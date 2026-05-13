@@ -1,0 +1,174 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Quick Vocab Quiz</title>
+<link rel="stylesheet" href="/styles/base.css"/>
+<link rel="stylesheet" href="/styles/controls.css"/>
+<link rel="stylesheet" href="/styles/quiz.css"/>
+<link rel="stylesheet" href="/styles/recall.css"/>
+<link rel="stylesheet" href="/styles/responsiveness.css"/>
+<link rel="stylesheet" href="/styles/summary.css"/>
+<link rel="stylesheet" href="/styles/table.css"/>
+<link rel="stylesheet" href="/styles/tooltip.css"/>
+<link rel="stylesheet" href="/styles/variables.css"/>
+<link rel="stylesheet" href="/styles/enhancements.css"/>
+
+</head>
+
+
+<body>
+  <!-- Loading Spinner -->
+  <div id="loadingSpinner">
+    <div class="spinner"></div>
+    <p>Loading vocabulary...</p>
+  </div>
+
+  <!-- Error Message -->
+  <div id="errorMessage" style="display:none" role="alert" aria-live="polite">
+    <span class="error-icon">⚠️</span>
+    <span class="error-text"></span>
+    <button type="button" onclick="closeError()" aria-label="Close error">×</button>
+  </div>
+
+  <main>
+    <button id="themeToggle" aria-label="Toggle theme">☾</button>
+    <div id="controls">
+      <div id="controls-top">
+        <div class="control-group">
+          <label>Language</label>
+
+          <select id="langSelect">
+            <option value="spanish">Spanish</option>
+            <option value="portuguese">Portuguese</option>
+            <option value="italian">Italian</option>
+            <option value="french">French</option>
+        </select>
+
+        
+
+        </div>
+
+        <div class="control-group">
+          <label>Mode</label>
+          <select id="modeSelect">
+            <option value="single">Single word</option>
+            <option value="table">Table</option>
+            <option value="recall">Recall</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label>Top words</label>
+          <div class="size-row">
+            <select id="sizeSelect">
+              <option value="100">Top 100</option>
+              <option value="250">Top 250</option>
+              <option value="500">Top 500</option>
+              <option value="1000" selected>Top 1000</option>
+              <option value="custom">Custom…</option>
+            </select>
+            <input type="number" id="sizeCustom" min="1" max="9999" placeholder="e.g. 75" style="display:none;"/>
+          </div>
+        </div>
+
+        <label>Randomize</label>
+        <input type="checkbox" id="randomizeWords"/>
+
+
+        <button id="startBtn">Start Quiz</button>
+      </div>
+
+      <div id="classFilter">
+        <button type="button" id="selectAllClasses">All</button>
+        <button type="button" id="selectNoneClasses">None</button>
+        <label><input type="checkbox" value="verb" checked> Verbs</label>
+        <label><input type="checkbox" value="noun" checked> Nouns</label>
+        <label><input type="checkbox" value="adjective" checked> Adjectives</label>
+        <label><input type="checkbox" value="adverb" checked> Adverbs</label>
+        <label><input type="checkbox" value="pronoun" checked> Pronouns</label>
+        <label><input type="checkbox" value="preposition" checked> Prepositions</label>
+        <label><input type="checkbox" value="conjunction" checked> Conjunctions</label>
+        <label><input type="checkbox" value="article" checked> Articles</label>
+      </div>
+
+      <div id="domainFilter">
+        <button type="button" id="selectAllDomains">All</button>
+        <button type="button" id="selectNoneDomains">None</button>
+        <label><input type="checkbox" value="general" checked> General</label>
+        <label><input type="checkbox" value="clothes" checked> Clothes</label>
+        <label><input type="checkbox" value="food" checked> Food</label>
+        <label><input type="checkbox" value="law" checked> Law</label>
+        <label><input type="checkbox" value="medical" checked> Medical</label>
+      </div>
+
+    </div>
+
+    <section id="quizArea" hidden>
+      <div id="word" class="word"></div>
+      <input id="answer" type="text" placeholder="Type English translation…" autocomplete="off"/>
+      <div id="feedback" class="feedback"></div>
+
+      <div class="controls-row">
+        <button id="btnCorrect">Mark Correct</button>
+        <button id="btnSkip">Skip</button>
+        <button id="ttsBtn">🔊</button>
+        <button id="exportBtn">Export Progress</button>
+        <button id="resetBtn">Reset Progress</button>
+      </div>
+
+      <div class="progressWrap">
+        <div class="progress"><div id="bar" class="bar"></div></div>
+        <div id="stats" class="small"></div>
+      </div>
+    </section>
+
+    <section id="tableArea" hidden>
+        
+      <div id="tableControls" class="controls-row">
+        <select id="colsSelect" title="Columns">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+        </select>
+        <button id="tableExport">Export</button>
+        <button id="tableReset">Give Up</button>
+      </div>
+      <div id="tableWrap"></div>
+      <div id="tableFeedback" class="feedback"></div>
+      <div id="tableSummary" class="quiz-summary" style="display:none"></div>
+    </section>
+
+    <section id="recallArea" hidden>
+      <div id="recallControls" class="controls-row">
+        <label>
+          Timer:
+          <select id="recallTimer">
+            <option value="0">No timer</option>
+            <option value="60">1 min</option>
+            <option value="180">3 min</option>
+            <option value="300" selected>5 min</option>
+            <option value="600">10 min</option>
+            <option value="900">15 min</option>
+            <option value="custom">Custom…</option>
+            </select>
+            <input type="number" id="recallTimerCustom" min="1" max="999" placeholder="mins" style="display:none; width:60px;"/>
+        </label>
+        <label>
+          When time runs out:
+          <select id="recallHardStop">
+            <option value="false">Keep going</option>
+            <option value="true">Hard stop</option>
+          </select>
+        </label>
+      </div>
+      <div id="recallWrap"></div>
+    </section>
+
+    <pre id="output" class="output"></pre>
+  </main>
+
+<script type="module" src="/src/app.js"></script>
+</body>
+</html>

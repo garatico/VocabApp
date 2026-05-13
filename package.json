@@ -1,0 +1,11 @@
+{
+  "name": "vocab-app",
+  "version": "1.0.0",
+  "description": "Vocabulary learning app",
+  "type": "module",
+  "scripts": {
+    "postinstall": "cd backend && npm install",
+    "dev": "node --watch backend/src/index.js",
+    "start": "node backend/src/index.js"
+  }
+}

@@ -1,0 +1,225 @@
+/* ================================
+   RESPONSIVE DESIGN SYSTEM
+   Breakpoints: 360px (small mobile)
+                600px (mobile)
+                768px (tablet)
+                1024px (small desktop)
+                1400px (desktop max-width)
+================================ */
+
+/* ─ SMALL MOBILE (360px and up) ─────────────────────────────── */
+@media (max-width: 599px) {
+  body {
+    padding: 0.5rem 0.5rem 1.5rem;
+    font-size: 14px;
+  }
+
+  /* Stack controls vertically */
+  #controls-top {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .control-group {
+    width: 100%;
+  }
+
+  .control-group > label {
+    font-size: 0.6rem;
+  }
+
+  .size-row {
+    gap: 0.3rem;
+    width: 100%;
+  }
+
+  #sizeCustom {
+    width: 60px;
+    font-size: 0.75rem;
+  }
+
+  /* Full-width start button */
+  #startBtn {
+    width: 100%;
+    padding: 0.4rem 0.8rem;
+    align-self: stretch;
+    font-size: 0.75rem;
+  }
+
+  /* Stack selects to full width */
+  select {
+    width: 100%;
+    font-size: 0.75rem;
+    padding: 0.35rem 1.8rem 0.35rem 0.5rem;
+  }
+
+
+  /* Class filter badges: single row scroll */
+  #classFilter {
+    gap: 0.3rem;
+    padding-top: 0.35rem;
+    margin-top: 0.35rem;
+  }
+
+  #classFilter label {
+    font-size: 0.68rem;
+    gap: 0.15rem;
+  }
+
+  #classFilter input[type="checkbox"] {
+    width: 11px;
+    height: 11px;
+  }
+
+  /* Table adjustments */
+  #tableWrap {
+    font-size: 1rem;
+  }
+
+  #tableWrap table {
+    border: none;
+  }
+
+  #tableWrap tr,
+  #tableWrap td {
+    display: block;
+    width: 100%;
+  }
+
+  #tableWrap td {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 0.5rem 0.4rem;
+  }
+
+  #tableWrap .spanish-word {
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+  }
+
+  #tableWrap input[type="text"] {
+    font-size: 1rem;
+    padding: 0.4rem;
+    min-height: 40px;
+  }
+
+  /* Theme toggle: adjusted position for mobile */
+  #themeToggle {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+}
+
+/* ─ TABLET (600px - 767px) ────────────────────────────────── */
+@media (min-width: 600px) and (max-width: 767px) {
+  body {
+    padding: 0.6rem 0.9rem 1.75rem;
+    font-size: 15px;
+  }
+
+  /* Controls: 2-column layout */
+  #controls-top {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  select {
+    flex: 0 1 calc(50% - 0.25rem);
+    font-size: 0.8rem;
+  }
+
+  #startBtn {
+    flex: 0 1 100%;
+    width: 100%;
+    padding: 0.4rem 1rem;
+  }
+
+  /* Filters: 2-column grid */
+  .filter-group {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .filter-option {
+    font-size: 0.75rem;
+    padding: 0.38rem 0.6rem;
+    min-height: 36px;
+  }
+
+  /* Table: moderate size */
+  #tableWrap {
+    font-size: 1.2rem;
+  }
+
+  #tableWrap input[type="text"] {
+    font-size: 1.1rem;
+    min-height: 42px;
+  }
+
+  #themeToggle {
+    width: 34px;
+    height: 34px;
+    font-size: 0.95rem;
+  }
+}
+
+/* ─ SMALL DESKTOP (768px - 1023px) ────────────────────────── */
+@media (min-width: 768px) and (max-width: 1023px) {
+  body {
+    padding: 0.7rem 1rem 2rem;
+    font-size: 15px;
+  }
+
+  /* Controls: mostly horizontal with some wrapping */
+  #controls-top {
+    gap: 0.6rem;
+  }
+
+  select {
+    flex: 0 1 auto;
+    font-size: 0.8rem;
+  }
+
+  /* Filters: 3-column grid */
+  .filter-group {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+
+  .filter-option {
+    font-size: 0.76rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  /* Table: comfortable size */
+  #tableWrap {
+    font-size: 1.35rem;
+  }
+
+  #tableWrap input[type="text"] {
+    font-size: 1.2rem;
+    min-height: 44px;
+  }
+}
+
+/* ─ LARGE DESKTOP (1024px+) ──────────────────────────────── */
+@media (min-width: 1024px) {
+  /* Base layout already optimal for desktop */
+  #tableWrap {
+    font-size: 1.5rem;
+  }
+
+  #tableWrap input[type="text"] {
+    font-size: 1.25rem;
+    min-height: 46px;
+  }
+
+  /* Filters: full responsive grid with auto-fit */
+  .filter-group {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+}
+

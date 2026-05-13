@@ -1,0 +1,189 @@
+import { isCorrect } from './utils.js';
+
+export function renderRecallMode({ words, container, columns = 1 }) {
+  container.innerHTML = '';
+
+  const cols = Math.max(1, Math.min(3, Number(columns) || 1));
+
+  let recalled      = new Set();
+  let timerInterval = null;
+  let secondsLeft   = 0;
+  let hardStop      = false;
+  let finished      = false;
+
+  const sorted = [...words].sort((a, b) => (a.rank || 9999) - (b.rank || 9999));
+
+  // ── Layout ────────────────────────────────────────────
+  const wrap = document.createElement('div');
+  wrap.className = 'recall-wrap';
+
+  const timerRow = document.createElement('div');
+  timerRow.className = 'recall-timer-row';
+
+  const timerDisplay = document.createElement('span');
+  timerDisplay.className = 'recall-timer';
+
+  const giveUpBtn = document.createElement('button');
+  giveUpBtn.textContent = 'Give Up';
+  giveUpBtn.className   = 'recall-giveup-btn';
+
+  timerRow.appendChild(timerDisplay);
+  timerRow.appendChild(giveUpBtn);
+
+  const inputRow = document.createElement('div');
+  inputRow.className = 'recall-input-row';
+
+  const inp = document.createElement('input');
+  inp.type         = 'text';
+  inp.placeholder  = 'Type a Spanish word…';
+  inp.className    = 'recall-input';
+  inp.autocomplete = 'off';
+
+  const feedback = document.createElement('span');
+  feedback.className = 'recall-feedback';
+
+  inputRow.appendChild(inp);
+  inputRow.appendChild(feedback);
+
+  const scoreEl = document.createElement('div');
+  scoreEl.className = 'recall-score';
+  updateScore();
+
+  const gridWrap = document.createElement('div');
+  gridWrap.className = 'recall-grid-wrap';
+  gridWrap.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+  const rowsPerCol   = Math.ceil(sorted.length / cols);
+  const columnArrays = Array.from({ length: cols }, (_, ci) =>
+    sorted.slice(ci * rowsPerCol, (ci + 1) * rowsPerCol)
+  );
+
+  columnArrays.forEach(colWords => {
+    const table = document.createElement('table');
+    table.className = 'recall-table';
+
+    colWords.forEach((w, i) => {
+      const tr = document.createElement('tr');
+      tr.dataset.word = w.word;           // ← was w.es
+
+      const tdNum = document.createElement('td');
+      tdNum.className   = 'recall-rank';
+      tdNum.textContent = (w.rank || i + 1) + '.';
+
+      const tdWord = document.createElement('td');
+      tdWord.className    = 'recall-cell';
+      tdWord.dataset.word = w.word;       // ← was w.es
+      tdWord.textContent  = '';
+
+      tr.appendChild(tdNum);
+      tr.appendChild(tdWord);
+      table.appendChild(tr);
+    });
+
+    gridWrap.appendChild(table);
+  });
+
+  wrap.appendChild(timerRow);
+  wrap.appendChild(inputRow);
+  wrap.appendChild(scoreEl);
+  wrap.appendChild(gridWrap);
+  container.appendChild(wrap);
+
+  inp.focus();
+
+  // ── Input handler ──────────────────────────────────────
+  inp.addEventListener('input', () => {
+    const val = inp.value.trim();
+    if (!val) return;
+
+    // Find a word whose `word` field matches the input and hasn't been recalled yet.
+    // We compare against entry.word directly (target language form) rather than
+    // using isCorrect(), which checks English glosses — recall mode tests production
+    // of the target-language word, not translation.
+    const match = sorted.find(w =>
+      w.word.toLowerCase() === val.toLowerCase() && !recalled.has(w.word)
+    );
+
+    if (match) {
+      recalled.add(match.word);            // ← was match.es
+      revealCell(match.word, 'recalled');  // ← was match.es
+      updateScore();
+
+      feedback.textContent = `✓ ${match.word}`;  // ← was match.es
+      feedback.style.color = 'var(--correct)';
+      inp.value = '';
+
+      setTimeout(() => { feedback.textContent = ''; }, 800);
+      if (recalled.size === sorted.length) endSession();
+    }
+  });
+
+  giveUpBtn.addEventListener('click', endSession);
+
+  // ── Helpers ────────────────────────────────────────────
+  function revealCell(word, state) {
+    const cell = gridWrap.querySelector(`td.recall-cell[data-word="${CSS.escape(word)}"]`);
+    if (!cell) return;
+    cell.textContent = word;              // ← was es
+    cell.classList.remove('recalled', 'missed');
+    cell.classList.add(state);
+  }
+
+  function updateScore() {
+    scoreEl.textContent = `Recalled: ${recalled.size} / ${sorted.length}`;
+  }
+
+  function endSession() {
+    if (finished) return;
+    finished = true;
+    if (timerInterval) clearInterval(timerInterval);
+    inp.disabled       = true;
+    giveUpBtn.disabled = true;
+
+    sorted.forEach(w => {
+      if (!recalled.has(w.word)) revealCell(w.word, 'missed');  // ← was w.es
+    });
+
+    const missed = sorted.length - recalled.size;
+    const pct    = Math.round((recalled.size / sorted.length) * 100);
+
+    scoreEl.innerHTML = `
+      <div class="recall-summary">
+        <span class="summary-correct">✓ ${recalled.size} recalled</span>
+        <span class="summary-missed">✗ ${missed} missed</span>
+        <span class="summary-pct">${pct}%</span>
+      </div>
+    `;
+  }
+
+  // ── Timer ──────────────────────────────────────────────
+  function startTimer(seconds, isHardStop) {
+    secondsLeft = seconds;
+    hardStop    = isHardStop;
+    updateTimerDisplay();
+
+    timerInterval = setInterval(() => {
+      secondsLeft--;
+      updateTimerDisplay();
+
+      if (secondsLeft <= 0) {
+        clearInterval(timerInterval);
+        if (hardStop) {
+          endSession();
+        } else {
+          timerDisplay.textContent = "Time's up!";
+          timerDisplay.style.color = 'var(--danger)';
+        }
+      }
+    }, 1000);
+  }
+
+  function updateTimerDisplay() {
+    const m = Math.floor(secondsLeft / 60);
+    const s = secondsLeft % 60;
+    timerDisplay.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+    timerDisplay.style.color = secondsLeft <= 30 ? 'var(--danger)' : 'var(--text-muted)';
+  }
+
+  return { startTimer };
+}
