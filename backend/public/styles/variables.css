@@ -1,0 +1,115 @@
+/* ================================
+   FONTS & VARIABLES
+   Single source of truth for all
+   design tokens. Never hardcode
+   colours, radii, or shadows
+   anywhere else in the codebase.
+================================ */
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@400;600;700&display=swap');
+
+:root {
+  /* ── Backgrounds ───────────────────────────────
+     --bg        page background
+     --surface   cards, panels, inputs
+     --surface2  subtle hover / alternate rows   */
+  --bg: #f5f4f0;
+  --surface: #ffffff;
+  --surface2: #f0efe9;
+
+  /* ── Borders ───────────────────────────────────
+     --border        default dividers
+     --border-strong inputs, select, button edges */
+  --border: #dddbd4;
+  --border-strong: #b8b5ac;
+
+  /* ── Text ──────────────────────────────────────
+     --text        primary readable text
+     --text-muted  labels, placeholders, captions */
+  --text: #1a1916;
+  --text-muted: #7a7870;
+
+  /* ── Accent (green) ────────────────────────────
+     Primary interactive colour.
+     --accent-light  tinted background behind accent elements */
+  --accent: #3d6b4f;
+  --accent-light: #e8f2ec;
+  --accent-hover: #2e5340;
+
+  /* ── Semantic: danger ──────────────────────────
+     Destructive actions (reset, give up)          */
+  --danger: #c0392b;
+  --danger-light: #fdf0ee;
+
+  /* ── Semantic: correct / incorrect ────────────
+     Quiz answer feedback                          */
+  --correct: #2e7d32;
+  --correct-light: #d7f8d5;
+  --incorrect: #d32f2f;
+  --incorrect-light: #ffe5e5;
+
+  /* ── Semantic: warning / info ──────────────────
+     Notifications and feedback states             */
+  --warning: #f59e0b;
+  --warning-light: #fef3c7;
+  --info: #3b82f6;
+  --info-light: #dbeafe;
+  --success: #10b981;
+  --success-light: #d1fae5;
+
+  /* ── Transitions ───────────────────────────────
+     Standard timing for smooth interactions       */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+
+  /* ── Shape ─────────────────────────────────────
+     --radius     panels, cards
+     --radius-sm  buttons, inputs, badges          */
+  --radius: 8px;
+  --radius-sm: 5px;
+
+  /* ── Shadows ───────────────────────────────────
+     --shadow     cards, floating elements
+     --shadow-sm  controls bar, subtle lifts       */
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+/* ── Dark mode overrides ───────────────────────────────────
+   Applied by toggling class="dark" on <html>.
+   Managed by /src/theme-toggle.js.
+   Persisted to localStorage under key "theme".
+   Every variable above must have a counterpart here.      */
+html.dark {
+  --bg: #1a1917;
+  --surface: #23221f;
+  --surface2: #2c2b27;
+
+  --border: #3a3935;
+  --border-strong: #524f49;
+
+  --text: #edecea;
+  --text-muted: #908d85;
+
+  --accent: #5a9e72;
+  --accent-light: #1d3327;
+  --accent-hover: #6db584;
+
+  --danger: #e05c4b;
+  --danger-light: #2e1a18;
+
+  --correct: #4caf50;
+  --correct-light: #1a2e1b;
+  --incorrect: #ef5350;
+  --incorrect-light: #2e1a1a;
+
+  --warning: #fbbf24;
+  --warning-light: #1f1a0f;
+  --info: #60a5fa;
+  --info-light: #0f1c3d;
+  --success: #34d399;
+  --success-light: #0d2a1e;
+
+  --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+}

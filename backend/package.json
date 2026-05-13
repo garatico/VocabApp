@@ -1,0 +1,31 @@
+{
+  "name": "vocab-app-backend",
+  "version": "0.1.0",
+  "description": "Lightweight Express backend for serving vocabulary and admin tools",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "npm run validate && node src/index.js",
+    "dev": "npm run validate && cross-env NODE_ENV=development node --watch src/index.js",
+    "dev:admin": "cross-env NODE_ENV=development node src/index.js",
+    "test": "jest",
+    "lint": "eslint src/ public/src/",
+    "validate": "node scripts/validate.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.2.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "cross-env": "^7.0.3",
+    "eslint": "^10.3.0",
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
