@@ -1,0 +1,93 @@
+/* ================================================================
+   ADMIN EDIT FORM — right-panel card with form sections/groups.
+================================================================ */
+
+/* ── Card ── */
+.edit-form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.edit-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.edit-form-word    { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+.edit-form-actions { display: flex; gap: 0.5rem; }
+
+.edit-form-body {
+  padding: 1.25rem;
+  max-height: calc(100vh - 310px);
+  overflow-y: auto;
+}
+
+/* ── Sections ── */
+.form-section {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.form-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+.form-section-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+/* ── Groups ── */
+.form-group            { margin-bottom: 0.75rem; }
+.form-group:last-child { margin-bottom: 0; }
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group select,
+.form-group textarea { width: 100%; }
+
+.form-group textarea { resize: vertical; min-height: 80px; font-family: monospace; font-size: 0.85rem; }
+.form-group textarea.short { min-height: 60px; }
+
+/* ── Grid rows ── */
+.form-row   { display: grid; grid-template-columns: 1fr 1fr;     gap: 0.75rem; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+
+/* ── Checkbox row ── */
+.checkbox-row {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0;
+}
+.checkbox-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
+.checkbox-row label { font-size: 0.9rem; font-weight: 500; color: var(--text); cursor: pointer; margin: 0; }
+
+/* ── Read-only field ── */
+.readonly-field {
+  padding: 0.5rem 0.8rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  width: 100%;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .form-row, .form-row-3 { grid-template-columns: 1fr; }
+}

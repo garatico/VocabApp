@@ -1,0 +1,20 @@
+/* ================================================================
+   ADMIN STATUS BAR — success / error / info inline messages.
+================================================================ */
+
+.status-bar { min-height: 38px; margin-bottom: 0.75rem; }
+
+.status {
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.status.success { background: #d7f8d5; color: #1b5e20; border: 1px solid #a5d6a7; }
+.status.error   { background: #ffe5e5; color: #b71c1c; border: 1px solid #ffcdd2; }
+.status.info    { background: #dbeafe; color: #0d47a1; border: 1px solid #90caf9; }
+
+html.dark .status.success { background: rgba(76,175,80,0.15);  color: #81c784; border-color: rgba(76,175,80,0.3); }
+html.dark .status.error   { background: rgba(244,67,54,0.15);  color: #e57373; border-color: rgba(244,67,54,0.3); }
+html.dark .status.info    { background: rgba(33,150,243,0.15); color: #64b5f6; border-color: rgba(33,150,243,0.3); }

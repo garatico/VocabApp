@@ -1,25 +1,5 @@
-/* ================================
-   RESET & BASE
-================================ */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: 'Sora', system-ui, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  padding: 0.75rem 1rem 2rem;
-  line-height: 1.5;
-}
-
-/* ================================
-   LAYOUT
-================================ */
-main {
-  max-width: 1400px;
-  margin: 0 auto;
-}
+/*
+ * DEPRECATED — this file has been replaced by the unified styles/ structure.
+ * See styles/shared/, styles/app/, and styles/admin/.
+ * This file is no longer linked from any HTML and can be deleted.
+ */

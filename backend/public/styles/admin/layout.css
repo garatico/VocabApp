@@ -1,0 +1,43 @@
+/* ================================================================
+   ADMIN LAYOUT — page body, container, header, theme-toggle.
+================================================================ */
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Sora', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding: 1.5rem 2rem;
+  line-height: 1.5;
+}
+
+.container { max-width: 1600px; margin: 0 auto; }
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+h1 { font-size: 1.75rem; font-weight: 700; }
+
+/* Theme-toggle button in the header */
+.theme-toggle {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 36px; height: 36px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition-fast);
+}
+.theme-toggle:hover { background: var(--surface2); border-color: var(--accent); }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  body { padding: 1rem; }
+  h1   { font-size: 1.4rem; }
+}

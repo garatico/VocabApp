@@ -1,0 +1,9 @@
+/* ================================================================
+   PROGRESS BAR — animated gradient fill used in quiz mode.
+================================================================ */
+
+#bar {
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  transition: width var(--transition-normal);
+  border-radius: 4px;
+}

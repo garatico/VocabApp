@@ -1,0 +1,25 @@
+/* ================================================================
+   ADMIN TABS — tab navigation bar + content panels.
+================================================================ */
+
+.tabs {
+  display: flex; gap: 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--border);
+}
+
+.tab-btn {
+  padding: 0.65rem 1.25rem;
+  background: none; border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  color: var(--text-muted);
+  font-weight: 600; cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 0.95rem;
+}
+.tab-btn:hover  { color: var(--text); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.tab-content        { display: none; }
+.tab-content.active { display: block; }
