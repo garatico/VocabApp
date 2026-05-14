@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "postinstall": "cd backend && npm install",
-    "dev": "node --watch backend/src/index.js",
-    "start": "node backend/src/index.js"
+    "dev": "npm run dev --prefix backend",
+    "start": "npm run start --prefix backend",
+    "test": "npm test --prefix backend"
   }
 }
