@@ -34,12 +34,16 @@ export function bindStartHandler({
       // do NOT rebuild the filter UI here so user selections are preserved.
       let list = filterWords(getBaseList());
 
-      // Apply domain filter from the HTML #domainFilter checkboxes
+      // Apply domain filter from the HTML #domainFilter checkboxes.
+      // Words with no domain data pass through unconditionally — domain
+      // assignments only exist for Spanish, so filtering on them must not
+      // eliminate words from other languages.
       const selectedDomains = getSelectedDomains ? getSelectedDomains() : [];
       if (selectedDomains.length > 0) {
-        list = list.filter(w =>
-          (w.domains || []).some(d => selectedDomains.includes(d))
-        );
+        list = list.filter(w => {
+          const domains = w.domains || [];
+          return domains.length === 0 || domains.some(d => selectedDomains.includes(d));
+        });
       }
 
 

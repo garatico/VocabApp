@@ -59,7 +59,7 @@ async function loadAndBuildFilters(lang) {
   const selected = getSelectedClasses();
   const baseList = selected.length === 0
     ? sorted.slice(0, size)
-    : sorted.filter(w => selected.includes(w.pos)).slice(0, size);
+    : sorted.filter(w => w.pos == null || selected.includes(w.pos)).slice(0, size);
 
   currentBaseList = baseList;
   // Rebuild filter UI (and reset checkboxes) only when the list itself changes

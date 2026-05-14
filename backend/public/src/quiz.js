@@ -2,14 +2,14 @@ import { normalize, stripDiacritics, levenshtein } from './match.js';
 
 export class Quiz {
   constructor({ words, storageKey }) {
-    this.words      = words; // array of {es, answers:[], display, pos, ...}
+    this.words      = words;
     this.storageKey = storageKey || 'quick_quiz_state';
     this.state      = JSON.parse(localStorage.getItem(this.storageKey) || '{}');
 
     if (!this.state.order) {
       this.state.order = this.words.map((_, i) => i).sort(() => Math.random() - 0.5);
       this.state.pos   = 0;
-      this.state.seen  = {}; // es -> {correct, incorrect}
+      this.state.seen  = {};
       this.save();
     }
   }
@@ -43,8 +43,12 @@ export class Quiz {
     const normInput = normalize(input);
     let ok          = false;
 
-    // Check against all answers using normalize + fuzzy levenshtein
-    for (const cand of (w.answers || [])) {
+    // Check glosses array (current schema) then answers array (legacy)
+    const candidates = Array.isArray(w.glosses) && w.glosses.length > 0
+      ? w.glosses
+      : (w.answers || []);
+
+    for (const cand of candidates) {
       const nc    = normalize(cand);
       if (nc === normInput) { ok = true; break; }
       const dist  = levenshtein(nc, normInput);
@@ -52,18 +56,18 @@ export class Quiz {
       if (dist <= thresh) { ok = true; break; }
     }
 
-    const key = w.es;
+    const key = w.word;
     if (!this.state.seen[key]) this.state.seen[key] = { correct: 0, incorrect: 0 };
     if (ok) this.state.seen[key].correct++;
     else    this.state.seen[key].incorrect++;
     this.save();
 
-    return { ok, expected: (w.answers || []).join(', ') };
+    return { ok, expected: candidates.join(', ') };
   }
 
   markCorrect() {
     const w   = this.current();
-    const key = w.es;
+    const key = w.word;
     if (!this.state.seen[key]) this.state.seen[key] = { correct: 0, incorrect: 0 };
     this.state.seen[key].correct++;
     this.save();
