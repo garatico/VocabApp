@@ -9,7 +9,8 @@
     "start": "npm run validate && node src/index.js",
     "dev": "npm run validate && cross-env NODE_ENV=development node --watch src/index.js",
     "dev:admin": "cross-env NODE_ENV=development node src/index.js",
-    "test": "jest",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint src/ public/src/",
     "validate": "node scripts/validate.js"
   },
@@ -23,7 +24,10 @@
     "@eslint/js": "^10.0.1",
     "cross-env": "^7.0.3",
     "eslint": "^10.3.0",
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "sql.js": "^1.14.1",
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.6"
   },
   "engines": {
     "node": ">=16.0.0"

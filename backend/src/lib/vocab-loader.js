@@ -15,17 +15,17 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
-const appRoot    = path.join(__dirname, '../../..');   // → VocabApp/
+const appRoot    = path.join(__dirname, '../../..');   // => VocabApp/
 
-// ── Singleton DB connection ───────────────────────────────────────────────
+// Singleton DB connection
 let db = null;
 
-// ── Per-language in-memory cache ─────────────────────────────────────────
+// Per-language in-memory cache
 const vocabCache = new Map();
 
 const SUPPORTED_LANGUAGES = ['spanish', 'portuguese', 'italian', 'french'];
 
-// ── DB init ───────────────────────────────────────────────────────────────
+// DB init
 function initializeDatabase() {
   if (db) return;
 
@@ -34,7 +34,7 @@ function initializeDatabase() {
     console.log(`Connecting to SQLite database: ${dbPath}`);
     db = new Database(dbPath, { fileMustExist: true });
     db.pragma('journal_mode = WAL');
-    console.log('✓ SQLite database connected');
+    console.log('Connected to SQLite database');
   } catch (error) {
     console.error('Database connection error:', error);
     if (error.code === 'SQLITE_CANTOPEN') {
@@ -47,12 +47,8 @@ function initializeDatabase() {
   }
 }
 
-// ── Main loader ───────────────────────────────────────────────────────────
-
 /**
  * Load vocabulary for a language from SQLite.
- * @param {string} language  e.g. 'spanish'
- * @returns {Promise<Object>} { words, wordCount, language, source, loadedAt, cacheAge }
  */
 export async function loadVocabFile(language) {
   const lang = language.toLowerCase();
@@ -74,10 +70,6 @@ export async function loadVocabFile(language) {
 
     console.log(`Loading vocabulary for: ${lang}`);
 
-    // All word data is flat on `words` after the schema migration.
-    // Many-to-many tables use correlated subqueries with explicit ORDER BY
-    // so the returned strings are deterministically ordered regardless of
-    // SQLite version.
     const stmt = db.prepare(`
       SELECT
         w.id,
@@ -170,8 +162,6 @@ export async function loadVocabFile(language) {
   }
 }
 
-// ── Cache management ──────────────────────────────────────────────────────
-
 /** Clear cache for one language, or all languages if lang is null/'all'. */
 export function clearCache(language = null) {
   if (!language || language === 'all') {
@@ -180,8 +170,6 @@ export function clearCache(language = null) {
     vocabCache.delete(language.toLowerCase());
   }
 }
-
-// ── Status ────────────────────────────────────────────────────────────────
 
 /** Return connection status and per-language cache info. */
 export function getDbInfo() {
@@ -206,8 +194,6 @@ export function getDbInfo() {
   return info;
 }
 
-// ── Pre-load ──────────────────────────────────────────────────────────────
-
 /** Load all supported languages into cache at startup. */
 export async function preloadAll() {
   console.log('Pre-loading vocabularies from SQLite...');
@@ -217,20 +203,37 @@ export async function preloadAll() {
     try {
       await loadVocabFile(lang);
       results.push({ language: lang, status: 'loaded' });
-      console.log(`  ✓ ${lang}`);
+      console.log(`  ok ${lang}`);
     } catch (error) {
       results.push({ language: lang, status: 'failed', error: error.message });
-      console.log(`  ✗ ${lang}: ${error.message}`);
+      console.log(`  fail ${lang}: ${error.message}`);
     }
   }
 
   return results;
 }
 
-// ── Teardown ──────────────────────────────────────────────────────────────
+/**
+ * Returns the initialized DB connection, initializing it if needed.
+ * Intended for use by admin routes that need direct DB access.
+ */
+export function getDb() {
+  if (!db) initializeDatabase();
+  return db;
+}
+
+/**
+ * Inject an already-open DB instance (used by tests to supply an in-memory DB).
+ * Clears the vocab cache so subsequent loadVocabFile() calls read from the
+ * injected DB rather than returning stale cache entries.
+ */
+export function setDb(testDb) {
+  db = testDb;
+  vocabCache.clear();
+}
 
 export function closeDatabase() {
   if (db) { db.close(); db = null; }
 }
 
-export default { loadVocabFile, clearCache, getDbInfo, preloadAll, closeDatabase };
+export default { loadVocabFile, clearCache, getDbInfo, getDb, setDb, preloadAll, closeDatabase };

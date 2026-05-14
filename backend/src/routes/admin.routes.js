@@ -1,20 +1,18 @@
 /**
  * admin.routes.js
  *
- * Administrative routes for vocabulary editing, data management, and script execution.
- * Development mode only (localhost:3000 on dev server).
+ * Administrative routes for vocabulary editing and data management.
+ * All reads and writes go directly to the SQLite database.
+ * Development mode only.
  */
 
 import express from 'express';
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { execSync } from 'child_process';
+import { getDb, clearCache } from '../lib/vocab-loader.js';
 
 const router = express.Router();
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// ── Development mode check ────────────────────────────────────────────────────
+const SUPPORTED_LANGUAGES = ['spanish', 'portuguese', 'italian', 'french'];
+
 function isDevelopment(req, res, next) {
   if (process.env.NODE_ENV !== 'development') {
     return res.status(403).json({ error: 'Admin panel only available in development mode' });
@@ -24,195 +22,377 @@ function isDevelopment(req, res, next) {
 
 router.use(isDevelopment);
 
-// ── Load vocabulary data ──────────────────────────────────────────────────────
-
-async function loadVocabulary(lang = 'spanish') {
-  const vocabPath = path.join(__dirname, '../../data', `${lang}.json`);
-  try {
-    const data = await fs.readFile(vocabPath, 'utf8');
-    return JSON.parse(data);
-  } catch (err) {
-    console.error(`Error loading ${lang} vocabulary:`, err.message);
-    return [];
-  }
+function validateLanguage(lang) {
+  const l = lang?.toLowerCase();
+  return SUPPORTED_LANGUAGES.includes(l) ? l : null;
 }
 
-async function saveVocabulary(lang, words) {
-  const vocabPath = path.join(__dirname, '../../data', `${lang}.json`);
-  try {
-    await fs.writeFile(vocabPath, JSON.stringify(words, null, 2), 'utf8');
-    return { success: true, message: `Saved ${words.length} words to ${lang}.json` };
-  } catch (err) {
-    throw new Error(`Error saving vocabulary: ${err.message}`);
+function formatWord(row) {
+  let domains = [];
+  if (row.domains) {
+    try { domains = JSON.parse(row.domains); } catch (_) {}
   }
+  return {
+    word:       row.word,
+    display:    row.display    || '',
+    pos:        row.pos        || null,
+    difficulty: row.difficulty || null,
+    notes:      row.notes      || '',
+    glosses:    row.glosses_raw  ? row.glosses_raw.split('|||').filter(Boolean)  : [],
+    examples:   row.examples_raw ? row.examples_raw.split('|||').filter(Boolean) : [],
+    linguistic: {
+      infinitive: row.infinitive || null,
+      reflexive:  Boolean(row.reflexive),
+      gender:     row.gender     || null,
+      plural:     row.plural     || null,
+      register:   row.register   || null,
+      ipa:        row.ipa        || null,
+      syllables:  row.syllables  ? row.syllables.split('-') : null,
+    },
+    frequency: {
+      band:             row.band             || null,
+      rank:             row.rank             || null,
+      corpus_frequency: row.corpus_frequency || null,
+    },
+    domains,
+  };
 }
 
-// ── GET /api/admin/vocab ──────────────────────────────────────────────────────
-// Get vocabulary with search and pagination
-router.get('/vocab', async (req, res) => {
+const WORD_SELECT = `
+  SELECT
+    w.*,
+    (SELECT GROUP_CONCAT(gloss, '|||')
+       FROM (SELECT gloss FROM word_glosses WHERE word_id = w.id ORDER BY position)
+    ) AS glosses_raw,
+    (SELECT GROUP_CONCAT(example, '|||')
+       FROM (SELECT example FROM word_examples WHERE word_id = w.id ORDER BY rowid)
+    ) AS examples_raw
+  FROM words w
+`;
+
+// GET /api/admin/vocab
+router.get('/vocab', (req, res) => {
   try {
-    const lang = req.query.lang || 'spanish';
-    const search = req.query.search?.toLowerCase() || '';
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
+    const db     = getDb();
+    const lang   = validateLanguage(req.query.lang) || 'spanish';
+    const search = (req.query.search || '').toLowerCase().trim();
+    const page   = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit  = Math.min(200, Math.max(1, parseInt(req.query.limit) || 100));
+    const offset = (page - 1) * limit;
 
-    let words = await loadVocabulary(lang);
+    const posFilter    = req.query.pos    || null;
+    const bandFilter   = req.query.band   || null;
+    const domainFilter = req.query.domain || null;
 
-    // Filter by search
+    const conditions = ['w.language = ?'];
+    const params     = [lang];
+
     if (search) {
-      words = words.filter(w =>
-        w.word.toLowerCase().includes(search) ||
-        w.display?.toLowerCase().includes(search) ||
-        w.glosses?.some(g => g.toLowerCase().includes(search))
+      const pat = '%' + search + '%';
+      conditions.push(
+        '(LOWER(w.word) LIKE ? OR LOWER(w.display) LIKE ? OR EXISTS ' +
+        '(SELECT 1 FROM word_glosses wg WHERE wg.word_id = w.id AND LOWER(wg.gloss) LIKE ?))'
       );
+      params.push(pat, pat, pat);
+    }
+    if (posFilter) {
+      conditions.push('w.pos = ?');
+      params.push(posFilter);
+    }
+    if (bandFilter) {
+      conditions.push('w.band = ?');
+      params.push(bandFilter);
+    }
+    if (domainFilter) {
+      conditions.push('w.domains LIKE ?');
+      params.push('%"' + domainFilter.replace(/"/g, '') + '"%');
     }
 
-    // Pagination
-    const total = words.length;
-    const pages = Math.ceil(total / limit);
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const paginated = words.slice(start, end);
+    const where = conditions.join(' AND ');
+
+    const { total } = db.prepare('SELECT COUNT(*) AS total FROM words w WHERE ' + where).get(...params);
+    const rows = db.prepare(
+      WORD_SELECT + ' WHERE ' + where + ' ORDER BY COALESCE(w.rank,9999), w.word LIMIT ? OFFSET ?'
+    ).all(...params, limit, offset);
 
     res.json({
-      success: true,
-      language: lang,
-      total,
-      page,
-      pages,
-      limit,
-      words: paginated
+      success: true, language: lang, total,
+      page, pages: Math.ceil(total / limit), limit,
+      words: rows.map(formatWord),
     });
   } catch (err) {
+    console.error('GET /admin/vocab:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ── GET /api/admin/vocab/:word ────────────────────────────────────────────────
-// Get a specific word
-router.get('/vocab/:word', async (req, res) => {
+// GET /api/admin/vocab/:word
+router.get('/vocab/:word', (req, res) => {
   try {
-    const lang = req.query.lang || 'spanish';
-    const words = await loadVocabulary(lang);
-    const word = words.find(w => w.word === req.params.word);
-
-    if (!word) {
-      return res.status(404).json({ error: 'Word not found' });
-    }
-
-    res.json({ success: true, word });
+    const db   = getDb();
+    const lang = validateLanguage(req.query.lang) || 'spanish';
+    const row  = db.prepare(WORD_SELECT + ' WHERE w.word = ? AND w.language = ?').get(req.params.word, lang);
+    if (!row) return res.status(404).json({ error: 'Word not found' });
+    res.json({ success: true, word: formatWord(row) });
   } catch (err) {
+    console.error('GET /admin/vocab/:word:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ── POST /api/admin/vocab/:word ───────────────────────────────────────────────
-// Update a word
-router.post('/vocab/:word', async (req, res) => {
+// POST /api/admin/vocab/:word
+router.post('/vocab/:word', (req, res) => {
   try {
-    const lang = req.query.lang || 'spanish';
-    const words = await loadVocabulary(lang);
-    const index = words.findIndex(w => w.word === req.params.word);
+    const db   = getDb();
+    const lang = validateLanguage(req.query.lang) || 'spanish';
+    const body = req.body;
 
-    if (index === -1) {
-      return res.status(404).json({ error: 'Word not found' });
-    }
+    if (!body || typeof body !== 'object') return res.status(400).json({ error: 'Body must be a JSON object' });
 
-    // Deep merge the updates
-    words[index] = {
-      ...words[index],
-      ...req.body,
-      // Ensure nested objects are properly merged
-      linguistic: { ...words[index].linguistic, ...req.body.linguistic },
-      relations: { ...words[index].relations, ...req.body.relations },
-      frequency: { ...words[index].frequency, ...req.body.frequency }
-    };
+    const errors = [];
+    if (body.glosses  !== undefined && !Array.isArray(body.glosses))  errors.push('glosses must be an array');
+    if (body.examples !== undefined && !Array.isArray(body.examples)) errors.push('examples must be an array');
+    if (body.domains  !== undefined && !Array.isArray(body.domains))  errors.push('domains must be an array');
+    if (errors.length) return res.status(400).json({ error: errors.join('; ') });
 
-    await saveVocabulary(lang, words);
+    const wordRow = db.prepare('SELECT id FROM words WHERE word = ? AND language = ?').get(req.params.word, lang);
+    if (!wordRow) return res.status(404).json({ error: 'Word not found' });
 
-    res.json({
-      success: true,
-      message: 'Word updated',
-      word: words[index]
-    });
+    const wordId = wordRow.id;
+
+    db.transaction(() => {
+      let syllablesVal = null;
+      if (body.linguistic?.syllables != null) {
+        syllablesVal = Array.isArray(body.linguistic.syllables)
+          ? body.linguistic.syllables.join('-')
+          : String(body.linguistic.syllables);
+      }
+
+      let reflexiveVal = null;
+      if (body.linguistic?.reflexive != null) {
+        reflexiveVal = body.linguistic.reflexive ? 1 : 0;
+      }
+
+      db.prepare(`
+        UPDATE words SET
+          display          = ?,
+          pos              = ?,
+          notes            = ?,
+          ipa              = ?,
+          band             = ?,
+          domains          = ?,
+          difficulty       = ?,
+          gender           = ?,
+          plural           = ?,
+          infinitive       = ?,
+          reflexive        = ?,
+          register         = ?,
+          syllables        = ?,
+          rank             = ?,
+          corpus_frequency = ?,
+          updated_at       = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(
+        body.display                     ?? null,
+        body.pos                         ?? null,
+        body.notes                       ?? null,
+        body.linguistic?.ipa             ?? null,
+        body.frequency?.band             ?? null,
+        body.domains != null ? JSON.stringify(body.domains) : null,
+        body.difficulty                  ?? null,
+        body.linguistic?.gender          ?? null,
+        body.linguistic?.plural          ?? null,
+        body.linguistic?.infinitive      ?? null,
+        reflexiveVal,
+        body.linguistic?.register        ?? null,
+        syllablesVal,
+        body.frequency?.rank             ?? null,
+        body.frequency?.corpus_frequency ?? null,
+        wordId,
+      );
+
+      if (Array.isArray(body.glosses)) {
+        db.prepare('DELETE FROM word_glosses WHERE word_id = ?').run(wordId);
+        const ins = db.prepare('INSERT INTO word_glosses (word_id, gloss, position) VALUES (?, ?, ?)');
+        body.glosses.map(g => g.trim()).filter(Boolean).forEach((g, i) => ins.run(wordId, g, i));
+      }
+
+      if (Array.isArray(body.examples)) {
+        db.prepare('DELETE FROM word_examples WHERE word_id = ?').run(wordId);
+        const ins = db.prepare('INSERT INTO word_examples (word_id, example, position) VALUES (?, ?, ?)');
+        body.examples.map(e => e.trim()).filter(Boolean).forEach((e, i) => ins.run(wordId, e, i));
+      }
+    })();
+
+    clearCache(lang);
+
+    const updated = db.prepare(WORD_SELECT + ' WHERE w.id = ?').get(wordId);
+    res.json({ success: true, message: 'Word updated', word: formatWord(updated) });
   } catch (err) {
+    console.error('POST /admin/vocab/:word:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ── POST /api/admin/vocab ─────────────────────────────────────────────────────
-// Batch update words
-router.post('/vocab', async (req, res) => {
+// POST /api/admin/vocab (batch update)
+router.post('/vocab', (req, res) => {
   try {
-    const lang = req.query.lang || 'spanish';
-    const updates = req.body.updates; // Array of { word, data }
+    const db   = getDb();
+    const lang = validateLanguage(req.query.lang) || 'spanish';
+    const { updates } = req.body;
 
-    if (!Array.isArray(updates)) {
-      return res.status(400).json({ error: 'updates must be an array' });
-    }
+    if (!Array.isArray(updates)) return res.status(400).json({ error: 'updates must be an array' });
 
-    let words = await loadVocabulary(lang);
     let updated = 0;
 
-    for (const { word, data } of updates) {
-      const index = words.findIndex(w => w.word === word);
-      if (index !== -1) {
-        words[index] = {
-          ...words[index],
-          ...data,
-          linguistic: { ...words[index].linguistic, ...data.linguistic },
-          relations: { ...words[index].relations, ...data.relations },
-          frequency: { ...words[index].frequency, ...data.frequency }
-        };
+    db.transaction(() => {
+      for (const { word, data } of updates) {
+        if (!word || !data) continue;
+        const row = db.prepare('SELECT id FROM words WHERE word = ? AND language = ?').get(word, lang);
+        if (!row) continue;
+        const wordId = row.id;
+
+        db.prepare(`
+          UPDATE words SET
+            display=?, pos=?, notes=?, ipa=?, band=?, domains=?,
+            updated_at=CURRENT_TIMESTAMP
+          WHERE id=?
+        `).run(
+          data.display ?? null, data.pos ?? null, data.notes ?? null,
+          data.linguistic?.ipa ?? null, data.frequency?.band ?? null,
+          data.domains != null ? JSON.stringify(data.domains) : null,
+          wordId,
+        );
+
+        if (Array.isArray(data.glosses)) {
+          db.prepare('DELETE FROM word_glosses WHERE word_id = ?').run(wordId);
+          const ins = db.prepare('INSERT INTO word_glosses (word_id, gloss, position) VALUES (?, ?, ?)');
+          data.glosses.map(g => g.trim()).filter(Boolean).forEach((g, i) => ins.run(wordId, g, i));
+        }
+        if (Array.isArray(data.examples)) {
+          db.prepare('DELETE FROM word_examples WHERE word_id = ?').run(wordId);
+          const ins = db.prepare('INSERT INTO word_examples (word_id, example, position) VALUES (?, ?, ?)');
+          data.examples.map(e => e.trim()).filter(Boolean).forEach((e, i) => ins.run(wordId, e, i));
+        }
         updated++;
       }
-    }
+    })();
 
-    await saveVocabulary(lang, words);
-
-    res.json({
-      success: true,
-      message: `Updated ${updated} of ${updates.length} words`,
-      updated
-    });
+    clearCache(lang);
+    res.json({ success: true, message: 'Updated ' + updated + ' of ' + updates.length + ' words', updated });
   } catch (err) {
+    console.error('POST /admin/vocab:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// ── GET /api/admin/stats ──────────────────────────────────────────────────────
-// Get data statistics
-router.get('/stats', async (req, res) => {
+// GET /api/admin/stats
+router.get('/stats', (req, res) => {
   try {
+    const db    = getDb();
     const stats = {};
-    const languages = ['spanish', 'portuguese', 'italian', 'french'];
 
-    for (const lang of languages) {
-      const words = await loadVocabulary(lang);
+    for (const lang of SUPPORTED_LANGUAGES) {
+      const total   = db.prepare('SELECT COUNT(*) AS n FROM words WHERE language=?').get(lang).n;
+      const withIPA = db.prepare("SELECT COUNT(*) AS n FROM words WHERE language=? AND ipa IS NOT NULL AND ipa!=''").get(lang).n;
+      const withEx  = db.prepare('SELECT COUNT(DISTINCT we.word_id) AS n FROM word_examples we JOIN words w ON we.word_id=w.id WHERE w.language=?').get(lang).n;
+      const verbs   = db.prepare("SELECT COUNT(*) AS n FROM words WHERE language=? AND pos='verb'").get(lang).n;
+      const nouns   = db.prepare("SELECT COUNT(*) AS n FROM words WHERE language=? AND pos='noun'").get(lang).n;
+      const adjs    = db.prepare("SELECT COUNT(*) AS n FROM words WHERE language=? AND pos='adjective'").get(lang).n;
+
       stats[lang] = {
-        total: words.length,
-        withExamples: words.filter(w => w.examples?.length > 0).length,
-        withSynonyms: words.filter(w => w.relations?.synonyms?.length > 0).length,
-        withIPA: words.filter(w => w.linguistic?.ipa).length,
-        verbs: words.filter(w => w.pos === 'verb').length,
-        nouns: words.filter(w => w.pos === 'noun').length,
-        adjectives: words.filter(w => w.pos === 'adjective').length,
+        total, withExamples: withEx, withSynonyms: 0, withIPA,
+        verbs, nouns, adjectives: adjs,
         coverage: {
-          examples: Math.round((words.filter(w => w.examples?.length > 0).length / words.length) * 100),
-          synonyms: Math.round((words.filter(w => w.relations?.synonyms?.length > 0).length / words.length) * 100),
-          ipa: Math.round((words.filter(w => w.linguistic?.ipa).length / words.length) * 100)
-        }
+          examples: total ? Math.round((withEx  / total) * 100) : 0,
+          synonyms: 0,
+          ipa:      total ? Math.round((withIPA / total) * 100) : 0,
+        },
       };
     }
 
     res.json({ success: true, stats });
   } catch (err) {
+    console.error('GET /admin/stats:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// NOTE: Data generation endpoints removed (scripts/enrich, scripts/generate, scripts/all, scripts/quick-wins, export)
-// Data management is now handled by VocabApp-DataPipeline (separate repository)
-// The VocabApp only consumes clean vocabulary data.
+// GET /api/admin/meta
+router.get('/meta', (req, res) => {
+  try {
+    const db  = getDb();
+    const pos = db.prepare("SELECT DISTINCT pos FROM words WHERE pos IS NOT NULL ORDER BY pos").all().map(r => r.pos);
+
+    const domainRows = db.prepare("SELECT DISTINCT domains FROM words WHERE domains IS NOT NULL AND domains!='[]' AND domains!=''").all();
+    const domainSet  = new Set();
+    for (const r of domainRows) { try { JSON.parse(r.domains).forEach(d => domainSet.add(d)); } catch (_) {} }
+
+    const bands = db.prepare("SELECT DISTINCT band FROM words WHERE band IS NOT NULL ORDER BY band").all().map(r => r.band);
+
+    res.json({ success: true, pos, domains: [...domainSet].sort(), bands });
+  } catch (err) {
+    console.error('GET /admin/meta:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/cache/clear
+router.post('/cache/clear', (req, res) => {
+  try {
+    const lang = req.body?.lang || null;
+    clearCache(lang);
+    const msg = lang ? 'Cache cleared for ' + lang : 'All language caches cleared';
+    console.log('[admin] ' + msg);
+    res.json({ success: true, message: msg });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/export
+router.post('/export', (req, res) => {
+  try {
+    const db   = getDb();
+    const lang = validateLanguage(req.body?.lang);
+    if (!lang) return res.status(400).json({ error: 'Invalid language. Must be one of: ' + SUPPORTED_LANGUAGES.join(', ') });
+
+    const rows = db.prepare(`
+      SELECT w.*,
+        (SELECT GROUP_CONCAT(gloss,'|||') FROM (SELECT gloss FROM word_glosses WHERE word_id=w.id ORDER BY position)) AS glosses_raw,
+        (SELECT GROUP_CONCAT(example,'|||') FROM (SELECT example FROM word_examples WHERE word_id=w.id ORDER BY rowid)) AS examples_raw,
+        (SELECT GROUP_CONCAT(tag,'|') FROM word_tags WHERE word_id=w.id) AS tags_raw
+      FROM words w WHERE w.language=? ORDER BY COALESCE(w.rank,9999), w.word
+    `).all(lang);
+
+    const esc = v => {
+      if (v == null) return '';
+      const s = String(v);
+      return (s.includes(',') || s.includes('"') || s.includes('\n')) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+
+    const headers = ['rank','word','display','glosses','pos','difficulty','tags','notes','examples','ipa','frequency_band','gender','plural','infinitive','reflexive','register'];
+    const lines = [headers.join(',')];
+
+    for (const row of rows) {
+      lines.push([
+        esc(row.rank), esc(row.word), esc(row.display),
+        esc((row.glosses_raw  || '').replace(/\|\|\|/g, '|')),
+        esc(row.pos), esc(row.difficulty), esc(row.tags_raw || ''), esc(row.notes),
+        esc((row.examples_raw || '').replace(/\|\|\|/g, '|')),
+        esc(row.ipa), esc(row.band), esc(row.gender), esc(row.plural),
+        esc(row.infinitive), esc(row.reflexive ? 'true' : ''), esc(row.register),
+      ].join(','));
+    }
+
+    const date = new Date().toISOString().split('T')[0];
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="' + lang + '_' + date + '.csv"');
+    res.send(lines.join('\n'));
+  } catch (err) {
+    console.error('POST /admin/export:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 export default router;
