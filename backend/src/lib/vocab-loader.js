@@ -103,9 +103,7 @@ export async function loadVocabFile(language) {
         (SELECT GROUP_CONCAT(example, ',')
            FROM (SELECT example FROM word_examples WHERE word_id = w.id ORDER BY rowid)
         ) AS examples,
-        (SELECT GROUP_CONCAT(domain, ',')
-           FROM (SELECT domain FROM word_domains  WHERE word_id = w.id ORDER BY rowid)
-        ) AS domains,
+        w.domains,
         (SELECT GROUP_CONCAT(tag, ',')
            FROM (SELECT tag FROM word_tags WHERE word_id = w.id ORDER BY rowid)
         ) AS tags
@@ -144,7 +142,7 @@ export async function loadVocabFile(language) {
           rank:            row.rank             || null,
           corpus_frequency:row.corpus_frequency || null,
         },
-        domains: row.domains ? row.domains.split(',').filter(Boolean) : [],
+        domains: row.domains ? (() => { try { return JSON.parse(row.domains); } catch (_) { return []; } })() : [],
         tags:    row.tags    ? row.tags.split(',').filter(Boolean)    : [],
       };
     });
