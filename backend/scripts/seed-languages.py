@@ -2,15 +2,13 @@
 """
 seed-languages.py
 
-Loads French and Portuguese vocabulary into vocabulary.db.
+Loads Spanish, Portuguese, French, and Italian vocabulary into vocabulary.db.
 
-Source file priority (per language):
-  1. data/{lang}.json         – enriched format (produced by enrich-preseed.py)
-                                Populates: words, word_glosses, word_domains, word_tags
-  2. data/{lang}_preseed.jsonl – normalized JSONL (basic fallback)
-                                Populates: words only
+Source: data/{lang}_preseed.jsonl (single source of truth)
+  All languages use preseed JSONL files with the full Spanish schema.
+  Populates: words, word_glosses, word_domains, word_tags
 
-Run once after generating or updating the source files:
+Run once after generating or updating the preseed JSONL files:
     python backend/scripts/seed-languages.py
 
 Stop the server first (DB must not be locked).
@@ -31,14 +29,10 @@ BACKUP_PATH = DB_PATH.with_name(
 )
 
 SOURCES = {
-    'portuguese': {
-        'json':  BASE_DIR / '../../data/portuguese.json',
-        'jsonl': BASE_DIR / '../../data/portuguese_preseed.jsonl',
-    },
-    'french': {
-        'json':  BASE_DIR / '../../data/french.json',
-        'jsonl': BASE_DIR / '../../data/french_preseed.jsonl',
-    },
+    'spanish': BASE_DIR / '../../data/spanish_preseed.jsonl',
+    'portuguese': BASE_DIR / '../../data/portuguese_preseed.jsonl',
+    'french': BASE_DIR / '../../data/french_preseed.jsonl',
+    'italian': BASE_DIR / '../../data/italian_preseed.jsonl',
 }
 
 # ── Preflight ──────────────────────────────────────────────────────────────────
@@ -106,16 +100,11 @@ def read_jsonl(path: Path) -> list[dict]:
 
 
 def load_source(lang: str) -> tuple[list[dict], str]:
-    """Return (word_list, format_name) using the richest available source."""
-    paths = SOURCES[lang]
+    """Return (word_list, format_name) from preseed JSONL."""
+    jsonl_path = SOURCES[lang]
 
-    if paths['json'].exists():
-        with open(paths['json'], encoding='utf-8') as f:
-            data = json.load(f)
-        return data, 'json'
-
-    if paths['jsonl'].exists():
-        return read_jsonl(paths['jsonl']), 'jsonl'
+    if jsonl_path.exists():
+        return read_jsonl(jsonl_path), 'jsonl'
 
     return [], 'none'
 
@@ -129,48 +118,30 @@ def syllables_to_str(syllables) -> str | None:
     return str(syllables) or None
 
 
-def extract_word_row(w: dict, lang: str, fmt: str) -> tuple:
+def extract_word_row(w: dict, lang: str) -> tuple:
     """
-    Map one word entry to the `words` table row tuple.
+    Map one word entry from preseed JSONL to the `words` table row tuple.
 
-    Handles both formats:
-      json  – full spanish.json-style entry (from enrich-preseed.py)
-      jsonl – normalized JSONL entry (basic fallback)
+    The preseed JSONL uses the full Spanish schema with nested structures:
+      - linguistic: { infinitive, gender, register, ipa, syllables, conjugations, ... }
+      - frequency: { rank, corpus_frequency, ... }
     """
-    if fmt == 'json':
-        ling  = w.get('linguistic') or {}
-        freq  = w.get('frequency')  or {}
-        conj  = ling.get('conjugations')
+    ling  = w.get('linguistic') or {}
+    freq  = w.get('frequency')  or {}
+    conj  = ling.get('conjugations')
 
-        word       = w['word']
-        display    = w.get('display') or word
-        pos        = w.get('pos')
-        difficulty = w.get('difficulty')
-        notes      = w.get('notes') or None
-        gender     = ling.get('gender') or w.get('gender')
-        register   = w.get('register') or ling.get('register')
-        infinitive = ling.get('infinitive')
-        rank       = freq.get('rank') or w.get('rank')
-        ipa        = ling.get('ipa') or None
-        syllables  = syllables_to_str(ling.get('syllables'))
-        conjugations = json.dumps(conj, ensure_ascii=False) if conj else None
-
-    else:  # jsonl
-        cefr_to_level = {'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5}
-
-        word       = w['word']
-        display    = w.get('gloss') or word
-        pos        = w.get('part_of_speech') or None
-        difficulty = w.get('level') if isinstance(w.get('level'), int) \
-                     else cefr_to_level.get(w.get('cefr', 'A1'), 1)
-        notes      = w.get('notes') or None
-        gender     = w.get('gender')
-        register   = w.get('register')
-        infinitive = w.get('infinitive')
-        rank       = None
-        ipa        = None
-        syllables  = None
-        conjugations = None
+    word       = w['word']
+    display    = w.get('display') or word
+    pos        = w.get('pos')
+    difficulty = w.get('difficulty')
+    notes      = w.get('notes') or None
+    gender     = ling.get('gender')
+    register   = w.get('register') or ling.get('register')
+    infinitive = ling.get('infinitive')
+    rank       = freq.get('rank') or w.get('rank')
+    ipa        = ling.get('ipa') or None
+    syllables  = syllables_to_str(ling.get('syllables'))
+    conjugations = json.dumps(conj, ensure_ascii=False) if conj else None
 
     return (lang, word, display, pos, difficulty, notes,
             gender, register, infinitive, rank, ipa, syllables, conjugations)
@@ -186,11 +157,11 @@ def seed_language(lang: str):
     label = lang.capitalize()
     print(f'\n{label}  [{fmt} format]  {len(words)} words')
 
-    inserted = updated = glosses_n = domains_n = tags_n = 0
+    inserted = glosses_n = domains_n = tags_n = 0
 
     for w in words:
         # ── 1. Upsert the words row ──────────────────────────────────────────
-        row = extract_word_row(w, lang, fmt)
+        row = extract_word_row(w, lang)
         cursor.execute(UPSERT_WORD, row)
 
         # Fetch the word's DB id (needed for the child tables)
@@ -202,11 +173,6 @@ def seed_language(lang: str):
         if not result:
             continue
         word_id = result[0]
-
-        if fmt != 'json':
-            # JSONL mode — child tables not populated
-            inserted += 1
-            continue
 
         inserted += 1
 
@@ -244,15 +210,14 @@ def seed_language(lang: str):
     stats = cursor.fetchone()
     print(f'  ✓ words         : {stats[0]} total  '
           f'(pos: {stats[1]}, conjugations: {stats[2]}, IPA: {stats[3]}, rank: {stats[4]})')
-    if fmt == 'json':
-        print(f'  ✓ word_glosses  : {glosses_n} rows inserted/ignored')
-        print(f'  ✓ word_domains  : {domains_n} rows inserted/ignored')
-        print(f'  ✓ word_tags     : {tags_n} rows inserted/ignored')
+    print(f'  ✓ word_glosses  : {glosses_n} rows inserted/ignored')
+    print(f'  ✓ word_domains  : {domains_n} rows inserted/ignored')
+    print(f'  ✓ word_tags     : {tags_n} rows inserted/ignored')
 
 
 # ── Run ────────────────────────────────────────────────────────────────────────
-seed_language('portuguese')
-seed_language('french')
+for lang in ['spanish', 'portuguese', 'french', 'italian']:
+    seed_language(lang)
 
 conn.close()
 print('\n✓ Seeding complete.')

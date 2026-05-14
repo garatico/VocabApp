@@ -97,6 +97,11 @@ if (langSelect) {
 if (sizeSelect) {
   sizeSelect.addEventListener('change', () => loadAndBuildFilters(langSelect.value));
 }
+// Also listen for custom size input changes
+const sizeCustom = document.getElementById('sizeCustom');
+if (sizeCustom) {
+  sizeCustom.addEventListener('input', () => loadAndBuildFilters(langSelect.value));
+}
 
 (async function initUI() {
   // Initialize UI enhancements (Phase 4B)
