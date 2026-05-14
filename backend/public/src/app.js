@@ -39,7 +39,7 @@ const { showCurrent } = bindQuizControls({
   getLang: () => langMap[langSelect.value] || 'es',
 });
 
-// ── Word list state ───────────────────────────────────────
+// Word list state
 // allWordsByLang: cache of full sorted lists per language
 // currentBaseList: the sliced list filters are applied against;
 //   only rebuilt when language, size, or class selection changes
@@ -62,7 +62,6 @@ async function loadAndBuildFilters(lang) {
     : sorted.filter(w => w.pos == null || selected.includes(w.pos)).slice(0, size);
 
   currentBaseList = baseList;
-  // Rebuild filter UI (and reset checkboxes) only when the list itself changes
   buildFilterUI(sorted, baseList);
 }
 
@@ -90,21 +89,24 @@ bindStartHandler({
   elements: { startBtn, tableWrap, recallWrap, modeSelect, output },
 });
 
-// Rebuild filters (and reset checkboxes) only when something structural changes
+// Rebuild base list when structural filters change
 if (langSelect) {
   langSelect.addEventListener('change', () => loadAndBuildFilters(langSelect.value));
 }
 if (sizeSelect) {
   sizeSelect.addEventListener('change', () => loadAndBuildFilters(langSelect.value));
 }
-// Also listen for custom size input changes
 const sizeCustom = document.getElementById('sizeCustom');
 if (sizeCustom) {
   sizeCustom.addEventListener('input', () => loadAndBuildFilters(langSelect.value));
 }
+// Rebuild when part-of-speech filter changes
+const classFilter = document.getElementById('classFilter');
+if (classFilter) {
+  classFilter.addEventListener('change', () => loadAndBuildFilters(langSelect.value));
+}
 
 (async function initUI() {
-  // Initialize UI enhancements (Phase 4B)
   mountUI();
 
   if (langSelect) { langSelect.value = 'spanish'; }
