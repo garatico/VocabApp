@@ -1,0 +1,69 @@
+/* ================================================================
+   TOAST NOTIFICATIONS — slide-up fixed overlay messages.
+================================================================ */
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  max-width: 400px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 9998;
+  animation: slideUp var(--transition-normal);
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toast.toast-success {
+  background-color: var(--success-light);
+  color: var(--success);
+  border-left: 3px solid var(--success);
+}
+html.dark .toast.toast-success {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: var(--success);
+}
+
+.toast.toast-error {
+  background-color: var(--incorrect-light);
+  color: var(--incorrect);
+  border-left: 3px solid var(--incorrect);
+}
+html.dark .toast.toast-error {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: var(--incorrect);
+}
+
+.toast.toast-warning {
+  background-color: var(--warning-light);
+  color: var(--warning);
+  border-left: 3px solid var(--warning);
+}
+html.dark .toast.toast-warning {
+  background-color: rgba(251, 191, 36, 0.15);
+  color: var(--warning);
+}
+
+.toast.toast-info {
+  background-color: var(--info-light);
+  color: var(--info);
+  border-left: 3px solid var(--info);
+}
+html.dark .toast.toast-info {
+  background-color: rgba(96, 165, 250, 0.15);
+  color: var(--info);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .toast { bottom: 16px; right: 16px; max-width: 340px; padding: 12px 14px; font-size: 13px; }
+}
+
+@media (max-width: 600px) {
+  .toast { bottom: 12px; right: 12px; left: 12px; max-width: none; padding: 11px 12px; font-size: 12px; }
+}

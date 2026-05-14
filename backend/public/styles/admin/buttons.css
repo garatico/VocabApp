@@ -1,0 +1,41 @@
+/* ================================================================
+   ADMIN BUTTONS — base + primary / secondary / danger / ghost.
+================================================================ */
+
+button {
+  padding: 0.55rem 1.1rem;
+  background: var(--accent); color: white;
+  border: none; border-radius: 6px;
+  font-weight: 600; font-size: 0.9rem;
+  cursor: pointer; transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+button:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+}
+button:active:not(:disabled) { transform: translateY(0); }
+button:disabled               { opacity: 0.5; cursor: not-allowed; }
+
+button.secondary {
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border);
+}
+button.secondary:hover:not(:disabled) { background: var(--surface); border-color: var(--accent); }
+
+button.danger { background: var(--danger); }
+button.danger:hover:not(:disabled) { background: #a03120; }
+
+button.ghost {
+  background: transparent; color: var(--text-muted);
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.8rem; font-size: 0.85rem;
+}
+button.ghost:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-light);
+}
+
+.button-group { display: flex; gap: 0.6rem; flex-wrap: wrap; }

@@ -1,0 +1,72 @@
+/* ================================================================
+   CONTROLS BAR — top bar with mode/language/size selects + start.
+================================================================ */
+
+#controls {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 1rem;
+  margin-bottom: 0.6rem;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Top row: selects + start button inline */
+#controls-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: flex-end;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.control-group > label {
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+
+/* Size select + custom input side by side */
+.size-row { display: flex; gap: 0.35rem; align-items: center; }
+
+/* Controls row (secondary actions below) */
+.controls-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+#randomizeWords {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ── Responsive ── */
+@media (max-width: 599px) {
+  body { padding: 0.5rem 0.5rem 1.5rem; font-size: 14px; }
+
+  #controls-top { flex-direction: column; gap: 0.5rem; }
+
+  .control-group { width: 100%; }
+  .control-group > label { font-size: 0.6rem; }
+
+  .size-row { gap: 0.3rem; width: 100%; }
+
+  #startBtn { width: 100%; padding: 0.4rem 0.8rem; align-self: stretch; font-size: 0.75rem; }
+}
+
+@media (max-width: 480px) {
+  #controls-top { flex-direction: column; }
+  .size-row { width: 100%; }
+}

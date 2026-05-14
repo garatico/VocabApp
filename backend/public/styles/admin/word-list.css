@@ -1,0 +1,118 @@
+/* ================================================================
+   ADMIN WORD LIST — split-panel left side: header, list, items.
+================================================================ */
+
+/* ── Editor split layout ── */
+.editor-layout {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+
+.word-panel { width: 340px; flex-shrink: 0; }
+.form-panel { flex: 1; min-width: 0; }
+
+/* ── List header ── */
+.word-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.875rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  font-size: 0.8rem;
+}
+.word-list-title { font-weight: 700; color: var(--text); }
+.word-count      { color: var(--text-muted); }
+
+/* ── Scrollable list ── */
+.word-list {
+  overflow-y: auto;
+  max-height: calc(100vh - 260px);
+  min-height: 400px;
+  border: 1px solid var(--border);
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--surface);
+}
+
+.word-list-empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* ── List items ── */
+.word-item {
+  padding: 0.75rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.word-item:last-child { border-bottom: none; }
+.word-item:hover      { background: var(--surface2); }
+.word-item.active {
+  background: var(--accent-light);
+  border-left: 3px solid var(--accent);
+  padding-left: calc(0.875rem - 3px);
+}
+
+.word-item-top {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+.word-item-key     { font-weight: 700; color: var(--accent); font-size: 1rem; }
+.word-item-display { font-size: 0.8rem; color: var(--text-muted); }
+
+.word-item-badges  { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-bottom: 0.25rem; }
+
+.word-item-glosses {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Badges ── */
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.badge-pos  { background: var(--accent-light); color: var(--accent); }
+.badge-band { background: #fef3c7; color: #92400e; }
+html.dark .badge-band { background: rgba(254, 243, 199, 0.12); color: #fcd34d; }
+
+/* ── Empty form state ── */
+.form-panel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: var(--text-muted);
+  text-align: center;
+  gap: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.form-panel-empty .hint-icon { font-size: 2.5rem; opacity: 0.4; }
+.form-panel-empty .hint-text { font-size: 0.9rem; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .editor-layout { flex-direction: column; }
+  .word-panel    { width: 100%; }
+  .word-list     { max-height: 300px; min-height: unset; }
+}

@@ -1,0 +1,139 @@
+/* ================================================================
+   TABLE AREA — multi-word table quiz mode.
+================================================================ */
+
+#tableArea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 1rem;
+  box-shadow: var(--shadow);
+}
+
+#tableControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-top: 0;
+}
+
+#tableFeedback {
+  margin-top: 0.4rem;
+  font-size: 1.88rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+}
+
+/* ── Table structure ── */
+#tableWrap {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.50rem;
+}
+
+#tableWrap table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-bottom: 0.5rem;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+#tableWrap tr            { border-bottom: 1px solid var(--border); }
+#tableWrap tr:last-child { border-bottom: none; }
+
+#tableWrap td {
+  padding: 3px 5px;
+  vertical-align: middle;
+  border-right: 1px solid var(--border);
+}
+#tableWrap td:last-child { border-right: none; }
+
+#tableWrap .spanish-word {
+  font-weight: 700;
+  font-size: 1.25rem;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 22px;
+  color: var(--accent);
+}
+
+#tableWrap td:has(.spanish-word),
+#tableWrap td:nth-child(odd) { background: var(--surface2); }
+
+/* ── Input cells ── */
+#tableWrap input[type="text"] {
+  width: 100%;
+  font-family: 'DM Mono', monospace;
+  font-size: 1.25rem;
+  padding: 3px 5px;
+  box-sizing: border-box;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  transition: all var(--transition-fast);
+  color: var(--text);
+}
+#tableWrap input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(61, 107, 79, 0.15);
+}
+
+#tableWrap input.correct {
+  background-color: var(--correct-light);
+  border-color: var(--correct);
+  color: var(--correct);
+  font-weight: 600;
+}
+#tableWrap input.incorrect {
+  background-color: var(--incorrect-light);
+  border-color: var(--incorrect);
+  color: var(--incorrect);
+  font-weight: 600;
+}
+
+#tableWrap .word-cell  { width: 12%; }
+#tableWrap .input-cell { width: 22%; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  #tableArea     { padding: 0.5rem 0.75rem; }
+  #tableControls { gap: 0.3rem; margin-bottom: 0.4rem; padding-bottom: 0.4rem; }
+  #tableFeedback { font-size: 1.2rem; margin-top: 0.3rem; }
+  #tableWrap     { font-size: 1.2rem; }
+  #tableWrap input[type="text"] { font-size: 1.1rem; padding: 0.4rem 0.3rem; }
+}
+
+@media (max-width: 600px) {
+  #tableArea { border: none; padding: 0; box-shadow: none; }
+  #tableControls { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
+  #tableControls button { flex: 1 1 calc(50% - 0.2rem); min-width: 120px; padding: 0.35rem 0.6rem; font-size: 0.7rem; }
+  #tableWrap { font-size: 1rem; }
+  #tableWrap table { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 0.3rem; }
+  #tableWrap td { padding: 0.4rem; }
+  #tableWrap .spanish-word { font-size: 0.95rem; }
+  #tableWrap input[type="text"] { font-size: 0.95rem; padding: 0.35rem 0.3rem; }
+}
+
+@media (max-width: 599px) {
+  #tableWrap { font-size: 1rem; }
+  #tableWrap table { border: none; }
+  #tableWrap tr, #tableWrap td { display: block; width: 100%; }
+  #tableWrap td { border-right: none; border-bottom: 1px solid var(--border); padding: 0.5rem 0.4rem; }
+  #tableWrap .spanish-word { font-size: 1rem; margin-bottom: 0.25rem; }
+  #tableWrap input[type="text"] { font-size: 1rem; padding: 0.4rem; min-height: 40px; }
+}
+
+@media (max-width: 480px) {
+  #tableControls button { flex: 1 1 100%; min-width: auto; }
+  #tableWrap input[type="text"] { min-height: 40px; }
+}

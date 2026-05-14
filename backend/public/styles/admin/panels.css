@@ -1,0 +1,67 @@
+/* ================================================================
+   ADMIN PANELS — Stats tab + DB Admin tab cards.
+================================================================ */
+
+/* ── Generic section card ── */
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+}
+.section-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; }
+
+/* ── Statistics grid ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.stat-label {
+  font-size: 0.8rem; color: var(--text-muted);
+  font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.05em; margin-bottom: 0.4rem;
+}
+.stat-value { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+
+/* Coverage progress bars */
+.coverage-bar { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+.bar          { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.bar-fill     { height: 100%; background: var(--accent); transition: width 0.3s ease; }
+.bar-label    { font-size: 0.78rem; color: var(--text-muted); min-width: 36px; text-align: right; }
+
+/* ── DB Admin grid ── */
+.db-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.db-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+.db-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+.db-card p  { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.5; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 600px) {
+  .stats-grid { grid-template-columns: 1fr; }
+}

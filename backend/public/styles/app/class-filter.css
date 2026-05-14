@@ -1,0 +1,52 @@
+/* ================================================================
+   CLASS FILTER — POS checkboxes row below the controls bar.
+================================================================ */
+
+#classFilter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  padding-top: 0.45rem;
+  margin-top: 0.45rem;
+  border-top: 1px solid var(--border);
+}
+
+#classFilter label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#classFilter input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+  width: 12px;
+  height: 12px;
+}
+
+#classFilter button {
+  font-size: 0.68rem;
+  padding: 0.15rem 0.45rem;
+  background: var(--surface2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+#classFilter button:hover { background: var(--border); }
+
+/* ── Responsive ── */
+@media (max-width: 599px) {
+  #classFilter { gap: 0.3rem; padding-top: 0.35rem; margin-top: 0.35rem; }
+  #classFilter label { font-size: 0.68rem; gap: 0.15rem; }
+  #classFilter input[type="checkbox"] { width: 11px; height: 11px; }
+}

@@ -1,0 +1,47 @@
+/* ================================================================
+   SPINNER — full-screen loading overlay.
+================================================================ */
+
+#loadingSpinner {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.95);
+  z-index: 9999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  animation: fadeIn var(--transition-normal);
+}
+html.dark #loadingSpinner { background: rgba(26, 25, 23, 0.95); }
+#loadingSpinner.show      { display: flex; }
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+#loadingSpinner p { color: var(--text-muted); font-size: 14px; margin: 0; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .spinner { width: 36px; height: 36px; border-width: 2.5px; }
+  #loadingSpinner p { font-size: 13px; }
+}
+
+@media (max-width: 600px) {
+  #loadingSpinner { background: rgba(255, 255, 255, 0.98); }
+  html.dark #loadingSpinner { background: rgba(26, 25, 23, 0.98); }
+  .spinner { width: 32px; height: 32px; border-width: 2px; }
+  #loadingSpinner p { font-size: 12px; }
+}
+
+@media (max-width: 480px) {
+  .spinner { width: 28px; height: 28px; }
+  #loadingSpinner p { font-size: 11px; }
+}
