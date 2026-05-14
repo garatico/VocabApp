@@ -93,14 +93,99 @@
         <label><input type="checkbox" value="article" checked> Articles</label>
       </div>
 
-      <div id="domainFilter">
-        <button type="button" id="selectAllDomains">All</button>
-        <button type="button" id="selectNoneDomains">None</button>
-        <label><input type="checkbox" value="general" checked> General</label>
-        <label><input type="checkbox" value="clothes" checked> Clothes</label>
-        <label><input type="checkbox" value="food" checked> Food</label>
-        <label><input type="checkbox" value="law" checked> Law</label>
-        <label><input type="checkbox" value="medical" checked> Medical</label>
+      <div id="domainFilterWrap">
+        <div id="domainFilterHeader">
+          <span id="domainFilterLabel">Domains <span id="domainFilterCount"></span></span>
+          <div id="domainFilterActions">
+            <button type="button" id="selectAllDomains">All</button>
+            <button type="button" id="selectNoneDomains">None</button>
+            <button type="button" id="domainFilterToggle" aria-expanded="false">▾</button>
+          </div>
+        </div>
+        <div id="domainFilter" hidden>
+          <div class="domain-group">
+            <span class="domain-group-label">Mind &amp; Character</span>
+            <label><input type="checkbox" value="ability" checked> Ability</label>
+            <label><input type="checkbox" value="clarity" checked> Clarity</label>
+            <label><input type="checkbox" value="cognition" checked> Cognition</label>
+            <label><input type="checkbox" value="confidence" checked> Confidence</label>
+            <label><input type="checkbox" value="desire" checked> Desire</label>
+            <label><input type="checkbox" value="emotion" checked> Emotion</label>
+            <label><input type="checkbox" value="feelings" checked> Feelings</label>
+            <label><input type="checkbox" value="hope" checked> Hope</label>
+            <label><input type="checkbox" value="impression" checked> Impression</label>
+            <label><input type="checkbox" value="mind" checked> Mind</label>
+            <label><input type="checkbox" value="perception" checked> Perception</label>
+            <label><input type="checkbox" value="potential" checked> Potential</label>
+            <label><input type="checkbox" value="truth" checked> Truth</label>
+          </div>
+          <div class="domain-group">
+            <span class="domain-group-label">People &amp; Society</span>
+            <label><input type="checkbox" value="age" checked> Age</label>
+            <label><input type="checkbox" value="business" checked> Business</label>
+            <label><input type="checkbox" value="communication" checked> Communication</label>
+            <label><input type="checkbox" value="education" checked> Education</label>
+            <label><input type="checkbox" value="identity" checked> Identity</label>
+            <label><input type="checkbox" value="language" checked> Language</label>
+            <label><input type="checkbox" value="law" checked> Law</label>
+            <label><input type="checkbox" value="learning" checked> Learning</label>
+            <label><input type="checkbox" value="security" checked> Security</label>
+            <label><input type="checkbox" value="work" checked> Work</label>
+          </div>
+          <div class="domain-group">
+            <span class="domain-group-label">Body &amp; Physical</span>
+            <label><input type="checkbox" value="aesthetics" checked> Aesthetics</label>
+            <label><input type="checkbox" value="appearance" checked> Appearance</label>
+            <label><input type="checkbox" value="cleanliness" checked> Cleanliness</label>
+            <label><input type="checkbox" value="clothes" checked> Clothes</label>
+            <label><input type="checkbox" value="drinks" checked> Drinks</label>
+            <label><input type="checkbox" value="food" checked> Food</label>
+            <label><input type="checkbox" value="health" checked> Health</label>
+            <label><input type="checkbox" value="height" checked> Height</label>
+            <label><input type="checkbox" value="medical" checked> Medical</label>
+            <label><input type="checkbox" value="physical_state" checked> Physical State</label>
+            <label><input type="checkbox" value="senses" checked> Senses</label>
+            <label><input type="checkbox" value="size" checked> Size</label>
+            <label><input type="checkbox" value="speed" checked> Speed</label>
+            <label><input type="checkbox" value="strength" checked> Strength</label>
+            <label><input type="checkbox" value="temperature" checked> Temperature</label>
+          </div>
+          <div class="domain-group">
+            <span class="domain-group-label">World &amp; Action</span>
+            <label><input type="checkbox" value="events" checked> Events</label>
+            <label><input type="checkbox" value="existence" checked> Existence</label>
+            <label><input type="checkbox" value="location" checked> Location</label>
+            <label><input type="checkbox" value="movement" checked> Movement</label>
+            <label><input type="checkbox" value="occurrence" checked> Occurrence</label>
+            <label><input type="checkbox" value="state" checked> State</label>
+            <label><input type="checkbox" value="transport" checked> Transport</label>
+            <label><input type="checkbox" value="travel" checked> Travel</label>
+          </div>
+          <div class="domain-group">
+            <span class="domain-group-label">Abstract &amp; Logic</span>
+            <label><input type="checkbox" value="condition" checked> Condition</label>
+            <label><input type="checkbox" value="distinction" checked> Distinction</label>
+            <label><input type="checkbox" value="freedom" checked> Freedom</label>
+            <label><input type="checkbox" value="importance" checked> Importance</label>
+            <label><input type="checkbox" value="necessity" checked> Necessity</label>
+            <label><input type="checkbox" value="obligation" checked> Obligation</label>
+            <label><input type="checkbox" value="possibility" checked> Possibility</label>
+            <label><input type="checkbox" value="quality" checked> Quality</label>
+            <label><input type="checkbox" value="quantity" checked> Quantity</label>
+            <label><input type="checkbox" value="simplicity" checked> Simplicity</label>
+          </div>
+          <div class="domain-group">
+            <span class="domain-group-label">Exchange &amp; Value</span>
+            <label><input type="checkbox" value="giving" checked> Giving</label>
+            <label><input type="checkbox" value="ownership" checked> Ownership</label>
+            <label><input type="checkbox" value="possession" checked> Possession</label>
+            <label><input type="checkbox" value="request" checked> Request</label>
+            <label><input type="checkbox" value="search" checked> Search</label>
+            <label><input type="checkbox" value="transaction" checked> Transaction</label>
+            <label><input type="checkbox" value="wealth" checked> Wealth</label>
+            <label><input type="checkbox" value="general" checked> General</label>
+          </div>
+        </div>
       </div>
 
     </div>

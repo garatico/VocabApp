@@ -190,37 +190,40 @@ button {
 /* ================================
    DOMAIN FILTER
 ================================ */
-#domainFilter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  align-items: center;
-  padding-top: 0.45rem;
+#domainFilterWrap {
   margin-top: 0.45rem;
+  padding-top: 0.45rem;
   border-top: 1px solid var(--border);
 }
 
-#domainFilter label {
+#domainFilterHeader {
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 0.25rem;
-  font-size: 0.74rem;
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--text);
-  cursor: pointer;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
-#domainFilter input[type="checkbox"] {
-  accent-color: var(--accent);
-  cursor: pointer;
-  width: 12px;
-  height: 12px;
+#domainFilterLabel {
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  user-select: none;
 }
 
-#domainFilter button {
+#domainFilterCount {
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+#domainFilterActions {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+#domainFilterActions button {
   font-size: 0.68rem;
   padding: 0.15rem 0.45rem;
   background: var(--surface2);
@@ -230,7 +233,65 @@ button {
   font-weight: 600;
   color: var(--text-muted);
 }
-#domainFilter button:hover { background: var(--border); }
+#domainFilterActions button:hover { background: var(--border); }
+
+#domainFilterToggle {
+  width: 24px;
+  height: 24px;
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem !important;
+  transition: transform 0.2s ease;
+}
+#domainFilterToggle[aria-expanded="true"] {
+  transform: rotate(180deg);
+}
+
+#domainFilter {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem 1rem;
+  padding-top: 0.6rem;
+}
+#domainFilter[hidden] { display: none !important; }
+
+.domain-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.domain-group-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-bottom: 0.15rem;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid var(--border);
+}
+
+#domainFilter label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+}
+
+#domainFilter input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
 
 /* ================================
    CONTROLS ROW
