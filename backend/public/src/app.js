@@ -23,7 +23,6 @@ const recallWrap     = document.getElementById('recallWrap');
 const recallTimer    = document.getElementById('recallTimer');
 const recallHardStop = document.getElementById('recallHardStop');
 const colsSelect     = document.getElementById('colsSelect');
-const modeSelect     = document.getElementById('modeSelect');
 const output         = document.getElementById('output');
 
 const langMap = {
@@ -33,7 +32,7 @@ const langMap = {
   french:     'fr'
 };
 
-const { updateModeUI } = bindModeSwitch({ modeSelect, quizArea, tableArea, recallArea });
+const { updateModeUI } = bindModeSwitch({ quizArea, tableArea, recallArea });
 
 const { showCurrent } = bindQuizControls({
   getLang: () => langMap[langSelect.value] || 'es',
@@ -86,7 +85,7 @@ bindStartHandler({
   onModeChange: updateModeUI,
   onSingleStart: showCurrent,
   getBaseList: () => currentBaseList,
-  elements: { startBtn, tableWrap, recallWrap, modeSelect, output },
+  elements: { startBtn, tableWrap, recallWrap, output },
 });
 
 // Rebuild base list when structural filters change

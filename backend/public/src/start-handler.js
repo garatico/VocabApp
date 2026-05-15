@@ -25,6 +25,12 @@ export function bindStartHandler({
     output,
   }
 }) {
+  // Helper function to get current mode from tab buttons
+  function getCurrentMode() {
+    const activeTab = document.querySelector('.mode-tab.active');
+    return activeTab ? activeTab.dataset.mode : 'single';
+  }
+
   startBtn.addEventListener('click', async () => {
     startBtn.disabled    = true;
     startBtn.textContent = 'Loading…';
@@ -56,7 +62,9 @@ export function bindStartHandler({
 
       setQuiz(new Quiz({ words: list }));
 
-      if (modeSelect.value === 'table') {
+      const currentMode = getCurrentMode();
+
+      if (currentMode === 'table') {
         tableWrap.innerHTML = '';
         const summary = document.getElementById('tableSummary');
         if (summary) { summary.style.display = 'none'; summary.innerHTML = ''; }
@@ -68,7 +76,7 @@ export function bindStartHandler({
         }));
       }
 
-      if (modeSelect.value === 'recall') {
+      if (currentMode === 'recall') {
         recallWrap.innerHTML = '';
         const { seconds, isHardStop } = getRecallTimer();
 
@@ -82,7 +90,7 @@ export function bindStartHandler({
       }
 
       onModeChange();
-      if (modeSelect.value === 'single') onSingleStart();
+      if (currentMode === 'single') onSingleStart();
 
     } catch (err) {
       output.style.display = 'block';

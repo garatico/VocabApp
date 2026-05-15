@@ -19,14 +19,28 @@ export function bindUIState() {
   });
 }
 
-export function bindModeSwitch({ modeSelect, quizArea, tableArea, recallArea }) {
+export function bindModeSwitch({ quizArea, tableArea, recallArea }) {
+  let currentMode = 'single';
+
   function updateModeUI() {
-    const mode = modeSelect.value;
+    const mode = currentMode;
     quizArea.hidden   = mode !== 'single';
     tableArea.hidden  = mode !== 'table';
     recallArea.hidden = mode !== 'recall';
+
+    // Update active tab button
+    document.querySelectorAll('.mode-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
   }
 
-  modeSelect.addEventListener('change', updateModeUI);
+  // Handle tab button clicks
+  document.querySelectorAll('.mode-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentMode = btn.dataset.mode;
+      updateModeUI();
+    });
+  });
+
   return { updateModeUI };
 }
