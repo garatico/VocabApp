@@ -152,6 +152,11 @@ export function renderRecallMode({ words, container, columns = 1 }) {
     if (barBottom) barBottom.style.width = pct + '%';
     if (statsTop) statsTop.textContent = statsText;
     if (statsBottom) statsBottom.textContent = statsText;
+
+    // Grey out Give Up when all words have been recalled
+    if (sorted.length > 0 && recalled.size === sorted.length) {
+      giveUpBtn.disabled = true;
+    }
   }
 
   function endSession() {

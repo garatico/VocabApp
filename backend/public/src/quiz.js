@@ -38,6 +38,10 @@ export class Quiz {
     return { seen, total: this.words.length, correct, incorrect };
   }
 
+  uniqueCorrectCount() {
+    return this.words.filter(w => (this.state.seen[w.word]?.correct || 0) > 0).length;
+  }
+
   check(input) {
     const w         = this.current();
     const normInput = normalize(input);

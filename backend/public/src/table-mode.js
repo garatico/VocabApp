@@ -35,6 +35,10 @@ export function renderTableMode({ words, container, columns = 3, onComplete = nu
     if (barBottom) barBottom.style.width = pct + '%';
     if (statsTop) statsTop.textContent = statsText;
     if (statsBottom) statsBottom.textContent = statsText;
+
+    // Grey out Give Up when all words are correct
+    const giveUpBtn = document.getElementById('tableReset');
+    if (giveUpBtn) giveUpBtn.disabled = (pct === 100);
   }
 
   function buildTable() {
@@ -134,6 +138,7 @@ export function renderTableMode({ words, container, columns = 3, onComplete = nu
       inp.classList.add('incorrect');
       results.push({ ok: false });
     });
+    updateProgress();
     return results;
   }
 
