@@ -36,6 +36,13 @@ function initializeDatabase() {
     db = new Database(dbPath, { fileMustExist: true });
     db.pragma('journal_mode = WAL');
     console.log('Connected to SQLite database');
+
+    // Auto-migrate: add columns that may not exist yet
+    const cols = db.pragma('table_info(words)').map(c => c.name);
+    if (!cols.includes('emoji')) {
+      db.exec('ALTER TABLE words ADD COLUMN emoji TEXT');
+      console.log('  ✓ auto-migrated: added emoji column');
+    }
   } catch (error) {
     console.error('Database connection error:', error);
     if (error.code === 'SQLITE_CANTOPEN') {
@@ -87,6 +94,7 @@ export async function loadVocabFile(language) {
         w.ipa,
         w.syllables,
         w.conjugations,
+        w.emoji,
         w.band,
         w.rank,
         w.corpus_frequency,
@@ -121,6 +129,7 @@ export async function loadVocabFile(language) {
         glosses:   row.glosses  ? row.glosses.split(',').filter(Boolean)  : [],
         examples:  row.examples ? row.examples.split(',').filter(Boolean) : [],
         svg_url:   getSvgUrl(lang, row.word),
+        emoji:     row.emoji || null,
         linguistic: {
           infinitive:   row.infinitive || null,
           reflexive:    Boolean(row.reflexive),

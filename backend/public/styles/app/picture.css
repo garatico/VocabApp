@@ -56,6 +56,14 @@
   justify-content: center;
 }
 
+/* Emoji fallback — centred, large, no text-shadow clutter */
+.picture-card-emoji {
+  font-size: 4rem;
+  line-height: 1;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .picture-card-img img {
   max-width: 100%;
   max-height: 100%;
@@ -109,34 +117,35 @@
 /* ── Controls bar (Give Up) ─────────────────────────────────── */
 .picture-controls-bar {
   display: flex;
-  justify-content: center;
-  padding: 1.25rem 0 0.5rem;
-  border-top: 1px solid var(--border);
-  margin-top: 0.5rem;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .picture-give-up-btn {
-  padding: 0.6rem 1.5rem;
-  background: var(--danger);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  padding: 0.45rem 1rem;
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
   cursor: pointer;
-  font-size: 0.95rem;
-  font-family: inherit;
-  font-weight: 500;
-  transition: opacity var(--transition-fast),
-              transform var(--transition-fast);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  white-space: nowrap;
 }
 
 .picture-give-up-btn:hover:not(:disabled) {
-  opacity: 0.88;
-  transform: translateY(-1px);
+  border-color: var(--incorrect, #d32f2f);
+  color: var(--incorrect, #d32f2f);
 }
 
 .picture-give-up-btn:disabled {
   opacity: 0.4;
-  cursor: not-allowed;
+  cursor: default;
 }
 
 /* ── Responsive ─────────────────────────────────────────────── */

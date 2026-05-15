@@ -112,6 +112,7 @@ export function bindStartHandler({
         renderPictureMode({
           words: list,
           container: pictureWrap,
+          lang: getFullLang ? getFullLang() : 'spanish',
         });
       }
 

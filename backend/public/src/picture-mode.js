@@ -1,11 +1,17 @@
 /**
  * Picture Quiz Mode
  *
- * Displays all words-with-pictures as a grid of cards.
- * Under each SVG image is a text input; typing the correct
- * target-language word turns the card green automatically.
- * Mirrors the interaction style of table mode.
+ * Displays all words-with-pictures (SVG or emoji fallback) as a grid of cards.
+ * Under each image is a text input; typing the correct target-language word
+ * turns the card green automatically.
+ *
+ * Visual priority per card:
+ *   1. word.svg_url   — generated SVG on disk
+ *   2. word.emoji     — emoji stored in the database (set via admin panel)
+ *   3. getFallbackEmoji(lang, word.word) — hardcoded map in emoji-map.js
  */
+
+import { getFallbackEmoji } from './emoji-map.js';
 
 function normalise(str = '') {
   return str
@@ -23,12 +29,18 @@ function wordIsCorrect(input, word) {
   return normalise(word.word) === attempt;
 }
 
-export function renderPictureMode({ words, container }) {
+export function renderPictureMode({ words, container, lang = 'spanish' }) {
   container.innerHTML = '';
 
-  const wordsWithPictures = words.filter(w => w.svg_url);
+  // Resolve the visual for each word: SVG > DB emoji > hardcoded map
+  const wordsWithVisuals = words
+    .map(w => ({
+      ...w,
+      _emoji: w.emoji || getFallbackEmoji(lang, w.word),
+    }))
+    .filter(w => w.svg_url || w._emoji);
 
-  if (wordsWithPictures.length === 0) {
+  if (wordsWithVisuals.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'picture-empty';
     empty.innerHTML = `
@@ -45,17 +57,25 @@ export function renderPictureMode({ words, container }) {
 
   const cards = [];
 
-  wordsWithPictures.forEach(word => {
+  wordsWithVisuals.forEach(word => {
     const card = document.createElement('div');
     card.className = 'picture-card';
 
-    // SVG image
+    // Visual — SVG image takes priority; emoji is the fallback
     const imgWrap = document.createElement('div');
     imgWrap.className = 'picture-card-img';
-    const img = document.createElement('img');
-    img.src = word.svg_url;
-    img.alt = '?';
-    imgWrap.appendChild(img);
+
+    if (word.svg_url) {
+      const img = document.createElement('img');
+      img.src = word.svg_url;
+      img.alt = '?';
+      imgWrap.appendChild(img);
+    } else {
+      const emojiEl = document.createElement('span');
+      emojiEl.className   = 'picture-card-emoji';
+      emojiEl.textContent = word._emoji;
+      imgWrap.appendChild(emojiEl);
+    }
 
     // Text input
     const inp = document.createElement('input');
@@ -91,7 +111,7 @@ export function renderPictureMode({ words, container }) {
     cards.push({ card, inp, word });
   });
 
-  // ── Controls bar ───────────────────────────────────────────────────
+  // ── Controls bar (rendered above the grid so it's always visible) ─
   const controlsBar = document.createElement('div');
   controlsBar.className = 'picture-controls-bar';
 
@@ -114,8 +134,8 @@ export function renderPictureMode({ words, container }) {
 
   controlsBar.appendChild(giveUpBtn);
 
-  container.appendChild(grid);
   container.appendChild(controlsBar);
+  container.appendChild(grid);
 
   // ── Progress ───────────────────────────────────────────────────────
   function updateProgress() {
