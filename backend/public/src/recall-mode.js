@@ -91,6 +91,9 @@ export function renderRecallMode({ words, container, columns = 1 }) {
 
   inp.focus();
 
+  // Initialize progress display
+  updateProgress();
+
   // ── Input handler ──────────────────────────────────────
   inp.addEventListener('input', () => {
     const val = inp.value.trim();
@@ -131,6 +134,24 @@ export function renderRecallMode({ words, container, columns = 1 }) {
 
   function updateScore() {
     scoreEl.textContent = `Recalled: ${recalled.size} / ${sorted.length}`;
+    updateProgress();
+  }
+
+  function updateProgress() {
+    const pct = sorted.length > 0 ? Math.round((recalled.size / sorted.length) * 100) : 0;
+
+    // Update progress bars and stats
+    const barTop = document.getElementById('recallBarTop');
+    const barBottom = document.getElementById('recallBarBottom');
+    const statsTop = document.getElementById('recallStatsTop');
+    const statsBottom = document.getElementById('recallStatsBottom');
+
+    const statsText = `${recalled.size}/${sorted.length} recalled`;
+
+    if (barTop) barTop.style.width = pct + '%';
+    if (barBottom) barBottom.style.width = pct + '%';
+    if (statsTop) statsTop.textContent = statsText;
+    if (statsBottom) statsBottom.textContent = statsText;
   }
 
   function endSession() {

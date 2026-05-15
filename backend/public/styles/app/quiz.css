@@ -65,10 +65,15 @@
   border-radius: 99px;
 }
 
-#stats {
+#stats, #statsTop {
   font-size: 0.75rem;
   color: var(--text-muted);
   font-family: 'DM Mono', monospace;
+}
+
+.small {
+  font-size: 0.75rem;
+  color: var(--text-muted);
 }
 
 /* ── Responsive ── */
@@ -79,7 +84,7 @@
   .feedback  { font-size: 0.8rem; }
   .progressWrap { margin-top: 0.5rem; }
   .progress  { height: 5px; margin-bottom: 0.25rem; }
-  #stats     { font-size: 0.7rem; }
+  #stats, #statsTop { font-size: 0.7rem; }
 }
 
 @media (max-width: 600px) {
@@ -89,7 +94,7 @@
   .feedback  { font-size: 0.75rem; min-height: 1rem; margin-bottom: 0.3rem; }
   .progressWrap { margin-top: 0.4rem; }
   .progress  { height: 4px; margin-bottom: 0.2rem; }
-  #stats     { font-size: 0.65rem; }
+  #stats, #statsTop { font-size: 0.65rem; }
 }
 
 @media (max-width: 480px) {

@@ -50,9 +50,9 @@
 
     <!-- Mode Tabs -->
     <div class="mode-tabs">
-      <button class="mode-tab active" data-mode="single">Single Word</button>
-      <button class="mode-tab" data-mode="table">Table</button>
+      <button class="mode-tab active" data-mode="table">Table</button>
       <button class="mode-tab" data-mode="recall">Recall</button>
+      <button class="mode-tab" data-mode="single">Single Word</button>
     </div>
 
     <div id="controls">
@@ -202,27 +202,12 @@
 
     </div>
 
-    <section id="quizArea" hidden>
-      <div id="word" class="word"></div>
-      <input id="answer" type="text" placeholder="Type English translation…" autocomplete="off"/>
-      <div id="feedback" class="feedback"></div>
-
-      <div class="controls-row">
-        <button id="btnCorrect">Mark Correct</button>
-        <button id="btnSkip">Skip</button>
-        <button id="ttsBtn">🔊</button>
-        <button id="exportBtn">Export Progress</button>
-        <button id="resetBtn">Reset Progress</button>
-      </div>
-
+    <section id="tableArea">
       <div class="progressWrap">
-        <div class="progress"><div id="bar" class="bar"></div></div>
-        <div id="stats" class="small"></div>
+        <div class="progress"><div id="tableBarTop" class="bar"></div></div>
+        <div id="tableStatsTop" class="small"></div>
       </div>
-    </section>
 
-    <section id="tableArea" hidden>
-        
       <div id="tableControls" class="controls-row">
         <select id="colsSelect" title="Columns">
           <option value="1">1</option>
@@ -235,9 +220,19 @@
       <div id="tableWrap"></div>
       <div id="tableFeedback" class="feedback"></div>
       <div id="tableSummary" class="quiz-summary" style="display:none"></div>
+
+      <div class="progressWrap">
+        <div class="progress"><div id="tableBarBottom" class="bar"></div></div>
+        <div id="tableStatsBottom" class="small"></div>
+      </div>
     </section>
 
     <section id="recallArea" hidden>
+      <div class="progressWrap">
+        <div class="progress"><div id="recallBarTop" class="bar"></div></div>
+        <div id="recallStatsTop" class="small"></div>
+      </div>
+
       <div id="recallControls" class="controls-row">
         <label>
           Timer:
@@ -261,6 +256,34 @@
         </label>
       </div>
       <div id="recallWrap"></div>
+
+      <div class="progressWrap">
+        <div class="progress"><div id="recallBarBottom" class="bar"></div></div>
+        <div id="recallStatsBottom" class="small"></div>
+      </div>
+    </section>
+
+    <section id="quizArea" hidden>
+      <div class="progressWrap">
+        <div class="progress"><div id="bar" class="bar"></div></div>
+        <div id="statsTop" class="small"></div>
+      </div>
+
+      <div id="word" class="word"></div>
+      <input id="answer" type="text" placeholder="Type English translation…" autocomplete="off"/>
+      <div id="feedback" class="feedback"></div>
+
+      <div class="controls-row">
+        <button id="btnCorrect">Mark Correct</button>
+        <button id="btnSkip">Skip</button>
+        <button id="ttsBtn">🔊</button>
+        <button id="exportBtn">Export Progress</button>
+        <button id="resetBtn">Reset Progress</button>
+      </div>
+
+      <div class="progressWrap">
+        <div id="stats" class="small"></div>
+      </div>
     </section>
 
     <pre id="output" class="output"></pre>
