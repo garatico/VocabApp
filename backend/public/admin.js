@@ -8,6 +8,7 @@
 import { loadMeta, initEditor } from './src/admin-editor.js';
 import { loadStatistics, initStats } from './src/admin-stats.js';
 import { initDbAdmin } from './src/admin-db.js';
+import { initConjugation } from './src/admin-conjugation.js';
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
@@ -41,6 +42,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 initEditor();
 initStats();
 initDbAdmin();
+initConjugation();
 
 // Pre-load data for the default visible tabs
 loadMeta();

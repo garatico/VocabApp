@@ -3,12 +3,14 @@ import { loadWords }                      from './data-loader.js';
 import { renderTableMode }                from './table-mode.js';
 import { renderRecallMode }               from './recall-mode.js';
 import { renderPictureMode }              from './picture-mode.js';
+import { renderConjugationMode }          from './conjugation-mode.js';
 import { setTableController }             from './table-controls.js';
 import { setQuiz }                        from './quiz-controls.js';
 import { filterWords }                    from './word-filters.js';
 
 export function bindStartHandler({
   getLang,
+  getFullLang,
   getSize,
   getSelectedClasses,
   getSelectedDomains,
@@ -23,6 +25,7 @@ export function bindStartHandler({
     tableWrap,
     recallWrap,
     pictureWrap,
+    conjugationWrap,
     modeSelect,
     output,
   }
@@ -109,6 +112,15 @@ export function bindStartHandler({
         renderPictureMode({
           words: list,
           container: pictureWrap,
+        });
+      }
+
+      if (currentMode === 'conjugation' && conjugationWrap) {
+        conjugationWrap.innerHTML = '';
+        renderConjugationMode({
+          words: list,
+          container: conjugationWrap,
+          lang: getFullLang ? getFullLang() : 'spanish',
         });
       }
 

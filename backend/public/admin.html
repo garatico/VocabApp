@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="/styles/admin/word-list.css">
   <link rel="stylesheet" href="/styles/admin/edit-form.css">
   <link rel="stylesheet" href="/styles/admin/panels.css">
+  <link rel="stylesheet" href="/styles/admin/conjugation.css">
 </head>
 <body>
   <div class="container">
@@ -29,6 +30,7 @@
       <button class="tab-btn active" data-tab="editor">Word Editor</button>
       <button class="tab-btn" data-tab="dbadmin">DB Admin</button>
       <button class="tab-btn" data-tab="statistics">Statistics</button>
+      <button class="tab-btn" data-tab="conjugation">Conjugation</button>
       <button class="tab-btn" data-tab="documentation">Help &amp; Docs</button>
     </div>
 
@@ -338,6 +340,87 @@
         <div id="statsContainer"></div>
       </div>
     </div>
+
+    <!-- ═══════════════════ CONJUGATION TAB ════════════════════ -->
+    <div id="conjugation" class="tab-content">
+
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <span class="filter-label">Language</span>
+        <select id="conjLangSelect">
+          <option value="spanish">Spanish</option>
+          <option value="portuguese">Portuguese</option>
+          <option value="italian">Italian</option>
+          <option value="french">French</option>
+        </select>
+
+        <div class="filter-divider"></div>
+
+        <span class="filter-label">Tense</span>
+        <select id="conjTenseSelect">
+          <!-- populated by JS based on selected language -->
+        </select>
+
+        <div class="filter-divider"></div>
+
+        <input type="text" id="conjSearchInput" placeholder="Search verbs…" style="flex:1;min-width:160px;">
+        <button id="conjSearchBtn">Search</button>
+      </div>
+
+      <!-- Split layout -->
+      <div class="conj-layout">
+
+        <!-- Verb list panel -->
+        <div class="conj-verb-panel">
+          <div class="conj-verb-panel-header">
+            <span class="conj-verb-panel-title">Verbs</span>
+            <span class="word-count" id="conjVerbCount">—</span>
+          </div>
+          <div class="conj-verb-list" id="conjVerbList">
+            <div class="conj-verb-list-empty">Loading…</div>
+          </div>
+        </div>
+
+        <!-- Conjugation table panel -->
+        <div class="conj-table-panel">
+
+          <!-- Empty state -->
+          <div class="conj-empty-state" id="conjEmptyState">
+            <div class="hint-icon">🔤</div>
+            <div class="hint-text">Select a verb to practice conjugating it</div>
+          </div>
+
+          <!-- Table card -->
+          <div class="conj-table-card" id="conjTableCard" style="display:none;">
+            <div class="conj-table-header">
+              <div>
+                <div class="conj-verb-name" id="conjVerbTitle"></div>
+                <div class="conj-verb-meta" id="conjVerbGlosses"></div>
+              </div>
+              <div class="edit-form-actions">
+                <button id="conjClearBtn">Clear</button>
+                <button class="secondary" id="conjResetBtn">Reset</button>
+              </div>
+            </div>
+
+            <div class="conj-tense-label" id="conjTenseLabel"></div>
+
+            <table class="conj-table">
+              <thead>
+                <tr>
+                  <th class="conj-th-pronoun">Pronoun</th>
+                  <th class="conj-th-form">Conjugated form</th>
+                </tr>
+              </thead>
+              <tbody id="conjTableBody">
+                <!-- populated by JS -->
+              </tbody>
+            </table>
+          </div>
+
+        </div><!-- /conj-table-panel -->
+      </div><!-- /conj-layout -->
+    </div><!-- /conjugation tab -->
 
     <!-- ═══════════════════ DOCUMENTATION TAB ═══════════════════ -->
     <div id="documentation" class="tab-content">

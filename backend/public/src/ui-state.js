@@ -19,15 +19,16 @@ export function bindUIState() {
   });
 }
 
-export function bindModeSwitch({ quizArea, tableArea, recallArea, pictureArea }) {
+export function bindModeSwitch({ quizArea, tableArea, recallArea, pictureArea, conjugationArea }) {
   let currentMode = 'table';
 
   function updateModeUI() {
     const mode = currentMode;
-    quizArea.hidden    = mode !== 'single';
-    tableArea.hidden   = mode !== 'table';
-    recallArea.hidden  = mode !== 'recall';
-    pictureArea.hidden = mode !== 'picture';
+    quizArea.hidden         = mode !== 'single';
+    tableArea.hidden        = mode !== 'table';
+    recallArea.hidden       = mode !== 'recall';
+    pictureArea.hidden      = mode !== 'picture';
+    if (conjugationArea) conjugationArea.hidden = mode !== 'conjugation';
 
     // Update active tab button
     document.querySelectorAll('.mode-tab').forEach(btn => {
