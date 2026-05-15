@@ -114,12 +114,19 @@
       <div id="conjModeControls" style="display:none">
         <span class="filter-section-label">Display</span>
         <div class="conj-display-toggle" id="conjDisplayToggle">
-          <button class="conj-toggle-btn" data-mode="spanish">Spanish</button>
+          <button class="conj-toggle-btn" data-mode="target">Spanish</button>
           <button class="conj-toggle-btn active" data-mode="both">Spanish + English</button>
           <button class="conj-toggle-btn" data-mode="english">English</button>
         </div>
         <span class="filter-section-label">Tense</span>
         <select id="conjTenseSelect"><!-- populated by JS based on language --></select>
+        <!-- Second row: pronoun form toggles (populated by JS) -->
+        <div id="conjPronounRow" class="conj-pronoun-row">
+          <span class="filter-section-label">Forms</span>
+          <button type="button" id="conjFormsAll">All</button>
+          <button type="button" id="conjFormsNone">None</button>
+          <div id="conjPronounToggles" class="conj-pronoun-toggles"></div>
+        </div>
       </div>
 
       <div id="domainFilterWrap">
