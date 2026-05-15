@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="/styles/app/theme-toggle.css"/>
 <link rel="stylesheet" href="/styles/app/buttons.css"/>
 <link rel="stylesheet" href="/styles/app/selects.css"/>
+<link rel="stylesheet" href="/styles/app/mode-tabs.css"/>
 <link rel="stylesheet" href="/styles/app/controls-bar.css"/>
 <link rel="stylesheet" href="/styles/app/class-filter.css"/>
 <link rel="stylesheet" href="/styles/app/domain-filter.css"/>
@@ -46,6 +47,14 @@
 
   <main>
     <button id="themeToggle" aria-label="Toggle theme">☾</button>
+
+    <!-- Mode Tabs -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="single">Single Word</button>
+      <button class="mode-tab" data-mode="table">Table</button>
+      <button class="mode-tab" data-mode="recall">Recall</button>
+    </div>
+
     <div id="controls">
       <div id="controls-top">
         <div class="control-group">
@@ -58,17 +67,8 @@
             <option value="french">French</option>
         </select>
 
-        
 
-        </div>
 
-        <div class="control-group">
-          <label>Mode</label>
-          <select id="modeSelect">
-            <option value="single">Single word</option>
-            <option value="table">Table</option>
-            <option value="recall">Recall</option>
-          </select>
         </div>
 
         <div class="control-group">
