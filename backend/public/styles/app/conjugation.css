@@ -58,6 +58,90 @@
 .conj-empty p        { margin-bottom: 0.5rem; }
 .conj-empty-hint     { font-size: 0.875rem; }
 
+/* ── Progress section ── */
+.conj-progress-section {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 12px);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.conj-prog-bars {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.conj-prog-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.conj-prog-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  width: 38px;
+  flex-shrink: 0;
+}
+
+.conj-prog-track {
+  flex: 1;
+  height: 8px;
+  background: var(--surface2);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.conj-prog-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover, var(--accent)));
+  border-radius: 99px;
+  transition: width 0.35s ease;
+}
+
+.conj-prog-stat {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  min-width: 110px;
+  text-align: right;
+}
+
+/* Give Up button */
+.conj-giveup-btn {
+  flex-shrink: 0;
+  padding: 0.45rem 1rem;
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.conj-giveup-btn:hover:not(:disabled) {
+  border-color: var(--incorrect, #d32f2f);
+  color: var(--incorrect, #d32f2f);
+}
+.conj-giveup-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* ── Cards grid: 2 columns ── */
 .conj-cards-grid {
   display: grid;
@@ -153,21 +237,34 @@
   background: var(--surface);
 }
 
-/* Correct + locked */
+/* User typed correctly — locked green */
 .conj-drill-input.correct,
 .conj-drill-input.correct:disabled {
   border-color: var(--correct);
   background: color-mix(in srgb, var(--correct) 10%, var(--surface));
   color: var(--correct);
   cursor: default;
-  opacity: 1;        /* override browser grey-out of disabled */
-  -webkit-text-fill-color: var(--correct);  /* Safari fix */
+  opacity: 1;
+  -webkit-text-fill-color: var(--correct);
+}
+
+/* Give Up revealed — locked red */
+.conj-drill-input.revealed,
+.conj-drill-input.revealed:disabled {
+  border-color: var(--incorrect, #d32f2f);
+  background: color-mix(in srgb, var(--incorrect, #d32f2f) 10%, var(--surface));
+  color: var(--incorrect, #d32f2f);
+  cursor: default;
+  opacity: 1;
+  -webkit-text-fill-color: var(--incorrect, #d32f2f);
 }
 
 /* ── Responsive ── */
 @media (max-width: 640px) {
-  .conj-cards-grid   { grid-template-columns: 1fr; }
-  #conjModeControls  { flex-wrap: wrap; }
-  .conj-pronoun      { width: 62px; font-size: 0.72rem; }
-  .conj-drill-input  { font-size: 0.82rem; }
+  .conj-cards-grid       { grid-template-columns: 1fr; }
+  #conjModeControls      { flex-wrap: wrap; }
+  .conj-pronoun          { width: 62px; font-size: 0.72rem; }
+  .conj-drill-input      { font-size: 0.82rem; }
+  .conj-progress-section { flex-wrap: wrap; }
+  .conj-prog-stat        { min-width: 90px; }
 }
