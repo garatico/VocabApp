@@ -39,6 +39,9 @@ export function createApp({ nodeEnv = process.env.NODE_ENV || 'development' } = 
   // Admin API (always mounted — guard is NODE_ENV check inside the route file)
   app.use('/api/admin', adminRoutes);
 
+  // SVG files from data/svgs/ (one level above backend/)
+  app.use('/svgs', express.static(path.join(projectRoot, '..', 'data', 'svgs')));
+
   // Static files + SPA fallback (skip in test — we only need the API)
   if (nodeEnv !== 'test') {
     app.use(express.static(path.join(projectRoot, 'public')));

@@ -12,6 +12,7 @@
 import Database from 'better-sqlite3';
 import path     from 'path';
 import { fileURLToPath } from 'url';
+import { getSvgUrl } from './svg-loader.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -119,6 +120,7 @@ export async function loadVocabFile(language) {
         notes:     row.notes    || '',
         glosses:   row.glosses  ? row.glosses.split(',').filter(Boolean)  : [],
         examples:  row.examples ? row.examples.split(',').filter(Boolean) : [],
+        svg_url:   getSvgUrl(lang, row.word),
         linguistic: {
           infinitive:   row.infinitive || null,
           reflexive:    Boolean(row.reflexive),

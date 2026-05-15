@@ -19,14 +19,15 @@ export function bindUIState() {
   });
 }
 
-export function bindModeSwitch({ quizArea, tableArea, recallArea }) {
+export function bindModeSwitch({ quizArea, tableArea, recallArea, pictureArea }) {
   let currentMode = 'table';
 
   function updateModeUI() {
     const mode = currentMode;
-    quizArea.hidden   = mode !== 'single';
-    tableArea.hidden  = mode !== 'table';
-    recallArea.hidden = mode !== 'recall';
+    quizArea.hidden    = mode !== 'single';
+    tableArea.hidden   = mode !== 'table';
+    recallArea.hidden  = mode !== 'recall';
+    pictureArea.hidden = mode !== 'picture';
 
     // Update active tab button
     document.querySelectorAll('.mode-tab').forEach(btn => {

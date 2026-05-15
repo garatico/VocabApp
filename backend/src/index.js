@@ -10,6 +10,7 @@ dotenv.config();
 
 import { createApp } from './app.js';
 import { preloadAll, closeDatabase } from './lib/vocab-loader.js';
+import { ensureSvgDirs } from './lib/svg-loader.js';
 
 const PORT     = process.env.API_PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -34,8 +35,11 @@ const server = app.listen(PORT, async () => {
   `);
 
   try {
+    ensureSvgDirs();
+    console.log('✅ SVG directories ready');
+
     await preloadAll();
-    console.log('\n✅ All vocabularies loaded from SQLite');
+    console.log('✅ All vocabularies loaded from SQLite');
   } catch (error) {
     console.error('\n⚠️  Warning: Could not pre-load vocabularies:', error.message);
     console.error('App will still start; vocabulary loads on first request.');

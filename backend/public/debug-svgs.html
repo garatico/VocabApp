@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SVG Debug</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #f5f5f5; }
+    .section { background: white; padding: 15px; margin: 10px 0; border-radius: 5px; border: 1px solid #ddd; }
+    .section h3 { margin-top: 0; color: #333; }
+    .pass { color: green; }
+    .fail { color: red; }
+    pre { background: #f0f0f0; padding: 10px; overflow-x: auto; border-radius: 3px; }
+    button { padding: 8px 15px; margin: 5px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>🔍 SVG Debugging Tool</h1>
+
+  <div class="section">
+    <h3>1. Check API Response</h3>
+    <button onclick="testAPI()">Test API (Spanish)</button>
+    <pre id="api-result">Waiting...</pre>
+  </div>
+
+  <div class="section">
+    <h3>2. Check SVG Files Directly</h3>
+    <button onclick="testSvgFiles()">Test SVG URLs</button>
+    <pre id="svg-result">Waiting...</pre>
+  </div>
+
+  <div class="section">
+    <h3>3. Check Picture Mode Data</h3>
+    <button onclick="testPictureMode()">Test Picture Mode</button>
+    <pre id="picture-result">Waiting...</pre>
+  </div>
+
+  <script>
+    async function testAPI() {
+      const res = document.getElementById('api-result');
+      res.textContent = 'Loading...';
+
+      try {
+        const response = await fetch('/api/vocab/spanish');
+        const data = await response.json();
+
+        const words = data.data || [];
+        const wordsWithSvg = words.filter(w => w.svg_url);
+
+        let output = `Total words: ${words.length}\n`;
+        output += `Words with svg_url: ${wordsWithSvg.length}\n\n`;
+        output += '=== First 10 Words ===\n';
+
+        words.slice(0, 10).forEach(w => {
+          output += `${w.word}: svg_url=${w.svg_url || 'NULL'}\n`;
+        });
+
+        if (wordsWithSvg.length > 0) {
+          output += '\n=== First Word with SVG ===\n';
+          output += JSON.stringify(wordsWithSvg[0], null, 2);
+        }
+
+        res.textContent = output;
+        res.className = wordsWithSvg.length > 0 ? 'pass' : 'fail';
+      } catch (err) {
+        res.textContent = `ERROR: ${err.message}`;
+        res.className = 'fail';
+      }
+    }
+
+    async function testSvgFiles() {
+      const res = document.getElementById('svg-result');
+      res.textContent = 'Loading...';
+
+      try {
+        // Test a few SVG files
+        const testFiles = [
+          '/svgs/spanish/manzana.svg',
+          '/svgs/spanish/gato.svg',
+          '/svgs/spanish/casa.svg',
+          '/svgs/spanish/perro.svg'
+        ];
+
+        let output = '';
+        for (const file of testFiles) {
+          const response = await fetch(file);
+          output += `${file}: ${response.ok ? '✓ Found' : `✗ ${response.status}`}\n`;
+        }
+
+        res.textContent = output;
+        res.className = output.includes('✓') ? 'pass' : 'fail';
+      } catch (err) {
+        res.textContent = `ERROR: ${err.message}`;
+        res.className = 'fail';
+      }
+    }
+
+    async function testPictureMode() {
+      const res = document.getElementById('picture-result');
+      res.textContent = 'Loading...';
+
+      try {
+        const response = await fetch('/api/vocab/spanish');
+        const data = await response.json();
+
+        const words = (data.data || []).filter(w => w.svg_url);
+
+        let output = `Words with SVG: ${words.length}\n\n`;
+
+        if (words.length === 0) {
+          output += 'No words with SVG found! This is the problem.\n';
+          output += 'Checking why...\n\n';
+
+          // Check first word
+          const firstWord = data.data?.[0];
+          if (firstWord) {
+            output += `First word: ${firstWord.word}\n`;
+            output += `Has svg_url field? ${firstWord.svg_url ? 'YES' : 'NO'}\n`;
+            output += `Full object: ${JSON.stringify(firstWord, null, 2)}\n`;
+          }
+        } else {
+          output += 'Sample words with SVG:\n\n';
+          words.slice(0, 5).forEach(w => {
+            output += `- ${w.word}: ${w.svg_url}\n`;
+          });
+
+          // Try loading first SVG
+          const firstSvg = words[0];
+          output += `\nTesting first SVG load...`;
+          const svgRes = await fetch(firstSvg.svg_url);
+          output += ` ${svgRes.ok ? '✓ Loads' : '✗ Error'}`;
+        }
+
+        res.textContent = output;
+        res.className = words.length > 0 ? 'pass' : 'fail';
+      } catch (err) {
+        res.textContent = `ERROR: ${err.message}`;
+        res.className = 'fail';
+      }
+    }
+
+    // Auto-test on load
+    window.addEventListener('load', () => {
+      console.log('Debug page loaded. Click buttons to test.');
+    });
+  </script>
+</body>
+</html>

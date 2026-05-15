@@ -25,6 +25,7 @@
 <link rel="stylesheet" href="/styles/app/recall.css"/>
 <link rel="stylesheet" href="/styles/app/summary.css"/>
 <link rel="stylesheet" href="/styles/app/table.css"/>
+<link rel="stylesheet" href="/styles/app/picture.css"/>
 <link rel="stylesheet" href="/styles/app/tooltip.css"/>
 <link rel="stylesheet" href="/styles/app/responsive.css"/>
 
@@ -53,6 +54,7 @@
       <button class="mode-tab active" data-mode="table">Table</button>
       <button class="mode-tab" data-mode="recall">Recall</button>
       <button class="mode-tab" data-mode="single">Single Word</button>
+      <button class="mode-tab" data-mode="picture">Picture Quiz</button>
     </div>
 
     <div id="controls">
@@ -284,6 +286,20 @@
 
       <div class="progressWrap">
         <div id="stats" class="small"></div>
+      </div>
+    </section>
+
+    <section id="pictureArea" hidden>
+      <div class="progressWrap">
+        <div class="progress"><div id="pictureBarTop" class="bar"></div></div>
+        <div id="pictureStatsTop" class="small"></div>
+      </div>
+
+      <div id="pictureWrap"></div>
+
+      <div class="progressWrap">
+        <div class="progress"><div id="pictureBarBottom" class="bar"></div></div>
+        <div id="pictureStatsBottom" class="small"></div>
       </div>
     </section>
 
