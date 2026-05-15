@@ -259,6 +259,69 @@
   -webkit-text-fill-color: var(--incorrect, #d32f2f);
 }
 
+/* ── Pronoun toggle row ── */
+.conj-pronoun-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.35rem;
+  margin-top: 0.2rem;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+/* All / None buttons in the Forms row */
+#conjFormsAll,
+#conjFormsNone {
+  font-size: 0.68rem;
+  padding: 0.15rem 0.45rem;
+  background: var(--surface2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+#conjFormsAll:hover,
+#conjFormsNone:hover { background: var(--border); }
+
+.conj-pronoun-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.conj-pronoun-toggle {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  border-radius: 99px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+
+.conj-pronoun-toggle:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.conj-pronoun-toggle.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* Hidden pronoun rows (toggled off) */
+.conj-row-hidden {
+  display: none;
+}
+
 /* ── Responsive ── */
 @media (max-width: 640px) {
   .conj-cards-grid       { grid-template-columns: 1fr; }

@@ -10,7 +10,7 @@ import { initTheme } from './theme-toggle.js';
 import { mountUI } from './ui.js';
 import { initializeFilterToggle } from './filter-toggle.js';
 import { renderPictureMode }                  from './picture-mode.js';
-import { populateConjTenses }                 from './conjugation-mode.js';
+import { initConjControls }                   from './conjugation-mode.js';
 
 initTheme();
 
@@ -41,7 +41,7 @@ const langMap = {
 const { updateModeUI } = bindModeSwitch({
   quizArea, tableArea, recallArea, pictureArea, conjugationArea,
   onActivate: {
-    conjugation: () => populateConjTenses(langSelect?.value || 'spanish'),
+    conjugation: () => initConjControls(langSelect?.value || 'spanish'),
   },
 });
 
@@ -107,7 +107,7 @@ if (langSelect) {
     // Keep tense select in sync if conjugation tab is active
     const activeTab = document.querySelector('.mode-tab.active');
     if (activeTab?.dataset.mode === 'conjugation') {
-      populateConjTenses(langSelect.value);
+      initConjControls(langSelect.value);
     }
   });
 }
