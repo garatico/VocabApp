@@ -1,13 +1,15 @@
 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="50" cy="25" r="8" fill="#FF1493"/>
-  <circle cx="70" cy="35" r="8" fill="#FF1493"/>
-  <circle cx="75" cy="55" r="8" fill="#FF1493"/>
-  <circle cx="65" cy="70" r="8" fill="#FF1493"/>
-  <circle cx="35" cy="70" r="8" fill="#FF1493"/>
-  <circle cx="25" cy="55" r="8" fill="#FF1493"/>
-  <circle cx="30" cy="35" r="8" fill="#FF1493"/>
-  <circle cx="50" cy="50" r="12" fill="#FFD700"/>
-  <line x1="50" y1="60" x2="50" y2="85" stroke="#228B22" stroke-width="3"/>
-  <ellipse cx="45" cy="75" rx="5" ry="8" fill="#228B22"/>
-  <ellipse cx="55" cy="70" rx="5" ry="8" fill="#228B22"/>
+  <ellipse cx="50" cy="93" rx="13" ry="3.5" fill="#000" fill-opacity="0.09"/>
+  <path d="M50 90 Q48 74 50 60" stroke="#388e3c" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M50 77 Q33 66 35 53 Q50 59 50 77Z" fill="#43a047"/>
+  <path d="M50 77 Q38 65 35 53" stroke="#2e7d32" stroke-width="0.8" fill="none" stroke-linecap="round" opacity="0.7"/>
+  <g transform="rotate(0 50 43)"><ellipse cx="50" cy="24" rx="8" ry="15" fill="#e91e63"/></g>
+  <g transform="rotate(60 50 43)"><ellipse cx="50" cy="24" rx="8" ry="15" fill="#e91e63"/></g>
+  <g transform="rotate(120 50 43)"><ellipse cx="50" cy="24" rx="8" ry="15" fill="#e91e63"/></g>
+  <g transform="rotate(180 50 43)"><ellipse cx="50" cy="24" rx="8" ry="15" fill="#e91e63"/></g>
+  <g transform="rotate(240 50 43)"><ellipse cx="50" cy="24" rx="8" ry="15" fill="#e91e63"/></g>
+  <g transform="rotate(300 50 43)"><ellipse cx="50" cy="24" rx="8" ry="15" fill="#e91e63"/></g>
+  <circle cx="50" cy="43" r="13" fill="#fdd835"/>
+  <path d="M50 30 A13 13 0 0 1 63 43 A13 13 0 0 1 50 56 L50 30Z" fill="#f9a825" opacity="0.45"/>
+  <ellipse cx="43" cy="38" rx="4" ry="5" fill="white" fill-opacity="0.28"/>
 </svg>
