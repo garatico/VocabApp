@@ -52,13 +52,14 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 #tableControls button:hover:not(:disabled) { background: var(--surface2); }
 
 /* ── Danger ── */
-#tableReset, #resetBtn {
+#tableReset, #resetBtn, #quizGiveUp {
   background: var(--danger-light) !important;
   color: var(--danger) !important;
   border-color: #e8a09a !important;
 }
 #tableReset:hover:not(:disabled),
-#resetBtn:hover:not(:disabled) { background: #f9dbd8 !important; }
+#resetBtn:hover:not(:disabled),
+#quizGiveUp:hover:not(:disabled) { background: #f9dbd8 !important; }
 
 /* ── Checkboxes ── */
 input[type="checkbox"] {

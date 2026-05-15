@@ -22,6 +22,7 @@ export function bindQuizControls({ getLang }) {
   const ttsBtn     = document.getElementById('ttsBtn');
   const btnCorrect = document.getElementById('btnCorrect');
   const btnSkip    = document.getElementById('btnSkip');
+  const giveUpBtn  = document.getElementById('quizGiveUp');
   const exportBtn  = document.getElementById('exportBtn');
   const resetBtn   = document.getElementById('resetBtn');
 
@@ -43,12 +44,16 @@ export function bindQuizControls({ getLang }) {
 
   function updateStats() {
     if (!quiz) return;
-    const s   = quiz.stats();
-    const pct = s.total ? Math.round((s.seen / s.total) * 100) : 0;
-    barEl.style.width   = pct + '%';
+    const s            = quiz.stats();
+    const uniqueCorrect = quiz.uniqueCorrectCount();
+    const pct          = s.total ? Math.round((uniqueCorrect / s.total) * 100) : 0;
+    barEl.style.width  = pct + '%';
     const statsText = `Seen ${s.seen}/${s.total} • Correct ${s.correct} • Incorrect ${s.incorrect}`;
     statsEl.textContent = statsText;
     if (statsTopEl) statsTopEl.textContent = statsText;
+
+    // Grey out Give Up once every word has been answered correctly at least once
+    if (giveUpBtn) giveUpBtn.disabled = (s.total > 0 && uniqueCorrect === s.total);
   }
 
   answerEl.addEventListener('input', () => {
@@ -79,6 +84,23 @@ export function bindQuizControls({ getLang }) {
     if (!quiz) return;
     quiz.next();
     showCurrent();
+  });
+
+  giveUpBtn?.addEventListener('click', () => {
+    if (!quiz) return;
+    const entry   = quiz.current();
+    const glosses = getGlosses(entry);
+    feedbackEl.textContent = `Answer: ${glosses.join(' / ')}`;
+    feedbackEl.style.color = 'var(--danger)';
+
+    // Count this as an incorrect attempt
+    const key = entry.word;
+    if (!quiz.state.seen[key]) quiz.state.seen[key] = { correct: 0, incorrect: 0 };
+    quiz.state.seen[key].incorrect++;
+    quiz.save();
+    updateStats();
+
+    setTimeout(() => { quiz.next(); showCurrent(); }, 900);
   });
 
   ttsBtn.addEventListener('click', () => {
