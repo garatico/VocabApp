@@ -43,6 +43,14 @@ function initializeDatabase() {
       db.exec('ALTER TABLE words ADD COLUMN emoji TEXT');
       console.log('  ✓ auto-migrated: added emoji column');
     }
+    if (!cols.includes('conjugations')) {
+      db.exec('ALTER TABLE words ADD COLUMN conjugations TEXT');
+      console.log('  ✓ auto-migrated: added conjugations column');
+    }
+    if (!cols.includes('updated_at')) {
+      db.exec('ALTER TABLE words ADD COLUMN updated_at TEXT');
+      console.log('  ✓ auto-migrated: added updated_at column');
+    }
   } catch (error) {
     console.error('Database connection error:', error);
     if (error.code === 'SQLITE_CANTOPEN') {
