@@ -8,6 +8,7 @@
 
 import express from 'express';
 import { getDb, clearCache } from '../lib/vocab-loader.js';
+import { getSvgUrl } from '../lib/svg-loader.js';
 
 const router = express.Router();
 
@@ -27,7 +28,7 @@ function validateLanguage(lang) {
   return SUPPORTED_LANGUAGES.includes(l) ? l : null;
 }
 
-function formatWord(row) {
+function formatWord(row, lang = 'spanish') {
   let domains = [];
   if (row.domains) {
     try { domains = JSON.parse(row.domains); } catch (_) {}
@@ -40,6 +41,7 @@ function formatWord(row) {
     notes:      row.notes      || '',
     glosses:    row.glosses_raw  ? row.glosses_raw.split('|||').filter(Boolean)  : [],
     examples:   row.examples_raw ? row.examples_raw.split('|||').filter(Boolean) : [],
+    svg_url:    getSvgUrl(lang, row.word),
     linguistic: {
       infinitive: row.infinitive || null,
       reflexive:  Boolean(row.reflexive),
@@ -118,7 +120,7 @@ router.get('/vocab', (req, res) => {
     res.json({
       success: true, language: lang, total,
       page, pages: Math.ceil(total / limit), limit,
-      words: rows.map(formatWord),
+      words: rows.map(row => formatWord(row, lang)),
     });
   } catch (err) {
     console.error('GET /admin/vocab:', err);
@@ -133,7 +135,7 @@ router.get('/vocab/:word', (req, res) => {
     const lang = validateLanguage(req.query.lang) || 'spanish';
     const row  = db.prepare(WORD_SELECT + ' WHERE w.word = ? AND w.language = ?').get(req.params.word, lang);
     if (!row) return res.status(404).json({ error: 'Word not found' });
-    res.json({ success: true, word: formatWord(row) });
+    res.json({ success: true, word: formatWord(row, lang) });
   } catch (err) {
     console.error('GET /admin/vocab/:word:', err);
     res.status(500).json({ error: err.message });
@@ -227,7 +229,7 @@ router.post('/vocab/:word', (req, res) => {
     clearCache(lang);
 
     const updated = db.prepare(WORD_SELECT + ' WHERE w.id = ?').get(wordId);
-    res.json({ success: true, message: 'Word updated', word: formatWord(updated) });
+    res.json({ success: true, message: 'Word updated', word: formatWord(updated, lang) });
   } catch (err) {
     console.error('POST /admin/vocab/:word:', err);
     res.status(500).json({ error: err.message });

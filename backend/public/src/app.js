@@ -9,6 +9,7 @@ import { loadWords }                          from './data-loader.js';
 import { initTheme } from './theme-toggle.js';
 import { mountUI } from './ui.js';
 import { initializeFilterToggle } from './filter-toggle.js';
+import { renderPictureMode }                  from './picture-mode.js';
 
 initTheme();
 
@@ -20,6 +21,8 @@ const tableArea      = document.getElementById('tableArea');
 const tableWrap      = document.getElementById('tableWrap');
 const recallArea     = document.getElementById('recallArea');
 const recallWrap     = document.getElementById('recallWrap');
+const pictureArea    = document.getElementById('pictureArea');
+const pictureWrap    = document.getElementById('pictureWrap');
 const recallTimer    = document.getElementById('recallTimer');
 const recallHardStop = document.getElementById('recallHardStop');
 const colsSelect     = document.getElementById('colsSelect');
@@ -32,7 +35,7 @@ const langMap = {
   french:     'fr'
 };
 
-const { updateModeUI } = bindModeSwitch({ quizArea, tableArea, recallArea });
+const { updateModeUI } = bindModeSwitch({ quizArea, tableArea, recallArea, pictureArea });
 
 const { showCurrent } = bindQuizControls({
   getLang: () => langMap[langSelect.value] || 'es',
@@ -85,7 +88,7 @@ bindStartHandler({
   onModeChange: updateModeUI,
   onSingleStart: showCurrent,
   getBaseList: () => currentBaseList,
-  elements: { startBtn, tableWrap, recallWrap, output },
+  elements: { startBtn, tableWrap, recallWrap, pictureWrap, output },
 });
 
 // Rebuild base list when structural filters change

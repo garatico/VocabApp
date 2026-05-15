@@ -2,6 +2,7 @@ import { Quiz }                          from './quiz.js';
 import { loadWords }                      from './data-loader.js';
 import { renderTableMode }                from './table-mode.js';
 import { renderRecallMode }               from './recall-mode.js';
+import { renderPictureMode }              from './picture-mode.js';
 import { setTableController }             from './table-controls.js';
 import { setQuiz }                        from './quiz-controls.js';
 import { filterWords }                    from './word-filters.js';
@@ -21,6 +22,7 @@ export function bindStartHandler({
     startBtn,
     tableWrap,
     recallWrap,
+    pictureWrap,
     modeSelect,
     output,
   }
@@ -100,6 +102,14 @@ export function bindStartHandler({
         });
 
         if (seconds > 0) controller.startTimer(seconds, isHardStop);
+      }
+
+      if (currentMode === 'picture') {
+        pictureWrap.innerHTML = '';
+        renderPictureMode({
+          words: list,
+          container: pictureWrap,
+        });
       }
 
       onModeChange();
