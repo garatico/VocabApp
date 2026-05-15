@@ -2,6 +2,17 @@
    CLASS FILTER — POS checkboxes row below the controls bar.
 ================================================================ */
 
+/* Shared small-caps label — used by POS, conjugation controls, domains, etc. */
+.filter-section-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-right: 0.15rem;
+  white-space: nowrap;
+}
+
 #classFilter {
   display: flex;
   flex-wrap: wrap;
