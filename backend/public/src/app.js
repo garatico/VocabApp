@@ -16,13 +16,15 @@ initTheme();
 const langSelect     = document.getElementById('langSelect');
 const sizeSelect     = document.getElementById('sizeSelect');
 const startBtn       = document.getElementById('startBtn');
-const quizArea       = document.getElementById('quizArea');
-const tableArea      = document.getElementById('tableArea');
-const tableWrap      = document.getElementById('tableWrap');
-const recallArea     = document.getElementById('recallArea');
-const recallWrap     = document.getElementById('recallWrap');
-const pictureArea    = document.getElementById('pictureArea');
-const pictureWrap    = document.getElementById('pictureWrap');
+const quizArea         = document.getElementById('quizArea');
+const tableArea        = document.getElementById('tableArea');
+const tableWrap        = document.getElementById('tableWrap');
+const recallArea       = document.getElementById('recallArea');
+const recallWrap       = document.getElementById('recallWrap');
+const pictureArea      = document.getElementById('pictureArea');
+const pictureWrap      = document.getElementById('pictureWrap');
+const conjugationArea  = document.getElementById('conjugationArea');
+const conjugationWrap  = document.getElementById('conjugationWrap');
 const recallTimer    = document.getElementById('recallTimer');
 const recallHardStop = document.getElementById('recallHardStop');
 const colsSelect     = document.getElementById('colsSelect');
@@ -35,7 +37,7 @@ const langMap = {
   french:     'fr'
 };
 
-const { updateModeUI } = bindModeSwitch({ quizArea, tableArea, recallArea, pictureArea });
+const { updateModeUI } = bindModeSwitch({ quizArea, tableArea, recallArea, pictureArea, conjugationArea });
 
 const { showCurrent } = bindQuizControls({
   getLang: () => langMap[langSelect.value] || 'es',
@@ -76,7 +78,8 @@ function getRecallTimerValue() {
 }
 
 bindStartHandler({
-  getLang: () => langSelect.value,
+  getLang: () => langMap[langSelect.value] || 'es',
+  getFullLang: () => langSelect.value,
   getSize: () => sizeSelect.value === 'custom'
                  ? Number(document.getElementById('sizeCustom').value) || 100
                  : Number(sizeSelect.value) || 100,
@@ -88,7 +91,7 @@ bindStartHandler({
   onModeChange: updateModeUI,
   onSingleStart: showCurrent,
   getBaseList: () => currentBaseList,
-  elements: { startBtn, tableWrap, recallWrap, pictureWrap, output },
+  elements: { startBtn, tableWrap, recallWrap, pictureWrap, conjugationWrap, output },
 });
 
 // Rebuild base list when structural filters change

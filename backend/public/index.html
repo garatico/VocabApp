@@ -26,6 +26,7 @@
 <link rel="stylesheet" href="/styles/app/summary.css"/>
 <link rel="stylesheet" href="/styles/app/table.css"/>
 <link rel="stylesheet" href="/styles/app/picture.css"/>
+<link rel="stylesheet" href="/styles/app/conjugation.css"/>
 <link rel="stylesheet" href="/styles/app/tooltip.css"/>
 <link rel="stylesheet" href="/styles/app/responsive.css"/>
 
@@ -55,6 +56,7 @@
       <button class="mode-tab" data-mode="recall">Recall</button>
       <button class="mode-tab" data-mode="single">Single Word</button>
       <button class="mode-tab" data-mode="picture">Picture Quiz</button>
+      <button class="mode-tab" data-mode="conjugation">Conjugation</button>
     </div>
 
     <div id="controls">
@@ -301,6 +303,10 @@
         <div class="progress"><div id="pictureBarBottom" class="bar"></div></div>
         <div id="pictureStatsBottom" class="small"></div>
       </div>
+    </section>
+
+    <section id="conjugationArea" hidden>
+      <div id="conjugationWrap"></div>
     </section>
 
     <pre id="output" class="output"></pre>
