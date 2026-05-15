@@ -10,6 +10,7 @@ import { initTheme } from './theme-toggle.js';
 import { mountUI } from './ui.js';
 import { initializeFilterToggle } from './filter-toggle.js';
 import { renderPictureMode }                  from './picture-mode.js';
+import { populateConjTenses }                 from './conjugation-mode.js';
 
 initTheme();
 
@@ -37,7 +38,12 @@ const langMap = {
   french:     'fr'
 };
 
-const { updateModeUI } = bindModeSwitch({ quizArea, tableArea, recallArea, pictureArea, conjugationArea });
+const { updateModeUI } = bindModeSwitch({
+  quizArea, tableArea, recallArea, pictureArea, conjugationArea,
+  onActivate: {
+    conjugation: () => populateConjTenses(langSelect?.value || 'spanish'),
+  },
+});
 
 const { showCurrent } = bindQuizControls({
   getLang: () => langMap[langSelect.value] || 'es',
@@ -96,7 +102,14 @@ bindStartHandler({
 
 // Rebuild base list when structural filters change
 if (langSelect) {
-  langSelect.addEventListener('change', () => loadAndBuildFilters(langSelect.value));
+  langSelect.addEventListener('change', () => {
+    loadAndBuildFilters(langSelect.value);
+    // Keep tense select in sync if conjugation tab is active
+    const activeTab = document.querySelector('.mode-tab.active');
+    if (activeTab?.dataset.mode === 'conjugation') {
+      populateConjTenses(langSelect.value);
+    }
+  });
 }
 if (sizeSelect) {
   sizeSelect.addEventListener('change', () => loadAndBuildFilters(langSelect.value));

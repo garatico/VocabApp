@@ -97,6 +97,7 @@
       </div>
 
       <div id="classFilter">
+        <span class="filter-section-label">Part of Speech</span>
         <button type="button" id="selectAllClasses">All</button>
         <button type="button" id="selectNoneClasses">None</button>
         <label><input type="checkbox" value="verb" checked> Verbs</label>
@@ -107,6 +108,18 @@
         <label><input type="checkbox" value="preposition" checked> Prepositions</label>
         <label><input type="checkbox" value="conjunction" checked> Conjunctions</label>
         <label><input type="checkbox" value="article" checked> Articles</label>
+      </div>
+
+      <!-- Conjugation-mode controls: shown only when Conjugation tab is active -->
+      <div id="conjModeControls" style="display:none">
+        <span class="filter-section-label">Display</span>
+        <div class="conj-display-toggle" id="conjDisplayToggle">
+          <button class="conj-toggle-btn" data-mode="spanish">Spanish</button>
+          <button class="conj-toggle-btn active" data-mode="both">Spanish + English</button>
+          <button class="conj-toggle-btn" data-mode="english">English</button>
+        </div>
+        <span class="filter-section-label">Tense</span>
+        <select id="conjTenseSelect"><!-- populated by JS based on language --></select>
       </div>
 
       <div id="domainFilterWrap">
