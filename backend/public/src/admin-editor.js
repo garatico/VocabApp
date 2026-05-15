@@ -227,6 +227,9 @@ function populateForm(word) {
   document.getElementById('editExamples').value =
     (word.examples || []).join('\n');
 
+  // Picture Quiz
+  document.getElementById('editEmoji').value = word.emoji || '';
+
   // Notes
   document.getElementById('editNotes').value = word.notes || '';
 }
@@ -258,6 +261,7 @@ function collectFormData() {
   return {
     display:    document.getElementById('editDisplay').value.trim(),
     pos:        document.getElementById('editPos').value || null,
+    emoji:      document.getElementById('editEmoji').value.trim() || null,
     difficulty: document.getElementById('editDifficulty').value || null,
     notes:      document.getElementById('editNotes').value.trim(),
     glosses:    glossLines,
