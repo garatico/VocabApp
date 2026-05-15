@@ -28,7 +28,7 @@ export function bindStartHandler({
   // Helper function to get current mode from tab buttons
   function getCurrentMode() {
     const activeTab = document.querySelector('.mode-tab.active');
-    return activeTab ? activeTab.dataset.mode : 'single';
+    return activeTab ? activeTab.dataset.mode : 'table';
   }
 
   startBtn.addEventListener('click', async () => {
@@ -69,11 +69,24 @@ export function bindStartHandler({
         const summary = document.getElementById('tableSummary');
         if (summary) { summary.style.display = 'none'; summary.innerHTML = ''; }
 
-        setTableController(renderTableMode({
+        const tableController = renderTableMode({
           words: list,
           container: tableWrap,
           columns: getCols({ max: 5, fallback: 3 }),
-        }));
+          onComplete: () => {
+            // Show final score
+            const correct = list.length;
+            const pct = 100;
+            if (summary) {
+              summary.style.display = 'flex';
+              summary.innerHTML = `
+                <span class="summary-correct">✓ ${correct} correct</span>
+                <span class="summary-pct">${pct}%</span>
+              `;
+            }
+          }
+        });
+        setTableController(tableController);
       }
 
       if (currentMode === 'recall') {

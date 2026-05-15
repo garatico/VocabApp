@@ -1,7 +1,7 @@
 import { isCorrect, getGlosses } from './utils.js';
 import { attachTooltips }        from './word-tooltip.js';
 
-export function renderTableMode({ words, container, columns = 3 }) {
+export function renderTableMode({ words, container, columns = 3, onComplete = null }) {
   if (!(container instanceof HTMLElement)) {
     throw new Error('renderTableMode: container element required');
   }
@@ -10,6 +10,31 @@ export function renderTableMode({ words, container, columns = 3 }) {
 
   function revealText(entry) {
     return entry.display ?? getGlosses(entry).join(' / ') ?? entry.word;
+  }
+
+  function checkAllComplete() {
+    const allInputs = Array.from(container.querySelectorAll('input[data-word]'));
+    return allInputs.length > 0 && allInputs.every(inp => inp.disabled);
+  }
+
+  function updateProgress() {
+    const allInputs = Array.from(container.querySelectorAll('input[data-word]'));
+    const correct = allInputs.filter(inp => inp.disabled).length;
+    const total = allInputs.length;
+    const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+
+    // Update progress bars and stats
+    const barTop = document.getElementById('tableBarTop');
+    const barBottom = document.getElementById('tableBarBottom');
+    const statsTop = document.getElementById('tableStatsTop');
+    const statsBottom = document.getElementById('tableStatsBottom');
+
+    const statsText = `${correct}/${total} answered`;
+
+    if (barTop) barTop.style.width = pct + '%';
+    if (barBottom) barBottom.style.width = pct + '%';
+    if (statsTop) statsTop.textContent = statsText;
+    if (statsBottom) statsBottom.textContent = statsText;
   }
 
   function buildTable() {
@@ -54,6 +79,14 @@ export function renderTableMode({ words, container, columns = 3 }) {
             const currentIdx = allInputs.indexOf(inp);
             const next       = allInputs.slice(currentIdx + 1).find(i => !i.disabled);
             if (next) next.focus();
+
+            // Update progress
+            updateProgress();
+
+            // Check if all words are now complete
+            if (checkAllComplete() && onComplete) {
+              setTimeout(() => onComplete(), 300);
+            }
           } else {
             inp.classList.remove('correct');
           }
@@ -69,6 +102,7 @@ export function renderTableMode({ words, container, columns = 3 }) {
 
     container.appendChild(table);
     attachTooltips(container);  // ← attach after table is in the DOM
+    updateProgress();  // Initialize progress bars and stats
   }
 
   function checkAll() {
@@ -104,5 +138,5 @@ export function renderTableMode({ words, container, columns = 3 }) {
   }
 
   buildTable();
-  return { checkAll, giveUp, buildTable, words };
+  return { checkAll, giveUp, buildTable, words, checkAllComplete };
 }

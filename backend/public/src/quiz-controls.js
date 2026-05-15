@@ -18,6 +18,7 @@ export function bindQuizControls({ getLang }) {
   const feedbackEl = document.getElementById('feedback');
   const barEl      = document.getElementById('bar');
   const statsEl    = document.getElementById('stats');
+  const statsTopEl = document.getElementById('statsTop');
   const ttsBtn     = document.getElementById('ttsBtn');
   const btnCorrect = document.getElementById('btnCorrect');
   const btnSkip    = document.getElementById('btnSkip');
@@ -45,7 +46,9 @@ export function bindQuizControls({ getLang }) {
     const s   = quiz.stats();
     const pct = s.total ? Math.round((s.seen / s.total) * 100) : 0;
     barEl.style.width   = pct + '%';
-    statsEl.textContent = `Seen ${s.seen}/${s.total} • Correct ${s.correct} • Incorrect ${s.incorrect}`;
+    const statsText = `Seen ${s.seen}/${s.total} • Correct ${s.correct} • Incorrect ${s.incorrect}`;
+    statsEl.textContent = statsText;
+    if (statsTopEl) statsTopEl.textContent = statsText;
   }
 
   answerEl.addEventListener('input', () => {

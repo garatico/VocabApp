@@ -20,7 +20,7 @@ export function bindUIState() {
 }
 
 export function bindModeSwitch({ quizArea, tableArea, recallArea }) {
-  let currentMode = 'single';
+  let currentMode = 'table';
 
   function updateModeUI() {
     const mode = currentMode;
