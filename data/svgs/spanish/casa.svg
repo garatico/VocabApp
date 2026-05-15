@@ -1,7 +1,16 @@
 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <polygon points="50,20 80,50 80,80 20,80 20,50" fill="#D2691E"/>
-  <polygon points="50,20 80,50 70,50" fill="#8B4513"/>
-  <rect x="35" y="55" width="15" height="20" fill="#87CEEB"/>
-  <rect x="50" y="55" width="15" height="20" fill="#87CEEB"/>
-  <rect x="30" y="70" width="20" height="15" fill="#654321"/>
+  <ellipse cx="50" cy="94" rx="29" ry="5" fill="#000" fill-opacity="0.09"/>
+  <rect x="16" y="53" width="68" height="39" rx="2" fill="#ffe0b2"/>
+  <rect x="62" y="53" width="22" height="39" rx="0" fill="#e65100" opacity="0.10"/>
+  <polygon points="50,14 8,56 92,56" fill="#e53935"/>
+  <polygon points="50,14 92,56 92,56" fill="#b71c1c" opacity="0.35"/>
+  <rect x="41" y="69" width="18" height="23" rx="2" fill="#5d4037"/>
+  <circle cx="55" cy="81" r="1.5" fill="#a1887f"/>
+  <rect x="20" y="61" width="15" height="13" rx="2" fill="#81d4fa"/>
+  <line x1="27.5" y1="61" x2="27.5" y2="74" stroke="#4fc3f7" stroke-width="1"/>
+  <line x1="20" y1="67.5" x2="35" y2="67.5" stroke="#4fc3f7" stroke-width="1"/>
+  <rect x="65" y="61" width="15" height="13" rx="2" fill="#81d4fa"/>
+  <line x1="72.5" y1="61" x2="72.5" y2="74" stroke="#4fc3f7" stroke-width="1"/>
+  <line x1="65" y1="67.5" x2="80" y2="67.5" stroke="#4fc3f7" stroke-width="1"/>
+  <rect x="66" y="24" width="9" height="19" rx="1" fill="#bf360c"/>
 </svg>

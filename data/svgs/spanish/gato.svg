@@ -1,10 +1,23 @@
 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="50" cy="55" r="30" fill="#FF8C00"/>
-  <circle cx="40" cy="35" r="8" fill="#FF8C00"/>
-  <circle cx="60" cy="35" r="8" fill="#FF8C00"/>
-  <polygon points="35,25 40,15 45,25" fill="#FF8C00"/>
-  <polygon points="55,25 60,15 65,25" fill="#FF8C00"/>
-  <circle cx="38" cy="52" r="3" fill="#000"/>
-  <circle cx="62" cy="52" r="3" fill="#000"/>
-  <ellipse cx="50" cy="65" rx="3" ry="4" fill="#000"/>
+  <ellipse cx="50" cy="92" rx="23" ry="5" fill="#000" fill-opacity="0.09"/>
+  <polygon points="18,34 24,12 38,36" fill="#ff8f00"/>
+  <polygon points="82,34 76,12 62,36" fill="#ff8f00"/>
+  <polygon points="21,32 26,15 36,33" fill="#ffd54f" opacity="0.6"/>
+  <polygon points="79,32 74,15 64,33" fill="#ffd54f" opacity="0.6"/>
+  <circle cx="50" cy="56" r="34" fill="#ff8f00"/>
+  <path d="M50 22 A34 34 0 0 1 84 56 A34 34 0 0 1 50 90 L50 22Z" fill="#e65100" opacity="0.28"/>
+  <ellipse cx="50" cy="69" rx="19" ry="13" fill="#ffe082"/>
+  <ellipse cx="34" cy="50" rx="7.5" ry="7" fill="#558b2f"/>
+  <ellipse cx="66" cy="50" rx="7.5" ry="7" fill="#558b2f"/>
+  <ellipse cx="34" cy="50" rx="3.5" ry="6" fill="#1a1a1a"/>
+  <ellipse cx="66" cy="50" rx="3.5" ry="6" fill="#1a1a1a"/>
+  <circle cx="32" cy="48" r="1.5" fill="white" fill-opacity="0.7"/>
+  <circle cx="64" cy="48" r="1.5" fill="white" fill-opacity="0.7"/>
+  <polygon points="50,63 46,67 54,67" fill="#f06292"/>
+  <path d="M46 67 Q50 72 54 67" stroke="#c2185b" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+  <line x1="12" y1="63" x2="35" y2="65" stroke="#e65100" stroke-width="0.8" opacity="0.6"/>
+  <line x1="12" y1="68" x2="35" y2="69" stroke="#e65100" stroke-width="0.8" opacity="0.6"/>
+  <line x1="88" y1="63" x2="65" y2="65" stroke="#e65100" stroke-width="0.8" opacity="0.6"/>
+  <line x1="88" y1="68" x2="65" y2="69" stroke="#e65100" stroke-width="0.8" opacity="0.6"/>
+  <ellipse cx="36" cy="37" rx="8" ry="11" fill="white" fill-opacity="0.16" transform="rotate(-20 36 37)"/>
 </svg>
