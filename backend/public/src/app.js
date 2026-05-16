@@ -1,16 +1,16 @@
-import { bindTableControls }                  from './table-controls.js';
-import { bindQuizControls }                   from './quiz-controls.js';
+import { bindTableControls }                  from './modes/table-controls.js';
+import { bindQuizControls }                   from './quiz/quiz-controls.js';
 import { bindStartHandler }                   from './start-handler.js';
-import { bindClassFilter, getSelectedClasses } from './class-filter.js';
-import { bindDomainFilter, getSelectedDomains } from './features/filters/domain-filter.js';
-import { bindUIState, bindModeSwitch }         from './ui-state.js';
-import { buildFilterUI }                      from './word-filters.js';
-import { loadWords }                          from './data-loader.js';
-import { initTheme } from './theme-toggle.js';
-import { mountUI } from './ui.js';
-import { initializeFilterToggle } from './filter-toggle.js';
-import { renderPictureMode }                  from './picture-mode.js';
-import { initConjControls }                   from './conjugation-mode.js';
+import { bindClassFilter, getSelectedClasses } from './filters/class-filter.js';
+import { bindDomainFilter, getSelectedDomains } from './filters/domain-filter.js';
+import { bindUIState, bindModeSwitch }         from './ui/ui-state.js';
+import { buildFilterUI }                      from './filters/word-filters.ts';
+import { loadWords }                          from './data/data-loader.ts';
+import { initTheme }                          from './ui/theme-toggle.ts';
+import { mountUI }                            from './ui/ui.js';
+import { initializeFilterToggle }             from './filters/filter-toggle.js';
+import { renderPictureMode }                  from './modes/picture-mode.js';
+import { initConjControls }                   from './modes/conjugation/controls.ts';
 
 initTheme();
 

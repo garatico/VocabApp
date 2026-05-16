@@ -1,66 +1,80 @@
 /**
- * word-filters.js
+ * word-filters.ts
  *
  * Renders filter controls populated dynamically from the loaded word list,
- * and exports a filterWords() function used by start-handler.js.
+ * and exports filterWords() used by start-handler.
  *
- * Filters available:
- *   - Domain        (from word.domains[])
- *   - CEFR band     (from word.frequency.band)
- *   - Difficulty    (from word.difficulty  1–5)
- *   - Register      (from word.linguistic.register)
+ * Filters:
+ *   - Domain        (word.domains[])
+ *   - CEFR band     (word.frequency.band)
+ *   - Difficulty    (word.difficulty  1–5)
+ *   - Register      (word.linguistic.register)
  */
 
-const CEFR_ORDER = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+import type { Word } from '../types.js';
+
+const CEFR_ORDER = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
+
+export interface FilterState {
+  domains:      string[];
+  bands:        string[];
+  difficulties: number[];
+  registers:    string[];
+}
+
+interface ActiveValues {
+  domains:      Set<string>;
+  bands:        Set<string>;
+  difficulties: Set<string>;
+  registers:    Set<string>;
+}
+
+interface CheckboxGroupOptions {
+  id:           string;
+  label:        string;
+  values:       (string | number)[];
+  labels?:      Record<string | number, string>;
+  activeValues?: Set<string>;
+}
 
 // Track which filter groups were actually rendered so filterWords() knows
 // which filters are active.
-const renderedFilters = new Set();
+const renderedFilters = new Set<string>();
 
-// ── Build filter UI from word data ────────────────────────────────────────────
-//
-// allWords  – the complete loaded list (used to populate checkbox options)
-// baseList  – the current sliced/class-filtered list (used to pre-check only
-//             the values present in the active set; defaults to allWords)
-// containerId – defaults to 'wordFilters'
+// ── Build filter UI ───────────────────────────────────────────────────────────
 
-export function buildFilterUI(allWords, baseList = allWords, containerId = 'wordFilters') {
+export function buildFilterUI(
+  allWords:    Word[],
+  baseList:    Word[] = allWords,
+  containerId: string = 'wordFilters',
+): void {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  // Get the content div if it exists (for the new collapsible structure)
   let contentDiv = document.getElementById('filterContent');
-  const hasHeader = !!contentDiv;
-
   if (!contentDiv) {
-    // Fallback for old structure without header - clear entire container
     container.innerHTML = '';
     contentDiv = container;
   } else {
-    // New structure - only clear the content div
     contentDiv.innerHTML = '';
   }
 
   renderedFilters.clear();
 
-  // Collect unique values across the FULL word list (for option population)
-  const domains      = new Set();
-  const bands        = new Set();
-  const difficulties = new Set();
-  const registers    = new Set();
+  const domains      = new Set<string>();
+  const bands        = new Set<string>();
+  const difficulties = new Set<number>();
+  const registers    = new Set<string>();
 
   allWords.forEach(w => {
-    (w.domains || []).forEach(d => domains.add(d));
+    (w.domains ?? []).forEach(d => domains.add(d));
     if (w.frequency?.band)      bands.add(w.frequency.band);
-    if (w.difficulty != null)   difficulties.add(w.difficulty);
+    if (w.difficulty != null)   difficulties.add(w.difficulty as unknown as number);
     if (w.linguistic?.register) registers.add(w.linguistic.register);
   });
 
-  // Collect values present in the active slice (for pre-checking checkboxes)
   const activeValues = getActiveValues(baseList);
 
-  // Always render a group if there's at least one value — even a single option
-  // keeps the UI stable and shows the user what's in their set.
   if (domains.size > 0) {
     contentDiv.appendChild(buildCheckboxGroup({
       id:           'filterDomain',
@@ -83,7 +97,7 @@ export function buildFilterUI(allWords, baseList = allWords, containerId = 'word
   }
 
   if (difficulties.size > 0) {
-    const labels = {
+    const labels: Record<number, string> = {
       1: '1 – Beginner',
       2: '2 – Elementary',
       3: '3 – Intermediate',
@@ -111,20 +125,18 @@ export function buildFilterUI(allWords, baseList = allWords, containerId = 'word
     renderedFilters.add('filterRegister');
   }
 
-  // Control visibility based on whether there are any filter groups
   const filterCount = contentDiv.querySelectorAll('.filter-group').length;
   container.style.display = filterCount > 0 ? '' : 'none';
 }
 
-// Returns sets of string values present in a given word list (for pre-checking)
-function getActiveValues(words) {
-  const domains      = new Set();
-  const bands        = new Set();
-  const difficulties = new Set();
-  const registers    = new Set();
+function getActiveValues(words: Word[]): ActiveValues {
+  const domains      = new Set<string>();
+  const bands        = new Set<string>();
+  const difficulties = new Set<string>();
+  const registers    = new Set<string>();
 
   words.forEach(w => {
-    (w.domains || []).forEach(d => domains.add(d));
+    (w.domains ?? []).forEach(d => domains.add(d));
     if (w.frequency?.band)      bands.add(w.frequency.band);
     if (w.difficulty != null)   difficulties.add(String(w.difficulty));
     if (w.linguistic?.register) registers.add(w.linguistic.register);
@@ -133,7 +145,13 @@ function getActiveValues(words) {
   return { domains, bands, difficulties, registers };
 }
 
-function buildCheckboxGroup({ id, label, values, labels = {}, activeValues = new Set() }) {
+function buildCheckboxGroup({
+  id,
+  label,
+  values,
+  labels = {},
+  activeValues = new Set<string>(),
+}: CheckboxGroupOptions): HTMLDivElement {
   const group = document.createElement('div');
   group.className = 'filter-group';
   group.dataset.filterId = id;
@@ -149,7 +167,8 @@ function buildCheckboxGroup({ id, label, values, labels = {}, activeValues = new
   allBtn.textContent = 'All';
   allBtn.className   = 'filter-toggle-btn';
   allBtn.addEventListener('click', () =>
-    group.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true)
+    group.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
+      .forEach(cb => { cb.checked = true; })
   );
 
   const noneBtn = document.createElement('button');
@@ -157,7 +176,8 @@ function buildCheckboxGroup({ id, label, values, labels = {}, activeValues = new
   noneBtn.textContent = 'None';
   noneBtn.className   = 'filter-toggle-btn';
   noneBtn.addEventListener('click', () =>
-    group.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false)
+    group.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
+      .forEach(cb => { cb.checked = false; })
   );
 
   heading.appendChild(labelEl);
@@ -172,8 +192,6 @@ function buildCheckboxGroup({ id, label, values, labels = {}, activeValues = new
     const cb = document.createElement('input');
     cb.type           = 'checkbox';
     cb.value          = String(val);
-    // Pre-check values present in the active slice.
-    // If activeValues is empty (edge case), default everything to checked.
     cb.checked        = activeValues.size === 0 || activeValues.has(String(val));
     cb.dataset.filter = id;
 
@@ -185,15 +203,15 @@ function buildCheckboxGroup({ id, label, values, labels = {}, activeValues = new
   return group;
 }
 
-// ── Read current filter state ─────────────────────────────────────────────────
+// ── Read filter state from the DOM ────────────────────────────────────────────
 
-function getChecked(filterId) {
+function getChecked(filterId: string): string[] {
   return Array.from(
-    document.querySelectorAll(`input[data-filter="${filterId}"]:checked`)
+    document.querySelectorAll<HTMLInputElement>(`input[data-filter="${filterId}"]:checked`)
   ).map(cb => cb.value);
 }
 
-export function getFilterState() {
+export function getFilterState(): FilterState {
   return {
     domains:      renderedFilters.has('filterDomain')
                     ? getChecked('filterDomain')
@@ -210,30 +228,26 @@ export function getFilterState() {
   };
 }
 
-// ── Apply filters to a word list ──────────────────────────────────────────────
+// ── Filter a word list against current UI state ───────────────────────────────
 
-export function filterWords(words) {
+export function filterWords(words: Word[]): Word[] {
   const { domains, bands, difficulties, registers } = getFilterState();
 
   return words.filter(w => {
     if (domains.length > 0) {
-      const wordDomains = w.domains || [];
+      const wordDomains = w.domains ?? [];
       if (!wordDomains.some(d => domains.includes(d))) return false;
     }
-
     if (bands.length > 0) {
-      if (!bands.includes(w.frequency?.band)) return false;
+      if (!w.frequency?.band || !bands.includes(w.frequency.band)) return false;
     }
-
     if (difficulties.length > 0) {
-      if (!difficulties.includes(w.difficulty)) return false;
+      if (!difficulties.includes(w.difficulty as unknown as number)) return false;
     }
-
     if (registers.length > 0) {
       const reg = w.linguistic?.register;
       if (!reg || !registers.includes(reg)) return false;
     }
-
     return true;
   });
 }

@@ -7,7 +7,7 @@ function normalise(str = '') {
     .trim()
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')  // strip diacritics
+    .replace(/[̀-ͯ]/g, '')  // strip diacritics
     .replace(/\s+/g, ' ');
 }
 

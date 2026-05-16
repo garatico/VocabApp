@@ -1,5 +1,5 @@
-import { isCorrect, getGlosses } from './utils.js';
-import { attachTooltips }        from './word-tooltip.js';
+import { isCorrect, getGlosses } from '../utils/utils.js';
+import { attachTooltips }        from '../utils/word-tooltip.js';
 
 export function renderTableMode({ words, container, columns = 3, onComplete = null }) {
   if (!(container instanceof HTMLElement)) {
@@ -23,7 +23,6 @@ export function renderTableMode({ words, container, columns = 3, onComplete = nu
     const total = allInputs.length;
     const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
 
-    // Update progress bars and stats
     const barTop = document.getElementById('tableBarTop');
     const barBottom = document.getElementById('tableBarBottom');
     const statsTop = document.getElementById('tableStatsTop');
@@ -36,7 +35,6 @@ export function renderTableMode({ words, container, columns = 3, onComplete = nu
     if (statsTop) statsTop.textContent = statsText;
     if (statsBottom) statsBottom.textContent = statsText;
 
-    // Grey out Give Up when all words are correct
     const giveUpBtn = document.getElementById('tableReset');
     if (giveUpBtn) giveUpBtn.disabled = (pct === 100);
   }
@@ -84,10 +82,8 @@ export function renderTableMode({ words, container, columns = 3, onComplete = nu
             const next       = allInputs.slice(currentIdx + 1).find(i => !i.disabled);
             if (next) next.focus();
 
-            // Update progress
             updateProgress();
 
-            // Check if all words are now complete
             if (checkAllComplete() && onComplete) {
               setTimeout(() => onComplete(), 300);
             }
@@ -105,8 +101,8 @@ export function renderTableMode({ words, container, columns = 3, onComplete = nu
     }
 
     container.appendChild(table);
-    attachTooltips(container);  // ← attach after table is in the DOM
-    updateProgress();  // Initialize progress bars and stats
+    attachTooltips(container);
+    updateProgress();
   }
 
   function checkAll() {
