@@ -30,3 +30,8 @@ desktop.ini
 dist/
 build/
 tmp/
+
+# data
+wikipedia_freq_corpora/
+
+
