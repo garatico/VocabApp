@@ -10,6 +10,7 @@ Produces one JSONL file per language containing:
 
   2. CORPUS entries (top --n open-class words from Wikipedia frequency data)
        • Only nouns, verbs and adjectives are extracted.
+       • Verbs receive conjugation tables via mlconjug3.
        • Closed-class words are covered by the hardcoded list above.
 
 Output  →  data/wikicorpus_{lang}.jsonl
@@ -44,13 +45,10 @@ from typing import Dict, List, Optional, Tuple
 warnings.filterwarnings('ignore', message='.*InconsistentVersionWarning.*')
 warnings.filterwarnings('ignore', message='.*Trying to unpickle estimator.*')
 
-# ── Hardcoded word / verb data ─────────────────────────────────────────────────
 # All function words and irregular verb lists live in hardcoded_data.py.
-# Edit that file to add/remove words without touching this pipeline script.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from hardcoded_data import LANGUAGE_DATA   # noqa: E402
 
-# ── Optional runtime deps ──────────────────────────────────────────────────────
 try:
     import spacy
     SPACY_AVAILABLE = True
@@ -106,7 +104,6 @@ LANG_NAMES: Dict[str, str] = {
     'zho': 'chinese',
 }
 
-# mlconjug3 language codes
 MLCONJUG3_LANG: Dict[str, str] = {
     'spa': 'es',
     'fra': 'fr',
@@ -116,33 +113,31 @@ MLCONJUG3_LANG: Dict[str, str] = {
 
 # Map app tense names to (mlconjug3 mood, mlconjug3 tense label).
 #
-# If conjugations are missing, run debug_conjugations.py to print the
-# exact key names your installed mlconjug3 version uses, then update here.
+# If conjugations are wrong, run debug_conjugations.py to see the exact key
+# names your installed mlconjug3 version uses, then update here.
 #
-# Key things to verify:
-#   Spanish  'Condicional' is its own MOOD (not under 'Indicativo')
-#   Italian  'Condizionale' is its own MOOD
-#   French   'Conditionnel' is its own MOOD
-#   Portuguese conditional varies by database -- check debug output
+# Lookup behaviour in build_conjugations():
+#   1. mood_data.get(tense_label)              — exact match (French, old v3)
+#   2. mood_data.get(f"{mood} {tense_label}")  — mood-prefixed (v4 for spa/ita/por)
 #
-# mlconjug3 >= 4.0 changed tense key format: tense keys inside each mood dict
-# are now prefixed with the mood name (e.g. 'Indicativo Presente' instead of
-# just 'Presente').  build_conjugations() tries both bare and mood-prefixed
-# variants automatically, so these entries only need the bare tense name.
-#
-# Additionally some tense names were renamed between versions:
-#   spa/por  'Pretérito Indefinido' -> 'pretérito perfecto simple'
-#   spa/por  conditional tense label -> same as mood name ('Condicional')
-#   ita      all tense labels are lowercase in v4
+# mlconjug3 4.x notes:
+#   spa/ita  — has BOTH uppercase (broken, 1-form) and lowercase (correct, 6-form)
+#              keys; use lowercase tense labels so the prefixed lookup finds the
+#              correct lowercase key.
+#   por      — lowercase indicativo tenses; conditional key is
+#              'Futuro do Pretérito Simples'; subjunctive mood is 'Conjuntivo'
+#              with keys like 'Conjuntivo  Subjuntivo Presente' (2 spaces —
+#              achieved via a leading space in the tense_label below).
+#   fra      — still uses old bare key format (e.g. 'Présent') — exact match works.
 TENSE_MAP: Dict[str, Dict[str, Tuple[str, str]]] = {
     'spa': {
-        'present':     ('Indicativo',  'Presente'),
+        'present':     ('Indicativo',  'presente'),
         'preterite':   ('Indicativo',  'pretérito perfecto simple'),
-        'imperfect':   ('Indicativo',  'Pretérito imperfecto'),
-        'future':      ('Indicativo',  'Futuro'),
-        'conditional': ('Condicional', 'Condicional'),
-        'subjunctive': ('Subjuntivo',  'Presente'),
-        'imperative':  ('Imperativo',  'Afirmativo'),
+        'imperfect':   ('Indicativo',  'pretérito imperfecto'),
+        'future':      ('Indicativo',  'futuro'),
+        'conditional': ('Condicional', 'Condicional'),   # key: 'Condicional Condicional'
+        'subjunctive': ('Subjuntivo',  'presente'),
+        'imperative':  ('Imperativo',  'Afirmativo'),    # key: 'Imperativo Afirmativo'
     },
     'fra': {
         'present':     ('Indicatif',    'Présent'),
@@ -154,29 +149,29 @@ TENSE_MAP: Dict[str, Dict[str, Tuple[str, str]]] = {
         'imperative':  ('Impératif',    'Présent'),
     },
     'ita': {
-        # mlconjug3 4.x uses lowercase tense labels for Italian:
-        #   'Indicativo presente', 'Indicativo passato remoto', etc.
-        # The bare label + mood-prefix fallback in build_conjugations() resolves correctly.
+        # All lowercase in mlconjug3 4.x — prefixed lookup builds correct key.
         'present':     ('Indicativo',   'presente'),
         'preterite':   ('Indicativo',   'passato remoto'),
         'imperfect':   ('Indicativo',   'imperfetto'),
         'future':      ('Indicativo',   'futuro semplice'),
         'conditional': ('Condizionale', 'presente'),
         'subjunctive': ('Congiuntivo',  'presente'),
-        'imperative':  ('Imperativo',   'Affermativo'),
+        'imperative':  ('Imperativo',   'Affermativo'),  # key: 'Imperativo Affermativo'
     },
     'por': {
-        'present':     ('Indicativo',  'Presente'),
-        'preterite':   ('Indicativo',  'Pretérito Perfeito'),
-        'imperfect':   ('Indicativo',  'Pretérito Imperfeito'),
-        'future':      ('Indicativo',  'Futuro do Presente'),
-        'conditional': ('Condicional', 'Condicional'),
-        'subjunctive': ('Subjuntivo',  'Presente'),
+        # Indicativo tenses are lowercase. Subjunctive mood is 'Conjuntivo';
+        # the tense key has a double space: 'Conjuntivo  Subjuntivo Presente',
+        # produced by the leading space in the tense_label below.
+        'present':     ('Indicativo',  'presente'),
+        'preterite':   ('Indicativo',  'pretérito perfeito simples'),
+        'imperfect':   ('Indicativo',  'pretérito imperfeito'),
+        'future':      ('Indicativo',  'Futuro do Presente Simples'),
+        'conditional': ('Condicional', 'Futuro do Pretérito Simples'),
+        'subjunctive': ('Conjuntivo',  ' Subjuntivo Presente'),   # leading space intentional
         'imperative':  ('Imperativo',  'Afirmativo'),
     },
 }
 
-# Corpus: only these POS groups are extracted
 OPEN_CLASS_POS = {'noun', 'verb', 'adjective'}
 
 POS_GROUPS: Dict[str, str] = {
@@ -289,23 +284,18 @@ def get_conjugator(lang_code: str):
 def _extract_conjug_info(verb) -> Optional[dict]:
     """
     Pull the mood->tense->forms dict out of a mlconjug3 Verb object.
-    Handles API differences across mlconjug3 versions:
-      - v2/v3: verb.conjug_info  (dict-of-dicts-of-dicts)
-      - v3+:   verb.iterate()    (yields (mood, tense, person, form) tuples)
+    Handles API differences across mlconjug3 versions.
     Returns None if nothing usable is found.
     """
-    # Preferred: conjug_info as a nested dict
     info = getattr(verb, 'conjug_info', None)
     if isinstance(info, dict) and info:
         return info
 
-    # Fallback: reconstruct from iterate() if available (mlconjug3 >= 3.x)
     iterate_fn = getattr(verb, 'iterate', None)
     if callable(iterate_fn):
         try:
             info = {}
             for item in iterate_fn():
-                # item may be (mood, tense, person, form) or a namedtuple
                 if hasattr(item, '_asdict'):
                     d = item._asdict()
                     mood, tense, person, form = (
@@ -330,10 +320,10 @@ def build_conjugations(infinitive: str, lang_code: str,
                        capture_error: bool = False):
     """
     Return a conjugation dict keyed by app tense name, or None on failure.
-    Each value is a list of forms in pronoun order.
+    Each value is a list of forms in person order (1s 2s 3s 1p 2p 3p).
 
-    If capture_error=True and conjugation fails entirely, returns
-    (None, error_string) so the caller can surface the first failure.
+    If capture_error=True returns (None, error_string) on failure so the
+    caller can surface diagnostic information.
     """
     conjugator = get_conjugator(lang_code)
     if not conjugator:
@@ -369,8 +359,8 @@ def build_conjugations(infinitive: str, lang_code: str,
                 result[app_tense] = None
                 continue
 
-            # Try bare label first (mlconjug3 v3 / French), then mood-prefixed
-            # variant (mlconjug3 >= 4.0: keys look like 'Indicativo Presente').
+            # Try bare label first (French / exact match), then mood-prefixed
+            # (mlconjug3 >= 4.0 uses keys like 'Indicativo presente').
             tense_data = (
                 mood_data.get(tense_label)
                 or mood_data.get(f"{mood} {tense_label}")
@@ -382,10 +372,15 @@ def build_conjugations(infinitive: str, lang_code: str,
                 result[app_tense] = None
                 continue
 
-            try:
-                result[app_tense] = list(tense_data.values())
-            except AttributeError:
-                result[app_tense] = list(tense_data) if tense_data else None
+            # Validate the result has meaningful content (not a single-form
+            # garbage entry from the broken uppercase keys in mlconjug3 4.x).
+            raw = dict(tense_data)
+            forms = [v for v in raw.values() if v and v not in ('-', '')]
+            if not forms:
+                result[app_tense] = None
+                continue
+
+            result[app_tense] = list(raw.values())
 
         return result if any(v is not None for v in result.values()) else None
 
@@ -475,7 +470,8 @@ def read_top_n(filepath: Path, n: int) -> List[Tuple[int, str, int]]:
 
 
 def build_corpus_entries(rows: List[Tuple[int, str, int]],
-                         lang_code: str, nlp) -> List[dict]:
+                         lang_code: str, nlp,
+                         verbose: bool = False) -> List[dict]:
     lemma_map: Dict[str, dict] = {}
 
     for _, word, count in rows:
@@ -497,7 +493,7 @@ def build_corpus_entries(rows: List[Tuple[int, str, int]],
 
     sorted_items = sorted(lemma_map.items(), key=lambda x: x[1]['_count'], reverse=True)
 
-    return [
+    entries = [
         corpus_entry(
             word=lemma,
             pos_group=data['_pos_group'],
@@ -507,6 +503,23 @@ def build_corpus_entries(rows: List[Tuple[int, str, int]],
         )
         for rank_clean, (lemma, data) in enumerate(sorted_items, start=1)
     ]
+
+    # Add conjugations for corpus verbs.
+    if MLCONJUG3_AVAILABLE and lang_code in TENSE_MAP:
+        verbs = [e for e in entries if e['pos'] == 'verb']
+        conj_ok = conj_fail = 0
+        for entry in verbs:
+            inf = entry['linguistic']['infinitive']
+            conj = build_conjugations(inf, lang_code, verbose=verbose)
+            if conj:
+                entry['linguistic']['conjugations'] = conj
+                conj_ok += 1
+            else:
+                conj_fail += 1
+        print(f"  Corpus verbs : {len(verbs)} total — "
+              f"{conj_ok} conjugated, {conj_fail} skipped")
+
+    return entries
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -544,11 +557,10 @@ def main(langs: List[str], n: int, verbose: bool) -> None:
 
         print(f"-- {lang} " + "-" * 50)
 
-        # 1. Deep-copy so conjugation mutations don't bleed across runs
         fn_words  = copy.deepcopy(data['function_words'])
         irr_verbs = copy.deepcopy(data['irregular_verbs'])
 
-        # 2. Fill conjugations for irregular verbs via mlconjug3
+        # Fill conjugations for hardcoded irregular verbs
         if MLCONJUG3_AVAILABLE:
             print(f"  Conjugating {len(irr_verbs)} irregular verbs "
                   f"(mlconjug3 {MLCONJUG3_VERSION}) ...")
@@ -559,7 +571,7 @@ def main(langs: List[str], n: int, verbose: bool) -> None:
                     inf  = entry['linguistic']['infinitive']
                     conj = build_conjugations(inf, lang, verbose=verbose,
                                               capture_error=(first_error is None))
-                    if isinstance(conj, tuple):      # (None, error_msg)
+                    if isinstance(conj, tuple):
                         conj, first_error = conj
                     if conj:
                         entry['linguistic']['conjugations'] = conj
@@ -569,8 +581,6 @@ def main(langs: List[str], n: int, verbose: bool) -> None:
                         if verbose:
                             print(f"    No conjugations produced for '{inf}'")
             except Exception as exc:
-                # Should never reach here — build_conjugations catches its own
-                # exceptions — but belt-and-suspenders so files always get written.
                 first_error = f"Unexpected loop error: {type(exc).__name__}: {exc}"
                 print(f"  ERROR during conjugation loop: {first_error}")
 
@@ -578,11 +588,6 @@ def main(langs: List[str], n: int, verbose: bool) -> None:
             if conj_fail and not verbose:
                 if first_error:
                     msg += f"\n  First error  : {first_error}"
-                    if 'conjug_info' in first_error or 'attr' in first_error.lower():
-                        msg += "\n  Hint: mlconjug3 API changed -- run debug_conjugations.py"
-                    else:
-                        msg += "\n  Hint: run with --verbose or debug_conjugations.py"
-                else:
                     msg += "\n  Hint: run with --verbose or debug_conjugations.py"
             print(msg)
         else:
@@ -592,7 +597,7 @@ def main(langs: List[str], n: int, verbose: bool) -> None:
         print(f"  Hardcoded  : {len(fn_words)} function words "
               f"+ {len(irr_verbs)} irregular verbs = {len(hardcoded_entries)} total")
 
-        # 3. Corpus entries
+        # Corpus entries
         corpus_entries_out: List[dict] = []
         if n == 0:
             print("  Corpus     : skipped (--n 0)")
@@ -617,12 +622,13 @@ def main(langs: List[str], n: int, verbose: bool) -> None:
                         print(f"  Corpus src : {words_file}")
                         rows = read_top_n(words_file, n)
                         print(f"  Tokens read: {len(rows):,}")
-                        corpus_entries_out = build_corpus_entries(rows, lang, nlp)
+                        corpus_entries_out = build_corpus_entries(
+                            rows, lang, nlp, verbose=verbose
+                        )
                         print(f"  Corpus     : {len(corpus_entries_out):,} entries after filtering")
                     except FileNotFoundError as e:
                         print(f"  Corpus     : skipped ({e})")
 
-        # 4. Combine and write
         all_entries = hardcoded_entries + corpus_entries_out
         outpath     = OUTPUT_DIR / f'wikicorpus_{lang}.jsonl'
         write_jsonl(outpath, all_entries)
