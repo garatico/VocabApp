@@ -133,6 +133,18 @@ if (classFilter) {
   bindDomainFilter();
   bindTableControls();
   initializeFilterToggle();
+
+  // Wire up the Picture Quiz sub-mode toggle (Type / Click)
+  const pictureSubMode = document.getElementById('pictureSubMode');
+  if (pictureSubMode) {
+    pictureSubMode.addEventListener('click', e => {
+      const btn = e.target.closest('.conj-toggle-btn');
+      if (!btn) return;
+      pictureSubMode.querySelectorAll('.conj-toggle-btn')
+        .forEach(b => b.classList.toggle('active', b === btn));
+    });
+  }
+
   updateModeUI();
   await loadAndBuildFilters(langSelect?.value ?? 'spanish');
 })();

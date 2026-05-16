@@ -32,10 +32,12 @@ export function bindModeSwitch({ quizArea, tableArea, recallArea, pictureArea, c
 
     // Show conjugation controls / hide POS filter in conjugation mode.
     // Use style.display — the hidden attribute is overridden by explicit display:flex in CSS.
-    const classFilter      = document.getElementById('classFilter');
-    const conjModeControls = document.getElementById('conjModeControls');
-    if (classFilter)      classFilter.style.display      = mode === 'conjugation' ? 'none' : '';
-    if (conjModeControls) conjModeControls.style.display = mode === 'conjugation' ? ''     : 'none';
+    const classFilter         = document.getElementById('classFilter');
+    const conjModeControls    = document.getElementById('conjModeControls');
+    const pictureModeControls = document.getElementById('pictureModeControls');
+    if (classFilter)         classFilter.style.display         = mode === 'conjugation' ? 'none' : '';
+    if (conjModeControls)    conjModeControls.style.display    = mode === 'conjugation' ? ''     : 'none';
+    if (pictureModeControls) pictureModeControls.style.display = mode === 'picture'     ? ''     : 'none';
 
     // Update active tab button
     document.querySelectorAll('.mode-tab').forEach(btn => {

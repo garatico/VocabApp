@@ -109,10 +109,13 @@ export function bindStartHandler({
 
       if (currentMode === 'picture') {
         pictureWrap.innerHTML = '';
+        const pictureSubMode = document.getElementById('pictureSubMode');
+        const pictureMode = pictureSubMode?.querySelector('.conj-toggle-btn.active')?.dataset.mode ?? 'type';
         renderPictureMode({
           words: list,
           container: pictureWrap,
           lang: getFullLang ? getFullLang() : 'spanish',
+          mode: pictureMode,
         });
       }
 
