@@ -102,6 +102,7 @@ export function bindStartHandler({
           words: list,
           container: recallWrap,
           columns: getCols({ max: 3, fallback: 1 }),
+          lang: getFullLang ? getFullLang() : 'spanish',
         });
 
         if (seconds > 0) controller.startTimer(seconds, isHardStop);

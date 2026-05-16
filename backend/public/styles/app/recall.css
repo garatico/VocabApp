@@ -48,9 +48,9 @@
 
 .recall-input {
   font-family: 'DM Mono', monospace;
-  font-size: 1rem;
+  font-size: calc(1rem * var(--rs, 1));
   flex: 1;
-  padding: 0.6rem 0.9rem;
+  padding: calc(0.6rem * var(--rs, 1)) calc(0.9rem * var(--rs, 1));
   border: 1.5px solid var(--border-strong);
   border-radius: var(--radius-sm);
   background: var(--surface);
@@ -77,31 +77,32 @@
   width: 100%;
   border-collapse: collapse;
   font-family: 'DM Mono', monospace;
-  font-size: 0.82rem;
+  font-size: calc(0.82rem * var(--rs, 1));
 }
 .recall-table tr { border-bottom: 1px solid var(--border); }
 .recall-table tr:last-child { border-bottom: none; }
 
 .recall-rank {
-  width: 3rem;
+  width: calc(3rem * var(--rs, 1));
   padding: 3px 6px;
   color: var(--text-muted);
   text-align: right;
   vertical-align: middle;
-  font-size: 0.72rem;
+  font-size: calc(0.72rem * var(--rs, 1));
   user-select: none;
 }
 
 .recall-cell {
-  padding: 3px 8px;
+  padding: calc(3px * var(--rs, 1)) calc(8px * var(--rs, 1));
   vertical-align: middle;
   min-height: 22px;
-  min-width: 6rem;
+  min-width: calc(6rem * var(--rs, 1));
   border-left: 1px solid var(--border);
   color: transparent;
   background: var(--surface2);
   border-radius: 0 3px 3px 0;
   transition: all 0.2s ease;
+  cursor: default;
 }
 .recall-cell.recalled {
   background: var(--correct-light);
@@ -117,6 +118,59 @@
 }
 
 .recall-grid-wrap { display: grid; gap: 0.75rem; }
+
+/* ── Size slider ── */
+.recall-size-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  max-width: 180px;
+  margin: 0 0.75rem;
+}
+.recall-size-icon {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  user-select: none;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.recall-size-icon.lg {
+  font-size: 1.1rem;
+}
+.recall-size-slider {
+  flex: 1;
+  accent-color: var(--accent, #3d6b4f);
+  cursor: pointer;
+  height: 6px;
+  /* Larger thumb across all browsers */
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 3px;
+  background: var(--border, #d1d5db);
+  outline: none;
+}
+.recall-size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent, #3d6b4f);
+  cursor: pointer;
+  border: 2px solid var(--surface, #fff);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.recall-size-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent, #3d6b4f);
+  cursor: pointer;
+  border: 2px solid var(--surface, #fff);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
 
 /* ── Responsive ── */
 @media (max-width: 768px) {

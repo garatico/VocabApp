@@ -1,6 +1,11 @@
-import { isCorrect } from '../utils/utils.js';
+import { isCorrect }     from '../utils/utils.js';
+import { attachTooltips } from '../utils/word-tooltip.js';
 
-export function renderRecallMode({ words, container, columns = 1 }) {
+const LANG_LABELS = {
+  spanish: 'Spanish', portuguese: 'Portuguese', italian: 'Italian', french: 'French',
+};
+
+export function renderRecallMode({ words, container, columns = 1, lang = 'spanish' }) {
   container.innerHTML = '';
 
   const cols = Math.max(1, Math.min(3, Number(columns) || 1));
@@ -27,15 +32,45 @@ export function renderRecallMode({ words, container, columns = 1 }) {
   giveUpBtn.textContent = 'Give Up';
   giveUpBtn.className   = 'recall-giveup-btn';
 
-  timerRow.appendChild(timerDisplay);
-  timerRow.appendChild(giveUpBtn);
+  // ── Size slider ──────────────────────────────────────────
+  const sliderWrap = document.createElement('div');
+  sliderWrap.className = 'recall-size-wrap';
+
+  const iconSm = document.createElement('span');
+  iconSm.className   = 'recall-size-icon';
+  iconSm.textContent = 'A';
+
+  const sizeSlider = document.createElement('input');
+  sizeSlider.type      = 'range';
+  sizeSlider.min       = '0';
+  sizeSlider.max       = '3';
+  sizeSlider.step      = '1';
+  sizeSlider.value     = '0';
+  sizeSlider.className = 'recall-size-slider';
+  sizeSlider.setAttribute('aria-label', 'Text size');
+
+  // 4 stops: 1.15 → 1.32 → 1.48 → 1.65
+  function applyScale(v) {
+    const scale = 1.15 + (v / 3) * 0.5;
+    wrap.style.setProperty('--rs', scale.toFixed(3));
+  }
+  sizeSlider.addEventListener('input', () => applyScale(Number(sizeSlider.value)));
+  applyScale(0); // apply on first render
+
+  const iconLg = document.createElement('span');
+  iconLg.className   = 'recall-size-icon lg';
+  iconLg.textContent = 'A';
+
+  sliderWrap.append(iconSm, sizeSlider, iconLg);
+
+  timerRow.append(timerDisplay, sliderWrap, giveUpBtn);
 
   const inputRow = document.createElement('div');
   inputRow.className = 'recall-input-row';
 
   const inp = document.createElement('input');
   inp.type         = 'text';
-  inp.placeholder  = 'Type a Spanish word…';
+  inp.placeholder  = `Type a ${LANG_LABELS[lang] || 'word'}…`;
   inp.className    = 'recall-input';
   inp.autocomplete = 'off';
 
@@ -53,35 +88,43 @@ export function renderRecallMode({ words, container, columns = 1 }) {
   gridWrap.className = 'recall-grid-wrap';
   gridWrap.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
-  const rowsPerCol   = Math.ceil(sorted.length / cols);
-  const columnArrays = Array.from({ length: cols }, (_, ci) =>
-    sorted.slice(ci * rowsPerCol, (ci + 1) * rowsPerCol)
-  );
+  // One table per column — keeps CSS grid stretching (each table fills 1fr).
+  // Items are interleaved so the visual read order is row-major:
+  //   col 0 gets sorted[0], sorted[cols], sorted[2*cols], …
+  //   col 1 gets sorted[1], sorted[cols+1], sorted[2*cols+1], …
+  // → reading left-to-right across columns: 1,2,3 / 4,5,6 / …
+  const totalRows = Math.ceil(sorted.length / cols);
 
-  columnArrays.forEach(colWords => {
+  for (let ci = 0; ci < cols; ci++) {
     const table = document.createElement('table');
     table.className = 'recall-table';
 
-    colWords.forEach((w, i) => {
+    for (let row = 0; row < totalRows; row++) {
+      const idx = row * cols + ci;
+      if (idx >= sorted.length) break;
+
+      const w = sorted[idx];
       const tr = document.createElement('tr');
-      tr.dataset.word = w.word;
 
       const tdNum = document.createElement('td');
       tdNum.className   = 'recall-rank';
-      tdNum.textContent = (w.rank || i + 1) + '.';
+      tdNum.textContent = (w.rank || idx + 1) + '.';
 
       const tdWord = document.createElement('td');
-      tdWord.className    = 'recall-cell';
-      tdWord.dataset.word = w.word;
-      tdWord.textContent  = '';
+      tdWord.className        = 'recall-cell';
+      tdWord.dataset.word     = w.word;
+      tdWord.dataset.wordJson = JSON.stringify(w);
+      tdWord.textContent      = '';
 
       tr.appendChild(tdNum);
       tr.appendChild(tdWord);
       table.appendChild(tr);
-    });
+    }
 
     gridWrap.appendChild(table);
-  });
+  }
+
+  attachTooltips(gridWrap);
 
   wrap.appendChild(timerRow);
   wrap.appendChild(inputRow);
