@@ -1,4 +1,4 @@
-import { isCorrect } from './utils.js';
+import { isCorrect } from '../utils/utils.js';
 
 export function renderRecallMode({ words, container, columns = 1 }) {
   container.innerHTML = '';
@@ -64,7 +64,7 @@ export function renderRecallMode({ words, container, columns = 1 }) {
 
     colWords.forEach((w, i) => {
       const tr = document.createElement('tr');
-      tr.dataset.word = w.word;           // ← was w.es
+      tr.dataset.word = w.word;
 
       const tdNum = document.createElement('td');
       tdNum.className   = 'recall-rank';
@@ -72,7 +72,7 @@ export function renderRecallMode({ words, container, columns = 1 }) {
 
       const tdWord = document.createElement('td');
       tdWord.className    = 'recall-cell';
-      tdWord.dataset.word = w.word;       // ← was w.es
+      tdWord.dataset.word = w.word;
       tdWord.textContent  = '';
 
       tr.appendChild(tdNum);
@@ -99,20 +99,16 @@ export function renderRecallMode({ words, container, columns = 1 }) {
     const val = inp.value.trim();
     if (!val) return;
 
-    // Find a word whose `word` field matches the input and hasn't been recalled yet.
-    // We compare against entry.word directly (target language form) rather than
-    // using isCorrect(), which checks English glosses — recall mode tests production
-    // of the target-language word, not translation.
     const match = sorted.find(w =>
       w.word.toLowerCase() === val.toLowerCase() && !recalled.has(w.word)
     );
 
     if (match) {
-      recalled.add(match.word);            // ← was match.es
-      revealCell(match.word, 'recalled');  // ← was match.es
+      recalled.add(match.word);
+      revealCell(match.word, 'recalled');
       updateScore();
 
-      feedback.textContent = `✓ ${match.word}`;  // ← was match.es
+      feedback.textContent = `✓ ${match.word}`;
       feedback.style.color = 'var(--correct)';
       inp.value = '';
 
@@ -127,7 +123,7 @@ export function renderRecallMode({ words, container, columns = 1 }) {
   function revealCell(word, state) {
     const cell = gridWrap.querySelector(`td.recall-cell[data-word="${CSS.escape(word)}"]`);
     if (!cell) return;
-    cell.textContent = word;              // ← was es
+    cell.textContent = word;
     cell.classList.remove('recalled', 'missed');
     cell.classList.add(state);
   }
@@ -140,7 +136,6 @@ export function renderRecallMode({ words, container, columns = 1 }) {
   function updateProgress() {
     const pct = sorted.length > 0 ? Math.round((recalled.size / sorted.length) * 100) : 0;
 
-    // Update progress bars and stats
     const barTop = document.getElementById('recallBarTop');
     const barBottom = document.getElementById('recallBarBottom');
     const statsTop = document.getElementById('recallStatsTop');
@@ -153,7 +148,6 @@ export function renderRecallMode({ words, container, columns = 1 }) {
     if (statsTop) statsTop.textContent = statsText;
     if (statsBottom) statsBottom.textContent = statsText;
 
-    // Grey out Give Up when all words have been recalled
     if (sorted.length > 0 && recalled.size === sorted.length) {
       giveUpBtn.disabled = true;
     }
@@ -167,7 +161,7 @@ export function renderRecallMode({ words, container, columns = 1 }) {
     giveUpBtn.disabled = true;
 
     sorted.forEach(w => {
-      if (!recalled.has(w.word)) revealCell(w.word, 'missed');  // ← was w.es
+      if (!recalled.has(w.word)) revealCell(w.word, 'missed');
     });
 
     const missed = sorted.length - recalled.size;

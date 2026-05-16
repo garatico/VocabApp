@@ -8,10 +8,10 @@
  * Visual priority per card:
  *   1. word.svg_url   — generated SVG on disk
  *   2. word.emoji     — emoji stored in the database (set via admin panel)
- *   3. getFallbackEmoji(lang, word.word) — hardcoded map in emoji-map.js
+ *   3. getFallbackEmoji(lang, word.word) — hardcoded map in emoji-map.ts
  */
 
-import { getFallbackEmoji } from './emoji-map.js';
+import { getFallbackEmoji } from '../data/emoji-map.ts';
 
 function normalise(str = '') {
   return str

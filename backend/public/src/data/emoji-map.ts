@@ -1,5 +1,5 @@
 /**
- * emoji-map.js
+ * emoji-map.ts
  *
  * Hardcoded emoji fallbacks for Picture Quiz mode.
  * Used when a word has no SVG and no emoji set in the database.
@@ -7,7 +7,10 @@
  * once you're happy with a particular emoji.
  */
 
-export const EMOJI_MAP = {
+/** lang → word → emoji */
+type EmojiMap = Record<string, Record<string, string>>;
+
+export const EMOJI_MAP: EmojiMap = {
 
   // ── People & family ───────────────────────────────────────────────────────
   spanish: {
@@ -262,10 +265,7 @@ export const EMOJI_MAP = {
 /**
  * Look up a fallback emoji for a word.
  * Returns the emoji string or null if none is mapped.
- *
- * @param {string} lang   - e.g. 'spanish'
- * @param {string} word   - the target-language word
  */
-export function getFallbackEmoji(lang, word) {
+export function getFallbackEmoji(lang: string, word: string): string | null {
   return EMOJI_MAP[lang]?.[word] ?? null;
 }

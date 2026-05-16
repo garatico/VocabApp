@@ -39,8 +39,6 @@ export function bindTableControls() {
 
   tableExport?.addEventListener('click', () => {
     if (!tableController) return;
-    // Export the words from the active controller if possible,
-    // otherwise fall back to whatever the caller injected
     const data = tableController.words ?? [];
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a    = document.createElement('a');

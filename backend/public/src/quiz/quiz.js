@@ -1,4 +1,4 @@
-import { normalize, stripDiacritics, levenshtein } from './match.js';
+import { normalize, stripDiacritics, levenshtein } from '../utils/match.js';
 
 export class Quiz {
   constructor({ words, storageKey }) {

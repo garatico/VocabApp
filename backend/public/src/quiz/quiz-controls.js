@@ -1,5 +1,5 @@
-import { speak }                             from './tts.js';
-import { isCorrect, getPosLabel, getGlosses } from './utils.js';
+import { speak }                             from '../utils/tts.js';
+import { isCorrect, getPosLabel, getGlosses } from '../utils/utils.js';
 
 let quiz        = null;
 let getLangCode = null;
@@ -12,8 +12,8 @@ export function bindQuizControls({ getLang }) {
   getLangCode = getLang;
 
   const wordEl     = document.getElementById('word');
-  const posEl      = document.getElementById('pos');     // part-of-speech badge
-  const hintEl     = document.getElementById('hint');    // display gloss subtitle
+  const posEl      = document.getElementById('pos');
+  const hintEl     = document.getElementById('hint');
   const answerEl   = document.getElementById('answer');
   const feedbackEl = document.getElementById('feedback');
   const barEl      = document.getElementById('bar');
@@ -32,7 +32,6 @@ export function bindQuizControls({ getLang }) {
 
     wordEl.textContent = cur.word;
 
-    // Gracefully absent if element not yet in HTML
     if (posEl)  posEl.textContent  = getPosLabel(cur);
     if (hintEl) hintEl.textContent = cur.display ?? '';
 
@@ -52,7 +51,6 @@ export function bindQuizControls({ getLang }) {
     statsEl.textContent = statsText;
     if (statsTopEl) statsTopEl.textContent = statsText;
 
-    // Grey out Give Up once every word has been answered correctly at least once
     if (giveUpBtn) giveUpBtn.disabled = (s.total > 0 && uniqueCorrect === s.total);
   }
 
@@ -93,7 +91,6 @@ export function bindQuizControls({ getLang }) {
     feedbackEl.textContent = `Answer: ${glosses.join(' / ')}`;
     feedbackEl.style.color = 'var(--danger)';
 
-    // Count this as an incorrect attempt
     const key = entry.word;
     if (!quiz.state.seen[key]) quiz.state.seen[key] = { correct: 0, incorrect: 0 };
     quiz.state.seen[key].incorrect++;

@@ -1,12 +1,12 @@
-import { Quiz }                          from './quiz.js';
-import { loadWords }                      from './data-loader.js';
-import { renderTableMode }                from './table-mode.js';
-import { renderRecallMode }               from './recall-mode.js';
-import { renderPictureMode }              from './picture-mode.js';
-import { renderConjugationMode }          from './conjugation-mode.js';
-import { setTableController }             from './table-controls.js';
-import { setQuiz }                        from './quiz-controls.js';
-import { filterWords }                    from './word-filters.js';
+import { Quiz }                          from './quiz/quiz.js';
+import { loadWords }                      from './data/data-loader.ts';
+import { renderTableMode }                from './modes/table-mode.js';
+import { renderRecallMode }               from './modes/recall-mode.js';
+import { renderPictureMode }              from './modes/picture-mode.js';
+import { renderConjugationMode }          from './modes/conjugation/index.ts';
+import { setTableController }             from './modes/table-controls.js';
+import { setQuiz }                        from './quiz/quiz-controls.js';
+import { filterWords }                    from './filters/word-filters.ts';
 
 export function bindStartHandler({
   getLang,
