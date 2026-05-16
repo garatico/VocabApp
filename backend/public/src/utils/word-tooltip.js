@@ -111,6 +111,11 @@ function positionTooltip() {
 // ── Helpers ───────────────────────────────────────────────
 
 function isWordRevealed(anchorEl) {
+  // Recall mode: cell is revealed once it carries .recalled or .missed
+  if (anchorEl.classList.contains('recalled') || anchorEl.classList.contains('missed')) return true;
+  if (anchorEl.classList.contains('recall-cell')) return false;
+
+  // Table mode: check for a solved input in the next sibling td
   const wordTd = anchorEl.closest('td');
   if (!wordTd) return false;
 
