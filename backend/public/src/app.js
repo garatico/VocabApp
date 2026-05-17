@@ -1,14 +1,14 @@
 import { bindTableControls }                  from './modes/table-controls.js';
-import { bindQuizControls }                   from './quiz/quiz-controls.js';
+import { bindQuizControls }                   from './quiz/quiz-controls.ts';
 import { bindStartHandler }                   from './start-handler.js';
-import { bindClassFilter, getSelectedClasses } from './filters/class-filter.js';
-import { bindDomainFilter, getSelectedDomains } from './filters/domain-filter.js';
-import { bindUIState, bindModeSwitch }         from './ui/ui-state.js';
+import { bindClassFilter, getSelectedClasses } from './filters/class-filter.ts';
+import { bindDomainFilter, getSelectedDomains } from './filters/domain-filter.ts';
+import { bindUIState, bindModeSwitch }         from './ui/ui-state.ts';
 import { buildFilterUI }                      from './filters/word-filters.ts';
 import { loadWords }                          from './data/data-loader.ts';
 import { initTheme }                          from './ui/theme-toggle.ts';
-import { mountUI }                            from './ui/ui.js';
-import { initializeFilterToggle }             from './filters/filter-toggle.js';
+import { mountUI }                            from './ui/ui.ts';
+import { initializeFilterToggle }             from './filters/filter-toggle.ts';
 import { renderPictureMode }                  from './modes/picture-mode.js';
 import { initConjControls }                   from './modes/conjugation/controls.ts';
 
