@@ -29,16 +29,19 @@ TEST_VERBS = {
     'por': ('pt', 'ser'),
 }
 
-# What clean_wikicorpora.py currently expects (for comparison)
+# Mirrors TENSE_MAP in clean_wikicorpora.py — keep these in sync.
+# Note: spa/ita/por use lowercase tense labels for mlconjug3 4.x.
+# The lookup in build_conjugations() tries the bare label first,
+# then a mood-prefixed version (e.g. 'Indicativo presente').
 EXPECTED_TENSE_MAP = {
     'spa': {
-        'present':     ('Indicativo',   'Presente'),
-        'preterite':   ('Indicativo',   'Pretérito Indefinido'),
-        'imperfect':   ('Indicativo',   'Pretérito Imperfecto'),
-        'future':      ('Indicativo',   'Futuro'),
-        'conditional': ('Indicativo',   'Condicional'),
-        'subjunctive': ('Subjuntivo',   'Presente'),
-        'imperative':  ('Imperativo',   'Afirmativo'),
+        'present':     ('Indicativo',  'presente'),
+        'preterite':   ('Indicativo',  'pretérito perfecto simple'),
+        'imperfect':   ('Indicativo',  'pretérito imperfecto'),
+        'future':      ('Indicativo',  'futuro'),
+        'conditional': ('Condicional', 'Condicional'),
+        'subjunctive': ('Subjuntivo',  'presente'),
+        'imperative':  ('Imperativo',  'Afirmativo'),
     },
     'fra': {
         'present':     ('Indicatif',    'Présent'),
@@ -50,22 +53,22 @@ EXPECTED_TENSE_MAP = {
         'imperative':  ('Impératif',    'Présent'),
     },
     'ita': {
-        'present':     ('Indicativo',   'Presente'),
-        'preterite':   ('Indicativo',   'Passato remoto'),
-        'imperfect':   ('Indicativo',   'Imperfetto'),
-        'future':      ('Indicativo',   'Futuro semplice'),
-        'conditional': ('Condizionale', 'Presente'),
-        'subjunctive': ('Congiuntivo',  'Presente'),
-        'imperative':  ('Imperativo',   'Presente'),
+        'present':     ('Indicativo',   'presente'),
+        'preterite':   ('Indicativo',   'passato remoto'),
+        'imperfect':   ('Indicativo',   'imperfetto'),
+        'future':      ('Indicativo',   'futuro semplice'),
+        'conditional': ('Condizionale', 'presente'),
+        'subjunctive': ('Congiuntivo',  'presente'),
+        'imperative':  ('Imperativo',   'Affermativo'),
     },
     'por': {
-        'present':     ('Indicativo',   'Presente'),
-        'preterite':   ('Indicativo',   'Pretérito Perfeito'),
-        'imperfect':   ('Indicativo',   'Pretérito Imperfeito'),
-        'future':      ('Indicativo',   'Futuro do Presente'),
-        'conditional': ('Indicativo',   'Futuro do Pretérito'),
-        'subjunctive': ('Subjuntivo',   'Presente'),
-        'imperative':  ('Imperativo',   'Afirmativo'),
+        'present':     ('Indicativo',  'presente'),
+        'preterite':   ('Indicativo',  'pretérito perfeito simples'),
+        'imperfect':   ('Indicativo',  'pretérito imperfeito'),
+        'future':      ('Indicativo',  'Futuro do Presente Simples'),
+        'conditional': ('Condicional', 'Futuro do Pretérito Simples'),
+        'subjunctive': ('Conjuntivo',  ' Subjuntivo Presente'),   # leading space → double space in key
+        'imperative':  ('Imperativo',  'Afirmativo'),
     },
 }
 
