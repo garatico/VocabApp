@@ -1,5 +1,5 @@
-import { isCorrect }     from '../utils/utils.js';
-import { attachTooltips } from '../utils/word-tooltip.js';
+import { isCorrect }     from '../utils/utils.ts';
+import { attachTooltips } from '../utils/word-tooltip.ts';
 
 const LANG_LABELS = {
   spanish: 'Spanish', portuguese: 'Portuguese', italian: 'Italian', french: 'French',

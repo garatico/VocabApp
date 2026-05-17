@@ -1,5 +1,5 @@
-import { isCorrect, getGlosses } from '../utils/utils.js';
-import { attachTooltips }        from '../utils/word-tooltip.js';
+import { isCorrect, getGlosses } from '../utils/utils.ts';
+import { attachTooltips }        from '../utils/word-tooltip.ts';
 
 export function renderTableMode({ words, container, columns = 3, onComplete = null }) {
   if (!(container instanceof HTMLElement)) {

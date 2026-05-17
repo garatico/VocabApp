@@ -4,7 +4,7 @@
  * Core vocabulary types shared across the frontend.
  * The shape here mirrors what vocab-loader.js returns via /api/vocab/:lang.
  *
- * Import with:  import type { Word } from './types.js';
+ * Import with:  import type { Word } from '../types.js';
  * (The .js extension is intentional — required for ESM + bundler resolution)
  */
 
@@ -26,20 +26,30 @@ export interface WordFrequency {
   corpus_frequency:  number | null;
 }
 
+export interface WordRelations {
+  synonyms?: string[];
+  antonyms?: string[];
+}
+
 export interface Word {
   word:       string;
   display:    string;
   pos:        string | null;
-  difficulty: string | null;
+  difficulty: number | null;
   notes:      string;
   glosses:    string[];
   examples:   string[];
   svg_url:    string | null;
   emoji:      string | null;
-  linguistic: WordLinguistic;
-  frequency:  WordFrequency;
+  linguistic: WordLinguistic | null;
+  frequency:  WordFrequency | null;
   domains:    string[];
   tags:       string[];
+  relations?: WordRelations;
+  /** Direct rank shortcut (mirrors frequency.rank; present on API response). */
+  rank?:      number | null;
+  /** Legacy pipe-delimited answers string (pre-glosses schema). */
+  answers?:   string;
 }
 
 /** Word with the resolved emoji added by picture-mode before rendering. */

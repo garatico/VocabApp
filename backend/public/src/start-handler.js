@@ -1,11 +1,11 @@
-import { Quiz }                          from './quiz/quiz.js';
+import { Quiz }                          from './quiz/quiz.ts';
 import { loadWords }                      from './data/data-loader.ts';
 import { renderTableMode }                from './modes/table-mode.js';
 import { renderRecallMode }               from './modes/recall-mode.js';
 import { renderPictureMode }              from './modes/picture-mode.js';
 import { renderConjugationMode }          from './modes/conjugation/index.ts';
 import { setTableController }             from './modes/table-controls.js';
-import { setQuiz }                        from './quiz/quiz-controls.js';
+import { setQuiz }                        from './quiz/quiz-controls.ts';
 import { filterWords }                    from './filters/word-filters.ts';
 
 export function bindStartHandler({

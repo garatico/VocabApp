@@ -1,30 +1,27 @@
 /**
- * filter-toggle.js
+ * filter-toggle.ts
  *
  * Handles the collapse/expand functionality for the "Refine Results" filter section.
  */
 
-export function initializeFilterToggle() {
+export function initializeFilterToggle(): void {
   const filterToggle = document.getElementById('filterToggle');
-  const wordFilters = document.getElementById('wordFilters');
+  const wordFilters  = document.getElementById('wordFilters');
 
   if (!filterToggle || !wordFilters) return;
 
   filterToggle.addEventListener('click', () => {
     const isExpanded = filterToggle.getAttribute('aria-expanded') === 'true';
-    const newState = !isExpanded;
+    const newState   = !isExpanded;
 
-    // Update button state
     filterToggle.setAttribute('aria-expanded', String(newState));
 
-    // Update container state
     if (newState) {
       wordFilters.classList.remove('collapsed');
     } else {
       wordFilters.classList.add('collapsed');
     }
 
-    // Persist preference to localStorage
     localStorage.setItem('filterExpanded', String(newState));
   });
 
