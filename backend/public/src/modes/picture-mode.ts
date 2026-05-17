@@ -13,20 +13,40 @@
  */
 
 import { getFallbackEmoji } from '../data/emoji-map.ts';
+import type { Word }        from '../types.ts';
+
+// ── Types ──────────────────────────────────────────────────────────────────────
+
+interface WordWithVisual extends Word {
+  _emoji: string | null;
+}
+
+interface CardEntry {
+  card: HTMLDivElement;
+  inp:  HTMLInputElement;
+  word: WordWithVisual;
+}
+
+interface RenderPictureModeOptions {
+  words:     Word[];
+  container: HTMLElement;
+  lang?:     string;
+  mode?:     'type' | 'click';
+}
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
 
-function normalise(str = '') {
+function normalise(str = ''): string {
   return str.trim().toLowerCase().normalize('NFD')
     .replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ');
 }
 
-function wordIsCorrect(input, word) {
+function wordIsCorrect(input: string, word: WordWithVisual): boolean {
   const attempt = normalise(input);
   return !!attempt && normalise(word.word) === attempt;
 }
 
-function shuffle(arr) {
+function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -35,7 +55,7 @@ function shuffle(arr) {
   return a;
 }
 
-function buildVisual(word) {
+function buildVisual(word: WordWithVisual): HTMLElement {
   if (word.svg_url) {
     const img = document.createElement('img');
     img.src = word.svg_url;
@@ -44,13 +64,13 @@ function buildVisual(word) {
   }
   const span = document.createElement('span');
   span.className   = 'picture-card-emoji';
-  span.textContent = word._emoji;
+  span.textContent = word._emoji ?? '';
   return span;
 }
 
 // ── Style injection (runs once) ────────────────────────────────────────────────
 
-function injectStyles() {
+function injectStyles(): void {
   if (document.getElementById('picture-click-styles')) return;
   const s = document.createElement('style');
   s.id = 'picture-click-styles';
@@ -182,22 +202,22 @@ function injectStyles() {
 
 // ── Progress bar helpers ───────────────────────────────────────────────────────
 
-function setProgress(correct, total) {
+function setProgress(correct: number, total: number): void {
   const pct  = total > 0 ? Math.round((correct / total) * 100) : 0;
   const text = `${correct} / ${total}`;
   const barTop      = document.getElementById('pictureBarTop');
   const barBottom   = document.getElementById('pictureBarBottom');
   const statsTop    = document.getElementById('pictureStatsTop');
   const statsBottom = document.getElementById('pictureStatsBottom');
-  if (barTop)      barTop.style.width      = pct + '%';
-  if (barBottom)   barBottom.style.width   = pct + '%';
+  if (barTop)      (barTop    as HTMLElement).style.width = pct + '%';
+  if (barBottom)   (barBottom as HTMLElement).style.width = pct + '%';
   if (statsTop)    statsTop.textContent    = text;
   if (statsBottom) statsBottom.textContent = text;
 }
 
 // ── Type-the-word mode (original) ─────────────────────────────────────────────
 
-function renderTypeMode(wordsWithVisuals, container) {
+function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLElement): void {
   container.innerHTML = '';
 
   if (wordsWithVisuals.length === 0) {
@@ -211,7 +231,7 @@ function renderTypeMode(wordsWithVisuals, container) {
 
   const grid  = document.createElement('div');
   grid.className = 'picture-grid';
-  const cards = [];
+  const cards: CardEntry[] = [];
 
   wordsWithVisuals.forEach(word => {
     const card = document.createElement('div');
@@ -236,7 +256,7 @@ function renderTypeMode(wordsWithVisuals, container) {
         card.classList.add('correct');
         inp.classList.add('correct');
 
-        const allInputs = Array.from(container.querySelectorAll('input[data-word]'));
+        const allInputs = Array.from(container.querySelectorAll<HTMLInputElement>('input[data-word]'));
         const next = allInputs.slice(allInputs.indexOf(inp) + 1).find(i => !i.disabled);
         if (next) next.focus();
 
@@ -274,10 +294,10 @@ function renderTypeMode(wordsWithVisuals, container) {
   container.appendChild(grid);
 
   updateTypeProgress();
-  const first = container.querySelector('input[data-word]');
+  const first = container.querySelector<HTMLInputElement>('input[data-word]');
   if (first) first.focus();
 
-  function updateTypeProgress() {
+  function updateTypeProgress(): void {
     const correct = cards.filter(({ inp }) => inp.classList.contains('correct')).length;
     setProgress(correct, cards.length);
     if (correct === cards.length) giveUpBtn.disabled = true;
@@ -286,7 +306,11 @@ function renderTypeMode(wordsWithVisuals, container) {
 
 // ── Click-the-picture mode ─────────────────────────────────────────────────────
 
-function renderClickMode(wordsWithVisuals, container, onPlayAgain) {
+function renderClickMode(
+  wordsWithVisuals: WordWithVisual[],
+  container: HTMLElement,
+  onPlayAgain: () => void,
+): void {
   if (wordsWithVisuals.length === 0) {
     container.innerHTML = `
       <div class="picture-empty">
@@ -346,7 +370,7 @@ function renderClickMode(wordsWithVisuals, container, onPlayAgain) {
   wrap.append(header, counter, prompt, clickGrid, feedback);
   container.appendChild(wrap);
 
-  function renderCard(word) {
+  function renderCard(word: WordWithVisual): void {
     answered             = false;
     giveUpBtn.disabled   = false;
     feedback.textContent = '';
@@ -383,7 +407,7 @@ function renderClickMode(wordsWithVisuals, container, onPlayAgain) {
           card.classList.add('pm-wrong');
           feedback.textContent = `✗  That's "${opt.word}" — the answer was "${word.word}"`;
           feedback.classList.add('bad');
-          clickGrid.querySelectorAll(`.pm-click-card[data-word="${CSS.escape(word.word)}"]`)
+          clickGrid.querySelectorAll<HTMLElement>(`.pm-click-card[data-word="${CSS.escape(word.word)}"]`)
             .forEach(c => c.classList.add('pm-reveal'));
         }
 
@@ -395,7 +419,7 @@ function renderClickMode(wordsWithVisuals, container, onPlayAgain) {
     });
   }
 
-  function advance() {
+  function advance(): void {
     idx++;
     if (idx >= queue.length) {
       showDone();
@@ -404,7 +428,7 @@ function renderClickMode(wordsWithVisuals, container, onPlayAgain) {
     }
   }
 
-  function showDone() {
+  function showDone(): void {
     const pct = Math.round((correct / queue.length) * 100);
     container.innerHTML = '';
 
@@ -429,17 +453,22 @@ function renderClickMode(wordsWithVisuals, container, onPlayAgain) {
 
 // ── Public export ──────────────────────────────────────────────────────────────
 
-export function renderPictureMode({ words, container, lang = 'spanish', mode = 'type' }) {
+export function renderPictureMode({
+  words,
+  container,
+  lang = 'spanish',
+  mode = 'type',
+}: RenderPictureModeOptions): void {
   injectStyles();
   container.innerHTML = '';
   setProgress(0, 0);
 
-  const wordsWithVisuals = words
+  const wordsWithVisuals: WordWithVisual[] = words
     .map(w => ({ ...w, _emoji: w.emoji || getFallbackEmoji(lang, w.word) }))
-    .filter(w => w.svg_url || w._emoji);
+    .filter((w): w is WordWithVisual => !!(w.svg_url || w._emoji));
 
   if (mode === 'click') {
-    function playAgain() {
+    function playAgain(): void {
       container.innerHTML = '';
       setProgress(0, 0);
       renderClickMode(wordsWithVisuals, container, playAgain);

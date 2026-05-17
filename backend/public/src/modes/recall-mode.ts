@@ -1,17 +1,34 @@
 import { isCorrect }     from '../utils/utils.ts';
 import { attachTooltips } from '../utils/word-tooltip.ts';
+import type { Word }     from '../types.ts';
 
-const LANG_LABELS = {
+const LANG_LABELS: Record<string, string> = {
   spanish: 'Spanish', portuguese: 'Portuguese', italian: 'Italian', french: 'French',
 };
 
-export function renderRecallMode({ words, container, columns = 1, lang = 'spanish' }) {
+interface RenderRecallModeOptions {
+  words:     Word[];
+  container: HTMLElement;
+  columns?:  number;
+  lang?:     string;
+}
+
+export interface RecallController {
+  startTimer: (seconds: number, isHardStop: boolean) => void;
+}
+
+export function renderRecallMode({
+  words,
+  container,
+  columns = 1,
+  lang = 'spanish',
+}: RenderRecallModeOptions): RecallController {
   container.innerHTML = '';
 
   const cols = Math.max(1, Math.min(3, Number(columns) || 1));
 
-  let recalled      = new Set();
-  let timerInterval = null;
+  const recalled      = new Set<string>();
+  let timerInterval: ReturnType<typeof setInterval> | null = null;
   let secondsLeft   = 0;
   let hardStop      = false;
   let finished      = false;
@@ -50,7 +67,7 @@ export function renderRecallMode({ words, container, columns = 1, lang = 'spanis
   sizeSlider.setAttribute('aria-label', 'Text size');
 
   // 4 stops: 1.15 → 1.32 → 1.48 → 1.65
-  function applyScale(v) {
+  function applyScale(v: number): void {
     const scale = 1.15 + (v / 3) * 0.5;
     wrap.style.setProperty('--rs', scale.toFixed(3));
   }
@@ -163,32 +180,34 @@ export function renderRecallMode({ words, container, columns = 1, lang = 'spanis
   giveUpBtn.addEventListener('click', endSession);
 
   // ── Helpers ────────────────────────────────────────────
-  function revealCell(word, state) {
-    const cell = gridWrap.querySelector(`td.recall-cell[data-word="${CSS.escape(word)}"]`);
+  function revealCell(word: string, state: 'recalled' | 'missed'): void {
+    const cell = gridWrap.querySelector<HTMLTableCellElement>(
+      `td.recall-cell[data-word="${CSS.escape(word)}"]`
+    );
     if (!cell) return;
     cell.textContent = word;
     cell.classList.remove('recalled', 'missed');
     cell.classList.add(state);
   }
 
-  function updateScore() {
+  function updateScore(): void {
     scoreEl.textContent = `Recalled: ${recalled.size} / ${sorted.length}`;
     updateProgress();
   }
 
-  function updateProgress() {
+  function updateProgress(): void {
     const pct = sorted.length > 0 ? Math.round((recalled.size / sorted.length) * 100) : 0;
 
-    const barTop = document.getElementById('recallBarTop');
-    const barBottom = document.getElementById('recallBarBottom');
-    const statsTop = document.getElementById('recallStatsTop');
+    const barTop     = document.getElementById('recallBarTop');
+    const barBottom  = document.getElementById('recallBarBottom');
+    const statsTop   = document.getElementById('recallStatsTop');
     const statsBottom = document.getElementById('recallStatsBottom');
 
     const statsText = `${recalled.size}/${sorted.length} recalled`;
 
-    if (barTop) barTop.style.width = pct + '%';
-    if (barBottom) barBottom.style.width = pct + '%';
-    if (statsTop) statsTop.textContent = statsText;
+    if (barTop)     (barTop    as HTMLElement).style.width = pct + '%';
+    if (barBottom)  (barBottom as HTMLElement).style.width = pct + '%';
+    if (statsTop)   statsTop.textContent    = statsText;
     if (statsBottom) statsBottom.textContent = statsText;
 
     if (sorted.length > 0 && recalled.size === sorted.length) {
@@ -196,7 +215,7 @@ export function renderRecallMode({ words, container, columns = 1, lang = 'spanis
     }
   }
 
-  function endSession() {
+  function endSession(): void {
     if (finished) return;
     finished = true;
     if (timerInterval) clearInterval(timerInterval);
@@ -220,7 +239,7 @@ export function renderRecallMode({ words, container, columns = 1, lang = 'spanis
   }
 
   // ── Timer ──────────────────────────────────────────────
-  function startTimer(seconds, isHardStop) {
+  function startTimer(seconds: number, isHardStop: boolean): void {
     secondsLeft = seconds;
     hardStop    = isHardStop;
     updateTimerDisplay();
@@ -230,7 +249,7 @@ export function renderRecallMode({ words, container, columns = 1, lang = 'spanis
       updateTimerDisplay();
 
       if (secondsLeft <= 0) {
-        clearInterval(timerInterval);
+        clearInterval(timerInterval!);
         if (hardStop) {
           endSession();
         } else {
@@ -241,7 +260,7 @@ export function renderRecallMode({ words, container, columns = 1, lang = 'spanis
     }, 1000);
   }
 
-  function updateTimerDisplay() {
+  function updateTimerDisplay(): void {
     const m = Math.floor(secondsLeft / 60);
     const s = secondsLeft % 60;
     timerDisplay.textContent = `${m}:${s.toString().padStart(2, '0')}`;
