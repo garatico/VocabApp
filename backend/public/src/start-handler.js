@@ -19,7 +19,8 @@ export function bindStartHandler({
   getRecallTimer,
   onModeChange,
   onSingleStart,
-  getBaseList,     // NEW: returns the current baseList maintained by main.js
+  getBaseList,
+  getAllWords,      // full unsized word list — used by picture mode
   elements: {
     startBtn,
     tableWrap,
@@ -112,8 +113,27 @@ export function bindStartHandler({
         pictureWrap.innerHTML = '';
         const pictureSubMode = document.getElementById('pictureSubMode');
         const pictureMode = pictureSubMode?.querySelector('.conj-toggle-btn.active')?.dataset.mode ?? 'type';
+
+        // Picture mode draws from the full word list (no size limit) so that
+        // emoji/SVG words with ranks > the size slider are still reachable.
+        // We still respect the POS class filter and the static domain filter.
+        let pictureWords = getAllWords ? getAllWords() : list;
+
+        const selectedClasses = getSelectedClasses ? getSelectedClasses() : [];
+        if (selectedClasses.length > 0) {
+          pictureWords = pictureWords.filter(w => w.pos == null || selectedClasses.includes(w.pos));
+        }
+
+        const selectedDomains2 = getSelectedDomains ? getSelectedDomains() : [];
+        if (selectedDomains2.length > 0) {
+          pictureWords = pictureWords.filter(w => {
+            const doms = w.domains || [];
+            return doms.length === 0 || doms.some(d => selectedDomains2.includes(d));
+          });
+        }
+
         renderPictureMode({
-          words: list,
+          words: pictureWords,
           container: pictureWrap,
           lang: getFullLang ? getFullLang() : 'spanish',
           mode: pictureMode,

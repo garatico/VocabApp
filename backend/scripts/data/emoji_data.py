@@ -1,0 +1,140 @@
+"""
+emoji_data.py — Curated emoji mappings for Picture Quiz mode.
+
+Structure: { lang_code: { category: { word: emoji } } }
+  - lang_code: 'spa' | 'fra' | 'ita' | 'por'
+  - category:  matches the domain value used in the DB ('animals', 'food', etc.)
+
+The seeder (seed-languages.py) applies emoji AND updates the domain to the
+category name — but only for words that still have the default ['general'] domain.
+Words already assigned a specific domain by the pipeline keep their domain.
+"""
+from typing import Dict
+
+EMOJI_DATA: Dict[str, Dict[str, Dict[str, str]]] = {
+    'spa': {
+        'animals': {
+            'animal':    '🦁', 'perro':     '🐕', 'gato':      '🐱',
+            'caballo':   '🐴', 'vaca':      '🐄', 'cerdo':     '🐷',
+            'oveja':     '🐑', 'pájaro':    '🐦', 'ave':       '🦅',
+            'pez':       '🐟', 'lobo':      '🐺', 'león':      '🦁',
+            'tigre':     '🐯', 'oso':       '🐻', 'mono':      '🐒',
+            'elefante':  '🐘', 'serpiente': '🐍', 'insecto':   '🐛',
+            'conejo':    '🐰', 'gallina':   '🐔', 'pato':      '🦆',
+            'águila':    '🦅', 'abeja':     '🐝', 'mariposa':  '🦋',
+            'ratón':     '🐭', 'rata':      '🐀', 'rana':      '🐸',
+            'tiburón':   '🦈', 'ballena':   '🐳', 'pulpo':     '🐙',
+            'araña':     '🕷️', 'hormiga':   '🐜',
+        },
+        'food': {
+            'comida':    '🍽️', 'pan':       '🍞', 'leche':     '🥛',
+            'carne':     '🥩', 'pescado':   '🐟', 'pollo':     '🐔',
+            'arroz':     '🍚', 'fruta':     '🍎', 'verdura':   '🥦',
+            'café':      '☕', 'vino':      '🍷', 'cerveza':   '🍺',
+            'jugo':      '🥤', 'zumo':      '🥤', 'manzana':   '🍎',
+            'naranja':   '🍊', 'tomate':    '🍅', 'queso':     '🧀',
+            'huevo':     '🥚', 'azúcar':    '🍬', 'sal':       '🧂',
+            'té':        '🍵', 'sopa':      '🍲', 'ensalada':  '🥗',
+            'pasta':     '🍝', 'pizza':     '🍕', 'aceite':    '🫒',
+            'mantequilla':'🧈','chocolate': '🍫', 'torta':     '🎂',
+            'pastel':    '🎂', 'plátano':   '🍌', 'banana':    '🍌',
+            'limón':     '🍋', 'uva':       '🍇', 'fresa':     '🍓',
+            'sandía':    '🍉', 'zanahoria': '🥕', 'patata':    '🥔',
+            'papa':      '🥔', 'cebolla':   '🧅', 'ajo':       '🧄',
+            'pimiento':  '🌶️', 'agua':      '💧',
+        },
+    },
+    'fra': {
+        'animals': {
+            'animal':    '🦁', 'chien':     '🐕', 'chat':      '🐱',
+            'cheval':    '🐴', 'vache':     '🐄', 'cochon':    '🐷',
+            'mouton':    '🐑', 'oiseau':    '🐦', 'poisson':   '🐟',
+            'loup':      '🐺', 'lion':      '🦁', 'tigre':     '🐯',
+            'ours':      '🐻', 'singe':     '🐒', 'éléphant':  '🐘',
+            'serpent':   '🐍', 'insecte':   '🐛', 'lapin':     '🐰',
+            'poule':     '🐔', 'canard':    '🦆', 'aigle':     '🦅',
+            'abeille':   '🐝', 'papillon':  '🦋', 'souris':    '🐭',
+            'rat':       '🐀', 'grenouille':'🐸', 'requin':    '🦈',
+            'baleine':   '🐳', 'pieuvre':   '🐙', 'araignée':  '🕷️',
+            'fourmi':    '🐜',
+        },
+        'food': {
+            'nourriture':'🍽️', 'repas':     '🍽️', 'pain':      '🍞',
+            'lait':      '🥛', 'viande':    '🥩', 'poulet':    '🐔',
+            'riz':       '🍚', 'fruit':     '🍎', 'légume':    '🥦',
+            'café':      '☕', 'vin':       '🍷', 'bière':     '🍺',
+            'jus':       '🥤', 'pomme':     '🍎', 'orange':    '🍊',
+            'tomate':    '🍅', 'fromage':   '🧀', 'œuf':       '🥚',
+            'sucre':     '🍬', 'sel':       '🧂', 'thé':       '🍵',
+            'soupe':     '🍲', 'salade':    '🥗', 'pâtes':     '🍝',
+            'pizza':     '🍕', 'huile':     '🫒', 'beurre':    '🧈',
+            'chocolat':  '🍫', 'gâteau':    '🎂', 'banane':    '🍌',
+            'citron':    '🍋', 'raisin':    '🍇', 'fraise':    '🍓',
+            'pastèque':  '🍉', 'carotte':   '🥕', 'oignon':    '🧅',
+            'ail':       '🧄', 'poivron':   '🌶️', 'eau':       '💧',
+        },
+    },
+    'ita': {
+        'animals': {
+            'animale':   '🦁', 'cane':      '🐕', 'gatto':     '🐱',
+            'cavallo':   '🐴', 'mucca':     '🐄', 'vacca':     '🐄',
+            'maiale':    '🐷', 'pecora':    '🐑', 'uccello':   '🐦',
+            'pesce':     '🐟', 'lupo':      '🐺', 'leone':     '🦁',
+            'tigre':     '🐯', 'orso':      '🐻', 'scimmia':   '🐒',
+            'elefante':  '🐘', 'serpente':  '🐍', 'insetto':   '🐛',
+            'coniglio':  '🐰', 'gallina':   '🐔', 'anatra':    '🦆',
+            'aquila':    '🦅', 'ape':       '🐝', 'farfalla':  '🦋',
+            'topo':      '🐭', 'ratto':     '🐀', 'rana':      '🐸',
+            'squalo':    '🦈', 'balena':    '🐳', 'polpo':     '🐙',
+            'ragno':     '🕷️', 'formica':   '🐜',
+        },
+        'food': {
+            'cibo':      '🍽️', 'pasto':     '🍽️', 'pane':      '🍞',
+            'latte':     '🥛', 'carne':     '🥩', 'pollo':     '🐔',
+            'riso':      '🍚', 'frutta':    '🍎', 'verdura':   '🥦',
+            'caffè':     '☕', 'vino':      '🍷', 'birra':     '🍺',
+            'succo':     '🥤', 'mela':      '🍎', 'arancia':   '🍊',
+            'pomodoro':  '🍅', 'formaggio': '🧀', 'uovo':      '🥚',
+            'zucchero':  '🍬', 'sale':      '🧂', 'tè':        '🍵',
+            'zuppa':     '🍲', 'insalata':  '🥗', 'pasta':     '🍝',
+            'pizza':     '🍕', 'olio':      '🫒', 'burro':     '🧈',
+            'cioccolato':'🍫', 'torta':     '🎂', 'banana':    '🍌',
+            'limone':    '🍋', 'uva':       '🍇', 'fragola':   '🍓',
+            'anguria':   '🍉', 'carota':    '🥕', 'patata':    '🥔',
+            'cipolla':   '🧅', 'aglio':     '🧄', 'peperone':  '🌶️',
+            'acqua':     '💧',
+        },
+    },
+    'por': {
+        'animals': {
+            'animal':    '🦁', 'cachorro':  '🐕', 'cão':       '🐕',
+            'gato':      '🐱', 'cavalo':    '🐴', 'vaca':      '🐄',
+            'porco':     '🐷', 'ovelha':    '🐑', 'pássaro':   '🐦',
+            'ave':       '🦅', 'peixe':     '🐟', 'lobo':      '🐺',
+            'leão':      '🦁', 'tigre':     '🐯', 'urso':      '🐻',
+            'macaco':    '🐒', 'elefante':  '🐘', 'serpente':  '🐍',
+            'inseto':    '🐛', 'coelho':    '🐰', 'galinha':   '🐔',
+            'frango':    '🐔', 'pato':      '🦆', 'águia':     '🦅',
+            'abelha':    '🐝', 'borboleta': '🦋', 'rato':      '🐭',
+            'rã':        '🐸', 'sapo':      '🐸', 'tubarão':   '🦈',
+            'baleia':    '🐳', 'polvo':     '🐙', 'aranha':    '🕷️',
+            'formiga':   '🐜',
+        },
+        'food': {
+            'comida':    '🍽️', 'refeição':  '🍽️', 'pão':       '🍞',
+            'leite':     '🥛', 'carne':     '🥩', 'frango':    '🐔',
+            'arroz':     '🍚', 'fruta':     '🍎', 'legume':    '🥦',
+            'café':      '☕', 'vinho':     '🍷', 'cerveja':   '🍺',
+            'suco':      '🥤', 'maçã':      '🍎', 'laranja':   '🍊',
+            'tomate':    '🍅', 'queijo':    '🧀', 'ovo':       '🥚',
+            'açúcar':    '🍬', 'sal':       '🧂', 'chá':       '🍵',
+            'sopa':      '🍲', 'salada':    '🥗', 'macarrão':  '🍝',
+            'massa':     '🍝', 'pizza':     '🍕', 'azeite':    '🫒',
+            'manteiga':  '🧈', 'chocolate': '🍫', 'bolo':      '🎂',
+            'banana':    '🍌', 'limão':     '🍋', 'uva':       '🍇',
+            'morango':   '🍓', 'melancia':  '🍉', 'cenoura':   '🥕',
+            'batata':    '🥔', 'cebola':    '🧅', 'alho':      '🧄',
+            'pimentão':  '🌶️', 'água':      '💧',
+        },
+    },
+}

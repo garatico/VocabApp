@@ -97,6 +97,7 @@ bindStartHandler({
   onModeChange: updateModeUI,
   onSingleStart: showCurrent,
   getBaseList: () => currentBaseList,
+  getAllWords:  () => allWordsByLang[langSelect.value] || [],
   elements: { startBtn, tableWrap, recallWrap, pictureWrap, conjugationWrap, output },
 });
 
