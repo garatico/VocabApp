@@ -63,12 +63,14 @@ async function loadAndBuildFilters(lang) {
   }
 
   const sorted   = allWordsByLang[lang];
-  const size     = sizeSelect.value === 'custom'
+  const isMax    = sizeSelect.value === 'max';
+  const size     = isMax             ? Infinity
+                 : sizeSelect.value === 'custom'
                    ? Number(document.getElementById('sizeCustom').value) || 100
                    : Number(sizeSelect.value) || 100;
   const selected = getSelectedClasses();
   const baseList = selected.length === 0
-    ? sorted.slice(0, size)
+    ? (isMax ? sorted.slice() : sorted.slice(0, size))
     : sorted.filter(w => w.pos == null || selected.includes(w.pos)).slice(0, size);
 
   currentBaseList = baseList;
@@ -86,9 +88,9 @@ function getRecallTimerValue() {
 bindStartHandler({
   getLang: () => langMap[langSelect.value] || 'es',
   getFullLang: () => langSelect.value,
-  getSize: () => sizeSelect.value === 'custom'
-                 ? Number(document.getElementById('sizeCustom').value) || 100
-                 : Number(sizeSelect.value) || 100,
+  getSize: () => sizeSelect.value === 'max'    ? Infinity
+               : sizeSelect.value === 'custom' ? Number(document.getElementById('sizeCustom').value) || 100
+               :                                 Number(sizeSelect.value) || 100,
   getSelectedClasses,
   getSelectedDomains,
   getRandomize: () => document.getElementById('randomizeWords').checked,
