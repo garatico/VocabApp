@@ -288,7 +288,7 @@ SPANISH_FUNCTION_WORDS: List[dict] = [
 SPANISH_IRREGULAR_VERBS: List[dict] = [
     irr('ser',       ['to be (permanent quality)'],              'spanish'),
     irr('estar',     ['to be (state / location)'],               'spanish'),
-    irr('haber',     ['to have (auxiliary)', 'there is/are'],    'spanish'),
+    irr('haber',     ['to have', 'there is', 'there are'],       'spanish'),
     irr('ir',        ['to go'],                                  'spanish'),
     irr('tener',     ['to have', 'to hold'],                     'spanish'),
     irr('hacer',     ['to do', 'to make'],                       'spanish'),
@@ -780,7 +780,7 @@ PORTUGUESE_IRREGULAR_VERBS: List[dict] = [
     irr('estar',     ['to be (state / location)'],               'portuguese'),
     irr('ir',        ['to go'],                                  'portuguese'),
     irr('ter',       ['to have'],                                'portuguese'),
-    irr('haver',     ['to have (auxiliary)', 'there is/are'],    'portuguese'),
+    irr('haver',     ['to have', 'there is', 'there are'],       'portuguese'),
     irr('fazer',     ['to do', 'to make'],                       'portuguese'),
     irr('poder',     ['to be able to', 'can'],                   'portuguese'),
     irr('querer',    ['to want'],                                'portuguese'),
@@ -815,6 +815,133 @@ PORTUGUESE_IRREGULAR_VERBS: List[dict] = [
 # ══════════════════════════════════════════════════════════════════════════════
 # LANGUAGE REGISTRY  (imported by clean_wikicorpora.py)
 # ══════════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════════
+# EMOJI DATA — curated, high-confidence mappings for Picture Quiz mode
+# ══════════════════════════════════════════════════════════════════════════════
+# Starting with animals and food where emoji are unambiguous across languages.
+# These flow into the JSONL → DB → app pipeline via clean_wikicorpora.py.
+# Add categories incrementally once you're happy with a group.
+
+EMOJI_DATA: Dict[str, Dict[str, str]] = {
+    'spa': {
+        # ── Animals ──────────────────────────────────────────────────────────
+        'animal':    '🦁', 'perro':     '🐕', 'gato':      '🐱',
+        'caballo':   '🐴', 'vaca':      '🐄', 'cerdo':     '🐷',
+        'oveja':     '🐑', 'pájaro':    '🐦', 'ave':       '🦅',
+        'pez':       '🐟', 'lobo':      '🐺', 'león':      '🦁',
+        'tigre':     '🐯', 'oso':       '🐻', 'mono':      '🐒',
+        'elefante':  '🐘', 'serpiente': '🐍', 'insecto':   '🐛',
+        'conejo':    '🐰', 'gallina':   '🐔', 'pollo':     '🐔',
+        'pato':      '🦆', 'águila':    '🦅', 'abeja':     '🐝',
+        'mariposa':  '🦋', 'ratón':     '🐭', 'rata':      '🐀',
+        'rana':      '🐸', 'tiburón':   '🦈', 'ballena':   '🐳',
+        'pulpo':     '🐙', 'araña':     '🕷️', 'hormiga':   '🐜',
+        # ── Food & drink ─────────────────────────────────────────────────────
+        'comida':    '🍽️', 'pan':       '🍞', 'leche':     '🥛',
+        'carne':     '🥩', 'pescado':   '🐟', 'arroz':     '🍚',
+        'fruta':     '🍎', 'verdura':   '🥦', 'café':      '☕',
+        'vino':      '🍷', 'cerveza':   '🍺', 'jugo':      '🥤',
+        'zumo':      '🥤', 'manzana':   '🍎', 'naranja':   '🍊',
+        'tomate':    '🍅', 'queso':     '🧀', 'huevo':     '🥚',
+        'azúcar':    '🍬', 'sal':       '🧂', 'té':        '🍵',
+        'sopa':      '🍲', 'ensalada':  '🥗', 'pasta':     '🍝',
+        'pizza':     '🍕', 'aceite':    '🫒', 'mantequilla':'🧈',
+        'chocolate': '🍫', 'torta':     '🎂', 'pastel':    '🎂',
+        'plátano':   '🍌', 'banana':    '🍌', 'limón':     '🍋',
+        'uva':       '🍇', 'fresa':     '🍓', 'sandía':    '🍉',
+        'zanahoria': '🥕', 'patata':    '🥔', 'papa':      '🥔',
+        'cebolla':   '🧅', 'ajo':       '🧄', 'pimiento':  '🌶️',
+        'agua':      '💧', 'leche':     '🥛',
+    },
+    'fra': {
+        # ── Animals ──────────────────────────────────────────────────────────
+        'animal':    '🦁', 'chien':     '🐕', 'chat':      '🐱',
+        'cheval':    '🐴', 'vache':     '🐄', 'cochon':    '🐷',
+        'mouton':    '🐑', 'oiseau':    '🐦', 'poisson':   '🐟',
+        'loup':      '🐺', 'lion':      '🦁', 'tigre':     '🐯',
+        'ours':      '🐻', 'singe':     '🐒', 'éléphant':  '🐘',
+        'serpent':   '🐍', 'insecte':   '🐛', 'lapin':     '🐰',
+        'poule':     '🐔', 'poulet':    '🐔', 'canard':    '🦆',
+        'aigle':     '🦅', 'abeille':   '🐝', 'papillon':  '🦋',
+        'souris':    '🐭', 'rat':       '🐀', 'grenouille':'🐸',
+        'requin':    '🦈', 'baleine':   '🐳', 'pieuvre':   '🐙',
+        'araignée':  '🕷️', 'fourmi':    '🐜',
+        # ── Food & drink ─────────────────────────────────────────────────────
+        'nourriture':'🍽️', 'repas':     '🍽️', 'pain':      '🍞',
+        'lait':      '🥛', 'viande':    '🥩', 'riz':       '🍚',
+        'fruit':     '🍎', 'légume':    '🥦', 'café':      '☕',
+        'vin':       '🍷', 'bière':     '🍺', 'jus':       '🥤',
+        'pomme':     '🍎', 'orange':    '🍊', 'tomate':    '🍅',
+        'fromage':   '🧀', 'œuf':       '🥚', 'sucre':     '🍬',
+        'sel':       '🧂', 'thé':       '🍵', 'soupe':     '🍲',
+        'salade':    '🥗', 'pâtes':     '🍝', 'pizza':     '🍕',
+        'huile':     '🫒', 'beurre':    '🧈', 'chocolat':  '🍫',
+        'gâteau':    '🎂', 'banane':    '🍌', 'citron':    '🍋',
+        'raisin':    '🍇', 'fraise':    '🍓', 'pastèque':  '🍉',
+        'carotte':   '🥕', 'pomme de terre': '🥔', 'oignon': '🧅',
+        'ail':       '🧄', 'poivron':   '🌶️', 'eau':       '💧',
+    },
+    'ita': {
+        # ── Animals ──────────────────────────────────────────────────────────
+        'animale':   '🦁', 'cane':      '🐕', 'gatto':     '🐱',
+        'cavallo':   '🐴', 'mucca':     '🐄', 'vacca':     '🐄',
+        'maiale':    '🐷', 'pecora':    '🐑', 'uccello':   '🐦',
+        'pesce':     '🐟', 'lupo':      '🐺', 'leone':     '🦁',
+        'tigre':     '🐯', 'orso':      '🐻', 'scimmia':   '🐒',
+        'elefante':  '🐘', 'serpente':  '🐍', 'insetto':   '🐛',
+        'coniglio':  '🐰', 'gallina':   '🐔', 'pollo':     '🐔',
+        'anatra':    '🦆', 'aquila':    '🦅', 'ape':       '🐝',
+        'farfalla':  '🦋', 'topo':      '🐭', 'ratto':     '🐀',
+        'rana':      '🐸', 'squalo':    '🦈', 'balena':    '🐳',
+        'polpo':     '🐙', 'ragno':     '🕷️', 'formica':   '🐜',
+        # ── Food & drink ─────────────────────────────────────────────────────
+        'cibo':      '🍽️', 'pasto':     '🍽️', 'pane':      '🍞',
+        'latte':     '🥛', 'carne':     '🥩', 'riso':      '🍚',
+        'frutta':    '🍎', 'verdura':   '🥦', 'caffè':     '☕',
+        'vino':      '🍷', 'birra':     '🍺', 'succo':     '🥤',
+        'mela':      '🍎', 'arancia':   '🍊', 'pomodoro':  '🍅',
+        'formaggio': '🧀', 'uovo':      '🥚', 'zucchero':  '🍬',
+        'sale':      '🧂', 'tè':        '🍵', 'zuppa':     '🍲',
+        'insalata':  '🥗', 'pasta':     '🍝', 'pizza':     '🍕',
+        'olio':      '🫒', 'burro':     '🧈', 'cioccolato':'🍫',
+        'torta':     '🎂', 'banana':    '🍌', 'limone':    '🍋',
+        'uva':       '🍇', 'fragola':   '🍓', 'anguria':   '🍉',
+        'carota':    '🥕', 'patata':    '🥔', 'cipolla':   '🧅',
+        'aglio':     '🧄', 'peperone':  '🌶️', 'acqua':     '💧',
+    },
+    'por': {
+        # ── Animals ──────────────────────────────────────────────────────────
+        'animal':    '🦁', 'cachorro':  '🐕', 'cão':       '🐕',
+        'gato':      '🐱', 'cavalo':    '🐴', 'vaca':      '🐄',
+        'porco':     '🐷', 'ovelha':    '🐑', 'pássaro':   '🐦',
+        'ave':       '🦅', 'peixe':     '🐟', 'lobo':      '🐺',
+        'leão':      '🦁', 'tigre':     '🐯', 'urso':      '🐻',
+        'macaco':    '🐒', 'elefante':  '🐘', 'serpente':  '🐍',
+        'inseto':    '🐛', 'coelho':    '🐰', 'galinha':   '🐔',
+        'frango':    '🐔', 'pato':      '🦆', 'águia':     '🦅',
+        'abelha':    '🐝', 'borboleta': '🦋', 'rato':      '🐭',
+        'rã':        '🐸', 'sapo':      '🐸', 'tubarão':   '🦈',
+        'baleia':    '🐳', 'polvo':     '🐙', 'aranha':    '🕷️',
+        'formiga':   '🐜',
+        # ── Food & drink ─────────────────────────────────────────────────────
+        'comida':    '🍽️', 'refeição':  '🍽️', 'pão':       '🍞',
+        'leite':     '🥛', 'carne':     '🥩', 'arroz':     '🍚',
+        'fruta':     '🍎', 'legume':    '🥦', 'café':      '☕',
+        'vinho':     '🍷', 'cerveja':   '🍺', 'suco':      '🥤',
+        'maçã':      '🍎', 'laranja':   '🍊', 'tomate':    '🍅',
+        'queijo':    '🧀', 'ovo':       '🥚', 'açúcar':    '🍬',
+        'sal':       '🧂', 'chá':       '🍵', 'sopa':      '🍲',
+        'salada':    '🥗', 'macarrão':  '🍝', 'massa':     '🍝',
+        'pizza':     '🍕', 'azeite':    '🫒', 'manteiga':  '🧈',
+        'chocolate': '🍫', 'bolo':      '🎂', 'banana':    '🍌',
+        'limão':     '🍋', 'uva':       '🍇', 'morango':   '🍓',
+        'melancia':  '🍉', 'cenoura':   '🥕', 'batata':    '🥔',
+        'cebola':    '🧅', 'alho':      '🧄', 'pimentão':  '🌶️',
+        'água':      '💧',
+    },
+}
+
 
 LANGUAGE_DATA: Dict[str, dict] = {
     'spa': {

@@ -53,11 +53,24 @@ import warnings
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+# Monkey-patch requests.Session so EVERY HTTP call made by wiktionaryparser or
+# deep_translator gets a hard 5-second timeout.  socket.setdefaulttimeout() is
+# not enough because requests uses urllib3 connection pools that bypass it.
+try:
+    import requests as _requests
+    _orig_request = _requests.Session.request
+    def _timed_request(self, method, url, **kwargs):
+        kwargs.setdefault('timeout', 3)
+        return _orig_request(self, method, url, **kwargs)
+    _requests.Session.request = _timed_request
+except ImportError:
+    pass
+
 warnings.filterwarnings('ignore', message='.*InconsistentVersionWarning.*')
 warnings.filterwarnings('ignore', message='.*Trying to unpickle estimator.*')
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from hardcoded_data import LANGUAGE_DATA   # noqa: E402
+from hardcoded_data import LANGUAGE_DATA, EMOJI_DATA   # noqa: E402
 
 try:
     import spacy
@@ -314,52 +327,93 @@ def assign_corpus_rank(entry: dict, corpus_ranks: Dict[str, int]) -> None:
 # Whole-word matched against the English gloss to prevent false positives
 # (e.g. 'war' inside 'software', 'sing.' grammar abbreviation hitting music).
 DOMAIN_GLOSS_KEYWORDS: Dict[str, List[str]] = {
+    'animals':     ['dog', 'cat', 'bird', 'fish', 'horse', 'cow', 'pig', 'sheep',
+                    'wolf', 'lion', 'tiger', 'bear', 'monkey', 'elephant', 'snake',
+                    'rabbit', 'duck', 'eagle', 'bee', 'butterfly', 'frog', 'shark',
+                    'whale', 'insect', 'animal', 'pet', 'wild', 'species', 'prey',
+                    'predator', 'mammal', 'reptile', 'amphibian', 'creature'],
     'food':        ['eat', 'food', 'drink', 'cook', 'meal', 'fruit', 'vegetable',
                     'meat', 'bread', 'fish', 'dish', 'taste', 'flavor', 'recipe',
-                    'soup', 'salad', 'wine', 'beer', 'milk', 'cheese', 'egg'],
+                    'soup', 'salad', 'wine', 'beer', 'milk', 'cheese', 'egg',
+                    'rice', 'pasta', 'pizza', 'chocolate', 'sugar', 'salt', 'oil',
+                    'butter', 'coffee', 'tea', 'juice', 'water', 'apple', 'orange',
+                    'banana', 'tomato', 'potato', 'onion', 'garlic', 'lemon'],
     'travel':      ['travel', 'trip', 'journey', 'hotel', 'airport', 'train',
                     'bus', 'car', 'plane', 'ship', 'tourist', 'map', 'road',
-                    'station', 'ticket', 'passport', 'border', 'destination'],
+                    'station', 'ticket', 'passport', 'border', 'destination',
+                    'luggage', 'flight', 'cruise', 'voyage', 'taxi', 'guide'],
     'body':        ['body', 'hand', 'foot', 'eye', 'ear', 'nose', 'mouth',
                     'arm', 'leg', 'head', 'hair', 'skin', 'heart', 'blood',
-                    'bone', 'face', 'finger', 'tooth', 'back', 'neck'],
+                    'bone', 'face', 'finger', 'tooth', 'back', 'neck',
+                    'chest', 'stomach', 'knee', 'shoulder', 'tongue', 'lip'],
     'health':      ['health', 'doctor', 'medicine', 'sick', 'pain', 'hospital',
                     'drug', 'therapy', 'disease', 'symptom', 'treatment',
-                    'injury', 'cure', 'patient', 'nurse', 'pharmacy'],
+                    'injury', 'cure', 'patient', 'nurse', 'pharmacy', 'virus',
+                    'infection', 'surgery', 'diagnosis', 'mental', 'physical'],
+    'family':      ['family', 'mother', 'father', 'parent', 'child', 'son',
+                    'daughter', 'brother', 'sister', 'grandmother', 'grandfather',
+                    'grandparent', 'uncle', 'aunt', 'cousin', 'husband', 'wife',
+                    'spouse', 'relative', 'sibling', 'nephew', 'niece'],
+    'emotions':    ['feel', 'love', 'hate', 'happy', 'sad', 'angry', 'fear',
+                    'joy', 'hope', 'worry', 'emotion', 'mood', 'desire',
+                    'trust', 'doubt', 'surprise', 'pleasure', 'excited',
+                    'nervous', 'proud', 'ashamed', 'jealous', 'grateful',
+                    'lonely', 'bored', 'confused', 'calm', 'anxious'],
+    'weather':     ['rain', 'sun', 'snow', 'wind', 'cloud', 'storm', 'thunder',
+                    'lightning', 'fog', 'temperature', 'cold', 'hot', 'warm',
+                    'humid', 'dry', 'weather', 'climate', 'forecast', 'hail',
+                    'frost', 'flood', 'drought', 'rainbow', 'sunny', 'rainy'],
     'education':   ['school', 'study', 'learn', 'teach', 'book', 'class',
                     'university', 'student', 'teacher', 'lesson', 'knowledge',
-                    'exam', 'grade', 'subject', 'course', 'read', 'write'],
+                    'exam', 'grade', 'subject', 'course', 'read', 'write',
+                    'degree', 'diploma', 'homework', 'lecture', 'library'],
     'business':    ['money', 'work', 'job', 'company', 'sell', 'buy', 'market',
                     'price', 'cost', 'profit', 'tax', 'bank', 'invest',
-                    'trade', 'contract', 'salary', 'business', 'economy'],
+                    'trade', 'contract', 'salary', 'business', 'economy',
+                    'budget', 'revenue', 'debt', 'loan', 'client', 'brand'],
     'technology':  ['computer', 'phone', 'internet', 'digital', 'software',
                     'machine', 'device', 'data', 'network', 'screen',
                     'program', 'system', 'technology', 'electric', 'app',
-                    'application', 'electronic', 'keyboard', 'robot'],
-    'nature':      ['tree', 'flower', 'animal', 'water', 'fire', 'earth',
+                    'application', 'electronic', 'keyboard', 'robot',
+                    'camera', 'battery', 'signal', 'wireless', 'download'],
+    'nature':      ['tree', 'flower', 'water', 'fire', 'earth',
                     'sky', 'mountain', 'river', 'sea', 'forest', 'plant',
-                    'stone', 'wind', 'rain', 'sun', 'moon', 'star', 'nature'],
+                    'stone', 'wind', 'rain', 'sun', 'moon', 'star', 'nature',
+                    'ocean', 'lake', 'desert', 'jungle', 'beach', 'valley',
+                    'cave', 'cliff', 'soil', 'grass', 'leaf', 'root', 'seed'],
     'home':        ['house', 'home', 'room', 'door', 'window', 'floor',
                     'kitchen', 'bathroom', 'bedroom', 'furniture', 'table',
-                    'chair', 'bed', 'wall', 'garden', 'roof', 'clean'],
-    'people':      ['person', 'people', 'family', 'friend', 'man', 'woman',
-                    'child', 'parent', 'mother', 'father', 'brother', 'sister',
-                    'human', 'individual', 'community', 'society'],
+                    'chair', 'bed', 'wall', 'garden', 'roof', 'clean',
+                    'sofa', 'lamp', 'shelf', 'closet', 'stair', 'basement'],
+    'clothing':    ['wear', 'clothes', 'shirt', 'dress', 'shoe', 'hat',
+                    'coat', 'jacket', 'pants', 'skirt', 'sock', 'glove',
+                    'scarf', 'belt', 'fabric', 'cotton', 'fashion', 'style'],
+    'people':      ['person', 'people', 'friend', 'man', 'woman',
+                    'child', 'human', 'individual', 'community', 'society',
+                    'neighbor', 'stranger', 'adult', 'elder', 'baby'],
     'time':        ['time', 'day', 'week', 'month', 'year', 'hour', 'minute',
                     'morning', 'evening', 'night', 'today', 'yesterday',
-                    'tomorrow', 'past', 'future', 'season', 'calendar'],
+                    'tomorrow', 'past', 'future', 'season', 'calendar',
+                    'second', 'decade', 'century', 'moment', 'period'],
     'culture':     ['art', 'music', 'film', 'book', 'story', 'culture',
                     'tradition', 'religion', 'history', 'language', 'sport',
-                    'festival', 'celebrate', 'game', 'dance', 'song', 'play'],
+                    'festival', 'celebrate', 'game', 'dance', 'song', 'play',
+                    'poem', 'theater', 'museum', 'concert', 'exhibition'],
     'geography':   ['country', 'city', 'region', 'location',
                     'continent', 'island', 'north', 'south', 'east', 'west',
-                    'border', 'capital', 'territory', 'area', 'zone'],
-    'emotions':    ['feel', 'love', 'hate', 'happy', 'sad', 'angry', 'fear',
-                    'joy', 'hope', 'worry', 'emotion', 'mood', 'desire',
-                    'trust', 'doubt', 'surprise', 'pain', 'pleasure'],
+                    'border', 'capital', 'territory', 'area', 'zone',
+                    'village', 'town', 'province', 'district', 'coast'],
     'government':  ['law', 'government', 'state', 'politics', 'vote', 'right',
                     'freedom', 'power', 'rule', 'justice', 'court', 'police',
-                    'military', 'war', 'peace', 'election', 'party', 'tax'],
+                    'military', 'war', 'peace', 'election', 'party', 'tax',
+                    'constitution', 'democracy', 'republic', 'parliament'],
+    'science':     ['science', 'research', 'experiment', 'theory', 'fact',
+                    'evidence', 'chemistry', 'physics', 'biology', 'math',
+                    'laboratory', 'discovery', 'analysis', 'hypothesis',
+                    'formula', 'element', 'atom', 'cell', 'organism'],
+    'sports':      ['sport', 'play', 'game', 'team', 'ball', 'win', 'lose',
+                    'race', 'run', 'jump', 'swim', 'kick', 'score', 'match',
+                    'competition', 'athlete', 'coach', 'stadium', 'champion'],
 }
 
 ENTITY_DOMAIN_MAP: Dict[str, List[str]] = {
@@ -398,7 +452,10 @@ def classify_domains(gloss: str, pos: str, rank: Optional[int],
 # ══════════════════════════════════════════════════════════════════════════════
 
 def try_wiktionary(word: str, lang_code: str) -> Optional[List[str]]:
-    """Fetch POS-aware definitions from English Wiktionary."""
+    """
+    Fetch POS-aware definitions from English Wiktionary.
+    The global socket.setdefaulttimeout(5) enforces a hard network deadline.
+    """
     try:
         from wiktionaryparser import WiktionaryParser
     except ImportError:
@@ -413,13 +470,13 @@ def try_wiktionary(word: str, lang_code: str) -> Optional[List[str]]:
         for block in result:
             for defn in block.get('definitions', []):
                 texts = defn.get('text', [])
-                for text in texts[1:4]:
+                # texts[0] is the POS header; texts[1:] are the actual definitions
+                for text in texts[1:5]:
                     text = text.strip()
-                    text = re.sub(r'^\([^)]+\)\s*', '', text)
-                    text = re.split(r'\s[-:]\s', text)[0].strip()
                     if text and len(text) > 1:
                         glosses.append(text)
-                        break
+                if len(glosses) >= 6:
+                    break
         return glosses if glosses else None
     except Exception:
         return None
@@ -427,7 +484,10 @@ def try_wiktionary(word: str, lang_code: str) -> Optional[List[str]]:
 
 def try_google_translate(word: str, lang_code: str,
                          delay: float = 0.5) -> Optional[str]:
-    """Translate word to English via Google Translate (deep_translator)."""
+    """
+    Translate word to English via Google Translate (deep_translator).
+    The global socket.setdefaulttimeout(5) enforces a hard network deadline.
+    """
     try:
         from deep_translator import GoogleTranslator
     except ImportError:
@@ -442,14 +502,88 @@ def try_google_translate(word: str, lang_code: str,
         return None
 
 
+# ── Gloss cleaning ────────────────────────────────────────────────────────────
+_PAREN_RE     = re.compile(r'\([^)]*\)')          # (formal), (archaic), (sing.) …
+_BRACKET_RE   = re.compile(r'\[[^\]]*\]')          # [Spain], [archaic] …
+_SEMI_NOTE_RE = re.compile(r'\s*;.*')              # ; especially when used …
+_DASH_NOTE_RE = re.compile(r'\s+[-–—]\s+.*')       # - as in …, — usually …
+_COLON_NOTE_RE= re.compile(r'\s*:\s.*')            # : used to express …
+
+
+def clean_gloss(text: str) -> Optional[str]:
+    """
+    Strip parentheticals, brackets, usage notes, and trailing punctuation.
+    Returns None if the result is empty, too long, or otherwise unusable.
+    """
+    text = _PAREN_RE.sub('', text)
+    text = _BRACKET_RE.sub('', text)
+    text = _SEMI_NOTE_RE.sub('', text)
+    text = _DASH_NOTE_RE.sub('', text)
+    text = _COLON_NOTE_RE.sub('', text)
+    text = re.sub(r'\s+', ' ', text).strip().strip('.,;:')
+    if not text or len(text.split()) > 6:
+        return None
+    if re.search(r'[<>{}|\\]', text):
+        return None
+    return text
+
+
+def normalize_glosses(raw: List[str], pos: str) -> List[str]:
+    """
+    Clean raw glosses and expand verbs to include both 'to X' and 'X' forms.
+    Also splits comma-separated items (e.g. Google often returns 'do, make').
+
+    Parentheticals are stripped BEFORE comma-splitting so that a raw gloss like
+    "yours (masc, informal)" is not incorrectly split mid-parenthesis into
+    ["yours (masc", "informal)"].
+
+    Returns a deduplicated list of short, quiz-ready answer strings (max 8).
+    """
+    seen: set = set()
+    result: List[str] = []
+
+    def _add(text: str) -> None:
+        key = text.lower()
+        if key not in seen:
+            seen.add(key)
+            result.append(text)
+
+    for raw_item in raw:
+        # Strip parentheticals/brackets first so commas inside them don't split
+        pre = _PAREN_RE.sub('', raw_item)
+        pre = _BRACKET_RE.sub('', pre).strip()
+
+        # Split on commas and slashes: "do, make", "to do, to make", "him / her"
+        parts = [p.strip() for p in re.split(r'[,/]', pre) if p.strip()]
+        for part in parts:
+            cleaned = clean_gloss(part)
+            if not cleaned:
+                continue
+            if pos == 'verb':
+                if cleaned.lower().startswith('to '):
+                    with_to = cleaned
+                    bare    = cleaned[3:].strip()
+                else:
+                    bare    = cleaned
+                    with_to = 'to ' + cleaned
+                _add(with_to)
+                _add(bare)
+            else:
+                _add(cleaned)
+
+    return result[:8]
+
+
 def build_display(word: str, pos: str, glosses: List[str]) -> str:
-    """Derive a short display string; verbs get 'to <gloss>'."""
+    """Pick the best display string from already-normalized glosses."""
     if not glosses:
         return word
-    first = glosses[0].strip().rstrip('.,;')
-    if pos == 'verb' and not first.lower().startswith('to '):
-        return f"to {first}"
-    return first
+    if pos == 'verb':
+        # Prefer the 'to X' form for display
+        for g in glosses:
+            if g.lower().startswith('to '):
+                return g
+    return glosses[0]
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -495,48 +629,74 @@ def enrich_entries(entries: List[dict], lang: str,
     if needs_gloss and not no_translate:
         print(f"  Translating  : {len(needs_gloss)} entries")
 
-    for entry in needs_gloss:
-        word   = entry['word']
-        pos    = entry.get('pos', '')
-        cached = cache.get(word)
+    total_needed = len(needs_gloss)
+    try:
+        for idx, entry in enumerate(needs_gloss):
+            word   = entry['word']
+            pos    = entry.get('pos', '')
+            cached = cache.get(word)
 
-        try:
-            if cached:
-                glosses = cached.get('glosses', [])
-                cache_hits += 1
-            elif no_translate:
-                glosses = []
-                skipped += 1
-            else:
-                glosses = try_wiktionary(word, lang) or []
-                if glosses:
-                    wikt_hits += 1
+            # Live progress on a single overwriting line
+            print(f"\r  [{idx + 1}/{total_needed}]  {word:<25}", end='', flush=True)
+
+            try:
+                if cached:
+                    raw_glosses = cached.get('glosses', [])
+                    cache_hits += 1
+                elif no_translate:
+                    raw_glosses = []
+                    skipped += 1
                 else:
-                    translation = try_google_translate(word, lang)
-                    if translation and translation.lower() != word.lower():
-                        glosses = [translation]
-                        google_hits += 1
-                cache[word] = {'glosses': glosses}
-                if (wikt_hits + google_hits) % 50 == 0:
-                    save_gloss_cache(lang, cache)
+                    raw_glosses = try_wiktionary(word, lang) or []
+                    if raw_glosses:
+                        wikt_hits += 1
+                    else:
+                        translation = try_google_translate(word, lang)
+                        if translation and translation.lower() != word.lower():
+                            raw_glosses = [translation]
+                            google_hits += 1
+                    cache[word] = {'glosses': raw_glosses}
+                    fetched = wikt_hits + google_hits
+                    if fetched > 0 and fetched % 50 == 0:
+                        save_gloss_cache(lang, cache)
 
-            if glosses:
-                entry['glosses'] = glosses
-                if not entry.get('display'):
+                # Normalize: strip parentheticals, expand verbs to 'to X' + 'X'
+                glosses = normalize_glosses(raw_glosses, pos)
+                if glosses:
+                    entry['glosses'] = glosses
                     entry['display'] = build_display(word, pos, glosses)
 
-        except Exception as exc:
-            # Never let a single word crash the whole translation pass.
-            skipped += 1
-            cache[word] = {'glosses': []}
-            if verbose:
-                print(f"  Warning: skipped '{word}' — {type(exc).__name__}: {exc}")
+            except Exception as exc:
+                skipped += 1
+                cache[word] = {'glosses': []}
+                if verbose:
+                    print(f"\n  Warning: skipped '{word}' — {type(exc).__name__}: {exc}")
+
+        print()  # newline after the progress line finishes
+
+    except KeyboardInterrupt:
+        save_gloss_cache(lang, cache)
+        print(f"\n  Interrupted  : {cache_hits} cache  "
+              f"{wikt_hits} Wiktionary  {google_hits} Google  {skipped} skipped")
+        raise KeyboardInterrupt
 
     save_gloss_cache(lang, cache)
 
     if not no_translate and (wikt_hits + google_hits + cache_hits) > 0:
         print(f"  Gloss source : {cache_hits} cache  "
               f"{wikt_hits} Wiktionary  {google_hits} Google  {skipped} skipped")
+
+    # Normalize ALL entries (including hardcoded ones that already had glosses).
+    # This strips parentheticals like "the (masc. sing.)" → "the" and expands
+    # verbs to include both "to X" and "X" forms for every entry.
+    for entry in entries:
+        pos         = entry.get('pos', '')
+        raw_glosses = entry.get('glosses', [])
+        if raw_glosses:
+            cleaned = normalize_glosses(raw_glosses, pos)
+            if cleaned:
+                entry['glosses'] = cleaned
+                entry['display'] = build_display(entry['word'], pos, cleaned)
 
     # Domain classification runs over ALL entries every time.
     for entry in entries:
@@ -553,6 +713,46 @@ def enrich_entries(entries: List[dict], lang: str,
           f"{total_display}/{len(entries)} display")
 
     return entries
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DUPLICATE WORD MERGING
+# ══════════════════════════════════════════════════════════════════════════════
+
+def merge_duplicate_words(entries: List[dict]) -> List[dict]:
+    """
+    Merge entries that share the same word (e.g. 'sí' as pronoun + adverb).
+
+    The first occurrence becomes the canonical entry.  Subsequent occurrences
+    donate their glosses and tags into it, then are dropped.  The DB schema
+    has a UNIQUE constraint on (language, word), so duplicates would silently
+    overwrite each other during seeding — merging here preserves all meanings.
+    """
+    index: Dict[str, int] = {}   # word → position in result list
+    result: List[dict] = []
+
+    for entry in entries:
+        word = entry['word']
+        if word not in index:
+            index[word] = len(result)
+            result.append(entry)
+        else:
+            base = result[index[word]]
+            # Merge glosses (preserve order, deduplicate)
+            existing = base.get('glosses') or []
+            for g in (entry.get('glosses') or []):
+                if g not in existing:
+                    existing.append(g)
+            base['glosses'] = existing
+            # Merge tags
+            for t in (entry.get('tags') or []):
+                if t not in (base.get('tags') or []):
+                    base.setdefault('tags', []).append(t)
+            # Keep the better display (non-empty, prefer the base)
+            if not base.get('display') and entry.get('display'):
+                base['display'] = entry['display']
+
+    return result
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1037,6 +1237,26 @@ def main(langs: List[str], n: int, verbose: bool,
             e.get('rank') if e.get('rank') is not None else float('inf')
         ))
 
+        # Merge any duplicate words (e.g. 'sí' appears as both pronoun + adverb
+        # in hardcoded data — the DB has a UNIQUE constraint on (language, word)
+        # so we must combine them into one entry before seeding).
+        before = len(all_entries)
+        all_entries = merge_duplicate_words(all_entries)
+        merged = before - len(all_entries)
+        if merged:
+            print(f"  Deduped      : {merged} duplicate word(s) merged")
+
+        # Apply curated emoji from EMOJI_DATA (animals + food for now).
+        # Only sets emoji where not already present; won't overwrite admin edits.
+        lang_emojis = EMOJI_DATA.get(lang, {})
+        emoji_applied = 0
+        for entry in all_entries:
+            if not entry.get('emoji') and entry['word'] in lang_emojis:
+                entry['emoji'] = lang_emojis[entry['word']]
+                emoji_applied += 1
+        if emoji_applied:
+            print(f"  Emoji        : {emoji_applied} entries tagged")
+
         # Write immediately so the file exists before the (slow) translation step.
         # A second write below adds the enrichment results.
         outpath = OUTPUT_DIR / f'{lang_name}_preseed.jsonl'
@@ -1044,15 +1264,22 @@ def main(langs: List[str], n: int, verbose: bool,
         print(f"  Output       : {len(all_entries)} entries -> {outpath.name} (pre-enrichment)")
 
         # Enrich: glosses, display, domains (in-place, then re-write)
-        all_entries = enrich_entries(
-            all_entries, lang,
-            fresh=fresh,
-            batch=batch,
-            no_translate=no_translate,
-            verbose=verbose,
-        )
-        write_jsonl(outpath, all_entries)
-        print(f"  Output       : {len(all_entries)} entries -> {outpath.name} (enriched)\n")
+        try:
+            all_entries = enrich_entries(
+                all_entries, lang,
+                fresh=fresh,
+                batch=batch,
+                no_translate=no_translate,
+                verbose=verbose,
+            )
+            write_jsonl(outpath, all_entries)
+            print(f"  Output       : {len(all_entries)} entries -> {outpath.name} (enriched)\n")
+        except KeyboardInterrupt:
+            # enrich_entries already saved the cache; write whatever we have
+            write_jsonl(outpath, all_entries)
+            print(f"  Output       : {len(all_entries)} entries -> {outpath.name} (partial)\n")
+            print("Interrupted — partial file written. Re-run to continue.")
+            sys.exit(0)
 
     print("Done.")
 

@@ -43,8 +43,8 @@ LANGUAGES = ['spanish', 'french', 'italian', 'portuguese']
 UPSERT_WORD = """
     INSERT INTO words
         (language, word, display, pos, difficulty, notes,
-         gender, register, infinitive, rank, ipa, syllables, conjugations, domains)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         gender, register, infinitive, rank, ipa, syllables, conjugations, domains, emoji)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(language, word) DO UPDATE SET
         display      = COALESCE(excluded.display,      display),
         pos          = COALESCE(excluded.pos,          pos),
@@ -58,6 +58,7 @@ UPSERT_WORD = """
         syllables    = COALESCE(excluded.syllables,    syllables),
         conjugations = COALESCE(excluded.conjugations, conjugations),
         domains      = COALESCE(excluded.domains,      domains),
+        emoji        = COALESCE(excluded.emoji,        emoji),
         updated_at   = CURRENT_TIMESTAMP
 """
 
@@ -118,6 +119,7 @@ def extract_word_row(w: dict, lang: str) -> tuple:
         syllables_to_str(ling.get('syllables')),
         json.dumps(conj, ensure_ascii=False) if conj else None,
         json.dumps(doms, ensure_ascii=False) if doms else None,
+        w.get('emoji') or None,
     )
 
 
