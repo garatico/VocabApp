@@ -267,5 +267,7 @@ export const EMOJI_MAP: EmojiMap = {
  * Returns the emoji string or null if none is mapped.
  */
 export function getFallbackEmoji(lang: string, word: string): string | null {
-  return EMOJI_MAP[lang]?.[word] ?? null;
+  const map = EMOJI_MAP[lang];
+  if (!map || !Object.prototype.hasOwnProperty.call(map, word)) return null;
+  return map[word] ?? null;
 }
