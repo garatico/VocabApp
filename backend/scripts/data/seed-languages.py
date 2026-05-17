@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 """
-seed-languages.py
+seed-languages.py  —  Load preseed JSONL files into vocabulary.db.
 
-Loads Spanish, Portuguese, French, and Italian vocabulary into vocabulary.db.
+Source files (produced by clean_wikicorpora.py):
+    data/spanish_preseed.jsonl
+    data/french_preseed.jsonl
+    data/italian_preseed.jsonl
+    data/portuguese_preseed.jsonl
 
-Source: data/{lang}_preseed.jsonl (single source of truth)
-  All languages use preseed JSONL files with the full Spanish schema.
-  Populates: words, word_glosses, word_domains, word_tags
+Populates: words, word_glosses, word_tags
+Uses UPSERT — safe to re-run; existing rows are updated, not duplicated.
 
-Run once after generating or updating the preseed JSONL files:
+Usage:
     python backend/scripts/data/seed-languages.py
 
-Stop the server first (DB must not be locked).
-Re-running is safe -- uses UPSERT so existing rows are updated, not duplicated.
+Stop the server before running (DB must not be locked).
 """
 
 import json
@@ -22,49 +24,22 @@ import datetime
 import sqlite3
 from pathlib import Path
 
-# Paths
 # backend/scripts/data/ → backend/scripts/ → backend/ → VocabApp/
-BASE_DIR    = Path(__file__).resolve().parent
+BASE_DIR     = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent.parent.parent
-DB_PATH     = PROJECT_ROOT / 'data' / 'vocabulary.db'
-BACKUP_PATH = DB_PATH.with_name(
-    f"vocabulary_pre_seed_{int(datetime.datetime.now().timestamp())}.db"
-)
+DB_PATH      = PROJECT_ROOT / 'data' / 'vocabulary.db'
 
 SOURCES = {
     'spanish':    PROJECT_ROOT / 'data' / 'spanish_preseed.jsonl',
-    'portuguese': PROJECT_ROOT / 'data' / 'portuguese_preseed.jsonl',
     'french':     PROJECT_ROOT / 'data' / 'french_preseed.jsonl',
     'italian':    PROJECT_ROOT / 'data' / 'italian_preseed.jsonl',
+    'portuguese': PROJECT_ROOT / 'data' / 'portuguese_preseed.jsonl',
 }
 
-# Preflight
-if not DB_PATH.exists():
-    print(f'X DB not found: {DB_PATH}')
-    exit(1)
+LANGUAGES = ['spanish', 'french', 'italian', 'portuguese']
 
-shutil.copy(DB_PATH, BACKUP_PATH)
-print(f'Backup: {BACKUP_PATH.name}')
+# ── SQL ────────────────────────────────────────────────────────────────────────
 
-# Copy DB to a local temp file so SQLite WAL/shm files work (CIFS mounts block them)
-_tmp_dir  = tempfile.mkdtemp()
-LOCAL_DB  = Path(_tmp_dir) / 'vocabulary.db'
-shutil.copy(DB_PATH, LOCAL_DB)
-print(f'Working copy: {LOCAL_DB}')
-
-conn = sqlite3.connect(str(LOCAL_DB))
-conn.execute('PRAGMA foreign_keys = ON')
-conn.execute('PRAGMA journal_mode = WAL')
-cursor = conn.cursor()
-
-# Add domains column if the schema predates it
-existing_cols = {r[1] for r in cursor.execute("PRAGMA table_info(words)").fetchall()}
-if "domains" not in existing_cols:
-    cursor.execute("ALTER TABLE words ADD COLUMN domains TEXT")
-    conn.commit()
-    print("Migrated: added domains column to words")
-
-# SQL templates
 UPSERT_WORD = """
     INSERT INTO words
         (language, word, display, pos, difficulty, notes,
@@ -91,17 +66,13 @@ INSERT_GLOSS = """
     VALUES (?, ?, ?)
 """
 
-INSERT_DOMAIN = """
-    INSERT OR IGNORE INTO word_domains (word_id, domain)
-    VALUES (?, ?)
-"""
-
 INSERT_TAG = """
     INSERT OR IGNORE INTO word_tags (word_id, tag)
     VALUES (?, ?)
 """
 
-# Helpers
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
 def read_jsonl(path: Path) -> list[dict]:
     entries = []
     with open(path, encoding='utf-8') as f:
@@ -112,22 +83,12 @@ def read_jsonl(path: Path) -> list[dict]:
             try:
                 entries.append(json.loads(line))
             except json.JSONDecodeError as e:
-                print(f'  Warning: Skipping JSONL line {lineno}: {e}')
+                print(f'  Warning: skipping JSONL line {lineno}: {e}')
     return entries
 
 
-def load_source(lang: str) -> tuple[list[dict], str]:
-    """Return (word_list, format_name) from preseed JSONL."""
-    jsonl_path = SOURCES[lang]
-
-    if jsonl_path.exists():
-        return read_jsonl(jsonl_path), 'jsonl'
-
-    return [], 'none'
-
-
 def syllables_to_str(syllables) -> str | None:
-    """Convert syllable list ['par','ler'] to 'par-ler' for DB storage."""
+    """Convert ['par', 'ler'] → 'par-ler' for DB storage."""
     if not syllables:
         return None
     if isinstance(syllables, list):
@@ -136,54 +97,47 @@ def syllables_to_str(syllables) -> str | None:
 
 
 def extract_word_row(w: dict, lang: str) -> tuple:
-    """
-    Map one word entry from preseed JSONL to the words table row tuple.
+    """Map one preseed entry to the words table row tuple."""
+    ling = w.get('linguistic') or {}
+    freq = w.get('frequency')  or {}
+    conj = ling.get('conjugations')
+    doms = w.get('domains') or ['general']
 
-    The preseed JSONL uses the full Spanish schema with nested structures:
-      - linguistic: { infinitive, gender, register, ipa, syllables, conjugations, ... }
-      - frequency: { rank, corpus_frequency, ... }
-    """
-    ling  = w.get('linguistic') or {}
-    freq  = w.get('frequency')  or {}
-    conj  = ling.get('conjugations')
-    doms  = w.get('domains') or ['general']
-
-    word         = w['word']
-    display      = w.get('display') or word
-    pos          = w.get('pos')
-    difficulty   = w.get('difficulty')
-    notes        = w.get('notes') or None
-    gender       = ling.get('gender')
-    register     = w.get('register') or ling.get('register')
-    infinitive   = ling.get('infinitive')
-    rank         = freq.get('rank') or w.get('rank')
-    ipa          = ling.get('ipa') or None
-    syllables    = syllables_to_str(ling.get('syllables'))
-    conjugations = json.dumps(conj, ensure_ascii=False) if conj else None
-    domains      = json.dumps(doms, ensure_ascii=False) if doms else None
-
-    return (lang, word, display, pos, difficulty, notes,
-            gender, register, infinitive, rank, ipa, syllables, conjugations, domains)
+    return (
+        lang,
+        w['word'],
+        w.get('display') or w['word'],
+        w.get('pos'),
+        w.get('difficulty'),
+        w.get('notes') or None,
+        ling.get('gender'),
+        w.get('register') or ling.get('register'),
+        ling.get('infinitive'),
+        freq.get('rank') or w.get('rank'),
+        ling.get('ipa') or None,
+        syllables_to_str(ling.get('syllables')),
+        json.dumps(conj, ensure_ascii=False) if conj else None,
+        json.dumps(doms, ensure_ascii=False) if doms else None,
+    )
 
 
-def seed_language(lang: str):
-    words, fmt = load_source(lang)
+# ── Core seeding ───────────────────────────────────────────────────────────────
 
-    if not words:
-        print(f'  X No source found for {lang}')
+def seed_language(lang: str, conn: sqlite3.Connection) -> None:
+    cursor = conn.cursor()
+    source = SOURCES[lang]
+
+    if not source.exists():
+        print(f'\n  {lang.capitalize()}  ✗  file not found: {source.name}')
         return
 
-    label = lang.capitalize()
-    print(f'\n{label}  [{fmt} format]  {len(words)} words')
+    words = read_jsonl(source)
+    print(f'\n{lang.capitalize()}  [{len(words)} words]')
 
-    inserted = glosses_n = tags_n = 0
+    glosses_n = tags_n = 0
 
     for w in words:
-        # 1. Upsert the words row
-        row = extract_word_row(w, lang)
-        cursor.execute(UPSERT_WORD, row)
-
-        # Fetch the word DB id (needed for child tables)
+        cursor.execute(UPSERT_WORD, extract_word_row(w, lang))
         cursor.execute(
             'SELECT id FROM words WHERE language = ? AND word = ?',
             (lang, w['word'])
@@ -193,15 +147,11 @@ def seed_language(lang: str):
             continue
         word_id = result[0]
 
-        inserted += 1
-
-        # 2. word_glosses
         for pos_idx, gloss in enumerate(w.get('glosses') or []):
             if gloss:
                 cursor.execute(INSERT_GLOSS, (word_id, gloss, pos_idx))
                 glosses_n += 1
 
-        # 3. word_tags
         for tag in w.get('tags') or []:
             if tag:
                 cursor.execute(INSERT_TAG, (word_id, tag))
@@ -209,7 +159,6 @@ def seed_language(lang: str):
 
     conn.commit()
 
-    # Summary
     cursor.execute(
         '''SELECT
              COUNT(*) total,
@@ -221,19 +170,50 @@ def seed_language(lang: str):
         (lang,)
     )
     stats = cursor.fetchone()
-    print(f'  OK words         : {stats[0]} total  '
-          f'(pos: {stats[1]}, conjugations: {stats[2]}, IPA: {stats[3]}, rank: {stats[4]})')
-    print(f'  OK word_glosses  : {glosses_n} rows inserted/ignored')
-    print(f'  OK word_tags     : {tags_n} rows inserted/ignored')
-    print(f'  OK domains       : stored as JSON in words table')
+    print(f'  words        : {stats[0]} total  '
+          f'(pos: {stats[1]}, conj: {stats[2]}, IPA: {stats[3]}, rank: {stats[4]})')
+    print(f'  word_glosses : {glosses_n} rows')
+    print(f'  word_tags    : {tags_n} rows')
 
 
-# Run
-for lang in ['spanish', 'portuguese', 'french', 'italian']:
-    seed_language(lang)
+# ── Entry point ────────────────────────────────────────────────────────────────
 
-conn.close()
+def main() -> None:
+    if not DB_PATH.exists():
+        print(f'✗  DB not found: {DB_PATH}')
+        raise SystemExit(1)
 
-# Copy seeded DB back to the original location
-shutil.copy(LOCAL_DB, DB_PATH)
-print(f'\nOK Seeding complete. DB written back to {DB_PATH.name}')
+    # Backup
+    backup = DB_PATH.with_name(
+        f"vocabulary_pre_seed_{int(datetime.datetime.now().timestamp())}.db"
+    )
+    shutil.copy(DB_PATH, backup)
+    print(f'Backup  : {backup.name}')
+
+    # Work on a local temp copy so SQLite WAL/shm files work on CIFS mounts.
+    tmp_dir  = tempfile.mkdtemp()
+    local_db = Path(tmp_dir) / 'vocabulary.db'
+    shutil.copy(DB_PATH, local_db)
+
+    conn = sqlite3.connect(str(local_db))
+    conn.execute('PRAGMA foreign_keys = ON')
+    conn.execute('PRAGMA journal_mode = WAL')
+
+    # Schema migration: add domains column if missing.
+    existing_cols = {r[1] for r in conn.execute("PRAGMA table_info(words)").fetchall()}
+    if 'domains' not in existing_cols:
+        conn.execute('ALTER TABLE words ADD COLUMN domains TEXT')
+        conn.commit()
+        print('Migrated: added domains column to words')
+
+    for lang in LANGUAGES:
+        seed_language(lang, conn)
+
+    conn.close()
+
+    shutil.copy(local_db, DB_PATH)
+    print(f'\n✓  Seeding complete — {DB_PATH.name}')
+
+
+if __name__ == '__main__':
+    main()
