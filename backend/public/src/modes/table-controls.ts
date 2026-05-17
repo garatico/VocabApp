@@ -1,23 +1,24 @@
-import { renderTableMode } from './table-mode.js';
+import { renderTableMode, type TableController } from './table-mode.ts';
 
-let tableController = null;
+let tableController: TableController | null = null;
 
-export function setTableController(controller) {
+export function setTableController(controller: TableController): void {
   tableController = controller;
 }
 
-export function bindTableControls() {
+export function bindTableControls(): void {
   const tableSubmit   = document.getElementById('tableSubmit');
   const tableReset    = document.getElementById('tableReset');
   const tableExport   = document.getElementById('tableExport');
   const tableFeedback = document.getElementById('tableFeedback');
-  const colsSelect    = document.getElementById('colsSelect');
+  const colsSelect    = document.getElementById('colsSelect') as HTMLSelectElement | null;
 
   tableSubmit?.addEventListener('click', () => {
-    if (!tableController) return;
+    if (!tableController || !tableFeedback) return;
     const results = tableController.checkAll();
     const correct = results.filter(r => r.ok).length;
-    tableFeedback.textContent = `Checked ${results.length} — correct: ${correct}, incorrect: ${results.length - correct}`;
+    tableFeedback.textContent =
+      `Checked ${results.length} — correct: ${correct}, incorrect: ${results.length - correct}`;
   });
 
   tableReset?.addEventListener('click', () => {
@@ -50,12 +51,13 @@ export function bindTableControls() {
   colsSelect?.addEventListener('change', () => {
     if (!tableController) return;
     const wrap = document.getElementById('tableWrap');
+    if (!wrap) return;
     wrap.innerHTML = '';
     const cols = Math.max(1, Math.min(5, Number(colsSelect.value)));
     tableController = renderTableMode({
-      words: tableController.words,
-      container: wrap,
-      columns: cols
+      words:     tableController.words,
+      container: wrap as HTMLElement,
+      columns:   cols,
     });
   });
 }

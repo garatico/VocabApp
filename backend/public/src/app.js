@@ -1,4 +1,4 @@
-import { bindTableControls }                  from './modes/table-controls.js';
+import { bindTableControls }                  from './modes/table-controls.ts';
 import { bindQuizControls }                   from './quiz/quiz-controls.ts';
 import { bindStartHandler }                   from './start-handler.js';
 import { bindClassFilter, getSelectedClasses } from './filters/class-filter.ts';
@@ -9,7 +9,7 @@ import { loadWords }                          from './data/data-loader.ts';
 import { initTheme }                          from './ui/theme-toggle.ts';
 import { mountUI }                            from './ui/ui.ts';
 import { initializeFilterToggle }             from './filters/filter-toggle.ts';
-import { renderPictureMode }                  from './modes/picture-mode.js';
+import { renderPictureMode }                  from './modes/picture-mode.ts';
 import { initConjControls }                   from './modes/conjugation/controls.ts';
 
 initTheme();

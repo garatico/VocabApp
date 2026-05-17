@@ -1,10 +1,10 @@
 import { Quiz }                          from './quiz/quiz.ts';
 import { loadWords }                      from './data/data-loader.ts';
-import { renderTableMode }                from './modes/table-mode.js';
-import { renderRecallMode }               from './modes/recall-mode.js';
-import { renderPictureMode }              from './modes/picture-mode.js';
+import { renderTableMode }                from './modes/table-mode.ts';
+import { renderRecallMode }               from './modes/recall-mode.ts';
+import { renderPictureMode }              from './modes/picture-mode.ts';
 import { renderConjugationMode }          from './modes/conjugation/index.ts';
-import { setTableController }             from './modes/table-controls.js';
+import { setTableController }             from './modes/table-controls.ts';
 import { setQuiz }                        from './quiz/quiz-controls.ts';
 import { filterWords }                    from './filters/word-filters.ts';
 
