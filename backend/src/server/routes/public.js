@@ -28,6 +28,10 @@ router.get('/vocab/:language', async (req, res, next) => {
     // Load vocabulary file
     const vocab = await loadVocabFile(normalizedLanguage);
 
+    // Cache vocab responses — data only changes when admin edits a word
+    const maxAge = process.env.NODE_ENV === 'production' ? 3600 : 300;
+    res.set('Cache-Control', `public, max-age=${maxAge}`);
+
     // Return vocabulary with metadata
     res.json({
       success: true,
