@@ -50,7 +50,8 @@ export function createApp({ nodeEnv = process.env.NODE_ENV || 'development' } = 
       app.get('/admin', (_req, res) => res.sendFile(path.join(projectRoot, 'public', 'admin.html')));
     }
 
-    app.get('*', (_req, res) => res.sendFile(path.join(projectRoot, 'public', 'index.html')));
+    // index.html now lives at backend/index.html (Vite root = backend/)
+    app.get('*', (_req, res) => res.sendFile(path.join(projectRoot, 'index.html')));
   }
 
   app.use(errorHandler);
