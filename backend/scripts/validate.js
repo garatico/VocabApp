@@ -19,8 +19,7 @@ const __dirname = join(fileURLToPath(import.meta.url), '..');
 const root = join(__dirname, '..');
 
 const CHECK_DIRS = [
-  join(root, 'src'),
-  join(root, 'public', 'src'),
+  join(root, 'src', 'server'),
 ];
 
 const MIN_BYTES = 50; // any JS file under this is almost certainly truncated

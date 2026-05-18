@@ -11,6 +11,10 @@ export default defineConfig({
       '/api':  { target: 'http://localhost:3000', changeOrigin: true },
       '/svgs': { target: 'http://localhost:3000', changeOrigin: true },
     },
+    fs: {
+      // Allow imports from src/client/ which lives one level above the Vite root (public/)
+      allow: ['..'],
+    },
   },
 
   // `vite build` output — Express can serve this in production instead of public/
