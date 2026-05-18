@@ -4,7 +4,7 @@ export default [
   js.configs.recommended,
   {
     // Backend Node.js source
-    files: ['src/**/*.js'],
+    files: ['src/server/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
@@ -24,8 +24,8 @@ export default [
     },
   },
   {
-    // Frontend browser source
-    files: ['public/src/**/*.js'],
+    // Frontend browser source (plain JS admin files)
+    files: ['src/client/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
@@ -55,7 +55,6 @@ export default [
     },
   },
   {
-    // Ignore generated/tool files
     ignores: ['node_modules/**', 'scripts/**'],
   },
 ];

@@ -51,14 +51,14 @@ export function renderTableMode({
     const pct       = total > 0 ? Math.round((correct / total) * 100) : 0;
     const statsText = `${correct}/${total} answered`;
 
-    const barTop     = document.getElementById('tableBarTop');
-    const barBottom  = document.getElementById('tableBarBottom');
-    const statsTop   = document.getElementById('tableStatsTop');
+    const barTop      = document.getElementById('tableBarTop');
+    const barBottom   = document.getElementById('tableBarBottom');
+    const statsTop    = document.getElementById('tableStatsTop');
     const statsBottom = document.getElementById('tableStatsBottom');
 
-    if (barTop)     barTop.style.width     = pct + '%';
-    if (barBottom)  barBottom.style.width  = pct + '%';
-    if (statsTop)   statsTop.textContent   = statsText;
+    if (barTop)     barTop.style.width      = pct + '%';
+    if (barBottom)  barBottom.style.width   = pct + '%';
+    if (statsTop)   statsTop.textContent    = statsText;
     if (statsBottom) statsBottom.textContent = statsText;
 
     const giveUpBtn = document.getElementById('tableReset') as HTMLButtonElement | null;
@@ -153,10 +153,7 @@ export function renderTableMode({
   function giveUp(): CheckResult[] {
     const results: CheckResult[] = [];
     container.querySelectorAll<HTMLInputElement>('input[data-word]').forEach(inp => {
-      if (inp.classList.contains('correct')) {
-        results.push({ ok: true });
-        return;
-      }
+      if (inp.classList.contains('correct')) { results.push({ ok: true }); return; }
       const entry = words.find(w => w.word === inp.dataset.word);
       if (!entry) return;
       inp.value    = revealText(entry);

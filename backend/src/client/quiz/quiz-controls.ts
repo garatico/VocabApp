@@ -31,13 +31,11 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
   function showCurrent(): void {
     if (!quiz) return;
     const cur = quiz.current();
-
     wordEl.textContent = cur.word;
     if (posEl)  posEl.textContent  = getPosLabel(cur);
     if (hintEl) hintEl.textContent = cur.display ?? '';
-
-    answerEl.value          = '';
-    feedbackEl.textContent  = '';
+    answerEl.value         = '';
+    feedbackEl.textContent = '';
     updateStats();
     answerEl.focus();
   }
@@ -51,39 +49,25 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
     const statsText = `Seen ${s.seen}/${s.total} • Correct ${s.correct} • Incorrect ${s.incorrect}`;
     statsEl.textContent = statsText;
     if (statsTopEl) statsTopEl.textContent = statsText;
-    if (giveUpBtn) (giveUpBtn as HTMLButtonElement).disabled =
-      (s.total > 0 && uniqueCorrect === s.total);
+    if (giveUpBtn) (giveUpBtn as HTMLButtonElement).disabled = (s.total > 0 && uniqueCorrect === s.total);
   }
 
   answerEl.addEventListener('input', () => {
     if (!quiz) return;
     const entry = quiz.current();
     if (!isCorrect(answerEl.value, entry)) return;
-
     feedbackEl.textContent = 'Correct ✓';
     (feedbackEl as HTMLElement).style.color = 'green';
-
     const key = entry.word;
     if (!quiz.state.seen[key]) quiz.state.seen[key] = { correct: 0, incorrect: 0 };
     quiz.state.seen[key].correct++;
     quiz.markCorrect();
     quiz.save();
-
     setTimeout(() => { quiz!.next(); showCurrent(); }, 450);
   });
 
-  btnCorrect.addEventListener('click', () => {
-    if (!quiz) return;
-    quiz.markCorrect();
-    quiz.next();
-    showCurrent();
-  });
-
-  btnSkip.addEventListener('click', () => {
-    if (!quiz) return;
-    quiz.next();
-    showCurrent();
-  });
+  btnCorrect.addEventListener('click', () => { if (!quiz) return; quiz.markCorrect(); quiz.next(); showCurrent(); });
+  btnSkip.addEventListener('click',    () => { if (!quiz) return; quiz.next(); showCurrent(); });
 
   giveUpBtn?.addEventListener('click', () => {
     if (!quiz) return;
@@ -91,28 +75,21 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
     const glosses = getGlosses(entry);
     feedbackEl.textContent = `Answer: ${glosses.join(' / ')}`;
     (feedbackEl as HTMLElement).style.color = 'var(--danger)';
-
     const key = entry.word;
     if (!quiz.state.seen[key]) quiz.state.seen[key] = { correct: 0, incorrect: 0 };
     quiz.state.seen[key].incorrect++;
     quiz.save();
     updateStats();
-
     setTimeout(() => { quiz!.next(); showCurrent(); }, 900);
   });
 
-  ttsBtn.addEventListener('click', () => {
-    if (!quiz) return;
-    speak(quiz.current().word, getLangCode!());
-  });
+  ttsBtn.addEventListener('click', () => { if (!quiz) return; speak(quiz.current().word, getLangCode!()); });
 
   exportBtn.addEventListener('click', () => {
     if (!quiz) return;
     const blob = new Blob([JSON.stringify(quiz.export(), null, 2)], { type: 'application/json' });
-    const a    = document.createElement('a');
-    a.href     = URL.createObjectURL(blob);
-    a.download = 'quiz_progress.json';
-    a.click();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'quiz_progress.json'; a.click();
   });
 
   resetBtn.addEventListener('click', () => {

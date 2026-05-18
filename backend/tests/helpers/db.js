@@ -27,6 +27,7 @@ const SCHEMA = `
     ipa             TEXT,
     syllables       TEXT,
     conjugations    TEXT,
+    emoji           TEXT,
     band            TEXT,
     rank            INTEGER,
     corpus_frequency REAL,

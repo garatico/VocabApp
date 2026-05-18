@@ -16,7 +16,7 @@ import { getSvgUrl } from './svg-loader.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
-const appRoot    = path.join(__dirname, '../../..');   // => VocabApp/
+const appRoot    = path.join(__dirname, '../../../..');   // => VocabApp/
 
 // Singleton DB connection
 let db = null;

@@ -1,0 +1,133 @@
+/**
+ * emoji-map.ts
+ *
+ * Hardcoded emoji fallbacks for Picture Quiz mode.
+ * Used when a word has no SVG and no emoji set in the database.
+ * Extend per-language as needed; promote to the DB via the admin panel
+ * once you're happy with a particular emoji.
+ */
+
+/** lang → word → emoji */
+type EmojiMap = Record<string, Record<string, string>>;
+
+export const EMOJI_MAP: EmojiMap = {
+  spanish: {
+    'perro':       '🐕',
+    'gato':        '🐱',
+    'caballo':     '🐴',
+    'vaca':        '🐄',
+    'cerdo':       '🐷',
+    'oveja':       '🐑',
+    'pájaro':      '🐦',
+    'pez':         '🐟',
+    'animal':      '🦁',
+    'lobo':        '🐺',
+    'león':        '🦁',
+    'tigre':       '🐯',
+    'oso':         '🐻',
+    'mono':        '🐒',
+    'elefante':    '🐘',
+    'serpiente':   '🐍',
+    'insecto':     '🐛',
+    'agua':        '💧',
+    'tierra':      '🌍',
+    'mar':         '🌊',
+    'río':         '🏞️',
+    'montaña':     '⛰️',
+    'árbol':       '🌳',
+    'flor':        '🌸',
+    'cielo':       '🌤️',
+    'sol':         '☀️',
+    'luna':        '🌙',
+    'estrella':    '⭐',
+    'fuego':       '🔥',
+    'aire':        '💨',
+    'bosque':      '🌲',
+    'planta':      '🌱',
+    'hoja':        '🍃',
+    'semilla':     '🌱',
+    'nube':        '☁️',
+    'lluvia':      '🌧️',
+    'nieve':       '❄️',
+    'viento':      '💨',
+    'tormenta':    '⛈️',
+    'coche':       '🚗',
+    'avión':       '✈️',
+    'tren':        '🚂',
+    'autobús':     '🚌',
+    'barco':       '🚢',
+    'bicicleta':   '🚲',
+    'cuerpo':      '🫀',
+    'cabeza':      '🗣️',
+    'mano':        '✋',
+    'ojo':         '👁️',
+    'boca':        '👄',
+    'pie':         '🦶',
+    'corazón':     '❤️',
+    'sangre':      '🩸',
+    'pelo':        '💇',
+    'cara':        '😊',
+    'brazo':       '💪',
+    'pierna':      '🦵',
+    'comida':      '🍽️',
+    'pan':         '🍞',
+    'leche':       '🥛',
+    'carne':       '🥩',
+    'pescado':     '🐟',
+    'pollo':       '🍗',
+    'arroz':       '🍚',
+    'fruta':       '🍎',
+    'verdura':     '🥦',
+    'café':        '☕',
+    'vino':        '🍷',
+    'cerveza':     '🍺',
+    'jugo':        '🥤',
+    'ropa':        '👕',
+    'camisa':      '👔',
+    'pantalón':    '👖',
+    'zapato':      '👟',
+    'sombrero':    '🎩',
+    'puerta':      '🚪',
+    'ventana':     '🪟',
+    'mesa':        '🍽️',
+    'silla':       '🪑',
+    'cama':        '🛏️',
+    'pared':       '🧱',
+    'cocina':      '🍳',
+    'baño':        '🚿',
+    'teléfono':    '📱',
+    'computadora': '💻',
+    'internet':    '🌐',
+    'mensaje':     '💬',
+    'correo':      '📧',
+    'trabajo':     '💼',
+    'dinero':      '💰',
+    'empresa':     '🏢',
+    'gobierno':    '🏛️',
+    'ley':         '⚖️',
+    'guerra':      '⚔️',
+    'paz':         '☮️',
+    'poder':       '⚡',
+    'libro':       '📖',
+    'papel':       '📄',
+    'carta':       '✉️',
+    'número':      '🔢',
+    'música':      '🎵',
+    'arte':        '🎨',
+    'ciencia':     '🔬',
+    'deporte':     '⚽',
+    'película':    '🎬',
+    'noticia':     '📰',
+    'historia':    '📚',
+  },
+};
+
+/**
+ * Look up a fallback emoji for a word.
+ * Returns the emoji string or null if none is mapped.
+ */
+export function getFallbackEmoji(lang: string, word: string): string | null {
+  const map = EMOJI_MAP[lang];
+  if (!map || !Object.prototype.hasOwnProperty.call(map, word)) return null;
+  return map[word] ?? null;
+}

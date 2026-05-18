@@ -16,7 +16,7 @@ import { errorHandler }  from './middleware/error-handler.js';
 
 const __filename   = fileURLToPath(import.meta.url);
 const __dirname    = path.dirname(__filename);
-const projectRoot  = path.join(__dirname, '..');
+const projectRoot  = path.join(__dirname, '../..');
 
 export function createApp({ nodeEnv = process.env.NODE_ENV || 'development' } = {}) {
   const app = express();

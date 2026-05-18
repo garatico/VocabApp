@@ -3,12 +3,6 @@
  *
  * Renders filter controls populated dynamically from the loaded word list,
  * and exports filterWords() used by start-handler.
- *
- * Filters:
- *   - Domain        (word.domains[])
- *   - CEFR band     (word.frequency.band)
- *   - Difficulty    (word.difficulty  1–5)
- *   - Register      (word.linguistic.register)
  */
 
 import type { Word } from '../types.js';
@@ -37,11 +31,7 @@ interface CheckboxGroupOptions {
   activeValues?: Set<string>;
 }
 
-// Track which filter groups were actually rendered so filterWords() knows
-// which filters are active.
 const renderedFilters = new Set<string>();
-
-// ── Build filter UI ───────────────────────────────────────────────────────────
 
 export function buildFilterUI(
   allWords:    Word[],
@@ -98,11 +88,8 @@ export function buildFilterUI(
 
   if (difficulties.size > 0) {
     const labels: Record<number, string> = {
-      1: '1 – Beginner',
-      2: '2 – Elementary',
-      3: '3 – Intermediate',
-      4: '4 – Advanced',
-      5: '5 – Expert',
+      1: '1 – Beginner', 2: '2 – Elementary', 3: '3 – Intermediate',
+      4: '4 – Advanced', 5: '5 – Expert',
     };
     const sorted = [...difficulties].sort((a, b) => a - b);
     contentDiv.appendChild(buildCheckboxGroup({
@@ -146,11 +133,7 @@ function getActiveValues(words: Word[]): ActiveValues {
 }
 
 function buildCheckboxGroup({
-  id,
-  label,
-  values,
-  labels = {},
-  activeValues = new Set<string>(),
+  id, label, values, labels = {}, activeValues = new Set<string>(),
 }: CheckboxGroupOptions): HTMLDivElement {
   const group = document.createElement('div');
   group.className = 'filter-group';
@@ -163,21 +146,15 @@ function buildCheckboxGroup({
   labelEl.textContent = label;
 
   const allBtn = document.createElement('button');
-  allBtn.type        = 'button';
-  allBtn.textContent = 'All';
-  allBtn.className   = 'filter-toggle-btn';
+  allBtn.type = 'button'; allBtn.textContent = 'All'; allBtn.className = 'filter-toggle-btn';
   allBtn.addEventListener('click', () =>
-    group.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
-      .forEach(cb => { cb.checked = true; })
+    group.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach(cb => { cb.checked = true; })
   );
 
   const noneBtn = document.createElement('button');
-  noneBtn.type        = 'button';
-  noneBtn.textContent = 'None';
-  noneBtn.className   = 'filter-toggle-btn';
+  noneBtn.type = 'button'; noneBtn.textContent = 'None'; noneBtn.className = 'filter-toggle-btn';
   noneBtn.addEventListener('click', () =>
-    group.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
-      .forEach(cb => { cb.checked = false; })
+    group.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach(cb => { cb.checked = false; })
   );
 
   heading.appendChild(labelEl);
@@ -188,13 +165,10 @@ function buildCheckboxGroup({
   values.forEach(val => {
     const lbl = document.createElement('label');
     lbl.className = 'filter-option';
-
     const cb = document.createElement('input');
-    cb.type           = 'checkbox';
-    cb.value          = String(val);
-    cb.checked        = activeValues.size === 0 || activeValues.has(String(val));
+    cb.type = 'checkbox'; cb.value = String(val);
+    cb.checked = activeValues.size === 0 || activeValues.has(String(val));
     cb.dataset.filter = id;
-
     lbl.appendChild(cb);
     lbl.appendChild(document.createTextNode(' ' + (labels[val] ?? val)));
     group.appendChild(lbl);
@@ -202,8 +176,6 @@ function buildCheckboxGroup({
 
   return group;
 }
-
-// ── Read filter state from the DOM ────────────────────────────────────────────
 
 function getChecked(filterId: string): string[] {
   return Array.from(
@@ -213,26 +185,15 @@ function getChecked(filterId: string): string[] {
 
 export function getFilterState(): FilterState {
   return {
-    domains:      renderedFilters.has('filterDomain')
-                    ? getChecked('filterDomain')
-                    : [],
-    bands:        renderedFilters.has('filterBand')
-                    ? getChecked('filterBand')
-                    : [],
-    difficulties: renderedFilters.has('filterDifficulty')
-                    ? getChecked('filterDifficulty').map(Number)
-                    : [],
-    registers:    renderedFilters.has('filterRegister')
-                    ? getChecked('filterRegister')
-                    : [],
+    domains:      renderedFilters.has('filterDomain')     ? getChecked('filterDomain')                    : [],
+    bands:        renderedFilters.has('filterBand')        ? getChecked('filterBand')                      : [],
+    difficulties: renderedFilters.has('filterDifficulty') ? getChecked('filterDifficulty').map(Number)    : [],
+    registers:    renderedFilters.has('filterRegister')   ? getChecked('filterRegister')                  : [],
   };
 }
 
-// ── Filter a word list against current UI state ───────────────────────────────
-
 export function filterWords(words: Word[]): Word[] {
   const { domains, bands, difficulties, registers } = getFilterState();
-
   return words.filter(w => {
     if (domains.length > 0) {
       const wordDomains = w.domains ?? [];

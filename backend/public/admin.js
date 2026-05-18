@@ -5,10 +5,10 @@
  * theme toggle + tab navigation, then initialises everything.
  */
 
-import { loadMeta, initEditor } from './src/admin-editor.js';
-import { loadStatistics, initStats } from './src/admin-stats.js';
-import { initDbAdmin } from './src/admin-db.js';
-import { initConjugation } from './src/admin-conjugation.js';
+import { loadMeta, initEditor } from '../src/client/admin-editor.js';
+import { loadStatistics, initStats } from '../src/client/admin-stats.js';
+import { initDbAdmin } from '../src/client/admin-db.js';
+import { initConjugation } from '../src/client/admin-conjugation.js';
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
