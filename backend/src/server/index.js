@@ -53,5 +53,4 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   console.log('\nShutting down...');
-  server.close(() => { closeDatabase(); process.exit(0); });
-});
+  server.close(() => { closeDatabase(); proce
