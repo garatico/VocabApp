@@ -1,8 +1,11 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  // Vite root = the folder that contains index.html
-  root: 'public',
+  // Root is backend/ so that src/client/app.ts resolves to backend/src/client/app.ts
+  root: '.',
+
+  // Serve static assets (CSS, images, fonts) from public/
+  publicDir: 'public',
 
   server: {
     port: 5173,
@@ -11,15 +14,11 @@ export default defineConfig({
       '/api':  { target: 'http://localhost:3000', changeOrigin: true },
       '/svgs': { target: 'http://localhost:3000', changeOrigin: true },
     },
-    fs: {
-      // Allow imports from src/client/ which lives one level above the Vite root (public/)
-      allow: ['..'],
-    },
   },
 
-  // `vite build` output — Express can serve this in production instead of public/
+  // `vite build` output
   build: {
-    outDir:     '../dist',
+    outDir:     'dist',
     emptyOutDir: true,
   },
 });
