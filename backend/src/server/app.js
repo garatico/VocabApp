@@ -5,8 +5,9 @@
  * Imported by index.js (production) and by tests.
  */
 
-import express from 'express';
-import path    from 'path';
+import express     from 'express';
+import path        from 'path';
+import compression from 'compression';
 import { fileURLToPath } from 'url';
 
 import publicRoutes  from './routes/public.js';
@@ -21,6 +22,7 @@ const projectRoot  = path.join(__dirname, '../..');
 export function createApp({ nodeEnv = process.env.NODE_ENV || 'development' } = {}) {
   const app = express();
 
+  app.use(compression());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   app.use(corsMiddleware);
