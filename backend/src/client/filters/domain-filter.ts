@@ -1,40 +1,20 @@
 /**
  * domain-filter.ts  (v2 — chip/tag UI)
- *
- * Replaces the checkbox grid with:
- *  - Quick-pick buttons for the most common domains
- *  - A search input with live suggestion dropdown (constrained to ALL_DOMAINS)
- *  - Removable chip tags for active domain filters
- *
- * Semantics (same as v1 from the caller's perspective):
- *   empty array  → no filter applied (all words pass)
- *   non-empty    → whitelist — only words in those domains (or no domain) pass
- *
- * Public API (unchanged):
- *   bindDomainFilter()   – call once on init; builds the UI
- *   getSelectedDomains() – returns string[] of active domain values
  */
 
 const ALL_DOMAINS: readonly string[] = [
-  // Mind & Character
   'ability','clarity','cognition','confidence','desire','emotion',
   'feelings','hope','impression','mind','perception','potential','truth',
-  // People & Society
   'age','business','communication','education','identity','language',
   'law','learning','security','work',
-  // Body & Physical
   'aesthetics','appearance','cleanliness','clothes','drinks','food',
   'health','height','medical','physical_state','senses','size',
   'speed','strength','temperature',
-  // Nature & Living
   'animals','nature',
-  // World & Action
   'events','existence','location','movement','occurrence','state',
   'transport','travel',
-  // Abstract & Logic
   'condition','distinction','freedom','importance','necessity',
   'obligation','possibility','quality','quantity','simplicity',
-  // Exchange & Value
   'giving','ownership','possession','request','search','transaction',
   'wealth','general',
 ];
@@ -44,15 +24,11 @@ const QUICK_PICKS: readonly string[] = [
   'work','travel','clothes','health',
 ];
 
-/** Active domain whitelist — empty Set = no filter (all words pass). */
 const selected = new Set<string>();
 
-/** Capitalise and un-underscore a domain key for display. */
 function fmt(d: string): string {
   return d.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());
 }
-
-// ── Module-level element refs (set in bindDomainFilter) ──────────────────────
 
 let countEl:      HTMLElement | null      = null;
 let clearBtn:     HTMLElement | null      = null;
@@ -61,8 +37,6 @@ let searchInput:  HTMLInputElement | null = null;
 let suggestionsEl: HTMLElement | null     = null;
 let chipsEl:      HTMLElement | null      = null;
 let activeIdx = -1;
-
-// ── Render helpers ────────────────────────────────────────────────────────────
 
 function renderAll(): void {
   renderQuickPicks();
@@ -113,8 +87,6 @@ function renderChips(): void {
   }
 }
 
-// ── Suggestion dropdown ───────────────────────────────────────────────────────
-
 function showSuggestions(query: string): void {
   activeIdx = -1;
   const q = query.trim().toLowerCase();
@@ -162,8 +134,6 @@ function addDomain(d: string): void {
   renderAll();
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
-
 export function bindDomainFilter(): void {
   const body = document.getElementById('domainFilterBody');
   if (!body) return;
@@ -171,12 +141,12 @@ export function bindDomainFilter(): void {
   countEl  = document.getElementById('domainFilterCount');
   clearBtn = document.getElementById('clearAllDomains');
 
-  quickPicksEl       = document.createElement('div');
-  quickPicksEl.id    = 'domainQuickPicks';
+  quickPicksEl    = document.createElement('div');
+  quickPicksEl.id = 'domainQuickPicks';
   body.appendChild(quickPicksEl);
 
-  const searchWrap       = document.createElement('div');
-  searchWrap.className   = 'domain-search-wrap';
+  const searchWrap     = document.createElement('div');
+  searchWrap.className = 'domain-search-wrap';
 
   searchInput             = document.createElement('input');
   searchInput.type        = 'text';
@@ -219,9 +189,7 @@ export function bindDomainFilter(): void {
   });
 
   searchInput.addEventListener('blur', () => setTimeout(hideSuggestions, 150));
-
   clearBtn?.addEventListener('click', () => { selected.clear(); renderAll(); });
-
   renderAll();
 }
 

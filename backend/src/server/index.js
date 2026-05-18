@@ -2,7 +2,7 @@
  * VocabApp Backend — server entry point
  *
  * Creates the Express app and starts listening.
- * App logic lives in src/app.js so tests can import it without binding a port.
+ * App logic lives in src/server/app.js so tests can import it without binding a port.
  */
 
 import dotenv from 'dotenv';

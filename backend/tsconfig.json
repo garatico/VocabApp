@@ -1,26 +1,15 @@
 {
   "compilerOptions": {
-    // Emit target — ES2020 is safe for all modern browsers and Node 16+
     "target": "ES2020",
     "module": "ESNext",
-    // "bundler" tells tsc that a bundler (Vite) handles module resolution,
-    // so .js extension imports correctly resolve to .ts source files.
     "moduleResolution": "bundler",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
-
-    // Strict mode — full type safety on .ts files
     "strict": true,
-    // Allow .js files to be imported from .ts without errors;
-    // checkJs:false means we don't type-check them (they migrate later).
     "allowJs": true,
     "checkJs": false,
-
-    // Each file is an isolated module — required by Vite/esbuild
     "isolatedModules": true,
-    // No output — Vite handles compilation; tsc is type-check only
     "noEmit": true,
     "skipLibCheck": true
   },
-  // Only include frontend source; backend Node files use plain JS for now
-  "include": ["public/src"]
+  "include": ["src/client"]
 }

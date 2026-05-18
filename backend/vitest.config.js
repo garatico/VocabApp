@@ -11,6 +11,8 @@ export default defineConfig({
     testTimeout: 15000,
     hookTimeout: 15000,
     fileParallelism: false,
+    // Only look in tests/ — never pick up frontend or other stray test files
+    include: ['tests/**/*.test.{js,ts}'],
   },
   resolve: {
     alias: {

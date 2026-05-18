@@ -1,6 +1,6 @@
 import { bindTableControls }                  from './modes/table-controls.ts';
 import { bindQuizControls }                   from './quiz/quiz-controls.ts';
-import { bindStartHandler }                   from './start-handler.js';
+import { bindStartHandler }                   from './start-handler.ts';
 import { bindClassFilter, getSelectedClasses } from './filters/class-filter.ts';
 import { bindDomainFilter, getSelectedDomains } from './filters/domain-filter.ts';
 import { bindUIState, bindModeSwitch }         from './ui/ui-state.ts';
