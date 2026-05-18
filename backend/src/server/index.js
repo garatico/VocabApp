@@ -12,7 +12,7 @@ import { createApp } from './app.js';
 import { preloadAll, closeDatabase } from './lib/vocab-loader.js';
 import { ensureSvgDirs } from './lib/svg-loader.js';
 
-const PORT     = process.env.API_PORT || 3000;
+const PORT     = process.env.PORT || process.env.API_PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 const app    = createApp({ nodeEnv: NODE_ENV });
