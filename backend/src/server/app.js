@@ -53,12 +53,4 @@ export function createApp({ nodeEnv = process.env.NODE_ENV || 'development' } = 
     } else {
       // Dev: Vite handles the JS/TS; Express just serves public/ assets
       app.use(express.static(path.join(projectRoot, 'public')));
-      app.get('/admin', (_req, res) => res.sendFile(path.join(projectRoot, 'public', 'admin.html')));
-      app.get('*', (_req, res) => res.sendFile(path.join(projectRoot, 'index.html')));
-    }
-  }
-
-  app.use(errorHandler);
-
-  return app;
-}
+      app
