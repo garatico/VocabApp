@@ -14,7 +14,7 @@ export function bindStartHandler({
   getSize,
   getSelectedClasses,
   getSelectedDomains,
-  getRandomize,
+  getSortOrder,
   getCols,
   getRecallTimer,
   onModeChange,
@@ -59,12 +59,16 @@ export function bindStartHandler({
       }
 
 
-      if (getRandomize()) {
+      const sortOrder = getSortOrder ? getSortOrder() : 'frequency';
+      if (sortOrder === 'random') {
         for (let i = list.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [list[i], list[j]] = [list[j], list[i]];
         }
+      } else if (sortOrder === 'alpha') {
+        list.sort((a, b) => (a.word || '').localeCompare(b.word || ''));
       }
+      // 'frequency' keeps the existing rank-based order from loadAndBuildFilters
 
       setQuiz(new Quiz({ words: list }));
 

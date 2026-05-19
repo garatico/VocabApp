@@ -12,94 +12,112 @@ type EmojiMap = Record<string, Record<string, string>>;
 
 export const EMOJI_MAP: EmojiMap = {
   spanish: {
+
+    // ── Animals ───────────────────────────────────────────────────────
+    'animal':      '🦁',
     'perro':       '🐕',
     'gato':        '🐱',
     'caballo':     '🐴',
     'vaca':        '🐄',
     'cerdo':       '🐷',
     'oveja':       '🐑',
-    'pájaro':      '🐦',
-    'pez':         '🐟',
-    'animal':      '🦁',
     'lobo':        '🐺',
-    'león':        '🦁',
-    'tigre':       '🐯',
     'oso':         '🐻',
     'mono':        '🐒',
     'elefante':    '🐘',
+    'león':        '🦁',
+    'tigre':       '🐯',
+    'pájaro':      '🐦',
+    'pez':         '🐟',
     'serpiente':   '🐍',
-    'insecto':     '🐛',
+    'insecto':     '🐛',  // caterpillar — stands in for insects generally
+
+    // ── Nature & Weather ──────────────────────────────────────────────
     'agua':        '💧',
-    'tierra':      '🌍',
+    'fuego':       '🔥',
+    'aire':        '💨',
+    'tierra':      '🌍',  // globe — represents "earth/ground" conceptually
     'mar':         '🌊',
-    'río':         '🏞️',
+    'río':         '🏞️',  // landscape with river
     'montaña':     '⛰️',
+    'bosque':      '🌲',
     'árbol':       '🌳',
+    'planta':      '🌱',
+    'hoja':        '🍃',
+    'semilla':     '🌱',  // sprout — closest to "seed"
     'flor':        '🌸',
     'cielo':       '🌤️',
     'sol':         '☀️',
     'luna':        '🌙',
     'estrella':    '⭐',
-    'fuego':       '🔥',
-    'aire':        '💨',
-    'bosque':      '🌲',
-    'planta':      '🌱',
-    'hoja':        '🍃',
-    'semilla':     '🌱',
     'nube':        '☁️',
     'lluvia':      '🌧️',
     'nieve':       '❄️',
     'viento':      '💨',
     'tormenta':    '⛈️',
+
+    // ── Transport ─────────────────────────────────────────────────────
     'coche':       '🚗',
     'avión':       '✈️',
     'tren':        '🚂',
     'autobús':     '🚌',
     'barco':       '🚢',
     'bicicleta':   '🚲',
-    'cuerpo':      '🫀',
+
+    // ── Human Body ────────────────────────────────────────────────────
+    'cuerpo':      '🫀',  // anatomical heart — represents the body as a whole
     'cabeza':      '🗣️',
-    'mano':        '✋',
+    'cara':        '😊',
     'ojo':         '👁️',
     'boca':        '👄',
-    'pie':         '🦶',
-    'corazón':     '❤️',
-    'sangre':      '🩸',
-    'pelo':        '💇',
-    'cara':        '😊',
+    'mano':        '✋',
     'brazo':       '💪',
     'pierna':      '🦵',
+    'pie':         '🦶',
+    'pelo':        '💇',  // person getting haircut — stands in for hair
+    'corazón':     '❤️',
+    'sangre':      '🩸',
+
+    // ── Food & Drink ──────────────────────────────────────────────────
     'comida':      '🍽️',
     'pan':         '🍞',
-    'leche':       '🥛',
     'carne':       '🥩',
-    'pescado':     '🐟',
+    'pescado':     '🐟',  // fish on plate — distinct from pez (live fish)
     'pollo':       '🍗',
     'arroz':       '🍚',
     'fruta':       '🍎',
     'verdura':     '🥦',
+    'leche':       '🥛',
     'café':        '☕',
     'vino':        '🍷',
     'cerveza':     '🍺',
     'jugo':        '🥤',
+
+    // ── Clothing ─────────────────────────────────────────────────────
     'ropa':        '👕',
     'camisa':      '👔',
     'pantalón':    '👖',
     'zapato':      '👟',
     'sombrero':    '🎩',
+
+    // ── Home & Furniture ──────────────────────────────────────────────
     'puerta':      '🚪',
     'ventana':     '🪟',
-    'mesa':        '🍽️',
+    'mesa':        '🍽️',  // no table emoji exists; plate on table is the closest
     'silla':       '🪑',
     'cama':        '🛏️',
     'pared':       '🧱',
-    'cocina':      '🍳',
+    'cocina':      '🍳',  // frying pan — represents kitchen/cooking
     'baño':        '🚿',
+
+    // ── Technology & Communication ────────────────────────────────────
     'teléfono':    '📱',
     'computadora': '💻',
     'internet':    '🌐',
     'mensaje':     '💬',
     'correo':      '📧',
+
+    // ── Society, Work & Institutions ──────────────────────────────────
     'trabajo':     '💼',
     'dinero':      '💰',
     'empresa':     '🏢',
@@ -107,7 +125,9 @@ export const EMOJI_MAP: EmojiMap = {
     'ley':         '⚖️',
     'guerra':      '⚔️',
     'paz':         '☮️',
-    'poder':       '⚡',
+    'poder':       '⚡',  // lightning bolt — energy/power
+
+    // ── Knowledge, Arts & Culture ─────────────────────────────────────
     'libro':       '📖',
     'papel':       '📄',
     'carta':       '✉️',
@@ -118,7 +138,7 @@ export const EMOJI_MAP: EmojiMap = {
     'deporte':     '⚽',
     'película':    '🎬',
     'noticia':     '📰',
-    'historia':    '📚',
+    'historia':    '📚',  // stack of books — covers both "history" and "story"
   },
 };
 

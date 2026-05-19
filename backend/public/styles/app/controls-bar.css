@@ -45,11 +45,40 @@
   margin-top: 0.5rem;
 }
 
-#randomizeWords {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--accent);
+/* ── Sort-order segmented button group ── */
+.sort-order-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.sort-order-btn {
+  flex: 1;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  background: var(--surface);
+  color: var(--text-muted);
+  border: none;
+  border-right: 1px solid var(--border);
   cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sort-order-btn:last-child {
+  border-right: none;
+}
+
+.sort-order-btn:hover {
+  background: var(--surface-hover, var(--border));
+  color: var(--text);
+}
+
+.sort-order-btn.active {
+  background: var(--accent);
+  color: #fff;
 }
 
 /* ── Responsive ── */
