@@ -99,6 +99,7 @@ SCRIPT_DIR   = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
 CORPUS_DIR   = PROJECT_ROOT / 'data' / 'wikipedia_freq_corpora' / 'raw'
 OUTPUT_DIR   = PROJECT_ROOT / 'data'
+CACHE_DIR    = OUTPUT_DIR / 'gloss_cache'
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -591,7 +592,7 @@ def build_display(word: str, pos: str, glosses: List[str]) -> str:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def load_gloss_cache(lang: str) -> Dict[str, dict]:
-    path = OUTPUT_DIR / f'gloss_cache_{lang}.json'
+    path = CACHE_DIR / f'gloss_cache_{lang}.json'
     if path.exists():
         try:
             return json.loads(path.read_text(encoding='utf-8'))
@@ -601,7 +602,8 @@ def load_gloss_cache(lang: str) -> Dict[str, dict]:
 
 
 def save_gloss_cache(lang: str, cache: Dict[str, dict]) -> None:
-    path = OUTPUT_DIR / f'gloss_cache_{lang}.json'
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    path = CACHE_DIR / f'gloss_cache_{lang}.json'
     path.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding='utf-8')
 
 
