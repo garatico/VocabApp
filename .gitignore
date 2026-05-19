@@ -33,6 +33,8 @@ tmp/
 
 # data
 wikipedia_freq_corpora/
+data/old_json/
+data/old_jsonl/
 
 # src
 backend/src_old/
