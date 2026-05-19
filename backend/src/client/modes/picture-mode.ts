@@ -14,6 +14,7 @@
 
 import { getFallbackEmoji  } from '../data/emoji-map.ts';
 import { getFallbackSvgUrl } from '../data/svg-map.ts';
+import { attachTooltips    } from '../utils/word-tooltip.ts';
 import type { Word }        from '../types.ts';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -237,6 +238,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
   wordsWithVisuals.forEach(word => {
     const card = document.createElement('div');
     card.className = 'picture-card';
+    card.dataset.wordJson = JSON.stringify(word);
 
     const imgWrap = document.createElement('div');
     imgWrap.className = 'picture-card-img';
@@ -293,6 +295,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
   bar.appendChild(giveUpBtn);
   container.appendChild(bar);
   container.appendChild(grid);
+  attachTooltips(grid, { hideWordWhenUnrevealed: true });
 
   updateTypeProgress();
   const first = container.querySelector<HTMLInputElement>('input[data-word]');

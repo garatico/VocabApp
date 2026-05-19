@@ -79,8 +79,21 @@ function positionTooltip(): void {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function isWordRevealed(anchorEl: Element): boolean {
+  // Recall mode
   if (anchorEl.classList.contains('recalled') || anchorEl.classList.contains('missed')) return true;
   if (anchorEl.classList.contains('recall-cell')) return false;
+
+  // Picture mode — card is the anchor; check its input for correct/revealed state
+  const card = anchorEl.classList.contains('picture-card')
+    ? anchorEl
+    : anchorEl.closest('.picture-card');
+  if (card) {
+    const inp = card.querySelector('input');
+    if (!inp) return false;
+    return inp.classList.contains('correct') || inp.classList.contains('revealed');
+  }
+
+  // Table / quiz mode
   const wordTd  = anchorEl.closest('td');
   if (!wordTd) return false;
   const inputTd = wordTd.nextElementSibling;
@@ -213,14 +226,14 @@ function buildConjSection(word: Word): HTMLElement | null {
   return section;
 }
 
-function populateTooltip(word: Word, revealed: boolean): void {
+function populateTooltip(word: Word, revealed: boolean, hideWordWhenUnrevealed = false): void {
   const tt = getTooltip();
   tt.innerHTML   = '';
   tt.style.width = '';
 
   const heading = document.createElement('div');
   heading.className   = 'tt-word';
-  heading.textContent = word.word;
+  heading.textContent = (hideWordWhenUnrevealed && !revealed) ? '???' : word.word;
   tt.appendChild(heading);
   tt.appendChild(buildMetaRow(word));
 
@@ -261,7 +274,13 @@ function populateTooltip(word: Word, revealed: boolean): void {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
-export function attachTooltips(container: HTMLElement): void {
+export interface AttachTooltipOptions {
+  /** When true, replaces the word heading with '???' until the card is solved.
+   *  Use in picture mode where the word itself is what the user is guessing. */
+  hideWordWhenUnrevealed?: boolean;
+}
+
+export function attachTooltips(container: HTMLElement, opts: AttachTooltipOptions = {}): void {
   if (!container) return;
 
   container.querySelectorAll<HTMLElement>('[data-word-json]').forEach(el => {
@@ -271,7 +290,7 @@ export function attachTooltips(container: HTMLElement): void {
         const word     = JSON.parse(el.dataset.wordJson!) as Word;
         const revealed = isWordRevealed(el);
         lastAnchor     = el;
-        populateTooltip(word, revealed);
+        populateTooltip(word, revealed, opts.hideWordWhenUnrevealed);
         positionTooltip();
         getTooltip().classList.add('visible');
       } catch (e) {
