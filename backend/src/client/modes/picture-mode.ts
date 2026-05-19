@@ -12,7 +12,8 @@
  * start-handler.js reads the active button and passes `mode` here.
  */
 
-import { getFallbackEmoji } from '../data/emoji-map.ts';
+import { getFallbackEmoji  } from '../data/emoji-map.ts';
+import { getFallbackSvgUrl } from '../data/svg-map.ts';
 import type { Word }        from '../types.ts';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -464,7 +465,11 @@ export function renderPictureMode({
   setProgress(0, 0);
 
   const wordsWithVisuals: WordWithVisual[] = words
-    .map(w => ({ ...w, _emoji: w.emoji || getFallbackEmoji(lang, w.word) }))
+    .map(w => ({
+      ...w,
+      svg_url: w.svg_url || getFallbackSvgUrl(lang, w.word) || undefined,
+      _emoji:  w.emoji   || getFallbackEmoji(lang, w.word),
+    }))
     .filter((w): w is WordWithVisual => !!(w.svg_url || w._emoji));
 
   if (mode === 'click') {
