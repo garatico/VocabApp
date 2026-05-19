@@ -35,6 +35,7 @@ tmp/
 wikipedia_freq_corpora/
 data/old_json/
 data/old_jsonl/
+data/gloss_cache/
 
 # src
 backend/src_old/
