@@ -90,8 +90,14 @@
           </div>
         </div>
 
-        <label>Randomize</label>
-        <input type="checkbox" id="randomizeWords"/>
+        <div class="control-group">
+          <label>Order</label>
+          <div class="sort-order-toggle" id="sortOrderToggle">
+            <button class="sort-order-btn active" data-order="frequency">By Frequency</button>
+            <button class="sort-order-btn" data-order="alpha">Alphabetize</button>
+            <button class="sort-order-btn" data-order="random">Randomize</button>
+          </div>
+        </div>
 
 
         <button id="startBtn">Start Quiz</button>

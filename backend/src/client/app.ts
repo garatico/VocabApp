@@ -93,7 +93,10 @@ bindStartHandler({
                :                                 Number(sizeSelect.value) || 100,
   getSelectedClasses,
   getSelectedDomains,
-  getRandomize: () => document.getElementById('randomizeWords').checked,
+  getSortOrder: () => {
+    const active = document.querySelector<HTMLButtonElement>('#sortOrderToggle .sort-order-btn.active');
+    return (active?.dataset.order ?? 'frequency') as 'frequency' | 'alpha' | 'random';
+  },
   getCols: ({ max, fallback }) => Math.max(1, Math.min(max, Number(colsSelect.value) || fallback)),
   getRecallTimer: getRecallTimerValue,
   onModeChange: updateModeUI,
@@ -125,6 +128,17 @@ if (sizeCustom) {
 const classFilter = document.getElementById('classFilter');
 if (classFilter) {
   classFilter.addEventListener('change', () => loadAndBuildFilters(langSelect.value));
+}
+
+// Sort-order segmented button toggle
+const sortOrderToggle = document.getElementById('sortOrderToggle');
+if (sortOrderToggle) {
+  sortOrderToggle.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    sortOrderToggle.querySelectorAll('.sort-order-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
 }
 
 (async function initUI() {
