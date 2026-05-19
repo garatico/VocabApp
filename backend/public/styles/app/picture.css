@@ -43,8 +43,9 @@
 
 .picture-card.revealed {
   border-color: var(--border);
+  border-style: dashed;
   background: var(--surface2);
-  opacity: 0.65;
+  /* no opacity — keeps image and answer text fully readable */
 }
 
 /* ── SVG image area ─────────────────────────────────────────── */
@@ -105,8 +106,8 @@
 .picture-card-input.revealed {
   background: var(--surface2);
   border-color: var(--border);
-  color: var(--text-muted);
-  font-style: italic;
+  color: var(--text);        /* full contrast — you need to read this */
+  font-style: italic;        /* italic is enough to signal "revealed, not typed" */
   cursor: default;
 }
 
