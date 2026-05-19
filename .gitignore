@@ -30,6 +30,9 @@ desktop.ini
 dist/
 build/
 tmp/
+__pycache__/
+*.pyc
+*.pyo
 
 # data
 wikipedia_freq_corpora/
@@ -39,3 +42,4 @@ data/gloss_cache/
 
 # src
 backend/src_old/
+

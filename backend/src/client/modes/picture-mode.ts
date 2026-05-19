@@ -12,8 +12,7 @@
  * start-handler.js reads the active button and passes `mode` here.
  */
 
-import { getFallbackEmoji  } from '../data/emoji-map.ts';
-import { getFallbackSvgUrl } from '../data/svg-map.ts';
+import { getFallbackEmoji, getFallbackSvgUrl } from '../data/visual-map.ts';
 import { attachTooltips    } from '../utils/word-tooltip.ts';
 import type { Word }        from '../types.ts';
 
