@@ -26,15 +26,16 @@ from pathlib import Path
 BASE_DIR     = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent.parent.parent
 DB_PATH      = PROJECT_ROOT / 'data' / 'vocabulary.db'
+PRESEED_DIR  = PROJECT_ROOT / 'data' / 'preseed'
 
 sys.path.insert(0, str(BASE_DIR))
 from emoji_data import EMOJI_DATA  # type: ignore
 
 SOURCES = {
-    'spanish':    PROJECT_ROOT / 'data' / 'spanish_preseed.jsonl',
-    'french':     PROJECT_ROOT / 'data' / 'french_preseed.jsonl',
-    'italian':    PROJECT_ROOT / 'data' / 'italian_preseed.jsonl',
-    'portuguese': PROJECT_ROOT / 'data' / 'portuguese_preseed.jsonl',
+    'spanish':    PRESEED_DIR / 'spanish_preseed.jsonl',
+    'french':     PRESEED_DIR / 'french_preseed.jsonl',
+    'italian':    PRESEED_DIR / 'italian_preseed.jsonl',
+    'portuguese': PRESEED_DIR / 'portuguese_preseed.jsonl',
 }
 
 LANGUAGES = ['spanish', 'french', 'italian', 'portuguese']

@@ -100,6 +100,7 @@ PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
 CORPUS_DIR   = PROJECT_ROOT / 'data' / 'wikipedia_freq_corpora' / 'raw'
 OUTPUT_DIR   = PROJECT_ROOT / 'data'
 CACHE_DIR    = OUTPUT_DIR / 'gloss_cache'
+PRESEED_DIR  = OUTPUT_DIR / 'preseed'
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1261,7 +1262,8 @@ def main(langs: List[str], n: int, verbose: bool,
 
         # Write immediately so the file exists before the (slow) translation step.
         # A second write below adds the enrichment results.
-        outpath = OUTPUT_DIR / f'{lang_name}_preseed.jsonl'
+        PRESEED_DIR.mkdir(parents=True, exist_ok=True)
+        outpath = PRESEED_DIR / f'{lang_name}_preseed.jsonl'
         write_jsonl(outpath, all_entries)
         print(f"  Output       : {len(all_entries)} entries -> {outpath.name} (pre-enrichment)")
 
