@@ -1,0 +1,39 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Drop shadow -->
+  <ellipse cx="50" cy="89" rx="24" ry="5" fill="#000" fill-opacity="0.10"/>
+
+  <!-- Stem -->
+  <path d="M49 36 Q45 21 53 13" stroke="#6d4c41" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Leaf body -->
+  <path d="M51 23 Q67 5 80 17 Q64 34 51 23Z" fill="#388e3c"/>
+  <!-- Leaf upper edge highlight -->
+  <path d="M51 23 Q67 5 80 17" stroke="#66bb6a" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+  <!-- Leaf midrib vein -->
+  <path d="M51 23 Q67 17 79 17" stroke="#2e7d32" stroke-width="0.8" fill="none" stroke-linecap="round" opacity="0.75"/>
+
+  <!-- Apple body -->
+  <path d="M50 36
+           C 44 28, 19 37, 17 63
+           C 15 83, 37 95, 50 90
+           C 63 95, 85 83, 83 63
+           C 81 37, 56 28, 50 36Z"
+        fill="#e53935"/>
+
+  <!-- Right-side shadow for depth -->
+  <path d="M50 36
+           C 56 28, 81 37, 83 63
+           C 85 83, 63 95, 50 90"
+        fill="#c62828" opacity="0.35"/>
+
+  <!-- Top dimple crease -->
+  <path d="M50 36 Q50 43 49 48" stroke="#b71c1c" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Primary shine -->
+  <ellipse cx="33" cy="54" rx="7" ry="12" fill="white" fill-opacity="0.28" transform="rotate(-22 33 54)"/>
+
+  <!-- Specular highlight -->
+  <ellipse cx="39" cy="42" rx="3" ry="4.5" fill="white" fill-opacity="0.20" transform="rotate(-18 39 42)"/>
+
+</svg>
