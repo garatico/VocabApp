@@ -469,8 +469,12 @@ export function renderPictureMode({
   const wordsWithVisuals: WordWithVisual[] = words
     .map(w => ({
       ...w,
+      // svg_url: server concept map (canonical shared) → per-language file → null
       svg_url: w.svg_url || getFallbackSvgUrl(lang, w.word) || undefined,
-      _emoji:  w.emoji   || getFallbackEmoji(lang, w.word),
+      // _emoji: visual-map only — DB emoji (w.emoji) is excluded intentionally.
+      // The visual-map is the curated source for picture mode; DB emojis were
+      // bulk-seeded and include abstract words that shouldn't appear here.
+      _emoji: getFallbackEmoji(lang, w.word),
     }))
     .filter((w): w is WordWithVisual => !!(w.svg_url || w._emoji));
 
