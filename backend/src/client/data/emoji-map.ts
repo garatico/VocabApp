@@ -57,26 +57,30 @@ export const EMOJI_MAP: EmojiMap = {
     'tormenta':    '⛈️',
 
     // ── Transport ─────────────────────────────────────────────────────
-    'coche':       '🚗',
-    'avión':       '✈️',
-    'tren':        '🚂',
-    'autobús':     '🚌',
-    'barco':       '🚢',
-    'bicicleta':   '🚲',
+    // (commented out — transport vehicles are clear as emojis but lower
+    //  priority; promote to SVG map when ready)
+    // 'coche':       '🚗',
+    // 'avión':       '✈️',
+    // 'tren':        '🚂',
+    // 'autobús':     '🚌',
+    // 'barco':       '🚢',
+    // 'bicicleta':   '🚲',
 
     // ── Human Body ────────────────────────────────────────────────────
-    'cuerpo':      '🫀',  // anatomical heart — represents the body as a whole
-    'cabeza':      '🗣️',
-    'cara':        '😊',
-    'ojo':         '👁️',
-    'boca':        '👄',
-    'mano':        '✋',
-    'brazo':       '💪',
-    'pierna':      '🦵',
-    'pie':         '🦶',
-    'pelo':        '💇',  // person getting haircut — stands in for hair
-    'corazón':     '❤️',
-    'sangre':      '🩸',
+    // (commented out — body-part emojis are ambiguous or clinical;
+    //  better handled with SVG illustrations when we get there)
+    // 'cuerpo':      '🫀',
+    // 'cabeza':      '🗣️',
+    // 'cara':        '😊',
+    // 'ojo':         '👁️',
+    // 'boca':        '👄',
+    // 'mano':        '✋',
+    // 'brazo':       '💪',
+    // 'pierna':      '🦵',
+    // 'pie':         '🦶',
+    // 'pelo':        '💇',
+    // 'corazón':     '❤️',
+    // 'sangre':      '🩸',
 
     // ── Food & Drink ──────────────────────────────────────────────────
     'comida':      '🍽️',
@@ -94,51 +98,59 @@ export const EMOJI_MAP: EmojiMap = {
     'jugo':        '🥤',
 
     // ── Clothing ─────────────────────────────────────────────────────
-    'ropa':        '👕',
-    'camisa':      '👔',
-    'pantalón':    '👖',
-    'zapato':      '👟',
-    'sombrero':    '🎩',
+    // (commented out — too abstract / unclear without an illustration)
+    // 'ropa':        '👕',
+    // 'camisa':      '👔',
+    // 'pantalón':    '👖',
+    // 'zapato':      '👟',
+    // 'sombrero':    '🎩',
 
     // ── Home & Furniture ──────────────────────────────────────────────
-    'puerta':      '🚪',
-    'ventana':     '🪟',
-    'mesa':        '🍽️',  // no table emoji exists; plate on table is the closest
-    'silla':       '🪑',
-    'cama':        '🛏️',
-    'pared':       '🧱',
-    'cocina':      '🍳',  // frying pan — represents kitchen/cooking
-    'baño':        '🚿',
+    // (commented out — mesa/cocina/pared are confusing as emojis;
+    //  revisit with SVG icons)
+    // 'puerta':      '🚪',
+    // 'ventana':     '🪟',
+    // 'mesa':        '🍽️',
+    // 'silla':       '🪑',
+    // 'cama':        '🛏️',
+    // 'pared':       '🧱',
+    // 'cocina':      '🍳',
+    // 'baño':        '🚿',
 
     // ── Technology & Communication ────────────────────────────────────
-    'teléfono':    '📱',
-    'computadora': '💻',
-    'internet':    '🌐',
-    'mensaje':     '💬',
-    'correo':      '📧',
+    // (commented out — abstract concepts; phone/laptop are fine but
+    //  internet/mensaje/correo are unclear)
+    // 'teléfono':    '📱',
+    // 'computadora': '💻',
+    // 'internet':    '🌐',
+    // 'mensaje':     '💬',
+    // 'correo':      '📧',
 
-    // ── Society, Work & Institutions ──────────────────────────────────
-    'trabajo':     '💼',
-    'dinero':      '💰',
-    'empresa':     '🏢',
-    'gobierno':    '🏛️',
-    'ley':         '⚖️',
-    'guerra':      '⚔️',
-    'paz':         '☮️',
-    'poder':       '⚡',  // lightning bolt — energy/power
+    // ── Society, Work & Abstract ──────────────────────────────────────
+    // (commented out — no emoji conveys these reliably)
+    // 'trabajo':     '💼',
+    // 'dinero':      '💰',
+    // 'empresa':     '🏢',
+    // 'gobierno':    '🏛️',
+    // 'ley':         '⚖️',
+    // 'guerra':      '⚔️',
+    // 'paz':         '☮️',
+    // 'poder':       '⚡',
 
     // ── Knowledge, Arts & Culture ─────────────────────────────────────
-    'libro':       '📖',
-    'papel':       '📄',
-    'carta':       '✉️',
-    'número':      '🔢',
-    'música':      '🎵',
-    'arte':        '🎨',
-    'ciencia':     '🔬',
-    'deporte':     '⚽',
-    'película':    '🎬',
-    'noticia':     '📰',
-    'historia':    '📚',  // stack of books — covers both "history" and "story"
+    // (commented out — abstract; keep 🎵/🎨/⚽ candidates for later
+    //  once we decide on SVG vs emoji for this group)
+    // 'libro':       '📖',
+    // 'papel':       '📄',
+    // 'carta':       '✉️',
+    // 'número':      '🔢',
+    // 'música':      '🎵',
+    // 'arte':        '🎨',
+    // 'ciencia':     '🔬',
+    // 'deporte':     '⚽',
+    // 'película':    '🎬',
+    // 'noticia':     '📰',
+    // 'historia':    '📚',
   },
 };
 
