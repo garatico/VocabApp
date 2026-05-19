@@ -288,38 +288,49 @@ def rank_to_difficulty(rank: int) -> int:
 # CORPUS FREQUENCY RANK LOOKUP
 # ══════════════════════════════════════════════════════════════════════════════
 
-def load_corpus_ranks(lang: str) -> Dict[str, int]:
-    """Read corpus frequency file and return {word: rank} for rank lookup."""
+def load_corpus_ranks(lang: str) -> Dict[str, dict]:
+    """Read corpus frequency file and return {word: {'rank': int, 'count': int}}."""
     try:
         corpus_dir = find_corpus_dir(lang)
         if not corpus_dir:
             return {}
         words_file = find_words_file(corpus_dir, lang)
-        ranks: Dict[str, int] = {}
+        ranks: Dict[str, dict] = {}
         with open(words_file, encoding='utf-8', errors='replace') as f:
             for raw in f:
                 parsed = parse_corpus_line(raw)
                 if parsed:
-                    rank, word, _count = parsed
-                    ranks[word.lower()] = rank
+                    rank, word, count = parsed
+                    key = word.lower()
+                    # Keep the highest-count entry for each word.
+                    # Corpus files are sorted by frequency descending, so the
+                    # first occurrence is usually the best — but the same word
+                    # can appear multiple times with different capitalisation
+                    # (e.g. "de" at rank 101 and "De" at rank 4 000), and the
+                    # later, lower-count form must not overwrite the earlier one.
+                    if key not in ranks or count > ranks[key]['count']:
+                        ranks[key] = {'rank': rank, 'count': count}
         return ranks
     except Exception:
         return {}
 
 
-def assign_corpus_rank(entry: dict, corpus_ranks: Dict[str, int]) -> None:
-    """Fill rank/difficulty/band for a hardcoded entry found in the corpus."""
+def assign_corpus_rank(entry: dict, corpus_ranks: Dict[str, dict]) -> None:
+    """Fill rank/difficulty/band/corpus_frequency for a hardcoded entry found in the corpus."""
     if entry.get('rank') is not None:
         return
     word = entry.get('word', '').lower()
-    rank = corpus_ranks.get(word)
-    if rank is None:
+    data = corpus_ranks.get(word)
+    if data is None:
         return
+    rank  = data['rank']
+    count = data['count']
     entry['rank'] = rank
     entry['difficulty'] = rank_to_difficulty(rank)
     freq = entry.setdefault('frequency', {})
-    freq['rank'] = rank
-    freq['band'] = rank_to_band(rank)
+    freq['rank']             = rank
+    freq['band']             = rank_to_band(rank)
+    freq['corpus_frequency'] = count
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1018,17 +1029,15 @@ def deduplicate_lemma_map(lemma_map: Dict[str, dict],
         if lemma.endswith('es') and len(lemma) > 4:
             base = lemma[:-2]
             if base in lemma_map and base not in to_remove:
-                lemma_map[base]['_count'] = max(
-                    lemma_map[base]['_count'], data['_count']
-                )
+                lemma_map[base]['_count'] = max(lemma_map[base]['_count'], data['_count'])
+                lemma_map[base]['_rank']  = min(lemma_map[base]['_rank'],  data['_rank'])
                 to_remove.add(lemma)
                 continue
         if lemma.endswith('s') and len(lemma) > 3:
             base = lemma[:-1]
             if base in lemma_map and base not in to_remove:
-                lemma_map[base]['_count'] = max(
-                    lemma_map[base]['_count'], data['_count']
-                )
+                lemma_map[base]['_count'] = max(lemma_map[base]['_count'], data['_count'])
+                lemma_map[base]['_rank']  = min(lemma_map[base]['_rank'],  data['_rank'])
                 to_remove.add(lemma)
                 continue
 
@@ -1041,9 +1050,8 @@ def deduplicate_lemma_map(lemma_map: Dict[str, dict],
             masc_data = lemma_map.get(masculine)
             if (masc_data and masculine not in to_remove
                     and masc_data['_pos_group'] == 'adjective'):
-                lemma_map[masculine]['_count'] = max(
-                    lemma_map[masculine]['_count'], data['_count']
-                )
+                lemma_map[masculine]['_count'] = max(lemma_map[masculine]['_count'], data['_count'])
+                lemma_map[masculine]['_rank']  = min(lemma_map[masculine]['_rank'],  data['_rank'])
                 to_remove.add(lemma)
 
     return {k: v for k, v in lemma_map.items() if k not in to_remove}
@@ -1051,9 +1059,25 @@ def deduplicate_lemma_map(lemma_map: Dict[str, dict],
 
 def build_corpus_entries(rows: List[Tuple[int, str, int]],
                          lang_code: str, nlp,
-                         verbose: bool = False) -> List[dict]:
-    lemma_map: Dict[str, dict] = {}
-    for _, word, count in rows:
+                         verbose: bool = False) -> Tuple[List[dict], Dict[str, dict]]:
+    """
+    Process corpus rows into open-class vocabulary entries.
+
+    Also collects closed-class (function word) frequency data from the rows so
+    that hardcoded entries can be updated with their real corpus counts in main().
+
+    Returns:
+        (entries, closed_class_freq)
+        closed_class_freq: {lemma: {'rank': int, 'count': int}}  for non-open-class
+                           words found in this batch of rows (ranks 101+).
+                           Words in the top-100 are handled by load_corpus_ranks.
+    """
+    lemma_map:        Dict[str, dict] = {}
+    closed_class_freq: Dict[str, dict] = {}
+    total_rows = len(rows)
+
+    for row_idx, (corpus_rank, word, count) in enumerate(rows):
+        print(f"\r  [{row_idx + 1:,}/{total_rows:,}]  {word:<30}", end='', flush=True)
         if ' ' in word:
             continue
         lemma, pos, pos_group = analyze_word(nlp, word)
@@ -1063,10 +1087,22 @@ def build_corpus_entries(rows: List[Tuple[int, str, int]],
             continue
         if pos == 'NUM' or NUMERIC_RE.match(lemma) or NUMERIC_BROAD_RE.match(lemma):
             continue
+
+        if pos_group not in OPEN_CLASS_POS:
+            # Closed-class word — capture frequency only; the hardcoded list
+            # supplies all other fields.  Keep the entry with the highest count
+            # (lowest corpus rank) when the same lemma appears multiple times.
+            # NOTE: is_valid_corpus_lemma is intentionally skipped here — its
+            # length filter (< 3 chars) would drop "de", "la", "el", "y", etc.
+            # which are the most important function words to rank correctly.
+            if lemma not in closed_class_freq or count > closed_class_freq[lemma]['count']:
+                closed_class_freq[lemma] = {'rank': corpus_rank, 'count': count}
+            continue
+
+        # Open-class: apply full validity filter (length, bad chars, roman numerals)
         if not is_valid_corpus_lemma(lemma):
             continue
-        if pos_group not in OPEN_CLASS_POS:
-            continue
+
         # Drop verb lemmas that don't end in a valid infinitive suffix —
         # they're conjugated forms spaCy failed to reduce to root form.
         if pos_group == 'verb':
@@ -1077,22 +1113,35 @@ def build_corpus_entries(rows: List[Tuple[int, str, int]],
             # are in the hardcoded list; 3-char matches here are fragments like 'cer'.
             if len(lemma) < 4:
                 continue
+
+        # Store the true corpus rank alongside the count so dedup and
+        # corpus_entry() can use the actual frequency position, not a
+        # synthetic 1-N offset that ignores the slots taken by function words.
         if lemma not in lemma_map or count > lemma_map[lemma]['_count']:
-            lemma_map[lemma] = {'_count': count, '_pos_group': pos_group}
+            prev_rank = lemma_map[lemma]['_rank'] if lemma in lemma_map else corpus_rank
+            lemma_map[lemma] = {
+                '_count':     count,
+                '_pos_group': pos_group,
+                '_rank':      min(corpus_rank, prev_rank),
+            }
+
+    print()  # end the progress line
 
     # Merge plural/feminine variants into their canonical form before ranking.
     lemma_map = deduplicate_lemma_map(lemma_map, lang_code)
 
+    # Sort by frequency count (highest first).  The true corpus rank stored in
+    # _rank is used directly — no synthetic enumerate offset needed.
     sorted_items = sorted(lemma_map.items(), key=lambda x: x[1]['_count'], reverse=True)
     entries = [
         corpus_entry(
             word=lemma,
             pos_group=data['_pos_group'],
-            rank_clean=rank_clean,
+            rank_clean=data['_rank'],   # true corpus position
             corpus_count=data['_count'],
             lang_code=lang_code,
         )
-        for rank_clean, (lemma, data) in enumerate(sorted_items, start=1)
+        for lemma, data in sorted_items
     ]
 
     if MLCONJUG3_AVAILABLE and lang_code in TENSE_MAP:
@@ -1108,7 +1157,7 @@ def build_corpus_entries(rows: List[Tuple[int, str, int]],
                 conj_fail += 1
         print(f"  Corpus verbs : {len(verbs)} — {conj_ok} conjugated, {conj_fail} skipped")
 
-    return entries
+    return entries, closed_class_freq
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1190,19 +1239,15 @@ def main(langs: List[str], n: int, verbose: bool,
         print(f"  Hardcoded    : {len(fn_words)} function words "
               f"+ {len(irr_verbs)} irregular verbs = {len(hardcoded_entries)} total")
 
-        # Assign natural corpus ranks to hardcoded entries
+        # Load the full corpus frequency table (no RANK_START filter).
+        # Used later to set corpus_frequency on every entry.
         corpus_ranks = load_corpus_ranks(lang)
         if corpus_ranks:
-            ranked = sum(
-                1 for e in hardcoded_entries
-                if assign_corpus_rank(e, corpus_ranks) is None
-                and e.get('rank') is not None
-            )
-            print(f"  Rank lookup  : {len(corpus_ranks):,} corpus words, "
-                  f"{ranked} hardcoded entries ranked")
+            print(f"  Rank lookup  : {len(corpus_ranks):,} corpus words loaded")
 
         # Build corpus entries
         corpus_entries_out: List[dict] = []
+        closed_class_freq:  Dict[str, dict] = {}
         if n == 0:
             print("  Corpus       : skipped (--n 0)")
         elif not SPACY_AVAILABLE:
@@ -1226,19 +1271,43 @@ def main(langs: List[str], n: int, verbose: bool,
                         print(f"  Corpus src   : {words_file.name}")
                         rows = read_top_n(words_file, n)
                         print(f"  Tokens read  : {len(rows):,}")
-                        corpus_entries_out = build_corpus_entries(
+                        corpus_entries_out, closed_class_freq = build_corpus_entries(
                             rows, lang, nlp, verbose=verbose
                         )
                         print(f"  Corpus       : {len(corpus_entries_out):,} entries after filtering")
+                        if closed_class_freq:
+                            print(f"  Closed-class : {len(closed_class_freq):,} function word(s) "
+                                  f"found in corpus rows (ranks 101+)")
                     except FileNotFoundError as e:
                         print(f"  Corpus       : skipped ({e})")
 
-        # Merge and sort by rank (unranked last)
+        # ── Merge all entries ─────────────────────────────────────────────────
         all_entries = hardcoded_entries + corpus_entries_out
+
+        # ── One authoritative pass: set corpus_frequency from the full corpus file.
+        # corpus_ranks was loaded without any rank filter so it covers every word:
+        # function words ("de", "la", "en") and open-class words alike.
+        # Always overwrite — no `is None` guard — so no stale or wrong value survives.
+        if corpus_ranks:
+            for entry in all_entries:
+                word = entry.get('word', '').lower()
+                data = corpus_ranks.get(word)
+                if data:
+                    entry.setdefault('frequency', {})['corpus_frequency'] = data['count']
+
+        # ── Sort by corpus count descending; words not in the corpus go last ──
         all_entries.sort(key=lambda e: (
-            e.get('rank') is None,
-            e.get('rank') if e.get('rank') is not None else float('inf')
+            e.get('frequency', {}).get('corpus_frequency') is None,
+            -(e.get('frequency', {}).get('corpus_frequency') or 0),
         ))
+
+        # ── Re-number every entry 1, 2, 3 … based on sorted position ─────────
+        for pos, entry in enumerate(all_entries, start=1):
+            entry['rank']       = pos
+            entry['difficulty'] = rank_to_difficulty(pos)
+            freq = entry.setdefault('frequency', {})
+            freq['rank'] = pos
+            freq['band'] = rank_to_band(pos)
 
         # Merge any duplicate words (e.g. 'sí' appears as both pronoun + adverb
         # in hardcoded data — the DB has a UNIQUE constraint on (language, word)
