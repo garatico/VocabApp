@@ -21,7 +21,7 @@ Pipeline steps
 
 4. ENRICHMENT — English glosses, display strings, and domain tags.
        Wiktionary (wiktionaryparser) tried first; Google Translate as fallback.
-       Results cached in data/gloss_cache_{lang}.json between runs.
+       Results cached in data/gloss_cache_{lang}.jsonl between runs.
 
 Usage:
     python backend/scripts/data/clean_wikicorpora.py
@@ -605,19 +605,30 @@ def build_display(word: str, pos: str, glosses: List[str]) -> str:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def load_gloss_cache(lang: str) -> Dict[str, dict]:
-    path = CACHE_DIR / f'gloss_cache_{lang}.json'
-    if path.exists():
-        try:
-            return json.loads(path.read_text(encoding='utf-8'))
-        except Exception:
-            pass
-    return {}
+    path = CACHE_DIR / f'gloss_cache_{lang}.jsonl'
+    if not path.exists():
+        return {}
+    cache: Dict[str, dict] = {}
+    try:
+        for line in path.read_text(encoding='utf-8').splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            row  = json.loads(line)
+            word = row.pop('word', None)
+            if word:
+                cache[word] = row
+    except Exception:
+        pass
+    return cache
 
 
 def save_gloss_cache(lang: str, cache: Dict[str, dict]) -> None:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    path = CACHE_DIR / f'gloss_cache_{lang}.json'
-    path.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding='utf-8')
+    path = CACHE_DIR / f'gloss_cache_{lang}.jsonl'
+    with path.open('w', encoding='utf-8') as f:
+        for word, entry in cache.items():
+            f.write(json.dumps({'word': word, **entry}, ensure_ascii=False) + '\n')
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -665,12 +676,15 @@ def enrich_entries(entries: List[dict], lang: str,
                     raw_glosses = try_wiktionary(word, lang) or []
                     if raw_glosses:
                         wikt_hits += 1
+                        cache[word] = {'glosses': raw_glosses, 'source': 'wiktionary'}
                     else:
                         translation = try_google_translate(word, lang)
                         if translation and translation.lower() != word.lower():
                             raw_glosses = [translation]
                             google_hits += 1
-                    cache[word] = {'glosses': raw_glosses}
+                            cache[word] = {'glosses': raw_glosses, 'source': 'google'}
+                        else:
+                            cache[word] = {'glosses': [], 'source': 'empty'}
                     fetched = wikt_hits + google_hits
                     if fetched > 0 and fetched % 50 == 0:
                         save_gloss_cache(lang, cache)
@@ -1060,6 +1074,7 @@ def deduplicate_lemma_map(lemma_map: Dict[str, dict],
 
 def build_corpus_entries(rows: List[Tuple[int, str, int]],
                          lang_code: str, nlp,
+                         corpus_ranks: Optional[Dict[str, dict]] = None,
                          verbose: bool = False) -> Tuple[List[dict], Dict[str, dict]]:
     """
     Process corpus rows into open-class vocabulary entries.
@@ -1113,6 +1128,12 @@ def build_corpus_entries(rows: List[Tuple[int, str, int]],
             # Require ≥ 4 chars for corpus verbs: real 3-char roots (ser/dar/ver/ir)
             # are in the hardcoded list; 3-char matches here are fragments like 'cer'.
             if len(lemma) < 4:
+                continue
+            # Reject phantom infinitives: spaCy sometimes generates an infinitive
+            # that never actually appears in the corpus (e.g. "estado" → "estadir").
+            # If the lemma itself has no entry in corpus_ranks it was never written
+            # in Wikipedia — it's a hallucinated root form, not a real word.
+            if corpus_ranks and lemma not in corpus_ranks:
                 continue
 
         # Store the true corpus rank alongside the count so dedup and
@@ -1273,7 +1294,7 @@ def main(langs: List[str], n: int, verbose: bool,
                         rows = read_top_n(words_file, n)
                         print(f"  Tokens read  : {len(rows):,}")
                         corpus_entries_out, closed_class_freq = build_corpus_entries(
-                            rows, lang, nlp, verbose=verbose
+                            rows, lang, nlp, corpus_ranks=corpus_ranks, verbose=verbose
                         )
                         print(f"  Corpus       : {len(corpus_entries_out):,} entries after filtering")
                         if closed_class_freq:
@@ -1379,7 +1400,7 @@ examples:
         help='Language codes to process (default: spa fra ita por)',
     )
     parser.add_argument(
-        '--n', type=int, default=20_000,
+        '--n', type=int, default=10_000,
         help='Max corpus tokens per language (0 = hardcoded only, default: 10000)',
     )
     parser.add_argument(
