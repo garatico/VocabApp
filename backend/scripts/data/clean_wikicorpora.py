@@ -588,11 +588,12 @@ def normalize_glosses(raw: List[str], pos: str) -> List[str]:
 
 
 def build_display(word: str, pos: str, glosses: List[str]) -> str:
-    """Pick the best display string from already-normalized glosses."""
+    """Pick a single fallback display string. The app renders the full ' / '-joined
+    display from the glosses array and applies POS-specific filtering (e.g. 'to X'
+    forms only for verbs), so this just needs a clean single value."""
     if not glosses:
         return word
     if pos == 'verb':
-        # Prefer the 'to X' form for display
         for g in glosses:
             if g.lower().startswith('to '):
                 return g

@@ -35,7 +35,7 @@ export function isCorrect(input: string, entry: Word): boolean {
 export function getDisplay(entry: Word): { prompt: string; hint: string | null } {
   return {
     prompt: entry.word,
-    hint:   entry.display ?? null,
+    hint:   buildGlossDisplay(entry) || null,
   };
 }
 
@@ -60,6 +60,22 @@ export function getGlosses(entry: Word): string[] {
   if (Array.isArray(entry.glosses)) return entry.glosses;
   if (typeof entry.answers === 'string') return entry.answers.split('|');
   return [];
+}
+
+/**
+ * Build the human-readable gloss string for a word entry.
+ * - Verbs: filter to "to X" forms and join with " / "  (e.g. "to speak / to talk")
+ * - Everything else: join all glosses with " / "        (e.g. "of / from")
+ * Falls back to entry.display, then entry.word.
+ */
+export function buildGlossDisplay(entry: Word): string {
+  const glosses = getGlosses(entry);
+  if (glosses.length === 0) return entry.display ?? entry.word ?? '';
+  if (entry.pos === 'verb') {
+    const toForms = glosses.filter(g => g.toLowerCase().startsWith('to '));
+    return (toForms.length > 0 ? toForms : glosses).join(' / ');
+  }
+  return glosses.join(' / ');
 }
 
 /** Return a difficulty label for a word entry. */

@@ -1,5 +1,5 @@
 import type { Word } from '../types.js';
-import { isCorrect, getGlosses } from '../utils/utils.ts';
+import { isCorrect, getGlosses, buildGlossDisplay } from '../utils/utils.ts';
 import { attachTooltips }        from '../utils/word-tooltip.ts';
 
 export interface CheckResult {
@@ -36,7 +36,7 @@ export function renderTableMode({
   const cols = Math.max(1, Math.min(5, Number(columns) || 3));
 
   function revealText(entry: Word): string {
-    return entry.display ?? getGlosses(entry).join(' / ') ?? entry.word;
+    return buildGlossDisplay(entry);
   }
 
   function checkAllComplete(): boolean {
