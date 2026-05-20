@@ -197,6 +197,10 @@ TENSE_MAP: Dict[str, Dict[str, Tuple[str, str]]] = {
 
 OPEN_CLASS_POS = {'noun', 'verb', 'adjective'}
 
+# Sources that are considered settled — skip re-fetching for these.
+# 'unknown' and 'empty' are NOT in this set so they always get retried.
+GOOD_SOURCES = {'wiktionary', 'google', 'reviewed'}
+
 POS_GROUPS: Dict[str, str] = {
     'NOUN':  'noun',   'PROPN': 'noun',
     'VERB':  'verb',   'AUX':   'verb',
@@ -666,7 +670,17 @@ def enrich_entries(entries: List[dict], lang: str,
             print(f"\r  [{idx + 1}/{total_needed}]  {word:<25}", end='', flush=True)
 
             try:
-                if cached:
+                # Only trust the cache when the source is a known-good one
+                # ('wiktionary', 'google', 'reviewed').  'unknown' (legacy
+                # entries with no source tag) and 'empty' (previous failed
+                # fetch) both fall through so they get retried this run.
+                source    = cached.get('source', 'unknown') if cached else None
+                reviewed  = cached.get('reviewed', False)   if cached else False
+                use_cache = cached is not None and (
+                    reviewed or (source in GOOD_SOURCES and bool(cached.get('glosses')))
+                )
+
+                if use_cache:
                     raw_glosses = cached.get('glosses', [])
                     cache_hits += 1
                 elif no_translate:
@@ -697,7 +711,7 @@ def enrich_entries(entries: List[dict], lang: str,
 
             except Exception as exc:
                 skipped += 1
-                cache[word] = {'glosses': []}
+                cache[word] = {'glosses': [], 'source': 'empty'}
                 if verbose:
                     print(f"\n  Warning: skipped '{word}' — {type(exc).__name__}: {exc}")
 
@@ -1400,7 +1414,7 @@ examples:
         help='Language codes to process (default: spa fra ita por)',
     )
     parser.add_argument(
-        '--n', type=int, default=10_000,
+        '--n', type=int, default=100_000,
         help='Max corpus tokens per language (0 = hardcoded only, default: 10000)',
     )
     parser.add_argument(
