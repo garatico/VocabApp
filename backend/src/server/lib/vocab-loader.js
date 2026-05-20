@@ -106,14 +106,14 @@ export async function loadVocabFile(language) {
         w.band,
         w.rank,
         w.corpus_frequency,
-        (SELECT GROUP_CONCAT(gloss, ',')
+        (SELECT json_group_array(gloss)
            FROM (SELECT gloss FROM word_glosses  WHERE word_id = w.id ORDER BY position)
         ) AS glosses,
-        (SELECT GROUP_CONCAT(example, ',')
+        (SELECT json_group_array(example)
            FROM (SELECT example FROM word_examples WHERE word_id = w.id ORDER BY rowid)
         ) AS examples,
         w.domains,
-        (SELECT GROUP_CONCAT(tag, ',')
+        (SELECT json_group_array(tag)
            FROM (SELECT tag FROM word_tags WHERE word_id = w.id ORDER BY rowid)
         ) AS tags
       FROM words w
@@ -134,8 +134,8 @@ export async function loadVocabFile(language) {
         pos:       row.pos      || null,
         difficulty:row.difficulty || null,
         notes:     row.notes    || '',
-        glosses:   row.glosses  ? row.glosses.split(',').filter(Boolean)  : [],
-        examples:  row.examples ? row.examples.split(',').filter(Boolean) : [],
+        glosses:   row.glosses  ? (() => { try { return JSON.parse(row.glosses).filter(Boolean);  } catch (_) { return []; } })() : [],
+        examples:  row.examples ? (() => { try { return JSON.parse(row.examples).filter(Boolean); } catch (_) { return []; } })() : [],
         svg_url:   getSvgUrl(lang, row.word),
         emoji:     row.emoji || null,
         linguistic: {
@@ -154,7 +154,7 @@ export async function loadVocabFile(language) {
           corpus_frequency:row.corpus_frequency || null,
         },
         domains: row.domains ? (() => { try { return JSON.parse(row.domains); } catch (_) { return []; } })() : [],
-        tags:    row.tags    ? row.tags.split(',').filter(Boolean)    : [],
+        tags:    row.tags    ? (() => { try { return JSON.parse(row.tags).filter(Boolean);    } catch (_) { return []; } })() : [],
       };
     });
 
