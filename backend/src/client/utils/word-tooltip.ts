@@ -8,6 +8,7 @@
  */
 
 import type { Word } from '../types.js';
+import { buildGlossDisplay } from './utils.js';
 
 const TENSES = ['present','preterite','imperfect','future','conditional','subjunctive','imperative'] as const;
 type Tense = typeof TENSES[number];
@@ -142,10 +143,9 @@ function buildMetaRow(word: Word): HTMLElement {
 }
 
 function buildGlosses(word: Word): HTMLElement {
-  const glosses = (word.glosses?.length ? word.glosses : [word.display]);
   const el = document.createElement('div');
   el.className  = 'tt-glosses';
-  el.textContent = glosses.join(', ');
+  el.textContent = buildGlossDisplay(word);
   return el;
 }
 

@@ -1,6 +1,6 @@
 import type { Word } from '../types.js';
 import { speak }                              from '../utils/tts.js';
-import { isCorrect, getPosLabel, getGlosses } from '../utils/utils.js';
+import { isCorrect, getPosLabel, getGlosses, buildGlossDisplay } from '../utils/utils.js';
 import type { Quiz } from './quiz.js';
 
 let quiz:        Quiz | null = null;
@@ -33,7 +33,7 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
     const cur = quiz.current();
     wordEl.textContent = cur.word;
     if (posEl)  posEl.textContent  = getPosLabel(cur);
-    if (hintEl) hintEl.textContent = cur.display ?? '';
+    if (hintEl) hintEl.textContent = buildGlossDisplay(cur);
     answerEl.value         = '';
     feedbackEl.textContent = '';
     updateStats();

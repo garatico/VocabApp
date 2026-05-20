@@ -11,6 +11,7 @@ import {
   setProgressCallback,
   applyAllPronounToggles,
 } from './controls.js';
+import { buildGlossDisplay } from '../../utils/utils.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -204,7 +205,7 @@ function buildCard(
   function updateHeader(): void {
     const mode = getDisplayMode();
     targetEl.textContent  = verb.word;
-    englishEl.textContent = verb.display || verb.glosses?.join(', ') || '';
+    englishEl.textContent = buildGlossDisplay(verb);
     targetEl.hidden  = mode === 'english';
     englishEl.hidden = mode === 'target';
   }
