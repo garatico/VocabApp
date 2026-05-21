@@ -14,6 +14,31 @@ function normalise(str = ''): string {
 }
 
 /**
+ * Strip parenthetical usage notes from a gloss before comparison.
+ * e.g. "the (fem. sing.)"       → "the"
+ *      "to be (permanent)"      → "to be"
+ *      "you (indirect obj.)"    → "you"
+ *      "a, an (masc. sing.)"   → "a, an"
+ */
+function stripParens(str: string): string {
+  return str.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Expand a single gloss into all matchable forms:
+ * - strips parentheticals
+ * - splits comma-separated alternatives ("a, an" → ["a", "an"])
+ * Each token is normalised before returning.
+ */
+function glossToTokens(gloss: string): string[] {
+  const cleaned = stripParens(gloss);
+  return cleaned
+    .split(/[,/]/)
+    .map(t => normalise(t))
+    .filter(Boolean);
+}
+
+/**
  * Check whether the user's input matches any accepted gloss for a word entry.
  */
 export function isCorrect(input: string, entry: Word): boolean {
@@ -21,11 +46,11 @@ export function isCorrect(input: string, entry: Word): boolean {
   if (!attempt) return false;
 
   if (Array.isArray(entry.glosses) && entry.glosses.length > 0) {
-    return entry.glosses.some(g => normalise(g) === attempt);
+    return entry.glosses.some(g => glossToTokens(g).includes(attempt));
   }
 
   if (typeof entry.answers === 'string') {
-    return entry.answers.split('|').some(a => normalise(a) === attempt);
+    return entry.answers.split('|').some(a => glossToTokens(a).includes(attempt));
   }
 
   return false;
@@ -55,11 +80,14 @@ export function getPosLabel(entry: Word): string {
   return map[entry.pos ?? ''] ?? entry.pos ?? '';
 }
 
-/** Return the accepted glosses for display. */
+/** Return the accepted glosses for display, with parentheticals stripped. */
 export function getGlosses(entry: Word): string[] {
-  if (Array.isArray(entry.glosses)) return entry.glosses;
-  if (typeof entry.answers === 'string') return entry.answers.split('|');
-  return [];
+  const raw: string[] = Array.isArray(entry.glosses)
+    ? entry.glosses
+    : typeof entry.answers === 'string'
+      ? entry.answers.split('|')
+      : [];
+  return raw.map(stripParens).filter(Boolean);
 }
 
 /**

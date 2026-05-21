@@ -12,6 +12,15 @@ interface QuizState {
   seen:  Record<string, SeenEntry>;
 }
 
+function fisherYates(length: number): number[] {
+  const arr = Array.from({ length }, (_, i) => i);
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 export class Quiz {
   words:      Word[];
   storageKey: string;
@@ -22,8 +31,16 @@ export class Quiz {
     this.storageKey = storageKey || 'quick_quiz_state';
     this.state      = JSON.parse(localStorage.getItem(this.storageKey) || '{}') as QuizState;
 
-    if (!this.state.order) {
-      this.state.order = this.words.map((_, i) => i).sort(() => Math.random() - 0.5);
+    // Validate saved state against the current word list. Reset if:
+    //  - no order exists
+    //  - order length doesn't match (different word list size)
+    //  - any index is out of range (stale state from a larger list)
+    const orderValid = Array.isArray(this.state.order)
+      && this.state.order.length === this.words.length
+      && this.state.order.every(i => i >= 0 && i < this.words.length);
+
+    if (!orderValid) {
+      this.state.order = fisherYates(this.words.length);
       this.state.pos   = 0;
       this.state.seen  = {};
       this.save();
@@ -98,11 +115,7 @@ export class Quiz {
 
   reset(): void {
     localStorage.removeItem(this.storageKey);
-    this.state = {
-      order: this.words.map((_, i) => i),
-      pos:   0,
-      seen:  {},
-    };
+    this.state = { order: fisherYates(this.words.length), pos: 0, seen: {} };
     this.save();
   }
 }

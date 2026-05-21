@@ -109,6 +109,7 @@ bindStartHandler({
 // Rebuild base list when structural filters change
 if (langSelect) {
   langSelect.addEventListener('change', () => {
+    localStorage.setItem('vq_lang', langSelect.value);
     loadAndBuildFilters(langSelect.value);
     // Keep tense select in sync if conjugation tab is active
     const activeTab = document.querySelector('.mode-tab.active');
@@ -118,7 +119,10 @@ if (langSelect) {
   });
 }
 if (sizeSelect) {
-  sizeSelect.addEventListener('change', () => loadAndBuildFilters(langSelect.value));
+  sizeSelect.addEventListener('change', () => {
+    localStorage.setItem('vq_size', sizeSelect.value);
+    loadAndBuildFilters(langSelect.value);
+  });
 }
 const sizeCustom = document.getElementById('sizeCustom');
 if (sizeCustom) {
@@ -144,7 +148,13 @@ if (sortOrderToggle) {
 (async function initUI() {
   mountUI();
 
-  if (langSelect) { langSelect.value = 'spanish'; }
+  if (langSelect) {
+    langSelect.value = localStorage.getItem('vq_lang') ?? 'spanish';
+  }
+  if (sizeSelect) {
+    const savedSize = localStorage.getItem('vq_size');
+    if (savedSize) sizeSelect.value = savedSize;
+  }
   bindUIState();
   bindClassFilter();
   bindDomainFilter();
