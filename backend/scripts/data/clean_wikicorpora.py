@@ -1414,7 +1414,7 @@ examples:
         help='Language codes to process (default: spa fra ita por)',
     )
     parser.add_argument(
-        '--n', type=int, default=100_000,
+        '--n', type=int, default=1_000,
         help='Max corpus tokens per language (0 = hardcoded only, default: 10000)',
     )
     parser.add_argument(
