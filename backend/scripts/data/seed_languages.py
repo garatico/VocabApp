@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-seed-languages.py  —  Load preseed JSONL files into vocabulary.db.
+seed_languages.py  —  Load preseed JSONL files into vocabulary.db.
 
 Populates: words, word_glosses, word_tags
 Uses UPSERT — safe to re-run; existing rows are updated, not duplicated.
+Glosses are cleared and re-inserted on every run so cache corrections take effect.
 
 Emoji are applied from emoji_data.EMOJI_DATA (no JSONL regeneration needed).
 Each emoji category ('animals', 'food', ...) is also set as the word's domain
 when the word currently has only the default ['general'] domain.
 
 Usage:
-    python backend/scripts/data/seed-languages.py
+    python backend/scripts/data/seed_languages.py
+    python backend/scripts/data/seed_languages.py --langs spanish french
 
 Stop the server before running (DB must not be locked).
 """
@@ -18,7 +20,6 @@ Stop the server before running (DB must not be locked).
 import json
 import sys
 import shutil
-import tempfile
 import datetime
 import sqlite3
 from pathlib import Path
@@ -75,7 +76,7 @@ UPSERT_WORD = """
 """
 
 INSERT_GLOSS = """
-    INSERT OR IGNORE INTO word_glosses (word_id, gloss, position)
+    INSERT INTO word_glosses (word_id, gloss, position)
     VALUES (?, ?, ?)
 """
 
@@ -182,6 +183,7 @@ def seed_language(lang, conn):
             continue
         word_id = result[0]
 
+        cursor.execute('DELETE FROM word_glosses WHERE word_id = ?', (word_id,))
         for pos_idx, gloss in enumerate(w.get('glosses') or []):
             if gloss:
                 cursor.execute(INSERT_GLOSS, (word_id, gloss, pos_idx))
@@ -200,7 +202,7 @@ def seed_language(lang, conn):
     emoji_n = domain_n = 0
 
     for category, word_map in lang_emojis.items():
-        cat_domain = json.dumps([category])   # e.g. '["animals"]'
+        cat_domain = json.dumps([category])
 
         for word, emoji in word_map.items():
             row = cursor.execute(
@@ -208,7 +210,7 @@ def seed_language(lang, conn):
                 (lang, word)
             ).fetchone()
             if not row:
-                continue   # word not in DB (corpus not seeded for this lang)
+                continue
 
             cur_emoji, cur_domains = row
 
@@ -220,7 +222,6 @@ def seed_language(lang, conn):
                 )
                 emoji_n += 1
 
-            # Only promote to category domain if still on the default 'general'
             if cur_domains in DEFAULT_DOMAINS:
                 cursor.execute(
                     'UPDATE words SET domains = ?, updated_at = CURRENT_TIMESTAMP '
@@ -252,7 +253,16 @@ def seed_language(lang, conn):
 
 # -- Entry point ---------------------------------------------------------------
 
-def main():
+def main(langs=None):
+    if langs is None:
+        langs = LANGUAGES
+    else:
+        unknown = [l for l in langs if l not in LANGUAGES]
+        if unknown:
+            print(f'X  Unknown language(s): {", ".join(unknown)}')
+            print(f'   Valid choices: {", ".join(LANGUAGES)}')
+            raise SystemExit(1)
+
     if not DB_PATH.exists():
         print(f'X  DB not found: {DB_PATH}')
         raise SystemExit(1)
@@ -264,11 +274,7 @@ def main():
     shutil.copy2(str(DB_PATH), str(backup))
     print(f'Backup  : {backup.name}')
 
-    tmp_dir  = tempfile.mkdtemp()
-    local_db = Path(tmp_dir) / 'vocabulary.db'
-    shutil.copy2(str(DB_PATH), str(local_db))
-
-    conn = sqlite3.connect(str(local_db))
+    conn = sqlite3.connect(str(DB_PATH))
     conn.execute('PRAGMA foreign_keys = ON')
     conn.execute('PRAGMA journal_mode = DELETE')
 
@@ -279,18 +285,24 @@ def main():
             conn.commit()
             print(f'Migrated: added {col} column to words')
 
-    for lang in LANGUAGES:
+    for lang in langs:
         seed_language(lang, conn)
 
     conn.close()
-
-    print('\nWriting to vocabulary.db ...')
     cleanup_wal(DB_PATH)
-    shutil.copy2(str(local_db), str(DB_PATH))
-    cleanup_wal(DB_PATH)
-
-    print(f'Done -- {DB_PATH.name}')
+    print(f'\nDone -- {DB_PATH.name}')
 
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(
+        description='Load preseed JSONL files into vocabulary.db.',
+    )
+    parser.add_argument(
+        '--langs', nargs='+',
+        default=None,
+        metavar='LANG',
+        help=f'Languages to seed (default: all). Choices: {", ".join(LANGUAGES)}',
+    )
+    args = parser.parse_args()
+    main(langs=args.langs)

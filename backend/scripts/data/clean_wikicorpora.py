@@ -97,7 +97,7 @@ except ImportError:
 
 SCRIPT_DIR   = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
-CORPUS_DIR   = PROJECT_ROOT / 'data' / 'wikipedia_freq_corpora' / 'raw'
+CORPUS_DIR   = PROJECT_ROOT / 'data' / 'wikipedia_freq_corpora'  # lang folders live directly here
 OUTPUT_DIR   = PROJECT_ROOT / 'data'
 CACHE_DIR    = OUTPUT_DIR / 'gloss_cache'
 PRESEED_DIR  = OUTPUT_DIR / 'preseed'
@@ -468,20 +468,32 @@ def classify_domains(gloss: str, pos: str, rank: Optional[int],
 # TRANSLATION  (Wiktionary -> Google Translate fallback)
 # ══════════════════════════════════════════════════════════════════════════════
 
+_wikt_parser = None
+
+
+def _get_wikt_parser():
+    global _wikt_parser
+    if _wikt_parser is None:
+        try:
+            from wiktionaryparser import WiktionaryParser
+            _wikt_parser = WiktionaryParser()
+        except ImportError:
+            pass
+    return _wikt_parser
+
+
 def try_wiktionary(word: str, lang_code: str) -> Optional[List[str]]:
     """
     Fetch POS-aware definitions from English Wiktionary.
     The global socket.setdefaulttimeout(5) enforces a hard network deadline.
     """
-    try:
-        from wiktionaryparser import WiktionaryParser
-    except ImportError:
-        return None
     wikt_lang = WIKT_LANG.get(lang_code)
     if not wikt_lang:
         return None
+    parser = _get_wikt_parser()
+    if parser is None:
+        return None
     try:
-        parser = WiktionaryParser()
         result = parser.fetch(word, wikt_lang)
         glosses = []
         for block in result:
@@ -1414,7 +1426,7 @@ examples:
         help='Language codes to process (default: spa fra ita por)',
     )
     parser.add_argument(
-        '--n', type=int, default=1_000,
+        '--n', type=int, default=10_000,
         help='Max corpus tokens per language (0 = hardcoded only, default: 10000)',
     )
     parser.add_argument(
