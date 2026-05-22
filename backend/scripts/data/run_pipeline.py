@@ -1,55 +1,36 @@
 #!/usr/bin/env python3
 """
-run_pipeline.py  —  Full VocabApp data pipeline runner
-=======================================================
-Calls the main methods of the other pipeline scripts in the correct order:
+run_pipeline.py  —  VocabApp data pipeline
+===========================================
+Edit the CONFIG block, then run this file.
 
-    1. clean_wikicorpora.main()  — corpus → preseed JSONL
-    2. seed_languages.main()     — preseed JSONL → vocabulary.db
-    3. review_glosses.run()      — (optional) flag suspect glosses
-
-Edit the CONFIG block below, then hit Run (▶) in VS Code.
+Steps
+-----
+1. clean_wikicorpora  — Wikipedia corpus → preseed JSONL
+2. enrich_preseed     — IPA / relations / register tags
+3. seed_languages     — preseed JSONL → vocabulary.db
+4. review_glosses     — flag suspect glosses (optional)
 """
 
 import sys
 from pathlib import Path
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CONFIG  —  edit these before running
+# CONFIG
 # ══════════════════════════════════════════════════════════════════════════════
 
-# Which languages to process (choose any subset).
-LANGS = ['spa', 'fra', 'ita', 'por']
+LANGS = ['spa', 'fra', 'ita', 'por']   # 3-letter codes; any subset
 
-# 3-letter code → full name used by seed_languages.py
-LANG_NAMES = {'spa': 'spanish', 'fra': 'french', 'ita': 'italian', 'por': 'portuguese'}
+N            = 10_000   # corpus words per language (0 = hardcoded only)
+NO_TRANSLATE = False    # skip Wiktionary / Google Translate
+FRESH        = False    # ignore gloss cache and re-fetch everything
+BATCH        = None     # max new translations per run (None = unlimited)
+VERBOSE      = False    # extra logging from corpus / conjugation steps
 
-# How many corpus words to pull per language (0 = hardcoded entries only).
-N = 10_000
-
-# Set True to skip Wiktionary / Google Translate lookups entirely.
-NO_TRANSLATE = False
-
-# Set True to ignore the existing gloss cache and re-fetch everything.
-FRESH = False
-
-# Limit translation to this many new words per run (None = unlimited).
-BATCH = None
-
-# Extra logging from corpus / conjugation steps.
-VERBOSE = False
-
-# ── Step toggles ──────────────────────────────────────────────────────────────
-
-# Run clean_wikicorpora → writes preseed JSONL files.
-RUN_CLEAN = True
-
-# Run seed_languages → loads preseed JSONL into vocabulary.db.
-RUN_SEED = True
-
-# Run review_glosses after cleaning — writes review_{lang}.jsonl for each lang.
-# Only flags 'google' and 'empty' source entries by default.
-RUN_REVIEW = False
+RUN_CLEAN   = True   # Step 1 — build preseed JSONL from corpus
+RUN_ENRICH  = True   # Step 2 — apply IPA / relations / register
+RUN_SEED    = True   # Step 3 — load preseed into vocabulary.db
+RUN_REVIEW  = False  # Step 4 — write review_{lang}.jsonl for suspect glosses
 
 # ══════════════════════════════════════════════════════════════════════════════
 # IMPORTS
@@ -59,53 +40,61 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 import clean_wikicorpora  # noqa: E402
-import seed_languages      # noqa: E402
-import review_glosses      # noqa: E402
+import enrich_preseed     # noqa: E402
+import seed_languages     # noqa: E402
+import review_glosses     # noqa: E402
 
+_SEED_LANG_NAMES = {'spa': 'spanish', 'fra': 'french', 'ita': 'italian', 'por': 'portuguese'}
 
 # ══════════════════════════════════════════════════════════════════════════════
 # RUNNER
 # ══════════════════════════════════════════════════════════════════════════════
 
 def run():
-    # ── Step 1: Generate preseed JSONL ────────────────────────────────────────
+    # ── Step 1 ───────────────────────────────────────────────────────────────
     if RUN_CLEAN:
         print("=" * 60)
-        print("STEP 1  clean_wikicorpora — building preseed JSONL")
+        print("STEP 1  clean_wikicorpora — corpus → preseed JSONL")
         print("=" * 60)
         clean_wikicorpora.main(
-            langs=LANGS,
-            n=N,
-            verbose=VERBOSE,
-            no_translate=NO_TRANSLATE,
-            fresh=FRESH,
-            batch=BATCH,
+            langs=LANGS, n=N, verbose=VERBOSE,
+            no_translate=NO_TRANSLATE, fresh=FRESH, batch=BATCH,
         )
         print()
     else:
         print("STEP 1  clean_wikicorpora — SKIPPED\n")
 
-    # ── Step 2: Load preseed into SQLite ──────────────────────────────────────
-    if RUN_SEED:
+    # ── Step 2 ───────────────────────────────────────────────────────────────
+    if RUN_ENRICH:
         print("=" * 60)
-        print("STEP 2  seed_languages — loading into vocabulary.db")
+        print("STEP 2  enrich_preseed — IPA / relations / register")
         print("=" * 60)
-        seed_languages.main(langs=[LANG_NAMES[l] for l in LANGS if l in LANG_NAMES])
+        enrich_preseed.run(langs=LANGS)
         print()
     else:
-        print("STEP 2  seed_languages — SKIPPED\n")
+        print("STEP 2  enrich_preseed — SKIPPED\n")
 
-    # ── Step 3: Flag suspect glosses ─────────────────────────────────────────
+    # ── Step 3 ───────────────────────────────────────────────────────────────
+    if RUN_SEED:
+        print("=" * 60)
+        print("STEP 3  seed_languages — preseed JSONL → vocabulary.db")
+        print("=" * 60)
+        seed_languages.main(langs=[_SEED_LANG_NAMES[l] for l in LANGS if l in _SEED_LANG_NAMES])
+        print()
+    else:
+        print("STEP 3  seed_languages — SKIPPED\n")
+
+    # ── Step 4 ───────────────────────────────────────────────────────────────
     if RUN_REVIEW:
         print("=" * 60)
-        print("STEP 3  review_glosses — scanning for suspect entries")
+        print("STEP 4  review_glosses — flagging suspect entries")
         print("=" * 60)
         for lang in LANGS:
             print(f"\n── {lang} ──")
             review_glosses.run(lang, source_filter=['google', 'empty'])
         print()
     else:
-        print("STEP 3  review_glosses — SKIPPED\n")
+        print("STEP 4  review_glosses — SKIPPED\n")
 
     print("Pipeline complete.")
 
