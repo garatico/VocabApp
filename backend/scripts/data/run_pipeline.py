@@ -6,10 +6,15 @@ Edit the CONFIG block, then run this file.
 
 Steps
 -----
-1. clean_wikicorpora  — Wikipedia corpus → preseed JSONL
+1. clean_wikicorpora  — frequency corpus → preseed JSONL
 2. enrich_preseed     — IPA / relations / register tags
 3. seed_languages     — preseed JSONL → vocabulary.db
 4. review_glosses     — flag suspect glosses (optional)
+
+Corpus sources
+--------------
+  'wikipedia'     → data/preseed/{lang}_preseed.jsonl       (default)
+  'opensubtitles' → data/preseed/{lang}_preseed_os.jsonl
 """
 
 import sys
@@ -21,7 +26,9 @@ from pathlib import Path
 
 LANGS = ['spa', 'fra', 'ita', 'por']   # 3-letter codes; any subset
 
+CORPUS       = 'opensubtitles'  # 'wikipedia' or 'opensubtitles'
 N            = 10_000   # corpus words per language (0 = hardcoded only)
+OS_MIN_COUNT = 1000      # opensubtitles only: skip words with fewer occurrences (noise filter)
 NO_TRANSLATE = False    # skip Wiktionary / Google Translate
 FRESH        = False    # ignore gloss cache and re-fetch everything
 BATCH        = None     # max new translations per run (None = unlimited)
@@ -54,11 +61,12 @@ def run():
     # ── Step 1 ───────────────────────────────────────────────────────────────
     if RUN_CLEAN:
         print("=" * 60)
-        print("STEP 1  clean_wikicorpora — corpus → preseed JSONL")
+        print(f"STEP 1  clean_wikicorpora — {CORPUS} corpus → preseed JSONL")
         print("=" * 60)
         clean_wikicorpora.main(
             langs=LANGS, n=N, verbose=VERBOSE,
             no_translate=NO_TRANSLATE, fresh=FRESH, batch=BATCH,
+            corpus=CORPUS, os_min_count=OS_MIN_COUNT,
         )
         print()
     else:
