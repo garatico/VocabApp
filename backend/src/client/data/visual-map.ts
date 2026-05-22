@@ -23,7 +23,7 @@
  */
 
 const CDN    = 'https://cdn.jsdelivr.net/npm/openmoji@15.0.0/color/svg';
-const SHARED = '/svgs/shared';  // served by Express from data/svgs/shared/
+const SHARED = '/svgs';  // served by Express from data/svgs/
 
 type Languages = 'spanish' | 'portuguese' | 'italian' | 'french';
 

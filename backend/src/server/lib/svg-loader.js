@@ -1,14 +1,12 @@
 /**
  * SVG Loader - Filesystem-based SVG detection
  *
- * Resolution order for getSvgUrl(language, word):
- *   1. data/svgs/shared/{concept}.svg  — canonical English-named file,
- *      used for all languages that map to the same concept (e.g. dog →
- *      chien, perro, cane, cachorro all resolve to /svgs/shared/dog.svg)
- *   2. data/svgs/{language}/{word}.svg — legacy per-language file
+ * All SVGs live in data/svgs/shared/ named by English concept (e.g. dog.svg).
+ * Words in any language resolve to the same shared file via the CONCEPTS map.
  *
- * To add a new shared SVG: drop the file in data/svgs/shared/ with an
- * English concept name, then add the word→concept mappings below.
+ * To add a new SVG: drop the file in data/svgs/shared/ with an English concept
+ * name, then add the word→concept mappings to CONCEPTS below, and mirror the
+ * entry in client-side visual-map.ts.
  */
 
 import fs from 'fs';
@@ -54,11 +52,7 @@ function conceptKeyFor(language, word) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function sharedSvgPath(key) {
-  return path.join(appRoot, 'data', 'svgs', 'shared', `${key}.svg`);
-}
-
-function langSvgPath(language, word) {
-  return path.join(appRoot, 'data', 'svgs', language.toLowerCase(), `${word}.svg`);
+  return path.join(appRoot, 'data', 'svgs', `${key}.svg`);
 }
 
 function fileExists(p) {
@@ -68,73 +62,54 @@ function fileExists(p) {
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
- * Check if any SVG (shared or per-language) exists for a word.
+ * Check if a shared SVG exists for a word.
  */
 export function hasSvg(language, word) {
   if (!language || !word) return false;
   const key = conceptKeyFor(language, word);
-  if (key && fileExists(sharedSvgPath(key))) return true;
-  return fileExists(langSvgPath(language, word));
+  return !!(key && fileExists(sharedSvgPath(key)));
 }
 
 /**
- * Return the URL for the best available SVG:
- *   /svgs/shared/{concept}.svg  if a shared canonical exists
- *   /svgs/{language}/{word}.svg  if a per-language file exists
- *   null                         if nothing is found
+ * Return the shared SVG URL for a word, or null if no mapping exists.
+ *   /svgs/shared/{concept}.svg
  */
 export function getSvgUrl(language, word) {
   if (!language || !word) return null;
-
   const key = conceptKeyFor(language, word);
   if (key && fileExists(sharedSvgPath(key))) {
-    return `/svgs/shared/${key}.svg`;
+    return `/svgs/${key}.svg`;
   }
-
-  if (fileExists(langSvgPath(language, word))) {
-    return `/svgs/${language.toLowerCase()}/${word}.svg`;
-  }
-
   return null;
 }
 
 /**
- * Ensure SVG directories exist (called at server startup).
+ * Ensure the shared SVG directory exists (called at server startup).
  */
 export function ensureSvgDirs() {
-  const svgsRoot = path.join(appRoot, 'data', 'svgs');
-  const dirs = ['shared', 'spanish', 'portuguese', 'italian', 'french'];
-
+  const sharedDir = path.join(appRoot, 'data', 'svgs');
   try {
-    if (!fs.existsSync(svgsRoot)) {
-      fs.mkdirSync(svgsRoot, { recursive: true });
+    if (!fs.existsSync(sharedDir)) {
+      fs.mkdirSync(sharedDir, { recursive: true });
     }
-    dirs.forEach(d => {
-      const p = path.join(svgsRoot, d);
-      if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
-    });
     return true;
   } catch (err) {
-    console.error('Error creating SVG directories:', err.message);
+    console.error('Error creating SVG directory:', err.message);
     return false;
   }
 }
 
 /**
- * SVG counts per language (for admin stats).
+ * SVG count for admin stats.
  */
 export function getSvgStats() {
-  const stats = {};
-  const languages = ['shared', 'spanish', 'portuguese', 'italian', 'french'];
-  languages.forEach(lang => {
-    const dir = path.join(appRoot, 'data', 'svgs', lang);
-    try {
-      stats[lang] = fs.existsSync(dir)
-        ? fs.readdirSync(dir).filter(f => f.endsWith('.svg')).length
-        : 0;
-    } catch { stats[lang] = 0; }
-  });
-  return stats;
+  const dir = path.join(appRoot, 'data', 'svgs');
+  try {
+    const count = fs.existsSync(dir)
+      ? fs.readdirSync(dir).filter(f => f.endsWith('.svg')).length
+      : 0;
+    return { shared: count };
+  } catch { return { shared: 0 }; }
 }
 
 export default { hasSvg, getSvgUrl, ensureSvgDirs, getSvgStats };

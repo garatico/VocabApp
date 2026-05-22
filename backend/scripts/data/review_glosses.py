@@ -81,8 +81,12 @@ def is_suspect(word, entry):
     gloss_text = ' '.join(glosses)
     if any(g == g.upper() and g.isalpha() and len(g) > 1 for g in glosses):
         return True, f'all-caps: {glosses}'
-    if source == 'google' and len(glosses) == 1:
-        return True, f'single google gloss: {glosses}'
+    # Google echo: translation is the same word back (case-insensitive)
+    if source == 'google' and len(glosses) == 1 and glosses[0].lower() == word.lower():
+        return True, f'google echo: {glosses}'
+    # Google phrase: multi-word result suggests a definition rather than a clean gloss
+    if source == 'google' and len(glosses) == 1 and len(glosses[0].split()) > 3:
+        return True, f'google phrase: {glosses}'
     if re.search(r'[áéíóúüñàèìòùâêîôûäëïöüçæøå]', gloss_text, re.IGNORECASE):
         return True, f'non-English chars: {glosses}'
     if len(glosses) == 1 and len(glosses[0]) == 1:
