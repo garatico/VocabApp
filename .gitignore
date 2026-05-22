@@ -36,6 +36,7 @@ __pycache__/
 
 # data
 wikipedia_freq_corpora/
+opensubtitles_freq_corpora/
 data/old_json/
 data/old_jsonl/
 data/gloss_cache/
