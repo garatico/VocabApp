@@ -192,7 +192,6 @@ SPANISH_FUNCTION_WORDS: List[dict] = [
     # Stressed / prepositional pronouns
     fw('mí',  'pronoun', ['me (after preposition)'],             'spanish'),
     fw('ti',  'pronoun', ['you (after preposition)'],            'spanish'),
-    fw('sí',  'pronoun', ['himself / herself (after prep.)'],    'spanish'),
     # Indefinite pronouns
     fw('algo',    'pronoun', ['something'],                      'spanish'),
     fw('nada',    'pronoun', ['nothing'],                        'spanish'),
@@ -242,7 +241,7 @@ SPANISH_FUNCTION_WORDS: List[dict] = [
     fw('cuánta', 'pronoun', ['how much (fem.)'],                 'spanish'),
     # Closed-class adverbs
     fw('no',       'adverb', ['no', 'not'],                      'spanish'),
-    fw('sí',       'adverb', ['yes'],                            'spanish'),
+    fw('sí',       'adverb', ['yes', 'himself / herself (after prep.)'], 'spanish'),
     fw('muy',      'adverb', ['very'],                           'spanish'),
     fw('bien',     'adverb', ['well', 'fine'],                   'spanish'),
     fw('mal',      'adverb', ['badly', 'poorly'],                'spanish'),
