@@ -1,5 +1,5 @@
 """
-lang_config.py — Shared language configuration for the VocabApp pipeline
+lang_config.py - Shared language configuration for the VocabApp pipeline
 =========================================================================
 Single source of truth for language codes, model names, and POS mappings.
 Imported by corpus_builder.py, gloss_fetcher.py, and clean_wikicorpora.py.
@@ -7,7 +7,7 @@ Imported by corpus_builder.py, gloss_fetcher.py, and clean_wikicorpora.py.
 
 from typing import Dict, Tuple
 
-# 3-letter code → full language name (used for preseed filenames, DB lang field)
+# 3-letter code -> full language name (used for preseed filenames, DB lang field)
 LANG_NAMES: Dict[str, str] = {
     'spa': 'spanish',
     'fra': 'french',
@@ -19,7 +19,7 @@ LANG_NAMES: Dict[str, str] = {
     'zho': 'chinese',
 }
 
-# 3-letter code → spaCy model name
+# 3-letter code -> spaCy model name
 SPACY_MODELS: Dict[str, str] = {
     'deu': 'de_core_news_sm',
     'fra': 'fr_core_news_sm',
@@ -31,7 +31,7 @@ SPACY_MODELS: Dict[str, str] = {
     'zho': 'zh_core_news_sm',
 }
 
-# 3-letter code → ISO 639-1 code used by deep_translator
+# 3-letter code -> ISO 639-1 code used by deep_translator
 LANG_SRC: Dict[str, str] = {
     'spa': 'es',
     'fra': 'fr',
@@ -39,7 +39,7 @@ LANG_SRC: Dict[str, str] = {
     'por': 'pt',
 }
 
-# 3-letter code → ISO 639-1 code used by opensubtitles_freq_corpora directory names
+# 3-letter code -> ISO 639-1 code used by opensubtitles_freq_corpora directory names
 OS_LANG: Dict[str, str] = {
     'spa': 'es',
     'fra': 'fr',
@@ -51,7 +51,7 @@ OS_LANG: Dict[str, str] = {
     'zho': 'zh',
 }
 
-# 3-letter code → language name used by wiktionaryparser
+# 3-letter code -> language name used by wiktionaryparser
 WIKT_LANG: Dict[str, str] = {
     'spa': 'spanish',
     'fra': 'french',
@@ -59,7 +59,7 @@ WIKT_LANG: Dict[str, str] = {
     'por': 'portuguese',
 }
 
-# 3-letter code → mlconjug3 language code
+# 3-letter code -> mlconjug3 language code
 MLCONJUG3_LANG: Dict[str, str] = {
     'spa': 'es',
     'fra': 'fr',
@@ -67,7 +67,7 @@ MLCONJUG3_LANG: Dict[str, str] = {
     'por': 'pt',
 }
 
-# App tense name → (mlconjug3 mood, mlconjug3 tense label)
+# App tense name -> (mlconjug3 mood, mlconjug3 tense label)
 # Lookup tries bare label first (French exact match), then mood-prefixed (spa/ita/por v4).
 TENSE_MAP: Dict[str, Dict[str, Tuple[str, str]]] = {
     'spa': {
@@ -108,7 +108,7 @@ TENSE_MAP: Dict[str, Dict[str, Tuple[str, str]]] = {
     },
 }
 
-# spaCy POS tag → app POS group
+# spaCy POS tag -> app POS group
 POS_GROUPS: Dict[str, str] = {
     'NOUN':  'noun',   'PROPN': 'noun',
     'VERB':  'verb',   'AUX':   'verb',

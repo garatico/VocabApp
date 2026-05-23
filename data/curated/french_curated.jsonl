@@ -1,0 +1,11 @@
+# curated_LANG.jsonl — Manually curated vocabulary
+#
+# Format: one JSON object per line.  Lines starting with '#' are ignored.
+#
+# Required fields:
+#   word     — the word (infinitive for verbs)
+#   pos      — noun | verb | adjective | adverb | preposition | conjunction | interjection
+#   glosses  — list of English translations, most common first
+#
+# Optional fields: display, tags, notes, domains, register,
+#   linguistic.gender, linguistic.plural, linguistic.ipa, linguistic.reflexive

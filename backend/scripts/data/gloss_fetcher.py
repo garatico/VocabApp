@@ -1,5 +1,5 @@
 """
-gloss_fetcher.py — Gloss translation, cache, and domain classification
+gloss_fetcher.py - Gloss translation, cache, and domain classification
 =======================================================================
 Responsible for:
   - Fetching English glosses from Wiktionary (primary) and Google Translate (fallback)
@@ -32,31 +32,33 @@ except ImportError:
     pass
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # CONSTANTS
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 # Cache entries with these sources are considered settled; skip re-fetching.
 # 'unknown' and 'empty' are excluded so they always get retried.
 GOOD_SOURCES = {'wiktionary', 'google', 'reviewed'}
 
-# Manually verified glosses — override whatever cache / Google returned.
+# Manually verified glosses -- override whatever cache / Google returned.
 # Keys are the target-language words; values are clean English glosses in
 # preferred order (most common meaning first).
 # Marked 'reviewed' in cache so they're never overwritten on future runs.
-# NOTE: Do NOT add verb forms here (e.g. 'son', 'era') — those are covered
+# NOTE: Do NOT add verb forms here (e.g. 'son', 'era') -- those are covered
 # by conjugation tables on their parent verb entries.
 GLOSS_CORRECTIONS: Dict[str, Dict[str, List[str]]] = {
     'spa': {
         'año':    ['year'],
         'equipo': ['team', 'equipment'],
+        'favor':  ['favor', 'please'],
         'grupo':  ['group'],
         'mayor':  ['older', 'greater', 'main', 'mayor'],
         'parte':  ['part', 'portion', 'side'],
+        'señor':  ['mister', 'sir', 'lord'],
     },
 }
 
-# ── Domain keywords (matched against English glosses) ────────────────────────
+# Domain keywords (matched against English glosses)
 # Whole-word matching prevents false positives (e.g. 'war' inside 'software').
 DOMAIN_GLOSS_KEYWORDS: Dict[str, List[str]] = {
     'animals':    ['dog', 'cat', 'bird', 'fish', 'horse', 'cow', 'pig', 'sheep',
@@ -160,17 +162,17 @@ ENTITY_DOMAIN_MAP: Dict[str, List[str]] = {
     'LANGUAGE':    ['education', 'culture'],
 }
 
-# ── Gloss cleaning regexes ───────────────────────────────────────────────────
+# Gloss cleaning regexes
 _PAREN_RE      = re.compile(r'\([^)]*\)')
 _BRACKET_RE    = re.compile(r'\[[^\]]*\]')
 _SEMI_NOTE_RE  = re.compile(r'\s*;.*')
-_DASH_NOTE_RE  = re.compile(r'\s+[-–—]\s+.*')
+_DASH_NOTE_RE  = re.compile(r'\s+[-\u2013\u2014]\s+.*')
 _COLON_NOTE_RE = re.compile(r'\s*:\s.*')
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # WIKTIONARY / GOOGLE TRANSLATE
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 _wikt_parser = None
 
@@ -228,9 +230,9 @@ def try_google_translate(word: str, lang_code: str,
         return None
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # GLOSS NORMALIZATION
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def clean_gloss(text: str) -> Optional[str]:
     """
@@ -302,9 +304,9 @@ def build_display(word: str, pos: str, glosses: List[str]) -> str:
     return glosses[0]
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # GLOSS CACHE
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def load_gloss_cache(lang: str, cache_dir: Path) -> Dict[str, dict]:
     path = cache_dir / f'gloss_cache_{lang}.jsonl'
@@ -333,9 +335,9 @@ def save_gloss_cache(lang: str, cache: Dict[str, dict], cache_dir: Path) -> None
             f.write(json.dumps({'word': word, **entry}, ensure_ascii=False) + '\n')
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # DOMAIN CLASSIFICATION
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def classify_domains(gloss: str, pos: str, rank: Optional[int],
                      entity_type: Optional[str] = None) -> List[str]:
@@ -355,9 +357,9 @@ def classify_domains(gloss: str, pos: str, rank: Optional[int],
     return domains if domains else ['general']
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # ENRICHMENT  (glosses + display + domains)
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def enrich_entries(entries: List[dict], lang: str,
                    cache_dir: Path,
@@ -428,7 +430,7 @@ def enrich_entries(entries: List[dict], lang: str,
                 skipped += 1
                 cache[word] = {'glosses': [], 'source': 'empty'}
                 if verbose:
-                    print(f"\n  Warning: skipped '{word}' — {type(exc).__name__}: {exc}")
+                    print(f"\n  Warning: skipped '{word}' -- {type(exc).__name__}: {exc}")
 
         print()
 
@@ -438,7 +440,7 @@ def enrich_entries(entries: List[dict], lang: str,
               f"{wikt_hits} Wiktionary  {google_hits} Google  {skipped} skipped")
         raise KeyboardInterrupt
 
-    # ── Apply manual corrections ──────────────────────────────────────────────
+    # Apply manual corrections
     # Runs before the cache save so corrected values are persisted as 'reviewed'
     # and before the normalization pass so they're cleaned consistently.
     corrections = GLOSS_CORRECTIONS.get(lang, {})

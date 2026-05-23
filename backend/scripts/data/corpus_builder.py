@@ -1,5 +1,5 @@
 """
-corpus_builder.py — Wikipedia corpus extraction and entry building
+corpus_builder.py - Wikipedia corpus extraction and entry building
 ==================================================================
 Responsible for:
   - Reading Wikipedia frequency corpus files
@@ -26,7 +26,7 @@ try:
     import spacy
     SPACY_AVAILABLE = True
 except ImportError:
-    print("Warning: spaCy not installed — corpus extraction will be skipped.")
+    print("Warning: spaCy not installed - corpus extraction will be skipped.")
     print("  pip install spacy")
     SPACY_AVAILABLE = False
 
@@ -36,14 +36,14 @@ try:
     MLCONJUG3_AVAILABLE = True
 except ImportError:
     MLCONJUG3_VERSION = None
-    print("Warning: mlconjug3 not installed — verbs will have no conjugations.")
+    print("Warning: mlconjug3 not installed - verbs will have no conjugations.")
     print("  pip install mlconjug3")
     MLCONJUG3_AVAILABLE = False
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # CONSTANTS
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 # Corpus rows below this rank are closed-class (function words).
 # They are hardcoded; the corpus only supplies their frequency.
@@ -53,7 +53,7 @@ OPEN_CLASS_POS = {'noun', 'verb', 'adjective'}
 
 # Valid infinitive endings per language.
 # Verb lemmas that don't end with one of these are conjugated forms that spaCy
-# failed to lemmatise correctly. Drop them — the true infinitive will appear
+# failed to lemmatise correctly. Drop them - the true infinitive will appear
 # elsewhere in the corpus with a higher frequency.
 VERB_INFINITIVE_ENDINGS: Dict[str, Tuple[str, ...]] = {
     'spa': ('ar', 'er', 'ir', 'ír'),
@@ -62,10 +62,96 @@ VERB_INFINITIVE_ENDINGS: Dict[str, Tuple[str, ...]] = {
     'por': ('ar', 'er', 'ir'),
 }
 
+# Conjugated verb suffixes that are unambiguously verbal - never noun endings.
+# spaCy sometimes misclassifies conjugated forms as NOUN/ADJ when given a
+# single word with no sentence context.  Any token whose surface form ends
+# with one of these suffixes is a conjugated verb form; we skip it so the
+# corpus only carries infinitives (which appear elsewhere and get picked up
+# correctly).
+CONJ_VERB_SUFFIXES: Dict[str, Tuple[str, ...]] = {
+    'spa': (
+        # Conditional - plural / 2nd-person forms.
+        # NOTE: 1s/3s '-ria' is omitted because it collides with
+        # real nouns like 'libreria', 'panaderia', 'secretaria'.
+        'ríamos', 'ríais', 'rían',
+        # Gerunds (no Spanish noun ends in -ando / -iendo / -yendo;
+        # rare false positives like 'comando'/'bando' are acceptable)
+        'ando', 'iendo', 'yendo',
+        # Imperfect -ar verbs: 3rd-person plural and both plural persons.
+        # (1s/2s '-aba'/'-abas' omitted - they match some noun stems.)
+        'aban', 'ábamos', 'abais',
+        # Imperfect -er/-ir verbs, plural and 2nd-person forms.
+        # NOTE: 1s/3s '-ia' is omitted because it collides with
+        # nouns like 'energia', 'alegria', 'policia', 'guia'.
+        'íamos', 'íais', 'ían',
+        # Preterite plurals
+        'aron', 'ieron',
+    ),
+    'fra': (
+        # Conditional plurals / 3rd-person forms
+        'rait', 'rais', 'rions', 'riez', 'raient',
+        # Imperfect plurals
+        'aient', 'ions', 'iez',
+        # Gerund (present participle)
+        'ant',
+    ),
+    'ita': (
+        # Conditional
+        'rebbe', 'rebbero', 'remmo',
+        # Gerunds
+        'ando', 'endo',
+        # Imperfect plurals
+        'avano', 'evano', 'ivano',
+    ),
+    'por': (
+        # Conditional plurals
+        'ríamos', 'ríeis', 'riam',
+        # Gerunds
+        'ando', 'endo',
+        # Imperfect -ar plurals
+        'avam', 'áveis',
+        # Imperfect -er/-ir plurals
+        'íamos', 'íeis', 'iam',
+        # Preterite plurals
+        'aram', 'eram',
+    ),
+}
+
+# Explicit per-language blocklist for high-frequency conjugated forms whose
+# surface spelling is too short or ambiguous for suffix rules to catch them
+# reliably (e.g. 1s/3s imperfect and conditional forms that would also match
+# legitimate nouns if we used a bare '-ia' / '-ria' suffix rule).
+# These are forms that spaCy consistently misclassifies as NOUN when given
+# a single word without sentence context.
+KNOWN_CONJUGATED_FORMS: Dict[str, set] = {
+    'spa': {
+        # Imperfect 1s/3s - common irregular verbs.
+        # Suffix rule cannot catch these because '-ia' also ends real nouns
+        # (energia, alegria, policia...), so we list them explicitly instead.
+        'tenía', 'hacía', 'sabía', 'podía', 'quería', 'veía',
+        'venía', 'ponía', 'traía', 'decía', 'vivía', 'seguía',
+        'salía', 'moría', 'oía', 'caía', 'creía', 'leía',
+        # Conditional 1s/3s - common irregular verbs.
+        # '-ria' suffix is omitted from CONJ_VERB_SUFFIXES because it also
+        # ends nouns like 'libreria'; these high-frequency forms are listed here instead.
+        'podría', 'tendría', 'habría', 'sería', 'haría',
+        'diría', 'vendría', 'pondría', 'querría', 'sabría',
+        'valdría', 'saldría', 'caería', 'traería', 'daría',
+        # Subjunctive present - irregular stems that have no noun meaning
+        'sea', 'sepa', 'vaya', 'diga', 'haga', 'ponga', 'tenga',
+        'traiga', 'caiga', 'salga', 'valga', 'venga', 'quepa',
+        # Present 1s -go forms that spaCy misclassifies as ADJ/NOUN without sentence context.
+        # Only forms with NO competing noun meaning are listed (juego=game, pago=payment,
+        # riego=irrigation etc. are intentionally omitted since they're real nouns).
+        'tengo', 'vengo', 'traigo', 'caigo', 'salgo', 'valgo', 'pongo',
+        'apago', 'llego', 'entrego', 'distingo', 'extingo', 'cuelgo',
+    },
+}
+
 NUMERIC_RE       = re.compile(r'^\d+[%]?$')
 NUMERIC_BROAD_RE = re.compile(r'^[\d][,.\d]+[%]?$')
 # Periods catch abbreviations (d.c, u.s.a); hyphens catch fragments (mid-word)
-_BAD_CHARS_RE    = re.compile(r'[:/\\@#=<>{}|^~`\[\]"\'*+.]|\d')
+_BAD_CHARS_RE    = re.compile(r'[:/\\@#=<>{}|^~`\[\]"' + r"\'*+.]|\d")
 _ROMAN_CHARS_RE  = re.compile(r'^[ivxlcdm]+$', re.IGNORECASE)
 ROMAN_NUMERAL_RE = re.compile(
     r'^m{0,4}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$',
@@ -73,9 +159,9 @@ ROMAN_NUMERAL_RE = re.compile(
 )
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # RANK / BAND HELPERS
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def rank_to_band(rank: int) -> str:
     if rank <= 100:  return 'A1'
@@ -94,9 +180,9 @@ def rank_to_difficulty(rank: int) -> int:
     return 5
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # LEMMA VALIDATION
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def is_valid_corpus_lemma(lemma: str) -> bool:
     """
@@ -105,7 +191,7 @@ def is_valid_corpus_lemma(lemma: str) -> bool:
       - Too short (< 3 chars; real short words are hardcoded)
       - Contains digits or special characters
       - No actual letters
-      - Roman numerals (from Wikipedia 'Siglo XIX' references)
+      - Roman numerals (from Wikipedia references)
     """
     if ' ' in lemma:
         return False
@@ -120,9 +206,9 @@ def is_valid_corpus_lemma(lemma: str) -> bool:
     return True
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # CORPUS ENTRY FACTORY
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def corpus_entry(word: str, pos_group: str, rank_clean: int,
                  corpus_count: int, lang_code: str,
@@ -164,9 +250,9 @@ def corpus_entry(word: str, pos_group: str, rank_clean: int,
     }
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # CONJUGATION
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 _conjugators: Dict[str, object] = {}
 
@@ -278,9 +364,9 @@ def build_conjugations(infinitive: str, lang_code: str,
         return (None, err) if capture_error else None
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# SPACY — CORPUS EXTRACTION
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
+# SPACY - CORPUS EXTRACTION
+# ==============================================================================
 
 def ensure_spacy_model(lang: str) -> bool:
     if not SPACY_AVAILABLE:
@@ -379,9 +465,9 @@ def load_corpus_ranks(lang: str, corpus_dir: Path) -> Dict[str, dict]:
         return {}
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 # OPENSUBTITLES CORPUS
-# ══════════════════════════════════════════════════════════════════════════════
+# ==============================================================================
 
 def parse_opensubtitles_line(line: str, rank: int) -> Optional[Tuple[int, str, int]]:
     """
@@ -420,10 +506,9 @@ def read_top_n_os(filepath: Path, n: int,
     """
     Read up to n entries from an OpenSubtitles frequency file.
     Skips the first RANK_START-1 lines (closed-class function words at the top).
-    Stops early if a line's count drops below min_count — at that frequency words
-    are too rare to be useful and noise (subtitle artifacts, foreign fragments)
-    starts to dominate.
-    Rank equals the line's position in the file.
+    Stops early if a line count drops below min_count - at that frequency words
+    are too rare to be useful and noise starts to dominate.
+    Rank equals the line position in the file.
     """
     results = []
     with open(filepath, encoding='utf-8', errors='replace') as f:
@@ -469,14 +554,6 @@ def deduplicate_lemma_map(lemma_map: Dict[str, dict],
                           lang_code: str) -> Dict[str, dict]:
     """
     Merge plural/feminine variants into their canonical singular/masculine form.
-
-    Plural → singular (all languages):
-      - word ends in '-es' and word[:-2] exists → drop plural
-      - word ends in '-s'  and word[:-1] exists → drop plural
-    Feminine → masculine (adjectives, spa/por/ita):
-      - adjective ends in '-a' and same word with '-o' exists as adjective → drop feminine
-
-    The surviving entry absorbs the variant's corpus count.
     """
     to_remove: set = set()
 
@@ -514,16 +591,76 @@ def deduplicate_lemma_map(lemma_map: Dict[str, dict],
     return {k: v for k, v in lemma_map.items() if k not in to_remove}
 
 
+def load_english_blocklist(os_dir: Path,
+                           top_n: int = 10_000,
+                           spanish_whitelist_n: int = 3_000) -> set:
+    """
+    Build an English word blocklist from the OpenSubtitles English corpus.
+
+    Words are included if they appear in the top-N English OS words AND are
+    NOT in the top spanish_whitelist_n Spanish OS words. The cross-reference
+    prevents legitimate Spanish-English shared words (final, control, hotel,
+    no) from being incorrectly blocked.
+
+    Words shorter than 3 chars are always excluded.
+    """
+    en_file = os_dir / 'en' / 'en_50k.txt'
+    es_file = os_dir / 'es' / 'es_50k.txt'
+    if not en_file.exists():
+        print(f"  Warning: English blocklist unavailable - {en_file} not found.")
+        print("  English words (met, dino, amir, etc.) will not be filtered from OS corpus.")
+        return set()
+
+    spanish_common: set = set()
+    if es_file.exists():
+        try:
+            with open(es_file, encoding='utf-8', errors='replace') as f:
+                for line_rank, raw in enumerate(f, start=1):
+                    if line_rank > spanish_whitelist_n:
+                        break
+                    parts = raw.strip().split()
+                    if parts:
+                        spanish_common.add(parts[0].lower())
+        except Exception:
+            pass
+
+    blocklist: set = set()
+    try:
+        with open(en_file, encoding='utf-8', errors='replace') as f:
+            for line_rank, raw in enumerate(f, start=1):
+                if line_rank > top_n:
+                    break
+                parts = raw.strip().split()
+                if len(parts) >= 2 and len(parts[0]) >= 3:
+                    word = parts[0].lower()
+                    if word not in spanish_common:
+                        blocklist.add(word)
+    except Exception:
+        pass
+    return blocklist
+
+
 def build_corpus_entries(rows: List[Tuple[int, str, int]],
                          lang_code: str, nlp,
                          corpus_ranks: Optional[Dict[str, dict]] = None,
                          verbose: bool = False,
-                         source: str = 'wikicorpus') -> Tuple[List[dict], Dict[str, dict]]:
+                         source: str = 'wikicorpus',
+                         strict_vocab: Optional[set] = None,
+                         skip_words: Optional[set] = None,
+                         curated_map: Optional[Dict[str, dict]] = None) -> Tuple[List[dict], Dict[str, dict]]:
     """
     Process corpus rows into open-class vocabulary entries.
 
     Also collects closed-class (function word) frequency data from the rows so
     hardcoded entries can be updated with their real corpus counts in main().
+
+    Args:
+        strict_vocab:  English blocklist - words in this set are dropped.
+        skip_words:    Words already covered by hardcoded or curated entries.
+                       Skipped early so they don't appear twice in the preseed.
+        curated_map:   {word_lower: entry} for curated entries.  When a corpus
+                       row matches a curated word, its frequency is applied
+                       directly to the curated entry rather than discarded.
 
     Returns:
         (entries, closed_class_freq)
@@ -539,6 +676,40 @@ def build_corpus_entries(rows: List[Tuple[int, str, int]],
         lemma, pos, pos_group = analyze_word(nlp, word)
         if not lemma:
             continue
+
+        w_lower = word.lower()
+
+        # If the word is already covered by a curated entry, pull the corpus
+        # frequency directly into that entry and skip creating a new one.
+        if skip_words and w_lower in skip_words:
+            if curated_map and w_lower in curated_map:
+                curated_entry = curated_map[w_lower]
+                freq = curated_entry.setdefault('frequency', {})
+                # Only update if this corpus row has a higher count than any
+                # previously recorded value (same word may appear multiple times).
+                if count > freq.get('corpus_frequency', 0):
+                    freq['corpus_frequency'] = count
+                    freq['corpus_rank']      = corpus_rank
+            continue
+
+        # Skip words that appear in the English blocklist.
+        if strict_vocab and w_lower in strict_vocab:
+            continue
+
+        # Drop conjugated verb forms that spaCy misclassifies as NOUN/ADJ
+        # when given a single word without sentence context.  Infinitives
+        # appear elsewhere in the corpus and are handled correctly.
+        # Two complementary checks:
+        #   1. Suffix filter - catches regular plural / gerund forms in bulk.
+        #   2. Explicit blocklist - catches 1s/3s forms whose suffixes also
+        #      appear in real nouns (conditional -ria, imperfect -ia).
+        conj_suffixes = CONJ_VERB_SUFFIXES.get(lang_code, ())
+        if conj_suffixes and any(w_lower.endswith(s) for s in conj_suffixes):
+            continue
+        known_forms = KNOWN_CONJUGATED_FORMS.get(lang_code, set())
+        if known_forms and w_lower in known_forms:
+            continue
+
         if pos == 'PROPN':
             continue
         if pos == 'NUM' or NUMERIC_RE.match(lemma) or NUMERIC_BROAD_RE.match(lemma):
@@ -571,7 +742,7 @@ def build_corpus_entries(rows: List[Tuple[int, str, int]],
 
     print()  # end the progress line
 
-    lemma_map   = deduplicate_lemma_map(lemma_map, lang_code)
+    lemma_map    = deduplicate_lemma_map(lemma_map, lang_code)
     sorted_items = sorted(lemma_map.items(), key=lambda x: x[1]['_count'], reverse=True)
     entries = [
         corpus_entry(
@@ -584,18 +755,5 @@ def build_corpus_entries(rows: List[Tuple[int, str, int]],
         )
         for lemma, data in sorted_items
     ]
-
-    if MLCONJUG3_AVAILABLE and lang_code in TENSE_MAP:
-        verbs   = [e for e in entries if e['pos'] == 'verb']
-        conj_ok = conj_fail = 0
-        for entry in verbs:
-            inf  = entry['linguistic']['infinitive']
-            conj = build_conjugations(inf, lang_code, verbose=verbose)
-            if conj:
-                entry['linguistic']['conjugations'] = conj
-                conj_ok += 1
-            else:
-                conj_fail += 1
-        print(f"  Corpus verbs : {len(verbs)} — {conj_ok} conjugated, {conj_fail} skipped")
 
     return entries, closed_class_freq
