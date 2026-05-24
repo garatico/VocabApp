@@ -45,9 +45,11 @@ export function bindModeSwitch({
     if (conjugationArea) conjugationArea.hidden = mode !== 'conjugation';
 
     const classFilter         = document.getElementById('classFilter');
+    const tableModeControls   = document.getElementById('tableModeControls');
     const conjModeControls    = document.getElementById('conjModeControls');
     const pictureModeControls = document.getElementById('pictureModeControls');
     if (classFilter)         classFilter.style.display         = mode === 'conjugation' ? 'none' : '';
+    if (tableModeControls)   tableModeControls.style.display   = mode === 'table'       ? ''     : 'none';
     if (conjModeControls)    conjModeControls.style.display    = mode === 'conjugation' ? ''     : 'none';
     if (pictureModeControls) pictureModeControls.style.display = mode === 'picture'     ? ''     : 'none';
 

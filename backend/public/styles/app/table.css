@@ -40,19 +40,26 @@
   border-collapse: collapse;
   table-layout: fixed;
   margin-bottom: 0.5rem;
-  border: 1.5px solid var(--border-strong);
+  border: 2px solid var(--border-strong);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
 
-#tableWrap tr            { border-bottom: 1px solid var(--border); }
+#tableWrap tr            { border-bottom: 2px solid var(--border-strong); }
 #tableWrap tr:last-child { border-bottom: none; }
 
 #tableWrap td {
-  padding: 3px 5px;
+  padding: 6px 8px;
   vertical-align: middle;
+  /* within-pair separator: subtle */
   border-right: 1px solid var(--border);
 }
+
+/* between-pair separator: bold divider after each input cell */
+#tableWrap td:nth-child(even) {
+  border-right: 3px solid var(--border-strong);
+}
+
 #tableWrap td:last-child { border-right: none; }
 
 #tableWrap .spanish-word {

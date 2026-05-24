@@ -1,6 +1,8 @@
 import type { Word } from '../types.js';
-import { isCorrect, getGlosses, buildGlossDisplay } from '../utils/utils.ts';
+import { isCorrect, isReverseCorrect, getGlosses, buildGlossDisplay } from '../utils/utils.ts';
 import { attachTooltips }        from '../utils/word-tooltip.ts';
+
+export type TableDirection = 'target-en' | 'en-target' | 'mixed';
 
 export interface CheckResult {
   word?:     string;
@@ -17,16 +19,18 @@ export interface TableController {
 }
 
 interface RenderTableModeOptions {
-  words:      Word[];
-  container:  HTMLElement;
-  columns?:   number;
+  words:       Word[];
+  container:   HTMLElement;
+  columns?:    number;
+  direction?:  TableDirection;
   onComplete?: (() => void) | null;
 }
 
 export function renderTableMode({
   words,
   container,
-  columns = 3,
+  columns   = 3,
+  direction = 'target-en',
   onComplete = null,
 }: RenderTableModeOptions): TableController {
   if (!(container instanceof HTMLElement)) {
@@ -35,8 +39,27 @@ export function renderTableMode({
 
   const cols = Math.max(1, Math.min(5, Number(columns) || 3));
 
-  function revealText(entry: Word): string {
-    return buildGlossDisplay(entry);
+  /** Resolve the direction for a single entry (handles 'mixed' by picking randomly). */
+  function entryDir(_entry: Word): 'target-en' | 'en-target' {
+    if (direction === 'mixed') return Math.random() < 0.5 ? 'target-en' : 'en-target';
+    return direction;
+  }
+
+  /** The text shown in the label cell (what the user is prompted with). */
+  function labelText(entry: Word, dir: 'target-en' | 'en-target'): string {
+    return dir === 'en-target' ? buildGlossDisplay(entry) : entry.word;
+  }
+
+  /** The text revealed when the user answers correctly or gives up. */
+  function revealText(entry: Word, dir: 'target-en' | 'en-target'): string {
+    return dir === 'en-target' ? entry.word : buildGlossDisplay(entry);
+  }
+
+  /** Check whether the user's input is correct for a given direction. */
+  function checkInput(input: string, entry: Word, dir: 'target-en' | 'en-target'): boolean {
+    return dir === 'en-target'
+      ? isReverseCorrect(input, entry)
+      : isCorrect(input, entry);
   }
 
   function checkAllComplete(): boolean {
@@ -86,8 +109,10 @@ export function renderTableMode({
           continue;
         }
 
+        const dir = entryDir(w);
+
         const wordDiv = document.createElement('div');
-        wordDiv.textContent = w.word;
+        wordDiv.textContent = labelText(w, dir);
         wordDiv.classList.add('spanish-word');
         wordDiv.dataset.wordJson = JSON.stringify(w);
         tdWord.appendChild(wordDiv);
@@ -95,10 +120,12 @@ export function renderTableMode({
         const inp        = document.createElement('input');
         inp.type         = 'text';
         inp.dataset.word = w.word;
+        inp.dataset.dir  = dir;
+        inp.placeholder  = dir === 'en-target' ? 'Type in target language…' : 'Type translation…';
 
         inp.addEventListener('input', () => {
-          if (isCorrect(inp.value, w)) {
-            inp.value    = revealText(w);
+          if (checkInput(inp.value, w, dir)) {
+            inp.value    = revealText(w, dir);
             inp.disabled = true;
             inp.classList.add('correct');
 
@@ -136,16 +163,17 @@ export function renderTableMode({
     container.querySelectorAll<HTMLInputElement>('input[data-word]').forEach(inp => {
       const entry = words.find(w => w.word === inp.dataset.word);
       if (!entry) return;
-      const ok = isCorrect(inp.value, entry);
+      const dir = (inp.dataset.dir ?? 'target-en') as 'target-en' | 'en-target';
+      const ok  = checkInput(inp.value, entry, dir);
       inp.classList.remove('correct', 'incorrect');
       if (ok) {
-        inp.value    = revealText(entry);
+        inp.value    = revealText(entry, dir);
         inp.disabled = true;
         inp.classList.add('correct');
       } else {
         inp.classList.add('incorrect');
       }
-      results.push({ word: inp.dataset.word, ok, expected: revealText(entry) });
+      results.push({ word: inp.dataset.word, ok, expected: revealText(entry, dir) });
     });
     return results;
   }
@@ -156,7 +184,8 @@ export function renderTableMode({
       if (inp.classList.contains('correct')) { results.push({ ok: true }); return; }
       const entry = words.find(w => w.word === inp.dataset.word);
       if (!entry) return;
-      inp.value    = revealText(entry);
+      const dir = (inp.dataset.dir ?? 'target-en') as 'target-en' | 'en-target';
+      inp.value    = revealText(entry, dir);
       inp.disabled = true;
       inp.classList.remove('correct');
       inp.classList.add('incorrect');

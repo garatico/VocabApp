@@ -1,4 +1,4 @@
-import { bindTableControls }                  from './modes/table-controls.ts';
+import { bindTableControls, resolveDirection } from './modes/table-controls.ts';
 import { bindQuizControls }                   from './quiz/quiz-controls.ts';
 import { bindStartHandler }                   from './start-handler.ts';
 import { bindClassFilter, getSelectedClasses } from './filters/class-filter.ts';
@@ -97,7 +97,8 @@ bindStartHandler({
     const active = document.querySelector<HTMLButtonElement>('#sortOrderToggle .sort-order-btn.active');
     return (active?.dataset.order ?? 'frequency') as 'frequency' | 'alpha' | 'random';
   },
-  getCols: ({ max, fallback }) => Math.max(1, Math.min(max, Number(colsSelect.value) || fallback)),
+  getCols:      ({ max, fallback }) => Math.max(1, Math.min(max, Number(colsSelect.value) || fallback)),
+  getDirection: resolveDirection,   // resolves 'random' freshly on each Start Quiz click
   getRecallTimer: getRecallTimerValue,
   onModeChange: updateModeUI,
   onSingleStart: showCurrent,
