@@ -40,6 +40,7 @@ function glossToTokens(gloss: string): string[] {
 
 /**
  * Check whether the user's input matches any accepted gloss for a word entry.
+ * Used in forward direction (target language shown, user types English).
  */
 export function isCorrect(input: string, entry: Word): boolean {
   const attempt = normalise(input);
@@ -54,6 +55,21 @@ export function isCorrect(input: string, entry: Word): boolean {
   }
 
   return false;
+}
+
+/**
+ * Check whether the user's input matches the target-language word.
+ * Used in reverse direction (English shown, user types the foreign word).
+ * Accent-insensitive by default (same leniency as forward direction).
+ */
+export function isReverseCorrect(input: string, entry: Word): boolean {
+  const attempt = normalise(input);
+  if (!attempt) return false;
+  // Accept the canonical word form and the infinitive (if it differs, e.g. "hablar" for "habla")
+  const targets = ([entry.word, entry.linguistic?.infinitive] as (string | null | undefined)[])
+    .filter((w): w is string => typeof w === 'string' && w.length > 0)
+    .map(w => normalise(w));
+  return targets.includes(attempt);
 }
 
 /** Return prompt + hint for display. */

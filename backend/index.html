@@ -42,13 +42,13 @@
 
   <!-- Error Message -->
   <div id="errorMessage" style="display:none" role="alert" aria-live="polite">
-    <span class="error-icon">⚠️</span>
+    <span class="error-icon">&#x26A0;&#xFE0F;</span>
     <span class="error-text"></span>
-    <button type="button" onclick="closeError()" aria-label="Close error">×</button>
+    <button type="button" onclick="closeError()" aria-label="Close error">&#xD7;</button>
   </div>
 
   <main>
-    <button id="themeToggle" aria-label="Toggle theme">☾</button>
+    <button id="themeToggle" aria-label="Toggle theme">&#x263E;</button>
 
     <!-- Mode Tabs -->
     <div class="mode-tabs">
@@ -84,7 +84,7 @@
               <option value="500">Top 500</option>
               <option value="1000" selected>Top 1000</option>
               <option value="max">Max</option>
-              <option value="custom">Custom…</option>
+              <option value="custom">Custom...</option>
             </select>
             <input type="number" id="sizeCustom" min="1" max="9999" placeholder="e.g. 75" style="display:none;"/>
           </div>
@@ -101,6 +101,16 @@
 
 
         <button id="startBtn">Start Quiz</button>
+      </div>
+
+      <!-- Table-mode controls: shown only when Table tab is active -->
+      <div id="tableModeControls">
+        <span class="filter-section-label">Direction</span>
+        <div class="conj-display-toggle" id="directionToggle">
+          <button class="conj-toggle-btn active" data-direction="target-en">Word &#x2192; Meaning</button>
+          <button class="conj-toggle-btn"        data-direction="en-target">Meaning &#x2192; Word</button>
+          <button class="conj-toggle-btn"        data-direction="mixed">Mixed</button>
+        </div>
       </div>
 
       <div id="classFilter">
@@ -164,8 +174,8 @@
       <div id="tableControls" class="controls-row">
         <select id="colsSelect" title="Columns">
           <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3" selected>3</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
         </select>
         <button id="tableExport">Export</button>
         <button id="tableReset">Give Up</button>
@@ -196,7 +206,7 @@
             <option value="300" selected>5 min</option>
             <option value="600">10 min</option>
             <option value="900">15 min</option>
-            <option value="custom">Custom…</option>
+            <option value="custom">Custom...</option>
             </select>
             <input type="number" id="recallTimerCustom" min="1" max="999" placeholder="mins" style="display:none; width:60px;"/>
         </label>
@@ -225,18 +235,18 @@
       <div id="word" class="word"></div>
 
       <div id="quizNav" class="quiz-nav">
-        <button id="quizPrev">← Prev</button>
+        <button id="quizPrev">&#x2190; Prev</button>
         <span id="quizCounter" class="quiz-counter"></span>
-        <button id="quizNext">Next →</button>
+        <button id="quizNext">Next &#x2192;</button>
       </div>
 
-      <input id="answer" type="text" placeholder="Type English translation…" autocomplete="off"/>
+      <input id="answer" type="text" placeholder="Type English translation..." autocomplete="off"/>
       <div id="feedback" class="feedback"></div>
 
       <div class="controls-row">
         <button id="btnCorrect">Mark Correct</button>
         <button id="quizGiveUp">Reveal Answer</button>
-        <button id="ttsBtn">🔊</button>
+        <button id="ttsBtn">&#x1F50A;</button>
         <button id="resetBtn">End Quiz</button>
       </div>
 

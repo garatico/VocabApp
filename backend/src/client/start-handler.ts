@@ -16,6 +16,7 @@ export function bindStartHandler({
   getSelectedDomains,
   getSortOrder,
   getCols,
+  getDirection,
   getRecallTimer,
   onModeChange,
   onSingleStart,
@@ -82,7 +83,8 @@ export function bindStartHandler({
         const tableController = renderTableMode({
           words: list,
           container: tableWrap,
-          columns: getCols({ max: 5, fallback: 3 }),
+          columns:   getCols({ max: 5, fallback: 2 }),
+          direction: getDirection ? getDirection() : 'target-en',
           onComplete: () => {
             // Show final score
             const correct = list.length;
