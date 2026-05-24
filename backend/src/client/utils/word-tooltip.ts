@@ -246,7 +246,7 @@ function populateTooltip(word: Word, revealed: boolean, hideWordWhenUnrevealed =
     tt.appendChild(hint);
   }
 
-  if (word.pos === 'verb') {
+  if (revealed && word.pos === 'verb') {
     const conjSection = buildConjSection(word);
     if (conjSection) tt.appendChild(conjSection);
   }
