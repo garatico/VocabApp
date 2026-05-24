@@ -44,3 +44,5 @@ data/gloss_cache/
 # src
 backend/src_old/
 
+vite.config.js.timestamp-*.mjs
+vitest.config.js.timestamp-*.mjs
