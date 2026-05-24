@@ -141,7 +141,7 @@ export function renderRecallMode({
     gridWrap.appendChild(table);
   }
 
-  attachTooltips(gridWrap);
+  attachTooltips(gridWrap, { hideWordWhenUnrevealed: true });
 
   wrap.appendChild(timerRow);
   wrap.appendChild(inputRow);
