@@ -687,7 +687,7 @@ def build_corpus_entries(rows: List[Tuple[int, str, int]],
                 freq = curated_entry.setdefault('frequency', {})
                 # Only update if this corpus row has a higher count than any
                 # previously recorded value (same word may appear multiple times).
-                if count > freq.get('corpus_frequency', 0):
+                if count > (freq.get('corpus_frequency') or 0):
                     freq['corpus_frequency'] = count
                     freq['corpus_rank']      = corpus_rank
             continue

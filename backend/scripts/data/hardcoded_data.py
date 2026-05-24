@@ -815,14 +815,9 @@ PORTUGUESE_IRREGULAR_VERBS: List[dict] = [
 # LANGUAGE REGISTRY  (imported by clean_wikicorpora.py)
 # ══════════════════════════════════════════════════════════════════════════════
 
-# ══════════════════════════════════════════════════════════════════════════════
-# EMOJI DATA — curated, high-confidence mappings for Picture Quiz mode
-# ══════════════════════════════════════════════════════════════════════════════
-# Starting with animals and food where emoji are unambiguous across languages.
-# These flow into the JSONL → DB → app pipeline via clean_wikicorpora.py.
-# Add categories incrementally once you're happy with a group.
+# Emoji data has moved to emoji_data.py (categorised structure used by rebuild_db.py).
 
-EMOJI_DATA: Dict[str, Dict[str, str]] = {
+_REMOVED_EMOJI_DATA = {
     'spa': {
         # ── Animals ──────────────────────────────────────────────────────────
         'animal':    '🦁', 'perro':     '🐕', 'gato':      '🐱',

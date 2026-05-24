@@ -4,7 +4,7 @@ debug_conjugations.py
 =====================
 Prints the exact mood/tense key structure that mlconjug3 exposes for one
 test verb per language.  Run this first to verify (and fix) TENSE_MAP in
-clean_wikicorpora.py.
+corpus_builder.py.
 
 Usage:
     python backend/scripts/data/debug_conjugations.py
@@ -29,7 +29,7 @@ TEST_VERBS = {
     'por': ('pt', 'ser'),
 }
 
-# Mirrors TENSE_MAP in clean_wikicorpora.py — keep these in sync.
+# Mirrors TENSE_MAP in corpus_builder.py — keep these in sync.
 # Note: spa/ita/por use lowercase tense labels for mlconjug3 4.x.
 # The lookup in build_conjugations() tries the bare label first,
 # then a mood-prefixed version (e.g. 'Indicativo presente').
@@ -160,7 +160,7 @@ def main(langs):
             print(f"\n  [{lang}] No test verb configured — skipping.")
             continue
         debug_lang(lang)
-    print("\n\nDone. Use the output above to update TENSE_MAP in clean_wikicorpora.py.")
+    print("\n\nDone. Use the output above to update TENSE_MAP in corpus_builder.py.")
 
 
 if __name__ == '__main__':
