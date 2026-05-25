@@ -196,10 +196,11 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> No
         if col not in existing:
             conn.execute(f'ALTER TABLE words ADD COLUMN {col} {ctype}')
 
-    # Rank by corpus_frequency descending
-    entries.sort(key=lambda e: -(e.get('frequency', {}).get('corpus_frequency') or 0))
+    # Preserve the curated rank order from the JSONL
+    entries.sort(key=lambda e: e.get('rank') or 9999)
 
-    for rank, w in enumerate(entries, start=1):
+    for w in entries:
+        rank = w.get('rank') or 9999
         ling = w.get('linguistic') or {}
         conj = ling.get('conjugations')
         doms = w.get('domains') or ['general']

@@ -181,10 +181,14 @@ export async function loadVocabFile(language) {
   }
 }
 
-/** Clear cache for one language, or all languages if lang is null/'all'. */
+/** Clear cache for one language, or all languages if lang is null/'all'.
+ *  When clearing all languages, also closes and reopens the DB connection
+ *  so that a replaced vocabulary.db file is picked up immediately. */
 export function clearCache(language = null) {
   if (!language || language === 'all') {
     vocabCache.clear();
+    // Close DB so the next query reopens it — picks up any replaced DB file.
+    if (db) { try { db.close(); } catch (_) {} db = null; }
   } else {
     vocabCache.delete(language.toLowerCase());
   }
