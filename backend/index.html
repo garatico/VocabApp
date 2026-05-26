@@ -29,6 +29,8 @@
 <link rel="stylesheet" href="/styles/app/conjugation.css"/>
 <link rel="stylesheet" href="/styles/app/tooltip.css"/>
 <link rel="stylesheet" href="/styles/app/responsive.css"/>
+<link rel="stylesheet" href="/styles/app/list-picker.css"/>
+<link rel="stylesheet" href="/styles/app/my-lists.css"/>
 
 </head>
 
@@ -48,8 +50,6 @@
   </div>
 
   <main>
-    <button id="themeToggle" aria-label="Toggle theme">&#x263E;</button>
-
     <!-- Mode Tabs -->
     <div class="mode-tabs">
       <button class="mode-tab active" data-mode="table">Table</button>
@@ -57,9 +57,11 @@
       <button class="mode-tab" data-mode="single">Single Word</button>
       <button class="mode-tab" data-mode="picture">Picture Quiz</button>
       <button class="mode-tab" data-mode="conjugation">Conjugation</button>
+      <button class="mode-tab" data-mode="mylists">My Lists</button>
     </div>
 
     <div id="controls">
+      <button id="themeToggle" aria-label="Toggle theme">&#x263E;</button>
       <div id="controls-top">
         <div class="control-group">
           <label>Language</label>
@@ -89,9 +91,9 @@
         <div class="control-group">
           <label>Order</label>
           <div class="sort-order-toggle" id="sortOrderToggle">
-            <button class="sort-order-btn active" data-order="frequency">By Frequency</button>
-            <button class="sort-order-btn" data-order="alpha">Alphabetize</button>
-            <button class="sort-order-btn" data-order="random">Randomize</button>
+            <button class="sort-order-btn active" data-order="frequency" title="Order by word frequency">Freq</button>
+            <button class="sort-order-btn" data-order="alpha" title="Order alphabetically">A&#x2013;Z</button>
+            <button class="sort-order-btn" data-order="random" title="Randomize order">Shuffle</button>
           </div>
         </div>
 
@@ -121,8 +123,10 @@
         <label><input type="checkbox" value="conjunction" checked> Conjunctions</label>
         <label><input type="checkbox" value="article" checked> Articles</label>
         <label class="filter-known-inline" id="hideKnownLabel">
-          <input type="checkbox" id="filterHideKnown">
-          Hide known (<span id="knownWordCount">0</span>)
+          <select id="filterListSelect" title="Hide words from a list">
+            <option value="">Show all words</option>
+          </select>
+          <span class="filter-known-count">(<span id="knownWordCount">0</span> listed)</span>
         </label>
       </div>
 
@@ -274,6 +278,10 @@
 
     <section id="conjugationArea" hidden>
       <div id="conjugationWrap"></div>
+    </section>
+
+    <section id="myListsArea" hidden>
+      <div id="myListsWrap"></div>
     </section>
 
     <pre id="output" class="output"></pre>

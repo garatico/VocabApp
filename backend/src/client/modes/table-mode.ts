@@ -1,7 +1,8 @@
 import type { Word } from '../types.js';
 import { isCorrect, isReverseCorrect, getGlosses, buildGlossDisplay } from '../utils/utils.ts';
 import { attachTooltips }        from '../utils/word-tooltip.ts';
-import { markKnown, unmarkKnown, isKnown } from '../utils/known-words.ts';
+import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
+import { openListPicker }        from '../utils/list-picker.ts';
 
 export type TableDirection = 'target-en' | 'en-target' | 'mixed';
 
@@ -42,23 +43,19 @@ export function renderTableMode({
 
   const cols = Math.max(1, Math.min(5, Number(columns) || 3));
 
-  /** Resolve the direction for a single entry (handles 'mixed' by picking randomly). */
   function entryDir(_entry: Word): 'target-en' | 'en-target' {
     if (direction === 'mixed') return Math.random() < 0.5 ? 'target-en' : 'en-target';
     return direction;
   }
 
-  /** The text shown in the label cell (what the user is prompted with). */
   function labelText(entry: Word, dir: 'target-en' | 'en-target'): string {
     return dir === 'en-target' ? buildGlossDisplay(entry) : entry.word;
   }
 
-  /** The text revealed when the user answers correctly or gives up. */
   function revealText(entry: Word, dir: 'target-en' | 'en-target'): string {
     return dir === 'en-target' ? entry.word : buildGlossDisplay(entry);
   }
 
-  /** Check whether the user's input is correct for a given direction. */
   function checkInput(input: string, entry: Word, dir: 'target-en' | 'en-target'): boolean {
     return dir === 'en-target'
       ? isReverseCorrect(input, entry)
@@ -75,20 +72,51 @@ export function renderTableMode({
     const correct   = allInputs.filter(inp => inp.disabled).length;
     const total     = allInputs.length;
     const pct       = total > 0 ? Math.round((correct / total) * 100) : 0;
-    const statsText = `${correct}/${total} answered`;
+    const statsText = correct + '/' + total + ' answered';
 
     const barTop      = document.getElementById('tableBarTop');
     const barBottom   = document.getElementById('tableBarBottom');
     const statsTop    = document.getElementById('tableStatsTop');
     const statsBottom = document.getElementById('tableStatsBottom');
 
-    if (barTop)     barTop.style.width      = pct + '%';
-    if (barBottom)  barBottom.style.width   = pct + '%';
-    if (statsTop)   statsTop.textContent    = statsText;
-    if (statsBottom) statsBottom.textContent = statsText;
+    if (barTop)      barTop.style.width       = pct + '%';
+    if (barBottom)   barBottom.style.width    = pct + '%';
+    if (statsTop)    statsTop.textContent     = statsText;
+    if (statsBottom) statsBottom.textContent  = statsText;
 
     const giveUpBtn = document.getElementById('tableReset') as HTMLButtonElement | null;
     if (giveUpBtn) giveUpBtn.disabled = (pct === 100);
+  }
+
+  function buildKnownBtn(w: Word, tdWord: HTMLElement): HTMLButtonElement {
+    const lists = getWordLists(lang, w.word);
+    const btn   = document.createElement('button');
+    btn.type        = 'button';
+    btn.className   = 'known-btn' + (lists.length > 0 ? ' known-btn--active' : '');
+    btn.title       = lists.length > 0 ? 'In lists: ' + lists.join(', ') : 'Add to a list';
+    btn.textContent = '★';
+    btn.hidden      = true;
+
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      openListPicker({
+        anchorEl: btn,
+        lang,
+        word: w.word,
+        onClose: () => {
+          const inAny = isInAnyList(lang, w.word);
+          if (inAny) {
+            btn.classList.add('known-btn--active');
+            tdWord.classList.add('word-cell--known');
+          } else {
+            btn.classList.remove('known-btn--active');
+            tdWord.classList.remove('word-cell--known');
+          }
+        },
+      });
+    });
+
+    return btn;
   }
 
   function buildTable(): void {
@@ -114,6 +142,8 @@ export function renderTableMode({
 
         const dir = entryDir(w);
 
+        if (isInAnyList(lang, w.word)) tdWord.classList.add('word-cell--known');
+
         const wordDiv = document.createElement('div');
         wordDiv.textContent = labelText(w, dir);
         wordDiv.classList.add('spanish-word');
@@ -126,24 +156,7 @@ export function renderTableMode({
         inp.dataset.dir  = dir;
         inp.placeholder  = dir === 'en-target' ? 'Type in target language…' : 'Type translation…';
 
-        // "Mark as known" button — shown after correct answer
-        const knownBtn = document.createElement('button');
-        knownBtn.type      = 'button';
-        knownBtn.className = 'known-btn' + (isKnown(lang, w.word) ? ' known-btn--active' : '');
-        knownBtn.title     = 'Mark as known (hides from future quizzes)';
-        knownBtn.textContent = '★';
-        knownBtn.hidden    = true;
-        knownBtn.addEventListener('click', () => {
-          if (knownBtn.classList.contains('known-btn--active')) {
-            unmarkKnown(lang, w.word);
-            knownBtn.classList.remove('known-btn--active');
-            tdWord.classList.remove('word-cell--known');
-          } else {
-            markKnown(lang, w.word);
-            knownBtn.classList.add('known-btn--active');
-            tdWord.classList.add('word-cell--known');
-          }
-        });
+        const knownBtn = buildKnownBtn(w, tdWord);
 
         inp.addEventListener('input', () => {
           if (checkInput(inp.value, w, dir)) {
@@ -152,7 +165,8 @@ export function renderTableMode({
             inp.classList.add('correct');
 
             knownBtn.hidden = false;
-            if (isKnown(lang, w.word)) {
+
+            if (isInAnyList(lang, w.word)) {
               knownBtn.classList.add('known-btn--active');
               tdWord.classList.add('word-cell--known');
             }

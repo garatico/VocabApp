@@ -11,6 +11,8 @@ import { mountUI }                            from './ui/ui.ts';
 import { initializeFilterToggle }             from './filters/filter-toggle.ts';
 import { renderPictureMode }                  from './modes/picture-mode.ts';
 import { initConjControls }                   from './modes/conjugation/controls.ts';
+import { renderMyLists }                      from './modes/my-lists-mode.ts';
+import { refreshFilterSelect }                from './utils/word-lists.ts';
 
 initTheme();
 
@@ -26,6 +28,8 @@ const pictureArea      = document.getElementById('pictureArea');
 const pictureWrap      = document.getElementById('pictureWrap');
 const conjugationArea  = document.getElementById('conjugationArea');
 const conjugationWrap  = document.getElementById('conjugationWrap');
+const myListsArea      = document.getElementById('myListsArea');
+const myListsWrap      = document.getElementById('myListsWrap');
 const recallTimer    = document.getElementById('recallTimer');
 const recallHardStop = document.getElementById('recallHardStop');
 const colsSelect     = document.getElementById('colsSelect');
@@ -40,8 +44,12 @@ const langMap = {
 
 const { updateModeUI } = bindModeSwitch({
   quizArea, tableArea, recallArea, pictureArea, conjugationArea,
+  extraAreas: { mylists: myListsArea },
   onActivate: {
     conjugation: () => initConjControls(langSelect?.value || 'spanish'),
+    mylists:     () => {
+      if (myListsWrap) renderMyLists(myListsWrap as HTMLElement, langSelect?.value ?? 'spanish');
+    },
   },
 });
 
@@ -94,8 +102,8 @@ bindStartHandler({
   getSelectedClasses,
   getSelectedDomains,
   getSortOrder: () => {
-    const active = document.querySelector<HTMLButtonElement>('#sortOrderToggle .sort-order-btn.active');
-    return (active?.dataset.order ?? 'frequency') as 'frequency' | 'alpha' | 'random';
+    const active = document.querySelector('#sortOrderToggle .sort-order-btn.active');
+    return (active?.dataset.order ?? 'frequency');
   },
   getCols:      ({ max, fallback }) => Math.max(1, Math.min(max, Number(colsSelect.value) || fallback)),
   getDirection: resolveDirection,
@@ -112,9 +120,13 @@ if (langSelect) {
   langSelect.addEventListener('change', () => {
     localStorage.setItem('vq_lang', langSelect.value);
     loadAndBuildFilters(langSelect.value);
+    refreshFilterSelect(langSelect.value);
     const activeTab = document.querySelector('.mode-tab.active');
     if (activeTab?.dataset.mode === 'conjugation') {
       initConjControls(langSelect.value);
+    }
+    if (activeTab?.dataset.mode === 'mylists' && myListsWrap) {
+      renderMyLists(myListsWrap, langSelect.value);
     }
   });
 }
@@ -136,7 +148,7 @@ if (classFilter) {
 const sortOrderToggle = document.getElementById('sortOrderToggle');
 if (sortOrderToggle) {
   sortOrderToggle.addEventListener('click', e => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    const btn = e.target.closest('.sort-order-btn');
     if (!btn) return;
     sortOrderToggle.querySelectorAll('.sort-order-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -166,15 +178,6 @@ if (sortOrderToggle) {
       if (!btn) return;
       pictureSubMode.querySelectorAll('.conj-toggle-btn')
         .forEach(b => b.classList.toggle('active', b === btn));
-    });
-  }
-
-  // Restore "Hide known words" checkbox state from localStorage
-  const hideKnownCb = document.getElementById('filterHideKnown') as HTMLInputElement | null;
-  if (hideKnownCb) {
-    hideKnownCb.checked = localStorage.getItem('vq_hide_known') === '1';
-    hideKnownCb.addEventListener('change', () => {
-      localStorage.setItem('vq_hide_known', hideKnownCb.checked ? '1' : '0');
     });
   }
 

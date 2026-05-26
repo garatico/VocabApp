@@ -1,4 +1,5 @@
-type Mode = 'table' | 'recall' | 'single' | 'picture' | 'conjugation';
+type CoreMode = 'table' | 'recall' | 'single' | 'picture' | 'conjugation';
+type Mode = CoreMode | 'mylists' | string;
 
 interface BindModeSwitchOptions {
   quizArea:         HTMLElement;
@@ -6,7 +7,8 @@ interface BindModeSwitchOptions {
   recallArea:       HTMLElement;
   pictureArea:      HTMLElement;
   conjugationArea:  HTMLElement | null;
-  onActivate?:      Partial<Record<Mode, () => void>>;
+  extraAreas?:      Record<string, HTMLElement | null>;
+  onActivate?:      Partial<Record<string, () => void>>;
 }
 
 export function bindUIState(): void {
@@ -32,6 +34,7 @@ export function bindUIState(): void {
 
 export function bindModeSwitch({
   quizArea, tableArea, recallArea, pictureArea, conjugationArea,
+  extraAreas = {},
   onActivate = {},
 }: BindModeSwitchOptions): { updateModeUI: () => void } {
   let currentMode: Mode = 'table';
@@ -44,11 +47,21 @@ export function bindModeSwitch({
     pictureArea.hidden = mode !== 'picture';
     if (conjugationArea) conjugationArea.hidden = mode !== 'conjugation';
 
+    for (const [areaMode, el] of Object.entries(extraAreas)) {
+      if (el) el.hidden = mode !== areaMode;
+    }
+
     const classFilter         = document.getElementById('classFilter');
     const tableModeControls   = document.getElementById('tableModeControls');
     const conjModeControls    = document.getElementById('conjModeControls');
     const pictureModeControls = document.getElementById('pictureModeControls');
-    if (classFilter)         classFilter.style.display         = mode === 'conjugation' ? 'none' : '';
+    const controlsTop         = document.getElementById('controls-top');
+    const domainFilterWrap    = document.getElementById('domainFilterWrap');
+
+    const isMyLists = mode === 'mylists';
+    if (controlsTop)      controlsTop.style.display     = isMyLists ? 'none' : '';
+    if (domainFilterWrap) domainFilterWrap.style.display = isMyLists ? 'none' : '';
+    if (classFilter)      classFilter.style.display      = (mode === 'conjugation' || isMyLists) ? 'none' : '';
     if (tableModeControls)   tableModeControls.style.display   = mode === 'table'       ? ''     : 'none';
     if (conjModeControls)    conjModeControls.style.display    = mode === 'conjugation' ? ''     : 'none';
     if (pictureModeControls) pictureModeControls.style.display = mode === 'picture'     ? ''     : 'none';
@@ -62,7 +75,7 @@ export function bindModeSwitch({
 
   document.querySelectorAll<HTMLElement>('.mode-tab').forEach(btn => {
     btn.addEventListener('click', () => {
-      currentMode = (btn.dataset.mode as Mode) || 'table';
+      currentMode = btn.dataset.mode || 'table';
       updateModeUI();
     });
   });

@@ -4,9 +4,9 @@
 
 #controls {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.6rem 1rem;
+  border: 1px solid var(--border-strong);  /* full border — tabs overlap the top edge */
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 0.55rem 1rem 0.6rem;
   margin-bottom: 0.6rem;
   box-shadow: var(--shadow-sm);
 }
@@ -17,7 +17,13 @@
   flex-wrap: wrap;
   gap: 0.6rem;
   align-items: flex-end;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.25rem;
 }
+
+/* Reserve space on the right for the theme toggle (absolute-positioned inside #controls) */
+#controls { position: relative; padding-right: 3rem; }
 
 .control-group {
   display: flex;

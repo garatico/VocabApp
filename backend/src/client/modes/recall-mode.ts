@@ -1,6 +1,8 @@
 import { isCorrect }     from '../utils/utils.ts';
 import { attachTooltips } from '../utils/word-tooltip.ts';
 import type { Word }     from '../types.ts';
+import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
+import { openListPicker }            from '../utils/list-picker.ts';
 
 const LANG_LABELS: Record<string, string> = {
   spanish: 'Spanish', portuguese: 'Portuguese', italian: 'Italian', french: 'French',
@@ -35,7 +37,6 @@ export function renderRecallMode({
 
   const sorted = [...words].sort((a, b) => (a.rank || 9999) - (b.rank || 9999));
 
-  // ── Layout ────────────────────────────────────────────
   const wrap = document.createElement('div');
   wrap.className = 'recall-wrap';
 
@@ -49,7 +50,6 @@ export function renderRecallMode({
   giveUpBtn.textContent = 'Give Up';
   giveUpBtn.className   = 'recall-giveup-btn';
 
-  // ── Size slider ──────────────────────────────────────────
   const sliderWrap = document.createElement('div');
   sliderWrap.className = 'recall-size-wrap';
 
@@ -66,20 +66,18 @@ export function renderRecallMode({
   sizeSlider.className = 'recall-size-slider';
   sizeSlider.setAttribute('aria-label', 'Text size');
 
-  // 4 stops: 1.15 → 1.32 → 1.48 → 1.65
   function applyScale(v: number): void {
     const scale = 1.15 + (v / 3) * 0.5;
     wrap.style.setProperty('--rs', scale.toFixed(3));
   }
   sizeSlider.addEventListener('input', () => applyScale(Number(sizeSlider.value)));
-  applyScale(0); // apply on first render
+  applyScale(0);
 
   const iconLg = document.createElement('span');
   iconLg.className   = 'recall-size-icon lg';
   iconLg.textContent = 'A';
 
   sliderWrap.append(iconSm, sizeSlider, iconLg);
-
   timerRow.append(timerDisplay, sliderWrap, giveUpBtn);
 
   const inputRow = document.createElement('div');
@@ -87,7 +85,7 @@ export function renderRecallMode({
 
   const inp = document.createElement('input');
   inp.type         = 'text';
-  inp.placeholder  = `Type a ${LANG_LABELS[lang] || 'word'}…`;
+  inp.placeholder  = 'Type a ' + (LANG_LABELS[lang] || 'word') + '…';
   inp.className    = 'recall-input';
   inp.autocomplete = 'off';
 
@@ -103,13 +101,8 @@ export function renderRecallMode({
 
   const gridWrap = document.createElement('div');
   gridWrap.className = 'recall-grid-wrap';
-  gridWrap.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  gridWrap.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
 
-  // One table per column — keeps CSS grid stretching (each table fills 1fr).
-  // Items are interleaved so the visual read order is row-major:
-  //   col 0 gets sorted[0], sorted[cols], sorted[2*cols], …
-  //   col 1 gets sorted[1], sorted[cols+1], sorted[2*cols+1], …
-  // → reading left-to-right across columns: 1,2,3 / 4,5,6 / …
   const totalRows = Math.ceil(sorted.length / cols);
 
   for (let ci = 0; ci < cols; ci++) {
@@ -133,6 +126,10 @@ export function renderRecallMode({
       tdWord.dataset.wordJson = JSON.stringify(w);
       tdWord.textContent      = '';
 
+      if (isInAnyList(lang, w.word)) {
+        tdWord.classList.add('recall-cell--known');
+      }
+
       tr.appendChild(tdNum);
       tr.appendChild(tdWord);
       table.appendChild(tr);
@@ -150,11 +147,8 @@ export function renderRecallMode({
   container.appendChild(wrap);
 
   inp.focus();
-
-  // Initialize progress display
   updateProgress();
 
-  // ── Input handler ──────────────────────────────────────
   inp.addEventListener('input', () => {
     const val = inp.value.trim();
     if (!val) return;
@@ -168,7 +162,7 @@ export function renderRecallMode({
       revealCell(match.word, 'recalled');
       updateScore();
 
-      feedback.textContent = `✓ ${match.word}`;
+      feedback.textContent = '✓ ' + match.word;
       feedback.style.color = 'var(--correct)';
       inp.value = '';
 
@@ -179,35 +173,63 @@ export function renderRecallMode({
 
   giveUpBtn.addEventListener('click', endSession);
 
-  // ── Helpers ────────────────────────────────────────────
   function revealCell(word: string, state: 'recalled' | 'missed'): void {
     const cell = gridWrap.querySelector<HTMLTableCellElement>(
-      `td.recall-cell[data-word="${CSS.escape(word)}"]`
+      'td.recall-cell[data-word="' + CSS.escape(word) + '"]'
     );
     if (!cell) return;
+
     cell.textContent = word;
-    cell.classList.remove('recalled', 'missed');
+    cell.classList.remove('recalled', 'missed', 'recall-cell--known');
     cell.classList.add(state);
+
+    if (state === 'recalled') {
+      const btn       = document.createElement('button');
+      btn.type        = 'button';
+      btn.className   = 'recall-known-btn' + (isInAnyList(lang, word) ? ' known-btn--active' : '');
+      btn.title       = isInAnyList(lang, word)
+        ? 'In lists: ' + getWordLists(lang, word).join(', ')
+        : 'Add to a list';
+      btn.textContent = '★';
+
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        openListPicker({
+          anchorEl: btn,
+          lang,
+          word,
+          onClose: () => {
+            const inAny = isInAnyList(lang, word);
+            btn.classList.toggle('known-btn--active', inAny);
+            btn.title = inAny
+              ? 'In lists: ' + getWordLists(lang, word).join(', ')
+              : 'Add to a list';
+          },
+        });
+      });
+
+      cell.appendChild(btn);
+    }
   }
 
   function updateScore(): void {
-    scoreEl.textContent = `Recalled: ${recalled.size} / ${sorted.length}`;
+    scoreEl.textContent = 'Recalled: ' + recalled.size + ' / ' + sorted.length;
     updateProgress();
   }
 
   function updateProgress(): void {
     const pct = sorted.length > 0 ? Math.round((recalled.size / sorted.length) * 100) : 0;
 
-    const barTop     = document.getElementById('recallBarTop');
-    const barBottom  = document.getElementById('recallBarBottom');
-    const statsTop   = document.getElementById('recallStatsTop');
+    const barTop      = document.getElementById('recallBarTop');
+    const barBottom   = document.getElementById('recallBarBottom');
+    const statsTop    = document.getElementById('recallStatsTop');
     const statsBottom = document.getElementById('recallStatsBottom');
 
-    const statsText = `${recalled.size}/${sorted.length} recalled`;
+    const statsText = recalled.size + '/' + sorted.length + ' recalled';
 
-    if (barTop)     (barTop    as HTMLElement).style.width = pct + '%';
-    if (barBottom)  (barBottom as HTMLElement).style.width = pct + '%';
-    if (statsTop)   statsTop.textContent    = statsText;
+    if (barTop)      (barTop    as HTMLElement).style.width = pct + '%';
+    if (barBottom)   (barBottom as HTMLElement).style.width = pct + '%';
+    if (statsTop)    statsTop.textContent    = statsText;
     if (statsBottom) statsBottom.textContent = statsText;
 
     if (sorted.length > 0 && recalled.size === sorted.length) {
@@ -229,16 +251,14 @@ export function renderRecallMode({
     const missed = sorted.length - recalled.size;
     const pct    = Math.round((recalled.size / sorted.length) * 100);
 
-    scoreEl.innerHTML = `
-      <div class="recall-summary">
-        <span class="summary-correct">✓ ${recalled.size} recalled</span>
-        <span class="summary-missed">✗ ${missed} missed</span>
-        <span class="summary-pct">${pct}%</span>
-      </div>
-    `;
+    scoreEl.innerHTML =
+      '<div class="recall-summary">' +
+      '<span class="summary-correct">✓ ' + recalled.size + ' recalled</span>' +
+      '<span class="summary-missed">✗ ' + missed + ' missed</span>' +
+      '<span class="summary-pct">' + pct + '%</span>' +
+      '</div>';
   }
 
-  // ── Timer ──────────────────────────────────────────────
   function startTimer(seconds: number, isHardStop: boolean): void {
     secondsLeft = seconds;
     hardStop    = isHardStop;
@@ -263,7 +283,7 @@ export function renderRecallMode({
   function updateTimerDisplay(): void {
     const m = Math.floor(secondsLeft / 60);
     const s = secondsLeft % 60;
-    timerDisplay.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+    timerDisplay.textContent = m + ':' + s.toString().padStart(2, '0');
     timerDisplay.style.color = secondsLeft <= 30 ? 'var(--danger)' : 'var(--text-muted)';
   }
 
