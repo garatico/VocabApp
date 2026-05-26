@@ -18,9 +18,11 @@
   flex-wrap: wrap;
   gap: 0.4rem;
   align-items: center;
-  padding-top: 0.45rem;
-  margin-top: 0.45rem;
-  border-top: 1px solid var(--border);
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
 }
 
 #classFilter label {

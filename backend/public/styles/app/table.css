@@ -64,13 +64,14 @@
 
 #tableWrap .spanish-word {
   font-weight: 700;
-  font-size: 1.25rem;
+  font-size: 1.4rem;        /* noticeably larger than the 1.25rem answer inputs */
   text-align: center;
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 22px;
   color: var(--accent);
+  letter-spacing: -0.01em;
 }
 
 #tableWrap td:has(.spanish-word),

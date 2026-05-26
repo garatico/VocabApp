@@ -2,6 +2,15 @@
    Picture Quiz Mode — grid of SVG cards with text inputs
 ================================================================ */
 
+/* ── Area card shell ─────────────────────────────────────────── */
+#pictureArea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 1rem;
+  box-shadow: var(--shadow);
+}
+
 /* ── Empty state ────────────────────────────────────────────── */
 .picture-empty {
   padding: 3rem 2rem;

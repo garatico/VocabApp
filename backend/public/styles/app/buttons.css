@@ -35,11 +35,19 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
-  padding: 0.35rem 1.2rem;
+  padding: 0.45rem 1.6rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   align-self: flex-end;
+  box-shadow: 0 2px 8px rgba(61, 107, 79, 0.28);
 }
-#startBtn:hover:not(:disabled)    { background: var(--accent-hover); border-color: var(--accent-hover); }
-#startBtn:disabled                 { opacity: 0.5; cursor: not-allowed; }
+#startBtn:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  box-shadow: 0 4px 14px rgba(61, 107, 79, 0.38);
+}
+#startBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── Secondary (controls-row & table controls) ── */
 .controls-row button,

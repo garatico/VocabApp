@@ -2,14 +2,18 @@
  * word-filters.ts
  *
  * Exports filterWords() used by start-handler, and buildFilterUI() which
- * is called on language/size change to update the known-word count badge.
+ * is called on language/size change to update the known-word count badge
+ * and repopulate the list-select dropdown.
  *
  * Note: the domain chip filter is handled by domain-filter.ts.
- * The difficulty/register filters are not yet surfaced in the UI.
  */
 
 import type { Word } from '../types.js';
-import { getKnownWords, getKnownCount } from '../utils/known-words.ts';
+import {
+  getTotalListedCount,
+  getList,
+  refreshFilterSelect,
+} from '../utils/word-lists.ts';
 
 export interface FilterState {
   domains:      string[];
@@ -18,7 +22,7 @@ export interface FilterState {
   registers:    string[];
 }
 
-/** Called on language/size change — updates the known-word count badge. */
+/** Called on language/size change — updates the known-word count badge and list dropdown. */
 export function buildFilterUI(
   _allWords:    Word[],
   _baseList:    Word[] = _allWords,
@@ -26,7 +30,8 @@ export function buildFilterUI(
 ): void {
   const lang         = (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? 'spanish';
   const knownCountEl = document.getElementById('knownWordCount');
-  if (knownCountEl) knownCountEl.textContent = String(getKnownCount(lang));
+  if (knownCountEl) knownCountEl.textContent = String(getTotalListedCount(lang));
+  refreshFilterSelect(lang);
 }
 
 /** Always returns empty arrays — domain filtering is handled by domain-filter.ts. */
@@ -35,10 +40,12 @@ export function getFilterState(): FilterState {
 }
 
 export function filterWords(words: Word[]): Word[] {
-  const hideKnown = (document.getElementById('filterHideKnown') as HTMLInputElement | null)?.checked ?? false;
-  const lang      = (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? 'spanish';
-  const knownSet  = hideKnown ? getKnownWords(lang) : null;
+  const sel  = document.getElementById('filterListSelect') as HTMLSelectElement | null;
+  const lang = (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? 'spanish';
 
-  if (!knownSet) return words;
-  return words.filter(w => !knownSet.has(w.word));
+  const listName = sel?.value ?? '';
+  if (!listName) return words;
+
+  const listed = new Set(getList(lang, listName));
+  return words.filter(w => !listed.has(w.word));
 }
