@@ -9,15 +9,16 @@
  */
 
 export interface WordLinguistic {
-  infinitive:    string | null;
-  reflexive:     boolean;
-  gender:        string | null;
-  plural:        string | null;
-  register:      string | null;
-  ipa:           string | null;
-  syllables:     string[] | null;
-  /** Keyed by tense name (e.g. "present"), value is array of 6 conjugated forms. */
-  conjugations:  Record<string, string[]> | null;
+  infinitive:      string | null;
+  reflexive:       boolean;
+  gender:          string | null;
+  plural:          string | null;
+  register:        string | null;
+  ipa:             string | null;
+  syllables:       string[] | null;
+  /** Keyed by tense name (e.g. "present"), value is array of 6 conjugated forms.
+   *  Also contains "past_participle" and "gerund" as string values for verbs. */
+  conjugations:    Record<string, string[] | string> | null;
 }
 
 export interface WordFrequency {

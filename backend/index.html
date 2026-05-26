@@ -63,16 +63,12 @@
       <div id="controls-top">
         <div class="control-group">
           <label>Language</label>
-
           <select id="langSelect">
             <option value="spanish">Spanish</option>
             <option value="portuguese">Portuguese</option>
             <option value="italian">Italian</option>
             <option value="french">French</option>
-        </select>
-
-
-
+          </select>
         </div>
 
         <div class="control-group">
@@ -99,7 +95,6 @@
           </div>
         </div>
 
-
         <button id="startBtn">Start Quiz</button>
       </div>
 
@@ -125,6 +120,10 @@
         <label><input type="checkbox" value="preposition" checked> Prepositions</label>
         <label><input type="checkbox" value="conjunction" checked> Conjunctions</label>
         <label><input type="checkbox" value="article" checked> Articles</label>
+        <label class="filter-known-inline" id="hideKnownLabel">
+          <input type="checkbox" id="filterHideKnown">
+          Hide known (<span id="knownWordCount">0</span>)
+        </label>
       </div>
 
       <!-- Conjugation-mode controls: shown only when Conjugation tab is active -->
@@ -161,6 +160,10 @@
           <button type="button" id="clearAllDomains" style="display:none">Clear all</button>
         </div>
         <div id="domainFilterBody"></div>
+      </div>
+
+      <div id="wordFilters" style="display:none">
+        <div id="filterContent"></div>
       </div>
 
     </div>
@@ -207,8 +210,8 @@
             <option value="600">10 min</option>
             <option value="900">15 min</option>
             <option value="custom">Custom...</option>
-            </select>
-            <input type="number" id="recallTimerCustom" min="1" max="999" placeholder="mins" style="display:none; width:60px;"/>
+          </select>
+          <input type="number" id="recallTimerCustom" min="1" max="999" placeholder="mins" style="display:none; width:60px;"/>
         </label>
         <label>
           When time runs out:

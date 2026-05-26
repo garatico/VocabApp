@@ -98,7 +98,7 @@ bindStartHandler({
     return (active?.dataset.order ?? 'frequency') as 'frequency' | 'alpha' | 'random';
   },
   getCols:      ({ max, fallback }) => Math.max(1, Math.min(max, Number(colsSelect.value) || fallback)),
-  getDirection: resolveDirection,   // resolves 'random' freshly on each Start Quiz click
+  getDirection: resolveDirection,
   getRecallTimer: getRecallTimerValue,
   onModeChange: updateModeUI,
   onSingleStart: showCurrent,
@@ -112,7 +112,6 @@ if (langSelect) {
   langSelect.addEventListener('change', () => {
     localStorage.setItem('vq_lang', langSelect.value);
     loadAndBuildFilters(langSelect.value);
-    // Keep tense select in sync if conjugation tab is active
     const activeTab = document.querySelector('.mode-tab.active');
     if (activeTab?.dataset.mode === 'conjugation') {
       initConjControls(langSelect.value);
@@ -129,13 +128,11 @@ const sizeCustom = document.getElementById('sizeCustom');
 if (sizeCustom) {
   sizeCustom.addEventListener('input', () => loadAndBuildFilters(langSelect.value));
 }
-// Rebuild when part-of-speech filter changes
 const classFilter = document.getElementById('classFilter');
 if (classFilter) {
   classFilter.addEventListener('change', () => loadAndBuildFilters(langSelect.value));
 }
 
-// Sort-order segmented button toggle
 const sortOrderToggle = document.getElementById('sortOrderToggle');
 if (sortOrderToggle) {
   sortOrderToggle.addEventListener('click', e => {
@@ -162,7 +159,6 @@ if (sortOrderToggle) {
   bindTableControls();
   initializeFilterToggle();
 
-  // Wire up the Picture Quiz sub-mode toggle (Type / Click)
   const pictureSubMode = document.getElementById('pictureSubMode');
   if (pictureSubMode) {
     pictureSubMode.addEventListener('click', e => {
@@ -170,6 +166,15 @@ if (sortOrderToggle) {
       if (!btn) return;
       pictureSubMode.querySelectorAll('.conj-toggle-btn')
         .forEach(b => b.classList.toggle('active', b === btn));
+    });
+  }
+
+  // Restore "Hide known words" checkbox state from localStorage
+  const hideKnownCb = document.getElementById('filterHideKnown') as HTMLInputElement | null;
+  if (hideKnownCb) {
+    hideKnownCb.checked = localStorage.getItem('vq_hide_known') === '1';
+    hideKnownCb.addEventListener('change', () => {
+      localStorage.setItem('vq_hide_known', hideKnownCb.checked ? '1' : '0');
     });
   }
 

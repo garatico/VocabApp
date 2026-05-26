@@ -158,23 +158,26 @@ def fix_display(entries: List[dict]) -> int:
 UPSERT = """
     INSERT INTO words
         (language, word, display, pos, difficulty, notes,
-         gender, register, infinitive, rank, ipa, syllables, conjugations, domains, emoji)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         gender, register, infinitive, rank, ipa, syllables, conjugations, domains, emoji,
+         past_participle, gerund)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(language, word) DO UPDATE SET
-        display      = excluded.display,
-        pos          = COALESCE(excluded.pos,          pos),
-        difficulty   = COALESCE(excluded.difficulty,   difficulty),
-        notes        = COALESCE(excluded.notes,        notes),
-        gender       = COALESCE(excluded.gender,       gender),
-        register     = COALESCE(excluded.register,     register),
-        infinitive   = COALESCE(excluded.infinitive,   infinitive),
-        rank         = excluded.rank,
-        ipa          = COALESCE(excluded.ipa,          ipa),
-        syllables    = COALESCE(excluded.syllables,    syllables),
-        conjugations = COALESCE(excluded.conjugations, conjugations),
-        domains      = COALESCE(excluded.domains,      domains),
-        emoji        = COALESCE(excluded.emoji,        emoji),
-        updated_at   = CURRENT_TIMESTAMP
+        display         = excluded.display,
+        pos             = COALESCE(excluded.pos,             pos),
+        difficulty      = COALESCE(excluded.difficulty,      difficulty),
+        notes           = COALESCE(excluded.notes,           notes),
+        gender          = COALESCE(excluded.gender,          gender),
+        register        = COALESCE(excluded.register,        register),
+        infinitive      = COALESCE(excluded.infinitive,      infinitive),
+        rank            = excluded.rank,
+        ipa             = COALESCE(excluded.ipa,             ipa),
+        syllables       = COALESCE(excluded.syllables,       syllables),
+        conjugations    = COALESCE(excluded.conjugations,    conjugations),
+        domains         = COALESCE(excluded.domains,         domains),
+        emoji           = COALESCE(excluded.emoji,           emoji),
+        past_participle = COALESCE(excluded.past_participle, past_participle),
+        gerund          = COALESCE(excluded.gerund,          gerund),
+        updated_at      = CURRENT_TIMESTAMP
 """
 
 
@@ -192,7 +195,8 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> No
 
     # Ensure optional columns exist
     existing = {r[1] for r in conn.execute('PRAGMA table_info(words)').fetchall()}
-    for col, ctype in [('domains', 'TEXT'), ('emoji', 'TEXT')]:
+    for col, ctype in [('domains', 'TEXT'), ('emoji', 'TEXT'),
+                       ('past_participle', 'TEXT'), ('gerund', 'TEXT')]:
         if col not in existing:
             conn.execute(f'ALTER TABLE words ADD COLUMN {col} {ctype}')
 
@@ -207,6 +211,10 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> No
         syl  = ling.get('syllables')
         if isinstance(syl, list):
             syl = '-'.join(s for s in syl if s) or None
+
+        # past_participle / gerund now live inside conjugations
+        pp  = (conj.get('past_participle') if isinstance(conj, dict) else None) or ling.get('past_participle') or None
+        ger = (conj.get('gerund')          if isinstance(conj, dict) else None) or ling.get('gerund')          or None
 
         cursor.execute(UPSERT, (
             lang_name,
@@ -224,6 +232,8 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> No
             json.dumps(conj, ensure_ascii=False) if conj else None,
             json.dumps(doms, ensure_ascii=False),
             w.get('emoji') or None,
+            pp,
+            ger,
         ))
 
         row = cursor.execute(
