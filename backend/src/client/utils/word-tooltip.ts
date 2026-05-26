@@ -18,7 +18,7 @@ const TENSE_LABELS: Record<Tense, string> = {
   future: 'Future', conditional: 'Conditional', subjunctive: 'Subjunctive', imperative: 'Imperative',
 };
 
-const PRONOUNS = ['yo','tú','él/ella','nosotros','vosotros','ellos'];
+const PRONOUNS = ['yo','tu','el/ella','nosotros','vosotros','ellos'];
 
 const DIFFICULTY_LABELS: Record<number, string> = {
   1: 'Beginner', 2: 'Elementary', 3: 'Intermediate', 4: 'Advanced', 5: 'Expert',
@@ -184,6 +184,41 @@ function buildConjTable(conj: Record<string, string[]>, tenses: readonly string[
   return table;
 }
 
+function buildNonFiniteSection(word: Word): HTMLElement | null {
+  const pp  = (word.linguistic?.conjugations?.['past_participle'] as string | null) ?? null;
+  const ger = (word.linguistic?.conjugations?.['gerund']          as string | null) ?? null;
+  if (!pp && !ger) return null;
+
+  const section = document.createElement('div');
+  section.className = 'tt-nonfinite';
+
+  const label = document.createElement('div');
+  label.className   = 'tt-section-label';
+  label.textContent = 'Non-finite';
+  section.appendChild(label);
+
+  const table = document.createElement('table');
+  table.className = 'tt-conj-table tt-nonfinite-table';
+
+  const pairs: [string, string][] = [];
+  if (ger) pairs.push(['gerundio', ger]);
+  if (pp)  pairs.push(['participio', pp]);
+
+  pairs.forEach(([rowLabel, form]) => {
+    const tr  = document.createElement('tr');
+    const tdL = document.createElement('td');
+    tdL.className   = 'tt-pronoun';
+    tdL.textContent = rowLabel;
+    const tdF = document.createElement('td');
+    tdF.textContent = form;
+    tr.append(tdL, tdF);
+    table.appendChild(tr);
+  });
+
+  section.appendChild(table);
+  return section;
+}
+
 function buildConjSection(word: Word): HTMLElement | null {
   const conj = word.linguistic?.conjugations;
   if (!conj) return null;
@@ -198,7 +233,7 @@ function buildConjSection(word: Word): HTMLElement | null {
 
   const presentWrap = document.createElement('div');
   presentWrap.className = 'tt-conj-present';
-  presentWrap.appendChild(buildConjTable(conj, ['present']));
+  presentWrap.appendChild(buildConjTable(conj as Record<string, string[]>, ['present']));
   section.appendChild(presentWrap);
 
   const expandBtn = document.createElement('button');
@@ -209,7 +244,7 @@ function buildConjSection(word: Word): HTMLElement | null {
   const fullWrap = document.createElement('div');
   fullWrap.className = 'tt-conj-full';
   fullWrap.hidden    = true;
-  fullWrap.appendChild(buildConjTable(conj, TENSES));
+  fullWrap.appendChild(buildConjTable(conj as Record<string, string[]>, TENSES));
   section.appendChild(fullWrap);
 
   expandBtn.addEventListener('click', e => {
@@ -249,6 +284,8 @@ function populateTooltip(word: Word, revealed: boolean, hideWordWhenUnrevealed =
   if (revealed && word.pos === 'verb') {
     const conjSection = buildConjSection(word);
     if (conjSection) tt.appendChild(conjSection);
+    const nonFiniteSection = buildNonFiniteSection(word);
+    if (nonFiniteSection) tt.appendChild(nonFiniteSection);
   }
 
   const syns = word.relations?.synonyms ?? [];

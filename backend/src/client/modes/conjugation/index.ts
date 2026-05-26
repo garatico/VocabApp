@@ -1,8 +1,5 @@
 /**
  * conjugation/index.ts
- *
- * Renders the conjugation drill grid and wires up Give Up / tense / display
- * controls. Pronoun data and control-bar logic live in their own modules.
  */
 
 import type { Word } from '../../types.js';
@@ -12,8 +9,6 @@ import {
   applyAllPronounToggles,
 } from './controls.js';
 import { buildGlossDisplay } from '../../utils/utils.js';
-
-// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface ConjugationModeOptions {
   words:     Word[];
@@ -28,19 +23,24 @@ interface CardController {
   revealAnswers: () => void;
 }
 
-// ── Module state ───────────────────────────────────────────────────────────────
-
 let _cleanup: (() => void) | null = null;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+const SINGLE_FORM_TENSES = new Set(['past_participle', 'gerund']);
+
+function isSingleForm(key: string): boolean {
+  return SINGLE_FORM_TENSES.has(key);
+}
+
+const SINGLE_FORM_ROW_LABEL: Record<string, string> = {
+  past_participle: 'participio',
+  gerund:          'gerundio',
+};
 
 function normalize(s: string): string {
   return s.trim().toLowerCase()
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '');
 }
-
-// ── Main export ───────────────────────────────────────────────────────────────
 
 export function renderConjugationMode({ words, container, lang = 'spanish' }: ConjugationModeOptions): void {
   if (_cleanup) { _cleanup(); _cleanup = null; }
@@ -62,16 +62,22 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   const pronouns  = PRONOUNS[lang]   ?? PRONOUNS.spanish;
   const tenseDefs = TENSE_DEFS[lang] ?? TENSE_DEFS.spanish;
 
-  // ── External controls ──────────────────────────────────────────────────────
   const tenseSelect   = document.getElementById('conjTenseSelect') as HTMLSelectElement | null;
   const displayToggle = document.getElementById('conjDisplayToggle');
 
-  function getTenseKey(): string    { return tenseSelect?.value ?? tenseDefs[0].key; }
+  function getTenseKey(): string {
+    return tenseSelect?.value ?? tenseDefs[0].key;
+  }
   function getDisplayMode(): string {
     return displayToggle?.querySelector<HTMLElement>('.conj-toggle-btn.active')?.dataset.mode ?? 'both';
   }
 
-  // ── Progress section ───────────────────────────────────────────────────────
+  function syncPronounRowVisibility(): void {
+    const single     = isSingleForm(getTenseKey());
+    const pronounRow = document.getElementById('conjPronounRow');
+    if (pronounRow) pronounRow.hidden = single;
+  }
+
   const progressSection = document.createElement('div');
   progressSection.className = 'conj-progress-section';
 
@@ -105,11 +111,9 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
 
   progressSection.append(barsWrap, giveUpBtn);
 
-  // ── Cards grid ─────────────────────────────────────────────────────────────
   const cardsGrid = document.createElement('div');
   cardsGrid.className = 'conj-cards-grid';
 
-  // updateProgress defined after cardsGrid exists so cards can reference it
   function updateProgress(): void {
     let totalForms = 0, correctForms = 0, completeVerbs = 0;
 
@@ -133,7 +137,6 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     formsStat.textContent = `${correctForms} / ${totalForms} correct`;
   }
 
-  // Pass updateProgress into each card so correct answers trigger it directly
   const cardUpdaters: CardController[] = [];
   verbs.forEach(verb => {
     const updater = buildCard(verb, pronouns, getTenseKey, getDisplayMode, updateProgress);
@@ -143,24 +146,30 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
 
   container.append(progressSection, cardsGrid);
 
-  applyAllPronounToggles(cardsGrid);
+  // Only apply pronoun toggles for conjugation tenses — skipping it in
+  // single-form mode prevents applyAllPronounToggles from re-showing the
+  // pronoun rows that buildCard already hid via setSingleMode(true).
+  if (!isSingleForm(getTenseKey())) {
+    applyAllPronounToggles(cardsGrid);
+  }
+  syncPronounRowVisibility();
 
-  // Share updateProgress with conjugation-controls so pronoun toggles can call it
   setProgressCallback(updateProgress);
   updateProgress();
 
-  // ── Give Up ────────────────────────────────────────────────────────────────
   giveUpBtn.addEventListener('click', () => {
     cardUpdaters.forEach(u => u.revealAnswers());
     giveUpBtn.disabled = true;
     updateProgress();
   });
 
-  // ── External control listeners ─────────────────────────────────────────────
   const handleTenseChange = (): void => {
     giveUpBtn.disabled = false;
     cardUpdaters.forEach(u => u.updateInputs());
-    applyAllPronounToggles(cardsGrid);
+    if (!isSingleForm(getTenseKey())) {
+      applyAllPronounToggles(cardsGrid);
+    }
+    syncPronounRowVisibility();
     updateProgress();
   };
 
@@ -214,6 +223,7 @@ function buildCard(
   innerGrid.className = 'conj-inner-grid';
 
   let inputs: HTMLInputElement[] = [];
+  const pronounRows: HTMLElement[] = [];
 
   pronouns.forEach((pronoun, i) => {
     const row = document.createElement('div');
@@ -231,12 +241,33 @@ function buildCard(
     inp.autocorrect    = 'off';
     inp.autocapitalize = 'off';
     inp.spellcheck     = false;
-    inp.placeholder    = '…';
+    inp.placeholder    = '...';
 
     row.append(label, inp);
     innerGrid.appendChild(row);
     inputs.push(inp);
+    pronounRows.push(row);
   });
+
+  // Single-form row (past_participle / gerund)
+  const singleFormRow = document.createElement('div');
+  singleFormRow.className  = 'conj-row conj-row-hidden';
+  singleFormRow.dataset.pi = 'single';
+
+  const singleLabel = document.createElement('span');
+  singleLabel.className = 'conj-pronoun';
+
+  let singleInp = document.createElement('input');
+  singleInp.type           = 'text';
+  singleInp.className      = 'conj-drill-input';
+  singleInp.autocomplete   = 'off';
+  singleInp.autocorrect    = 'off';
+  singleInp.autocapitalize = 'off';
+  singleInp.spellcheck     = false;
+  singleInp.placeholder    = '...';
+
+  singleFormRow.append(singleLabel, singleInp);
+  innerGrid.appendChild(singleFormRow);
 
   card.append(header, innerGrid);
 
@@ -257,56 +288,107 @@ function buildCard(
   }
 
   function attachChecking(): void {
-    const answers = (verb.linguistic?.conjugations as Record<string, string[]> | null)
-      ?.[getTenseKey()] ?? null;
+    const tenseKey = getTenseKey();
 
-    inputs.forEach((inp, i) => {
-      const fresh = inp.cloneNode(true) as HTMLInputElement;
-      inp.parentNode!.replaceChild(fresh, inp);
-      inputs[i] = fresh;
+    if (isSingleForm(tenseKey)) {
+      const answer = verb.linguistic?.conjugations?.[tenseKey] as string | null ?? null;
 
-      addNav(fresh, i);
+      const fresh = singleInp.cloneNode(true) as HTMLInputElement;
+      singleInp.parentNode!.replaceChild(fresh, singleInp);
+      singleInp = fresh;
 
       fresh.addEventListener('input', () => {
-        if (!answers) return;
-        const expected = answers[i] ?? '';
-        const correct  = normalize(fresh.value) === normalize(expected);
-        const was      = fresh.classList.contains('correct');
+        if (!answer) return;
+        const correct = normalize(fresh.value) === normalize(answer);
+        const was     = fresh.classList.contains('correct');
         fresh.classList.toggle('correct', correct);
-
         if (correct && !was) {
-          fresh.value    = expected;   // restore accented canonical form
+          fresh.value    = answer;
           fresh.disabled = true;
-          let n = (i + 1) % inputs.length;
-          while (inputs[n].disabled && n !== i) n = (n + 1) % inputs.length;
-          if (n !== i) inputs[n].focus();
           onProgress();
         }
       });
-    });
+
+    } else {
+      const answers = (verb.linguistic?.conjugations as Record<string, string[]> | null)
+        ?.[tenseKey] ?? null;
+
+      inputs.forEach((inp, i) => {
+        const fresh = inp.cloneNode(true) as HTMLInputElement;
+        inp.parentNode!.replaceChild(fresh, inp);
+        inputs[i] = fresh;
+
+        addNav(fresh, i);
+
+        fresh.addEventListener('input', () => {
+          if (!answers) return;
+          const expected = Array.isArray(answers) ? (answers[i] ?? '') : '';
+          const correct  = normalize(fresh.value) === normalize(expected);
+          const was      = fresh.classList.contains('correct');
+          fresh.classList.toggle('correct', correct);
+
+          if (correct && !was) {
+            fresh.value    = expected;
+            fresh.disabled = true;
+            let n = (i + 1) % inputs.length;
+            while (inputs[n].disabled && n !== i) n = (n + 1) % inputs.length;
+            if (n !== i) inputs[n].focus();
+            onProgress();
+          }
+        });
+      });
+    }
+  }
+
+  function setSingleMode(single: boolean): void {
+    pronounRows.forEach(row => row.classList.toggle('conj-row-hidden', single));
+    singleFormRow.classList.toggle('conj-row-hidden', !single);
+    if (single) {
+      singleLabel.textContent = SINGLE_FORM_ROW_LABEL[getTenseKey()] ?? getTenseKey();
+    }
   }
 
   function updateInputs(): void {
+    const single = isSingleForm(getTenseKey());
+
     inputs.forEach(inp => {
       inp.value    = '';
       inp.disabled = false;
       inp.classList.remove('correct', 'revealed');
     });
+
+    singleInp.value = '';
+    singleInp.disabled = false;
+    singleInp.classList.remove('correct', 'revealed');
+
+    setSingleMode(single);
     attachChecking();
   }
 
   function revealAnswers(): void {
-    const answers = (verb.linguistic?.conjugations as Record<string, string[]> | null)
-      ?.[getTenseKey()] ?? null;
-    inputs.forEach((inp, i) => {
-      if (!inp.classList.contains('correct') && !inp.classList.contains('revealed')) {
-        inp.value = answers?.[i] ?? '—';
-        inp.classList.add('revealed');
-        inp.disabled = true;
+    const tenseKey = getTenseKey();
+
+    if (isSingleForm(tenseKey)) {
+      if (!singleInp.classList.contains('correct') && !singleInp.classList.contains('revealed')) {
+        const answer = verb.linguistic?.conjugations?.[tenseKey] as string | null;
+        singleInp.value = answer ?? '—';
+        singleInp.classList.add('revealed');
+        singleInp.disabled = true;
       }
-    });
+    } else {
+      const answers = (verb.linguistic?.conjugations as Record<string, string[]> | null)
+        ?.[tenseKey] ?? null;
+      inputs.forEach((inp, i) => {
+        if (!inp.classList.contains('correct') && !inp.classList.contains('revealed')) {
+          inp.value = (Array.isArray(answers) ? answers[i] : null) ?? '—';
+          inp.classList.add('revealed');
+          inp.disabled = true;
+        }
+      });
+    }
   }
 
+  setSingleMode(isSingleForm(getTenseKey()));
   updateHeader();
   attachChecking();
 

@@ -111,6 +111,43 @@
 #tableWrap .word-cell  { width: 12%; }
 #tableWrap .input-cell { width: 22%; }
 
+/* ── Known-word button ── */
+.known-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  padding: 0 4px;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity var(--transition-fast), color var(--transition-fast),
+              background var(--transition-fast), border-color var(--transition-fast);
+  vertical-align: middle;
+}
+.known-btn:hover {
+  opacity: 1;
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.known-btn--active {
+  opacity: 1;
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+/* Dim word cells that are marked known */
+.word-cell--known .spanish-word {
+  opacity: 0.45;
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   #tableArea     { padding: 0.5rem 0.75rem; }

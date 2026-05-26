@@ -51,6 +51,14 @@ function initializeDatabase() {
       db.exec('ALTER TABLE words ADD COLUMN updated_at TEXT');
       console.log('  ✓ auto-migrated: added updated_at column');
     }
+    if (!cols.includes('past_participle')) {
+      db.exec('ALTER TABLE words ADD COLUMN past_participle TEXT');
+      console.log('  ✓ auto-migrated: added past_participle column');
+    }
+    if (!cols.includes('gerund')) {
+      db.exec('ALTER TABLE words ADD COLUMN gerund TEXT');
+      console.log('  ✓ auto-migrated: added gerund column');
+    }
   } catch (error) {
     console.error('Database connection error:', error);
     if (error.code === 'SQLITE_CANTOPEN') {
@@ -139,13 +147,13 @@ export async function loadVocabFile(language) {
         svg_url:   getSvgUrl(lang, row.word),
         emoji:     row.emoji || null,
         linguistic: {
-          infinitive:   row.infinitive || null,
-          reflexive:    Boolean(row.reflexive),
-          gender:       row.gender    || null,
-          plural:       row.plural    || null,
-          register:     row.register  || null,
-          ipa:          row.ipa       || null,
-          syllables:    row.syllables ? row.syllables.split('-') : null,
+          infinitive:      row.infinitive      || null,
+          reflexive:       Boolean(row.reflexive),
+          gender:          row.gender          || null,
+          plural:          row.plural          || null,
+          register:        row.register        || null,
+          ipa:             row.ipa             || null,
+          syllables:       row.syllables ? row.syllables.split('-') : null,
           conjugations,
         },
         frequency: {

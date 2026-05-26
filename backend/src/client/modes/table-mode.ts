@@ -1,6 +1,7 @@
 import type { Word } from '../types.js';
 import { isCorrect, isReverseCorrect, getGlosses, buildGlossDisplay } from '../utils/utils.ts';
 import { attachTooltips }        from '../utils/word-tooltip.ts';
+import { markKnown, unmarkKnown, isKnown } from '../utils/known-words.ts';
 
 export type TableDirection = 'target-en' | 'en-target' | 'mixed';
 
@@ -24,6 +25,7 @@ interface RenderTableModeOptions {
   columns?:    number;
   direction?:  TableDirection;
   onComplete?: (() => void) | null;
+  lang?:       string;
 }
 
 export function renderTableMode({
@@ -32,6 +34,7 @@ export function renderTableMode({
   columns   = 3,
   direction = 'target-en',
   onComplete = null,
+  lang       = (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? 'spanish',
 }: RenderTableModeOptions): TableController {
   if (!(container instanceof HTMLElement)) {
     throw new Error('renderTableMode: container element required');
@@ -123,11 +126,36 @@ export function renderTableMode({
         inp.dataset.dir  = dir;
         inp.placeholder  = dir === 'en-target' ? 'Type in target language…' : 'Type translation…';
 
+        // "Mark as known" button — shown after correct answer
+        const knownBtn = document.createElement('button');
+        knownBtn.type      = 'button';
+        knownBtn.className = 'known-btn' + (isKnown(lang, w.word) ? ' known-btn--active' : '');
+        knownBtn.title     = 'Mark as known (hides from future quizzes)';
+        knownBtn.textContent = '★';
+        knownBtn.hidden    = true;
+        knownBtn.addEventListener('click', () => {
+          if (knownBtn.classList.contains('known-btn--active')) {
+            unmarkKnown(lang, w.word);
+            knownBtn.classList.remove('known-btn--active');
+            tdWord.classList.remove('word-cell--known');
+          } else {
+            markKnown(lang, w.word);
+            knownBtn.classList.add('known-btn--active');
+            tdWord.classList.add('word-cell--known');
+          }
+        });
+
         inp.addEventListener('input', () => {
           if (checkInput(inp.value, w, dir)) {
             inp.value    = revealText(w, dir);
             inp.disabled = true;
             inp.classList.add('correct');
+
+            knownBtn.hidden = false;
+            if (isKnown(lang, w.word)) {
+              knownBtn.classList.add('known-btn--active');
+              tdWord.classList.add('word-cell--known');
+            }
 
             const allInputs  = Array.from(container.querySelectorAll<HTMLInputElement>('input[data-word]'));
             const currentIdx = allInputs.indexOf(inp);
@@ -146,6 +174,7 @@ export function renderTableMode({
         });
 
         tdInput.appendChild(inp);
+        tdInput.appendChild(knownBtn);
         tr.appendChild(tdWord);
         tr.appendChild(tdInput);
       }
