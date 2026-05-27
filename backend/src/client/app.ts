@@ -4,7 +4,7 @@ import { bindStartHandler }                   from './start-handler.ts';
 import { bindClassFilter, getSelectedClasses } from './filters/class-filter.ts';
 import { bindDomainFilter, getSelectedDomains } from './filters/domain-filter.ts';
 import { bindUIState, bindModeSwitch }         from './ui/ui-state.ts';
-import { buildFilterUI }                      from './filters/word-filters.ts';
+import { buildFilterUI, initListFilter }       from './filters/word-filters.ts';
 import { loadWords }                          from './data/data-loader.ts';
 import { initTheme }                          from './ui/theme-toggle.ts';
 import { mountUI }                            from './ui/ui.ts';
@@ -164,6 +164,7 @@ if (sortOrderToggle) {
   bindDomainFilter();
   bindTableControls();
   initializeFilterToggle();
+  initListFilter(langSelect?.value ?? 'spanish');
 
   const pictureSubMode = document.getElementById('pictureSubMode');
   if (pictureSubMode) {

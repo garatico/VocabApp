@@ -7,11 +7,36 @@
  * Migrates old `vq_known_<lang>` (single Set) to a list named "Known".
  */
 
-const LISTS_PREFIX = 'vq_lists_';
-const OLD_PREFIX   = 'vq_known_';
-const DEFAULT_LIST = 'Known';
+const LISTS_PREFIX         = 'vq_lists_';
+const OLD_PREFIX           = 'vq_known_';
+const DEFAULT_LIST         = 'Known';
+const FILTER_STATE_PREFIX  = 'vq_listfilter_';
 
 type ListStore = Record<string, string[]>;
+
+export interface ListFilterState {
+  mode:     'hide' | 'focus';
+  selected: string[];
+}
+
+export function getListFilterState(lang: string): ListFilterState {
+  try {
+    const raw = localStorage.getItem(FILTER_STATE_PREFIX + lang.toLowerCase());
+    if (raw) {
+      const parsed = JSON.parse(raw) as ListFilterState;
+      if ((parsed.mode === 'hide' || parsed.mode === 'focus') && Array.isArray(parsed.selected)) {
+        return parsed;
+      }
+    }
+  } catch { /* ignore */ }
+  return { mode: 'hide', selected: [] };
+}
+
+export function saveListFilterState(lang: string, state: ListFilterState): void {
+  try {
+    localStorage.setItem(FILTER_STATE_PREFIX + lang.toLowerCase(), JSON.stringify(state));
+  } catch { /* ignore */ }
+}
 
 function storageKey(lang: string): string {
   return LISTS_PREFIX + lang.toLowerCase();
@@ -146,28 +171,85 @@ export function refreshCountBadge(lang: string): void {
 }
 
 export function refreshFilterSelect(lang: string): void {
-  const sel = document.getElementById('filterListSelect') as HTMLSelectElement | null;
-  if (!sel) return;
+  const container = document.getElementById('listFilterCheckboxes');
+  if (!container) return;
 
-  const current = sel.value;
-  sel.innerHTML = '';
+  const names = getListNames(lang);
 
-  const noneOpt       = document.createElement('option');
-  noneOpt.value       = '';
-  noneOpt.textContent = 'Show all words';
-  sel.appendChild(noneOpt);
-
-  for (const name of getListNames(lang)) {
-    const opt       = document.createElement('option');
-    opt.value       = name;
-    const count     = getListCount(lang, name);
-    opt.textContent = 'Hide "' + name + '" (' + count + ')';
-    sel.appendChild(opt);
+  // Load persisted state and prune any selections for lists that no longer exist
+  const state    = getListFilterState(lang);
+  const validSet = new Set(names);
+  const pruned   = state.selected.filter(n => validSet.has(n));
+  if (pruned.length !== state.selected.length) {
+    state.selected = pruned;
+    saveListFilterState(lang, state);
   }
 
-  if (current && [...sel.options].some(o => o.value === current)) {
-    sel.value = current;
+  // Rebuild checkbox list
+  container.innerHTML = '';
+
+  if (names.length === 0) {
+    const empty       = document.createElement('span');
+    empty.className   = 'list-filter-empty';
+    empty.textContent = 'No lists yet — create one in My Lists';
+    container.appendChild(empty);
+  } else {
+    for (const name of names) {
+      const label       = document.createElement('label');
+      label.className   = 'list-filter-item';
+
+      const cb          = document.createElement('input');
+      cb.type           = 'checkbox';
+      cb.value          = name;
+      cb.checked        = state.selected.includes(name);
+      cb.addEventListener('change', () => {
+        const s = getListFilterState(lang);
+        if (cb.checked) {
+          if (!s.selected.includes(name)) s.selected.push(name);
+        } else {
+          s.selected = s.selected.filter(n => n !== name);
+        }
+        saveListFilterState(lang, s);
+      });
+
+      const nameSpan       = document.createElement('span');
+      nameSpan.className   = 'list-filter-name';
+      nameSpan.textContent = name;
+
+      const countSpan       = document.createElement('span');
+      countSpan.className   = 'list-filter-item-count';
+      countSpan.textContent = String(getListCount(lang, name));
+
+      label.appendChild(cb);
+      label.appendChild(nameSpan);
+      label.appendChild(countSpan);
+      container.appendChild(label);
+    }
   }
+
+  // Sync mode toggle button active state
+  const modeWrap = document.getElementById('listFilterMode');
+  if (modeWrap) {
+    modeWrap.querySelectorAll<HTMLButtonElement>('.list-filter-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === state.mode);
+    });
+  }
+
+  // Stamp data-mode on the wrapper so CSS can key checked-item colours off it
+  const wrap = container.closest<HTMLElement>('.list-filter-wrap');
+  if (wrap) wrap.dataset.mode = state.mode;
+
+  // Description line — explains what the active mode does in plain language
+  const desc = document.getElementById('listFilterDesc');
+  if (desc) {
+    desc.textContent = state.mode === 'hide'
+      ? 'Checked lists are removed from the quiz'
+      : 'Quiz shows only words from checked lists';
+  }
+
+  // Update total-count badge
+  const countEl = document.getElementById('knownWordCount');
+  if (countEl) countEl.textContent = String(getTotalListedCount(lang));
 }
 
 // Backwards-compat shims
