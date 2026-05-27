@@ -9,22 +9,33 @@
 
 import type { Word } from '../types.js';
 import { buildGlossDisplay } from './utils.js';
+import { PRONOUNS as LANG_PRONOUNS, TENSE_DEFS } from '../modes/conjugation/data.js';
 
+// Fallback tense display keys used when iterating conjugation tables
 const TENSES = ['present','preterite','imperfect','future','conditional','subjunctive','imperative'] as const;
 type Tense = typeof TENSES[number];
 
-const TENSE_LABELS: Record<Tense, string> = {
-  present: 'Present', preterite: 'Preterite', imperfect: 'Imperfect',
-  future: 'Future', conditional: 'Conditional', subjunctive: 'Subjunctive', imperative: 'Imperative',
-};
+/** Build a tense-key -> display-label map for the given language. */
+function tenseLabels(lang: string): Record<string, string> {
+  const map: Record<string, string> = {};
+  (TENSE_DEFS[lang] ?? TENSE_DEFS['spanish']).forEach(d => { map[d.key] = d.label; });
+  return map;
+}
 
-const PRONOUNS = ['yo','tu','el/ella','nosotros','vosotros','ellos'];
+/** Return the current language from the UI select, defaulting to Spanish. */
+function getLang(): string {
+  return (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? 'spanish';
+}
+
+function getPronouns(lang: string): string[] {
+  return LANG_PRONOUNS[lang] ?? LANG_PRONOUNS['spanish'];
+}
 
 const DIFFICULTY_LABELS: Record<number, string> = {
   1: 'Beginner', 2: 'Elementary', 3: 'Intermediate', 4: 'Advanced', 5: 'Expert',
 };
 
-// ── Shared tooltip element ────────────────────────────────────────────────────
+// -- Shared tooltip element ---------------------------------------------------
 
 let tooltip:    HTMLElement | null = null;
 let hideTimer:  ReturnType<typeof setTimeout> | null = null;
@@ -45,7 +56,7 @@ function scheduleHide(): void {
   hideTimer = setTimeout(() => { tooltip?.classList.remove('visible'); }, 120);
 }
 
-// ── Positioning ───────────────────────────────────────────────────────────────
+// -- Positioning --------------------------------------------------------------
 
 function positionTooltip(): void {
   const tt = getTooltip();
@@ -77,14 +88,14 @@ function positionTooltip(): void {
   tt.style.left = `${left}px`;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers ------------------------------------------------------------------
 
 function isWordRevealed(anchorEl: Element): boolean {
   // Recall mode
   if (anchorEl.classList.contains('recalled') || anchorEl.classList.contains('missed')) return true;
   if (anchorEl.classList.contains('recall-cell')) return false;
 
-  // Picture mode — card is the anchor; check its input for correct/revealed state
+  // Picture mode -- card is the anchor; check its input for correct/revealed state
   const card = anchorEl.classList.contains('picture-card')
     ? anchorEl
     : anchorEl.closest('.picture-card');
@@ -104,7 +115,7 @@ function isWordRevealed(anchorEl: Element): boolean {
   return inp.classList.contains('correct') || inp.classList.contains('incorrect');
 }
 
-// ── Content builders ──────────────────────────────────────────────────────────
+// -- Content builders ---------------------------------------------------------
 
 function buildMetaRow(word: Word): HTMLElement {
   const row = document.createElement('div');
@@ -149,23 +160,26 @@ function buildGlosses(word: Word): HTMLElement {
   return el;
 }
 
-function buildConjTable(conj: Record<string, string[]>, tenses: readonly string[]): HTMLTableElement {
+function buildConjTable(conj: Record<string, string[]>, tenses: readonly string[], lang: string): HTMLTableElement {
   const table  = document.createElement('table');
   table.className = 'tt-conj-table';
+
+  const labels   = tenseLabels(lang);
+  const pronouns = getPronouns(lang);
 
   const thead     = document.createElement('thead');
   const headerRow = document.createElement('tr');
   headerRow.appendChild(document.createElement('th'));
   tenses.forEach(t => {
     const th = document.createElement('th');
-    th.textContent = TENSE_LABELS[t as Tense] ?? t;
+    th.textContent = labels[t] ?? t;
     headerRow.appendChild(th);
   });
   thead.appendChild(headerRow);
   table.appendChild(thead);
 
   const tbody = document.createElement('tbody');
-  PRONOUNS.forEach((pronoun, i) => {
+  pronouns.forEach((pronoun, i) => {
     const tr = document.createElement('tr');
     const tdPronoun = document.createElement('td');
     tdPronoun.className   = 'tt-pronoun';
@@ -184,25 +198,27 @@ function buildConjTable(conj: Record<string, string[]>, tenses: readonly string[
   return table;
 }
 
-function buildNonFiniteSection(word: Word): HTMLElement | null {
+function buildNonFiniteSection(word: Word, lang: string): HTMLElement | null {
   const pp  = (word.linguistic?.conjugations?.['past_participle'] as string | null) ?? null;
   const ger = (word.linguistic?.conjugations?.['gerund']          as string | null) ?? null;
   if (!pp && !ger) return null;
 
+  const labels = tenseLabels(lang);
+
   const section = document.createElement('div');
   section.className = 'tt-nonfinite';
 
-  const label = document.createElement('div');
-  label.className   = 'tt-section-label';
-  label.textContent = 'Non-finite';
-  section.appendChild(label);
+  const sectionLabel = document.createElement('div');
+  sectionLabel.className   = 'tt-section-label';
+  sectionLabel.textContent = 'Non-finite';
+  section.appendChild(sectionLabel);
 
   const table = document.createElement('table');
   table.className = 'tt-conj-table tt-nonfinite-table';
 
   const pairs: [string, string][] = [];
-  if (ger) pairs.push(['gerundio', ger]);
-  if (pp)  pairs.push(['participio', pp]);
+  if (ger) pairs.push([labels['gerund']          ?? 'Gerund',          ger]);
+  if (pp)  pairs.push([labels['past_participle'] ?? 'Past Participle', pp]);
 
   pairs.forEach(([rowLabel, form]) => {
     const tr  = document.createElement('tr');
@@ -219,9 +235,14 @@ function buildNonFiniteSection(word: Word): HTMLElement | null {
   return section;
 }
 
-function buildConjSection(word: Word): HTMLElement | null {
+function buildConjSection(word: Word, lang: string): HTMLElement | null {
   const conj = word.linguistic?.conjugations;
   if (!conj) return null;
+
+  // Only show finite tenses relevant to the selected language
+  const finiteTenseKeys = (TENSE_DEFS[lang] ?? TENSE_DEFS['spanish'])
+    .filter(d => d.key !== 'past_participle' && d.key !== 'gerund')
+    .map(d => d.key);
 
   const section = document.createElement('div');
   section.className = 'tt-conj';
@@ -233,7 +254,7 @@ function buildConjSection(word: Word): HTMLElement | null {
 
   const presentWrap = document.createElement('div');
   presentWrap.className = 'tt-conj-present';
-  presentWrap.appendChild(buildConjTable(conj as Record<string, string[]>, ['present']));
+  presentWrap.appendChild(buildConjTable(conj as Record<string, string[]>, ['present'], lang));
   section.appendChild(presentWrap);
 
   const expandBtn = document.createElement('button');
@@ -244,7 +265,7 @@ function buildConjSection(word: Word): HTMLElement | null {
   const fullWrap = document.createElement('div');
   fullWrap.className = 'tt-conj-full';
   fullWrap.hidden    = true;
-  fullWrap.appendChild(buildConjTable(conj as Record<string, string[]>, TENSES));
+  fullWrap.appendChild(buildConjTable(conj as Record<string, string[]>, finiteTenseKeys, lang));
   section.appendChild(fullWrap);
 
   expandBtn.addEventListener('click', e => {
@@ -261,7 +282,7 @@ function buildConjSection(word: Word): HTMLElement | null {
   return section;
 }
 
-function populateTooltip(word: Word, revealed: boolean, hideWordWhenUnrevealed = false): void {
+function populateTooltip(word: Word, revealed: boolean, lang: string, hideWordWhenUnrevealed = false): void {
   const tt = getTooltip();
   tt.innerHTML   = '';
   tt.style.width = '';
@@ -282,9 +303,9 @@ function populateTooltip(word: Word, revealed: boolean, hideWordWhenUnrevealed =
   }
 
   if (revealed && word.pos === 'verb') {
-    const conjSection = buildConjSection(word);
+    const conjSection = buildConjSection(word, lang);
     if (conjSection) tt.appendChild(conjSection);
-    const nonFiniteSection = buildNonFiniteSection(word);
+    const nonFiniteSection = buildNonFiniteSection(word, lang);
     if (nonFiniteSection) tt.appendChild(nonFiniteSection);
   }
 
@@ -309,7 +330,7 @@ function populateTooltip(word: Word, revealed: boolean, hideWordWhenUnrevealed =
   tt.style.width = '280px';
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
+// -- Public API ---------------------------------------------------------------
 
 export interface AttachTooltipOptions {
   /** When true, replaces the word heading with '???' until the card is solved.
@@ -326,8 +347,9 @@ export function attachTooltips(container: HTMLElement, opts: AttachTooltipOption
       try {
         const word     = JSON.parse(el.dataset.wordJson!) as Word;
         const revealed = isWordRevealed(el);
+        const lang     = getLang();
         lastAnchor     = el;
-        populateTooltip(word, revealed, opts.hideWordWhenUnrevealed);
+        populateTooltip(word, revealed, lang, opts.hideWordWhenUnrevealed);
         positionTooltip();
         getTooltip().classList.add('visible');
       } catch (e) {

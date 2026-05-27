@@ -5,12 +5,24 @@
 
 /* ── Small mobile (≤ 599px) ── */
 @media (max-width: 599px) {
-  body { padding: 0.5rem 0.5rem 1.5rem; font-size: 14px; }
+  body {
+    padding: calc(0.5rem + env(safe-area-inset-top))
+             calc(0.5rem + env(safe-area-inset-right))
+             calc(1.5rem + env(safe-area-inset-bottom))
+             calc(0.5rem + env(safe-area-inset-left));
+    font-size: 14px;
+  }
 }
 
 /* ── Tablet (600px – 767px) ── */
 @media (min-width: 600px) and (max-width: 767px) {
-  body { padding: 0.6rem 0.9rem 1.75rem; font-size: 15px; }
+  body {
+    padding: calc(0.6rem + env(safe-area-inset-top))
+             calc(0.9rem + env(safe-area-inset-right))
+             calc(1.75rem + env(safe-area-inset-bottom))
+             calc(0.9rem + env(safe-area-inset-left));
+    font-size: 15px;
+  }
 
   #controls-top { flex-wrap: wrap; gap: 0.5rem; }
 
