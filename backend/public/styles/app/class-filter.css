@@ -13,12 +13,19 @@
   white-space: nowrap;
 }
 
+/* When a filter-section-label heads its own block, give it more presence */
+#classFilter > .filter-section-label,
+.list-filter-header > .filter-section-label {
+  color: var(--text);
+  letter-spacing: 0.06em;
+}
+
 #classFilter {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
   align-items: center;
-  margin-top: 0.5rem;
+  margin-top: 0;
   padding: 0.35rem 0.5rem;
   background: var(--surface2);
   border-radius: var(--radius-sm);
@@ -63,7 +70,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 0.35rem 0.5rem 0.4rem;
-  margin-top: 0.35rem;
+  margin-top: 0.5rem;
 }
 
 /* ── "Hide known" inline toggle (sits in the POS filter row) ── */

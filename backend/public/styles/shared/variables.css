@@ -56,6 +56,12 @@
   /* Shadows */
   --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.05);
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+
+  /* Focus ring — used for all :focus-visible outlines & glow */
+  --focus-ring: rgba(61, 107, 79, 0.15);
+
+  /* Extra surface step between --surface2 and --border */
+  --surface3: #e6e5df;
 }
 
 /* ── Dark mode ──────────────────────────────────────────────── */
@@ -92,4 +98,7 @@ html.dark {
 
   --shadow:    0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+
+  --focus-ring: rgba(90, 158, 114, 0.25);
+  --surface3:   #333229;
 }

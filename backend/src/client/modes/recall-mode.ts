@@ -163,10 +163,13 @@ export function renderRecallMode({
       updateScore();
 
       feedback.textContent = '✓ ' + match.word;
-      feedback.style.color = 'var(--correct)';
+      feedback.className   = 'recall-feedback ok';
       inp.value = '';
 
-      setTimeout(() => { feedback.textContent = ''; }, 800);
+      setTimeout(() => {
+        feedback.textContent = '';
+        feedback.className   = 'recall-feedback';
+      }, 800);
       if (recalled.size === sorted.length) endSession();
     }
   });

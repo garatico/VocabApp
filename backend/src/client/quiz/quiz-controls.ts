@@ -78,7 +78,7 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
     answerEl.value         = '';
     answerEl.disabled      = false;
     feedbackEl.textContent = '';
-    feedbackEl.style.color = '';
+    feedbackEl.className   = 'feedback';
     updateCounter();
     updateStats();
     answerEl.focus();
@@ -114,9 +114,10 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
     answerEl.value         = '';
     counterEl.textContent  = '';
 
+    feedbackEl.className = 'feedback';
     feedbackEl.innerHTML =
-      `<span style="color:var(--correct,green)">✓ ${done} mastered</span>` +
-      (missed > 0 ? `&nbsp;&nbsp;<span style="color:var(--danger,red)">✗ ${missed} not yet mastered</span>` : '');
+      `<span style="color:var(--correct)">✓ ${done} mastered</span>` +
+      (missed > 0 ? `&nbsp;&nbsp;<span style="color:var(--danger)">✗ ${missed} not yet mastered</span>` : '');
 
     barEl.style.width = pct + '%';
     const summary = `${done} / ${total} mastered (${pct}%)`;
@@ -147,7 +148,7 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
 
     mastered.add(word.word);
     feedbackEl.textContent = '✓ Correct!';
-    feedbackEl.style.color = 'var(--correct, green)';
+    feedbackEl.className   = 'feedback ok';
     answerEl.disabled      = true;
     updateCounter();
     updateStats();
@@ -180,7 +181,7 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
     const glosses = getGlosses(word);
     const answer  = glosses.length > 0 ? glosses.join(' / ') : '—';
     feedbackEl.textContent = `Answer: ${answer}`;
-    feedbackEl.style.color = 'var(--danger, red)';
+    feedbackEl.className   = 'feedback bad';
   });
 
   // ── Buttons: Prev / Next ────────────────────────────────────────────────────

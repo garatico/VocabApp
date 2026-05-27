@@ -93,7 +93,7 @@
 #tableWrap input[type="text"]:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(61, 107, 79, 0.15);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 #tableWrap input.correct {

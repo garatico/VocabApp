@@ -18,8 +18,8 @@
   gap: 0.6rem;
   align-items: flex-end;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border-strong);
+  margin-bottom: 0.5rem;
 }
 
 /* Reserve space on the right for the theme toggle (absolute-positioned inside #controls) */

@@ -18,19 +18,21 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.35rem 0.75rem;
+  padding: 0.42rem 0.75rem;
   cursor: pointer;
   font-size: 0.82rem;
   font-weight: 500;
   color: var(--text);
   user-select: none;
+  transition: background var(--transition-fast);
 }
-.list-picker-row:hover { background: var(--surface2); }
+.list-picker-row:hover { background: var(--accent-light); color: var(--accent); }
+.list-picker-row:has(input:checked) { background: var(--accent-light); color: var(--accent); font-weight: 600; }
 .list-picker-row input[type="checkbox"] {
   accent-color: var(--accent);
   cursor: pointer;
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   flex-shrink: 0;
 }
 
