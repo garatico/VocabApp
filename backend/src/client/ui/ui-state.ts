@@ -1,5 +1,5 @@
 type CoreMode = 'table' | 'recall' | 'single' | 'picture' | 'conjugation';
-type Mode = CoreMode | 'mylists' | string;
+type Mode = CoreMode | string;
 
 interface BindModeSwitchOptions {
   quizArea:         HTMLElement;
@@ -40,7 +40,9 @@ export function bindModeSwitch({
   let currentMode: Mode = 'table';
 
   function updateModeUI(): void {
-    const mode = currentMode;
+    const mode      = currentMode;
+    const isMyLists = mode === 'mylists';
+
     quizArea.hidden    = mode !== 'single';
     tableArea.hidden   = mode !== 'table';
     recallArea.hidden  = mode !== 'recall';
@@ -51,17 +53,16 @@ export function bindModeSwitch({
       if (el) el.hidden = mode !== areaMode;
     }
 
+    // Hide the entire controls card when My Lists is active
+    const controlsEl = document.getElementById('controls');
+    if (controlsEl) controlsEl.hidden = isMyLists;
+
     const classFilter         = document.getElementById('classFilter');
     const tableModeControls   = document.getElementById('tableModeControls');
     const conjModeControls    = document.getElementById('conjModeControls');
     const pictureModeControls = document.getElementById('pictureModeControls');
-    const controlsTop         = document.getElementById('controls-top');
-    const domainFilterWrap    = document.getElementById('domainFilterWrap');
 
-    const isMyLists = mode === 'mylists';
-    if (controlsTop)      controlsTop.style.display     = isMyLists ? 'none' : '';
-    if (domainFilterWrap) domainFilterWrap.style.display = isMyLists ? 'none' : '';
-    if (classFilter)      classFilter.style.display      = (mode === 'conjugation' || isMyLists) ? 'none' : '';
+    if (classFilter)         classFilter.style.display         = mode === 'conjugation' ? 'none' : '';
     if (tableModeControls)   tableModeControls.style.display   = mode === 'table'       ? ''     : 'none';
     if (conjModeControls)    conjModeControls.style.display    = mode === 'conjugation' ? ''     : 'none';
     if (pictureModeControls) pictureModeControls.style.display = mode === 'picture'     ? ''     : 'none';

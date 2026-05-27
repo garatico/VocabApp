@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Quick Vocab Quiz</title>
 <!-- Shared tokens -->
 <link rel="stylesheet" href="/styles/shared/variables.css"/>
@@ -50,241 +50,243 @@
   </div>
 
   <main>
-    <!-- Mode Tabs -->
-    <div class="mode-tabs">
-      <button class="mode-tab active" data-mode="table">Table</button>
-      <button class="mode-tab" data-mode="recall">Recall</button>
-      <button class="mode-tab" data-mode="single">Single Word</button>
-      <button class="mode-tab" data-mode="picture">Picture Quiz</button>
-      <button class="mode-tab" data-mode="conjugation">Conjugation</button>
-      <button class="mode-tab" data-mode="mylists">My Lists</button>
-    </div>
 
-    <div id="controls">
-      <button id="themeToggle" aria-label="Toggle theme">&#x263E;</button>
-      <div id="controls-top">
-        <div class="control-group">
-          <label>Language</label>
-          <select id="langSelect">
-            <option value="spanish">Spanish</option>
-            <option value="portuguese">Portuguese</option>
-            <option value="italian">Italian</option>
-            <option value="french">French</option>
-          </select>
+      <!-- Mode Tabs -->
+      <div class="mode-tabs">
+        <button class="mode-tab active" data-mode="table">Table</button>
+        <button class="mode-tab" data-mode="recall">Recall</button>
+        <button class="mode-tab" data-mode="single">Single Word</button>
+        <button class="mode-tab" data-mode="picture">Picture Quiz</button>
+        <button class="mode-tab" data-mode="conjugation">Conjugation</button>
+        <button class="mode-tab" data-mode="mylists">My Lists</button>
+      </div>
+
+      <div id="controls">
+        <button id="themeToggle" aria-label="Toggle theme">&#x263E;</button>
+        <div id="controls-top">
+          <div class="control-group">
+            <label>Language</label>
+            <select id="langSelect">
+              <option value="spanish">Spanish</option>
+              <option value="portuguese">Portuguese</option>
+              <option value="italian">Italian</option>
+              <option value="french">French</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label>Top words</label>
+            <div class="size-row">
+              <select id="sizeSelect">
+                <option value="100">Top 100</option>
+                <option value="250">Top 250</option>
+                <option value="500">Top 500</option>
+                <option value="1000" selected>Top 1000</option>
+                <option value="max">Max</option>
+                <option value="custom">Custom...</option>
+              </select>
+              <input type="number" id="sizeCustom" min="1" max="9999" placeholder="e.g. 75" style="display:none;"/>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label>Order</label>
+            <div class="sort-order-toggle" id="sortOrderToggle">
+              <button class="sort-order-btn active" data-order="frequency" title="Order by word frequency">Freq</button>
+              <button class="sort-order-btn" data-order="alpha" title="Order alphabetically">A&#x2013;Z</button>
+              <button class="sort-order-btn" data-order="random" title="Randomize order">Shuffle</button>
+            </div>
+          </div>
+
+          <button id="startBtn">Start Quiz</button>
         </div>
 
-        <div class="control-group">
-          <label>Top words</label>
-          <div class="size-row">
-            <select id="sizeSelect">
-              <option value="100">Top 100</option>
-              <option value="250">Top 250</option>
-              <option value="500">Top 500</option>
-              <option value="1000" selected>Top 1000</option>
-              <option value="max">Max</option>
+        <!-- Table-mode controls: shown only when Table tab is active -->
+        <div id="tableModeControls">
+          <span class="filter-section-label">Direction</span>
+          <div class="conj-display-toggle" id="directionToggle">
+            <button class="conj-toggle-btn active" data-direction="target-en">Word &#x2192; Meaning</button>
+            <button class="conj-toggle-btn"        data-direction="en-target">Meaning &#x2192; Word</button>
+            <button class="conj-toggle-btn"        data-direction="mixed">Mixed</button>
+          </div>
+        </div>
+
+        <div id="classFilter">
+          <span class="filter-section-label">Part of Speech</span>
+          <button type="button" id="selectAllClasses">All</button>
+          <button type="button" id="selectNoneClasses">None</button>
+          <label><input type="checkbox" value="verb" checked> Verbs</label>
+          <label><input type="checkbox" value="noun" checked> Nouns</label>
+          <label><input type="checkbox" value="adjective" checked> Adjectives</label>
+          <label><input type="checkbox" value="adverb" checked> Adverbs</label>
+          <label><input type="checkbox" value="pronoun" checked> Pronouns</label>
+          <label><input type="checkbox" value="preposition" checked> Prepositions</label>
+          <label><input type="checkbox" value="conjunction" checked> Conjunctions</label>
+          <label><input type="checkbox" value="article" checked> Articles</label>
+          <label class="filter-known-inline" id="hideKnownLabel">
+            <select id="filterListSelect" title="Hide words from a list">
+              <option value="">Show all words</option>
+            </select>
+            <span class="filter-known-count">(<span id="knownWordCount">0</span> listed)</span>
+          </label>
+        </div>
+
+        <!-- Conjugation-mode controls: shown only when Conjugation tab is active -->
+        <div id="conjModeControls" style="display:none">
+          <span class="filter-section-label">Display</span>
+          <div class="conj-display-toggle" id="conjDisplayToggle">
+            <button class="conj-toggle-btn" data-mode="target">Spanish</button>
+            <button class="conj-toggle-btn active" data-mode="both">Spanish + English</button>
+            <button class="conj-toggle-btn" data-mode="english">English</button>
+          </div>
+          <span class="filter-section-label">Tense</span>
+          <select id="conjTenseSelect"><!-- populated by JS based on language --></select>
+          <!-- Second row: pronoun form toggles (populated by JS) -->
+          <div id="conjPronounRow" class="conj-pronoun-row">
+            <span class="filter-section-label">Forms</span>
+            <button type="button" id="conjFormsAll">All</button>
+            <button type="button" id="conjFormsNone">None</button>
+            <div id="conjPronounToggles" class="conj-pronoun-toggles"></div>
+          </div>
+        </div>
+
+        <!-- Picture-mode controls: shown only when Picture Quiz tab is active -->
+        <div id="pictureModeControls" style="display:none">
+          <span class="filter-section-label">Quiz Style</span>
+          <div class="conj-display-toggle" id="pictureSubMode">
+            <button class="conj-toggle-btn active" data-mode="type">Type the Word</button>
+            <button class="conj-toggle-btn" data-mode="click">Click the Picture</button>
+          </div>
+        </div>
+
+        <div id="domainFilterWrap">
+          <div id="domainFilterHeader">
+            <span id="domainFilterLabel">Domains <span id="domainFilterCount"></span></span>
+            <button type="button" id="clearAllDomains" style="display:none">Clear all</button>
+          </div>
+          <div id="domainFilterBody"></div>
+        </div>
+
+        <div id="wordFilters" style="display:none">
+          <div id="filterContent"></div>
+        </div>
+
+      </div>
+
+      <section id="tableArea">
+        <div class="progressWrap">
+          <div class="progress"><div id="tableBarTop" class="bar"></div></div>
+          <div id="tableStatsTop" class="small"></div>
+        </div>
+
+        <div id="tableControls" class="controls-row">
+          <select id="colsSelect" title="Columns">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+          </select>
+          <button id="tableExport">Export</button>
+          <button id="tableReset">Give Up</button>
+        </div>
+        <div id="tableWrap"></div>
+        <div id="tableFeedback" class="feedback"></div>
+        <div id="tableSummary" class="quiz-summary" style="display:none"></div>
+
+        <div class="progressWrap">
+          <div class="progress"><div id="tableBarBottom" class="bar"></div></div>
+          <div id="tableStatsBottom" class="small"></div>
+        </div>
+      </section>
+
+      <section id="recallArea" hidden>
+        <div class="progressWrap">
+          <div class="progress"><div id="recallBarTop" class="bar"></div></div>
+          <div id="recallStatsTop" class="small"></div>
+        </div>
+
+        <div id="recallControls" class="controls-row">
+          <label>
+            Timer:
+            <select id="recallTimer">
+              <option value="0">No timer</option>
+              <option value="60">1 min</option>
+              <option value="180">3 min</option>
+              <option value="300" selected>5 min</option>
+              <option value="600">10 min</option>
+              <option value="900">15 min</option>
               <option value="custom">Custom...</option>
             </select>
-            <input type="number" id="sizeCustom" min="1" max="9999" placeholder="e.g. 75" style="display:none;"/>
-          </div>
+            <input type="number" id="recallTimerCustom" min="1" max="999" placeholder="mins" style="display:none; width:60px;"/>
+          </label>
+          <label>
+            When time runs out:
+            <select id="recallHardStop">
+              <option value="false">Keep going</option>
+              <option value="true">Hard stop</option>
+            </select>
+          </label>
+        </div>
+        <div id="recallWrap"></div>
+
+        <div class="progressWrap">
+          <div class="progress"><div id="recallBarBottom" class="bar"></div></div>
+          <div id="recallStatsBottom" class="small"></div>
+        </div>
+      </section>
+
+      <section id="quizArea" hidden>
+        <div class="progressWrap">
+          <div class="progress"><div id="bar" class="bar"></div></div>
+          <div id="statsTop" class="small"></div>
         </div>
 
-        <div class="control-group">
-          <label>Order</label>
-          <div class="sort-order-toggle" id="sortOrderToggle">
-            <button class="sort-order-btn active" data-order="frequency" title="Order by word frequency">Freq</button>
-            <button class="sort-order-btn" data-order="alpha" title="Order alphabetically">A&#x2013;Z</button>
-            <button class="sort-order-btn" data-order="random" title="Randomize order">Shuffle</button>
-          </div>
+        <div id="word" class="word"></div>
+
+        <div id="quizNav" class="quiz-nav">
+          <button id="quizPrev">&#x2190; Prev</button>
+          <span id="quizCounter" class="quiz-counter"></span>
+          <button id="quizNext">Next &#x2192;</button>
         </div>
 
-        <button id="startBtn">Start Quiz</button>
-      </div>
+        <input id="answer" type="text" placeholder="Type English translation..." autocomplete="off"/>
+        <div id="feedback" class="feedback"></div>
 
-      <!-- Table-mode controls: shown only when Table tab is active -->
-      <div id="tableModeControls">
-        <span class="filter-section-label">Direction</span>
-        <div class="conj-display-toggle" id="directionToggle">
-          <button class="conj-toggle-btn active" data-direction="target-en">Word &#x2192; Meaning</button>
-          <button class="conj-toggle-btn"        data-direction="en-target">Meaning &#x2192; Word</button>
-          <button class="conj-toggle-btn"        data-direction="mixed">Mixed</button>
+        <div class="controls-row">
+          <button id="btnCorrect">Mark Correct</button>
+          <button id="quizGiveUp">Reveal Answer</button>
+          <button id="ttsBtn">&#x1F50A;</button>
+          <button id="resetBtn">End Quiz</button>
         </div>
-      </div>
 
-      <div id="classFilter">
-        <span class="filter-section-label">Part of Speech</span>
-        <button type="button" id="selectAllClasses">All</button>
-        <button type="button" id="selectNoneClasses">None</button>
-        <label><input type="checkbox" value="verb" checked> Verbs</label>
-        <label><input type="checkbox" value="noun" checked> Nouns</label>
-        <label><input type="checkbox" value="adjective" checked> Adjectives</label>
-        <label><input type="checkbox" value="adverb" checked> Adverbs</label>
-        <label><input type="checkbox" value="pronoun" checked> Pronouns</label>
-        <label><input type="checkbox" value="preposition" checked> Prepositions</label>
-        <label><input type="checkbox" value="conjunction" checked> Conjunctions</label>
-        <label><input type="checkbox" value="article" checked> Articles</label>
-        <label class="filter-known-inline" id="hideKnownLabel">
-          <select id="filterListSelect" title="Hide words from a list">
-            <option value="">Show all words</option>
-          </select>
-          <span class="filter-known-count">(<span id="knownWordCount">0</span> listed)</span>
-        </label>
-      </div>
-
-      <!-- Conjugation-mode controls: shown only when Conjugation tab is active -->
-      <div id="conjModeControls" style="display:none">
-        <span class="filter-section-label">Display</span>
-        <div class="conj-display-toggle" id="conjDisplayToggle">
-          <button class="conj-toggle-btn" data-mode="target">Spanish</button>
-          <button class="conj-toggle-btn active" data-mode="both">Spanish + English</button>
-          <button class="conj-toggle-btn" data-mode="english">English</button>
+        <div class="progressWrap">
+          <div id="stats" class="small"></div>
         </div>
-        <span class="filter-section-label">Tense</span>
-        <select id="conjTenseSelect"><!-- populated by JS based on language --></select>
-        <!-- Second row: pronoun form toggles (populated by JS) -->
-        <div id="conjPronounRow" class="conj-pronoun-row">
-          <span class="filter-section-label">Forms</span>
-          <button type="button" id="conjFormsAll">All</button>
-          <button type="button" id="conjFormsNone">None</button>
-          <div id="conjPronounToggles" class="conj-pronoun-toggles"></div>
+      </section>
+
+      <section id="pictureArea" hidden>
+        <div class="progressWrap">
+          <div class="progress"><div id="pictureBarTop" class="bar"></div></div>
+          <div id="pictureStatsTop" class="small"></div>
         </div>
-      </div>
 
-      <!-- Picture-mode controls: shown only when Picture Quiz tab is active -->
-      <div id="pictureModeControls" style="display:none">
-        <span class="filter-section-label">Quiz Style</span>
-        <div class="conj-display-toggle" id="pictureSubMode">
-          <button class="conj-toggle-btn active" data-mode="type">Type the Word</button>
-          <button class="conj-toggle-btn" data-mode="click">Click the Picture</button>
+        <div id="pictureWrap"></div>
+
+        <div class="progressWrap">
+          <div class="progress"><div id="pictureBarBottom" class="bar"></div></div>
+          <div id="pictureStatsBottom" class="small"></div>
         </div>
-      </div>
+      </section>
 
-      <div id="domainFilterWrap">
-        <div id="domainFilterHeader">
-          <span id="domainFilterLabel">Domains <span id="domainFilterCount"></span></span>
-          <button type="button" id="clearAllDomains" style="display:none">Clear all</button>
-        </div>
-        <div id="domainFilterBody"></div>
-      </div>
+      <section id="conjugationArea" hidden>
+        <div id="conjugationWrap"></div>
+      </section>
 
-      <div id="wordFilters" style="display:none">
-        <div id="filterContent"></div>
-      </div>
+      <section id="myListsArea" hidden>
+        <div id="myListsWrap"></div>
+      </section>
 
-    </div>
+      <pre id="output" class="output"></pre>
 
-    <section id="tableArea">
-      <div class="progressWrap">
-        <div class="progress"><div id="tableBarTop" class="bar"></div></div>
-        <div id="tableStatsTop" class="small"></div>
-      </div>
-
-      <div id="tableControls" class="controls-row">
-        <select id="colsSelect" title="Columns">
-          <option value="1">1</option>
-          <option value="2" selected>2</option>
-          <option value="3">3</option>
-        </select>
-        <button id="tableExport">Export</button>
-        <button id="tableReset">Give Up</button>
-      </div>
-      <div id="tableWrap"></div>
-      <div id="tableFeedback" class="feedback"></div>
-      <div id="tableSummary" class="quiz-summary" style="display:none"></div>
-
-      <div class="progressWrap">
-        <div class="progress"><div id="tableBarBottom" class="bar"></div></div>
-        <div id="tableStatsBottom" class="small"></div>
-      </div>
-    </section>
-
-    <section id="recallArea" hidden>
-      <div class="progressWrap">
-        <div class="progress"><div id="recallBarTop" class="bar"></div></div>
-        <div id="recallStatsTop" class="small"></div>
-      </div>
-
-      <div id="recallControls" class="controls-row">
-        <label>
-          Timer:
-          <select id="recallTimer">
-            <option value="0">No timer</option>
-            <option value="60">1 min</option>
-            <option value="180">3 min</option>
-            <option value="300" selected>5 min</option>
-            <option value="600">10 min</option>
-            <option value="900">15 min</option>
-            <option value="custom">Custom...</option>
-          </select>
-          <input type="number" id="recallTimerCustom" min="1" max="999" placeholder="mins" style="display:none; width:60px;"/>
-        </label>
-        <label>
-          When time runs out:
-          <select id="recallHardStop">
-            <option value="false">Keep going</option>
-            <option value="true">Hard stop</option>
-          </select>
-        </label>
-      </div>
-      <div id="recallWrap"></div>
-
-      <div class="progressWrap">
-        <div class="progress"><div id="recallBarBottom" class="bar"></div></div>
-        <div id="recallStatsBottom" class="small"></div>
-      </div>
-    </section>
-
-    <section id="quizArea" hidden>
-      <div class="progressWrap">
-        <div class="progress"><div id="bar" class="bar"></div></div>
-        <div id="statsTop" class="small"></div>
-      </div>
-
-      <div id="word" class="word"></div>
-
-      <div id="quizNav" class="quiz-nav">
-        <button id="quizPrev">&#x2190; Prev</button>
-        <span id="quizCounter" class="quiz-counter"></span>
-        <button id="quizNext">Next &#x2192;</button>
-      </div>
-
-      <input id="answer" type="text" placeholder="Type English translation..." autocomplete="off"/>
-      <div id="feedback" class="feedback"></div>
-
-      <div class="controls-row">
-        <button id="btnCorrect">Mark Correct</button>
-        <button id="quizGiveUp">Reveal Answer</button>
-        <button id="ttsBtn">&#x1F50A;</button>
-        <button id="resetBtn">End Quiz</button>
-      </div>
-
-      <div class="progressWrap">
-        <div id="stats" class="small"></div>
-      </div>
-    </section>
-
-    <section id="pictureArea" hidden>
-      <div class="progressWrap">
-        <div class="progress"><div id="pictureBarTop" class="bar"></div></div>
-        <div id="pictureStatsTop" class="small"></div>
-      </div>
-
-      <div id="pictureWrap"></div>
-
-      <div class="progressWrap">
-        <div class="progress"><div id="pictureBarBottom" class="bar"></div></div>
-        <div id="pictureStatsBottom" class="small"></div>
-      </div>
-    </section>
-
-    <section id="conjugationArea" hidden>
-      <div id="conjugationWrap"></div>
-    </section>
-
-    <section id="myListsArea" hidden>
-      <div id="myListsWrap"></div>
-    </section>
-
-    <pre id="output" class="output"></pre>
   </main>
 
 <script type="module" src="src/client/app.ts"></script>

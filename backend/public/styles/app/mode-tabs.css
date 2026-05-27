@@ -57,3 +57,25 @@
   background: var(--accent);
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
 }
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  /* Scroll tabs horizontally instead of wrapping/overflowing */
+  .mode-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;       /* Firefox */
+    -ms-overflow-style: none;    /* IE/Edge */
+    /* slight fade-out on right edge hinting there's more to scroll */
+    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+  }
+  .mode-tabs::-webkit-scrollbar { display: none; }
+
+  .mode-tab {
+    flex-shrink: 0;   /* never compress — keep each tab at its natural width */
+    padding: 0.45rem 0.8rem;
+    font-size: 0.73rem;
+    min-height: 40px; /* comfortable tap target height */
+  }
+}

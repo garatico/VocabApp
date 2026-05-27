@@ -179,3 +179,60 @@
   font-weight: 700;
 }
 .domain-chip-x:hover { background: rgba(255,255,255,0.45); }
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  #domainFilterWrap {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+  }
+
+  /* Quick-pick chips: bigger tap targets */
+  .domain-qpick {
+    font-size: 0.78rem;
+    padding: 0.35rem 0.75rem;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* More breathing room between chips */
+  #domainQuickPicks {
+    gap: 0.4rem 0.35rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Search input: tall enough to tap easily */
+  #domainSearchInput {
+    font-size: 0.85rem;
+    padding: 0.45rem 0.7rem;
+    min-height: 42px;
+  }
+
+  /* Dropdown suggestion rows: comfortably tappable */
+  .domain-suggestion {
+    font-size: 0.85rem;
+    padding: 0.55rem 0.75rem;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Active chip: bigger remove button */
+  .domain-chip {
+    font-size: 0.78rem;
+    padding: 0.3rem 0.3rem 0.3rem 0.65rem;
+    min-height: 32px;
+  }
+  .domain-chip-x {
+    width: 1.5em;
+    height: 1.5em;
+    font-size: 0.9em;
+    /* expand tap area beyond the visual circle */
+    padding: 0.15rem;
+  }
+
+  #domainChips {
+    gap: 0.4rem;
+  }
+}

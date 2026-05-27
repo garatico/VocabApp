@@ -82,13 +82,24 @@ input[type="checkbox"]:hover { transform: scale(1.1); }
 /* ── Responsive ── */
 @media (max-width: 768px) {
   button, select { min-height: 44px; font-size: 0.8rem; }
+  /* Reduce hover lift on touch devices — no hover state anyway */
   button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
   html.dark button:hover:not(:disabled) { box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-  input[type="checkbox"] { width: 16px; height: 16px; }
+  input[type="checkbox"] { width: 18px; height: 18px; }
+
+  /* On mobile, controls-row buttons stack to full-width pairs */
+  .controls-row {
+    gap: 0.5rem;
+  }
+  .controls-row button {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: 100px;
+  }
 }
 
 @media (max-width: 480px) {
-  button:active:not(:disabled) { transform: scale(0.98); }
-  input[type="checkbox"] { width: 13px; height: 13px; }
-  input[type="checkbox"]:hover { transform: scale(1.08); }
+  /* Tap scale feedback instead of translate for touch */
+  button:active:not(:disabled) { transform: scale(0.97); }
+  input[type="checkbox"] { width: 20px; height: 20px; }
+  input[type="checkbox"]:hover { transform: scale(1.05); }
 }

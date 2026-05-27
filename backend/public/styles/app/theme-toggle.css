@@ -27,6 +27,13 @@
 }
 
 /* ── Responsive ── */
-@media (max-width: 599px) {
-  #themeToggle { width: 26px; height: 26px; font-size: 0.8rem; top: 0.4rem; right: 0.5rem; }
+@media (max-width: 767px) {
+  /* Bring visual size up to a comfortable tap target */
+  #themeToggle {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
+    top: 0.45rem;
+    right: 0.5rem;
+  }
 }

@@ -88,20 +88,49 @@
 }
 
 /* ── Responsive ── */
+@media (max-width: 767px) {
+  /* Shrink the right padding — toggle is 36px wide now so 2.75rem is enough */
+  #controls { padding-right: 2.75rem; }
+}
+
 @media (max-width: 599px) {
-  body { padding: 0.5rem 0.5rem 1.5rem; font-size: 14px; }
+  /* 2-column grid: Language | Top words / Order spans full width / Start full width */
+  #controls-top {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    align-items: end;
+  }
 
-  #controls-top { flex-direction: column; gap: 0.5rem; }
+  /* Language and Top words side by side */
+  #controls-top .control-group:nth-child(1),
+  #controls-top .control-group:nth-child(2) {
+    width: 100%;
+  }
 
-  .control-group { width: 100%; }
-  .control-group > label { font-size: 0.6rem; }
+  /* Order toggle: span both columns */
+  #controls-top .control-group:nth-child(3) {
+    grid-column: 1 / -1;
+  }
 
+  /* Start button: full width */
+  #startBtn {
+    grid-column: 1 / -1;
+    width: 100%;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.82rem;
+    min-height: 44px;
+  }
+
+  .control-group > label { font-size: 0.63rem; }
   .size-row { gap: 0.3rem; width: 100%; }
 
-  #startBtn { width: 100%; padding: 0.4rem 0.8rem; align-self: stretch; font-size: 0.75rem; }
+  /* Sort-order segmented control: ensure it fills its container */
+  .sort-order-toggle { width: 100%; }
+  .sort-order-btn { min-height: 36px; font-size: 0.72rem; }
 }
 
 @media (max-width: 480px) {
-  #controls-top { flex-direction: column; }
+  #controls { padding: 0.5rem 0.6rem 0.55rem; padding-right: 2.75rem; }
   .size-row { width: 100%; }
 }

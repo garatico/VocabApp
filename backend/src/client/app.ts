@@ -47,9 +47,6 @@ const { updateModeUI } = bindModeSwitch({
   extraAreas: { mylists: myListsArea },
   onActivate: {
     conjugation: () => initConjControls(langSelect?.value || 'spanish'),
-    mylists:     () => {
-      if (myListsWrap) renderMyLists(myListsWrap as HTMLElement, langSelect?.value ?? 'spanish');
-    },
   },
 });
 
@@ -125,9 +122,6 @@ if (langSelect) {
     if (activeTab?.dataset.mode === 'conjugation') {
       initConjControls(langSelect.value);
     }
-    if (activeTab?.dataset.mode === 'mylists' && myListsWrap) {
-      renderMyLists(myListsWrap, langSelect.value);
-    }
   });
 }
 if (sizeSelect) {
@@ -180,6 +174,8 @@ if (sortOrderToggle) {
         .forEach(b => b.classList.toggle('active', b === btn));
     });
   }
+
+  if (myListsWrap) renderMyLists(myListsWrap as HTMLElement);
 
   updateModeUI();
   await loadAndBuildFilters(langSelect?.value ?? 'spanish');
