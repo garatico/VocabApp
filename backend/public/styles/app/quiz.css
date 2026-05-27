@@ -8,7 +8,6 @@
   border-radius: var(--radius);
   padding: 1.5rem;
   box-shadow: var(--shadow);
-  margin-bottom: 0.75rem;
 }
 
 .word {

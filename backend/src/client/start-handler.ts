@@ -77,8 +77,10 @@ export function bindStartHandler({
 
       if (currentMode === 'table') {
         tableWrap.innerHTML = '';
-        const summary = document.getElementById('tableSummary');
-        if (summary) { summary.style.display = 'none'; summary.innerHTML = ''; }
+        ['tableSummary', 'tableSummaryTop'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+        });
 
         const tableController = renderTableMode({
           words: list,
@@ -86,16 +88,12 @@ export function bindStartHandler({
           columns:   getCols({ max: 5, fallback: 2 }),
           direction: getDirection ? getDirection() : 'target-en',
           onComplete: () => {
-            // Show final score
             const correct = list.length;
-            const pct = 100;
-            if (summary) {
-              summary.style.display = 'flex';
-              summary.innerHTML = `
-                <span class="summary-correct">✓ ${correct} correct</span>
-                <span class="summary-pct">${pct}%</span>
-              `;
-            }
+            const html = `<span class="summary-correct">✓ ${correct} correct</span><span class="summary-pct">100%</span>`;
+            ['tableSummary', 'tableSummaryTop'].forEach(id => {
+              const el = document.getElementById(id);
+              if (el) { el.style.display = 'flex'; el.innerHTML = html; }
+            });
           }
         });
         setTableController(tableController);

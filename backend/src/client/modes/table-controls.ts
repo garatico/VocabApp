@@ -32,13 +32,26 @@ export function resolveDirection(): TableDirection {
 }
 
 /** Rebuild the table in the current wrap element. */
+function hideSummaries(): void {
+  ['tableSummary', 'tableSummaryTop'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+  });
+}
+
+function showSummaries(html: string): void {
+  ['tableSummary', 'tableSummaryTop'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = 'flex'; el.innerHTML = html; }
+  });
+}
+
 function rebuildTable(cols: number): void {
   if (!tableController) return;
   const wrap = document.getElementById('tableWrap');
   if (!wrap) return;
   wrap.innerHTML = '';
-  const summary = document.getElementById('tableSummary');
-  if (summary) { summary.style.display = 'none'; summary.innerHTML = ''; }
+  hideSummaries();
   tableController = renderTableMode({
     words:     tableController.words,
     container: wrap as HTMLElement,
@@ -69,15 +82,11 @@ export function bindTableControls(): void {
     const correct = results.filter(r => r.ok).length;
     const missed  = results.length - correct;
     const pct     = results.length ? Math.round((correct / results.length) * 100) : 0;
-    const el      = document.getElementById('tableSummary');
-    if (el) {
-      el.style.display = 'flex';
-      el.innerHTML = `
-        <span class="summary-correct">✓ ${correct} correct</span>
-        <span class="summary-missed">✗ ${missed} missed</span>
-        <span class="summary-pct">${pct}%</span>
-      `;
-    }
+    showSummaries(
+      `<span class="summary-correct">✓ ${correct} correct</span>` +
+      `<span class="summary-missed">✗ ${missed} missed</span>` +
+      `<span class="summary-pct">${pct}%</span>`
+    );
   });
 
   tableExport?.addEventListener('click', () => {

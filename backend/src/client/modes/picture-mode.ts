@@ -201,6 +201,28 @@ function injectStyles(): void {
   document.head.appendChild(s);
 }
 
+// ── Summary helpers ────────────────────────────────────────────────────────────
+
+function showPictureSummary(correct: number, total: number): void {
+  const missed = total - correct;
+  const pct    = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const html   =
+    `<span class="summary-correct">✓ ${correct} correct</span>` +
+    `<span class="summary-missed">✗ ${missed} missed</span>` +
+    `<span class="summary-pct">${pct}%</span>`;
+  ['pictureSummaryTop', 'pictureSummaryBottom'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = 'flex'; el.innerHTML = html; }
+  });
+}
+
+function clearPictureSummary(): void {
+  ['pictureSummaryTop', 'pictureSummaryBottom'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+  });
+}
+
 // ── Progress bar helpers ───────────────────────────────────────────────────────
 
 function setProgress(correct: number, total: number): void {
@@ -220,6 +242,7 @@ function setProgress(correct: number, total: number): void {
 
 function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLElement): void {
   container.innerHTML = '';
+  clearPictureSummary();
 
   if (wordsWithVisuals.length === 0) {
     container.innerHTML = `
@@ -279,6 +302,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
   giveUpBtn.className   = 'picture-give-up-btn';
   giveUpBtn.textContent = 'Give Up';
   giveUpBtn.addEventListener('click', () => {
+    const typedCorrect = cards.filter(({ inp }) => inp.classList.contains('correct')).length;
     cards.forEach(({ card, inp, word }) => {
       if (!inp.disabled) {
         inp.value    = word.word;
@@ -288,7 +312,8 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
       }
     });
     giveUpBtn.disabled = true;
-    updateTypeProgress();
+    setProgress(typedCorrect, cards.length);
+    showPictureSummary(typedCorrect, cards.length);
   });
 
   bar.appendChild(giveUpBtn);
@@ -303,7 +328,10 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
   function updateTypeProgress(): void {
     const correct = cards.filter(({ inp }) => inp.classList.contains('correct')).length;
     setProgress(correct, cards.length);
-    if (correct === cards.length) giveUpBtn.disabled = true;
+    if (correct === cards.length) {
+      giveUpBtn.disabled = true;
+      showPictureSummary(correct, cards.length);
+    }
   }
 }
 
@@ -321,6 +349,8 @@ function renderClickMode(
       </div>`;
     return;
   }
+
+  clearPictureSummary();
 
   const pool   = wordsWithVisuals;
   const queue  = shuffle(pool);
@@ -437,10 +467,7 @@ function renderClickMode(
 
     const done = document.createElement('div');
     done.className = 'pm-click-done';
-    done.innerHTML = `
-      <h3>${pct === 100 ? '🎉 Perfect!' : pct >= 70 ? '👍 Nice work!' : '💪 Keep practising!'}</h3>
-      <p>${correct} / ${queue.length} correct (${pct}%)</p>
-    `;
+    done.innerHTML = `<h3>${pct === 100 ? '🎉 Perfect!' : pct >= 70 ? '👍 Nice work!' : '💪 Keep practising!'}</h3>`;
 
     const again = document.createElement('button');
     again.textContent = 'Play Again';
@@ -449,6 +476,7 @@ function renderClickMode(
     done.appendChild(again);
     container.appendChild(done);
     setProgress(correct, queue.length);
+    showPictureSummary(correct, queue.length);
   }
 
   renderCard(queue[idx]);

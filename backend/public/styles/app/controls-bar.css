@@ -51,6 +51,32 @@
   margin-top: 0.5rem;
 }
 
+/* ── Shared mode-specific filter panel (conjugation, picture, etc.) ── */
+
+/* Applied to panels that appear in #controls below controls-top */
+.mode-filter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--border-strong);
+}
+
+/* Within mode panels, labels head a section → use full text colour */
+.mode-filter-panel .conj-control-group > .filter-section-label,
+.mode-filter-panel .conj-forms-header  > .filter-section-label {
+  color: var(--text);
+  letter-spacing: 0.06em;
+}
+
+/* In-area control rows (recall, table) also get the bolder label */
+#recallControls .control-group > label,
+#tableControls  .control-group > label {
+  color: var(--text);
+  letter-spacing: 0.06em;
+}
+
 /* ── Sort-order segmented button group ── */
 .sort-order-toggle {
   display: flex;
