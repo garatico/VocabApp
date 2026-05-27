@@ -60,11 +60,25 @@
 .recall-input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(61, 107, 79, 0.12);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 .recall-input:disabled { background: var(--surface2); color: var(--text-muted); }
 
-.recall-feedback { font-size: 0.85rem; font-weight: 600; min-width: 100px; }
+.recall-feedback {
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 100px;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast), color var(--transition-fast), padding var(--transition-fast);
+}
+.recall-feedback.ok {
+  padding: 0.15rem 0.55rem 0.15rem 0.45rem;
+  background: var(--correct-light);
+  color: var(--correct);
+  border: 1px solid var(--correct);
+  border-left-width: 3px;
+  white-space: nowrap;
+}
 
 .recall-score {
   font-family: 'DM Mono', monospace;

@@ -81,8 +81,8 @@
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  color: var(--text);
 }
 
 .ml-new-list-btn {
@@ -122,12 +122,14 @@
   color: var(--text);
   user-select: none;
   transition: background 0.1s;
+  border-left: 2px solid transparent;
 }
 .ml-list-item:hover { background: var(--surface2); }
 .ml-list-item.active {
   background: var(--accent-light, color-mix(in srgb, var(--accent) 12%, transparent));
   color: var(--accent);
   font-weight: 700;
+  border-left-color: var(--accent);
 }
 .ml-list-item--editing {
   padding: 0.3rem 0.5rem;
@@ -145,12 +147,19 @@
 }
 
 .ml-list-count {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
+  font-family: 'DM Mono', monospace;
   color: var(--text-muted);
   background: var(--surface2);
+  border: 1px solid var(--border);
   border-radius: 99px;
-  padding: 0 0.4rem;
+  padding: 0.05rem 0.45rem;
   flex-shrink: 0;
+}
+.ml-list-item.active .ml-list-count {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .ml-list-actions {
@@ -227,8 +236,14 @@
   border-radius: var(--radius-sm);
   background: var(--bg);
   color: var(--text);
-  width: 80px;
+  width: 110px;
   min-width: 0;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.ml-search:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 /* ── Add-words search ────────────────────────────────────────── */
@@ -237,9 +252,9 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  border-bottom: 1px dashed var(--border);
-  padding-bottom: 0.4rem;
-  margin-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.35rem;
 }
 
 .ml-add-row {
@@ -338,7 +353,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: 0;
 }
 
 .ml-word-empty {
@@ -351,11 +366,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.3rem 0.5rem;
+  padding: 0.32rem 0.5rem;
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
   color: var(--text);
+  border-bottom: 1px solid var(--border);
 }
+.ml-word-item:last-child { border-bottom: none; }
 .ml-word-item:hover { background: var(--surface2); }
 
 .ml-word-text {
@@ -388,7 +405,23 @@
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    max-height: 220px;
+    max-height: 260px;
   }
   .ml-list-actions { opacity: 1; }
+
+  /* Larger tap targets for word remove button */
+  .ml-remove-btn {
+    opacity: 1;
+    font-size: 1.1rem;
+    padding: 0.1rem 0.4rem;
+  }
+
+  /* Slightly taller word rows */
+  .ml-word-item { padding: 0.45rem 0.5rem; }
+
+  /* Add-words input */
+  .ml-add-input { font-size: 0.85rem; }
+
+  /* Filter search: full width on small screens */
+  .ml-search { width: 90px; }
 }

@@ -77,14 +77,39 @@
 #answer:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(61, 107, 79, 0.12);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
+/* ── Feedback pill ── */
 .feedback {
   font-size: 0.85rem;
   font-weight: 600;
-  min-height: 1.2rem;
+  min-height: 1.6rem;
   margin-bottom: 0.4rem;
+  border-radius: var(--radius-sm);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    padding var(--transition-fast);
+}
+
+/* Correct answer */
+.feedback.ok {
+  padding: 0.35rem 0.85rem 0.35rem 0.65rem;
+  background: var(--correct-light);
+  color: var(--correct);
+  border: 1px solid var(--correct);
+  border-left-width: 3px;
+}
+
+/* Revealed / wrong answer */
+.feedback.bad {
+  padding: 0.35rem 0.85rem 0.35rem 0.65rem;
+  background: var(--incorrect-light);
+  color: var(--incorrect);
+  border: 1px solid var(--incorrect);
+  border-left-width: 3px;
 }
 
 /* Progress bar container */

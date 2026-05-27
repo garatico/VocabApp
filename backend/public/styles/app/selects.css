@@ -20,7 +20,7 @@ select {
 select:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(61, 107, 79, 0.15);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 /* ── Custom number input (quiz size) ── */
@@ -40,7 +40,7 @@ select:focus {
 #sizeCustom:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(61, 107, 79, 0.15);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 #sizeCustom::placeholder { color: var(--text-muted); font-size: 0.74rem; }
 
@@ -55,11 +55,8 @@ textarea {
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(61, 107, 79, 0.1);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
-html.dark input:focus,
-html.dark select:focus,
-html.dark textarea:focus { box-shadow: 0 0 0 3px rgba(90, 158, 114, 0.2); }
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
