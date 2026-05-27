@@ -142,30 +142,43 @@
         </div>
 
         <!-- Conjugation-mode controls: shown only when Conjugation tab is active -->
-        <div id="conjModeControls" style="display:none">
-          <span class="filter-section-label">Display</span>
-          <div class="conj-display-toggle" id="conjDisplayToggle">
-            <button class="conj-toggle-btn" data-mode="target">Spanish</button>
-            <button class="conj-toggle-btn active" data-mode="both">Spanish + English</button>
-            <button class="conj-toggle-btn" data-mode="english">English</button>
+        <div id="conjModeControls" class="mode-filter-panel" style="display:none">
+          <!-- Top row: Display + Tense, each with label above -->
+          <div class="conj-top-controls">
+            <div class="conj-control-group">
+              <span class="filter-section-label">Display</span>
+              <div class="conj-display-toggle" id="conjDisplayToggle">
+                <button class="conj-toggle-btn" data-mode="target">Spanish</button>
+                <button class="conj-toggle-btn active" data-mode="both">Spanish + English</button>
+                <button class="conj-toggle-btn" data-mode="english">English</button>
+              </div>
+            </div>
+            <div class="conj-control-group">
+              <span class="filter-section-label">Tense</span>
+              <select id="conjTenseSelect"><!-- populated by JS based on language --></select>
+            </div>
           </div>
-          <span class="filter-section-label">Tense</span>
-          <select id="conjTenseSelect"><!-- populated by JS based on language --></select>
-          <!-- Second row: pronoun form toggles (populated by JS) -->
+          <!-- Forms row: label + All/None above, 2×3 pronoun grid below -->
           <div id="conjPronounRow" class="conj-pronoun-row">
-            <span class="filter-section-label">Forms</span>
-            <button type="button" id="conjFormsAll">All</button>
-            <button type="button" id="conjFormsNone">None</button>
+            <div class="conj-forms-header">
+              <span class="filter-section-label">Forms</span>
+              <button type="button" id="conjFormsAll">All</button>
+              <button type="button" id="conjFormsNone">None</button>
+            </div>
             <div id="conjPronounToggles" class="conj-pronoun-toggles"></div>
           </div>
         </div>
 
         <!-- Picture-mode controls: shown only when Picture Quiz tab is active -->
-        <div id="pictureModeControls" style="display:none">
-          <span class="filter-section-label">Quiz Style</span>
-          <div class="conj-display-toggle" id="pictureSubMode">
-            <button class="conj-toggle-btn active" data-mode="type">Type the Word</button>
-            <button class="conj-toggle-btn" data-mode="click">Click the Picture</button>
+        <div id="pictureModeControls" class="mode-filter-panel" style="display:none">
+          <div class="conj-top-controls">
+            <div class="conj-control-group">
+              <span class="filter-section-label">Quiz Style</span>
+              <div class="conj-display-toggle" id="pictureSubMode">
+                <button class="conj-toggle-btn active" data-mode="type">Type the Word</button>
+                <button class="conj-toggle-btn" data-mode="click">Click the Picture</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -188,13 +201,17 @@
           <div class="progress"><div id="tableBarTop" class="bar"></div></div>
           <div id="tableStatsTop" class="small"></div>
         </div>
+        <div id="tableSummaryTop" class="quiz-summary" style="display:none"></div>
 
         <div id="tableControls" class="controls-row">
-          <select id="colsSelect" title="Columns">
-            <option value="1">1</option>
-            <option value="2" selected>2</option>
-            <option value="3">3</option>
-          </select>
+          <div class="control-group">
+            <label>Columns</label>
+            <select id="colsSelect">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+            </select>
+          </div>
           <button id="tableExport">Export</button>
           <button id="tableReset">Give Up</button>
         </div>
@@ -213,30 +230,34 @@
           <div class="progress"><div id="recallBarTop" class="bar"></div></div>
           <div id="recallStatsTop" class="small"></div>
         </div>
+        <div id="recallSummaryTop" class="quiz-summary" style="display:none"></div>
 
-        <div id="recallControls" class="controls-row">
-          <label>
-            Timer:
-            <select id="recallTimer">
-              <option value="0">No timer</option>
-              <option value="60">1 min</option>
-              <option value="180">3 min</option>
-              <option value="300" selected>5 min</option>
-              <option value="600">10 min</option>
-              <option value="900">15 min</option>
-              <option value="custom">Custom...</option>
-            </select>
-            <input type="number" id="recallTimerCustom" min="1" max="999" placeholder="mins" style="display:none; width:60px;"/>
-          </label>
-          <label>
-            When time runs out:
+        <div id="recallControls">
+          <div class="control-group">
+            <label>Timer</label>
+            <div class="recall-timer-inputs">
+              <select id="recallTimer">
+                <option value="0">No timer</option>
+                <option value="60">1 min</option>
+                <option value="180">3 min</option>
+                <option value="300" selected>5 min</option>
+                <option value="600">10 min</option>
+                <option value="900">15 min</option>
+                <option value="custom">Custom...</option>
+              </select>
+              <input type="number" id="recallTimerCustom" min="1" max="999" placeholder="mins" style="display:none; width:60px;"/>
+            </div>
+          </div>
+          <div class="control-group">
+            <label>When time runs out</label>
             <select id="recallHardStop">
               <option value="false">Keep going</option>
               <option value="true">Hard stop</option>
             </select>
-          </label>
+          </div>
         </div>
         <div id="recallWrap"></div>
+        <div id="recallSummaryBottom" class="quiz-summary" style="display:none"></div>
 
         <div class="progressWrap">
           <div class="progress"><div id="recallBarBottom" class="bar"></div></div>
@@ -249,6 +270,7 @@
           <div class="progress"><div id="bar" class="bar"></div></div>
           <div id="statsTop" class="small"></div>
         </div>
+        <div id="quizSummaryTop" class="quiz-summary" style="display:none"></div>
 
         <div id="word" class="word"></div>
 
@@ -267,6 +289,7 @@
           <button id="ttsBtn">&#x1F50A;</button>
           <button id="resetBtn">End Quiz</button>
         </div>
+        <div id="quizSummaryBottom" class="quiz-summary" style="display:none"></div>
 
         <div class="progressWrap">
           <div id="stats" class="small"></div>
@@ -278,8 +301,10 @@
           <div class="progress"><div id="pictureBarTop" class="bar"></div></div>
           <div id="pictureStatsTop" class="small"></div>
         </div>
+        <div id="pictureSummaryTop" class="quiz-summary" style="display:none"></div>
 
         <div id="pictureWrap"></div>
+        <div id="pictureSummaryBottom" class="quiz-summary" style="display:none"></div>
 
         <div class="progressWrap">
           <div class="progress"><div id="pictureBarBottom" class="bar"></div></div>
@@ -288,7 +313,9 @@
       </section>
 
       <section id="conjugationArea" hidden>
+        <div id="conjSummaryTop" class="quiz-summary" style="display:none"></div>
         <div id="conjugationWrap"></div>
+        <div id="conjSummaryBottom" class="quiz-summary" style="display:none"></div>
       </section>
 
       <section id="myListsArea" hidden>

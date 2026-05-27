@@ -15,7 +15,7 @@
   margin-top: 1rem;
 }
 
-/* Score strip shared by quiz + recall */
+/* Score strip shared by all game modes */
 .quiz-summary,
 .recall-summary {
   display: flex;

@@ -42,9 +42,31 @@ function normalize(s: string): string {
     .replace(/[̀-ͯ]/g, '');
 }
 
+function clearConjSummary(): void {
+  ['conjSummaryTop', 'conjSummaryBottom'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+  });
+}
+
+function showConjSummary(completeVerbs: number, nVerbs: number, correctForms: number, totalForms: number): void {
+  const verbPct  = nVerbs     ? Math.round((completeVerbs / nVerbs)    * 100) : 0;
+  const formPct  = totalForms ? Math.round((correctForms  / totalForms) * 100) : 0;
+  const pct      = Math.round((verbPct + formPct) / 2);
+  const html =
+    '<span class="summary-correct">✓ ' + completeVerbs + ' / ' + nVerbs + ' verbs</span>' +
+    '<span class="summary-correct">✓ ' + correctForms + ' / ' + totalForms + ' forms</span>' +
+    '<span class="summary-pct">' + pct + '%</span>';
+  ['conjSummaryTop', 'conjSummaryBottom'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = 'flex'; el.innerHTML = html; }
+  });
+}
+
 export function renderConjugationMode({ words, container, lang = 'spanish' }: ConjugationModeOptions): void {
   if (_cleanup) { _cleanup(); _cleanup = null; }
   setProgressCallback(null);
+  clearConjSummary();
 
   container.innerHTML = '';
 
@@ -135,6 +157,10 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     formsFill.style.width = (totalForms ? (correctForms  / totalForms) * 100 : 0) + '%';
     verbsStat.textContent = `${completeVerbs} / ${nVerbs} complete`;
     formsStat.textContent = `${correctForms} / ${totalForms} correct`;
+
+    if (totalForms > 0 && correctForms === totalForms) {
+      showConjSummary(completeVerbs, nVerbs, correctForms, totalForms);
+    }
   }
 
   const cardUpdaters: CardController[] = [];
@@ -161,10 +187,27 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     cardUpdaters.forEach(u => u.revealAnswers());
     giveUpBtn.disabled = true;
     updateProgress();
+    // Show a summary when giving up (progress may not be 100%)
+    let totalForms = 0, correctForms = 0, completeVerbs = 0;
+    cardsGrid.querySelectorAll('.conj-card').forEach(card => {
+      let cardTotal = 0, cardCorrect = 0;
+      card.querySelectorAll('.conj-row:not(.conj-row-hidden)').forEach(row => {
+        const inp = row.querySelector<HTMLInputElement>('.conj-drill-input');
+        if (!inp) return;
+        cardTotal++;
+        if (inp.classList.contains('correct')) cardCorrect++;
+      });
+      totalForms   += cardTotal;
+      correctForms += cardCorrect;
+      if (cardTotal > 0 && cardCorrect === cardTotal) completeVerbs++;
+    });
+    const nVerbs = cardsGrid.querySelectorAll('.conj-card').length;
+    showConjSummary(completeVerbs, nVerbs, correctForms, totalForms);
   });
 
   const handleTenseChange = (): void => {
     giveUpBtn.disabled = false;
+    clearConjSummary();
     cardUpdaters.forEach(u => u.updateInputs());
     if (!isSingleForm(getTenseKey())) {
       applyAllPronounToggles(cardsGrid);

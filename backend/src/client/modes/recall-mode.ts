@@ -27,6 +27,12 @@ export function renderRecallMode({
 }: RenderRecallModeOptions): RecallController {
   container.innerHTML = '';
 
+  // Clear any stale outer summary cards from a previous session
+  ['recallSummaryTop', 'recallSummaryBottom'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+  });
+
   const cols = Math.max(1, Math.min(3, Number(columns) || 1));
 
   const recalled      = new Set<string>();
@@ -254,12 +260,19 @@ export function renderRecallMode({
     const missed = sorted.length - recalled.size;
     const pct    = Math.round((recalled.size / sorted.length) * 100);
 
-    scoreEl.innerHTML =
-      '<div class="recall-summary">' +
+    const summaryHTML =
       '<span class="summary-correct">✓ ' + recalled.size + ' recalled</span>' +
       '<span class="summary-missed">✗ ' + missed + ' missed</span>' +
-      '<span class="summary-pct">' + pct + '%</span>' +
-      '</div>';
+      '<span class="summary-pct">' + pct + '%</span>';
+
+    // Inline score (visible within the scroll area, between input and grid)
+    scoreEl.innerHTML = '<div class="quiz-summary" style="margin:0.4rem 0">' + summaryHTML + '</div>';
+
+    // Top and bottom outer summary cards
+    ['recallSummaryTop', 'recallSummaryBottom'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.style.display = 'flex'; el.innerHTML = summaryHTML; }
+    });
   }
 
   function startTimer(seconds: number, isHardStop: boolean): void {

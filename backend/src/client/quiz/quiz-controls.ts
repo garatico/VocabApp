@@ -79,6 +79,10 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
     answerEl.disabled      = false;
     feedbackEl.textContent = '';
     feedbackEl.className   = 'feedback';
+    ['quizSummaryTop', 'quizSummaryBottom'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+    });
     updateCounter();
     updateStats();
     answerEl.focus();
@@ -114,10 +118,17 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
     answerEl.value         = '';
     counterEl.textContent  = '';
 
-    feedbackEl.className = 'feedback';
-    feedbackEl.innerHTML =
-      `<span style="color:var(--correct)">✓ ${done} mastered</span>` +
-      (missed > 0 ? `&nbsp;&nbsp;<span style="color:var(--danger)">✗ ${missed} not yet mastered</span>` : '');
+    feedbackEl.textContent = '';
+    feedbackEl.className   = 'feedback';
+
+    const summaryHTML =
+      `<span class="summary-correct">✓ ${done} mastered</span>` +
+      (missed > 0 ? `<span class="summary-missed">✗ ${missed} not yet mastered</span>` : '') +
+      `<span class="summary-pct">${pct}%</span>`;
+    ['quizSummaryTop', 'quizSummaryBottom'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.style.display = 'flex'; el.innerHTML = summaryHTML; }
+    });
 
     barEl.style.width = pct + '%';
     const summary = `${done} / ${total} mastered (${pct}%)`;

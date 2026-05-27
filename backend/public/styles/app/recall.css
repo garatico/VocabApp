@@ -11,10 +11,20 @@
 }
 
 #recallControls {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--border);
   margin-bottom: 0.5rem;
-  margin-top: 0;
+}
+
+/* Timer select + optional custom-minutes input sit side by side */
+.recall-timer-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .recall-wrap { display: flex; flex-direction: column; gap: 0.6rem; }
