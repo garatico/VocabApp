@@ -121,12 +121,12 @@
   font-weight: 500;
   color: var(--text);
   user-select: none;
-  transition: background 0.1s;
+  transition: background var(--transition-fast);
   border-left: 2px solid transparent;
 }
 .ml-list-item:hover { background: var(--surface2); }
 .ml-list-item.active {
-  background: var(--accent-light, color-mix(in srgb, var(--accent) 12%, transparent));
+  background: var(--accent-light);
   color: var(--accent);
   font-weight: 700;
   border-left-color: var(--accent);
@@ -167,7 +167,7 @@
   gap: 0.15rem;
   flex-shrink: 0;
   opacity: 0;
-  transition: opacity 0.1s;
+  transition: opacity var(--transition-fast);
 }
 .ml-list-item:hover .ml-list-actions { opacity: 1; }
 
@@ -182,7 +182,7 @@
   line-height: 1;
 }
 .ml-icon-btn:hover { background: var(--border); color: var(--text); }
-.ml-icon-btn--danger:hover { color: var(--danger, #e55); background: color-mix(in srgb, var(--danger, #e55) 12%, transparent); }
+.ml-icon-btn--danger:hover { color: var(--danger); background: var(--danger-light); }
 
 .ml-list-name-input {
   flex: 1;
@@ -265,7 +265,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 0.2rem 0.45rem;
-  transition: border-color 0.15s;
+  transition: border-color var(--transition-fast);
 }
 .ml-add-row:focus-within {
   border-color: var(--accent);
@@ -313,7 +313,7 @@
   font-size: 0.82rem;
   color: var(--text);
   cursor: pointer;
-  transition: background 0.1s;
+  transition: background var(--transition-fast);
 }
 .ml-add-result-item:hover { background: var(--surface2); }
 
@@ -342,7 +342,7 @@
   justify-content: center;
   line-height: 1;
   padding: 0;
-  transition: background 0.12s, color 0.12s;
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
 .ml-add-btn:hover { background: var(--accent); color: #fff; }
 
@@ -389,11 +389,11 @@
   padding: 0 0.25rem;
   line-height: 1;
   opacity: 0;
-  transition: opacity 0.1s;
+  transition: opacity var(--transition-fast);
   border-radius: var(--radius-sm);
 }
 .ml-word-item:hover .ml-remove-btn { opacity: 1; }
-.ml-remove-btn:hover { color: var(--danger, #e55); background: color-mix(in srgb, var(--danger, #e55) 12%, transparent); }
+.ml-remove-btn:hover { color: var(--danger); background: var(--danger-light); }
 
 /* ── Responsive ── */
 @media (max-width: 767px) {

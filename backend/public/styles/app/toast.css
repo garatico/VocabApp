@@ -24,19 +24,11 @@
   color: var(--success);
   border-left: 3px solid var(--success);
 }
-html.dark .toast.toast-success {
-  background-color: rgba(16, 185, 129, 0.15);
-  color: var(--success);
-}
 
 .toast.toast-error {
   background-color: var(--incorrect-light);
   color: var(--incorrect);
   border-left: 3px solid var(--incorrect);
-}
-html.dark .toast.toast-error {
-  background-color: rgba(239, 68, 68, 0.15);
-  color: var(--incorrect);
 }
 
 .toast.toast-warning {
@@ -44,19 +36,11 @@ html.dark .toast.toast-error {
   color: var(--warning);
   border-left: 3px solid var(--warning);
 }
-html.dark .toast.toast-warning {
-  background-color: rgba(251, 191, 36, 0.15);
-  color: var(--warning);
-}
 
 .toast.toast-info {
   background-color: var(--info-light);
   color: var(--info);
   border-left: 3px solid var(--info);
-}
-html.dark .toast.toast-info {
-  background-color: rgba(96, 165, 250, 0.15);
-  color: var(--info);
 }
 
 /* ── Responsive ── */

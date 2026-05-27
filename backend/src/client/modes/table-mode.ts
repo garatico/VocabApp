@@ -144,6 +144,12 @@ export function renderTableMode({
 
         if (isInAnyList(lang, w.word)) tdWord.classList.add('word-cell--known');
 
+        // Rank / position indicator
+        const rankEl = document.createElement('span');
+        rankEl.className   = 'table-word-rank';
+        rankEl.textContent = String(w.rank || (i + j + 1));
+        tdWord.appendChild(rankEl);
+
         const wordDiv = document.createElement('div');
         wordDiv.textContent = labelText(w, dir);
         wordDiv.classList.add('spanish-word');

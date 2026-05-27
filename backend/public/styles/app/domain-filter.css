@@ -106,10 +106,13 @@
   background: var(--surface);
   color: var(--text);
   outline: none;
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 #domainSearchInput::placeholder { color: var(--text-muted); }
-#domainSearchInput:focus { border-color: var(--accent); }
+#domainSearchInput:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
 
 #domainSuggestions {
   position: absolute;

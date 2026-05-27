@@ -26,12 +26,7 @@
 
   #controls-top { flex-wrap: wrap; gap: 0.5rem; }
 
-  select { flex: 0 1 calc(50% - 0.25rem); font-size: 0.8rem; }
-
   #startBtn { flex: 0 1 100%; width: 100%; padding: 0.4rem 1rem; }
-
-  .filter-group { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
-  .filter-option { font-size: 0.75rem; padding: 0.38rem 0.6rem; min-height: 36px; }
 
   #tableWrap { font-size: 1.2rem; }
   #tableWrap input[type="text"] { font-size: 1.1rem; min-height: 42px; }
@@ -42,10 +37,6 @@
   body { padding: 0.7rem 1rem 2rem; font-size: 15px; }
 
   #controls-top { gap: 0.6rem; }
-  select { flex: 0 1 auto; font-size: 0.8rem; }
-
-  .filter-group { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
-  .filter-option { font-size: 0.76rem; padding: 0.4rem 0.6rem; }
 
   #tableWrap { font-size: 1.35rem; }
   #tableWrap input[type="text"] { font-size: 1.2rem; min-height: 44px; }
@@ -55,5 +46,4 @@
 @media (min-width: 1024px) {
   #tableWrap { font-size: 1.5rem; }
   #tableWrap input[type="text"] { font-size: 1.25rem; min-height: 46px; }
-  .filter-group { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
 }

@@ -96,7 +96,7 @@
   border-right: 1px solid var(--border);
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .sort-order-btn:last-child {
@@ -104,7 +104,7 @@
 }
 
 .sort-order-btn:hover {
-  background: var(--surface-hover, var(--border));
+  background: var(--surface2);
   color: var(--text);
 }
 
