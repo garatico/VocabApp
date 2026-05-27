@@ -113,6 +113,11 @@
     grid-column: 1 / -1;
   }
 
+  /* Direction toggle: span both columns */
+  #controls-top #directionGroup {
+    grid-column: 1 / -1;
+  }
+
   /* Start button: full width */
   #startBtn {
     grid-column: 1 / -1;

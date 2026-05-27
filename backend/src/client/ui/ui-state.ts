@@ -58,12 +58,14 @@ export function bindModeSwitch({
     if (controlsEl) controlsEl.hidden = isMyLists;
 
     const classFilter         = document.getElementById('classFilter');
-    const tableModeControls   = document.getElementById('tableModeControls');
+    const listFilter          = document.getElementById('listFilter');
+    const directionGroup      = document.getElementById('directionGroup');
     const conjModeControls    = document.getElementById('conjModeControls');
     const pictureModeControls = document.getElementById('pictureModeControls');
 
     if (classFilter)         classFilter.style.display         = mode === 'conjugation' ? 'none' : '';
-    if (tableModeControls)   tableModeControls.style.display   = mode === 'table'       ? ''     : 'none';
+    if (listFilter)          listFilter.style.display          = mode === 'conjugation' ? 'none' : '';
+    if (directionGroup)      directionGroup.style.display      = mode === 'table'       ? ''     : 'none';
     if (conjModeControls)    conjModeControls.style.display    = mode === 'conjugation' ? ''     : 'none';
     if (pictureModeControls) pictureModeControls.style.display = mode === 'picture'     ? ''     : 'none';
 

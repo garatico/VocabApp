@@ -98,17 +98,16 @@
             </div>
           </div>
 
-          <button id="startBtn">Start Quiz</button>
-        </div>
-
-        <!-- Table-mode controls: shown only when Table tab is active -->
-        <div id="tableModeControls">
-          <span class="filter-section-label">Direction</span>
-          <div class="conj-display-toggle" id="directionToggle">
-            <button class="conj-toggle-btn active" data-direction="target-en">Word &#x2192; Meaning</button>
-            <button class="conj-toggle-btn"        data-direction="en-target">Meaning &#x2192; Word</button>
-            <button class="conj-toggle-btn"        data-direction="mixed">Mixed</button>
+          <div class="control-group" id="directionGroup">
+            <label>Direction</label>
+            <div class="conj-display-toggle" id="directionToggle">
+              <button class="conj-toggle-btn active" data-direction="target-en">Word &#x2192; Meaning</button>
+              <button class="conj-toggle-btn"        data-direction="en-target">Meaning &#x2192; Word</button>
+              <button class="conj-toggle-btn"        data-direction="mixed">Mixed</button>
+            </div>
           </div>
+
+          <button id="startBtn">Start Quiz</button>
         </div>
 
         <div id="classFilter">
@@ -123,12 +122,23 @@
           <label><input type="checkbox" value="preposition" checked> Prepositions</label>
           <label><input type="checkbox" value="conjunction" checked> Conjunctions</label>
           <label><input type="checkbox" value="article" checked> Articles</label>
-          <label class="filter-known-inline" id="hideKnownLabel">
-            <select id="filterListSelect" title="Hide words from a list">
-              <option value="">Show all words</option>
-            </select>
-            <span class="filter-known-count">(<span id="knownWordCount">0</span> listed)</span>
-          </label>
+        </div>
+
+        <div id="listFilter">
+          <div class="list-filter-wrap">
+            <div class="list-filter-header">
+              <span class="filter-section-label">Lists</span>
+              <div class="list-filter-toggle" id="listFilterMode">
+                <button type="button" class="list-filter-btn active" data-mode="hide">Hide</button>
+                <button type="button" class="list-filter-btn" data-mode="focus">Focus</button>
+              </div>
+              <span class="list-filter-count">(<span id="knownWordCount">0</span> listed)</span>
+            </div>
+            <p class="list-filter-desc" id="listFilterDesc"></p>
+            <div class="list-filter-checkboxes" id="listFilterCheckboxes">
+              <span class="list-filter-empty">No lists yet — create one in My Lists</span>
+            </div>
+          </div>
         </div>
 
         <!-- Conjugation-mode controls: shown only when Conjugation tab is active -->

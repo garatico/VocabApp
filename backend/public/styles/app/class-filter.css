@@ -57,6 +57,15 @@
 }
 #classFilter button:hover { background: var(--border); }
 
+/* ── List filter container — sits below #classFilter ── */
+#listFilter {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.5rem 0.4rem;
+  margin-top: 0.35rem;
+}
+
 /* ── "Hide known" inline toggle (sits in the POS filter row) ── */
 
 .filter-known-inline {
@@ -210,25 +219,199 @@
     flex-shrink: 0;
   }
 
-  /* "Show all words" row — full width, left-aligned (no more margin-left:auto) */
-  .filter-known-inline {
-    flex: 0 0 100%;          /* own row */
-    margin-left: 0;          /* ← override desktop margin-left:auto */
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding-top: 0.3rem;
-    border-top: 1px solid var(--border);
-    font-size: 0.78rem;
-    color: var(--text-muted);
+}
+
+/* ================================================================
+   LIST FILTER — multi-list Hide / Focus panel (inside #classFilter)
+================================================================ */
+
+/* Outer wrapper: fills #listFilter */
+.list-filter-wrap {
+  display: block;
+}
+
+/* Header row: label + mode toggle + word count */
+.list-filter-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.4rem;
+}
+
+.list-filter-count {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+/* ── Hide / Focus segmented toggle ── */
+.list-filter-toggle {
+  display: flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.list-filter-btn {
+  padding: 0.18rem 0.65rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  /* Inactive: clearly dimmed so active pops by contrast */
+  background: var(--surface2);
+  color: var(--text-muted);
+  border: none;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast), color var(--transition-fast),
+              font-weight var(--transition-fast);
+  min-height: unset; /* override the global 44px mobile rule */
+}
+.list-filter-btn:last-child { border-right: none; }
+.list-filter-btn:hover:not(.active) {
+  background: var(--border);
+  color: var(--text);
+  transform: none;   /* suppress global lift-on-hover */
+  box-shadow: none;
+}
+
+/* ── Active state: each mode gets its own distinct colour ── */
+.list-filter-btn.active {
+  font-weight: 700;
+  color: #fff;
+  transform: none;
+  box-shadow: none;
+}
+/* Hide active → accent green */
+.list-filter-btn[data-mode="hide"].active {
+  background: var(--accent);
+}
+/* Focus active → info blue */
+.list-filter-btn[data-mode="focus"].active {
+  background: var(--info, #3b82f6);
+}
+
+/* ── Description line ── */
+.list-filter-desc {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0 0 0.35rem;
+  line-height: 1.3;
+  opacity: 0.8;
+}
+/* Colour the description to echo the active mode */
+.list-filter-wrap[data-mode="hide"]   .list-filter-desc { color: var(--accent); }
+.list-filter-wrap[data-mode="focus"]  .list-filter-desc { color: var(--info, #3b82f6); }
+
+/* ── Checkbox list ── */
+.list-filter-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.4rem;
+}
+
+.list-filter-empty {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Each list item: pill-shaped checkbox label */
+.list-filter-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.22rem 0.5rem 0.22rem 0.35rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  user-select: none;
+  -webkit-user-select: none;
+  white-space: nowrap;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.list-filter-item:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+/* Checked state: colour follows the active mode so the whole panel reads consistently */
+.list-filter-item:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+/* Hide mode — keep accent green */
+.list-filter-wrap[data-mode="hide"] .list-filter-item:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+  accent-color: var(--accent);
+}
+/* Focus mode — switch to info blue */
+.list-filter-wrap[data-mode="focus"] .list-filter-item:has(input:checked) {
+  border-color: var(--info, #3b82f6);
+  background: var(--info-light, #dbeafe);
+  color: var(--info, #3b82f6);
+  accent-color: var(--info, #3b82f6);
+}
+.list-filter-wrap[data-mode="focus"] .list-filter-item:has(input:checked) .list-filter-item-count {
+  color: var(--info, #3b82f6);
+}
+
+.list-filter-item input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.list-filter-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 12rem;
+}
+
+.list-filter-item-count {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+}
+.list-filter-item:has(input:checked) .list-filter-item-count {
+  color: var(--accent);
+}
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  #listFilter { padding: 0.4rem 0.5rem; margin-top: 0.3rem; }
+  .list-filter-header { gap: 0.4rem; margin-bottom: 0.3rem; }
+
+  .list-filter-btn {
+    min-height: 34px;
+    padding: 0.2rem 0.85rem;
+    font-size: 0.76rem;
   }
-  .filter-known-inline select {
-    flex: 1;
+
+  .list-filter-desc {
+    font-size: 0.66rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .list-filter-item {
+    font-size: 0.8rem;
+    padding: 0.32rem 0.6rem 0.32rem 0.4rem;
     min-height: 38px;
-    font-size: 0.78rem;
   }
-  .filter-known-count {
-    white-space: nowrap;
-    font-size: 0.72rem;
+  .list-filter-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
   }
 }
