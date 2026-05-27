@@ -109,14 +109,17 @@ export function renderRecallMode({
   gridWrap.className = 'recall-grid-wrap';
   gridWrap.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
 
-  const totalRows = Math.ceil(sorted.length / cols);
+  // Chunked distribution: table 0 gets words 0…chunkSize-1,
+  // table 1 gets words chunkSize…2*chunkSize-1, etc.
+  // Each table reads top-to-bottom in order, so stacking on mobile is seamless.
+  const chunkSize = Math.ceil(sorted.length / cols);
 
   for (let ci = 0; ci < cols; ci++) {
     const table = document.createElement('table');
     table.className = 'recall-table';
 
-    for (let row = 0; row < totalRows; row++) {
-      const idx = row * cols + ci;
+    for (let row = 0; row < chunkSize; row++) {
+      const idx = ci * chunkSize + row;
       if (idx >= sorted.length) break;
 
       const w = sorted[idx];
@@ -265,8 +268,8 @@ export function renderRecallMode({
       '<span class="summary-missed">✗ ' + missed + ' missed</span>' +
       '<span class="summary-pct">' + pct + '%</span>';
 
-    // Inline score (visible within the scroll area, between input and grid)
-    scoreEl.innerHTML = '<div class="quiz-summary" style="margin:0.4rem 0">' + summaryHTML + '</div>';
+    // Clear the live score — results are shown in the outer summary cards below
+    scoreEl.textContent = '';
 
     // Top and bottom outer summary cards
     ['recallSummaryTop', 'recallSummaryBottom'].forEach(id => {

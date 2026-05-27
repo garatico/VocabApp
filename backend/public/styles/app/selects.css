@@ -20,7 +20,7 @@ select {
 select:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--focus-ring);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 /* ── Custom number input (quiz size) ── */
@@ -40,7 +40,7 @@ select:focus {
 #sizeCustom:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--focus-ring);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 #sizeCustom::placeholder { color: var(--text-muted); font-size: 0.74rem; }
 

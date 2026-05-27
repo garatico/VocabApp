@@ -141,7 +141,7 @@
   font-weight: 600;
 }
 
-.recall-grid-wrap { display: grid; gap: 0.75rem; }
+.recall-grid-wrap { display: grid; gap: 0.75rem; padding-bottom: 0.75rem; }
 
 /* ── Size slider ── */
 .recall-size-wrap {

@@ -14,10 +14,6 @@
   margin-bottom: 16px;
   animation: slideDown var(--transition-normal);
 }
-html.dark #errorMessage {
-  background-color: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
-}
 
 .error-icon { font-size: 18px; flex-shrink: 0; }
 
