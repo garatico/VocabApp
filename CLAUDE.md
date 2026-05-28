@@ -108,3 +108,20 @@ read from or write to `vocabulary.db`.
 - **Synonyms not implemented**: `word_relations` table exists in the schema
   but is empty — synonyms were never migrated from the old JSON format.
   The admin edit form does not expose this field.
+
+---
+
+## TODO: Rename `display` field
+
+The `display` field in `spanish_curated.jsonl` holds the **primary English
+translation** shown to the learner (e.g., `"display": "shark"`). The name is
+misleading — it sounds like a UI/formatting property.
+
+Candidate replacement names: `english`, `translation`, `gloss`.
+
+Renaming requires:
+1. Update all entries in `spanish_curated.jsonl` (currently ~2400+)
+2. Search app code for any reference to `entry.display` / `["display"]` and
+   update field access accordingly.
+
+Do this as a deliberate refactor, not mid-session.
