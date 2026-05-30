@@ -203,7 +203,25 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> No
     # Preserve the curated rank order from the JSONL
     entries.sort(key=lambda e: e.get('rank') or 9999)
 
-    for w in entries:
+    def missing_fields(w: dict) -> List[str]:
+        missing = []
+        if not w.get('word'):    missing.append('word')
+        if not w.get('display'): missing.append('display')
+        if not w.get('pos'):     missing.append('pos')
+        if not [g for g in (w.get('glosses') or []) if g]:
+            missing.append('glosses')
+        return missing
+
+    skipped = [(w.get('word', '?'), missing_fields(w)) for w in entries if missing_fields(w)]
+    ready   = [w for w in entries if not missing_fields(w)]
+
+    if skipped:
+        print(f'  Skipped      : {len(skipped)} incomplete entries:')
+        for word, fields in skipped:
+            print(f'    {word!r} — missing: {", ".join(fields)}')
+
+    for w in ready:
+
         rank = w.get('rank') or 9999
         ling = w.get('linguistic') or {}
         conj = ling.get('conjugations')
@@ -303,7 +321,7 @@ def sync(lang: str, dry_run: bool) -> None:
 
     shutil.copy2(str(tmp_path), str(DB_PATH))
     tmp_path.unlink(missing_ok=True)
-    print(f'  DB           : {len(entries)} words written')
+    print(f'  DB           : written (see above for any skipped)')
 
 
 def main():
