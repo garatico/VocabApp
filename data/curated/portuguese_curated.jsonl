@@ -198,3 +198,785 @@
 {"rank": 198, "word": "perna", "display": "leg", "pos": "noun", "difficulty": "A1", "tags": ["curated"], "notes": "Feminine noun 'leg'. De perna cruzada = cross-legged. Esticar as pernas = to stretch one's legs. Perna de frango = chicken leg. Partir a perna = to break one's leg. Pl: pernas.", "glosses": ["leg"], "examples": [{"pt": "Parti a perna a jogar futebol.", "en": "I broke my leg playing football."}], "linguistic": {"infinitive": null, "gender": "f", "plural": "pernas", "conjugations": null, "irregular": false, "register": "standard"}, "relations": {"commonly_confused_with": [], "related": [], "synonyms": [], "antonyms": []}, "frequency": {"corpus_frequency": 12542}, "domains": ["body"], "register": "standard", "lang": "portuguese", "source": "curated", "needs_review": false}
 {"rank": 199, "word": "preto", "display": "black", "pos": "adjective", "difficulty": "A1", "tags": ["curated"], "notes": "Adjective 'black'. Preto/preta. Café preto = black coffee. Em preto e branco = in black and white. Note: 'negro' exists but is more sensitive; 'preto' is the standard adjective for the color.", "glosses": ["black"], "examples": [{"pt": "Prefiro café preto sem açúcar.", "en": "I prefer black coffee without sugar."}], "linguistic": {"infinitive": null, "gender": null, "plural": null, "conjugations": null, "irregular": false, "register": "standard"}, "relations": {"commonly_confused_with": [], "related": [], "synonyms": [], "antonyms": []}, "frequency": {"corpus_frequency": 11473}, "domains": [], "register": "standard", "lang": "portuguese", "source": "curated", "needs_review": false}
 {"rank": 200, "word": "verde", "display": "green", "pos": "adjective", "difficulty": "A1", "tags": ["curated"], "notes": "Adjective 'green'. Invariable for gender. Plural: verdes. Vinho verde = young/light wine (famous PT wine). Semáforo verde = green light. Salada verde = green salad.", "glosses": ["green"], "examples": [{"pt": "As árvores estão muito verdes na primavera.", "en": "The trees are very green in spring."}], "linguistic": {"infinitive": null, "gender": null, "plural": null, "conjugations": null, "irregular": false, "register": "standard"}, "relations": {"commonly_confused_with": [], "related": [], "synonyms": [], "antonyms": []}, "frequency": {"corpus_frequency": 10856}, "domains": [], "register": "standard", "lang": "portuguese", "source": "curated", "needs_review": false}
+{"rank": 201, "word": "floresta", "display": "forest"}
+{"rank": 202, "word": "total", "display": "total"}
+{"rank": 203, "word": "ponte", "display": "bridge"}
+{"rank": 204, "word": "confusão", "display": "confusion"}
+{"rank": 205, "word": "director", "display": "director"}
+{"rank": 206, "word": "culpado", "display": "guilty"}
+{"rank": 207, "word": "praia", "display": "beach"}
+{"rank": 208, "word": "casos", "display": "cases"}
+{"rank": 209, "word": "língua", "display": "tongue"}
+{"rank": 210, "word": "descansar", "display": "to rest"}
+{"rank": 211, "word": "presa", "display": "prey"}
+{"rank": 212, "word": "investigar", "display": "to investigate"}
+{"rank": 213, "word": "meter", "display": "to put"}
+{"rank": 214, "word": "oi", "display": "hi"}
+{"rank": 215, "word": "construir", "display": "to build"}
+{"rank": 216, "word": "fotografias", "display": "photographs"}
+{"rank": 217, "word": "sinais", "display": "signals"}
+{"rank": 218, "word": "banda", "display": "band"}
+{"rank": 219, "word": "rapidamente", "display": "quickly"}
+{"rank": 220, "word": "cabrão", "display": "bastard"}
+{"rank": 221, "word": "busca", "display": "search"}
+{"rank": 222, "word": "ouvido", "display": "ear"}
+{"rank": 223, "word": "receio", "display": "fear"}
+{"rank": 224, "word": "atirar", "display": "to throw"}
+{"rank": 225, "word": "fingir", "display": "to pretend"}
+{"rank": 226, "word": "respirar", "display": "to breathe"}
+{"rank": 227, "word": "rosto", "display": "face"}
+{"rank": 228, "word": "ridículo", "display": "ridiculous"}
+{"rank": 229, "word": "mudança", "display": "change"}
+{"rank": 230, "word": "época", "display": "era"}
+{"rank": 231, "word": "nacional", "display": "national"}
+{"rank": 232, "word": "corpos", "display": "bodies"}
+{"rank": 233, "word": "fonte", "display": "source"}
+{"rank": 234, "word": "sentimentos", "display": "feelings"}
+{"rank": 235, "word": "major", "display": "major"}
+{"rank": 236, "word": "navio", "display": "ship"}
+{"rank": 237, "word": "escapar", "display": "to escape"}
+{"rank": 238, "word": "cavalos", "display": "horses"}
+{"rank": 239, "word": "cansado", "display": "tired"}
+{"rank": 240, "word": "aula", "display": "class"}
+{"rank": 241, "word": "rico", "display": "rich"}
+{"rank": 242, "word": "acordar", "display": "to wake up"}
+{"rank": 243, "word": "preocupar", "display": "to worry"}
+{"rank": 244, "word": "humana", "display": "human"}
+{"rank": 245, "word": "beleza", "display": "beauty"}
+{"rank": 246, "word": "atrasado", "display": "late"}
+{"rank": 247, "word": "portas", "display": "doors"}
+{"rank": 248, "word": "agir", "display": "to act"}
+{"rank": 249, "word": "dedos", "display": "fingers"}
+{"rank": 250, "word": "rir", "display": "to laugh"}
+{"rank": 251, "word": "dono", "display": "owner"}
+{"rank": 252, "word": "posto", "display": "post"}
+{"rank": 253, "word": "nervoso", "display": "nervous"}
+{"rank": 254, "word": "bordo", "display": "board"}
+{"rank": 255, "word": "magoar", "display": "to hurt"}
+{"rank": 256, "word": "entregar", "display": "to deliver"}
+{"rank": 257, "word": "agradável", "display": "pleasant"}
+{"rank": 258, "word": "preocupada", "display": "worried"}
+{"rank": 259, "word": "princesa", "display": "princess"}
+{"rank": 260, "word": "calor", "display": "heat"}
+{"rank": 261, "word": "gay", "display": "gay"}
+{"rank": 262, "word": "óbvio", "display": "obvious"}
+{"rank": 263, "word": "colega", "display": "colleague"}
+{"rank": 264, "word": "jornal", "display": "newspaper"}
+{"rank": 265, "word": "interesse", "display": "interest"}
+{"rank": 266, "word": "combate", "display": "combat"}
+{"rank": 267, "word": "atacar", "display": "to attack"}
+{"rank": 268, "word": "profissional", "display": "professional"}
+{"rank": 269, "word": "decidir", "display": "to decide"}
+{"rank": 270, "word": "anel", "display": "ring"}
+{"rank": 271, "word": "esperto", "display": "clever"}
+{"rank": 272, "word": "inteira", "display": "entire"}
+{"rank": 273, "word": "idiotas", "display": "idiots"}
+{"rank": 274, "word": "espada", "display": "sword"}
+{"rank": 275, "word": "sentado", "display": "seated"}
+{"rank": 276, "word": "luzes", "display": "lights"}
+{"rank": 277, "word": "descer", "display": "to descend"}
+{"rank": 278, "word": "classe", "display": "class"}
+{"rank": 279, "word": "casado", "display": "married"}
+{"rank": 280, "word": "estúpida", "display": "stupid"}
+{"rank": 281, "word": "aberta", "display": "open"}
+{"rank": 282, "word": "caro", "display": "expensive"}
+{"rank": 283, "word": "leite", "display": "milk"}
+{"rank": 284, "word": "mercado", "display": "market"}
+{"rank": 285, "word": "política", "display": "politics"}
+{"rank": 286, "word": "milhão", "display": "million"}
+{"rank": 287, "word": "género", "display": "type"}
+{"rank": 288, "word": "oferta", "display": "offer"}
+{"rank": 289, "word": "teoria", "display": "theory"}
+{"rank": 290, "word": "escuro", "display": "dark"}
+{"rank": 291, "word": "ruas", "display": "streets"}
+{"rank": 292, "word": "desaparecer", "display": "to disappear"}
+{"rank": 293, "word": "antiga", "display": "former"}
+{"rank": 294, "word": "cadeia", "display": "chain"}
+{"rank": 295, "word": "levantar", "display": "to lift"}
+{"rank": 296, "word": "crescer", "display": "to grow"}
+{"rank": 297, "word": "imprensa", "display": "press"}
+{"rank": 298, "word": "uso", "display": "use"}
+{"rank": 299, "word": "santo", "display": "saint"}
+{"rank": 300, "word": "treta", "display": "nonsense"}
+{"rank": 301, "word": "perfeita", "display": "perfect"}
+{"rank": 302, "word": "noiva", "display": "bride"}
+{"rank": 303, "word": "servir", "display": "to serve"}
+{"rank": 304, "word": "pequenos", "display": "small"}
+{"rank": 305, "word": "absolutamente", "display": "absolutely"}
+{"rank": 306, "word": "perda", "display": "loss"}
+{"rank": 307, "word": "resultado", "display": "result"}
+{"rank": 308, "word": "militar", "display": "military"}
+{"rank": 309, "word": "material", "display": "material"}
+{"rank": 310, "word": "camião", "display": "truck"}
+{"rank": 311, "word": "rede", "display": "network"}
+{"rank": 312, "word": "príncipe", "display": "prince"}
+{"rank": 313, "word": "momentos", "display": "moments"}
+{"rank": 314, "word": "fantasma", "display": "ghost"}
+{"rank": 315, "word": "segredos", "display": "secrets"}
+{"rank": 316, "word": "solução", "display": "solution"}
+{"rank": 317, "word": "ouvidos", "display": "ears"}
+{"rank": 318, "word": "beijo", "display": "kiss"}
+{"rank": 319, "word": "impedir", "display": "to prevent"}
+{"rank": 320, "word": "pessoalmente", "display": "personally"}
+{"rank": 321, "word": "data", "display": "date"}
+{"rank": 322, "word": "garrafa", "display": "bottle"}
+{"rank": 323, "word": "orgulho", "display": "pride"}
+{"rank": 324, "word": "bolo", "display": "cake"}
+{"rank": 325, "word": "propriedade", "display": "property"}
+{"rank": 326, "word": "maiores", "display": "greater"}
+{"rank": 327, "word": "policia", "display": "police"}
+{"rank": 328, "word": "fuga", "display": "escape"}
+{"rank": 329, "word": "sensação", "display": "sensation"}
+{"rank": 330, "word": "tecnologia", "display": "technology"}
+{"rank": 331, "word": "peito", "display": "chest"}
+{"rank": 332, "word": "futebol", "display": "football"}
+{"rank": 333, "word": "vinte", "display": "twenty"}
+{"rank": 334, "word": "terceiro", "display": "third"}
+{"rank": 335, "word": "bilhete", "display": "ticket"}
+{"rank": 336, "word": "cinema", "display": "cinema"}
+{"rank": 337, "word": "vento", "display": "wind"}
+{"rank": 338, "word": "táxi", "display": "taxi"}
+{"rank": 339, "word": "registos", "display": "records"}
+{"rank": 340, "word": "boleia", "display": "lift"}
+{"rank": 341, "word": "quinta", "display": "farm"}
+{"rank": 342, "word": "chapéu", "display": "hat"}
+{"rank": 343, "word": "dedo", "display": "finger"}
+{"rank": 344, "word": "mano", "display": "bro"}
+{"rank": 345, "word": "mexer", "display": "to move"}
+{"rank": 346, "word": "vingança", "display": "revenge"}
+{"rank": 347, "word": "dever", "display": "duty"}
+{"rank": 348, "word": "exacto", "display": "exact"}
+{"rank": 349, "word": "porco", "display": "pig"}
+{"rank": 350, "word": "doido", "display": "crazy"}
+{"rank": 351, "word": "raiva", "display": "anger"}
+{"rank": 352, "word": "peso", "display": "weight"}
+{"rank": 353, "word": "treino", "display": "training"}
+{"rank": 354, "word": "algures", "display": "somewhere"}
+{"rank": 355, "word": "natural", "display": "natural"}
+{"rank": 356, "word": "estudar", "display": "to study"}
+{"rank": 357, "word": "assistente", "display": "assistant"}
+{"rank": 358, "word": "partida", "display": "departure"}
+{"rank": 359, "word": "responsabilidade", "display": "responsibility"}
+{"rank": 360, "word": "maldição", "display": "curse"}
+{"rank": 361, "word": "inimigos", "display": "enemies"}
+{"rank": 362, "word": "controle", "display": "control"}
+{"rank": 363, "word": "corte", "display": "cut"}
+{"rank": 364, "word": "assassinato", "display": "murder"}
+{"rank": 365, "word": "meninos", "display": "kids"}
+{"rank": 366, "word": "aparentemente", "display": "apparently"}
+{"rank": 367, "word": "toque", "display": "touch"}
+{"rank": 368, "word": "baile", "display": "ball"}
+{"rank": 369, "word": "aeroporto", "display": "airport"}
+{"rank": 370, "word": "poucos", "display": "few"}
+{"rank": 371, "word": "complicado", "display": "complicated"}
+{"rank": 372, "word": "apresentar", "display": "to present"}
+{"rank": 373, "word": "lixar", "display": "to not care"}
+{"rank": 374, "word": "serviços", "display": "services"}
+{"rank": 375, "word": "universo", "display": "universe"}
+{"rank": 376, "word": "bocadinho", "display": "a little bit"}
+{"rank": 377, "word": "próprios", "display": "own"}
+{"rank": 378, "word": "interessado", "display": "interested"}
+{"rank": 379, "word": "sacana", "display": "scoundrel"}
+{"rank": 380, "word": "respostas", "display": "answers"}
+{"rank": 381, "word": "agradecer", "display": "to thank"}
+{"rank": 382, "word": "secretária", "display": "secretary"}
+{"rank": 383, "word": "morada", "display": "address"}
+{"rank": 384, "word": "mapa", "display": "map"}
+{"rank": 385, "word": "internet", "display": "internet"}
+{"rank": 386, "word": "efeito", "display": "effect"}
+{"rank": 387, "word": "notas", "display": "notes"}
+{"rank": 388, "word": "enfermeira", "display": "nurse"}
+{"rank": 389, "word": "patrão", "display": "boss"}
+{"rank": 390, "word": "resultados", "display": "results"}
+{"rank": 391, "word": "corredor", "display": "corridor"}
+{"rank": 392, "word": "conhecimento", "display": "knowledge"}
+{"rank": 393, "word": "visitar", "display": "to visit"}
+{"rank": 394, "word": "aguentar", "display": "to endure"}
+{"rank": 395, "word": "aldeia", "display": "village"}
+{"rank": 396, "word": "razões", "display": "reasons"}
+{"rank": 397, "word": "guardas", "display": "guards"}
+{"rank": 398, "word": "testes", "display": "tests"}
+{"rank": 399, "word": "cirurgia", "display": "surgery"}
+{"rank": 400, "word": "aberto", "display": "open"}
+{"rank": 401, "word": "médica", "display": "doctor"}
+{"rank": 402, "word": "contrato", "display": "contract"}
+{"rank": 403, "word": "vivos", "display": "alive"}
+{"rank": 404, "word": "gás", "display": "gas"}
+{"rank": 405, "word": "sociedade", "display": "society"}
+{"rank": 406, "word": "lar", "display": "home"}
+{"rank": 407, "word": "direitos", "display": "rights"}
+{"rank": 408, "word": "instante", "display": "instant"}
+{"rank": 409, "word": "original", "display": "original"}
+{"rank": 410, "word": "zangado", "display": "angry"}
+{"rank": 411, "word": "familiar", "display": "familiar"}
+{"rank": 412, "word": "parecido", "display": "similar"}
+{"rank": 413, "word": "pressa", "display": "hurry"}
+{"rank": 414, "word": "ferido", "display": "wounded"}
+{"rank": 415, "word": "treinador", "display": "coach"}
+{"rank": 416, "word": "anteriormente", "display": "previously"}
+{"rank": 417, "word": "chamadas", "display": "calls"}
+{"rank": 418, "word": "crédito", "display": "credit"}
+{"rank": 419, "word": "desligar", "display": "to disconnect"}
+{"rank": 420, "word": "costa", "display": "coast"}
+{"rank": 421, "word": "projecto", "display": "project"}
+{"rank": 422, "word": "importantes", "display": "important"}
+{"rank": 423, "word": "câmaras", "display": "cameras"}
+{"rank": 424, "word": "cancro", "display": "cancer"}
+{"rank": 425, "word": "bem-vindos", "display": "welcome"}
+{"rank": 426, "word": "obter", "display": "to obtain"}
+{"rank": 427, "word": "primo", "display": "cousin"}
+{"rank": 428, "word": "credo", "display": "creed"}
+{"rank": 429, "word": "próximos", "display": "next"}
+{"rank": 430, "word": "cavalheiros", "display": "gentlemen"}
+{"rank": 431, "word": "perfeitamente", "display": "perfectly"}
+{"rank": 432, "word": "objectivo", "display": "objective"}
+{"rank": 433, "word": "partes", "display": "parts"}
+{"rank": 434, "word": "ultimamente", "display": "lately"}
+{"rank": 435, "word": "pedaço", "display": "piece"}
+{"rank": 436, "word": "assuntos", "display": "matters"}
+{"rank": 437, "word": "jardim", "display": "garden"}
+{"rank": 438, "word": "opção", "display": "option"}
+{"rank": 439, "word": "sexual", "display": "sexual"}
+{"rank": 440, "word": "reino", "display": "kingdom"}
+{"rank": 441, "word": "diante", "display": "before"}
+{"rank": 442, "word": "grave", "display": "serious"}
+{"rank": 443, "word": "aspecto", "display": "aspect"}
+{"rank": 444, "word": "membros", "display": "members"}
+{"rank": 445, "word": "lago", "display": "lake"}
+{"rank": 446, "word": "fumar", "display": "to smoke"}
+{"rank": 447, "word": "deixem", "display": "let them"}
+{"rank": 448, "word": "hipóteses", "display": "hypotheses"}
+{"rank": 449, "word": "crer", "display": "to believe"}
+{"rank": 450, "word": "ovos", "display": "eggs"}
+{"rank": 451, "word": "pequeno-almoço", "display": "breakfast"}
+{"rank": 452, "word": "presença", "display": "presence"}
+{"rank": 453, "word": "melhorar", "display": "to improve"}
+{"rank": 454, "word": "imagens", "display": "images"}
+{"rank": 455, "word": "vitória", "display": "victory"}
+{"rank": 456, "word": "pesquisa", "display": "research"}
+{"rank": 457, "word": "centenas", "display": "hundreds"}
+{"rank": 458, "word": "membro", "display": "member"}
+{"rank": 459, "word": "camisa", "display": "shirt"}
+{"rank": 460, "word": "viajar", "display": "to travel"}
+{"rank": 461, "word": "explosão", "display": "explosion"}
+{"rank": 462, "word": "presos", "display": "prisoners"}
+{"rank": 463, "word": "giro", "display": "cool"}
+{"rank": 464, "word": "útil", "display": "useful"}
+{"rank": 465, "word": "maldita", "display": "damned"}
+{"rank": 466, "word": "massa", "display": "dough"}
+{"rank": 467, "word": "tempestade", "display": "storm"}
+{"rank": 468, "word": "sofrer", "display": "to suffer"}
+{"rank": 469, "word": "fortes", "display": "strong"}
+{"rank": 470, "word": "jamais", "display": "never"}
+{"rank": 471, "word": "falso", "display": "false"}
+{"rank": 472, "word": "loucos", "display": "crazy"}
+{"rank": 473, "word": "vencer", "display": "to win"}
+{"rank": 474, "word": "neve", "display": "snow"}
+{"rank": 475, "word": "protecção", "display": "protection"}
+{"rank": 476, "word": "aviso", "display": "warning"}
+{"rank": 477, "word": "admitir", "display": "to admit"}
+{"rank": 478, "word": "negra", "display": "black"}
+{"rank": 479, "word": "deuses", "display": "gods"}
+{"rank": 480, "word": "assalto", "display": "assault"}
+{"rank": 481, "word": "alerta", "display": "alert"}
+{"rank": 482, "word": "sábado", "display": "Saturday"}
+{"rank": 483, "word": "bairro", "display": "neighborhood"}
+{"rank": 484, "word": "famílias", "display": "families"}
+{"rank": 485, "word": "completo", "display": "complete"}
+{"rank": 486, "word": "tratamento", "display": "treatment"}
+{"rank": 487, "word": "maus", "display": "bad"}
+{"rank": 488, "word": "esquadra", "display": "police station"}
+{"rank": 489, "word": "farto", "display": "fed up"}
+{"rank": 490, "word": "vazio", "display": "empty"}
+{"rank": 491, "word": "resultar", "display": "to result"}
+{"rank": 492, "word": "locais", "display": "local"}
+{"rank": 493, "word": "avançar", "display": "to advance"}
+{"rank": 494, "word": "impressões", "display": "impressions"}
+{"rank": 495, "word": "funeral", "display": "funeral"}
+{"rank": 496, "word": "bebidas", "display": "drinks"}
+{"rank": 497, "word": "ossos", "display": "bones"}
+{"rank": 498, "word": "companheiro", "display": "companion"}
+{"rank": 499, "word": "enfrentar", "display": "to face"}
+{"rank": 500, "word": "testemunhas", "display": "witnesses"}
+{"rank": 501, "word": "quieto", "display": "quiet"}
+{"rank": 502, "word": "discurso", "display": "speech"}
+{"rank": 503, "word": "liceu", "display": "high school"}
+{"rank": 504, "word": "chocolate", "display": "chocolate"}
+{"rank": 505, "word": "compras", "display": "shopping"}
+{"rank": 506, "word": "tentativa", "display": "attempt"}
+{"rank": 507, "word": "prédio", "display": "building"}
+{"rank": 508, "word": "caça", "display": "hunt"}
+{"rank": 509, "word": "saltar", "display": "to jump"}
+{"rank": 510, "word": "equipamento", "display": "equipment"}
+{"rank": 511, "word": "bolsa", "display": "bag"}
+{"rank": 512, "word": "génio", "display": "genius"}
+{"rank": 513, "word": "primeiros", "display": "first"}
+{"rank": 514, "word": "colegas", "display": "colleagues"}
+{"rank": 515, "word": "crimes", "display": "crimes"}
+{"rank": 516, "word": "explodir", "display": "to explode"}
+{"rank": 517, "word": "amar", "display": "to love"}
+{"rank": 518, "word": "erros", "display": "errors"}
+{"rank": 519, "word": "definitivamente", "display": "definitely"}
+{"rank": 520, "word": "violência", "display": "violence"}
+{"rank": 521, "word": "envolvido", "display": "involved"}
+{"rank": 522, "word": "condições", "display": "conditions"}
+{"rank": 523, "word": "relações", "display": "relations"}
+{"rank": 524, "word": "guardar", "display": "to keep"}
+{"rank": 525, "word": "desaparecido", "display": "disappeared"}
+{"rank": 526, "word": "montanha", "display": "mountain"}
+{"rank": 527, "word": "fraco", "display": "weak"}
+{"rank": 528, "word": "mensagens", "display": "messages"}
+{"rank": 529, "word": "registo", "display": "record"}
+{"rank": 530, "word": "modelo", "display": "model"}
+{"rank": 531, "word": "topo", "display": "top"}
+{"rank": 532, "word": "prémio", "display": "prize"}
+{"rank": 533, "word": "anjo", "display": "angel"}
+{"rank": 534, "word": "chuva", "display": "rain"}
+{"rank": 535, "word": "bêbado", "display": "drunk"}
+{"rank": 536, "word": "venda", "display": "sale"}
+{"rank": 537, "word": "apaixonado", "display": "in love"}
+{"rank": 538, "word": "ladrão", "display": "thief"}
+{"rank": 539, "word": "ciência", "display": "science"}
+{"rank": 540, "word": "deitar", "display": "to lie down"}
+{"rank": 541, "word": "pão", "display": "bread"}
+{"rank": 542, "word": "balas", "display": "bullets"}
+{"rank": 543, "word": "cofre", "display": "safe"}
+{"rank": 544, "word": "comunidade", "display": "community"}
+{"rank": 545, "word": "pânico", "display": "panic"}
+{"rank": 546, "word": "detalhes", "display": "details"}
+{"rank": 547, "word": "casal", "display": "couple"}
+{"rank": 548, "word": "orgulhoso", "display": "proud"}
+{"rank": 549, "word": "consciência", "display": "conscience"}
+{"rank": 550, "word": "comportamento", "display": "behavior"}
+{"rank": 551, "word": "arriscar", "display": "to risk"}
+{"rank": 552, "word": "exame", "display": "exam"}
+{"rank": 553, "word": "sarilhos", "display": "trouble"}
+{"rank": 554, "word": "autorização", "display": "authorization"}
+{"rank": 555, "word": "castelo", "display": "castle"}
+{"rank": 556, "word": "lavar", "display": "to wash"}
+{"rank": 557, "word": "disposto", "display": "willing"}
+{"rank": 558, "word": "limpa", "display": "clean"}
+{"rank": 559, "word": "zero", "display": "zero"}
+{"rank": 560, "word": "impressão", "display": "impression"}
+{"rank": 561, "word": "assustador", "display": "scary"}
+{"rank": 562, "word": "piloto", "display": "pilot"}
+{"rank": 563, "word": "princípio", "display": "principle"}
+{"rank": 564, "word": "vírus", "display": "virus"}
+{"rank": 565, "word": "passeio", "display": "stroll"}
+{"rank": 566, "word": "peças", "display": "pieces"}
+{"rank": 567, "word": "idéia", "display": "idea"}
+{"rank": 568, "word": "mundial", "display": "worldwide"}
+{"rank": 569, "word": "intenção", "display": "intention"}
+{"rank": 570, "word": "curso", "display": "course"}
+{"rank": 571, "word": "domingo", "display": "Sunday"}
+{"rank": 572, "word": "avisar", "display": "to warn"}
+{"rank": 573, "word": "golpe", "display": "blow"}
+{"rank": 574, "word": "nota", "display": "note"}
+{"rank": 575, "word": "entrevista", "display": "interview"}
+{"rank": 576, "word": "armadilha", "display": "trap"}
+{"rank": 577, "word": "marcas", "display": "marks"}
+{"rank": 578, "word": "documentos", "display": "documents"}
+{"rank": 579, "word": "recentemente", "display": "recently"}
+{"rank": 580, "word": "trabalhos", "display": "jobs"}
+{"rank": 581, "word": "entretanto", "display": "meanwhile"}
+{"rank": 582, "word": "árvores", "display": "trees"}
+{"rank": 583, "word": "queijo", "display": "cheese"}
+{"rank": 584, "word": "truque", "display": "trick"}
+{"rank": 585, "word": "roubo", "display": "theft"}
+{"rank": 586, "word": "juntar", "display": "to gather"}
+{"rank": 587, "word": "francês", "display": "French"}
+{"rank": 588, "word": "legendas", "display": "subtitles"}
+{"rank": 589, "word": "dura", "display": "hard"}
+{"rank": 590, "word": "imbecil", "display": "imbecile"}
+{"rank": 591, "word": "compreender", "display": "to understand"}
+{"rank": 592, "word": "sozinhos", "display": "alone"}
+{"rank": 593, "word": "rápida", "display": "fast"}
+{"rank": 594, "word": "honesto", "display": "honest"}
+{"rank": 595, "word": "necessidade", "display": "necessity"}
+{"rank": 596, "word": "maravilhosa", "display": "wonderful"}
+{"rank": 597, "word": "particular", "display": "particular"}
+{"rank": 598, "word": "mentiras", "display": "lies"}
+{"rank": 599, "word": "sede", "display": "thirst"}
+{"rank": 600, "word": "torre", "display": "tower"}
+{"rank": 601, "word": "artigo", "display": "article"}
+{"rank": 602, "word": "pacientes", "display": "patients"}
+{"rank": 603, "word": "palco", "display": "stage"}
+{"rank": 604, "word": "gelado", "display": "ice cream"}
+{"rank": 605, "word": "quadro", "display": "picture"}
+{"rank": 606, "word": "cem", "display": "hundred"}
+{"rank": 607, "word": "directamente", "display": "directly"}
+{"rank": 608, "word": "carga", "display": "cargo"}
+{"rank": 609, "word": "lição", "display": "lesson"}
+{"rank": 610, "word": "vigilância", "display": "vigilance"}
+{"rank": 611, "word": "fila", "display": "queue"}
+{"rank": 612, "word": "vestir", "display": "to dress"}
+{"rank": 613, "word": "claramente", "display": "clearly"}
+{"rank": 614, "word": "escondido", "display": "hidden"}
+{"rank": 615, "word": "parvo", "display": "fool"}
+{"rank": 616, "word": "humanidade", "display": "humanity"}
+{"rank": 617, "word": "superior", "display": "superior"}
+{"rank": 618, "word": "geral", "display": "general"}
+{"rank": 619, "word": "prender", "display": "to arrest"}
+{"rank": 620, "word": "ocupada", "display": "busy"}
+{"rank": 621, "word": "fantástica", "display": "fantastic"}
+{"rank": 622, "word": "piscina", "display": "pool"}
+{"rank": 623, "word": "oferecer", "display": "to offer"}
+{"rank": 624, "word": "fronteira", "display": "border"}
+{"rank": 625, "word": "óculos", "display": "glasses"}
+{"rank": 626, "word": "ensinar", "display": "to teach"}
+{"rank": 627, "word": "ferida", "display": "wound"}
+{"rank": 628, "word": "trocar", "display": "to exchange"}
+{"rank": 629, "word": "maluca", "display": "crazy"}
+{"rank": 630, "word": "inútil", "display": "useless"}
+{"rank": 631, "word": "escadas", "display": "stairs"}
+{"rank": 632, "word": "basicamente", "display": "basically"}
+{"rank": 633, "word": "garantir", "display": "to guarantee"}
+{"rank": 634, "word": "diversão", "display": "fun"}
+{"rank": 635, "word": "assinar", "display": "to sign"}
+{"rank": 636, "word": "armário", "display": "wardrobe"}
+{"rank": 637, "word": "privado", "display": "private"}
+{"rank": 638, "word": "adorar", "display": "to adore"}
+{"rank": 639, "word": "deserto", "display": "desert"}
+{"rank": 640, "word": "possibilidade", "display": "possibility"}
+{"rank": 641, "word": "incêndio", "display": "fire"}
+{"rank": 642, "word": "impressionante", "display": "impressive"}
+{"rank": 643, "word": "cumprir", "display": "to fulfill"}
+{"rank": 644, "word": "agência", "display": "agency"}
+{"rank": 645, "word": "fábrica", "display": "factory"}
+{"rank": 646, "word": "felicidade", "display": "happiness"}
+{"rank": 647, "word": "poderoso", "display": "powerful"}
+{"rank": 648, "word": "partilhar", "display": "to share"}
+{"rank": 649, "word": "localização", "display": "location"}
+{"rank": 650, "word": "regra", "display": "rule"}
+{"rank": 651, "word": "mentiroso", "display": "liar"}
+{"rank": 652, "word": "suicídio", "display": "suicide"}
+{"rank": 653, "word": "malas", "display": "suitcases"}
+{"rank": 654, "word": "corda", "display": "rope"}
+{"rank": 655, "word": "menor", "display": "lesser"}
+{"rank": 656, "word": "choque", "display": "shock"}
+{"rank": 657, "word": "especiais", "display": "special"}
+{"rank": 658, "word": "virar", "display": "to turn"}
+{"rank": 659, "word": "álcool", "display": "alcohol"}
+{"rank": 660, "word": "importância", "display": "importance"}
+{"rank": 661, "word": "fase", "display": "phase"}
+{"rank": 662, "word": "adivinhar", "display": "to guess"}
+{"rank": 663, "word": "carteira", "display": "wallet"}
+{"rank": 664, "word": "telefonar", "display": "to phone"}
+{"rank": 665, "word": "famoso", "display": "famous"}
+{"rank": 666, "word": "digitais", "display": "digital"}
+{"rank": 667, "word": "juntas", "display": "together"}
+{"rank": 668, "word": "atender", "display": "to attend"}
+{"rank": 669, "word": "dores", "display": "pains"}
+{"rank": 670, "word": "passagem", "display": "passage"}
+{"rank": 671, "word": "gordo", "display": "fat"}
+{"rank": 672, "word": "cura", "display": "cure"}
+{"rank": 673, "word": "demónio", "display": "demon"}
+{"rank": 674, "word": "revisão", "display": "revision"}
+{"rank": 675, "word": "sentar", "display": "to sit"}
+{"rank": 676, "word": "bolso", "display": "pocket"}
+{"rank": 677, "word": "suficientemente", "display": "sufficiently"}
+{"rank": 678, "word": "vermelha", "display": "red"}
+{"rank": 679, "word": "quilómetros", "display": "kilometers"}
+{"rank": 680, "word": "esquisito", "display": "strange"}
+{"rank": 681, "word": "talento", "display": "talent"}
+{"rank": 682, "word": "identidade", "display": "identity"}
+{"rank": 683, "word": "formas", "display": "shapes"}
+{"rank": 684, "word": "telhado", "display": "roof"}
+{"rank": 685, "word": "proposta", "display": "proposal"}
+{"rank": 686, "word": "campanha", "display": "campaign"}
+{"rank": 687, "word": "tiros", "display": "shots"}
+{"rank": 688, "word": "iguais", "display": "equal"}
+{"rank": 689, "word": "secreto", "display": "secret"}
+{"rank": 690, "word": "página", "display": "page"}
+{"rank": 691, "word": "ambulância", "display": "ambulance"}
+{"rank": 692, "word": "fechado", "display": "closed"}
+{"rank": 693, "word": "século", "display": "century"}
+{"rank": 694, "word": "discussão", "display": "discussion"}
+{"rank": 695, "word": "identificação", "display": "identification"}
+{"rank": 696, "word": "ferro", "display": "iron"}
+{"rank": 697, "word": "ambas", "display": "both"}
+{"rank": 698, "word": "motor", "display": "engine"}
+{"rank": 699, "word": "chateado", "display": "annoyed"}
+{"rank": 700, "word": "humor", "display": "humor"}
+{"rank": 701, "word": "assassinos", "display": "killers"}
+{"rank": 702, "word": "nojento", "display": "disgusting"}
+{"rank": 703, "word": "artista", "display": "artist"}
+{"rank": 704, "word": "bebés", "display": "babies"}
+{"rank": 705, "word": "difíceis", "display": "difficult"}
+{"rank": 706, "word": "mínimo", "display": "minimum"}
+{"rank": 707, "word": "urso", "display": "bear"}
+{"rank": 708, "word": "danos", "display": "damages"}
+{"rank": 709, "word": "terreno", "display": "terrain"}
+{"rank": 710, "word": "experimentar", "display": "to try"}
+{"rank": 711, "word": "permitir", "display": "to allow"}
+{"rank": 712, "word": "brincadeira", "display": "joke"}
+{"rank": 713, "word": "canto", "display": "corner"}
+{"rank": 714, "word": "completa", "display": "complete"}
+{"rank": 715, "word": "canal", "display": "channel"}
+{"rank": 716, "word": "certas", "display": "certain"}
+{"rank": 717, "word": "quartos", "display": "rooms"}
+{"rank": 718, "word": "atravessar", "display": "to cross"}
+{"rank": 719, "word": "bruxa", "display": "witch"}
+{"rank": 720, "word": "sinceramente", "display": "sincerely"}
+{"rank": 721, "word": "directo", "display": "direct"}
+{"rank": 722, "word": "sofá", "display": "sofa"}
+{"rank": 723, "word": "episódio", "display": "episode"}
+{"rank": 724, "word": "solo", "display": "ground"}
+{"rank": 725, "word": "perante", "display": "before"}
+{"rank": 726, "word": "irmãs", "display": "sisters"}
+{"rank": 727, "word": "festas", "display": "parties"}
+{"rank": 728, "word": "fim-de-semana", "display": "weekend"}
+{"rank": 729, "word": "professora", "display": "teacher"}
+{"rank": 730, "word": "regresso", "display": "return"}
+{"rank": 731, "word": "convidado", "display": "guest"}
+{"rank": 732, "word": "disco", "display": "record"}
+{"rank": 733, "word": "alegria", "display": "joy"}
+{"rank": 734, "word": "ilegal", "display": "illegal"}
+{"rank": 735, "word": "parado", "display": "stopped"}
+{"rank": 736, "word": "amizade", "display": "friendship"}
+{"rank": 737, "word": "governador", "display": "governor"}
+{"rank": 738, "word": "presentes", "display": "presents"}
+{"rank": 739, "word": "coma", "display": "coma"}
+{"rank": 740, "word": "permissão", "display": "permission"}
+{"rank": 741, "word": "lados", "display": "sides"}
+{"rank": 742, "word": "criminoso", "display": "criminal"}
+{"rank": 743, "word": "correio", "display": "mail"}
+{"rank": 744, "word": "gigante", "display": "giant"}
+{"rank": 745, "word": "confortável", "display": "comfortable"}
+{"rank": 746, "word": "acordado", "display": "awake"}
+{"rank": 747, "word": "carregar", "display": "to carry"}
+{"rank": 748, "word": "estragar", "display": "to spoil"}
+{"rank": 749, "word": "pesadelo", "display": "nightmare"}
+{"rank": 750, "word": "facilmente", "display": "easily"}
+{"rank": 751, "word": "defender", "display": "to defend"}
+{"rank": 752, "word": "tripulação", "display": "crew"}
+{"rank": 753, "word": "queda", "display": "fall"}
+{"rank": 754, "word": "alarme", "display": "alarm"}
+{"rank": 755, "word": "pó", "display": "dust"}
+{"rank": 756, "word": "milagre", "display": "miracle"}
+{"rank": 757, "word": "cheque", "display": "check"}
+{"rank": 758, "word": "alemães", "display": "Germans"}
+{"rank": 759, "word": "jornais", "display": "newspapers"}
+{"rank": 760, "word": "teatro", "display": "theater"}
+{"rank": 761, "word": "capacidade", "display": "capacity"}
+{"rank": 762, "word": "entrega", "display": "delivery"}
+{"rank": 763, "word": "período", "display": "period"}
+{"rank": 764, "word": "estômago", "display": "stomach"}
+{"rank": 765, "word": "provável", "display": "probable"}
+{"rank": 766, "word": "estranhos", "display": "strangers"}
+{"rank": 767, "word": "adorável", "display": "adorable"}
+{"rank": 768, "word": "acampamento", "display": "camp"}
+{"rank": 769, "word": "cela", "display": "cell"}
+{"rank": 770, "word": "americana", "display": "American"}
+{"rank": 771, "word": "moda", "display": "fashion"}
+{"rank": 772, "word": "enganar", "display": "to deceive"}
+{"rank": 773, "word": "madeira", "display": "wood"}
+{"rank": 774, "word": "garganta", "display": "throat"}
+{"rank": 775, "word": "acusação", "display": "accusation"}
+{"rank": 776, "word": "planear", "display": "to plan"}
+{"rank": 777, "word": "brancos", "display": "white"}
+{"rank": 778, "word": "ambiente", "display": "environment"}
+{"rank": 779, "word": "calmo", "display": "calm"}
+{"rank": 780, "word": "bravo", "display": "brave"}
+{"rank": 781, "word": "garagem", "display": "garage"}
+{"rank": 782, "word": "assustado", "display": "scared"}
+{"rank": 783, "word": "libertar", "display": "to free"}
+{"rank": 784, "word": "cave", "display": "basement"}
+{"rank": 785, "word": "advogados", "display": "lawyers"}
+{"rank": 786, "word": "aumentar", "display": "to increase"}
+{"rank": 787, "word": "aposta", "display": "bet"}
+{"rank": 788, "word": "reserva", "display": "reservation"}
+{"rank": 789, "word": "erva", "display": "herb"}
+{"rank": 790, "word": "retirar", "display": "to withdraw"}
+{"rank": 791, "word": "negros", "display": "black"}
+{"rank": 792, "word": "somente", "display": "only"}
+{"rank": 793, "word": "promessa", "display": "promise"}
+{"rank": 794, "word": "gasolina", "display": "gasoline"}
+{"rank": 795, "word": "versão", "display": "version"}
+{"rank": 796, "word": "sorriso", "display": "smile"}
+{"rank": 797, "word": "campeão", "display": "champion"}
+{"rank": 798, "word": "causar", "display": "to cause"}
+{"rank": 799, "word": "gentil", "display": "kind"}
+{"rank": 800, "word": "seguros", "display": "safe"}
+{"rank": 801, "word": "inverno", "display": "winter"}
+{"rank": 802, "word": "vizinhos", "display": "neighbors"}
+{"rank": 803, "word": "diário", "display": "diary"}
+{"rank": 804, "word": "divisão", "display": "division"}
+{"rank": 805, "word": "praticamente", "display": "practically"}
+{"rank": 806, "word": "júri", "display": "jury"}
+{"rank": 807, "word": "operações", "display": "operations"}
+{"rank": 808, "word": "tomates", "display": "tomatoes"}
+{"rank": 809, "word": "espelho", "display": "mirror"}
+{"rank": 810, "word": "fumo", "display": "smoke"}
+{"rank": 811, "word": "limites", "display": "limits"}
+{"rank": 812, "word": "rosa", "display": "pink"}
+{"rank": 813, "word": "dom", "display": "gift"}
+{"rank": 814, "word": "padrão", "display": "pattern"}
+{"rank": 815, "word": "acções", "display": "shares"}
+{"rank": 816, "word": "garoto", "display": "boy"}
+{"rank": 817, "word": "dúvidas", "display": "doubts"}
+{"rank": 818, "word": "revista", "display": "magazine"}
+{"rank": 819, "word": "elevador", "display": "elevator"}
+{"rank": 820, "word": "tesouro", "display": "treasure"}
+{"rank": 821, "word": "rato", "display": "mouse"}
+{"rank": 822, "word": "amante", "display": "lover"}
+{"rank": 823, "word": "vantagem", "display": "advantage"}
+{"rank": 824, "word": "obra", "display": "work"}
+{"rank": 825, "word": "cometer", "display": "to commit"}
+{"rank": 826, "word": "marinha", "display": "navy"}
+{"rank": 827, "word": "crise", "display": "crisis"}
+{"rank": 828, "word": "corrente", "display": "current"}
+{"rank": 829, "word": "pedras", "display": "stones"}
+{"rank": 830, "word": "coincidência", "display": "coincidence"}
+{"rank": 831, "word": "veneno", "display": "poison"}
+{"rank": 832, "word": "paciência", "display": "patience"}
+{"rank": 833, "word": "livres", "display": "free"}
+{"rank": 834, "word": "atitude", "display": "attitude"}
+{"rank": 835, "word": "confirmar", "display": "to confirm"}
+{"rank": 836, "word": "comprimidos", "display": "pills"}
+{"rank": 837, "word": "memórias", "display": "memories"}
+{"rank": 838, "word": "empregada", "display": "employee"}
+{"rank": 839, "word": "sexy", "display": "sexy"}
+{"rank": 840, "word": "fechada", "display": "closed"}
+{"rank": 841, "word": "combinado", "display": "deal"}
+{"rank": 842, "word": "demora", "display": "delay"}
+{"rank": 843, "word": "decisões", "display": "decisions"}
+{"rank": 844, "word": "transporte", "display": "transport"}
+{"rank": 845, "word": "bicicleta", "display": "bicycle"}
+{"rank": 846, "word": "alternativa", "display": "alternative"}
+{"rank": 847, "word": "vidro", "display": "glass"}
+{"rank": 848, "word": "selvagem", "display": "wild"}
+{"rank": 849, "word": "limite", "display": "limit"}
+{"rank": 850, "word": "sitio", "display": "place"}
+{"rank": 851, "word": "saudável", "display": "healthy"}
+{"rank": 852, "word": "atirador", "display": "shooter"}
+{"rank": 853, "word": "macaco", "display": "monkey"}
+{"rank": 854, "word": "convencer", "display": "to convince"}
+{"rank": 855, "word": "quantidade", "display": "quantity"}
+{"rank": 856, "word": "educação", "display": "education"}
+{"rank": 857, "word": "judeus", "display": "Jews"}
+{"rank": 858, "word": "tropas", "display": "troops"}
+{"rank": 859, "word": "repetir", "display": "to repeat"}
+{"rank": 860, "word": "apostar", "display": "to bet"}
+{"rank": 861, "word": "conto", "display": "tale"}
+{"rank": 862, "word": "turno", "display": "shift"}
+{"rank": 863, "word": "pensamentos", "display": "thoughts"}
+{"rank": 864, "word": "criatura", "display": "creature"}
+{"rank": 865, "word": "confuso", "display": "confused"}
+{"rank": 866, "word": "medida", "display": "measure"}
+{"rank": 867, "word": "cozinhar", "display": "to cook"}
+{"rank": 868, "word": "joelhos", "display": "knees"}
+{"rank": 869, "word": "nação", "display": "nation"}
+{"rank": 870, "word": "sofrimento", "display": "suffering"}
+{"rank": 871, "word": "calado", "display": "silent"}
+{"rank": 872, "word": "medicina", "display": "medicine"}
+{"rank": 873, "word": "paredes", "display": "walls"}
+{"rank": 874, "word": "biblioteca", "display": "library"}
+{"rank": 875, "word": "armazém", "display": "warehouse"}
+{"rank": 876, "word": "cavalheiro", "display": "gentleman"}
+{"rank": 877, "word": "atraso", "display": "delay"}
+{"rank": 878, "word": "divórcio", "display": "divorce"}
+{"rank": 879, "word": "helicóptero", "display": "helicopter"}
+{"rank": 880, "word": "fortuna", "display": "fortune"}
+{"rank": 881, "word": "simpática", "display": "nice"}
+{"rank": 882, "word": "estudo", "display": "study"}
+{"rank": 883, "word": "papéis", "display": "papers"}
+{"rank": 884, "word": "território", "display": "territory"}
+{"rank": 885, "word": "escuridão", "display": "darkness"}
+{"rank": 886, "word": "maneiras", "display": "manners"}
+{"rank": 887, "word": "vaca", "display": "cow"}
+{"rank": 888, "word": "sombra", "display": "shadow"}
+{"rank": 889, "word": "nadar", "display": "to swim"}
+{"rank": 890, "word": "toques", "display": "touches"}
+{"rank": 891, "word": "pobres", "display": "poor"}
+{"rank": 892, "word": "bombas", "display": "bombs"}
+{"rank": 893, "word": "motivos", "display": "motives"}
+{"rank": 894, "word": "cadáver", "display": "corpse"}
+{"rank": 895, "word": "falha", "display": "failure"}
+{"rank": 896, "word": "traseiras", "display": "rear"}
+{"rank": 897, "word": "passos", "display": "steps"}
+{"rank": 898, "word": "cópia", "display": "copy"}
+{"rank": 899, "word": "inteligência", "display": "intelligence"}
+{"rank": 900, "word": "mel", "display": "honey"}
+{"rank": 901, "word": "prisioneiros", "display": "prisoners"}
+{"rank": 902, "word": "queixa", "display": "complaint"}
+{"rank": 903, "word": "leis", "display": "laws"}
+{"rank": 904, "word": "jogador", "display": "player"}
+{"rank": 905, "word": "botão", "display": "button"}
+{"rank": 906, "word": "batatas", "display": "potatoes"}
+{"rank": 907, "word": "nascer", "display": "to be born"}
+{"rank": 908, "word": "explicação", "display": "explanation"}
+{"rank": 909, "word": "ministro", "display": "minister"}
+{"rank": 910, "word": "alcance", "display": "reach"}
+{"rank": 911, "word": "doces", "display": "sweets"}
+{"rank": 912, "word": "almoçar", "display": "to have lunch"}
+{"rank": 913, "word": "linhas", "display": "lines"}
+{"rank": 914, "word": "autoridade", "display": "authority"}
+{"rank": 915, "word": "reputação", "display": "reputation"}
+{"rank": 916, "word": "esforço", "display": "effort"}
+{"rank": 917, "word": "sono", "display": "sleepiness"}
+{"rank": 918, "word": "oceano", "display": "ocean"}
+{"rank": 919, "word": "assumir", "display": "to assume"}
+{"rank": 920, "word": "fita", "display": "tape"}
+{"rank": 921, "word": "estúdio", "display": "studio"}
+{"rank": 922, "word": "treinar", "display": "to train"}
+{"rank": 923, "word": "compra", "display": "purchase"}
+{"rank": 924, "word": "motorista", "display": "driver"}
+{"rank": 925, "word": "areia", "display": "sand"}
+{"rank": 926, "word": "tolo", "display": "fool"}
+{"rank": 927, "word": "fundos", "display": "funds"}
+{"rank": 928, "word": "alunos", "display": "students"}
+{"rank": 929, "word": "medicamentos", "display": "medications"}
+{"rank": 930, "word": "devolver", "display": "to return"}
+{"rank": 931, "word": "desafio", "display": "challenge"}
+{"rank": 932, "word": "sangrar", "display": "to bleed"}
+{"rank": 933, "word": "factos", "display": "facts"}
+{"rank": 934, "word": "ciúmes", "display": "jealousy"}
+{"rank": 935, "word": "recursos", "display": "resources"}
+{"rank": 936, "word": "clínica", "display": "clinic"}
+{"rank": 937, "word": "segurar", "display": "to hold"}
+{"rank": 938, "word": "fã", "display": "fan"}
+{"rank": 939, "word": "sós", "display": "alone"}
+{"rank": 940, "word": "superfície", "display": "surface"}
+{"rank": 941, "word": "sessão", "display": "session"}
+{"rank": 942, "word": "ponta", "display": "tip"}
+{"rank": 943, "word": "paixão", "display": "passion"}
+{"rank": 944, "word": "capazes", "display": "capable"}
+{"rank": 945, "word": "alimentar", "display": "to feed"}
+{"rank": 946, "word": "ganho", "display": "gain"}
+{"rank": 947, "word": "empregado", "display": "employee"}
+{"rank": 948, "word": "alemão", "display": "German"}
+{"rank": 949, "word": "mortes", "display": "deaths"}
+{"rank": 950, "word": "estacionamento", "display": "parking"}
+{"rank": 951, "word": "jogada", "display": "move"}
+{"rank": 952, "word": "organização", "display": "organization"}
+{"rank": 953, "word": "açúcar", "display": "sugar"}
+{"rank": 954, "word": "mamas", "display": "breasts"}
+{"rank": 955, "word": "marcar", "display": "to mark"}
+{"rank": 956, "word": "lobo", "display": "wolf"}
+{"rank": 957, "word": "pássaro", "display": "bird"}
+{"rank": 958, "word": "caixas", "display": "boxes"}
+{"rank": 959, "word": "máscara", "display": "mask"}
+{"rank": 960, "word": "meia-noite", "display": "midnight"}
+{"rank": 961, "word": "senhorita", "display": "miss"}
+{"rank": 962, "word": "despedida", "display": "farewell"}
+{"rank": 963, "word": "prostituta", "display": "prostitute"}
+{"rank": 964, "word": "caçar", "display": "to hunt"}
+{"rank": 965, "word": "abandonar", "display": "to abandon"}
+{"rank": 966, "word": "interromper", "display": "to interrupt"}
+{"rank": 967, "word": "terras", "display": "lands"}
+{"rank": 968, "word": "preparada", "display": "prepared"}
+{"rank": 969, "word": "champanhe", "display": "champagne"}
+{"rank": 970, "word": "extremamente", "display": "extremely"}
+{"rank": 971, "word": "opções", "display": "options"}
+{"rank": 972, "word": "cabeças", "display": "heads"}
+{"rank": 973, "word": "russo", "display": "Russian"}
+{"rank": 974, "word": "inacreditável", "display": "unbelievable"}
+{"rank": 975, "word": "doentes", "display": "sick"}
+{"rank": 976, "word": "esquecido", "display": "forgotten"}
+{"rank": 977, "word": "sobretudo", "display": "above all"}
+{"rank": 978, "word": "inocentes", "display": "innocent"}
+{"rank": 979, "word": "máquinas", "display": "machines"}
+{"rank": 980, "word": "dívida", "display": "debt"}
+{"rank": 981, "word": "mistério", "display": "mystery"}
+{"rank": 982, "word": "portão", "display": "gate"}
