@@ -12,14 +12,15 @@
  * start-handler.js reads the active button and passes `mode` here.
  */
 
-import { getFallbackEmoji, getFallbackSvgUrl } from '../data/visual-map.ts';
+import { getFallbackEmoji, getFallbackSvgUrl, getFallbackImageUrl } from '../data/visual-map.ts';
 import { attachTooltips    } from '../utils/word-tooltip.ts';
 import type { Word }        from '../types.ts';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface WordWithVisual extends Word {
-  _emoji: string | null;
+  _emoji:    string | null;
+  _imageUrl: string | null;  // local Wikipedia photo — highest priority
 }
 
 interface CardEntry {
@@ -32,7 +33,7 @@ interface RenderPictureModeOptions {
   words:     Word[];
   container: HTMLElement;
   lang?:     string;
-  mode?:     'type' | 'click';
+  mode?:     'type' | 'flashcard' | 'click';
 }
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
@@ -56,17 +57,133 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function buildVisual(word: WordWithVisual): HTMLElement {
-  if (word.svg_url) {
-    const img = document.createElement('img');
-    img.src = word.svg_url;
-    img.alt = '?';
-    return img;
+// Returns all available visuals for a word, in priority order:
+// local photo → SVG → DB emoji → visual-map emoji (deduped)
+type VisualBuilder = () => HTMLElement;
+
+function buildAllVisuals(word: WordWithVisual): VisualBuilder[] {
+  const builders: VisualBuilder[] = [];
+
+  if (word._imageUrl) {
+    const src = word._imageUrl;
+    builders.push(() => {
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = '';  // never reveal the answer via alt text
+      img.className = 'picture-card-photo';
+      return img;
+    });
   }
-  const span = document.createElement('span');
-  span.className   = 'picture-card-emoji';
-  span.textContent = word._emoji ?? '';
-  return span;
+
+  if (word.svg_url) {
+    const src = word.svg_url;
+    builders.push(() => {
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = '';  // never reveal the answer via alt text
+      return img;
+    });
+  }
+
+  // Emojis — deduplicated (DB emoji first, then visual-map fallback)
+  const seen = new Set<string>();
+  for (const e of [word.emoji, word._emoji]) {
+    if (e && !seen.has(e)) {
+      seen.add(e);
+      const char = e;
+      builders.push(() => {
+        const span = document.createElement('span');
+        span.className   = 'picture-card-emoji';
+        span.textContent = char;
+        return span;
+      });
+    }
+  }
+
+  return builders;
+}
+
+// Mounts a visual cycler into imgWrap.
+// If only one visual: renders it directly with no arrows.
+// If multiple: renders left/right arrows to cycle through them.
+// Images that fail to load auto-advance to the next visual.
+function mountVisualCycler(imgWrap: HTMLElement, builders: VisualBuilder[]): void {
+  if (builders.length === 0) return;
+
+  if (builders.length === 1) {
+    const el = builders[0]();
+    if (el instanceof HTMLImageElement) {
+      el.onerror = () => { el.style.display = 'none'; };
+    }
+    imgWrap.appendChild(el);
+    return;
+  }
+
+  let idx = 0;
+  let errorCount = 0;  // guard against infinite loop if all images fail
+
+  const inner = document.createElement('div');
+  inner.className = 'vc-inner';
+
+  const prevBtn = document.createElement('button');
+  prevBtn.className = 'vc-arrow vc-prev';
+  prevBtn.innerHTML = '&#8592;';
+  prevBtn.setAttribute('aria-label', 'Previous image');
+  prevBtn.type = 'button';
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'vc-arrow vc-next';
+  nextBtn.innerHTML = '&#8594;';
+  nextBtn.setAttribute('aria-label', 'Next image');
+  nextBtn.type = 'button';
+
+  const visualEl = document.createElement('div');
+  visualEl.className = 'vc-visual';
+
+  const dotsEl = document.createElement('div');
+  dotsEl.className = 'vc-dots';
+  for (let i = 0; i < builders.length; i++) {
+    const dot = document.createElement('span');
+    dot.className = 'vc-dot';
+    dotsEl.appendChild(dot);
+  }
+
+  function render(): void {
+    visualEl.innerHTML = '';
+    const el = builders[idx]();
+    // If an image fails to load, skip to the next visual automatically
+    if (el instanceof HTMLImageElement) {
+      el.onerror = () => {
+        if (errorCount++ < builders.length) {
+          idx = (idx + 1) % builders.length;
+          render();
+        }
+      };
+    } else {
+      errorCount = 0; // reset once we hit a non-image (emoji) that can't fail
+    }
+    visualEl.appendChild(el);
+    dotsEl.querySelectorAll<HTMLSpanElement>('.vc-dot').forEach((d, i) => {
+      d.classList.toggle('vc-dot-active', i === idx);
+    });
+  }
+
+  prevBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    errorCount = 0;
+    idx = (idx - 1 + builders.length) % builders.length;
+    render();
+  });
+  nextBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    errorCount = 0;
+    idx = (idx + 1) % builders.length;
+    render();
+  });
+
+  inner.append(prevBtn, visualEl, nextBtn);
+  imgWrap.append(inner, dotsEl);
+  render();
 }
 
 // ── Style injection (runs once) ────────────────────────────────────────────────
@@ -264,7 +381,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
 
     const imgWrap = document.createElement('div');
     imgWrap.className = 'picture-card-img';
-    imgWrap.appendChild(buildVisual(word));
+    mountVisualCycler(imgWrap, buildAllVisuals(word));
 
     const inp = document.createElement('input');
     inp.type        = 'text';
@@ -333,6 +450,177 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
       showPictureSummary(correct, cards.length);
     }
   }
+}
+
+// ── Flashcard (carousel) mode ──────────────────────────────────────────────────
+
+function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTMLElement): void {
+  container.innerHTML = '';
+  clearPictureSummary();
+
+  if (wordsWithVisuals.length === 0) {
+    container.innerHTML = `
+      <div class="picture-empty">
+        <p>📷 No pictures available for the current word set.</p>
+        <p>Try selecting a different language or expanding the word count.</p>
+      </div>`;
+    return;
+  }
+
+  const words  = wordsWithVisuals;
+  let   idx    = 0;
+  const states = words.map(() => ({ correct: false, revealed: false, value: '' }));
+
+  // ── Outer wrap ──────────────────────────────────────────────────────────────
+  const wrap = document.createElement('div');
+  wrap.className = 'fc-wrap';
+
+  // ── Top controls bar ────────────────────────────────────────────────────────
+  const bar = document.createElement('div');
+  bar.className = 'fc-bar';
+
+  const giveUpBtn = document.createElement('button');
+  giveUpBtn.className   = 'picture-give-up-btn';
+  giveUpBtn.textContent = 'Give Up';
+
+  const counter = document.createElement('span');
+  counter.className = 'fc-counter';
+
+  bar.append(giveUpBtn, counter);
+
+  // ── Card row: prev arrow + card + next arrow ─────────────────────────────
+  const row = document.createElement('div');
+  row.className = 'fc-row';
+
+  const prevBtn = document.createElement('button');
+  prevBtn.className   = 'fc-arrow fc-prev';
+  prevBtn.innerHTML   = '&#8592;';
+  prevBtn.setAttribute('aria-label', 'Previous');
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className   = 'fc-arrow fc-next';
+  nextBtn.innerHTML   = '&#8594;';
+  nextBtn.setAttribute('aria-label', 'Next');
+
+  const cardWrap = document.createElement('div');
+  cardWrap.className = 'fc-card-wrap';
+
+  row.append(prevBtn, cardWrap, nextBtn);
+
+  // ── Input ────────────────────────────────────────────────────────────────
+  const inputWrap = document.createElement('div');
+  inputWrap.className = 'fc-input-wrap';
+
+  const inp = document.createElement('input');
+  inp.type        = 'text';
+  inp.className   = 'picture-card-input fc-input';
+  inp.placeholder = '…';
+  inp.setAttribute('autocomplete', 'off');
+  inp.setAttribute('spellcheck',   'false');
+
+  inputWrap.appendChild(inp);
+
+  wrap.append(bar, row, inputWrap);
+  container.appendChild(wrap);
+
+  // ── Render helpers ────────────────────────────────────────────────────────
+  function renderCurrent(): void {
+    const word  = words[idx];
+    const state = states[idx];
+
+    // Counter
+    counter.textContent = `${idx + 1} / ${words.length}`;
+
+    // Arrows: always enabled (wrap-around)
+    prevBtn.disabled = false;
+    nextBtn.disabled = false;
+
+    // Card visual
+    cardWrap.innerHTML = '';
+    const card = document.createElement('div');
+    card.className = 'fc-card';
+    if (state.correct)  card.classList.add('correct');
+    if (state.revealed) card.classList.add('revealed');
+
+    const imgWrap = document.createElement('div');
+    imgWrap.className = 'picture-card-img';
+    mountVisualCycler(imgWrap, buildAllVisuals(word));
+    card.appendChild(imgWrap);
+    cardWrap.appendChild(card);
+
+    // Input state
+    inp.value    = state.value;
+    inp.disabled = state.correct || state.revealed;
+    inp.className = 'picture-card-input fc-input' +
+      (state.correct  ? ' correct'  : '') +
+      (state.revealed ? ' revealed' : '');
+    inp.dataset.word = word.word;
+
+    updateProgress();
+
+    if (!inp.disabled) inp.focus();
+  }
+
+  function updateProgress(): void {
+    const correct = states.filter(s => s.correct).length;
+    setProgress(correct, words.length);
+    const allDone = states.every(s => s.correct || s.revealed);
+    giveUpBtn.disabled = allDone;
+    if (allDone) showPictureSummary(correct, words.length);
+  }
+
+  // ── Events ────────────────────────────────────────────────────────────────
+  inp.addEventListener('input', () => {
+    const word  = words[idx];
+    const state = states[idx];
+    if (state.correct || state.revealed) return;
+    state.value = inp.value;
+    if (wordIsCorrect(inp.value, word)) {
+      state.correct = true;
+      state.value   = word.word;
+      renderCurrent();
+      // Auto-advance to next unanswered after a short delay
+      const nextUnanswered = (() => {
+        for (let i = 1; i <= words.length; i++) {
+          const ni = (idx + i) % words.length;
+          if (!states[ni].correct && !states[ni].revealed) return ni;
+        }
+        return -1;
+      })();
+      if (nextUnanswered !== -1) {
+        setTimeout(() => { idx = nextUnanswered; renderCurrent(); }, 600);
+      }
+    }
+  });
+
+  prevBtn.addEventListener('click', () => {
+    idx = (idx - 1 + words.length) % words.length;
+    renderCurrent();
+  });
+
+  nextBtn.addEventListener('click', () => {
+    idx = (idx + 1) % words.length;
+    renderCurrent();
+  });
+
+  // Keyboard arrow support
+  document.addEventListener('keydown', onKey);
+  function onKey(e: KeyboardEvent): void {
+    if (!container.isConnected) { document.removeEventListener('keydown', onKey); return; }
+    if (e.target === inp) return; // don't hijack while typing
+    if (e.key === 'ArrowLeft')  { prevBtn.click(); e.preventDefault(); }
+    if (e.key === 'ArrowRight') { nextBtn.click(); e.preventDefault(); }
+  }
+
+  giveUpBtn.addEventListener('click', () => {
+    states.forEach((s, i) => {
+      if (!s.correct) { s.revealed = true; s.value = words[i].word; }
+    });
+    states[idx].value = words[idx].word;
+    renderCurrent();
+  });
+
+  renderCurrent();
 }
 
 // ── Click-the-picture mode ─────────────────────────────────────────────────────
@@ -421,7 +709,10 @@ function renderClickMode(
       const card = document.createElement('div');
       card.className    = 'pm-click-card';
       card.dataset.word = opt.word;
-      card.appendChild(buildVisual(opt));
+      const clickImgWrap = document.createElement('div');
+      clickImgWrap.className = 'picture-card-img';
+      mountVisualCycler(clickImgWrap, buildAllVisuals(opt));
+      card.appendChild(clickImgWrap);
 
       card.addEventListener('click', () => {
         if (answered) return;
@@ -497,14 +788,14 @@ export function renderPictureMode({
   const wordsWithVisuals: WordWithVisual[] = words
     .map(w => ({
       ...w,
-      // svg_url: server concept map (canonical shared) → per-language file → null
+      // 1. Local Wikipedia photo (highest quality)
+      _imageUrl: getFallbackImageUrl(lang, w.word),
+      // 2. SVG: server concept map → openmoji local/CDN fallback
       svg_url: w.svg_url || getFallbackSvgUrl(lang, w.word) || undefined,
-      // _emoji: visual-map only — DB emoji (w.emoji) is excluded intentionally.
-      // The visual-map is the curated source for picture mode; DB emojis were
-      // bulk-seeded and include abstract words that shouldn't appear here.
+      // 3. Emoji fallback (visual-map curated only — not DB emojis)
       _emoji: getFallbackEmoji(lang, w.word),
     }))
-    .filter((w): w is WordWithVisual => !!(w.svg_url || w._emoji));
+    .filter((w): w is WordWithVisual => !!(w._imageUrl || w.svg_url || w._emoji));
 
   if (mode === 'click') {
     function playAgain(): void {
@@ -513,6 +804,8 @@ export function renderPictureMode({
       renderClickMode(wordsWithVisuals, container, playAgain);
     }
     renderClickMode(wordsWithVisuals, container, playAgain);
+  } else if (mode === 'flashcard') {
+    renderFlashcardMode(wordsWithVisuals, container);
   } else {
     renderTypeMode(wordsWithVisuals, container);
   }

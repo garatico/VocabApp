@@ -9,16 +9,26 @@
  */
 
 export interface WordLinguistic {
-  infinitive:      string | null;
-  reflexive:       boolean;
-  gender:          string | null;
-  plural:          string | null;
-  register:        string | null;
-  ipa:             string | null;
-  syllables:       string[] | null;
-  /** Keyed by tense name (e.g. "present"), value is array of 6 conjugated forms.
-   *  Also contains "past_participle" and "gerund" as string values for verbs. */
-  conjugations:    Record<string, string[] | string> | null;
+  infinitive:          string | null;
+  reflexive:           boolean;
+  gender:              string | null;
+  plural:              string | null;
+  register:            string | null;
+  ipa:                 string | null;
+  syllables:           string[] | null;
+  /**
+   * Fully-resolved conjugation table, keyed by tense name.
+   * Generated server-side from conjugation_class + overrides when available,
+   * otherwise from the stored JSON. Arrays are 6-element [yo,tú,él,nos,vos,ellos].
+   * "past_participle" and "gerund" are string values.
+   */
+  conjugations:        Record<string, string[] | string> | null;
+  /**
+   * Rule class used to generate this verb's conjugations.
+   * e.g. "regular-ar", "stem-e-ie", "irregular-tener".
+   * Only present on verb entries; absent for non-verbs.
+   */
+  conjugation_class?:  string | null;
 }
 
 export interface WordFrequency {

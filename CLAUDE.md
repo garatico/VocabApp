@@ -75,6 +75,14 @@ VocabApp/
 │   │       ├── db.js            # createTestDb() — in-memory SQLite seed
 │   │       └── sqlite-shim.js   # better-sqlite3 API shim using sql.js WASM
 │   └── vitest.config.js         # aliases better-sqlite3 → sqlite-shim in tests
+│   └── scripts/
+│       └── data/
+│           ├── verb_rules.py        # Python conjugation engine (mirrors verb-rules.js)
+│           ├── sync_db.py           # curated JSONL → vocabulary.db
+│           ├── corpus_to_curated.py # corpus words → curated JSONL
+│           ├── corpus_builder.py    # spaCy corpus extraction helpers
+│           ├── lang_config.py       # shared language codes / tense maps
+│           └── review_glosses.py    # gloss cache review helper
 └── data/
     └── vocabulary.db            # Production SQLite DB (never touched by tests)
 ```

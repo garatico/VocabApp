@@ -10,9 +10,11 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // Forward all API calls and SVG requests to Express
-      '/api':  { target: 'http://localhost:3000', changeOrigin: true },
-      '/svgs': { target: 'http://localhost:3000', changeOrigin: true },
+      // Forward all API calls and static asset requests to Express
+      '/api':    { target: 'http://localhost:3000', changeOrigin: true },
+      '/svgs':   { target: 'http://localhost:3000', changeOrigin: true },
+      '/images': { target: 'http://localhost:3000', changeOrigin: true },
+      '/emoji':  { target: 'http://localhost:3000', changeOrigin: true },
     },
   },
 

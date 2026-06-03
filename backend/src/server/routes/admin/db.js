@@ -4,11 +4,12 @@
  * Database management:
  *   GET  /stats        — per-language word counts and coverage
  *   GET  /meta         — available POS values, domains, CEFR bands
- *   POST /cache/clear  — invalidate the vocab cache
+ *   POST /cache/clear  — invalidate the in-memory vocab cache (keeps DB connection open)
+ *   POST /db/reload    — close + reopen DB from disk; use after replacing vocabulary.db
  */
 
-import { Router }            from 'express';
-import { getDb, clearCache } from '../../lib/vocab-loader.js';
+import { Router }                      from 'express';
+import { getDb, clearCache, reloadDb } from '../../lib/vocab-loader.js';
 
 const router = Router();
 
@@ -69,7 +70,7 @@ router.get('/meta', (req, res) => {
   }
 });
 
-// POST /cache/clear
+// POST /cache/clear — clears in-memory vocab cache only; DB connection stays open
 router.post('/cache/clear', (req, res) => {
   try {
     const lang = req.body?.lang || null;
@@ -77,6 +78,18 @@ router.post('/cache/clear', (req, res) => {
     const msg = lang ? `Cache cleared for ${lang}` : 'All language caches cleared';
     console.log('[admin]', msg);
     res.json({ success: true, message: msg });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /db/reload — closes and reopens the DB connection from disk.
+// Call this after replacing vocabulary.db (e.g. after running sync_db.py).
+router.post('/db/reload', (req, res) => {
+  try {
+    reloadDb();
+    console.log('[admin] DB connection reset — will reopen on next request');
+    res.json({ success: true, message: 'DB connection reset. Cache cleared. Next request will reopen vocabulary.db from disk.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -13,6 +13,7 @@ import Database from 'better-sqlite3';
 import path     from 'path';
 import { fileURLToPath } from 'url';
 import { getSvgUrl } from './svg-loader.js';
+import { conjugate } from './verb-rules.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -26,6 +27,47 @@ const vocabCache = new Map();
 
 const SUPPORTED_LANGUAGES = ['spanish', 'portuguese', 'italian', 'french'];
 
+// Running count of JSON parse failures since process start — surfaced in getDbInfo()
+let parseErrorCount = 0;
+
+/**
+ * Parse a JSON column value, logging a warning on failure instead of swallowing it.
+ * @param {string|null} raw   - raw DB value
+ * @param {string}      word  - word being loaded (for log context)
+ * @param {string}      field - column name (for log context)
+ * @param {*}           fallback - value to return on failure (default: null)
+ */
+function parseJsonField(raw, word, field, fallback = null) {
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    console.warn(
+      `vocab-loader: JSON parse error on '${word}' field '${field}': ${err.message}` +
+      ` — raw: ${String(raw).slice(0, 120)}`
+    );
+    parseErrorCount++;
+    return fallback;
+  }
+}
+
+/** Return the set of existing column names for a table, compatible with both
+ *  better-sqlite3 and the sql.js test shim (which has a no-op pragma()). */
+function getColumns(database, table) {
+  try {
+    const result = database.pragma(`table_info(${table})`);
+    if (Array.isArray(result) && result.length > 0) {
+      return new Set(result.map(c => c.name));
+    }
+  } catch (_) {}
+  try {
+    const rows = database.prepare(`PRAGMA table_info(${table})`).all();
+    if (Array.isArray(rows) && rows.length > 0) {
+      return new Set(rows.map(r => r.name));
+    }
+  } catch (_) {}
+  return new Set();
+}
+
 // DB init
 function initializeDatabase() {
   if (db) return;
@@ -38,26 +80,22 @@ function initializeDatabase() {
     console.log('Connected to SQLite database');
 
     // Auto-migrate: add columns that may not exist yet
-    const cols = db.pragma('table_info(words)').map(c => c.name);
-    if (!cols.includes('emoji')) {
-      db.exec('ALTER TABLE words ADD COLUMN emoji TEXT');
-      console.log('  ✓ auto-migrated: added emoji column');
-    }
-    if (!cols.includes('conjugations')) {
-      db.exec('ALTER TABLE words ADD COLUMN conjugations TEXT');
-      console.log('  ✓ auto-migrated: added conjugations column');
-    }
-    if (!cols.includes('updated_at')) {
-      db.exec('ALTER TABLE words ADD COLUMN updated_at TEXT');
-      console.log('  ✓ auto-migrated: added updated_at column');
-    }
-    if (!cols.includes('past_participle')) {
-      db.exec('ALTER TABLE words ADD COLUMN past_participle TEXT');
-      console.log('  ✓ auto-migrated: added past_participle column');
-    }
-    if (!cols.includes('gerund')) {
-      db.exec('ALTER TABLE words ADD COLUMN gerund TEXT');
-      console.log('  ✓ auto-migrated: added gerund column');
+    const cols = getColumns(db, 'words');
+    const migrations = [
+      ['emoji',                 'TEXT'],
+      ['conjugations',          'TEXT'],
+      ['updated_at',            'TEXT'],
+      ['past_participle',       'TEXT'],
+      ['gerund',                'TEXT'],
+      ['conjugation_class',     'TEXT'],
+      ['future_stem',           'TEXT'],
+      ['conjugation_overrides', 'TEXT'],
+    ];
+    for (const [col, type] of migrations) {
+      if (!cols.has(col)) {
+        db.exec(`ALTER TABLE words ADD COLUMN ${col} ${type}`);
+        console.log(`  auto-migrated: added ${col} column`);
+      }
     }
   } catch (error) {
     console.error('Database connection error:', error);
@@ -110,6 +148,9 @@ export async function loadVocabFile(language) {
         w.ipa,
         w.syllables,
         w.conjugations,
+        w.conjugation_class,
+        w.future_stem,
+        w.conjugation_overrides,
         w.emoji,
         w.band,
         w.rank,
@@ -131,9 +172,27 @@ export async function loadVocabFile(language) {
 
     const rows  = stmt.all(lang);
     const words = rows.map(row => {
+      // Resolve conjugations: prefer rule-based generation, fall back to stored JSON
       let conjugations = null;
-      if (row.conjugations) {
-        try { conjugations = JSON.parse(row.conjugations); } catch (_) {}
+      if (row.conjugation_class) {
+        try {
+          const overrides = row.conjugation_overrides
+            ? parseJsonField(row.conjugation_overrides, row.word, 'conjugation_overrides', {})
+            : {};
+          conjugations = conjugate(
+            row.infinitive || row.word,
+            row.conjugation_class,
+            overrides,
+            row.future_stem || null
+          );
+        } catch (err) {
+          console.warn(`verb-rules: failed to conjugate '${row.word}' [${row.conjugation_class}]: ${err.message}`);
+          if (row.conjugations) {
+            conjugations = parseJsonField(row.conjugations, row.word, 'conjugations');
+          }
+        }
+      } else if (row.conjugations) {
+        conjugations = parseJsonField(row.conjugations, row.word, 'conjugations');
       }
 
       return {
@@ -142,27 +201,28 @@ export async function loadVocabFile(language) {
         pos:       row.pos      || null,
         difficulty:row.difficulty || null,
         notes:     row.notes    || '',
-        glosses:   row.glosses  ? (() => { try { return JSON.parse(row.glosses).filter(Boolean);  } catch (_) { return []; } })() : [],
-        examples:  row.examples ? (() => { try { return JSON.parse(row.examples).filter(Boolean); } catch (_) { return []; } })() : [],
+        glosses:   row.glosses  ? (parseJsonField(row.glosses,  row.word, 'glosses',  []) ?? []).filter(Boolean) : [],
+        examples:  row.examples ? (parseJsonField(row.examples, row.word, 'examples', []) ?? []).filter(Boolean) : [],
         svg_url:   getSvgUrl(lang, row.word),
         emoji:     row.emoji || null,
         linguistic: {
-          infinitive:      row.infinitive      || null,
-          reflexive:       Boolean(row.reflexive),
-          gender:          row.gender          || null,
-          plural:          row.plural          || null,
-          register:        row.register        || null,
-          ipa:             row.ipa             || null,
-          syllables:       row.syllables ? row.syllables.split('-') : null,
+          infinitive:        row.infinitive      || null,
+          reflexive:         Boolean(row.reflexive),
+          gender:            row.gender          || null,
+          plural:            row.plural          || null,
+          register:          row.register        || null,
+          ipa:               row.ipa             || null,
+          syllables:         row.syllables ? row.syllables.split('-') : null,
           conjugations,
+          conjugation_class: row.conjugation_class || null,
         },
         frequency: {
           band:            row.band             || null,
           rank:            row.rank             || null,
           corpus_frequency:row.corpus_frequency || null,
         },
-        domains: row.domains ? (() => { try { return JSON.parse(row.domains); } catch (_) { return []; } })() : [],
-        tags:    row.tags    ? (() => { try { return JSON.parse(row.tags).filter(Boolean);    } catch (_) { return []; } })() : [],
+        domains: row.domains ? (parseJsonField(row.domains, row.word, 'domains', []) ?? []) : [],
+        tags:    row.tags    ? (parseJsonField(row.tags,    row.word, 'tags',    []) ?? []).filter(Boolean) : [],
       };
     });
 
@@ -189,17 +249,21 @@ export async function loadVocabFile(language) {
   }
 }
 
-/** Clear cache for one language, or all languages if lang is null/'all'.
- *  When clearing all languages, also closes and reopens the DB connection
- *  so that a replaced vocabulary.db file is picked up immediately. */
+/** Clear the in-memory vocabulary cache for one language, or all if lang is null/'all'.
+ *  Does NOT touch the DB connection — use reloadDb() when the DB file has been replaced. */
 export function clearCache(language = null) {
   if (!language || language === 'all') {
     vocabCache.clear();
-    // Close DB so the next query reopens it — picks up any replaced DB file.
-    if (db) { try { db.close(); } catch (_) {} db = null; }
   } else {
     vocabCache.delete(language.toLowerCase());
   }
+}
+
+/** Close and null the DB connection so the next request reopens the file from disk.
+ *  Call this (in addition to clearCache()) after replacing vocabulary.db on disk. */
+export function reloadDb() {
+  vocabCache.clear();
+  if (db) { try { db.close(); } catch (_) {} db = null; }
 }
 
 /** Return connection status and per-language cache info. */
@@ -210,6 +274,7 @@ export function getDbInfo() {
     status: 'connected',
     source: 'sqlite',
     cachedLanguages: vocabCache.size,
+    parseErrors: parseErrorCount,  // non-zero means corrupt DB rows — check server logs
     languages: [],
   };
 
@@ -244,20 +309,11 @@ export async function preloadAll() {
   return results;
 }
 
-/**
- * Returns the initialized DB connection, initializing it if needed.
- * Intended for use by admin routes that need direct DB access.
- */
 export function getDb() {
   if (!db) initializeDatabase();
   return db;
 }
 
-/**
- * Inject an already-open DB instance (used by tests to supply an in-memory DB).
- * Clears the vocab cache so subsequent loadVocabFile() calls read from the
- * injected DB rather than returning stale cache entries.
- */
 export function setDb(testDb) {
   db = testDb;
   vocabCache.clear();
@@ -267,4 +323,4 @@ export function closeDatabase() {
   if (db) { db.close(); db = null; }
 }
 
-export default { loadVocabFile, clearCache, getDbInfo, getDb, setDb, preloadAll, closeDatabase };
+export default { loadVocabFile, clearCache, reloadDb, getDbInfo, getDb, setDb, preloadAll, closeDatabase };

@@ -71,7 +71,10 @@ async function loadVerbs() {
     if (query) params.set('search', query);
 
     const data = await apiCall(`/words?${params}`);
-    const words = data.words ?? data;
+    // Exclude single-form / function verbs (e.g. hay) — not meaningful to conjugate
+    const words = (data.words ?? data).filter(
+      w => !w.tags?.includes('function_word') && w.conjugation_class !== 'irregular-hay'
+    );
 
     conjVerbCount.textContent = words.length;
 
