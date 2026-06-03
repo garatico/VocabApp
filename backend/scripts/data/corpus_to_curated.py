@@ -177,14 +177,17 @@ def build_curated_entry(
     band     = rank_to_band(curated_rank)
     diff     = rank_to_difficulty(curated_rank)
 
-    # Build conjugations placeholder for verbs
-    conjugations = None
+    # Infer a default conjugation class from the infinitive ending.
+    # Spanish verbs will be flagged needs_review=True so a human can correct it.
+    conj_class = None
     if pos == 'verb':
-        conjugations = {
-            'present': None, 'preterite': None, 'imperfect': None,
-            'future': None, 'conditional': None, 'subjunctive': None,
-            'imperative': None,
-        }
+        inf = infinitive or word
+        if inf.endswith('ar'):
+            conj_class = 'regular-ar'
+        elif inf.endswith('er'):
+            conj_class = 'regular-er'
+        elif inf.endswith('ir') or inf.endswith('ír'):
+            conj_class = 'regular-ir'
 
     return {
         'rank':       curated_rank,
@@ -197,15 +200,16 @@ def build_curated_entry(
         'glosses':    glosses,
         'examples':   [],
         'linguistic': {
-            'infinitive':   infinitive or (word if pos == 'verb' else None),
-            'reflexive':    None,
-            'gender':       gender,
-            'plural':       None,
-            'register':     'neutral',
-            'ipa':          '',
-            'syllables':    [],
-            'conjugations': conjugations,
-            'irregular':    False,
+            'infinitive':        infinitive or (word if pos == 'verb' else None),
+            'reflexive':         None,
+            'gender':            gender,
+            'plural':            None,
+            'register':          'neutral',
+            'ipa':               '',
+            'syllables':         [],
+            'conjugation_class': conj_class,
+            'overrides':         {},
+            'irregular':         False,
         },
         'relations': {
             'commonly_confused_with': [],

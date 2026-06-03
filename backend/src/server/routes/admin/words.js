@@ -51,6 +51,8 @@ function formatWord(row, lang = 'spanish') {
       corpus_frequency: row.corpus_frequency || null,
     },
     domains,
+    tags:           row.tags_raw ? row.tags_raw.split('|||').filter(Boolean) : [],
+    conjugation_class: row.conjugation_class || null,
   };
 }
 
@@ -62,7 +64,10 @@ const WORD_SELECT = `
     ) AS glosses_raw,
     (SELECT GROUP_CONCAT(example, '|||')
        FROM (SELECT example FROM word_examples WHERE word_id = w.id ORDER BY rowid)
-    ) AS examples_raw
+    ) AS examples_raw,
+    (SELECT GROUP_CONCAT(tag, '|||')
+       FROM (SELECT tag FROM word_tags WHERE word_id = w.id ORDER BY rowid)
+    ) AS tags_raw
   FROM words w
 `;
 

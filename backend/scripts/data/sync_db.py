@@ -22,12 +22,99 @@ import json
 import shutil
 import sqlite3
 import sys
-import tempfile
 import warnings
 from pathlib import Path
 from typing import Dict, List, Optional
 
 warnings.filterwarnings("ignore")
+
+# ── Schema ─────────────────────────────────────────────────────────────────────
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS words (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    word                  TEXT    NOT NULL,
+    display               TEXT,
+    language              TEXT    NOT NULL,
+    pos                   TEXT,
+    difficulty            TEXT,
+    notes                 TEXT,
+    infinitive            TEXT,
+    reflexive             INTEGER DEFAULT 0,
+    gender                TEXT,
+    plural                TEXT,
+    register              TEXT,
+    ipa                   TEXT,
+    syllables             TEXT,
+    conjugations          TEXT,
+    emoji                 TEXT,
+    band                  TEXT,
+    rank                  INTEGER,
+    corpus_frequency      REAL,
+    domains               TEXT,
+    past_participle       TEXT,
+    gerund                TEXT,
+    conjugation_class     TEXT,
+    future_stem           TEXT,
+    conjugation_overrides TEXT,
+    updated_at            TEXT    DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(word, language)
+);
+CREATE TABLE IF NOT EXISTS word_glosses (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    word_id  INTEGER NOT NULL REFERENCES words(id) ON DELETE CASCADE,
+    gloss    TEXT    NOT NULL,
+    position INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS word_examples (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    word_id  INTEGER NOT NULL REFERENCES words(id) ON DELETE CASCADE,
+    example  TEXT    NOT NULL,
+    position INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS word_tags (
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    word_id INTEGER NOT NULL REFERENCES words(id) ON DELETE CASCADE,
+    tag     TEXT    NOT NULL,
+    UNIQUE(word_id, tag)
+);
+CREATE TABLE IF NOT EXISTS word_relations (
+    word_id    INTEGER NOT NULL REFERENCES words(id) ON DELETE CASCADE,
+    related_id INTEGER NOT NULL REFERENCES words(id) ON DELETE CASCADE,
+    relation   TEXT,
+    PRIMARY KEY (word_id, related_id, relation)
+);
+"""
+
+
+def open_db(db_path: Path) -> sqlite3.Connection:
+    """Open the DB, rebuilding from scratch if it is missing or malformed."""
+    def _connect(path: Path) -> sqlite3.Connection:
+        conn = sqlite3.connect(str(path))
+        conn.execute('PRAGMA foreign_keys = ON')
+        conn.execute('PRAGMA journal_mode = WAL')
+        return conn
+
+    if db_path.exists():
+        try:
+            conn = _connect(db_path)
+            result = conn.execute('PRAGMA integrity_check').fetchone()
+            if result and result[0] == 'ok':
+                return conn
+            conn.close()
+            print(f'  DB integrity check failed ({result[0]}); rebuilding…')
+        except Exception as e:
+            print(f'  DB could not be opened ({e}); rebuilding…')
+        # Rename corrupted file as backup
+        backup = db_path.with_suffix('.db.bak')
+        shutil.move(str(db_path), str(backup))
+        print(f'  Corrupt DB saved as {backup.name}')
+
+    print(f'  Creating fresh DB at {db_path}')
+    conn = _connect(db_path)
+    conn.executescript(SCHEMA)
+    conn.commit()
+    return conn
 
 SCRIPT_DIR   = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
@@ -70,9 +157,17 @@ def save_curated(entries: List[dict], lang: str) -> None:
 
 
 # ── Step 2: fill conjugations ──────────────────────────────────────────────────
+# Spanish verbs now use the rule engine (conjugation_class + overrides) so
+# mlconjug3 filling is no longer needed for Spanish.  Other languages that
+# still store a full conjugations dict are handled here.
 
 def fill_conjugations(entries: List[dict], lang: str) -> int:
-    """Fill null preterite/imperfect for verbs. Returns count filled."""
+    """Fill null preterite/imperfect for verbs that use the legacy conjugations
+    dict (non-Spanish languages).  Spanish is skipped — its verbs use the
+    rule engine via conjugation_class + overrides instead."""
+    if lang == 'spa':
+        return 0  # Spanish uses verb_rules engine, not mlconjug3
+
     try:
         import mlconjug3
         from lang_config import TENSE_MAP, MLCONJUG3_LANG
@@ -159,25 +254,29 @@ UPSERT = """
     INSERT INTO words
         (language, word, display, pos, difficulty, notes,
          gender, register, infinitive, rank, ipa, syllables, conjugations, domains, emoji,
-         past_participle, gerund)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         past_participle, gerund,
+         conjugation_class, future_stem, conjugation_overrides)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(language, word) DO UPDATE SET
-        display         = excluded.display,
-        pos             = COALESCE(excluded.pos,             pos),
-        difficulty      = COALESCE(excluded.difficulty,      difficulty),
-        notes           = COALESCE(excluded.notes,           notes),
-        gender          = COALESCE(excluded.gender,          gender),
-        register        = COALESCE(excluded.register,        register),
-        infinitive      = COALESCE(excluded.infinitive,      infinitive),
-        rank            = excluded.rank,
-        ipa             = COALESCE(excluded.ipa,             ipa),
-        syllables       = COALESCE(excluded.syllables,       syllables),
-        conjugations    = COALESCE(excluded.conjugations,    conjugations),
-        domains         = COALESCE(excluded.domains,         domains),
-        emoji           = COALESCE(excluded.emoji,           emoji),
-        past_participle = COALESCE(excluded.past_participle, past_participle),
-        gerund          = COALESCE(excluded.gerund,          gerund),
-        updated_at      = CURRENT_TIMESTAMP
+        display                = excluded.display,
+        pos                    = COALESCE(excluded.pos,             pos),
+        difficulty             = COALESCE(excluded.difficulty,      difficulty),
+        notes                  = COALESCE(excluded.notes,           notes),
+        gender                 = COALESCE(excluded.gender,          gender),
+        register               = COALESCE(excluded.register,        register),
+        infinitive             = COALESCE(excluded.infinitive,      infinitive),
+        rank                   = excluded.rank,
+        ipa                    = COALESCE(excluded.ipa,             ipa),
+        syllables              = COALESCE(excluded.syllables,       syllables),
+        conjugations           = COALESCE(excluded.conjugations,    conjugations),
+        domains                = COALESCE(excluded.domains,         domains),
+        emoji                  = COALESCE(excluded.emoji,           emoji),
+        past_participle        = COALESCE(excluded.past_participle, past_participle),
+        gerund                 = COALESCE(excluded.gerund,          gerund),
+        conjugation_class      = excluded.conjugation_class,
+        future_stem            = excluded.future_stem,
+        conjugation_overrides  = excluded.conjugation_overrides,
+        updated_at             = CURRENT_TIMESTAMP
 """
 
 
@@ -192,13 +291,6 @@ def rank_to_difficulty(rank: int) -> int:
 def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> None:
     lang_name = LANGS[lang]
     cursor    = conn.cursor()
-
-    # Ensure optional columns exist
-    existing = {r[1] for r in conn.execute('PRAGMA table_info(words)').fetchall()}
-    for col, ctype in [('domains', 'TEXT'), ('emoji', 'TEXT'),
-                       ('past_participle', 'TEXT'), ('gerund', 'TEXT')]:
-        if col not in existing:
-            conn.execute(f'ALTER TABLE words ADD COLUMN {col} {ctype}')
 
     # Preserve the curated rank order from the JSONL
     entries.sort(key=lambda e: e.get('rank') or 9999)
@@ -230,9 +322,32 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> No
         if isinstance(syl, list):
             syl = '-'.join(s for s in syl if s) or None
 
-        # past_participle / gerund now live inside conjugations
-        pp  = (conj.get('past_participle') if isinstance(conj, dict) else None) or ling.get('past_participle') or None
-        ger = (conj.get('gerund')          if isinstance(conj, dict) else None) or ling.get('gerund')          or None
+        # Rule-based conjugation fields (new schema)
+        conj_class     = ling.get('conjugation_class') or None
+        future_stem    = ling.get('future_stem') or None
+        conj_overrides = ling.get('overrides')
+
+        # Resolve past_participle and gerund:
+        # 1. Check legacy conjugations dict (non-Spanish languages)
+        # 2. Check overrides (irregular Spanish verbs store them there)
+        # 3. Compute from verb_rules engine when conjugation_class is set
+        pp  = (conj.get('past_participle') if isinstance(conj, dict) else None)
+        ger = (conj.get('gerund')          if isinstance(conj, dict) else None)
+        if pp is None or ger is None:
+            overrides = conj_overrides or {}
+            pp  = pp  or overrides.get('past_participle')
+            ger = ger or overrides.get('gerund')
+        if (pp is None or ger is None) and conj_class:
+            try:
+                import sys as _sys
+                _sys.path.insert(0, str(SCRIPT_DIR))
+                from verb_rules import conjugate
+                inf = ling.get('infinitive') or w.get('word', '')
+                forms = conjugate(inf, conj_class, conj_overrides or {})
+                pp  = pp  or forms.get('past_participle')
+                ger = ger or forms.get('gerund')
+            except Exception:
+                pass
 
         cursor.execute(UPSERT, (
             lang_name,
@@ -252,6 +367,9 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> No
             w.get('emoji') or None,
             pp,
             ger,
+            conj_class,
+            future_stem,
+            json.dumps(conj_overrides, ensure_ascii=False) if conj_overrides is not None else None,
         ))
 
         row = cursor.execute(
@@ -305,22 +423,9 @@ def sync(lang: str, dry_run: bool) -> None:
         print(f'  DB           : skipped (--dry-run)')
         return
 
-    if not DB_PATH.exists():
-        print(f'  DB           : not found at {DB_PATH}')
-        return
-
-    # Copy DB to /tmp — SQLite has I/O issues on Windows-mounted paths from Linux
-    with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp:
-        tmp_path = Path(tmp.name)
-    shutil.copy2(str(DB_PATH), str(tmp_path))
-
-    conn = sqlite3.connect(str(tmp_path))
-    conn.execute('PRAGMA foreign_keys = ON')
+    conn = open_db(DB_PATH)
     import_to_db(entries, lang, conn)
     conn.close()
-
-    shutil.copy2(str(tmp_path), str(DB_PATH))
-    tmp_path.unlink(missing_ok=True)
     print(f'  DB           : written (see above for any skipped)')
 
 

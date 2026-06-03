@@ -44,6 +44,18 @@ export function createApp({ nodeEnv = process.env.NODE_ENV || 'development' } = 
   // SVG files from data/svgs/ (one level above backend/)
   app.use('/svgs', express.static(path.join(projectRoot, '..', 'data', 'svgs')));
 
+  // OpenMoji emoji SVGs — organised into domain subfolders (data/emoji/animals/, etc.)
+  // Each subfolder is mounted at /emoji so existing URLs like /emoji/1F401.svg still work.
+  for (const domain of ['animals']) {
+    app.use('/emoji', express.static(path.join(projectRoot, '..', 'data', 'emoji', domain)));
+  }
+
+  // Wikipedia photos — organised into domain subfolders (data/images/animals/, food/, nature/)
+  // Each subfolder is mounted at /images so existing URLs like /images/ant.jpg still work.
+  for (const domain of ['animals', 'food', 'nature']) {
+    app.use('/images', express.static(path.join(projectRoot, '..', 'data', 'images', domain)));
+  }
+
   // Static files + SPA fallback (skip in test — we only need the API)
   if (nodeEnv !== 'test') {
     if (nodeEnv === 'production') {

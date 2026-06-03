@@ -12,27 +12,30 @@ await initShim?.();
 
 const SCHEMA = `
   CREATE TABLE words (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    word            TEXT    NOT NULL,
-    display         TEXT,
-    language        TEXT    NOT NULL,
-    pos             TEXT,
-    difficulty      TEXT,
-    notes           TEXT,
-    infinitive      TEXT,
-    reflexive       INTEGER DEFAULT 0,
-    gender          TEXT,
-    plural          TEXT,
-    register        TEXT,
-    ipa             TEXT,
-    syllables       TEXT,
-    conjugations    TEXT,
-    emoji           TEXT,
-    band            TEXT,
-    rank            INTEGER,
-    corpus_frequency REAL,
-    domains         TEXT,
-    updated_at      TEXT    DEFAULT CURRENT_TIMESTAMP,
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    word                  TEXT    NOT NULL,
+    display               TEXT,
+    language              TEXT    NOT NULL,
+    pos                   TEXT,
+    difficulty            TEXT,
+    notes                 TEXT,
+    infinitive            TEXT,
+    reflexive             INTEGER DEFAULT 0,
+    gender                TEXT,
+    plural                TEXT,
+    register              TEXT,
+    ipa                   TEXT,
+    syllables             TEXT,
+    conjugations          TEXT,
+    emoji                 TEXT,
+    band                  TEXT,
+    rank                  INTEGER,
+    corpus_frequency      REAL,
+    domains               TEXT,
+    updated_at            TEXT    DEFAULT CURRENT_TIMESTAMP,
+    conjugation_class     TEXT,
+    future_stem           TEXT,
+    conjugation_overrides TEXT,
     UNIQUE(word, language)
   );
 
@@ -70,6 +73,7 @@ const SEED_WORDS = [
     difficulty: 'beginner', notes: 'regular -ar verb', infinitive: 'hablar',
     reflexive: 0, ipa: 'aBlah', band: 'A1', rank: 1,
     domains: '["general"]',
+    conjugation_class: 'regular-ar',
     glosses: ['to speak', 'to talk'],
     examples: ['Yo hablo espanol.', 'Hablas ingles?'],
   },
@@ -106,9 +110,11 @@ export function createTestDb() {
 
   const insertWord = db.prepare(`
     INSERT INTO words (word, display, language, pos, difficulty, notes,
-      infinitive, reflexive, gender, plural, ipa, band, rank, domains)
+      infinitive, reflexive, gender, plural, ipa, band, rank, domains,
+      conjugation_class, future_stem, conjugation_overrides)
     VALUES (:word, :display, :language, :pos, :difficulty, :notes,
-      :infinitive, :reflexive, :gender, :plural, :ipa, :band, :rank, :domains)
+      :infinitive, :reflexive, :gender, :plural, :ipa, :band, :rank, :domains,
+      :conjugation_class, :future_stem, :conjugation_overrides)
   `);
   const insertGloss   = db.prepare('INSERT INTO word_glosses (word_id, gloss, position) VALUES (?, ?, ?)');
   const insertExample = db.prepare('INSERT INTO word_examples (word_id, example, position) VALUES (?, ?, ?)');
@@ -116,20 +122,23 @@ export function createTestDb() {
   const insertAll = db.transaction(() => {
     for (const seed of SEED_WORDS) {
       const info = insertWord.run({
-        word:       seed.word,
-        display:    seed.display    ?? null,
-        language:   seed.language,
-        pos:        seed.pos        ?? null,
-        difficulty: seed.difficulty ?? null,
-        notes:      seed.notes      ?? null,
-        infinitive: seed.infinitive ?? null,
-        reflexive:  seed.reflexive  ?? 0,
-        gender:     seed.gender     ?? null,
-        plural:     seed.plural     ?? null,
-        ipa:        seed.ipa        ?? null,
-        band:       seed.band       ?? null,
-        rank:       seed.rank       ?? null,
-        domains:    seed.domains    ?? null,
+        word:                  seed.word,
+        display:               seed.display               ?? null,
+        language:              seed.language,
+        pos:                   seed.pos                   ?? null,
+        difficulty:            seed.difficulty            ?? null,
+        notes:                 seed.notes                 ?? null,
+        infinitive:            seed.infinitive            ?? null,
+        reflexive:             seed.reflexive             ?? 0,
+        gender:                seed.gender                ?? null,
+        plural:                seed.plural                ?? null,
+        ipa:                   seed.ipa                   ?? null,
+        band:                  seed.band                  ?? null,
+        rank:                  seed.rank                  ?? null,
+        domains:               seed.domains               ?? null,
+        conjugation_class:     seed.conjugation_class     ?? null,
+        future_stem:           seed.future_stem           ?? null,
+        conjugation_overrides: seed.conjugation_overrides ?? null,
       });
       const wordId = info.lastInsertRowid;
       (seed.glosses  || []).forEach((g, i) => insertGloss.run(wordId, g, i));
