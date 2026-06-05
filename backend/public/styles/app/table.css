@@ -32,21 +32,32 @@
 /* ── Empty state (before Start Quiz) ── */
 #tableWrap:empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 220px;
+  min-height: 240px;
   border: 2px dashed var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   margin: 0.5rem 0;
+  gap: 0.5rem;
+  background: linear-gradient(160deg, var(--surface) 0%, var(--surface2) 100%);
 }
 #tableWrap:empty::before {
-  content: 'Select your settings above and hit Start Quiz';
+  content: '▶  Hit Start Quiz to begin';
   font-family: 'Sora', sans-serif;
-  font-size: 0.88rem;
+  font-size: 0.92rem;
+  font-weight: 600;
   color: var(--text-muted);
-  font-style: italic;
   text-align: center;
-  padding: 1.5rem;
+  padding: 0 1.5rem;
+}
+#tableWrap:empty::after {
+  content: 'Choose a language, word count, and mode above';
+  font-family: 'Sora', sans-serif;
+  font-size: 0.76rem;
+  color: var(--border-strong);
+  text-align: center;
+  padding: 0 1.5rem;
 }
 
 /* ── Table structure ── */
@@ -69,7 +80,7 @@
 #tableWrap tr:last-child { border-bottom: none; }
 
 #tableWrap td {
-  padding: 6px 8px;
+  padding: 8px 10px;
   vertical-align: middle;
   /* within-pair separator: subtle */
   border-right: 1px solid var(--border);
@@ -84,14 +95,15 @@
 
 #tableWrap .spanish-word {
   font-weight: 700;
-  font-size: 1.4rem;        /* noticeably larger than the 1.25rem answer inputs */
+  font-size: 1.55rem;
   text-align: center;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 22px;
+  min-height: 24px;
   color: var(--accent);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
 }
 
 #tableWrap td:has(.spanish-word),

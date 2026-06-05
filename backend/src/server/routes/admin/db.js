@@ -9,8 +9,7 @@
  */
 
 import { Router }                      from 'express';
-import { getDb, clearCache, reloadDb } from '../../lib/vocab-loader.js';
-import { SUPPORTED_LANGUAGES }         from './_utils.js';
+import { getDb, clearCache, reloadDb, getSupportedLanguages } from '../../lib/vocab-loader.js';
 
 const router = Router();
 
@@ -20,7 +19,7 @@ router.get('/stats', (req, res) => {
     const db    = getDb();
     const stats = {};
 
-    for (const lang of SUPPORTED_LANGUAGES) {
+    for (const lang of getSupportedLanguages()) {
       const total   = db.prepare('SELECT COUNT(*) AS n FROM words WHERE language=?').get(lang).n;
       const withIPA = db.prepare("SELECT COUNT(*) AS n FROM words WHERE language=? AND ipa IS NOT NULL AND ipa!=''").get(lang).n;
       const withEx  = db.prepare('SELECT COUNT(DISTINCT we.word_id) AS n FROM word_examples we JOIN words w ON we.word_id=w.id WHERE w.language=?').get(lang).n;
@@ -55,7 +54,7 @@ router.get('/meta', (req, res) => {
     const domainRows = db.prepare("SELECT DISTINCT domains FROM words WHERE domains IS NOT NULL AND domains!='[]' AND domains!=''").all();
     const domainSet  = new Set();
     for (const r of domainRows) {
-      try { JSON.parse(r.domains).forEach(d => domainSet.add(d)); } catch (e) {
+      try { JSON.parse(r.domains).forEach(d => domainSet.add(d)); } catch (_) {
         console.warn('GET /admin/meta: malformed domains JSON:', r.domains?.slice(0, 80));
       }
     }

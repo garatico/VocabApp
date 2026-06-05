@@ -43,12 +43,6 @@ const SUBJ = {
 
 const apply = (stem, suffixes) => suffixes.map(s => stem + s);
 
-function stemEnd(inf) {
-  for (const e of ['ar','er','ir']) {
-    if (inf.endsWith(e)) return [inf.slice(0,-2), e];
-  }
-  return [inf.slice(0,-2), inf.slice(-2)];
-}
 
 /** Derive imperative (ustedes) from subjunctive[5], unless already set. */
 function finalise(forms) {

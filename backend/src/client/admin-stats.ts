@@ -1,15 +1,25 @@
 /**
- * admin-stats.js
+ * admin-stats.ts
  *
  * Statistics tab — fetches per-language coverage metrics and renders them.
  */
 
 import { apiCall, showStatus } from './admin-api.js';
 
-const refreshStatsBtn = document.getElementById('refreshStatsBtn');
-const statsContainer  = document.getElementById('statsContainer');
+interface LangStat {
+  total: number;
+  withExamples: number;
+  withIPA: number;
+  verbs: number;
+  nouns: number;
+  adjectives: number;
+  coverage: { examples: number; ipa: number };
+}
 
-function renderLanguageStat(lang, s) {
+const refreshStatsBtn = document.getElementById('refreshStatsBtn') as HTMLButtonElement;
+const statsContainer  = document.getElementById('statsContainer') as HTMLElement;
+
+function renderLanguageStat(lang: string, s: LangStat): HTMLElement {
   const div = document.createElement('div');
   div.innerHTML = `
     <h3 style="margin-top:1.5rem;margin-bottom:1rem;color:var(--accent);">
@@ -53,7 +63,7 @@ function renderLanguageStat(lang, s) {
   return div;
 }
 
-export async function loadStatistics() {
+export async function loadStatistics(): Promise<void> {
   try {
     refreshStatsBtn.disabled    = true;
     refreshStatsBtn.textContent = '🔄 Loading...';
@@ -61,19 +71,19 @@ export async function loadStatistics() {
     const { stats } = await apiCall('/stats');
 
     statsContainer.innerHTML = '';
-    Object.entries(stats).forEach(([lang, s]) => {
+    Object.entries(stats as Record<string, LangStat>).forEach(([lang, s]) => {
       statsContainer.appendChild(renderLanguageStat(lang, s));
     });
 
     showStatus('Statistics loaded', 'success');
   } catch (err) {
-    showStatus(`Stats error: ${err.message}`, 'error');
+    showStatus(`Stats error: ${err instanceof Error ? err.message : String(err)}`, 'error');
   } finally {
     refreshStatsBtn.disabled    = false;
     refreshStatsBtn.textContent = '🔄 Refresh Statistics';
   }
 }
 
-export function initStats() {
+export function initStats(): void {
   refreshStatsBtn.addEventListener('click', loadStatistics);
 }

@@ -94,12 +94,6 @@ CREATE TABLE IF NOT EXISTS word_tags (
     tag     TEXT    NOT NULL,
     UNIQUE(word_id, tag)
 );
-CREATE TABLE IF NOT EXISTS word_relations (
-    word_id    INTEGER NOT NULL REFERENCES words(id) ON DELETE CASCADE,
-    related_id INTEGER NOT NULL REFERENCES words(id) ON DELETE CASCADE,
-    relation   TEXT,
-    PRIMARY KEY (word_id, related_id, relation)
-);
 """
 
 
@@ -338,20 +332,21 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> tu
             future_stem    = ling.get('future_stem') or None
             conj_overrides = ling.get('overrides')
 
-            pp  = (conj.get('past_participle') if isinstance(conj, dict) else None)
-            ger = (conj.get('gerund')          if isinstance(conj, dict) else None)
-            if pp is None or ger is None:
-                overrides = conj_overrides or {}
-                pp  = pp  or overrides.get('past_participle')
-                ger = ger or overrides.get('gerund')
-            if (pp is None or ger is None) and conj_class and _verb_rules_conjugate is not None:
+            # Compute full conjugations at sync time — Python owns the rule engine.
+            # This replaces runtime JS conjugation; verb-rules.js is deleted.
+            computed_conj = None
+            if conj_class and _verb_rules_conjugate is not None:
                 try:
                     inf = ling.get('infinitive') or w.get('word', '')
-                    forms = _verb_rules_conjugate(inf, conj_class, conj_overrides or {})
-                    pp  = pp  or forms.get('past_participle')
-                    ger = ger or forms.get('gerund')
+                    computed_conj = _verb_rules_conjugate(inf, conj_class, conj_overrides or {}, future_stem)
                 except Exception as e:
                     print(f'  Warning: verb_rules failed for {w["word"]!r}: {e}')
+
+            # Use computed forms if available, fall back to stored JSONL conjugations
+            final_conj = computed_conj or conj
+
+            pp  = (final_conj.get('past_participle') if isinstance(final_conj, dict) else None)
+            ger = (final_conj.get('gerund')          if isinstance(final_conj, dict) else None)
 
             cursor.execute(UPSERT, (
                 lang_name,
@@ -366,7 +361,7 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> tu
                 rank,
                 ling.get('ipa') or None,
                 syl,
-                json.dumps(conj, ensure_ascii=False) if conj else None,
+                json.dumps(final_conj, ensure_ascii=False) if final_conj else None,
                 json.dumps(doms, ensure_ascii=False),
                 w.get('emoji') or None,
                 pp,

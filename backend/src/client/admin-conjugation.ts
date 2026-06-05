@@ -1,5 +1,5 @@
 /**
- * admin-conjugation.js
+ * admin-conjugation.ts
  *
  * Conjugation Practice tab — pick a verb, pick a tense, fill in the table.
  * MVP: purely a drill interface; no answer-checking (conjugation answers are
@@ -10,48 +10,58 @@ import { apiCall, escapeHtml } from './admin-api.js';
 
 // ── Pronoun & tense data ──────────────────────────────────────────────────────
 
-const PRONOUNS = {
+const PRONOUNS: Record<string, string[]> = {
   spanish:    ['yo', 'tú', 'él / ella / Ud.', 'nosotros', 'vosotros', 'ellos / ellas / Uds.'],
   portuguese: ['eu', 'tu', 'ele / ela / você', 'nós', 'vós', 'eles / elas / vocês'],
   italian:    ['io', 'tu', 'lui / lei / Lei', 'noi', 'voi', 'loro'],
   french:     ['je', 'tu', 'il / elle / on', 'nous', 'vous', 'ils / elles'],
 };
 
-const TENSES = {
+const TENSES: Record<string, string[]> = {
   spanish:    ['Presente', 'Pretérito Indefinido', 'Pretérito Imperfecto', 'Futuro', 'Condicional', 'Subjuntivo Presente'],
   portuguese: ['Presente', 'Pretérito Perfeito', 'Pretérito Imperfeito', 'Futuro', 'Condicional', 'Subjuntivo Presente'],
   italian:    ['Presente', 'Passato Prossimo', 'Imperfetto', 'Futuro Semplice', 'Condizionale', 'Congiuntivo Presente'],
   french:     ['Présent', 'Passé Composé', 'Imparfait', 'Futur Simple', 'Conditionnel', 'Subjonctif Présent'],
 };
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface VerbWord {
+  word: string;
+  translation?: string;
+  glosses?: string[];
+  tags?: string[];
+  conjugation_class?: string;
+}
+
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
-const conjLangSelect   = document.getElementById('conjLangSelect');
-const conjTenseSelect  = document.getElementById('conjTenseSelect');
-const conjSearchInput  = document.getElementById('conjSearchInput');
-const conjSearchBtn    = document.getElementById('conjSearchBtn');
-const conjVerbList     = document.getElementById('conjVerbList');
-const conjVerbCount    = document.getElementById('conjVerbCount');
-const conjEmptyState   = document.getElementById('conjEmptyState');
-const conjTableCard    = document.getElementById('conjTableCard');
-const conjVerbTitle    = document.getElementById('conjVerbTitle');
-const conjVerbGlosses  = document.getElementById('conjVerbGlosses');
-const conjTenseLabel   = document.getElementById('conjTenseLabel');
-const conjTableBody    = document.getElementById('conjTableBody');
-const conjClearBtn     = document.getElementById('conjClearBtn');
-const conjResetBtn     = document.getElementById('conjResetBtn');
+const conjLangSelect   = document.getElementById('conjLangSelect')  as HTMLSelectElement;
+const conjTenseSelect  = document.getElementById('conjTenseSelect') as HTMLSelectElement;
+const conjSearchInput  = document.getElementById('conjSearchInput') as HTMLInputElement;
+const conjSearchBtn    = document.getElementById('conjSearchBtn')   as HTMLButtonElement;
+const conjVerbList     = document.getElementById('conjVerbList')    as HTMLElement;
+const conjVerbCount    = document.getElementById('conjVerbCount')   as HTMLElement;
+const conjEmptyState   = document.getElementById('conjEmptyState')  as HTMLElement;
+const conjTableCard    = document.getElementById('conjTableCard')   as HTMLElement;
+const conjVerbTitle    = document.getElementById('conjVerbTitle')   as HTMLElement;
+const conjVerbGlosses  = document.getElementById('conjVerbGlosses') as HTMLElement;
+const conjTenseLabel   = document.getElementById('conjTenseLabel')  as HTMLElement;
+const conjTableBody    = document.getElementById('conjTableBody')   as HTMLElement;
+const conjClearBtn     = document.getElementById('conjClearBtn')    as HTMLButtonElement;
+const conjResetBtn     = document.getElementById('conjResetBtn')    as HTMLButtonElement;
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
-let selectedVerb = null;
+let selectedVerb: VerbWord | null = null;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function currentLang() { return conjLangSelect.value; }
-function currentTense() { return conjTenseSelect.value; }
+function currentLang(): string  { return conjLangSelect.value; }
+function currentTense(): string { return conjTenseSelect.value; }
 
-function populateTenses(lang) {
-  const tenses = TENSES[lang] || [];
+function populateTenses(lang: string): void {
+  const tenses = TENSES[lang] ?? [];
   conjTenseSelect.innerHTML = tenses
     .map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`)
     .join('');
@@ -59,7 +69,7 @@ function populateTenses(lang) {
 
 // ── Verb list ─────────────────────────────────────────────────────────────────
 
-async function loadVerbs() {
+async function loadVerbs(): Promise<void> {
   const lang  = currentLang();
   const query = conjSearchInput.value.trim();
 
@@ -71,12 +81,11 @@ async function loadVerbs() {
     if (query) params.set('search', query);
 
     const data = await apiCall(`/words?${params}`);
-    // Exclude single-form / function verbs (e.g. hay) — not meaningful to conjugate
-    const words = (data.words ?? data).filter(
+    const words = ((data.words ?? data) as VerbWord[]).filter(
       w => !w.tags?.includes('function_word') && w.conjugation_class !== 'irregular-hay'
     );
 
-    conjVerbCount.textContent = words.length;
+    conjVerbCount.textContent = String(words.length);
 
     if (words.length === 0) {
       conjVerbList.innerHTML = '<div class="conj-verb-list-empty">No verbs found</div>';
@@ -87,50 +96,47 @@ async function loadVerbs() {
       <div class="conj-verb-item ${selectedVerb?.word === w.word ? 'active' : ''}"
            data-word="${escapeHtml(w.word)}">
         <span class="conj-verb-display">${escapeHtml(w.translation || w.word)}</span>
-        <span class="conj-verb-gloss">${escapeHtml((w.glosses?.[0]) || '')}</span>
+        <span class="conj-verb-gloss">${escapeHtml(w.glosses?.[0] ?? '')}</span>
       </div>
     `).join('');
 
-    conjVerbList.querySelectorAll('.conj-verb-item').forEach(item => {
+    conjVerbList.querySelectorAll<HTMLElement>('.conj-verb-item').forEach(item => {
       item.addEventListener('click', () => {
         const verb = words.find(w => w.word === item.dataset.word);
         if (verb) selectVerb(verb);
       });
     });
   } catch (err) {
-    conjVerbList.innerHTML = `<div class="conj-verb-list-empty" style="color:var(--error)">Error: ${escapeHtml(err.message)}</div>`;
+    conjVerbList.innerHTML = `<div class="conj-verb-list-empty" style="color:var(--error)">Error: ${escapeHtml(err instanceof Error ? err.message : String(err))}</div>`;
   }
 }
 
 // ── Select a verb and render the table ───────────────────────────────────────
 
-function selectVerb(verb) {
+function selectVerb(verb: VerbWord): void {
   selectedVerb = verb;
 
-  // Highlight in list
-  conjVerbList.querySelectorAll('.conj-verb-item').forEach(el => {
+  conjVerbList.querySelectorAll<HTMLElement>('.conj-verb-item').forEach(el => {
     el.classList.toggle('active', el.dataset.word === verb.word);
   });
 
-  // Show the card
   conjEmptyState.style.display = 'none';
   conjTableCard.style.display  = 'block';
 
-  // Fill header
-  conjVerbTitle.textContent   = verb.translation || verb.word;
-  conjVerbGlosses.textContent = verb.glosses?.join(', ') || '';
+  conjVerbTitle.textContent   = verb.translation ?? verb.word;
+  conjVerbGlosses.textContent = verb.glosses?.join(', ') ?? '';
 
   renderTable();
 }
 
 // ── Render / re-render conjugation table ─────────────────────────────────────
 
-function renderTable() {
+function renderTable(): void {
   if (!selectedVerb) return;
 
-  const lang    = currentLang();
-  const tense   = currentTense();
-  const pronouns = PRONOUNS[lang] || [];
+  const lang     = currentLang();
+  const tense    = currentTense();
+  const pronouns = PRONOUNS[lang] ?? [];
 
   conjTenseLabel.textContent = tense;
 
@@ -152,12 +158,10 @@ function renderTable() {
     </tr>
   `).join('');
 
-  // Focus first input
-  const first = conjTableBody.querySelector('.conj-input');
+  const first = conjTableBody.querySelector<HTMLInputElement>('.conj-input');
   if (first) first.focus();
 
-  // Tab between inputs wrapping around
-  const inputs = Array.from(conjTableBody.querySelectorAll('.conj-input'));
+  const inputs = Array.from(conjTableBody.querySelectorAll<HTMLInputElement>('.conj-input'));
   inputs.forEach((inp, idx) => {
     inp.addEventListener('keydown', e => {
       if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
@@ -170,19 +174,17 @@ function renderTable() {
 
 // ── Buttons ───────────────────────────────────────────────────────────────────
 
-function clearInputs() {
-  conjTableBody.querySelectorAll('.conj-input').forEach(inp => { inp.value = ''; });
-  const first = conjTableBody.querySelector('.conj-input');
+function clearInputs(): void {
+  conjTableBody.querySelectorAll<HTMLInputElement>('.conj-input').forEach(inp => { inp.value = ''; });
+  const first = conjTableBody.querySelector<HTMLInputElement>('.conj-input');
   if (first) first.focus();
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
-export function initConjugation() {
-  // Populate tenses for the initial language
+export function initConjugation(): void {
   populateTenses(currentLang());
 
-  // Language change → repopulate tenses + reload verb list
   conjLangSelect.addEventListener('change', () => {
     populateTenses(currentLang());
     selectedVerb = null;
@@ -191,25 +193,15 @@ export function initConjugation() {
     loadVerbs();
   });
 
-  // Tense change → re-render table (keeps typed answers — reset explicitly)
-  conjTenseSelect.addEventListener('change', () => {
-    renderTable();
-  });
+  conjTenseSelect.addEventListener('change', () => { renderTable(); });
 
-  // Search
   conjSearchBtn.addEventListener('click', loadVerbs);
   conjSearchInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') loadVerbs();
   });
 
-  // Clear inputs button
   conjClearBtn.addEventListener('click', clearInputs);
+  conjResetBtn.addEventListener('click', () => { renderTable(); });
 
-  // Reset → clear + re-render (same effect here since we don't store answers)
-  conjResetBtn.addEventListener('click', () => {
-    renderTable();
-  });
-
-  // Initial load
   loadVerbs();
 }

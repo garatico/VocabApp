@@ -91,12 +91,13 @@ describe('GET /api/admin/vocab/:word', () => {
 // GET /api/admin/stats  (read-only -- runs before POST tests mutate the data)
 
 describe('GET /api/admin/stats', () => {
-  it('returns stats object with all four languages', async () => {
+  it('returns stats object for seeded languages', async () => {
     const res = await request(app).get('/api/admin/stats');
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+    // Stats reflects languages present in the DB (DB-driven, not hardcoded)
     expect(Object.keys(res.body.stats)).toEqual(
-      expect.arrayContaining(['spanish', 'portuguese', 'italian', 'french'])
+      expect.arrayContaining(['spanish', 'portuguese'])
     );
   });
 
@@ -118,10 +119,10 @@ describe('GET /api/admin/stats', () => {
     expect(s.verbs).toBe(1);
   });
 
-  it('italian and french show zero totals (not seeded)', async () => {
+  it('unseeded languages are absent from stats (DB-driven language list)', async () => {
     const res = await request(app).get('/api/admin/stats');
-    expect(res.body.stats.italian.total).toBe(0);
-    expect(res.body.stats.french.total).toBe(0);
+    expect(res.body.stats.italian).toBeUndefined();
+    expect(res.body.stats.french).toBeUndefined();
   });
 });
 

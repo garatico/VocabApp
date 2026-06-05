@@ -13,6 +13,12 @@ export default defineConfig({
     fileParallelism: false,
     // Only look in tests/ — never pick up frontend or other stray test files
     include: ['tests/**/*.test.{js,ts}'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      include: ['src/server/**/*.js'],
+      exclude: ['src/server/index.js'],
+    },
   },
   resolve: {
     alias: {

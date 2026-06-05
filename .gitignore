@@ -32,9 +32,14 @@ desktop.ini
 dist/
 build/
 tmp/
+coverage/
 __pycache__/
 *.pyc
 *.pyo
+
+# Husky internals
+backend/.husky/_/
+.husky/
 
 # data
 wikipedia_freq_corpora/

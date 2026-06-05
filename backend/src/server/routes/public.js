@@ -11,10 +11,10 @@ import { loadVocabFile } from '../lib/vocab-loader.js';
 const router = Router();
 
 // GET /api/vocab/:language
-router.get('/vocab/:language', async (req, res, next) => {
+router.get('/vocab/:language', (req, res, next) => {
   try {
     // loadVocabFile normalises + validates the language; throws 404 for unknowns
-    const vocab = await loadVocabFile(req.params.language);
+    const vocab = loadVocabFile(req.params.language);
 
     // Cache vocab responses — data only changes on admin word edits
     const maxAge = process.env.NODE_ENV === 'production' ? 3600 : 300;

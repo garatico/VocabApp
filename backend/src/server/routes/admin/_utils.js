@@ -2,7 +2,7 @@
  * Shared utilities for admin routes.
  */
 
-export const SUPPORTED_LANGUAGES = ['spanish', 'portuguese', 'italian', 'french'];
+import { getSupportedLanguages } from '../../lib/vocab-loader.js';
 
 /**
  * Normalise and validate a language parameter.
@@ -10,5 +10,5 @@ export const SUPPORTED_LANGUAGES = ['spanish', 'portuguese', 'italian', 'french'
  */
 export function validateLanguage(lang) {
   const l = lang?.toLowerCase();
-  return SUPPORTED_LANGUAGES.includes(l) ? l : null;
+  return getSupportedLanguages().includes(l) ? l : null;
 }

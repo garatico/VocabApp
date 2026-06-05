@@ -4,7 +4,7 @@
  * Centralized error handling and response formatting
  */
 
-export function errorHandler(err, req, res, next) {
+export function errorHandler(err, req, res, _next) {
   // Log error
   const timestamp = new Date().toISOString();
   console.error(`[${timestamp}] ERROR:`, {

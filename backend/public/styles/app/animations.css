@@ -48,10 +48,24 @@
   }
 }
 
-/* Mode section entrance — subtle slide-up + fade */
+/* Mode section entrance -- subtle slide-up + fade */
 @keyframes sectionEnter {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Progress bar shimmer sweep */
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position:  200% center; }
+}
+
+/* 100% completion -- gentle pop + green glow */
+@keyframes celebratePop {
+  0%   { transform: scale(1);     box-shadow: var(--shadow-sm); }
+  30%  { transform: scale(1.018); box-shadow: 0 6px 24px rgba(46, 125, 50, 0.22); }
+  65%  { transform: scale(0.999); }
+  100% { transform: scale(1);     }
 }
 
 /* Reduced-motion override */

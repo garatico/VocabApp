@@ -126,7 +126,10 @@ export function bindStartHandler({
             const html = `<span class="summary-correct">✓ ${correct} correct</span><span class="summary-pct">100%</span>`;
             ['tableSummary', 'tableSummaryTop'].forEach(id => {
               const el = document.getElementById(id);
-              if (el) { el.style.display = 'flex'; el.innerHTML = html; }
+              if (!el) return;
+              el.style.display = 'flex';
+              el.innerHTML = html;
+              el.classList.add('quiz-summary--perfect');
             });
           }
         });
