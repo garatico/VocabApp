@@ -7,7 +7,7 @@ Single command to take curated JSONL → fixed up → live in the DB.
 What it does:
   1. Loads {lang}_curated.jsonl
   2. Fills any null preterite/imperfect conjugations (via mlconjug3)
-  3. Fixes cognate display fields (promotes second gloss when display == word)
+  3. Fixes cognate translation fields (promotes second gloss when translation == word)
   4. Writes improved JSONL back
   5. Imports to vocabulary.db
 
@@ -28,13 +28,29 @@ from typing import Dict, List, Optional
 
 warnings.filterwarnings("ignore")
 
+SCRIPT_DIR   = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
+CURATED_DIR  = PROJECT_ROOT / 'data' / 'curated'
+DB_PATH      = PROJECT_ROOT / 'data' / 'vocabulary.db'
+
+# verb_rules lives alongside this script — import once at module load
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+try:
+    from verb_rules import conjugate as _verb_rules_conjugate
+except ImportError:
+    _verb_rules_conjugate = None
+
+from lang_config import LANG_NAMES as LANGS, rank_to_difficulty
+
 # ── Schema ─────────────────────────────────────────────────────────────────────
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS words (
     id                    INTEGER PRIMARY KEY AUTOINCREMENT,
     word                  TEXT    NOT NULL,
-    display               TEXT,
+    translation           TEXT,
     language              TEXT    NOT NULL,
     pos                   TEXT,
     difficulty            TEXT,
@@ -115,19 +131,6 @@ def open_db(db_path: Path) -> sqlite3.Connection:
     conn.executescript(SCHEMA)
     conn.commit()
     return conn
-
-SCRIPT_DIR   = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
-CURATED_DIR  = PROJECT_ROOT / 'data' / 'curated'
-DB_PATH      = PROJECT_ROOT / 'data' / 'vocabulary.db'
-
-LANGS = {
-    'spa': 'spanish',
-    'fra': 'french',
-    'ita': 'italian',
-    'por': 'portuguese',
-}
-
 
 # ── Step 1: load ───────────────────────────────────────────────────────────────
 
@@ -225,24 +228,24 @@ def fill_conjugations(entries: List[dict], lang: str) -> int:
     return filled
 
 
-# ── Step 3: fix cognate display ────────────────────────────────────────────────
+# ── Step 3: fix cognate translation ─────────────────────────────────────────────
 
-def fix_display(entries: List[dict]) -> int:
-    """Promote second gloss to display when display == word. Returns count fixed."""
+def fix_translation(entries: List[dict]) -> int:
+    """Promote second gloss to translation when translation == word. Returns count fixed."""
     fixed = 0
     for entry in entries:
         word    = entry.get('word', '')
-        display = entry.get('display', '')
+        translation = entry.get('translation', '')
         glosses = entry.get('glosses') or []
 
-        if display.lower() != word.lower() and display:
-            continue  # already has a distinct English display
+        if translation.lower() != word.lower() and translation:
+            continue  # already has a distinct English translation
 
         better = next(
             (g for g in glosses if g and g.lower() != word.lower()), None
         )
         if better:
-            entry['display'] = better
+            entry['translation'] = better
             fixed += 1
 
     return fixed
@@ -252,13 +255,13 @@ def fix_display(entries: List[dict]) -> int:
 
 UPSERT = """
     INSERT INTO words
-        (language, word, display, pos, difficulty, notes,
+        (language, word, translation, pos, difficulty, notes,
          gender, register, infinitive, rank, ipa, syllables, conjugations, domains, emoji,
          past_participle, gerund,
          conjugation_class, future_stem, conjugation_overrides)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(language, word) DO UPDATE SET
-        display                = excluded.display,
+        translation = excluded.translation,
         pos                    = COALESCE(excluded.pos,             pos),
         difficulty             = COALESCE(excluded.difficulty,      difficulty),
         notes                  = COALESCE(excluded.notes,           notes),
@@ -280,17 +283,20 @@ UPSERT = """
 """
 
 
-def rank_to_difficulty(rank: int) -> int:
-    if rank <= 200:  return 1
-    if rank <= 500:  return 2
-    if rank <= 1000: return 3
-    if rank <= 2000: return 4
-    return 5
+def _example_text(ex) -> Optional[str]:
+    """Extract a plain string from an example that may be a dict or a string."""
+    if isinstance(ex, dict):
+        return ex.get('es') or ex.get('en') or None
+    return str(ex) if ex else None
 
 
-def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> None:
+def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> tuple:
+    """Import entries into the DB inside a single transaction.
+
+    Returns (imported, skipped) counts.
+    Raises on any DB error — the transaction is rolled back automatically.
+    """
     lang_name = LANGS[lang]
-    cursor    = conn.cursor()
 
     # Preserve the curated rank order from the JSONL
     entries.sort(key=lambda e: e.get('rank') or 9999)
@@ -298,7 +304,7 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> No
     def missing_fields(w: dict) -> List[str]:
         missing = []
         if not w.get('word'):    missing.append('word')
-        if not w.get('display'): missing.append('display')
+        if not w.get('translation'): missing.append('translation')
         if not w.get('pos'):     missing.append('pos')
         if not [g for g in (w.get('glosses') or []) if g]:
             missing.append('glosses')
@@ -308,96 +314,122 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> No
     ready   = [w for w in entries if not missing_fields(w)]
 
     if skipped:
-        print(f'  Skipped      : {len(skipped)} incomplete entries:')
-        for word, fields in skipped:
+        preview = skipped[:10]
+        print(f'  Skipped      : {len(skipped)} incomplete entries (first {len(preview)} shown):')
+        for word, fields in preview:
             print(f'    {word!r} — missing: {", ".join(fields)}')
+        if len(skipped) > len(preview):
+            print(f'    … and {len(skipped) - len(preview)} more')
 
-    for w in ready:
+    # Single transaction — all-or-nothing. On exception, Python's sqlite3
+    # context manager issues ROLLBACK automatically.
+    with conn:
+        cursor = conn.cursor()
+        for w in ready:
+            rank = w.get('rank') or 9999
+            ling = w.get('linguistic') or {}
+            conj = ling.get('conjugations')
+            doms = w.get('domains') or ['general']
+            syl  = ling.get('syllables')
+            if isinstance(syl, list):
+                syl = '-'.join(s for s in syl if s) or None
 
-        rank = w.get('rank') or 9999
-        ling = w.get('linguistic') or {}
-        conj = ling.get('conjugations')
-        doms = w.get('domains') or ['general']
-        syl  = ling.get('syllables')
-        if isinstance(syl, list):
-            syl = '-'.join(s for s in syl if s) or None
+            conj_class     = ling.get('conjugation_class') or None
+            future_stem    = ling.get('future_stem') or None
+            conj_overrides = ling.get('overrides')
 
-        # Rule-based conjugation fields (new schema)
-        conj_class     = ling.get('conjugation_class') or None
-        future_stem    = ling.get('future_stem') or None
-        conj_overrides = ling.get('overrides')
+            pp  = (conj.get('past_participle') if isinstance(conj, dict) else None)
+            ger = (conj.get('gerund')          if isinstance(conj, dict) else None)
+            if pp is None or ger is None:
+                overrides = conj_overrides or {}
+                pp  = pp  or overrides.get('past_participle')
+                ger = ger or overrides.get('gerund')
+            if (pp is None or ger is None) and conj_class and _verb_rules_conjugate is not None:
+                try:
+                    inf = ling.get('infinitive') or w.get('word', '')
+                    forms = _verb_rules_conjugate(inf, conj_class, conj_overrides or {})
+                    pp  = pp  or forms.get('past_participle')
+                    ger = ger or forms.get('gerund')
+                except Exception as e:
+                    print(f'  Warning: verb_rules failed for {w["word"]!r}: {e}')
 
-        # Resolve past_participle and gerund:
-        # 1. Check legacy conjugations dict (non-Spanish languages)
-        # 2. Check overrides (irregular Spanish verbs store them there)
-        # 3. Compute from verb_rules engine when conjugation_class is set
-        pp  = (conj.get('past_participle') if isinstance(conj, dict) else None)
-        ger = (conj.get('gerund')          if isinstance(conj, dict) else None)
-        if pp is None or ger is None:
-            overrides = conj_overrides or {}
-            pp  = pp  or overrides.get('past_participle')
-            ger = ger or overrides.get('gerund')
-        if (pp is None or ger is None) and conj_class:
-            try:
-                import sys as _sys
-                _sys.path.insert(0, str(SCRIPT_DIR))
-                from verb_rules import conjugate
-                inf = ling.get('infinitive') or w.get('word', '')
-                forms = conjugate(inf, conj_class, conj_overrides or {})
-                pp  = pp  or forms.get('past_participle')
-                ger = ger or forms.get('gerund')
-            except Exception:
-                pass
+            cursor.execute(UPSERT, (
+                lang_name,
+                w['word'],
+                w.get('translation') or w['word'],
+                w.get('pos'),
+                rank_to_difficulty(rank),
+                w.get('notes') or None,
+                ling.get('gender'),
+                w.get('register') or ling.get('register'),
+                ling.get('infinitive'),
+                rank,
+                ling.get('ipa') or None,
+                syl,
+                json.dumps(conj, ensure_ascii=False) if conj else None,
+                json.dumps(doms, ensure_ascii=False),
+                w.get('emoji') or None,
+                pp,
+                ger,
+                conj_class,
+                future_stem,
+                json.dumps(conj_overrides, ensure_ascii=False) if conj_overrides is not None else None,
+            ))
 
-        cursor.execute(UPSERT, (
-            lang_name,
-            w['word'],
-            w.get('display') or w['word'],
-            w.get('pos'),
-            rank_to_difficulty(rank),
-            w.get('notes') or None,
-            ling.get('gender'),
-            w.get('register') or ling.get('register'),
-            ling.get('infinitive'),
-            rank,
-            ling.get('ipa') or None,
-            syl,
-            json.dumps(conj, ensure_ascii=False) if conj else None,
-            json.dumps(doms, ensure_ascii=False),
-            w.get('emoji') or None,
-            pp,
-            ger,
-            conj_class,
-            future_stem,
-            json.dumps(conj_overrides, ensure_ascii=False) if conj_overrides is not None else None,
-        ))
+            row = cursor.execute(
+                'SELECT id FROM words WHERE language=? AND word=?', (lang_name, w['word'])
+            ).fetchone()
+            if not row:
+                continue
+            word_id = row[0]
 
-        row = cursor.execute(
-            'SELECT id FROM words WHERE language=? AND word=?', (lang_name, w['word'])
-        ).fetchone()
-        if not row:
-            continue
-        word_id = row[0]
+            # Glosses
+            cursor.execute('DELETE FROM word_glosses WHERE word_id=?', (word_id,))
+            for i, gloss in enumerate(w.get('glosses') or []):
+                if gloss:
+                    cursor.execute(
+                        'INSERT INTO word_glosses (word_id, gloss, position) VALUES (?,?,?)',
+                        (word_id, gloss, i)
+                    )
 
-        cursor.execute('DELETE FROM word_glosses WHERE word_id=?', (word_id,))
-        for i, gloss in enumerate(w.get('glosses') or []):
-            if gloss:
-                cursor.execute(
-                    'INSERT INTO word_glosses (word_id, gloss, position) VALUES (?,?,?)',
-                    (word_id, gloss, i)
-                )
+            # Examples (previously never imported — fixed)
+            cursor.execute('DELETE FROM word_examples WHERE word_id=?', (word_id,))
+            for i, ex in enumerate(w.get('examples') or []):
+                text = _example_text(ex)
+                if text:
+                    cursor.execute(
+                        'INSERT INTO word_examples (word_id, example, position) VALUES (?,?,?)',
+                        (word_id, text, i)
+                    )
 
-        for tag in w.get('tags') or []:
-            if tag:
-                cursor.execute(
-                    'INSERT OR IGNORE INTO word_tags (word_id, tag) VALUES (?,?)',
-                    (word_id, tag)
-                )
+            # Tags
+            for tag in w.get('tags') or []:
+                if tag:
+                    cursor.execute(
+                        'INSERT OR IGNORE INTO word_tags (word_id, tag) VALUES (?,?)',
+                        (word_id, tag)
+                    )
 
-    conn.commit()
+    return len(ready), len(skipped)
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────
+
+def backup_db(db_path: Path) -> Optional[Path]:
+    """Hot-copy the DB to a .bak file using SQLite's backup API.
+    Returns the backup path, or None if the DB doesn't exist yet."""
+    if not db_path.exists():
+        return None
+    backup_path = db_path.with_suffix('.db.bak')
+    src = sqlite3.connect(str(db_path))
+    dst = sqlite3.connect(str(backup_path))
+    try:
+        src.backup(dst)
+    finally:
+        dst.close()
+        src.close()
+    return backup_path
+
 
 def sync(lang: str, dry_run: bool) -> None:
     print(f'\n── {LANGS[lang].upper()} ({lang}) ──')
@@ -408,25 +440,39 @@ def sync(lang: str, dry_run: bool) -> None:
     print(f'  Loaded       : {len(entries)} entries')
 
     conj_filled   = fill_conjugations(entries, lang)
-    display_fixed = fix_display(entries)
+    translation_fixed = fix_translation(entries)
 
     if conj_filled:
         print(f'  Conjugations : filled {conj_filled} verbs')
-    if display_fixed:
-        print(f'  Display      : fixed {display_fixed} cognates')
-
-    if (conj_filled or display_fixed) and not dry_run:
-        save_curated(entries, lang)
-        print(f'  JSONL        : saved')
+    if translation_fixed:
+        print(f'  Translation  : fixed {translation_fixed} cognates')
 
     if dry_run:
         print(f'  DB           : skipped (--dry-run)')
         return
 
+    # Back up the DB before touching it — restore manually if needed
+    bak = backup_db(DB_PATH)
+    if bak:
+        print(f'  Backup       : {bak.name}')
+
+    # Import to DB first (in a single transaction).
+    # Only write the JSONL changes if the DB write succeeds — keeps them in sync.
     conn = open_db(DB_PATH)
-    import_to_db(entries, lang, conn)
+    try:
+        imported, skipped = import_to_db(entries, lang, conn)
+    except Exception as e:
+        print(f'  DB FAILED    : {e}')
+        print(f'  DB unchanged — restore from {bak.name if bak else "backup"} if needed')
+        conn.close()
+        return
     conn.close()
-    print(f'  DB           : written (see above for any skipped)')
+    print(f'  DB           : {imported} imported, {skipped} skipped')
+
+    # JSONL saved only after DB write confirmed — keeps source and DB in sync
+    if (conj_filled or translation_fixed):
+        save_curated(entries, lang)
+        print(f'  JSONL        : saved')
 
 
 def main():
@@ -441,7 +487,7 @@ def main():
     if unknown:
         print(f'Unknown language(s): {", ".join(unknown)}')
         print(f'Valid: {", ".join(LANGS)}')
-        sys.exit(1)
+        import sys; sys.exit(1)
 
     for lang in args.langs:
         sync(lang, args.dry_run)

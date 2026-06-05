@@ -1,8 +1,9 @@
 import type { Word } from '../types.js';
-import { isCorrect, isReverseCorrect, getGlosses, buildGlossDisplay } from '../utils/utils.ts';
+import { isCorrect, isReverseCorrect, isCorrectStrict, isReverseCorrectStrict, getGlosses, buildGlossDisplay } from '../utils/utils.ts';
 import { attachTooltips }        from '../utils/word-tooltip.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker }        from '../utils/list-picker.ts';
+import { Settings }              from '../settings.ts';
 
 export type TableDirection = 'target-en' | 'en-target' | 'mixed';
 
@@ -10,6 +11,15 @@ export interface CheckResult {
   word?:     string;
   ok:        boolean;
   expected?: string;
+}
+
+export interface InputSnapshot {
+  value:           string;
+  disabled:        boolean;
+  stateClass:      'correct' | 'incorrect' | 'peeked' | '';
+  dir:             'target-en' | 'en-target';
+  knownBtnVisible: boolean;
+  knownBtnActive:  boolean;
 }
 
 export interface TableController {
@@ -21,27 +31,37 @@ export interface TableController {
 }
 
 interface RenderTableModeOptions {
-  words:       Word[];
-  container:   HTMLElement;
-  columns?:    number;
-  direction?:  TableDirection;
-  onComplete?: (() => void) | null;
-  lang?:       string;
+  words:         Word[];
+  container:     HTMLElement;
+  columns?:      number;
+  direction?:    TableDirection;
+  onComplete?:   (() => void) | null;
+  lang?:         string;
+  initialState?: Map<string, InputSnapshot>;
 }
 
 export function renderTableMode({
   words,
   container,
-  columns   = 3,
-  direction = 'target-en',
-  onComplete = null,
-  lang       = (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? 'spanish',
+  columns      = 3,
+  direction    = 'target-en',
+  onComplete   = null,
+  lang         = (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? 'spanish',
+  initialState = new Map<string, InputSnapshot>(),
 }: RenderTableModeOptions): TableController {
   if (!(container instanceof HTMLElement)) {
     throw new Error('renderTableMode: container element required');
   }
 
-  const cols = Math.max(1, Math.min(5, Number(columns) || 3));
+  const cols      = Math.max(1, Math.min(5, Number(columns) || 3));
+  const hintMode  = Settings.getHintMode();
+  const matchMode = Settings.getMatchMode();
+
+  // O(1) word lookup — avoids O(n²) words.find() inside forEach loops
+  const wordMap = new Map<string, Word>(words.map(w => [w.word, w]));
+
+  // Only shake inputs when a manageable number are affected
+  const SHAKE_THRESHOLD = 30;
 
   function entryDir(_entry: Word): 'target-en' | 'en-target' {
     if (direction === 'mixed') return Math.random() < 0.5 ? 'target-en' : 'en-target';
@@ -57,6 +77,11 @@ export function renderTableMode({
   }
 
   function checkInput(input: string, entry: Word, dir: 'target-en' | 'en-target'): boolean {
+    if (matchMode === 'strict') {
+      return dir === 'en-target'
+        ? isReverseCorrectStrict(input, entry)
+        : isCorrectStrict(input, entry);
+    }
     return dir === 'en-target'
       ? isReverseCorrect(input, entry)
       : isCorrect(input, entry);
@@ -119,6 +144,11 @@ export function renderTableMode({
     return btn;
   }
 
+  function scrollToNext(next: HTMLInputElement): void {
+    next.focus();
+    next.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
   function buildTable(): void {
     container.innerHTML = '';
     const table       = document.createElement('table');
@@ -140,7 +170,8 @@ export function renderTableMode({
           continue;
         }
 
-        const dir = entryDir(w);
+        const snap = initialState.get(w.word);
+        const dir  = snap?.dir ?? entryDir(w);
 
         if (isInAnyList(lang, w.word)) tdWord.classList.add('word-cell--known');
 
@@ -162,8 +193,25 @@ export function renderTableMode({
         inp.dataset.dir  = dir;
         inp.placeholder  = dir === 'en-target' ? 'Type in target language…' : 'Type translation…';
 
-        const knownBtn = buildKnownBtn(w, tdWord);
+        // ── Restore saved state (column change preserves progress) ────────────
+        if (snap) {
+          inp.value    = snap.value;
+          inp.disabled = snap.disabled;
+          if (snap.stateClass) inp.classList.add(snap.stateClass);
+        }
 
+        const knownBtn = buildKnownBtn(w, tdWord);
+        if (snap?.knownBtnVisible) {
+          knownBtn.hidden = false;
+          if (snap.knownBtnActive) knownBtn.classList.add('known-btn--active');
+        }
+
+        // ── Reveal button — behaviour driven by hint mode setting ────────────
+        const revealBtn = document.createElement('button');
+        revealBtn.type      = 'button';
+        revealBtn.className = 'reveal-btn';
+
+        // ── Correct answer handler ───────────────────────────────────────────
         inp.addEventListener('input', () => {
           if (checkInput(inp.value, w, dir)) {
             inp.value    = revealText(w, dir);
@@ -171,7 +219,6 @@ export function renderTableMode({
             inp.classList.add('correct');
 
             knownBtn.hidden = false;
-
             if (isInAnyList(lang, w.word)) {
               knownBtn.classList.add('known-btn--active');
               tdWord.classList.add('word-cell--known');
@@ -180,7 +227,7 @@ export function renderTableMode({
             const allInputs  = Array.from(container.querySelectorAll<HTMLInputElement>('input[data-word]'));
             const currentIdx = allInputs.indexOf(inp);
             const next       = allInputs.slice(currentIdx + 1).find(i => !i.disabled);
-            if (next) next.focus();
+            if (next) scrollToNext(next);
 
             updateProgress();
 
@@ -193,7 +240,73 @@ export function renderTableMode({
           }
         });
 
+        // ── Escape: skip to next unanswered ──────────────────────────────────
+        inp.addEventListener('keydown', e => {
+          if (e.key !== 'Escape') return;
+          e.preventDefault();
+          const allInputs = Array.from(container.querySelectorAll<HTMLInputElement>('input[data-word]'));
+          const idx  = allInputs.indexOf(inp);
+          const next = allInputs.slice(idx + 1).find(i => !i.disabled);
+          if (next) scrollToNext(next);
+        });
+
+        // ── Row-active highlight while typing ────────────────────────────────
+        inp.addEventListener('focus', () => {
+          container.querySelectorAll('tr.row-active').forEach(r => r.classList.remove('row-active'));
+          inp.closest('tr')?.classList.add('row-active');
+        });
+        inp.addEventListener('blur', () => {
+          inp.closest('tr')?.classList.remove('row-active');
+        });
+
+        // ── Full reveal helper ────────────────────────────────────────────────
+        function doFullReveal(): void {
+          inp.value    = revealText(w, dir);
+          inp.disabled = true;
+          inp.classList.add('peeked');
+          knownBtn.hidden = false;
+          if (isInAnyList(lang, w.word)) {
+            knownBtn.classList.add('known-btn--active');
+            tdWord.classList.add('word-cell--known');
+          }
+          const allInputs = Array.from(container.querySelectorAll<HTMLInputElement>('input[data-word]'));
+          const idx  = allInputs.indexOf(inp);
+          const next = allInputs.slice(idx + 1).find(i => !i.disabled);
+          if (next) scrollToNext(next);
+          updateProgress();
+          if (checkAllComplete() && onComplete) setTimeout(() => onComplete!(), 300);
+        }
+
+        // ── Append input, then hint button based on hintMode ─────────────────
         tdInput.appendChild(inp);
+
+        if (hintMode === 'none') {
+          // No hint button
+        } else if (hintMode === 'first-letter') {
+          revealBtn.textContent = '?';
+          revealBtn.title       = 'Show first letter';
+          let hinted = false;
+          revealBtn.addEventListener('click', () => {
+            if (!hinted) {
+              const answer    = revealText(w, dir);
+              inp.value       = answer[0];
+              inp.placeholder = `${answer.length} letters`;
+              inp.focus();
+              hinted = true;
+              revealBtn.textContent = '??';
+              revealBtn.title       = 'Reveal full answer (counts as missed)';
+            } else {
+              doFullReveal();
+            }
+          });
+          tdInput.appendChild(revealBtn);
+        } else {
+          revealBtn.textContent = '?';
+          revealBtn.title       = 'Reveal answer (counts as missed)';
+          revealBtn.addEventListener('click', doFullReveal);
+          tdInput.appendChild(revealBtn);
+        }
+
         tdInput.appendChild(knownBtn);
         tr.appendChild(tdWord);
         tr.appendChild(tdInput);
@@ -205,40 +318,72 @@ export function renderTableMode({
     container.appendChild(table);
     attachTooltips(container);
     updateProgress();
+
+    // Auto-focus first unanswered input
+    const firstUnanswered = container.querySelector<HTMLInputElement>('input[data-word]:not(:disabled)');
+    firstUnanswered?.focus();
   }
 
   function checkAll(): CheckResult[] {
     const results: CheckResult[] = [];
     container.querySelectorAll<HTMLInputElement>('input[data-word]').forEach(inp => {
-      const entry = words.find(w => w.word === inp.dataset.word);
+      if (inp.classList.contains('correct')) { results.push({ ok: true });  return; }
+      if (inp.classList.contains('peeked'))  { results.push({ ok: false }); return; }
+      const entry = wordMap.get(inp.dataset.word ?? '');
       if (!entry) return;
-      const dir = (inp.dataset.dir ?? 'target-en') as 'target-en' | 'en-target';
-      const ok  = checkInput(inp.value, entry, dir);
+      const dir      = (inp.dataset.dir ?? 'target-en') as 'target-en' | 'en-target';
+      const revealed = revealText(entry, dir);
+      const ok       = checkInput(inp.value, entry, dir);
       inp.classList.remove('correct', 'incorrect');
       if (ok) {
-        inp.value    = revealText(entry, dir);
+        inp.value    = revealed;
         inp.disabled = true;
         inp.classList.add('correct');
       } else {
         inp.classList.add('incorrect');
       }
-      results.push({ word: inp.dataset.word, ok, expected: revealText(entry, dir) });
+      results.push({ word: inp.dataset.word, ok, expected: revealed });
     });
     return results;
   }
 
+  function shake(inp: HTMLInputElement): void {
+    // No forced reflow — giveUp only calls this once per element so the
+    // class is guaranteed to be absent; removing it first is unnecessary.
+    inp.classList.add('input-shake');
+    inp.addEventListener('animationend', () => inp.classList.remove('input-shake'), { once: true });
+  }
+
   function giveUp(): CheckResult[] {
+    const allInputs = Array.from(
+      container.querySelectorAll<HTMLInputElement>('input[data-word]')
+    );
+
+    // Count unanswered inputs upfront so we can decide whether shaking is useful
+    const unansweredCount = allInputs.filter(
+      inp => !inp.classList.contains('correct') &&
+             !inp.classList.contains('peeked')  &&
+             !inp.disabled
+    ).length;
+    const doShake = unansweredCount <= SHAKE_THRESHOLD;
+
     const results: CheckResult[] = [];
-    container.querySelectorAll<HTMLInputElement>('input[data-word]').forEach(inp => {
+    allInputs.forEach(inp => {
       if (inp.classList.contains('correct')) { results.push({ ok: true }); return; }
-      const entry = words.find(w => w.word === inp.dataset.word);
+      if (inp.classList.contains('peeked'))  {
+        results.push({ word: inp.dataset.word, ok: false, expected: inp.value });
+        return;
+      }
+      const entry = wordMap.get(inp.dataset.word ?? '');
       if (!entry) return;
-      const dir = (inp.dataset.dir ?? 'target-en') as 'target-en' | 'en-target';
-      inp.value    = revealText(entry, dir);
+      const dir      = (inp.dataset.dir ?? 'target-en') as 'target-en' | 'en-target';
+      const revealed = revealText(entry, dir);
+      inp.value    = revealed;
       inp.disabled = true;
       inp.classList.remove('correct');
       inp.classList.add('incorrect');
-      results.push({ ok: false });
+      if (doShake) shake(inp);
+      results.push({ word: inp.dataset.word, ok: false, expected: revealed });
     });
     updateProgress();
     return results;

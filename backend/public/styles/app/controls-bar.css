@@ -22,7 +22,7 @@
   margin-bottom: 0.5rem;
 }
 
-/* Reserve space on the right for the theme toggle (absolute-positioned inside #controls) */
+/* Reserve space on the right for the shortcuts button */
 #controls { position: relative; padding-right: 3rem; }
 
 .control-group {
@@ -32,15 +32,25 @@
 }
 
 .control-group > label {
-  font-size: 0.66rem;
+  font-size: 0.74rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--text-muted);
 }
 
-/* Size select + custom input side by side */
+/* Size select + custom input + mode toggle side by side */
 .size-row { display: flex; gap: 0.35rem; align-items: center; }
+
+/* Vertical divider between control groups */
+.controls-sep {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border);
+  margin: 0 0.25rem;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
 
 /* Controls row (secondary actions below) */
 .controls-row {
@@ -70,25 +80,27 @@
   letter-spacing: 0.06em;
 }
 
-/* In-area control rows (recall, table) also get the bolder label */
-#recallControls .control-group > label,
-#tableControls  .control-group > label {
+/* In-area control rows get a bolder label */
+#tableControls .control-group > label {
   color: var(--text);
   letter-spacing: 0.06em;
 }
 
-/* ── Sort-order segmented button group ── */
-.sort-order-toggle {
+/* ── Segmented button group — used for sort order, direction, settings toggles, etc. ── */
+/* .conj-display-toggle / .conj-toggle-btn are aliases of the same component.          */
+.sort-order-toggle,
+.conj-display-toggle {
   display: flex;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
 }
 
-.sort-order-btn {
+.sort-order-btn,
+.conj-toggle-btn {
   flex: 1;
-  padding: 0.28rem 0.55rem;
-  font-size: 0.72rem;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.78rem;
   font-weight: 500;
   background: var(--surface);
   color: var(--text-muted);
@@ -99,16 +111,19 @@
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 
-.sort-order-btn:last-child {
+.sort-order-btn:last-child,
+.conj-toggle-btn:last-child {
   border-right: none;
 }
 
-.sort-order-btn:hover {
+.sort-order-btn:hover,
+.conj-toggle-btn:hover {
   background: var(--surface2);
   color: var(--text);
 }
 
-.sort-order-btn.active {
+.sort-order-btn.active,
+.conj-toggle-btn.active {
   background: var(--accent);
   color: #fff;
 }
@@ -116,10 +131,12 @@
 /* ── Responsive ── */
 @media (max-width: 767px) {
   /* Shrink the right padding — toggle is 36px wide now so 2.75rem is enough */
-  #controls { padding-right: 2.75rem; }
+  #controls { padding-right: 5rem; }
 }
 
 @media (max-width: 599px) {
+  .controls-sep { display: none; }
+
   /* 2-column grid: Language | Top words / Order spans full width / Start full width */
   #controls-top {
     display: grid;

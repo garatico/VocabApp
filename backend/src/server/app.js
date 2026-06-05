@@ -6,6 +6,7 @@
  */
 
 import express     from 'express';
+import fs          from 'fs';
 import path        from 'path';
 import compression from 'compression';
 import { fileURLToPath } from 'url';
@@ -18,6 +19,17 @@ import { errorHandler }  from './middleware/error-handler.js';
 const __filename   = fileURLToPath(import.meta.url);
 const __dirname    = path.dirname(__filename);
 const projectRoot  = path.join(__dirname, '../..');
+
+/** Return immediate subdirectory names under `dir`, or [] if it doesn't exist. */
+function subDirs(dir) {
+  try {
+    return fs.readdirSync(dir, { withFileTypes: true })
+      .filter(d => d.isDirectory())
+      .map(d => d.name);
+  } catch {
+    return [];
+  }
+}
 
 export function createApp({ nodeEnv = process.env.NODE_ENV || 'development' } = {}) {
   const app = express();
@@ -41,19 +53,19 @@ export function createApp({ nodeEnv = process.env.NODE_ENV || 'development' } = 
   // Admin API (always mounted — guard is NODE_ENV check inside the route file)
   app.use('/api/admin', adminRoutes);
 
-  // SVG files from data/svgs/ (one level above backend/)
+  // SVG files from data/svgs/
   app.use('/svgs', express.static(path.join(projectRoot, '..', 'data', 'svgs')));
 
-  // OpenMoji emoji SVGs — organised into domain subfolders (data/emoji/animals/, etc.)
-  // Each subfolder is mounted at /emoji so existing URLs like /emoji/1F401.svg still work.
-  for (const domain of ['animals']) {
-    app.use('/emoji', express.static(path.join(projectRoot, '..', 'data', 'emoji', domain)));
+  // OpenMoji emoji SVGs — domain subfolders under data/emoji/ (e.g. animals/)
+  // Each subfolder is mounted at /emoji so URLs like /emoji/1F401.svg work regardless of domain.
+  const dataRoot = path.join(projectRoot, '..', 'data');
+  for (const domain of subDirs(path.join(dataRoot, 'emoji'))) {
+    app.use('/emoji', express.static(path.join(dataRoot, 'emoji', domain)));
   }
 
-  // Wikipedia photos — organised into domain subfolders (data/images/animals/, food/, nature/)
-  // Each subfolder is mounted at /images so existing URLs like /images/ant.jpg still work.
-  for (const domain of ['animals', 'food', 'nature']) {
-    app.use('/images', express.static(path.join(projectRoot, '..', 'data', 'images', domain)));
+  // Wikipedia photos — domain subfolders under data/images/ (e.g. animals/, food/, nature/)
+  for (const domain of subDirs(path.join(dataRoot, 'images'))) {
+    app.use('/images', express.static(path.join(dataRoot, 'images', domain)));
   }
 
   // Static files + SPA fallback (skip in test — we only need the API)

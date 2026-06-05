@@ -1,24 +1,25 @@
 /**
- * Core Word type — kept in sync with backend/public/src/types.ts.
+ * Core Word type — kept in sync with backend/src/client/types.ts.
  * When the project moves to a monorepo, both will import from a shared package.
  */
 
 export interface Word {
-  word:        string;
-  pos?:        string | null;
-  rank?:       number | null;
-  display?:    string | null;
-  emoji?:      string | null;
-  svg_url?:    string | null;
-  domains?:    string[];
-  answers?:    string;   // pipe-separated accepted English answers
+  word:         string;
+  translation?: string | null;   // primary English translation (formerly "display")
+  pos?:         string | null;
+  rank?:        number | null;
+  emoji?:       string | null;
+  svg_url?:     string | null;
+  domains?:     string[];
+  /** @deprecated Legacy pipe-delimited answers — not present in current API responses. */
+  answers?:     string;
   linguistic?: {
     gender?:  string | null;
     plural?:  string | null;
     forms?:   Record<string, string>;
   } | null;
   frequency?: {
-    rank?:       number;
+    rank?:        number;
     per_million?: number;
   } | null;
 }

@@ -139,13 +139,13 @@ function renderWordList(words, total) {
     ].join('');
 
     const glossPreview = (word.glosses || []).slice(0, 3).map(escapeHtml).join(', ');
-    const displayDiff  = word.display && word.display !== word.word
-      ? ` <span class="word-item-display">${escapeHtml(word.display)}</span>`
+    const translationDiff  = word.translation && word.translation !== word.word
+      ? ` <span class="word-item-display">${escapeHtml(word.translation)}</span>`
       : '';
 
     item.innerHTML = `
       <div class="word-item-top">
-        <span class="word-item-key">${escapeHtml(word.word)}</span>${displayDiff}
+        <span class="word-item-key">${escapeHtml(word.word)}</span>${translationDiff}
       </div>
       ${badgesHtml ? `<div class="word-item-badges">${badgesHtml}</div>` : ''}
       ${glossPreview ? `<div class="word-item-glosses">${glossPreview}</div>` : ''}
@@ -182,7 +182,7 @@ function populateForm(word) {
   // Identity
   document.getElementById('editWord').value        = word.word;
   document.getElementById('editWordDisplay').textContent = word.word;
-  document.getElementById('editDisplay').value     = word.display || '';
+  document.getElementById('editTranslation').value     = word.translation || '';
 
   // Classification
   setSelectValue('editPos',        word.pos        || '');
@@ -259,7 +259,7 @@ function collectFormData() {
   const domainVal    = document.getElementById('editDomain').value;
 
   return {
-    display:    document.getElementById('editDisplay').value.trim(),
+    translation: document.getElementById('editTranslation').value.trim(),
     pos:        document.getElementById('editPos').value || null,
     emoji:      document.getElementById('editEmoji').value.trim() || null,
     difficulty: document.getElementById('editDifficulty').value || null,

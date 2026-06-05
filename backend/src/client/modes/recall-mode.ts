@@ -3,6 +3,7 @@ import { attachTooltips } from '../utils/word-tooltip.ts';
 import type { Word }     from '../types.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker }            from '../utils/list-picker.ts';
+import { getFontScaleForRecall }     from '../settings.ts';
 
 const LANG_LABELS: Record<string, string> = {
   spanish: 'Spanish', portuguese: 'Portuguese', italian: 'Italian', french: 'French',
@@ -56,35 +57,10 @@ export function renderRecallMode({
   giveUpBtn.textContent = 'Give Up';
   giveUpBtn.className   = 'recall-giveup-btn';
 
-  const sliderWrap = document.createElement('div');
-  sliderWrap.className = 'recall-size-wrap';
+  // Apply text scale from the global font size setting
+  wrap.style.setProperty('--rs', getFontScaleForRecall().toFixed(3));
 
-  const iconSm = document.createElement('span');
-  iconSm.className   = 'recall-size-icon';
-  iconSm.textContent = 'A';
-
-  const sizeSlider = document.createElement('input');
-  sizeSlider.type      = 'range';
-  sizeSlider.min       = '0';
-  sizeSlider.max       = '3';
-  sizeSlider.step      = '1';
-  sizeSlider.value     = '0';
-  sizeSlider.className = 'recall-size-slider';
-  sizeSlider.setAttribute('aria-label', 'Text size');
-
-  function applyScale(v: number): void {
-    const scale = 1.15 + (v / 3) * 0.5;
-    wrap.style.setProperty('--rs', scale.toFixed(3));
-  }
-  sizeSlider.addEventListener('input', () => applyScale(Number(sizeSlider.value)));
-  applyScale(0);
-
-  const iconLg = document.createElement('span');
-  iconLg.className   = 'recall-size-icon lg';
-  iconLg.textContent = 'A';
-
-  sliderWrap.append(iconSm, sizeSlider, iconLg);
-  timerRow.append(timerDisplay, sliderWrap, giveUpBtn);
+  timerRow.append(timerDisplay, giveUpBtn);
 
   const inputRow = document.createElement('div');
   inputRow.className = 'recall-input-row';
@@ -256,11 +232,10 @@ export function renderRecallMode({
     inp.disabled       = true;
     giveUpBtn.disabled = true;
 
-    sorted.forEach(w => {
-      if (!recalled.has(w.word)) revealCell(w.word, 'missed');
-    });
+    const missedWords = sorted.filter(w => !recalled.has(w.word));
+    missedWords.forEach(w => revealCell(w.word, 'missed'));
 
-    const missed = sorted.length - recalled.size;
+    const missed = missedWords.length;
     const pct    = Math.round((recalled.size / sorted.length) * 100);
 
     const summaryHTML =
@@ -268,14 +243,31 @@ export function renderRecallMode({
       '<span class="summary-missed">✗ ' + missed + ' missed</span>' +
       '<span class="summary-pct">' + pct + '%</span>';
 
-    // Clear the live score — results are shown in the outer summary cards below
-    scoreEl.textContent = '';
-
     // Top and bottom outer summary cards
     ['recallSummaryTop', 'recallSummaryBottom'].forEach(id => {
       const el = document.getElementById(id);
       if (el) { el.style.display = 'flex'; el.innerHTML = summaryHTML; }
     });
+
+    // Missed word list — replaces the live score line
+    scoreEl.innerHTML = '';
+    if (missedWords.length > 0) {
+      const label = document.createElement('span');
+      label.className   = 'recall-missed-label';
+      label.textContent = 'Missed: ';
+      scoreEl.appendChild(label);
+
+      missedWords.forEach((w, i) => {
+        const chip = document.createElement('span');
+        chip.className   = 'recall-missed-chip';
+        chip.textContent = w.word;
+        if (w.linguistic?.gender) chip.title = w.linguistic.gender;
+        scoreEl.appendChild(chip);
+        if (i < missedWords.length - 1) {
+          scoreEl.appendChild(document.createTextNode(' '));
+        }
+      });
+    }
   }
 
   function startTimer(seconds: number, isHardStop: boolean): void {

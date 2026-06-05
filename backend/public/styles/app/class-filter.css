@@ -4,12 +4,12 @@
 
 /* Shared small-caps label — used by POS, conjugation controls, domains, etc. */
 .filter-section-label {
-  font-size: 0.66rem;
+  font-size: 0.74rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--text-muted);
-  margin-right: 0.15rem;
+  margin-right: 0.5rem;   /* more breathing room before the first chip */
   white-space: nowrap;
 }
 
@@ -23,46 +23,47 @@
 #classFilter {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.35rem;
   align-items: center;
   margin-top: 0;
-  padding: 0.35rem 0.5rem;
+  padding: 0.45rem 0.65rem;
   background: var(--surface2);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
 }
 
-#classFilter label {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.74rem;
+/* ── POS pill chips (shared by quiz sidebar + lists mode) ── */
+
+.pos-chip {
+  font-size: 0.78rem;
   font-weight: 500;
-  color: var(--text);
-  cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-#classFilter input[type="checkbox"] {
-  accent-color: var(--accent);
-  cursor: pointer;
-  width: 12px;
-  height: 12px;
-}
-
-#classFilter button {
-  font-size: 0.68rem;
-  padding: 0.15rem 0.45rem;
-  background: var(--surface2);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-weight: 600;
+  background: var(--surface2);
   color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+  white-space: nowrap;
+  line-height: 1.4;
 }
-#classFilter button:hover { background: var(--border); }
+.pos-chip:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.pos-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.pos-chip.active:hover {
+  background: var(--accent-hover, var(--accent));
+  border-color: var(--accent-hover, var(--accent));
+}
 
 /* ── List filter container — sits below #classFilter ── */
 #listFilter {
@@ -180,50 +181,15 @@
 /* ── Responsive ── */
 @media (max-width: 767px) {
   #classFilter {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.4rem 0.5rem;
+    gap: 0.35rem 0.4rem;
     padding: 0.5rem 0.55rem;
     margin-top: 0.4rem;
   }
 
-  /* Header row: label + All + None stay inline at natural width */
-  #classFilter > .filter-section-label { flex-shrink: 0; }
-  #classFilter > #selectAllClasses,
-  #classFilter > #selectNoneClasses {
-    flex-shrink: 0;
-    min-height: 34px;
-    padding: 0.15rem 0.7rem;
-    font-size: 0.75rem;
-  }
-
-  /* Each checkbox label takes exactly half the container width →
-     two columns of checkboxes that always align */
-  #classFilter label:not(.filter-known-inline) {
-    flex: 0 0 calc(50% - 0.25rem);
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 0.8rem;
-    font-weight: 500;
-    padding: 0.3rem 0.4rem;
-    min-height: 40px;
-    border-radius: var(--radius-sm);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    box-sizing: border-box;
-  }
-  #classFilter label:not(.filter-known-inline):active {
-    background: var(--accent-light);
-    border-color: var(--accent);
-  }
-
-  /* 20 px checkbox — iOS / Material minimum for touch */
-  #classFilter input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
+  .pos-chip {
+    font-size: 0.78rem;
+    padding: 0.3rem 0.65rem;
+    min-height: 36px;
   }
 
 }

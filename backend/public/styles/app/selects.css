@@ -4,7 +4,7 @@
 
 select {
   font-family: 'Sora', sans-serif;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border-strong);
@@ -26,7 +26,7 @@ select:focus {
 /* ── Custom number input (quiz size) ── */
 #sizeCustom {
   font-family: 'Sora', sans-serif;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border-strong);

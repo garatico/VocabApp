@@ -19,11 +19,11 @@ export function errorHandler(err, req, res, next) {
   const statusCode = err.statusCode || err.status || 500;
   const isDevelopment = process.env.NODE_ENV === 'development';
 
-  // Build error response
+  // Build error response.
+  // error is the message string (not a boolean) so admin-api.js can display it directly.
   const response = {
-    error: true,
+    error: err.message || 'Internal Server Error',
     statusCode,
-    message: err.message || 'Internal Server Error',
     timestamp
   };
 
@@ -46,22 +46,6 @@ export function errorHandler(err, req, res, next) {
 
   // Send response
   res.status(statusCode).json(response);
-}
-
-/**
- * 404 Handler
- *
- * Handles undefined routes
- */
-export function notFoundHandler(req, res) {
-  res.status(404).json({
-    error: true,
-    statusCode: 404,
-    message: 'Not Found',
-    path: req.path,
-    method: req.method,
-    timestamp: new Date().toISOString()
-  });
 }
 
 export default errorHandler;

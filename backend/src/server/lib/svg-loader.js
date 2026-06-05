@@ -62,17 +62,8 @@ function fileExists(p) {
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
- * Check if a shared SVG exists for a word.
- */
-export function hasSvg(language, word) {
-  if (!language || !word) return false;
-  const key = conceptKeyFor(language, word);
-  return !!(key && fileExists(sharedSvgPath(key)));
-}
-
-/**
  * Return the shared SVG URL for a word, or null if no mapping exists.
- *   /svgs/shared/{concept}.svg
+ *   /svgs/{concept}.svg
  */
 export function getSvgUrl(language, word) {
   if (!language || !word) return null;
@@ -99,17 +90,4 @@ export function ensureSvgDirs() {
   }
 }
 
-/**
- * SVG count for admin stats.
- */
-export function getSvgStats() {
-  const dir = path.join(appRoot, 'data', 'svgs');
-  try {
-    const count = fs.existsSync(dir)
-      ? fs.readdirSync(dir).filter(f => f.endsWith('.svg')).length
-      : 0;
-    return { shared: count };
-  } catch { return { shared: 0 }; }
-}
-
-export default { hasSvg, getSvgUrl, ensureSvgDirs, getSvgStats };
+export default { getSvgUrl, ensureSvgDirs };

@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VocabApp Admin Panel</title>
   <!-- Shared tokens -->
   <link rel="stylesheet" href="/styles/shared/variables.css">
+  <link rel="stylesheet" href="/styles/shared/reset.css">
   <!-- Admin styles -->
   <link rel="stylesheet" href="/styles/admin/layout.css">
   <link rel="stylesheet" href="/styles/admin/tabs.css">
@@ -22,7 +23,10 @@
   <div class="container">
 
     <header>
-      <h1>📚 VocabApp Admin</h1>
+      <div class="header-left">
+        <a href="/" class="back-link" title="Back to app">← App</a>
+        <h1>📚 VocabApp Admin</h1>
+      </div>
       <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">☾</button>
     </header>
 
@@ -34,6 +38,7 @@
       <button class="tab-btn" data-tab="documentation">Help &amp; Docs</button>
     </div>
 
+    <div class="tabs-wrap">
     <!-- ═══════════════════ EDITOR TAB ═══════════════════ -->
     <div id="editor" class="tab-content active">
 
@@ -136,8 +141,8 @@
                     <input type="hidden" id="editWord">
                   </div>
                   <div class="form-group">
-                    <label>Display / UI label</label>
-                    <input type="text" id="editDisplay" placeholder="How it appears in the app">
+                    <label>Translation (primary English)</label>
+                    <input type="text" id="editTranslation" placeholder="Primary English translation">
                   </div>
                 </div>
               </div>
@@ -448,8 +453,8 @@
             </thead>
             <tbody>
               <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:0.6rem 0.75rem;"><code>display</code></td>
-                <td style="padding:0.6rem 0.75rem;">How the word appears in the app UI</td>
+                <td style="padding:0.6rem 0.75rem;"><code>translation</code></td>
+                <td style="padding:0.6rem 0.75rem;">Primary English translation shown to the learner</td>
                 <td style="padding:0.6rem 0.75rem;">Plain text</td>
               </tr>
               <tr style="border-bottom:1px solid var(--border);">
@@ -540,7 +545,7 @@
         <div style="background:var(--surface2);padding:1.25rem;border-radius:var(--radius);">
           <h3 style="margin-bottom:0.75rem;font-size:1.05rem;color:var(--accent);">💡 Tips</h3>
           <ul style="color:var(--text);line-height:1.9;margin:0;padding-left:1.5rem;font-size:0.9rem;">
-            <li><strong>Search</strong> matches on word key, display name, and any translation/gloss.</li>
+            <li><strong>Search</strong> matches on word key, translation, and any gloss.</li>
             <li><strong>Filters</strong> (POS, Band, Domain) narrow the word list and combine with search.</li>
             <li><strong>Glosses:</strong> put each translation on its own line.</li>
             <li><strong>Examples:</strong> put each sentence on its own line.</li>
@@ -549,9 +554,10 @@
           </ul>
         </div>
       </div>
-    </div>
+    </div><!-- /documentation tab -->
 
-  </div>
+    </div><!-- /tabs-wrap -->
+  </div><!-- /container -->
   <script type="module" src="/admin.js"></script>
 </body>
 </html>

@@ -44,7 +44,7 @@ export interface WordRelations {
 
 export interface Word {
   word:       string;
-  display:    string;
+  translation: string;
   pos:        string | null;
   difficulty: number | null;
   notes:      string;
@@ -63,7 +63,3 @@ export interface Word {
   answers?:   string;
 }
 
-/** Word with the resolved emoji added by picture-mode before rendering. */
-export interface PictureWord extends Word {
-  _emoji: string | null;
-}

@@ -284,7 +284,7 @@ function buildCard(
     inp.autocorrect    = 'off';
     inp.autocapitalize = 'off';
     inp.spellcheck     = false;
-    inp.placeholder    = '...';
+    inp.placeholder    = 'Type conjugation…';
 
     row.append(label, inp);
     innerGrid.appendChild(row);
@@ -307,7 +307,7 @@ function buildCard(
   singleInp.autocorrect    = 'off';
   singleInp.autocapitalize = 'off';
   singleInp.spellcheck     = false;
-  singleInp.placeholder    = '...';
+  singleInp.placeholder    = 'Type conjugation…';
 
   singleFormRow.append(singleLabel, singleInp);
   innerGrid.appendChild(singleFormRow);

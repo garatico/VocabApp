@@ -1,34 +1,28 @@
 """
 lang_config.py - Shared language configuration for the VocabApp pipeline
 =========================================================================
-Single source of truth for language codes, model names, and POS mappings.
-Imported by corpus_builder.py, gloss_fetcher.py, and clean_wikicorpora.py.
+Single source of truth for language codes, model names, POS mappings,
+and shared utility functions.
+Imported by corpus_builder.py, corpus_to_curated.py, sync_db.py, and
+check_visual_coverage.py.
 """
 
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
-# 3-letter code -> full language name (used for preseed filenames, DB lang field)
+# 3-letter code -> full language name (used for JSONL filenames, DB lang field)
 LANG_NAMES: Dict[str, str] = {
     'spa': 'spanish',
     'fra': 'french',
     'ita': 'italian',
     'por': 'portuguese',
-    'deu': 'german',
-    'rus': 'russian',
-    'jpn': 'japanese',
-    'zho': 'chinese',
 }
 
 # 3-letter code -> spaCy model name
 SPACY_MODELS: Dict[str, str] = {
-    'deu': 'de_core_news_sm',
     'fra': 'fr_core_news_sm',
     'ita': 'it_core_news_sm',
-    'jpn': 'ja_core_news_sm',
     'por': 'pt_core_news_sm',
-    'rus': 'ru_core_news_sm',
     'spa': 'es_core_news_sm',
-    'zho': 'zh_core_news_sm',
 }
 
 # 3-letter code -> ISO 639-1 code used by deep_translator
@@ -45,10 +39,6 @@ OS_LANG: Dict[str, str] = {
     'fra': 'fr',
     'ita': 'it',
     'por': 'pt',
-    'deu': 'de',
-    'rus': 'ru',
-    'jpn': 'ja',
-    'zho': 'zh',
 }
 
 # 3-letter code -> language name used by wiktionaryparser
@@ -107,6 +97,17 @@ TENSE_MAP: Dict[str, Dict[str, Tuple[str, str]]] = {
         'imperative':  ('Imperativo',  'Afirmativo'),
     },
 }
+
+
+def rank_to_difficulty(rank: Optional[int]) -> int:
+    """Map a frequency rank to a 1-5 difficulty level (1 = most common)."""
+    if not rank:     return 5
+    if rank <= 200:  return 1
+    if rank <= 500:  return 2
+    if rank <= 1000: return 3
+    if rank <= 2000: return 4
+    return 5
+
 
 # spaCy POS tag -> app POS group
 POS_GROUPS: Dict[str, str] = {

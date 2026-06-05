@@ -14,7 +14,7 @@ const SCHEMA = `
   CREATE TABLE words (
     id                    INTEGER PRIMARY KEY AUTOINCREMENT,
     word                  TEXT    NOT NULL,
-    display               TEXT,
+    translation           TEXT,
     language              TEXT    NOT NULL,
     pos                   TEXT,
     difficulty            TEXT,
@@ -32,6 +32,8 @@ const SCHEMA = `
     rank                  INTEGER,
     corpus_frequency      REAL,
     domains               TEXT,
+    past_participle       TEXT,
+    gerund                TEXT,
     updated_at            TEXT    DEFAULT CURRENT_TIMESTAMP,
     conjugation_class     TEXT,
     future_stem           TEXT,
@@ -69,7 +71,7 @@ const SCHEMA = `
 
 const SEED_WORDS = [
   {
-    word: 'hablar', display: 'hablar', language: 'spanish', pos: 'verb',
+    word: 'hablar', translation: 'hablar', language: 'spanish', pos: 'verb',
     difficulty: 'beginner', notes: 'regular -ar verb', infinitive: 'hablar',
     reflexive: 0, ipa: 'aBlah', band: 'A1', rank: 1,
     domains: '["general"]',
@@ -78,7 +80,7 @@ const SEED_WORDS = [
     examples: ['Yo hablo espanol.', 'Hablas ingles?'],
   },
   {
-    word: 'casa', display: 'casa', language: 'spanish', pos: 'noun',
+    word: 'casa', translation: 'casa', language: 'spanish', pos: 'noun',
     difficulty: 'beginner', notes: '', gender: 'feminine', plural: 'casas',
     ipa: 'kasa', band: 'A1', rank: 2,
     domains: '["home","general"]',
@@ -86,14 +88,14 @@ const SEED_WORDS = [
     examples: ['Mi casa es grande.'],
   },
   {
-    word: 'bonito', display: 'bonito', language: 'spanish', pos: 'adjective',
+    word: 'bonito', translation: 'bonito', language: 'spanish', pos: 'adjective',
     difficulty: 'beginner', notes: '', ipa: 'bonito', band: 'A2', rank: 3,
     domains: '["general"]',
     glosses: ['pretty', 'nice', 'beautiful'],
     examples: [],
   },
   {
-    word: 'falar', display: 'falar', language: 'portuguese', pos: 'verb',
+    word: 'falar', translation: 'falar', language: 'portuguese', pos: 'verb',
     difficulty: 'beginner', notes: 'regular -ar verb', infinitive: 'falar',
     ipa: 'falar', band: 'A1', rank: 1,
     domains: '["general"]',
@@ -109,12 +111,12 @@ export function createTestDb() {
   db.exec(SCHEMA);
 
   const insertWord = db.prepare(`
-    INSERT INTO words (word, display, language, pos, difficulty, notes,
+    INSERT INTO words (word, translation, language, pos, difficulty, notes,
       infinitive, reflexive, gender, plural, ipa, band, rank, domains,
-      conjugation_class, future_stem, conjugation_overrides)
-    VALUES (:word, :display, :language, :pos, :difficulty, :notes,
+      past_participle, gerund, conjugation_class, future_stem, conjugation_overrides)
+    VALUES (:word, :translation, :language, :pos, :difficulty, :notes,
       :infinitive, :reflexive, :gender, :plural, :ipa, :band, :rank, :domains,
-      :conjugation_class, :future_stem, :conjugation_overrides)
+      :past_participle, :gerund, :conjugation_class, :future_stem, :conjugation_overrides)
   `);
   const insertGloss   = db.prepare('INSERT INTO word_glosses (word_id, gloss, position) VALUES (?, ?, ?)');
   const insertExample = db.prepare('INSERT INTO word_examples (word_id, example, position) VALUES (?, ?, ?)');
@@ -123,7 +125,7 @@ export function createTestDb() {
     for (const seed of SEED_WORDS) {
       const info = insertWord.run({
         word:                  seed.word,
-        display:               seed.display               ?? null,
+        translation:               seed.translation               ?? null,
         language:              seed.language,
         pos:                   seed.pos                   ?? null,
         difficulty:            seed.difficulty            ?? null,
@@ -136,6 +138,8 @@ export function createTestDb() {
         band:                  seed.band                  ?? null,
         rank:                  seed.rank                  ?? null,
         domains:               seed.domains               ?? null,
+        past_participle:       seed.past_participle       ?? null,
+        gerund:                seed.gerund                ?? null,
         conjugation_class:     seed.conjugation_class     ?? null,
         future_stem:           seed.future_stem           ?? null,
         conjugation_overrides: seed.conjugation_overrides ?? null,

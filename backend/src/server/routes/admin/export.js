@@ -5,17 +5,11 @@
  *   POST /export  — download full vocabulary as CSV
  */
 
-import { Router } from 'express';
-import { getDb }  from '../../lib/vocab-loader.js';
+import { Router }                                 from 'express';
+import { getDb }                                  from '../../lib/vocab-loader.js';
+import { SUPPORTED_LANGUAGES, validateLanguage }  from './_utils.js';
 
 const router = Router();
-
-const SUPPORTED_LANGUAGES = ['spanish', 'portuguese', 'italian', 'french'];
-
-function validateLanguage(lang) {
-  const l = lang?.toLowerCase();
-  return SUPPORTED_LANGUAGES.includes(l) ? l : null;
-}
 
 // POST /export
 router.post('/export', (req, res) => {
@@ -42,7 +36,7 @@ router.post('/export', (req, res) => {
     };
 
     const headers = [
-      'rank','word','display','glosses','pos','difficulty','tags',
+      'rank','word','translation','glosses','pos','difficulty','tags',
       'notes','examples','ipa','frequency_band','gender','plural',
       'infinitive','reflexive','register',
     ];
@@ -50,7 +44,7 @@ router.post('/export', (req, res) => {
 
     for (const row of rows) {
       lines.push([
-        esc(row.rank),        esc(row.word),     esc(row.display),
+        esc(row.rank),        esc(row.word),     esc(row.translation),
         esc((row.glosses_raw  || '').replace(/\|\|\|/g, '|')),
         esc(row.pos),         esc(row.difficulty),
         esc(row.tags_raw || ''),

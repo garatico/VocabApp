@@ -27,6 +27,33 @@
   50%       { opacity: 0.5; }
 }
 
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-5px); }
+  40%       { transform: translateX(5px); }
+  60%       { transform: translateX(-3px); }
+  80%       { transform: translateX(3px); }
+}
+
+@keyframes correctFill {
+  from {
+    background-color: var(--surface);
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
+  to {
+    background-color: var(--correct-light);
+    border-color: var(--correct);
+    color: var(--correct);
+  }
+}
+
+/* Mode section entrance — subtle slide-up + fade */
+@keyframes sectionEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* Reduced-motion override */
 @media (prefers-reduced-motion: reduce) {
   * {

@@ -10,10 +10,9 @@
 
 import { Router }                      from 'express';
 import { getDb, clearCache, reloadDb } from '../../lib/vocab-loader.js';
+import { SUPPORTED_LANGUAGES }         from './_utils.js';
 
 const router = Router();
-
-const SUPPORTED_LANGUAGES = ['spanish', 'portuguese', 'italian', 'french'];
 
 // GET /stats
 router.get('/stats', (req, res) => {
@@ -30,11 +29,10 @@ router.get('/stats', (req, res) => {
       const adjs    = db.prepare("SELECT COUNT(*) AS n FROM words WHERE language=? AND pos='adjective'").get(lang).n;
 
       stats[lang] = {
-        total, withExamples: withEx, withSynonyms: 0, withIPA,
+        total, withExamples: withEx, withIPA,
         verbs, nouns, adjectives: adjs,
         coverage: {
           examples: total ? Math.round((withEx  / total) * 100) : 0,
-          synonyms: 0,
           ipa:      total ? Math.round((withIPA / total) * 100) : 0,
         },
       };
@@ -57,7 +55,9 @@ router.get('/meta', (req, res) => {
     const domainRows = db.prepare("SELECT DISTINCT domains FROM words WHERE domains IS NOT NULL AND domains!='[]' AND domains!=''").all();
     const domainSet  = new Set();
     for (const r of domainRows) {
-      try { JSON.parse(r.domains).forEach(d => domainSet.add(d)); } catch (_) {}
+      try { JSON.parse(r.domains).forEach(d => domainSet.add(d)); } catch (e) {
+        console.warn('GET /admin/meta: malformed domains JSON:', r.domains?.slice(0, 80));
+      }
     }
 
     const bands = db.prepare("SELECT DISTINCT band FROM words WHERE band IS NOT NULL ORDER BY band")

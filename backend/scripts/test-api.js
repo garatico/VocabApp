@@ -1,99 +1,82 @@
 /**
- * Simple API Test Script
+ * test-api.js
  *
- * Usage: node test-api.js
+ * Manual smoke-test for the running backend.
+ * Usage: node scripts/test-api.js
  * Make sure the backend is running first: npm run dev
  */
 
 const BASE_URL = 'http://localhost:3000';
 
-/**
- * Make HTTP request
- */
-async function request(path) {
+async function request(path, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
   try {
-    const response = await fetch(`${BASE_URL}${path}`);
-    const data = await response.json();
-    return {
-      status: response.status,
-      data
-    };
-  } catch (error) {
-    return {
-      error: error.message
-    };
+    const res  = await fetch(`${BASE_URL}${path}`, opts);
+    const data = await res.json();
+    return { status: res.status, ok: res.ok, data };
+  } catch (err) {
+    return { error: err.message };
   }
 }
 
-/**
- * Format JSON for display
- */
-function formatJSON(obj, depth = 2) {
-  return JSON.stringify(obj, null, 2).split('\n').slice(0, depth * 3).join('\n');
+function check(label, condition, detail = '') {
+  const icon = condition ? '✓' : '✗';
+  console.log(`  ${icon} ${label}${detail ? ' — ' + detail : ''}`);
+  if (!condition) process.exitCode = 1;
 }
 
-/**
- * Test the API
- */
-async function runTests() {
-  console.log('\n🧪 VocabApp Backend API Tests\n');
-  console.log('═'.repeat(60));
+async function run() {
+  console.log('\n🧪  VocabApp API smoke-test\n');
 
-  // Test 1: Health check
-  console.log('\n✓ Test 1: Health Check');
-  console.log('  Request: GET /api/health');
+  // ── Health ───────────────────────────────────────────────────────────────
+  console.log('Health');
   const health = await request('/api/health');
   if (health.error) {
-    console.log('  ❌ Error:', health.error);
-    console.log('  Make sure backend is running: npm run dev');
-    return;
+    console.log(`  ✗ Could not connect: ${health.error}`);
+    console.log('  Make sure the backend is running: npm run dev');
+    process.exit(1);
   }
-  console.log('  Status:', health.status);
-  console.log('  Response:', formatJSON(health.data, 2));
+  check('200 OK',              health.status === 200);
+  check('status: ok',          health.data.status === 'ok');
+  check('uptime is a number',  typeof health.data.uptime === 'number');
 
-  // Test 2: List languages
-  console.log('\n✓ Test 2: List Available Languages');
-  console.log('  Request: GET /api/languages');
-  const languages = await request('/api/languages');
-  console.log('  Status:', languages.status);
-  console.log('  Languages:', languages.data.languages.map(l => `${l.flag} ${l.name}`).join(', '));
-
-  // Test 3: Get vocabulary (may fail if file doesn't exist - that's OK)
-  console.log('\n✓ Test 3: Get Spanish Vocabulary');
-  console.log('  Request: GET /api/vocab/spanish');
-  const spanish = await request('/api/vocab/spanish');
-  console.log('  Status:', spanish.status);
-  if (spanish.data.error) {
-    console.log('  ℹ  Expected: Vocabulary file not found yet');
-    console.log('  Message:', spanish.data.message);
-  } else {
-    console.log('  Words loaded:', spanish.data.count);
-    if (spanish.data.data.length > 0) {
-      console.log('  First word:', JSON.stringify(spanish.data.data[0], null, 2).split('\n').slice(0, 5).join('\n'));
-    }
+  // ── Vocabulary ───────────────────────────────────────────────────────────
+  console.log('\nGET /api/vocab/spanish');
+  const spa = await request('/api/vocab/spanish');
+  check('200 OK',              spa.status === 200);
+  check('success: true',       spa.data.success === true);
+  check('has data array',      Array.isArray(spa.data.data));
+  check('word count > 0',      (spa.data.count ?? 0) > 0, `${spa.data.count} words`);
+  if (spa.data.data?.[0]) {
+    const w = spa.data.data[0];
+    check('word has glosses',  Array.isArray(w.glosses));
+    check('word has examples', Array.isArray(w.examples));
+    check('word has domains',  Array.isArray(w.domains));
   }
 
-  // Test 4: Test 404 error handling
-  console.log('\n✓ Test 4: Error Handling (Invalid Language)');
-  console.log('  Request: GET /api/vocab/klingon');
-  const invalid = await request('/api/vocab/klingon');
-  console.log('  Status:', invalid.status);
-  console.log('  Error:', invalid.data.message);
+  console.log('\nGET /api/vocab/Spanish  (case-insensitive)');
+  const spaUpper = await request('/api/vocab/Spanish');
+  check('200 OK',              spaUpper.status === 200);
+  check('language normalised', spaUpper.data.language === 'spanish');
 
-  // Test 5: Test 404 for non-existent route
-  console.log('\n✓ Test 5: 404 Handler (Non-existent Route)');
-  console.log('  Request: GET /api/invalid-endpoint');
-  const notFound = await request('/api/invalid-endpoint');
-  console.log('  Status:', notFound.status);
-  console.log('  Error:', notFound.data.message);
+  console.log('\nGET /api/vocab/klingon  (unknown language → 404)');
+  const bad = await request('/api/vocab/klingon');
+  check('404',                 bad.status === 404);
+  check('error is a string',   typeof bad.data.error === 'string');
 
-  console.log('\n═'.repeat(60));
-  console.log('\n✅ API Tests Complete!\n');
-  console.log('Next steps:');
-  console.log('  1. Add vocabulary JSON files to backend/data/');
-  console.log('  2. Run: npm run dev');
-  console.log('  3. Visit: http://localhost:3000\n');
+  // ── Admin (dev-only) ─────────────────────────────────────────────────────
+  console.log('\nGET /api/admin/stats');
+  const stats = await request('/api/admin/stats');
+  check('200 OK',              stats.status === 200);
+  check('has spanish stats',   !!stats.data.stats?.spanish);
+
+  console.log('\nPOST /api/admin/cache/clear  (single language)');
+  const clear = await request('/api/admin/cache/clear', 'POST', { lang: 'spanish' });
+  check('200 OK',              clear.status === 200);
+  check('success: true',       clear.data.success === true);
+
+  console.log(`\n${process.exitCode ? '❌  Some checks failed.' : '✅  All checks passed.'}\n`);
 }
 
-// Run tests
-runTests().catch(console.error);
+run().catch(err => { console.error(err); process.exit(1); });

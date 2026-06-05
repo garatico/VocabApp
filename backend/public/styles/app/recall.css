@@ -27,6 +27,26 @@
   gap: 0.4rem;
 }
 
+/* ── Empty state (before Start Quiz) ── */
+#recallWrap:empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  margin: 0.5rem 0;
+}
+#recallWrap:empty::before {
+  content: 'Select your settings above and hit Start Quiz';
+  font-family: 'Sora', sans-serif;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: 1.5rem;
+}
+
 .recall-wrap { display: flex; flex-direction: column; gap: 0.6rem; }
 
 .recall-timer-row {

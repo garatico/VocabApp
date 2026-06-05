@@ -69,5 +69,6 @@ export function clearError(): void { closeError(); }
 
 export function mountUI(): void {
   (window as Window & { closeError?: () => void }).closeError = closeError;
+  document.getElementById('closeErrorBtn')?.addEventListener('click', closeError);
   console.log('✓ UI enhancements mounted');
 }

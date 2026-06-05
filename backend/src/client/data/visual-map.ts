@@ -4,22 +4,21 @@
  * Concept-based visual fallbacks for Picture Quiz mode.
  *
  * Each entry defines one concept (e.g. "dog") with:
- *   - emoji   — Unicode emoji fallback
- *   - svgUrl  — OpenMoji CDN URL (preferred over emoji when present)
- *   - words   — every word across all supported languages that represents
- *               this concept, so one entry covers perro + cachorro + cão + cane + chien
+ *   - emoji   — Unicode emoji fallback (always available)
+ *   - svgUrl  — OpenMoji SVG served from /emoji/ (preferred over emoji)
+ *   - words   — every word across all supported languages that maps to this concept,
+ *               so one entry covers perro + cachorro + cão + cane + chien
  *
  * Language keys match the full names used throughout the app
  * ('spanish', 'portuguese', 'italian', 'french').
  *
- * OpenMoji CDN base: https://cdn.jsdelivr.net/npm/openmoji@15.0.0/color/svg/
- * Filename = Unicode codepoint, e.g. U+1F415 -> 1F415.svg
- * Browse at: https://openmoji.org
+ * SVG files: run backend/scripts/download_emoji.py to populate data/emoji/animals/.
+ * Browse OpenMoji at: https://openmoji.org
  */
 
-// OpenMoji SVGs served locally from data/emoji/animals/ (download_emoji.py already run)
-const CDN    = '/emoji';
-const SHARED = '/svgs';
+// Local paths — SVGs are served by Express from data/emoji/ and data/svgs/
+const CDN    = '/emoji';   // OpenMoji SVGs (data/emoji/animals/)
+const SHARED = '/svgs';    // shared custom SVGs (data/svgs/)
 
 type Languages = 'spanish' | 'portuguese' | 'italian' | 'french';
 

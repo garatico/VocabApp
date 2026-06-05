@@ -19,7 +19,7 @@
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   color: var(--text-muted);
   font-weight: 500;
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   cursor: pointer;
   transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
   letter-spacing: 0.01em;
@@ -41,7 +41,7 @@
   border-bottom-color: var(--surface);
   color: var(--accent);
   font-weight: 700;
-  font-size: 0.77rem;
+  font-size: 0.84rem;
   z-index: 1;
   box-shadow: 0 -2px 6px rgba(0,0,0,0.08);
 }
@@ -56,6 +56,18 @@
   height: 3px;
   background: var(--accent);
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+/* ── Admin tab — link styled as a tab, never "active" ── */
+a.admin-tab {
+  text-decoration: none;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  border-style: dashed;   /* subtle visual cue it navigates away */
+  margin-left: 0.5rem;    /* small gap after My Lists */
+}
+a.admin-tab:hover {
+  color: var(--accent);
 }
 
 /* ── Responsive ── */

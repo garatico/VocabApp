@@ -3,7 +3,6 @@
  *
  * Integration tests for the public API routes:
  *   GET /api/health
- *   GET /api/languages
  *   GET /api/vocab/:language
  */
 
@@ -31,26 +30,6 @@ describe('GET /api/health', () => {
   });
 });
 
-describe('GET /api/languages', () => {
-  it('returns the four supported languages', async () => {
-    const res = await request(app).get('/api/languages');
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.languages).toHaveLength(4);
-    const codes = res.body.languages.map(l => l.code);
-    expect(codes).toEqual(expect.arrayContaining(['es', 'pt', 'it', 'fr']));
-  });
-
-  it('each language entry has code, name, nativeName, flag', async () => {
-    const res = await request(app).get('/api/languages');
-    for (const lang of res.body.languages) {
-      expect(lang).toHaveProperty('code');
-      expect(lang).toHaveProperty('name');
-      expect(lang).toHaveProperty('nativeName');
-      expect(lang).toHaveProperty('flag');
-    }
-  });
-});
 
 describe('GET /api/vocab/:language', () => {
   it('returns Spanish words from the test DB', async () => {

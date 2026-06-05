@@ -141,7 +141,7 @@
   flex-shrink: 0;
   padding: 0.45rem 1rem;
   background: var(--danger-light);
-  border: 1px solid #e8a09a;
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
   font-weight: 600;
@@ -152,7 +152,8 @@
 }
 
 .picture-give-up-btn:hover:not(:disabled) {
-  background: #f9dbd8;
+  background: var(--danger-light);
+  filter: brightness(0.95);
 }
 
 .picture-give-up-btn:disabled {

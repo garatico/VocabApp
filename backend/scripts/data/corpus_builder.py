@@ -7,7 +7,7 @@ Responsible for:
   - mlconjug3 verb conjugation
   - Building vocabulary entries from corpus rows
 
-Called by clean_wikicorpora.main().
+Used by corpus_to_curated.py.
 """
 
 import re
@@ -222,7 +222,7 @@ def corpus_entry(word: str, pos_group: str, rank_clean: int,
     return {
         'rank':       rank_clean,
         'word':       word,
-        'display':    '',
+        'translation':    '',
         'pos':        pos_group,
         'difficulty': difficulty,
         'tags':       tags,
