@@ -15,6 +15,7 @@ export default defineConfig({
       '/svgs':   { target: 'http://localhost:3000', changeOrigin: true },
       '/images': { target: 'http://localhost:3000', changeOrigin: true },
       '/emoji':  { target: 'http://localhost:3000', changeOrigin: true },
+      '/admin':  { target: 'http://localhost:3000', changeOrigin: true },
     },
   },
 

@@ -86,7 +86,7 @@ async function loadVerbs() {
     conjVerbList.innerHTML = words.map(w => `
       <div class="conj-verb-item ${selectedVerb?.word === w.word ? 'active' : ''}"
            data-word="${escapeHtml(w.word)}">
-        <span class="conj-verb-display">${escapeHtml(w.display || w.word)}</span>
+        <span class="conj-verb-display">${escapeHtml(w.translation || w.word)}</span>
         <span class="conj-verb-gloss">${escapeHtml((w.glosses?.[0]) || '')}</span>
       </div>
     `).join('');
@@ -117,7 +117,7 @@ function selectVerb(verb) {
   conjTableCard.style.display  = 'block';
 
   // Fill header
-  conjVerbTitle.textContent   = verb.display || verb.word;
+  conjVerbTitle.textContent   = verb.translation || verb.word;
   conjVerbGlosses.textContent = verb.glosses?.join(', ') || '';
 
   renderTable();

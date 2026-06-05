@@ -7,7 +7,8 @@
  * Route map:
  *   /vocab, /vocab/:word  →  admin/words.js
  *   /stats, /meta,
- *   /cache/clear          →  admin/db.js
+ *   /cache/clear,
+ *   /db/reload            →  admin/db.js
  *   /export               →  admin/export.js
  */
 

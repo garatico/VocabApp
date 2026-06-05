@@ -20,6 +20,7 @@ const root = join(__dirname, '..');
 
 const CHECK_DIRS = [
   join(root, 'src', 'server'),
+  join(root, 'scripts'),       // validate.js, test-api.js, and redirect stubs
 ];
 
 const MIN_BYTES = 50; // any JS file under this is almost certainly truncated
@@ -67,6 +68,7 @@ if (errors === 0) {
   console.log('✓ All files passed validation.');
   process.exit(0);
 } else {
-  console.error(`\n${errors} problem(s) found. Fix them before starting the server.`);
+  console.error(`
+${errors} problem(s) found. Fix them before starting the server.`);
   process.exit(1);
 }

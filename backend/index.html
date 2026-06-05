@@ -1,9 +1,10 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<title>Quick Vocab Quiz</title>
+<meta name="description" content="VocabApp — practice Spanish, Portuguese, Italian and French vocabulary with flashcards, recall, picture quiz and conjugation drills."/>
+<title>VocabApp</title>
 <!-- Shared tokens -->
 <link rel="stylesheet" href="/styles/shared/variables.css"/>
 <link rel="stylesheet" href="/styles/shared/reset.css"/>
@@ -31,6 +32,10 @@
 <link rel="stylesheet" href="/styles/app/responsive.css"/>
 <link rel="stylesheet" href="/styles/app/list-picker.css"/>
 <link rel="stylesheet" href="/styles/app/my-lists.css"/>
+<link rel="stylesheet" href="/styles/app/settings.css"/>
+<link rel="stylesheet" href="/styles/app/font-size.css"/>
+<link rel="stylesheet" href="/styles/app/shortcuts.css"/>
+<link rel="stylesheet" href="/styles/app/onboarding.css"/>
 
 </head>
 
@@ -46,26 +51,28 @@
   <div id="errorMessage" style="display:none" role="alert" aria-live="polite">
     <span class="error-icon">&#x26A0;&#xFE0F;</span>
     <span class="error-text"></span>
-    <button type="button" onclick="closeError()" aria-label="Close error">&#xD7;</button>
+    <button type="button" id="closeErrorBtn" aria-label="Close error">&#xD7;</button>
   </div>
 
   <main>
 
       <!-- Mode Tabs -->
-      <div class="mode-tabs">
-        <button class="mode-tab active" data-mode="table">Table</button>
-        <button class="mode-tab" data-mode="recall">Recall</button>
-        <button class="mode-tab" data-mode="single">Single Word</button>
-        <button class="mode-tab" data-mode="picture">Picture Quiz</button>
-        <button class="mode-tab" data-mode="conjugation">Conjugation</button>
-        <button class="mode-tab" data-mode="mylists">My Lists</button>
+      <div class="mode-tabs" role="tablist" aria-label="Quiz mode">
+        <button class="mode-tab active" data-mode="table" role="tab" aria-selected="true">Table</button>
+        <button class="mode-tab" data-mode="recall" role="tab" aria-selected="false">Recall</button>
+        <button class="mode-tab" data-mode="single" role="tab" aria-selected="false">Single Word</button>
+        <button class="mode-tab" data-mode="picture" role="tab" aria-selected="false">Picture Quiz</button>
+        <button class="mode-tab" data-mode="conjugation" role="tab" aria-selected="false">Conjugation</button>
+        <button class="mode-tab" data-mode="mylists" role="tab" aria-selected="false">My Lists</button>
+        <button class="mode-tab" data-mode="settings" role="tab" aria-selected="false">⚙ Settings</button>
+        <a href="/admin" class="mode-tab admin-tab" title="Open Admin Panel" hidden>Admin ↗</a>
       </div>
 
       <div id="controls">
-        <button id="themeToggle" aria-label="Toggle theme">&#x263E;</button>
+        <button id="shortcutsBtn" aria-label="Keyboard shortcuts (?)">?</button>
         <div id="controls-top">
           <div class="control-group">
-            <label>Language</label>
+            <label for="langSelect">Language</label>
             <select id="langSelect">
               <option value="spanish">Spanish</option>
               <option value="portuguese">Portuguese</option>
@@ -75,7 +82,7 @@
           </div>
 
           <div class="control-group">
-            <label>Top words</label>
+            <label>Words</label>
             <div class="size-row">
               <select id="sizeSelect">
                 <option value="100">Top 100</option>
@@ -86,8 +93,14 @@
                 <option value="custom">Custom...</option>
               </select>
               <input type="number" id="sizeCustom" min="1" max="9999" placeholder="e.g. 75" style="display:none;"/>
+              <div class="sort-order-toggle" id="sizeModeToggle" title="Top N: literal words 1–N. N New: always returns N words not in your lists, pulling deeper if needed.">
+                <button type="button" class="sort-order-btn active" data-mode="window">Top N</button>
+                <button type="button" class="sort-order-btn" data-mode="fill">N New</button>
+              </div>
             </div>
           </div>
+
+          <div class="controls-sep" aria-hidden="true"></div>
 
           <div class="control-group">
             <label>Order</label>
@@ -107,21 +120,22 @@
             </div>
           </div>
 
+          <div class="controls-sep" aria-hidden="true"></div>
+
           <button id="startBtn">Start Quiz</button>
         </div>
 
         <div id="classFilter">
           <span class="filter-section-label">Part of Speech</span>
-          <button type="button" id="selectAllClasses">All</button>
-          <button type="button" id="selectNoneClasses">None</button>
-          <label><input type="checkbox" value="verb" checked> Verbs</label>
-          <label><input type="checkbox" value="noun" checked> Nouns</label>
-          <label><input type="checkbox" value="adjective" checked> Adjectives</label>
-          <label><input type="checkbox" value="adverb" checked> Adverbs</label>
-          <label><input type="checkbox" value="pronoun" checked> Pronouns</label>
-          <label><input type="checkbox" value="preposition" checked> Prepositions</label>
-          <label><input type="checkbox" value="conjunction" checked> Conjunctions</label>
-          <label><input type="checkbox" value="article" checked> Articles</label>
+          <button type="button" class="pos-chip pos-chip-all active">All</button>
+          <button type="button" class="pos-chip" data-pos="verb">Verbs</button>
+          <button type="button" class="pos-chip" data-pos="noun">Nouns</button>
+          <button type="button" class="pos-chip" data-pos="adjective">Adjectives</button>
+          <button type="button" class="pos-chip" data-pos="adverb">Adverbs</button>
+          <button type="button" class="pos-chip" data-pos="pronoun">Pronouns</button>
+          <button type="button" class="pos-chip" data-pos="preposition">Prepositions</button>
+          <button type="button" class="pos-chip" data-pos="conjunction">Conjunctions</button>
+          <button type="button" class="pos-chip" data-pos="article">Articles</button>
         </div>
 
         <div id="listFilter">
@@ -191,10 +205,15 @@
           <div id="domainFilterBody"></div>
         </div>
 
-        <div id="wordFilters" style="display:none">
-          <div id="filterContent"></div>
-        </div>
 
+      </div>
+
+      <!-- Onboarding tip — shown on first visit, dismissable, re-triggerable from Settings -->
+      <div id="onboardingCard" hidden>
+        <div class="onboarding-body">
+          <strong>Welcome to VocabApp!</strong> Pick a language and word count in the controls above, then hit <strong>Start Quiz</strong>. Use the tabs to switch between Table, Recall, Single Word, Picture Quiz, and Conjugation modes. Head to <strong>⚙ Settings</strong> to configure hints, text size, and more.
+        </div>
+        <button type="button" class="onboarding-dismiss" id="onboardingDismiss" aria-label="Dismiss tip">✕</button>
       </div>
 
       <section id="tableArea">
@@ -205,15 +224,8 @@
         <div id="tableSummaryTop" class="quiz-summary" style="display:none"></div>
 
         <div id="tableControls" class="controls-row">
-          <div class="control-group">
-            <label>Columns</label>
-            <select id="colsSelect">
-              <option value="1">1</option>
-              <option value="2" selected>2</option>
-              <option value="3">3</option>
-            </select>
-          </div>
-          <button id="tableExport">Export</button>
+          <button id="tableJumpBtn" title="Jump to first unanswered (Ctrl+/)">↓ Gap</button>
+          <button id="tableExport">Export CSV</button>
           <button id="tableReset">Give Up</button>
         </div>
         <div id="tableWrap"></div>
@@ -233,30 +245,6 @@
         </div>
         <div id="recallSummaryTop" class="quiz-summary" style="display:none"></div>
 
-        <div id="recallControls">
-          <div class="control-group">
-            <label>Timer</label>
-            <div class="recall-timer-inputs">
-              <select id="recallTimer">
-                <option value="0">No timer</option>
-                <option value="60">1 min</option>
-                <option value="180">3 min</option>
-                <option value="300" selected>5 min</option>
-                <option value="600">10 min</option>
-                <option value="900">15 min</option>
-                <option value="custom">Custom...</option>
-              </select>
-              <input type="number" id="recallTimerCustom" min="1" max="999" placeholder="mins" style="display:none; width:60px;"/>
-            </div>
-          </div>
-          <div class="control-group">
-            <label>When time runs out</label>
-            <select id="recallHardStop">
-              <option value="false">Keep going</option>
-              <option value="true">Hard stop</option>
-            </select>
-          </div>
-        </div>
         <div id="recallWrap"></div>
         <div id="recallSummaryBottom" class="quiz-summary" style="display:none"></div>
 
@@ -274,6 +262,7 @@
         <div id="quizSummaryTop" class="quiz-summary" style="display:none"></div>
 
         <div id="word" class="word"></div>
+        <div id="wordMeta" class="word-meta"></div>
 
         <div id="quizNav" class="quiz-nav">
           <button id="quizPrev">&#x2190; Prev</button>
@@ -281,13 +270,13 @@
           <button id="quizNext">Next &#x2192;</button>
         </div>
 
-        <input id="answer" type="text" placeholder="Type English translation..." autocomplete="off"/>
+        <input id="answer" type="text" aria-label="Type the translation" placeholder="Type the translation…" autocomplete="off"/>
         <div id="feedback" class="feedback"></div>
 
         <div class="controls-row">
           <button id="btnCorrect">Mark Correct</button>
           <button id="quizGiveUp">Reveal Answer</button>
-          <button id="ttsBtn">&#x1F50A;</button>
+          <button id="ttsBtn" aria-label="Listen to pronunciation">&#x1F50A;</button>
           <button id="resetBtn">End Quiz</button>
         </div>
         <div id="quizSummaryBottom" class="quiz-summary" style="display:none"></div>
@@ -321,6 +310,131 @@
 
       <section id="myListsArea" hidden>
         <div id="myListsWrap"></div>
+      </section>
+
+      <section id="settingsArea" hidden>
+        <div class="settings-wrap">
+
+          <div class="settings-section">
+            <div class="settings-section-title">Table Quiz</div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Default columns</span>
+                <span class="settings-desc">Word pairs per row when starting a table quiz</span>
+              </div>
+              <div class="sort-order-toggle" id="settingCols">
+                <button type="button" class="sort-order-btn" data-cols="1">1</button>
+                <button type="button" class="sort-order-btn active" data-cols="2">2</button>
+                <button type="button" class="sort-order-btn" data-cols="3">3</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Hints</span>
+                <span class="settings-desc">What the ? button does — None hides it, First letter shows one character, Full reveal shows the answer immediately</span>
+              </div>
+              <div class="sort-order-toggle" id="settingHint">
+                <button type="button" class="sort-order-btn" data-hint="none">None</button>
+                <button type="button" class="sort-order-btn" data-hint="first-letter">First letter</button>
+                <button type="button" class="sort-order-btn active" data-hint="full">Full reveal</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">All Quizzes</div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Answer matching</span>
+                <span class="settings-desc">Flexible accepts answers regardless of accents and capitalisation — Strict requires exact accents (e.g. está ≠ esta)</span>
+              </div>
+              <div class="sort-order-toggle" id="settingMatch">
+                <button type="button" class="sort-order-btn" data-match="strict">Strict</button>
+                <button type="button" class="sort-order-btn active" data-match="fuzzy">Flexible</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Recall Quiz</div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Timer</span>
+                <span class="settings-desc">Time limit per recall session</span>
+              </div>
+              <div class="settings-control">
+                <select id="settingTimer">
+                  <option value="0">No timer</option>
+                  <option value="60">1 min</option>
+                  <option value="180">3 min</option>
+                  <option value="300" selected>5 min</option>
+                  <option value="600">10 min</option>
+                  <option value="900">15 min</option>
+                  <option value="custom">Custom…</option>
+                </select>
+                <input type="number" id="settingTimerCustom" min="1" max="999" placeholder="mins" style="display:none;"/>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>On timeout</span>
+                <span class="settings-desc">Whether the quiz locks up when the timer expires</span>
+              </div>
+              <div class="sort-order-toggle" id="settingHardStop">
+                <button type="button" class="sort-order-btn active" data-stop="false">Keep going</button>
+                <button type="button" class="sort-order-btn" data-stop="true">Hard stop</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Appearance</div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Theme</span>
+                <span class="settings-desc">System follows your OS dark/light preference</span>
+              </div>
+              <div class="sort-order-toggle" id="settingTheme">
+                <button type="button" class="sort-order-btn active" data-theme="system">System</button>
+                <button type="button" class="sort-order-btn" data-theme="light">Light</button>
+                <button type="button" class="sort-order-btn" data-theme="dark">Dark</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Text size</span>
+                <span class="settings-desc">Scales quiz text — Small fits more words on screen, Large is easier to read</span>
+              </div>
+              <div class="sort-order-toggle" id="settingFontSize">
+                <button type="button" class="sort-order-btn" data-size="xs">XS</button>
+                <button type="button" class="sort-order-btn" data-size="small">S</button>
+                <button type="button" class="sort-order-btn active" data-size="medium">M</button>
+                <button type="button" class="sort-order-btn" data-size="large">L</button>
+                <button type="button" class="sort-order-btn" data-size="xl">XL</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">General</div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Welcome tip</span>
+                <span class="settings-desc">Re-show the getting started hint at the top of the page</span>
+              </div>
+              <button type="button" id="settingShowOnboarding" class="settings-action-btn">Show again</button>
+            </div>
+          </div>
+
+        </div>
       </section>
 
       <pre id="output" class="output"></pre>

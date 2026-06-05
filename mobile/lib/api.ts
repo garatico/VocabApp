@@ -17,6 +17,6 @@ export async function fetchWords(lang: string): Promise<Word[]> {
   const res = await fetch(`${API_BASE}/api/vocab/${lang}`);
   if (!res.ok) throw new Error(`Failed to fetch words: ${res.status}`);
   const data = await res.json();
-  // API returns { words: Word[] }
-  return Array.isArray(data) ? data : (data.words ?? []);
+  // API returns { success, language, count, metadata, data: Word[] }
+  return Array.isArray(data) ? data : (data.data ?? []);
 }

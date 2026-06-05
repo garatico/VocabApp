@@ -14,6 +14,7 @@ import path     from 'path';
 import { fileURLToPath } from 'url';
 import { getSvgUrl } from './svg-loader.js';
 import { conjugate } from './verb-rules.js';
+import { SUPPORTED_LANGUAGES } from '../routes/admin/_utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -25,7 +26,6 @@ let db = null;
 // Per-language in-memory cache
 const vocabCache = new Map();
 
-const SUPPORTED_LANGUAGES = ['spanish', 'portuguese', 'italian', 'french'];
 
 // Running count of JSON parse failures since process start — surfaced in getDbInfo()
 let parseErrorCount = 0;
@@ -50,23 +50,6 @@ function parseJsonField(raw, word, field, fallback = null) {
   }
 }
 
-/** Return the set of existing column names for a table, compatible with both
- *  better-sqlite3 and the sql.js test shim (which has a no-op pragma()). */
-function getColumns(database, table) {
-  try {
-    const result = database.pragma(`table_info(${table})`);
-    if (Array.isArray(result) && result.length > 0) {
-      return new Set(result.map(c => c.name));
-    }
-  } catch (_) {}
-  try {
-    const rows = database.prepare(`PRAGMA table_info(${table})`).all();
-    if (Array.isArray(rows) && rows.length > 0) {
-      return new Set(rows.map(r => r.name));
-    }
-  } catch (_) {}
-  return new Set();
-}
 
 // DB init
 function initializeDatabase() {
@@ -79,24 +62,7 @@ function initializeDatabase() {
     db.pragma('journal_mode = WAL');
     console.log('Connected to SQLite database');
 
-    // Auto-migrate: add columns that may not exist yet
-    const cols = getColumns(db, 'words');
-    const migrations = [
-      ['emoji',                 'TEXT'],
-      ['conjugations',          'TEXT'],
-      ['updated_at',            'TEXT'],
-      ['past_participle',       'TEXT'],
-      ['gerund',                'TEXT'],
-      ['conjugation_class',     'TEXT'],
-      ['future_stem',           'TEXT'],
-      ['conjugation_overrides', 'TEXT'],
-    ];
-    for (const [col, type] of migrations) {
-      if (!cols.has(col)) {
-        db.exec(`ALTER TABLE words ADD COLUMN ${col} ${type}`);
-        console.log(`  auto-migrated: added ${col} column`);
-      }
-    }
+    // All schema columns are established by sync_db.py; no runtime migration needed.
   } catch (error) {
     console.error('Database connection error:', error);
     if (error.code === 'SQLITE_CANTOPEN') {
@@ -117,7 +83,7 @@ export async function loadVocabFile(language) {
 
   if (vocabCache.has(lang)) {
     const cached = vocabCache.get(lang);
-    return { ...cached, cacheAge: Date.now() - cached.loadedAt, source: 'sqlite' };
+    return { ...cached, cacheAge: Date.now() - cached.loadedAt, source: 'sqlite' };  // cacheAge in ms
   }
 
   if (!SUPPORTED_LANGUAGES.includes(lang)) {
@@ -136,7 +102,7 @@ export async function loadVocabFile(language) {
       SELECT
         w.id,
         w.word,
-        w.display,
+        w.translation,
         w.pos,
         w.difficulty,
         w.notes,
@@ -197,7 +163,7 @@ export async function loadVocabFile(language) {
 
       return {
         word:      row.word,
-        display:   row.display  || '',
+        translation:   row.translation  || '',
         pos:       row.pos      || null,
         difficulty:row.difficulty || null,
         notes:     row.notes    || '',
@@ -283,7 +249,7 @@ export function getDbInfo() {
       language:  lang,
       wordCount: data.wordCount,
       cachedAt:  new Date(data.loadedAt).toISOString(),
-      age:       Date.now() - data.loadedAt,
+      ageMs:     Date.now() - data.loadedAt,
     });
   });
 

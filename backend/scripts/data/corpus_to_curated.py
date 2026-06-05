@@ -36,8 +36,10 @@ CURATED_PATH = PROJECT_ROOT / 'data' / 'curated' / 'spanish_curated.jsonl'
 OS_DIR       = PROJECT_ROOT / 'data' / 'opensubtitles_freq_corpora'
 CACHE_DIR    = PROJECT_ROOT / 'data' / 'gloss_cache'
 
-sys.path.insert(0, str(SCRIPT_DIR))
-from lang_config import TENSE_MAP, MLCONJUG3_LANG
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from lang_config import rank_to_difficulty
 
 LANG      = 'spa'
 LANG_NAME = 'spanish'
@@ -154,15 +156,6 @@ def rank_to_band(rank: Optional[int]) -> str:
     return 'C2'
 
 
-def rank_to_difficulty(rank: Optional[int]) -> int:
-    if not rank:   return 5
-    if rank <= 200:  return 1
-    if rank <= 500:  return 2
-    if rank <= 1000: return 3
-    if rank <= 2000: return 4
-    return 5
-
-
 def build_curated_entry(
     word: str,
     pos: str,
@@ -192,7 +185,7 @@ def build_curated_entry(
     return {
         'rank':       curated_rank,
         'word':       word,
-        'display':    display,
+        'translation':    display,
         'pos':        pos,
         'difficulty': diff,
         'tags':       ['corpus'],
@@ -376,10 +369,9 @@ def main(
 
     print(f'Appended : {len(new_entries)} entries to {CURATED_PATH.name}')
     print(f'\nNext steps:')
-    print(f'  1. python backend/scripts/data/fill_conjugations.py   # fill verb conjugations')
-    print(f'  2. python backend/scripts/data/rebuild_db.py --langs spa --no-corpus')
-    print(f'  3. Review entries flagged needs_review: true in the admin panel')
-    print(f'  4. Run this script again to add another batch')
+    print(f'  1. python backend/scripts/data/sync_db.py --langs spa')
+    print(f'  2. Review entries flagged needs_review: true in the admin panel')
+    print(f'  3. Run this script again to add another batch')
 
 
 if __name__ == '__main__':

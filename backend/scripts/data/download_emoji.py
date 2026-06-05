@@ -16,7 +16,8 @@ import time
 import urllib.request
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+SCRIPT_DIR   = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
 DEST         = PROJECT_ROOT / 'data' / 'emoji' / 'animals'
 CDN          = 'https://cdn.jsdelivr.net/npm/openmoji@15.0.0/color/svg'
 

@@ -12,6 +12,7 @@ export function bindStartHandler({
   getLang,
   getFullLang,
   getSize,
+  getSizeMode,     // 'window' (literal top N) | 'fill' (always return N unknowns)
   getSelectedClasses,
   getSelectedDomains,
   getSortOrder,
@@ -28,7 +29,6 @@ export function bindStartHandler({
     recallWrap,
     pictureWrap,
     conjugationWrap,
-    modeSelect,
     output,
   }
 }) {
@@ -59,6 +59,40 @@ export function bindStartHandler({
         });
       }
 
+      // ── "N New" fill mode: compensate for words hidden by list filter ─────────
+      // When fill mode is active, pull additional words from beyond the current
+      // size window (preserving all other active filters) until we reach the
+      // requested count. "Top N" mode keeps the current behaviour unchanged.
+      const sizeMode      = getSizeMode ? getSizeMode() : 'window';
+      const requestedSize = getSize();
+
+      if (sizeMode === 'fill' && isFinite(requestedSize) && list.length < requestedSize) {
+        const allWords    = getAllWords ? getAllWords() : [];
+        const baseWordSet = new Set((getBaseList() as any[]).map(w => w.word));
+
+        // Candidates: words ranked beyond the current window
+        let extras: any[] = allWords.filter((w: any) => !baseWordSet.has(w.word));
+
+        // Apply list filter (same as applied to the base list above)
+        extras = filterWords(extras);
+
+        // Apply domain filter
+        if (selectedDomains.length > 0) {
+          extras = extras.filter((w: any) => {
+            const doms = w.domains || [];
+            return doms.length === 0 || doms.some((d: string) => selectedDomains.includes(d));
+          });
+        }
+
+        // Apply POS class filter
+        const selectedClasses = getSelectedClasses ? getSelectedClasses() : [];
+        if (selectedClasses.length > 0) {
+          extras = extras.filter((w: any) => w.pos == null || selectedClasses.includes(w.pos));
+        }
+
+        const needed = requestedSize - list.length;
+        list = [...list, ...extras.slice(0, needed)];
+      }
 
       const sortOrder = getSortOrder ? getSortOrder() : 'frequency';
       if (sortOrder === 'random') {
@@ -71,7 +105,7 @@ export function bindStartHandler({
       }
       // 'frequency' keeps the existing rank-based order from loadAndBuildFilters
 
-      setQuiz(new Quiz({ words: list }));
+      setQuiz(new Quiz({ words: list, storageKey: `quick_quiz_state_${getFullLang ? getFullLang() : 'spanish'}` }));
 
       const currentMode = getCurrentMode();
 
@@ -128,11 +162,10 @@ export function bindStartHandler({
           pictureWords = pictureWords.filter(w => w.pos == null || selectedClasses.includes(w.pos));
         }
 
-        const selectedDomains2 = getSelectedDomains ? getSelectedDomains() : [];
-        if (selectedDomains2.length > 0) {
+        if (selectedDomains.length > 0) {
           pictureWords = pictureWords.filter(w => {
             const doms = w.domains || [];
-            return doms.length === 0 || doms.some(d => selectedDomains2.includes(d));
+            return doms.length === 0 || doms.some(d => selectedDomains.includes(d));
           });
         }
 

@@ -2,8 +2,10 @@
    TRANSITIONS — global colour/border transitions + page fade-in.
 ================================================================ */
 
-/* Smooth theme changes on all elements */
-* {
+/* Smooth theme changes — applied to structural/interactive elements only.
+   Inputs are excluded: their background-color changes must be instant
+   for quiz performance (giveUp can affect hundreds simultaneously). */
+*:not(input):not(textarea) {
   transition:
     background-color var(--transition-normal),
     color            var(--transition-normal),
@@ -12,8 +14,10 @@
 }
 
 /* Page-level entrance */
-main       { animation: fadeIn var(--transition-normal); }
-section:not([hidden]) { animation: fadeIn var(--transition-normal); }
+main { animation: fadeIn var(--transition-normal); }
+
+/* Mode section entrance — slide up and fade in */
+section:not([hidden]) { animation: sectionEnter 0.18s ease-out both; }
 section[hidden]       { display: none !important; }
 
 /* High-contrast: widen focus rings */

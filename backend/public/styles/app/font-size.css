@@ -1,0 +1,76 @@
+/* ================================================================
+   FONT SIZE — Small / Medium (default) / Large quiz text overrides.
+   Applied via html.font-sm and html.font-lg classes; medium = base.
+================================================================ */
+
+/* ── Extra Small ───────────────────────────────────────────────── */
+
+html.font-xs #tableWrap                       { font-size: 0.9rem; }
+html.font-xs #tableWrap .spanish-word         { font-size: 0.82rem; }
+html.font-xs #tableWrap input[type="text"]    { font-size: 0.78rem; }
+html.font-xs #tableFeedback                   { font-size: 1.1rem; }
+
+html.font-xs #recallWrap                      { font-size: 0.78rem; }
+
+html.font-xs #word                            { font-size: 1.2rem; }
+html.font-xs #answer                          { font-size: 0.82rem; }
+html.font-xs #feedback                        { font-size: 0.82rem; }
+
+html.font-xs .mode-tab                                    { font-size: 0.62rem; padding: 0.28rem 0.6rem; }
+html.font-xs .sort-order-btn, html.font-xs .conj-toggle-btn { font-size: 0.62rem; }
+html.font-xs button                                        { font-size: 0.74rem; }
+html.font-xs select                                        { font-size: 0.74rem; }
+
+/* ── Small ─────────────────────────────────────────────────────── */
+
+html.font-sm #tableWrap                       { font-size: 1.1rem; }
+html.font-sm #tableWrap .spanish-word         { font-size: 1rem; }
+html.font-sm #tableWrap input[type="text"]    { font-size: 0.95rem; }
+html.font-sm #tableFeedback                   { font-size: 1.3rem; }
+
+html.font-sm #recallWrap                      { font-size: 0.9rem; }
+
+html.font-sm #word                            { font-size: 1.4rem; }
+html.font-sm #answer                          { font-size: 0.95rem; }
+html.font-sm #feedback                        { font-size: 0.95rem; }
+
+html.font-sm .mode-tab                                    { font-size: 0.68rem; padding: 0.32rem 0.7rem; }
+html.font-sm .sort-order-btn, html.font-sm .conj-toggle-btn { font-size: 0.66rem; }
+html.font-sm button                           { font-size: 0.78rem; }
+html.font-sm select                           { font-size: 0.78rem; }
+
+/* ── Large ─────────────────────────────────────────────────────── */
+
+html.font-lg #tableWrap                       { font-size: 1.9rem; }
+html.font-lg #tableWrap .spanish-word         { font-size: 1.75rem; }
+html.font-lg #tableWrap input[type="text"]    { font-size: 1.55rem; }
+html.font-lg #tableFeedback                   { font-size: 2.3rem; }
+
+html.font-lg #recallWrap                      { font-size: 1.15rem; }
+
+html.font-lg #word                            { font-size: 2.6rem; }
+html.font-lg #answer                          { font-size: 1.2rem; }
+html.font-lg #feedback                        { font-size: 1.2rem; }
+
+html.font-lg .mode-tab                                    { font-size: 0.82rem; padding: 0.45rem 1rem; }
+html.font-lg .sort-order-btn, html.font-lg .conj-toggle-btn { font-size: 0.78rem; }
+html.font-lg button                           { font-size: 0.88rem; }
+html.font-lg select                           { font-size: 0.88rem; }
+
+/* ── Extra Large ───────────────────────────────────────────────── */
+
+html.font-xl #tableWrap                       { font-size: 2.2rem; }
+html.font-xl #tableWrap .spanish-word         { font-size: 2rem; }
+html.font-xl #tableWrap input[type="text"]    { font-size: 1.8rem; }
+html.font-xl #tableFeedback                   { font-size: 2.6rem; }
+
+html.font-xl #recallWrap                      { font-size: 1.3rem; }
+
+html.font-xl #word                            { font-size: 3rem; }
+html.font-xl #answer                          { font-size: 1.3rem; }
+html.font-xl #feedback                        { font-size: 1.3rem; }
+
+html.font-xl .mode-tab                                    { font-size: 0.88rem; padding: 0.5rem 1.1rem; }
+html.font-xl .sort-order-btn, html.font-xl .conj-toggle-btn { font-size: 0.84rem; }
+html.font-xl button                           { font-size: 0.94rem; }
+html.font-xl select                           { font-size: 0.94rem; }

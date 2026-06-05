@@ -22,8 +22,11 @@ PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
 CACHE_DIR    = PROJECT_ROOT / 'data' / 'gloss_cache'
 PRESEED_DIR  = PROJECT_ROOT / 'data' / 'preseed'
 
-LANG_NAMES = {'spa': 'Spanish', 'fra': 'French', 'ita': 'Italian', 'por': 'Portuguese'}
-LANG_FULL  = {'spa': 'spanish', 'fra': 'french', 'ita': 'italian', 'por': 'portuguese'}
+sys.path.insert(0, str(SCRIPT_DIR))
+from lang_config import LANG_NAMES as _LANG_LOWER   # {'spa': 'spanish', ...}
+
+LANG_FULL  = _LANG_LOWER                                         # lowercase, for file paths
+LANG_NAMES = {k: v.capitalize() for k, v in _LANG_LOWER.items()} # 'Spanish', for display
 
 _KNOWN_PROPER_TARGETS = {
     'enero','febrero','marzo','abril','mayo','junio','julio','agosto',
@@ -156,7 +159,7 @@ def apply_corrections(lang, corrections_path):
 
     save_cache(lang, cache)
     print(f"Applied  : {updated} corrected, {skipped} marked OK")
-    print(f"Next     : re-run clean_wikicorpora.py to rebuild the preseed")
+    print(f"Next     : re-run corpus_to_curated.py to rebuild the preseed")
 
 
 def main():
@@ -170,7 +173,7 @@ def main():
     if args.apply:
         apply_corrections(args.lang, args.apply)
     else:
-        run(args.lang, source_filter=args.source, limit=args.limit)
+        run(args.lang, args.source)
 
 
 if __name__ == '__main__':

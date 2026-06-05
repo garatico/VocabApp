@@ -1,23 +1,25 @@
 const STORAGE_KEY = 'theme';
 const DARK_CLASS  = 'dark';
 
-function applyTheme(dark: boolean): void {
-  document.documentElement.classList.toggle(DARK_CLASS, dark);
-  const btn = document.getElementById('themeToggle');
-  if (btn) btn.textContent = dark ? '☀' : '☾';
+export type ThemeValue = 'light' | 'dark' | 'system';
+
+export function applyTheme(value: ThemeValue): void {
+  if (value === 'system') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.classList.toggle(DARK_CLASS, prefersDark);
+  } else {
+    document.documentElement.classList.toggle(DARK_CLASS, value === DARK_CLASS);
+  }
 }
 
 export function initTheme(): void {
-  const saved       = localStorage.getItem(STORAGE_KEY);
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  applyTheme(saved ? saved === DARK_CLASS : prefersDark);
+  const saved = (localStorage.getItem(STORAGE_KEY) ?? 'system') as ThemeValue;
+  applyTheme(saved);
 
-  const btn = document.getElementById('themeToggle');
-  if (!btn) return;
-
-  btn.addEventListener('click', () => {
-    const nowDark = document.documentElement.classList.toggle(DARK_CLASS);
-    localStorage.setItem(STORAGE_KEY, nowDark ? DARK_CLASS : 'light');
-    btn.textContent = nowDark ? '☀' : '☾';
+  // React to OS-level theme changes when 'system' is the active preference
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    if ((localStorage.getItem(STORAGE_KEY) ?? 'system') === 'system') {
+      document.documentElement.classList.toggle(DARK_CLASS, e.matches);
+    }
   });
 }

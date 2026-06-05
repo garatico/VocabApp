@@ -43,6 +43,23 @@ by minutes.
 4. Never use `wc -l` or `cat` in bash to verify file content after a
    file-tool write — use the Read tool instead.
 
+### Null-byte truncation variant
+Sometimes the Edit tool writes a file that bash sees as **correctly sized but
+with 40-50 null bytes appended**. This causes "parse error at end of file" or
+"unexpected EOF" errors. Detection and fix:
+
+```python
+# Detect
+raw = open(path, 'rb').read()
+print(raw.count(b'\x00'))  # > 0 means corrupted
+
+# Fix
+with open(path, 'wb') as f:
+    f.write(raw.rstrip(b'\x00'))
+```
+
+Always run this check when tests fail with parse errors after an Edit.
+
 ---
 
 ## Project Structure
@@ -51,40 +68,64 @@ by minutes.
 VocabApp/
 ├── backend/
 │   ├── src/
-│   │   ├── app.js               # Express app factory (no listen)
-│   │   ├── index.js             # Server entry point (imports app.js)
-│   │   ├── lib/
-│   │   │   └── vocab-loader.js  # SQLite singleton + cache
-│   │   ├── routes/
-│   │   │   ├── admin.routes.js  # /api/admin/* (dev only)
-│   │   │   └── public.js        # /api/vocab/:lang, /api/health, etc.
-│   │   └── middleware/
+│   │   ├── server/
+│   │   │   ├── app.js                   # Express app factory (no listen)
+│   │   │   ├── index.js                 # Server entry point
+│   │   │   ├── lib/
+│   │   │   │   ├── vocab-loader.js      # SQLite singleton + cache
+│   │   │   │   ├── verb-rules.js        # Conjugation rule engine
+│   │   │   │   └── svg-loader.js        # SVG URL resolver
+│   │   │   ├── routes/
+│   │   │   │   ├── admin.routes.js      # Mounts admin sub-routes
+│   │   │   │   ├── admin/
+│   │   │   │   │   ├── words.js         # GET/POST /api/admin/vocab
+│   │   │   │   │   ├── db.js            # /api/admin/stats, /meta, /cache/clear, /db/reload
+│   │   │   │   │   └── export.js        # POST /api/admin/export (CSV)
+│   │   │   │   └── public.js            # /api/vocab/:lang, /api/health, etc.
+│   │   │   ├── migrations/              # One-off schema migrations
+│   │   │   └── middleware/
+│   │   └── client/                      # TypeScript frontend (compiled by Vite)
+│   │       ├── app.ts                   # Entry point
+│   │       ├── types.ts                 # Shared type definitions
+│   │       ├── start-handler.ts         # Quiz start logic
+│   │       ├── data/
+│   │       │   ├── visual-map.ts        # Word → image/emoji fallback map
+│   │       │   └── data-loader.ts
+│   │       ├── modes/
+│   │       │   ├── picture-mode.ts      # Picture Quiz (type/flashcard/click modes)
+│   │       │   └── …
+│   │       ├── admin-*.js               # Admin panel modules (ES modules, no bundler)
+│   │       └── …
 │   ├── public/
-│   │   ├── admin.html
-│   │   ├── admin.js             # ES module entry point for admin panel
-│   │   └── src/
-│   │       ├── admin-api.js     # Shared fetch + status helpers
-│   │       ├── admin-editor.js  # Word editor tab
-│   │       ├── admin-stats.js   # Statistics tab
-│   │       └── admin-db.js      # DB Admin tab (cache, export)
+│   │   ├── admin.html                   # Admin panel HTML
+│   │   ├── admin.js                     # Admin panel entry point (imports admin-*.js)
+│   │   └── styles/
 │   ├── tests/
 │   │   ├── public.test.js
 │   │   ├── admin.test.js
 │   │   └── helpers/
-│   │       ├── app.js           # buildTestApp() / teardownTestApp()
-│   │       ├── db.js            # createTestDb() — in-memory SQLite seed
-│   │       └── sqlite-shim.js   # better-sqlite3 API shim using sql.js WASM
-│   └── vitest.config.js         # aliases better-sqlite3 → sqlite-shim in tests
+│   │       ├── app.js                   # buildTestApp() / teardownTestApp()
+│   │       ├── db.js                    # createTestDb() — in-memory SQLite seed
+│   │       └── sqlite-shim.js           # better-sqlite3 shim using sql.js WASM
+│   ├── vitest.config.js                 # aliases better-sqlite3 → sqlite-shim in tests
 │   └── scripts/
-│       └── data/
-│           ├── verb_rules.py        # Python conjugation engine (mirrors verb-rules.js)
-│           ├── sync_db.py           # curated JSONL → vocabulary.db
-│           ├── corpus_to_curated.py # corpus words → curated JSONL
-│           ├── corpus_builder.py    # spaCy corpus extraction helpers
-│           ├── lang_config.py       # shared language codes / tense maps
-│           └── review_glosses.py    # gloss cache review helper
+│       ├── validate.js                  # pre-flight null-byte/syntax check (npm run validate)
+│       ├── test-api.js                  # manual smoke-test for the running API
+│       └── data/                        # all Python data scripts
+│           ├── sync_db.py               # curated JSONL → vocabulary.db  (npm run sync)
+│           ├── download_images.py       # fetch Wikipedia photos → data/images/  (npm run download:images)
+│           ├── download_emoji.py        # fetch OpenMoji SVGs → data/emoji/  (npm run download:emoji)
+│           ├── check_visual_coverage.py # report picture-quiz visual gaps  (npm run check:visuals)
+│           ├── verb_rules.py            # Python conjugation engine (mirrors verb-rules.js)
+│           ├── corpus_to_curated.py     # corpus words → curated JSONL
+│           ├── corpus_builder.py        # spaCy corpus extraction helpers
+│           ├── lang_config.py           # shared language codes / tense maps
+│           └── review_glosses.py        # gloss cache review helper
 └── data/
-    └── vocabulary.db            # Production SQLite DB (never touched by tests)
+    ├── vocabulary.db                    # Production SQLite DB (never touched by tests)
+    ├── curated/                         # Source-of-truth JSONL files per language
+    ├── images/                          # Wikipedia photos (animals/, food/, nature/)
+    └── emoji/                           # OpenMoji SVGs (animals/)
 ```
 
 ## Running Tests

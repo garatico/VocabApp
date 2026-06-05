@@ -12,23 +12,12 @@ interface BindModeSwitchOptions {
 }
 
 export function bindUIState(): void {
-  const sizeSelect     = document.getElementById('sizeSelect')     as HTMLSelectElement;
-  const recallTimer    = document.getElementById('recallTimer')    as HTMLSelectElement;
-  const recallHardStop = document.getElementById('recallHardStop') as HTMLSelectElement;
+  const sizeSelect = document.getElementById('sizeSelect') as HTMLSelectElement;
 
   sizeSelect.addEventListener('change', () => {
     const custom = document.getElementById('sizeCustom') as HTMLInputElement;
     custom.style.display = sizeSelect.value === 'custom' ? 'inline-block' : 'none';
     if (sizeSelect.value === 'custom') custom.focus();
-  });
-
-  recallTimer.addEventListener('change', () => {
-    const val           = recallTimer.value;
-    const customEl      = document.getElementById('recallTimerCustom') as HTMLInputElement;
-    const hardStopLabel = recallHardStop.closest('label') as HTMLElement | null;
-    customEl.style.display = val === 'custom' ? 'inline-block' : 'none';
-    if (hardStopLabel) hardStopLabel.style.display = val === '0' ? 'none' : '';
-    if (val === 'custom') customEl.focus();
   });
 }
 
@@ -40,8 +29,7 @@ export function bindModeSwitch({
   let currentMode: Mode = 'table';
 
   function updateModeUI(): void {
-    const mode      = currentMode;
-    const isMyLists = mode === 'mylists';
+    const mode = currentMode;
 
     quizArea.hidden    = mode !== 'single';
     tableArea.hidden   = mode !== 'table';
@@ -53,9 +41,9 @@ export function bindModeSwitch({
       if (el) el.hidden = mode !== areaMode;
     }
 
-    // Hide the entire controls card when My Lists is active
+    // Hide the entire controls card for modes that don't use it
     const controlsEl = document.getElementById('controls');
-    if (controlsEl) controlsEl.hidden = isMyLists;
+    if (controlsEl) controlsEl.hidden = mode === 'mylists' || mode === 'settings';
 
     const classFilter         = document.getElementById('classFilter');
     const listFilter          = document.getElementById('listFilter');
@@ -69,8 +57,11 @@ export function bindModeSwitch({
     if (conjModeControls)    conjModeControls.style.display    = mode === 'conjugation' ? ''     : 'none';
     if (pictureModeControls) pictureModeControls.style.display = mode === 'picture'     ? ''     : 'none';
 
-    document.querySelectorAll('.mode-tab').forEach(btn => {
-      btn.classList.toggle('active', (btn as HTMLElement).dataset.mode === mode);
+    document.querySelectorAll<HTMLElement>('.mode-tab').forEach(btn => {
+      const isActive = btn.dataset.mode === mode;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', String(isActive));
+      if (isActive) btn.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
     });
 
     onActivate[mode]?.();

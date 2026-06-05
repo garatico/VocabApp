@@ -30,7 +30,8 @@ except ImportError:
     print('  pip install requests')
     sys.exit(1)
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+SCRIPT_DIR   = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
 IMAGES_ROOT  = PROJECT_ROOT / 'data' / 'images'
 
 # Domain classification — determines which subfolder each concept lands in.

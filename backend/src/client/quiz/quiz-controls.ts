@@ -48,6 +48,7 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
   const prevBtn     = document.getElementById('quizPrev')!    as HTMLButtonElement;
   const nextBtn     = document.getElementById('quizNext')!    as HTMLButtonElement;
   const counterEl   = document.getElementById('quizCounter')! as HTMLElement;
+  const wordMetaEl  = document.getElementById('wordMeta')  as HTMLElement | null;
 
   // ── Stats ──────────────────────────────────────────────────────────────────
 
@@ -77,8 +78,17 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
     wordEl.textContent     = word.word;
     answerEl.value         = '';
     answerEl.disabled      = false;
-    feedbackEl.textContent = '';
+    feedbackEl.innerHTML   = '';
     feedbackEl.className   = 'feedback';
+
+    // Subtle metadata line: difficulty band + first domain
+    if (wordMetaEl) {
+      const parts: string[] = [];
+      if (word.frequency?.band) parts.push(word.frequency.band);
+      const domain = word.domains?.[0];
+      if (domain && domain !== 'general') parts.push(domain.replace(/_/g, ' '));
+      wordMetaEl.textContent = parts.join(' · ');
+    }
     ['quizSummaryTop', 'quizSummaryBottom'].forEach(id => {
       const el = document.getElementById(id);
       if (el) { el.style.display = 'none'; el.innerHTML = ''; }
@@ -115,6 +125,7 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
     const pct    = total ? Math.round((done / total) * 100) : 0;
 
     wordEl.textContent     = done === total ? 'All mastered! 🎉' : 'Session ended';
+    if (wordMetaEl) wordMetaEl.textContent = '';
     answerEl.value         = '';
     counterEl.textContent  = '';
 
@@ -134,6 +145,24 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
     const summary = `${done} / ${total} mastered (${pct}%)`;
     statsEl.textContent = summary;
     if (statsTopEl) statsTopEl.textContent = summary;
+
+    // List of unmastered words shown in the feedback area
+    feedbackEl.innerHTML = '';
+    feedbackEl.className = 'feedback';
+    const unmastered = deck.filter(w => !mastered.has(w.word));
+    if (unmastered.length > 0) {
+      const label = document.createElement('span');
+      label.className   = 'recall-missed-label';
+      label.textContent = 'Not yet mastered: ';
+      feedbackEl.appendChild(label);
+      unmastered.forEach((w, i) => {
+        const chip = document.createElement('span');
+        chip.className   = 'recall-missed-chip';
+        chip.textContent = w.word;
+        feedbackEl.appendChild(chip);
+        if (i < unmastered.length - 1) feedbackEl.appendChild(document.createTextNode(' '));
+      });
+    }
 
     endBtn.textContent = 'Play Again';
     endBtn.disabled    = false;

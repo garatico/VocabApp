@@ -10,20 +10,8 @@ import { showLoading, hideLoading, showErrorMessage } from '../ui/ui.js';
 
 interface VocabApiResponse {
   success: boolean;
-  error?:  boolean;
-  message?: string;
+  error?:  string;   // set when success is false; contains the error message
   data:    Word[];
-}
-
-interface Language {
-  code:       string;
-  name:       string;
-  nativeName: string;
-  flag:       string;
-}
-
-interface LanguagesApiResponse {
-  languages: Language[];
 }
 
 const cache: Record<string, Word[]> = {};
@@ -43,7 +31,7 @@ export async function loadWords(lang: string): Promise<Word[]> {
     const data: VocabApiResponse = await response.json();
 
     if (data.error) {
-      throw new Error(data.message ?? 'Unknown error loading vocabulary');
+      throw new Error(data.error);
     }
 
     const words = data.data ?? [];
@@ -61,13 +49,3 @@ export async function loadWords(lang: string): Promise<Word[]> {
   }
 }
 
-export async function preloadLanguages(): Promise<Language[]> {
-  try {
-    const response = await fetch(`${window.location.origin}/api/languages`);
-    const data: LanguagesApiResponse = await response.json();
-    return data.languages ?? [];
-  } catch (error) {
-    console.error('Error loading languages:', error);
-    return [];
-  }
-}

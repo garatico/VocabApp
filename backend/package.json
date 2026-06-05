@@ -14,17 +14,20 @@
     "build": "vite build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:frontend": "vitest run --config vitest.frontend.config.ts",
-    "test:frontend:watch": "vitest --config vitest.frontend.config.ts",
-    "test:all": "vitest run && vitest run --config vitest.frontend.config.ts",
     "lint": "eslint src/server/ src/client/",
     "typecheck": "tsc --noEmit",
-    "validate": "node scripts/validate.js"
+    "validate": "node scripts/validate.js",
+    "sync": "python3 scripts/data/sync_db.py",
+    "sync:dry": "python3 scripts/data/sync_db.py --dry-run",
+    "download:images": "python3 scripts/data/download_images.py",
+    "download:emoji": "python3 scripts/data/download_emoji.py",
+    "check:visuals": "python3 scripts/data/check_visual_coverage.py",
+    "check:visuals:animals": "python3 scripts/data/check_visual_coverage.py --domain animals",
+    "check:visuals:food": "python3 scripts/data/check_visual_coverage.py --domain food"
   },
   "dependencies": {
     "better-sqlite3": "^9.2.2",
     "compression": "^1.8.1",
-    "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2"
   },

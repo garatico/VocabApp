@@ -29,6 +29,26 @@
   font-family: 'DM Mono', monospace;
 }
 
+/* ── Empty state (before Start Quiz) ── */
+#tableWrap:empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  margin: 0.5rem 0;
+}
+#tableWrap:empty::before {
+  content: 'Select your settings above and hit Start Quiz';
+  font-family: 'Sora', sans-serif;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: 1.5rem;
+}
+
 /* ── Table structure ── */
 #tableWrap {
   font-family: 'DM Mono', monospace;
@@ -77,6 +97,19 @@
 #tableWrap td:has(.spanish-word),
 #tableWrap td:nth-child(odd) { background: var(--surface2); }
 
+/* ── Row hover highlight ── */
+#tableWrap tr:hover .word-cell {
+  background: var(--surface3);
+}
+
+/* ── Active row (focused input) — accent tint, persists while typing ── */
+#tableWrap tr.row-active .word-cell {
+  background: var(--accent-light);
+}
+#tableWrap tr.row-active .word-cell .spanish-word {
+  color: var(--accent);
+}
+
 /* ── Input cells ── */
 #tableWrap input[type="text"] {
   width: 100%;
@@ -87,7 +120,7 @@
   background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: 4px;
-  transition: all var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   color: var(--text);
 }
 #tableWrap input[type="text"]:focus {
@@ -95,18 +128,67 @@
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--focus-ring);
 }
+#tableWrap input[type="text"]::placeholder {
+  font-style: italic;
+  color: var(--text-muted);
+  opacity: 0.65;
+}
 
 #tableWrap input.correct {
   background-color: var(--correct-light);
   border-color: var(--correct);
   color: var(--correct);
   font-weight: 600;
+  animation: correctFill 0.25s ease;
 }
 #tableWrap input.incorrect {
   background-color: var(--incorrect-light);
   border-color: var(--incorrect);
   color: var(--incorrect);
   font-weight: 600;
+}
+#tableWrap input.peeked {
+  background-color: var(--surface2);
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Shake animation class (added/removed in JS) ── */
+#tableWrap input.input-shake {
+  animation: shake 0.35s ease;
+}
+
+/* ── Reveal button ── */
+.reveal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: 4px;
+  padding: 0 5px;
+  min-width: 22px;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity var(--transition-fast), color var(--transition-fast),
+              background var(--transition-fast), border-color var(--transition-fast);
+}
+.reveal-btn:hover {
+  opacity: 1;
+  border-color: var(--text-muted);
+  background: var(--surface2);
+}
+/* Auto-hide once the input is answered */
+#tableWrap input:disabled ~ .reveal-btn {
+  display: none;
 }
 
 #tableWrap .word-cell  { width: 12%; position: relative; }

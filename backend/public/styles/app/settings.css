@@ -1,0 +1,128 @@
+/* ================================================================
+   SETTINGS PANEL — quiz preferences page.
+================================================================ */
+
+#settingsArea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.settings-wrap {
+  display: flex;
+  flex-direction: column;
+  max-width: 620px;
+}
+
+/* ── Section ── */
+.settings-section {
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.settings-section:first-child { padding-top: 0; }
+.settings-section:last-child  { border-bottom: none; padding-bottom: 0; }
+
+.settings-section-title {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+/* ── Row ── */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.55rem 0;
+}
+.settings-row + .settings-row {
+  border-top: 1px solid var(--border);
+}
+
+.settings-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  flex: 1;
+  min-width: 0;
+}
+.settings-label > span:first-child {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text);
+}
+.settings-desc {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ── Control area (right side of row) ── */
+.settings-control {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+.settings-control select {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.8rem;
+  padding: 0.28rem 0.55rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.settings-control input[type="number"] {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.8rem;
+  padding: 0.28rem 0.4rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  width: 52px;
+}
+
+/* ── Action button (e.g. "Show again") ── */
+.settings-action-btn {
+  flex-shrink: 0;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.8rem;
+  font-family: 'Sora', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.settings-action-btn:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Responsive ── */
+@media (max-width: 599px) {
+  #settingsArea { padding: 1rem; }
+
+  .settings-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.55rem;
+  }
+
+  /* Segmented toggles: full width on mobile */
+  .settings-row .sort-order-toggle { width: 100%; }
+  .settings-row .sort-order-btn    { flex: 1; }
+}

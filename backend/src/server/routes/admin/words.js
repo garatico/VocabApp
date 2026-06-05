@@ -8,18 +8,30 @@
  *   POST /vocab          — batch update
  */
 
-import { Router }              from 'express';
-import { getDb, clearCache }   from '../../lib/vocab-loader.js';
-import { getSvgUrl }           from '../../lib/svg-loader.js';
+import { Router }                            from 'express';
+import { getDb, clearCache }                 from '../../lib/vocab-loader.js';
+import { getSvgUrl }                         from '../../lib/svg-loader.js';
+import { SUPPORTED_LANGUAGES, validateLanguage } from './_utils.js';
 
 const router = Router();
 
-const SUPPORTED_LANGUAGES = ['spanish', 'portuguese', 'italian', 'french'];
+// ── Shared helpers ─────────────────────────────────────────────────────────────
 
-function validateLanguage(lang) {
-  const l = lang?.toLowerCase();
-  return SUPPORTED_LANGUAGES.includes(l) ? l : null;
+/** Replace all glosses for a word inside an open transaction. */
+function replaceGlosses(db, wordId, glosses) {
+  db.prepare('DELETE FROM word_glosses WHERE word_id = ?').run(wordId);
+  const ins = db.prepare('INSERT INTO word_glosses (word_id, gloss, position) VALUES (?, ?, ?)');
+  glosses.map(g => g.trim()).filter(Boolean).forEach((g, i) => ins.run(wordId, g, i));
 }
+
+/** Replace all examples for a word inside an open transaction. */
+function replaceExamples(db, wordId, examples) {
+  db.prepare('DELETE FROM word_examples WHERE word_id = ?').run(wordId);
+  const ins = db.prepare('INSERT INTO word_examples (word_id, example, position) VALUES (?, ?, ?)');
+  examples.map(e => e.trim()).filter(Boolean).forEach((e, i) => ins.run(wordId, e, i));
+}
+
+// ── Formatters ─────────────────────────────────────────────────────────────────
 
 function formatWord(row, lang = 'spanish') {
   let domains = [];
@@ -27,15 +39,15 @@ function formatWord(row, lang = 'spanish') {
     try { domains = JSON.parse(row.domains); } catch (_) {}
   }
   return {
-    word:       row.word,
-    display:    row.display    || '',
-    pos:        row.pos        || null,
-    difficulty: row.difficulty || null,
-    notes:      row.notes      || '',
-    emoji:      row.emoji      || null,
-    glosses:    row.glosses_raw  ? row.glosses_raw.split('|||').filter(Boolean)  : [],
-    examples:   row.examples_raw ? row.examples_raw.split('|||').filter(Boolean) : [],
-    svg_url:    getSvgUrl(lang, row.word),
+    word:        row.word,
+    translation: row.translation    || '',
+    pos:         row.pos            || null,
+    difficulty:  row.difficulty     || null,
+    notes:       row.notes          || '',
+    emoji:       row.emoji          || null,
+    glosses:     row.glosses_raw  ? row.glosses_raw.split('|||').filter(Boolean)  : [],
+    examples:    row.examples_raw ? row.examples_raw.split('|||').filter(Boolean) : [],
+    svg_url:     getSvgUrl(lang, row.word),
     linguistic: {
       infinitive: row.infinitive || null,
       reflexive:  Boolean(row.reflexive),
@@ -51,7 +63,7 @@ function formatWord(row, lang = 'spanish') {
       corpus_frequency: row.corpus_frequency || null,
     },
     domains,
-    tags:           row.tags_raw ? row.tags_raw.split('|||').filter(Boolean) : [],
+    tags:              row.tags_raw ? row.tags_raw.split('|||').filter(Boolean) : [],
     conjugation_class: row.conjugation_class || null,
   };
 }
@@ -70,6 +82,8 @@ const WORD_SELECT = `
     ) AS tags_raw
   FROM words w
 `;
+
+// ── Routes ─────────────────────────────────────────────────────────────────────
 
 // GET /vocab
 router.get('/vocab', (req, res) => {
@@ -91,7 +105,7 @@ router.get('/vocab', (req, res) => {
     if (search) {
       const pat = '%' + search + '%';
       conditions.push(
-        '(LOWER(w.word) LIKE ? OR LOWER(w.display) LIKE ? OR EXISTS ' +
+        '(LOWER(w.word) LIKE ? OR LOWER(w.translation) LIKE ? OR EXISTS ' +
         '(SELECT 1 FROM word_glosses wg WHERE wg.word_id = w.id AND LOWER(wg.gloss) LIKE ?))'
       );
       params.push(pat, pat, pat);
@@ -99,8 +113,8 @@ router.get('/vocab', (req, res) => {
     if (posFilter)    { conditions.push('w.pos = ?');           params.push(posFilter); }
     if (bandFilter)   { conditions.push('w.band = ?');          params.push(bandFilter); }
     if (domainFilter) {
-      conditions.push('w.domains LIKE ?');
-      params.push('%"' + domainFilter.replace(/"/g, '') + '"%');
+      conditions.push('EXISTS (SELECT 1 FROM json_each(w.domains) WHERE json_each.value = ?)');
+      params.push(domainFilter);
     }
 
     const where = conditions.join(' AND ');
@@ -170,7 +184,7 @@ router.post('/vocab/:word', (req, res) => {
 
       db.prepare(`
         UPDATE words SET
-          display          = ?,
+          translation      = ?,
           pos              = ?,
           notes            = ?,
           emoji            = ?,
@@ -189,35 +203,27 @@ router.post('/vocab/:word', (req, res) => {
           updated_at       = CURRENT_TIMESTAMP
         WHERE id = ?
       `).run(
-        body.display                     ?? null,
-        body.pos                         ?? null,
-        body.notes                       ?? null,
-        body.emoji                       ?? null,
-        body.linguistic?.ipa             ?? null,
-        body.frequency?.band             ?? null,
+        body.translation                     ?? null,
+        body.pos                             ?? null,
+        body.notes                           ?? null,
+        body.emoji                           ?? null,
+        body.linguistic?.ipa                 ?? null,
+        body.frequency?.band                 ?? null,
         body.domains != null ? JSON.stringify(body.domains) : null,
-        body.difficulty                  ?? null,
-        body.linguistic?.gender          ?? null,
-        body.linguistic?.plural          ?? null,
-        body.linguistic?.infinitive      ?? null,
+        body.difficulty                      ?? null,
+        body.linguistic?.gender              ?? null,
+        body.linguistic?.plural              ?? null,
+        body.linguistic?.infinitive          ?? null,
         reflexiveVal,
-        body.linguistic?.register        ?? null,
+        body.linguistic?.register            ?? null,
         syllablesVal,
-        body.frequency?.rank             ?? null,
-        body.frequency?.corpus_frequency ?? null,
+        body.frequency?.rank                 ?? null,
+        body.frequency?.corpus_frequency     ?? null,
         wordId,
       );
 
-      if (Array.isArray(body.glosses)) {
-        db.prepare('DELETE FROM word_glosses WHERE word_id = ?').run(wordId);
-        const ins = db.prepare('INSERT INTO word_glosses (word_id, gloss, position) VALUES (?, ?, ?)');
-        body.glosses.map(g => g.trim()).filter(Boolean).forEach((g, i) => ins.run(wordId, g, i));
-      }
-      if (Array.isArray(body.examples)) {
-        db.prepare('DELETE FROM word_examples WHERE word_id = ?').run(wordId);
-        const ins = db.prepare('INSERT INTO word_examples (word_id, example, position) VALUES (?, ?, ?)');
-        body.examples.map(e => e.trim()).filter(Boolean).forEach((e, i) => ins.run(wordId, e, i));
-      }
+      if (Array.isArray(body.glosses))  replaceGlosses(db, wordId, body.glosses);
+      if (Array.isArray(body.examples)) replaceExamples(db, wordId, body.examples);
     })();
 
     clearCache(lang);
@@ -250,26 +256,21 @@ router.post('/vocab', (req, res) => {
 
         db.prepare(`
           UPDATE words SET
-            display=?, pos=?, notes=?, ipa=?, band=?, domains=?,
-            updated_at=CURRENT_TIMESTAMP
-          WHERE id=?
+            translation = ?, pos = ?, notes = ?, ipa = ?, band = ?, domains = ?,
+            updated_at  = CURRENT_TIMESTAMP
+          WHERE id = ?
         `).run(
-          data.display ?? null, data.pos ?? null, data.notes ?? null,
-          data.linguistic?.ipa ?? null, data.frequency?.band ?? null,
+          data.translation          ?? null,
+          data.pos                  ?? null,
+          data.notes                ?? null,
+          data.linguistic?.ipa      ?? null,
+          data.frequency?.band      ?? null,
           data.domains != null ? JSON.stringify(data.domains) : null,
           wordId,
         );
 
-        if (Array.isArray(data.glosses)) {
-          db.prepare('DELETE FROM word_glosses WHERE word_id = ?').run(wordId);
-          const ins = db.prepare('INSERT INTO word_glosses (word_id, gloss, position) VALUES (?, ?, ?)');
-          data.glosses.map(g => g.trim()).filter(Boolean).forEach((g, i) => ins.run(wordId, g, i));
-        }
-        if (Array.isArray(data.examples)) {
-          db.prepare('DELETE FROM word_examples WHERE word_id = ?').run(wordId);
-          const ins = db.prepare('INSERT INTO word_examples (word_id, example, position) VALUES (?, ?, ?)');
-          data.examples.map(e => e.trim()).filter(Boolean).forEach((e, i) => ins.run(wordId, e, i));
-        }
+        if (Array.isArray(data.glosses))  replaceGlosses(db, wordId, data.glosses);
+        if (Array.isArray(data.examples)) replaceExamples(db, wordId, data.examples);
         updated++;
       }
     })();
