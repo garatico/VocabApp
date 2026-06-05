@@ -25,8 +25,8 @@ export default [
     },
   },
   {
-    // Frontend browser source
-    files: ['src/client/**/*.{js,ts}'],
+    // Frontend browser source (.js only — .ts files are checked by tsc)
+    files: ['src/client/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
@@ -75,6 +75,8 @@ export default [
     },
   },
   {
-    ignores: ['node_modules/**', 'scripts/**'],
+    // TypeScript files are checked by `tsc --noEmit` (npm run typecheck).
+    // ESLint has no TS parser installed, so exclude them to avoid parse errors.
+    ignores: ['node_modules/**', 'scripts/**', 'src/client/**/*.ts'],
   },
 ];
