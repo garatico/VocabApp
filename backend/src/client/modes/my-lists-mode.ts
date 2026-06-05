@@ -38,11 +38,21 @@ type SortMode = 'alpha-asc' | 'alpha-desc' | 'rank-asc' | 'rank-desc';
 
 // ── POS helpers ───────────────────────────────────────────────────────────────
 
+// Short labels for word-row badges
 const POS_ABBREV: Record<string, string> = {
   verb: 'verb', noun: 'noun', adjective: 'adj',
   adverb: 'adv', pronoun: 'pron', preposition: 'prep',
   conjunction: 'conj', article: 'art',
 };
+
+// Full pluralized labels for the stats row
+const POS_LABEL: Record<string, string> = {
+  verb: 'Verbs', noun: 'Nouns', adjective: 'Adjectives',
+  adverb: 'Adverbs', pronoun: 'Pronouns', preposition: 'Prepositions',
+  conjunction: 'Conjunctions', article: 'Articles',
+};
+
+type ExportFormat = 'with-translation' | 'words-only';
 
 // ── Vocabulary cache ──────────────────────────────────────────────────────────
 
@@ -100,17 +110,40 @@ function duplicateList(lang: string, sourceName: string): string {
 function exportList(
   words: string[], vocabMap: Map<string, VocabEntry> | undefined,
   listName: string, lang: string,
+  format: ExportFormat = 'with-translation',
 ): void {
-  const lines = words.map(w => {
-    const e = vocabMap?.get(w);
-    return e?.translation ? `${w}\t${e.translation}` : w;
-  });
-  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  let content: string;
+  let filename: string;
+  if (format === 'words-only') {
+    content  = words.join('\n');
+    filename = `${listName}-${lang}-words.txt`;
+  } else {
+    const lines = words.map(w => {
+      const e = vocabMap?.get(w);
+      return e?.translation ? `${w}\t${e.translation}` : w;
+    });
+    content  = lines.join('\n');
+    filename = `${listName}-${lang}.txt`;
+  }
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href = url; a.download = `${listName}-${lang}.txt`;
+  a.href = url; a.download = filename;
   document.body.appendChild(a); a.click();
   document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+// ── Mastery helpers ─────────────────────────────────────────────────────────
+
+function getMastered(lang: string, listName: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(`vq_mastery_${lang}_${listName}`);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch { return new Set(); }
+}
+
+function saveMastered(lang: string, listName: string, mastered: Set<string>): void {
+  localStorage.setItem(`vq_mastery_${lang}_${listName}`, JSON.stringify([...mastered]));
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -124,6 +157,7 @@ export function renderMyLists(container: HTMLElement): void {
   let sortMode: SortMode = 'alpha-asc';
   let expandedWord: string | null = null;
   const selectedPos = new Set<string>();
+  let hideMastered = false;
 
   // ── Left pane ──────────────────────────────────────────────────────────────
 
@@ -265,9 +299,23 @@ export function renderMyLists(container: HTMLElement): void {
     countBadge.textContent = String(getList(lang, selectedList).length) + ' words';
     const exportBtn = document.createElement('button');
     exportBtn.type = 'button'; exportBtn.className = 'ml-export-btn';
-    exportBtn.title = 'Export list as .txt'; exportBtn.textContent = '↓ Export';
+    exportBtn.textContent = '↓ Export';
+
+    const exportFmtSel = document.createElement('select');
+    exportFmtSel.className = 'ml-export-format-sel';
+    exportFmtSel.title = 'Export format';
+    ([
+      ['with-translation', 'Word + translation'],
+      ['words-only',       'Words only'],
+    ] as const).forEach(([value, label]) => {
+      const opt = document.createElement('option');
+      opt.value = value; opt.textContent = label;
+      exportFmtSel.appendChild(opt);
+    });
+
     exportBtn.addEventListener('click', () => {
-      exportList(sortWords(getList(lang, selectedList)), vocabMapCache.get(lang), selectedList, lang);
+      const fmt = exportFmtSel.value as ExportFormat;
+      exportList(sortWords(getList(lang, selectedList)), vocabMapCache.get(lang), selectedList, lang, fmt);
     });
     const quizBtn       = document.createElement('button');
     quizBtn.type        = 'button';
@@ -285,7 +333,8 @@ export function renderMyLists(container: HTMLElement): void {
     });
 
     titleGroup.appendChild(title); titleGroup.appendChild(countBadge);
-    titleGroup.appendChild(exportBtn); titleGroup.appendChild(quizBtn);
+    titleGroup.appendChild(exportBtn); titleGroup.appendChild(exportFmtSel);
+    titleGroup.appendChild(quizBtn);
 
     // Stats row — updates after renderWords()
     const statsRow = document.createElement('div');
@@ -311,11 +360,23 @@ export function renderMyLists(container: HTMLElement): void {
       sortSel.appendChild(opt);
     });
     sortSel.addEventListener('change', () => { sortMode = sortSel.value as SortMode; renderWords(filterInp.value); });
+    const hideMasteredBtn = document.createElement('button');
+    hideMasteredBtn.type = 'button';
+    hideMasteredBtn.className = 'ml-hide-mastered-btn';
+    hideMasteredBtn.textContent = 'Hide mastered';
+    hideMasteredBtn.title = 'Hide words you have marked as mastered';
+    hideMasteredBtn.addEventListener('click', () => {
+      hideMastered = !hideMastered;
+      hideMasteredBtn.classList.toggle('ml-hide-mastered-btn--active', hideMastered);
+      renderWords(filterInp.value);
+    });
     controlsGroup.appendChild(filterInp); controlsGroup.appendChild(sortSel);
+    controlsGroup.appendChild(hideMasteredBtn);
 
     // POS chips
     const posRow = document.createElement('div');
     posRow.className = 'ml-pos-row';
+    const posChipBtns = new Map<string, HTMLButtonElement>();
     const POS_CHIPS = [
       { value: '',            label: 'All'          },
       { value: 'verb',        label: 'Verbs'        },
@@ -331,7 +392,7 @@ export function renderMyLists(container: HTMLElement): void {
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'pos-chip' + (value === '' ? ' pos-chip-all active' : '');
-      chip.textContent = label; if (value) chip.dataset.pos = value;
+      chip.textContent = label; if (value) { chip.dataset.pos = value; posChipBtns.set(value, chip); }
       chip.addEventListener('click', () => {
         if (value === '') selectedPos.clear();
         else { if (selectedPos.has(value)) selectedPos.delete(value); else selectedPos.add(value); }
@@ -395,20 +456,30 @@ export function renderMyLists(container: HTMLElement): void {
 
     function renderStats(words: string[]): void {
       const vm = vocabMapCache.get(lang);
-      if (!vm || words.length === 0) { statsRow.textContent = ''; return; }
+      if (!vm || words.length === 0) { statsRow.innerHTML = ''; return; }
       const counts: Record<string, number> = {};
-      let totalRank = 0; let rankedCount = 0;
+      let minRank = Infinity; let maxRank = -Infinity; let rankedCount = 0; let unlabeled = 0;
       for (const w of words) {
         const e = vm.get(w);
         if (e?.pos) counts[e.pos] = (counts[e.pos] ?? 0) + 1;
-        if (e?.rank) { totalRank += e.rank; rankedCount++; }
+        else unlabeled++;
+        if (e?.rank != null) {
+          if (e.rank < minRank) minRank = e.rank;
+          if (e.rank > maxRank) maxRank = e.rank;
+          rankedCount++;
+        }
       }
-      const parts = Object.entries(counts)
+      const parts: string[] = Object.entries(counts)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([pos, n]) => `${n} ${POS_ABBREV[pos] ?? pos}`);
-      if (rankedCount > 0) parts.push(`avg rank ${Math.round(totalRank / rankedCount)}`);
-      statsRow.textContent = parts.join(' · ');
+        .map(([pos, n]) => `${n} ${POS_LABEL[pos] ?? pos}`);
+      if (unlabeled > 0) parts.push(`${unlabeled} other`);
+      if (rankedCount > 1)        parts.push(`ranks #${minRank}–#${maxRank}`);
+      else if (rankedCount === 1) parts.push(`rank #${minRank}`);
+      const masteredCount = words.filter(w => getMastered(lang, selectedList).has(w)).length;
+      if (masteredCount > 0) parts.push(`${masteredCount} mastered`);
+      statsRow.innerHTML = parts
+        .map(p => `<span class="ml-stat-chip">${p}</span>`)
+        .join('');
     }
 
     // ── Add-search ────────────────────────────────────────────────────────────
@@ -482,6 +553,39 @@ export function renderMyLists(container: HTMLElement): void {
     }
 
     addInp.addEventListener('input', () => renderAddResults(addInp.value.trim()));
+
+    // ── Bulk paste ────────────────────────────────────────────────────────────
+    addInp.addEventListener('paste', (e: ClipboardEvent) => {
+      const text = e.clipboardData?.getData('text') ?? '';
+      const lines = text.split(/[\r\n]+/).map(l => l.trim()).filter(Boolean);
+      if (lines.length < 2) return; // single line: normal paste behavior
+      e.preventDefault();
+      const currentWords = new Set(getList(lang, selectedList).map(w => w.toLowerCase()));
+      let added = 0;
+      for (const line of lines) {
+        const q = norm(line);
+        const match = allVocab.find(v => norm(v.word) === q || norm(v.translation) === q);
+        if (match && !currentWords.has(match.word.toLowerCase())) {
+          addToList(lang, selectedList, match.word);
+          currentWords.add(match.word.toLowerCase());
+          added++;
+        }
+      }
+      addInp.value = '';
+      addResults.hidden = true;
+      countBadge.textContent = String(getList(lang, selectedList).length) + ' words';
+      updateBadge();
+      renderWords(filterInp.value.trim());
+      renderSidebar();
+      const feedback = document.createElement('div');
+      feedback.className = 'ml-bulk-feedback';
+      feedback.textContent = added > 0
+        ? `Added ${added} of ${lines.length} words`
+        : 'No matching words found';
+      addRow.appendChild(feedback);
+      setTimeout(() => feedback.remove(), 2500);
+    });
+
     addInp.addEventListener('keydown', (e: KeyboardEvent) => {
       const count = currentMatches.length;
       if (!count || addResults.hidden) return;
@@ -557,14 +661,34 @@ export function renderMyLists(container: HTMLElement): void {
       activePopover = popover;
     }
 
+    // ── Chip counts ──────────────────────────────────────────────────────────────
+
+    function updateChipCounts(): void {
+      const vm = vocabMapCache.get(lang);
+      if (!vm) return;
+      const allWords = getList(lang, selectedList);
+      const counts: Record<string, number> = {};
+      for (const w of allWords) {
+        const pos = vm.get(w)?.pos;
+        if (pos) counts[pos] = (counts[pos] ?? 0) + 1;
+      }
+      for (const [pos, btn] of posChipBtns) {
+        const n = counts[pos] ?? 0;
+        const chipDef = POS_CHIPS.find(c => c.value === pos);
+        btn.textContent = n > 0 ? `${chipDef?.label ?? pos} (${n})` : (chipDef?.label ?? pos);
+      }
+    }
+
     // ── Word list render ───────────────────────────────────────────────────────
 
     function renderWords(filter = ''): void {
       closePopover(); listEl.innerHTML = '';
       const vm = vocabMapCache.get(lang);
       const q  = norm(filter);
+      const mastered = getMastered(lang, selectedList);
 
       const filtered = getList(lang, selectedList).filter(w => {
+        if (hideMastered && mastered.has(w)) return false;
         const e = vm?.get(w);
         if (selectedPos.size > 0 && !selectedPos.has(e?.pos ?? '')) return false;
         if (!q) return true;
@@ -572,6 +696,7 @@ export function renderMyLists(container: HTMLElement): void {
       });
 
       renderStats(filtered);
+      updateChipCounts();
       const words = sortWords(filtered);
 
       if (words.length === 0) {
@@ -584,10 +709,13 @@ export function renderMyLists(container: HTMLElement): void {
       words.forEach(word => {
         const entry = vm?.get(word);
         const posLabel = POS_ABBREV[entry?.pos ?? ''] ?? '';
+        const isMastered = mastered.has(word);
 
-        // ── Main row ──────────────────────────────────────────────────────
+        // ── Main row ────────────────────────────────────────────────
         const li = document.createElement('li');
-        li.className = 'ml-word-item' + (word === expandedWord ? ' ml-word-item--expanded' : '');
+        li.className = 'ml-word-item'
+          + (word === expandedWord ? ' ml-word-item--expanded' : '')
+          + (isMastered ? ' ml-word-item--mastered' : '');
 
         const wordSpan = document.createElement('span');
         wordSpan.className = 'ml-word-text'; wordSpan.textContent = word;
@@ -600,8 +728,26 @@ export function renderMyLists(container: HTMLElement): void {
         const transSpan = document.createElement('span');
         transSpan.className = 'ml-word-trans'; transSpan.textContent = entry?.translation ?? '';
 
+        const rankBadge = document.createElement('span');
+        rankBadge.className = 'ml-word-rank';
+        if (entry?.rank != null) rankBadge.textContent = '#' + entry.rank;
+        else rankBadge.hidden = true;
+
         const actionsDiv = document.createElement('div');
         actionsDiv.className = 'ml-word-actions';
+
+        const masteryBtn = document.createElement('button');
+        masteryBtn.type = 'button';
+        masteryBtn.className = 'ml-mastery-btn' + (isMastered ? ' ml-mastery-btn--active' : '');
+        masteryBtn.title = isMastered ? 'Unmark as mastered' : 'Mark as mastered';
+        masteryBtn.textContent = '✓';
+        masteryBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          const m = getMastered(lang, selectedList);
+          if (m.has(word)) m.delete(word); else m.add(word);
+          saveMastered(lang, selectedList, m);
+          renderWords(filterInp.value);
+        });
 
         const moveBtn = document.createElement('button');
         moveBtn.type = 'button'; moveBtn.className = 'ml-move-btn';
@@ -620,11 +766,11 @@ export function renderMyLists(container: HTMLElement): void {
           renderSidebar();
         });
 
-        actionsDiv.appendChild(moveBtn); actionsDiv.appendChild(removeBtn);
+        actionsDiv.appendChild(masteryBtn); actionsDiv.appendChild(moveBtn); actionsDiv.appendChild(removeBtn);
         li.appendChild(wordSpan); li.appendChild(posSpan);
-        li.appendChild(transSpan); li.appendChild(actionsDiv);
+        li.appendChild(rankBadge); li.appendChild(transSpan); li.appendChild(actionsDiv);
 
-        // ── Preview row (collapsed unless expanded) ───────────────────────
+        // ── Preview row (collapsed unless expanded) ───────────────────
         const detail = document.createElement('div');
         detail.className = 'ml-word-detail';
 
@@ -664,7 +810,6 @@ export function renderMyLists(container: HTMLElement): void {
         listEl.appendChild(li);
       });
     }
-
     renderWords();
     filterInp.addEventListener('input', () => renderWords(filterInp.value));
   }

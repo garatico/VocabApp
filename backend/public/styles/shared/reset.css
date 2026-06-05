@@ -9,6 +9,18 @@
   padding: 0;
 }
 
+/* ── Smooth scroll + thin custom scrollbars ── */
+html {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+::-webkit-scrollbar               { width: 6px; height: 6px; }
+::-webkit-scrollbar-track         { background: transparent; }
+::-webkit-scrollbar-thumb         { background: var(--border-strong); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover   { background: var(--text-muted); }
+::-webkit-scrollbar-corner        { background: transparent; }
+
 body {
   font-family: 'Sora', system-ui, sans-serif;
   background: var(--bg);

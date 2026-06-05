@@ -73,7 +73,6 @@ VocabApp/
 │   │   │   ├── index.js                 # Server entry point
 │   │   │   ├── lib/
 │   │   │   │   ├── vocab-loader.js      # SQLite singleton + cache
-│   │   │   │   ├── verb-rules.js        # Conjugation rule engine
 │   │   │   │   └── svg-loader.js        # SVG URL resolver
 │   │   │   ├── routes/
 │   │   │   │   ├── admin.routes.js      # Mounts admin sub-routes
@@ -94,11 +93,15 @@ VocabApp/
 │   │       ├── modes/
 │   │       │   ├── picture-mode.ts      # Picture Quiz (type/flashcard/click modes)
 │   │       │   └── …
-│   │       ├── admin-*.js               # Admin panel modules (ES modules, no bundler)
+│   │       ├── admin.ts                 # Admin panel entry point (Vite MPA)
+│   │       ├── admin-api.ts             # Shared fetch/status utilities
+│   │       ├── admin-editor.ts          # Word Editor tab
+│   │       ├── admin-stats.ts           # Statistics tab
+│   │       ├── admin-db.ts              # DB Admin tab (cache clear, CSV export)
+│   │       ├── admin-conjugation.ts     # Conjugation Practice tab
 │   │       └── …
+│   ├── admin.html                       # Admin panel Vite entry (dev: /admin, prod: dist/admin.html)
 │   ├── public/
-│   │   ├── admin.html                   # Admin panel HTML
-│   │   ├── admin.js                     # Admin panel entry point (imports admin-*.js)
 │   │   └── styles/
 │   ├── tests/
 │   │   ├── public.test.js
@@ -109,14 +112,14 @@ VocabApp/
 │   │       └── sqlite-shim.js           # better-sqlite3 shim using sql.js WASM
 │   ├── vitest.config.js                 # aliases better-sqlite3 → sqlite-shim in tests
 │   └── scripts/
-│       ├── validate.js                  # pre-flight null-byte/syntax check (npm run validate)
+│       ├── validate.js                  # null-byte/syntax check — runs as pre-commit hook (npm run validate)
 │       ├── test-api.js                  # manual smoke-test for the running API
 │       └── data/                        # all Python data scripts
 │           ├── sync_db.py               # curated JSONL → vocabulary.db  (npm run sync)
 │           ├── download_images.py       # fetch Wikipedia photos → data/images/  (npm run download:images)
 │           ├── download_emoji.py        # fetch OpenMoji SVGs → data/emoji/  (npm run download:emoji)
 │           ├── check_visual_coverage.py # report picture-quiz visual gaps  (npm run check:visuals)
-│           ├── verb_rules.py            # Python conjugation engine (mirrors verb-rules.js)
+│           ├── verb_rules.py            # Spanish conjugation rule engine (single source of truth)
 │           ├── corpus_to_curated.py     # corpus words → curated JSONL
 │           ├── corpus_builder.py        # spaCy corpus extraction helpers
 │           ├── lang_config.py           # shared language codes / tense maps
@@ -132,8 +135,9 @@ VocabApp/
 
 ```bash
 cd backend
-npm test          # run once
-npm run test:watch  # watch mode
+npm test              # run once
+npm run test:watch    # watch mode
+npm run test:coverage # run with V8 coverage report (outputs to coverage/)
 ```
 
 Tests use `sql.js` (pure WASM) instead of `better-sqlite3` so no native
@@ -148,29 +152,15 @@ read from or write to `vocabulary.db`.
   inject an in-memory DB without touching the filesystem.
 - **Cache invalidation**: every admin write calls `clearCache(lang)` so the
   public API immediately reflects changes without a restart.
-- **Admin panel is ES modules**: `admin.js` is `type="module"`, imports from
-  `public/src/admin-*.js`. No bundler required — Express serves `public/`
-  as static files.
+- **Admin panel is a Vite MPA entry**: `admin.html` at the project root is a
+  second Vite entry point (alongside `index.html`). In dev, `/admin` is served
+  by Vite directly (rewrite plugin). In production, Express serves
+  `dist/admin.html`. All admin TypeScript is bundled and type-checked by Vite.
 - **Admin routes guard**: `isDevelopment` middleware in `admin.routes.js`
   returns 403 unless `NODE_ENV=development`. Tests set this before building
   the app.
+- **Conjugation is Python-owned**: `verb_rules.py` is the single conjugation engine. `sync_db.py` computes full conjugation forms at sync time and stores them in the `conjugations` column. The server reads pre-computed JSON — there is no runtime conjugation in JS.
 - **Synonyms not implemented**: `word_relations` table exists in the schema
   but is empty — synonyms were never migrated from the old JSON format.
   The admin edit form does not expose this field.
 
----
-
-## TODO: Rename `display` field
-
-The `display` field in `spanish_curated.jsonl` holds the **primary English
-translation** shown to the learner (e.g., `"display": "shark"`). The name is
-misleading — it sounds like a UI/formatting property.
-
-Candidate replacement names: `english`, `translation`, `gloss`.
-
-Renaming requires:
-1. Update all entries in `spanish_curated.jsonl` (currently ~2400+)
-2. Search app code for any reference to `entry.display` / `["display"]` and
-   update field access accordingly.
-
-Do this as a deliberate refactor, not mid-session.

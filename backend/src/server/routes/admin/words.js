@@ -11,7 +11,7 @@
 import { Router }                            from 'express';
 import { getDb, clearCache }                 from '../../lib/vocab-loader.js';
 import { getSvgUrl }                         from '../../lib/svg-loader.js';
-import { SUPPORTED_LANGUAGES, validateLanguage } from './_utils.js';
+import { validateLanguage } from './_utils.js';
 
 const router = Router();
 

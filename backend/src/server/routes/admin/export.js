@@ -6,8 +6,8 @@
  */
 
 import { Router }                                 from 'express';
-import { getDb }                                  from '../../lib/vocab-loader.js';
-import { SUPPORTED_LANGUAGES, validateLanguage }  from './_utils.js';
+import { getDb, getSupportedLanguages }           from '../../lib/vocab-loader.js';
+import { validateLanguage }                       from './_utils.js';
 
 const router = Router();
 
@@ -17,7 +17,7 @@ router.post('/export', (req, res) => {
     const db   = getDb();
     const lang = validateLanguage(req.body?.lang);
     if (!lang)
-      return res.status(400).json({ error: 'Invalid language. Must be one of: ' + SUPPORTED_LANGUAGES.join(', ') });
+      return res.status(400).json({ error: 'Invalid language. Must be one of: ' + getSupportedLanguages().join(', ') });
 
     const rows = db.prepare(`
       SELECT w.*,

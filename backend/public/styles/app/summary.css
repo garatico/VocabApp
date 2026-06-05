@@ -1,5 +1,5 @@
 /* ================================================================
-   SUMMARY — end-of-session score strip + output error box.
+   SUMMARY -- end-of-session score strip + output error box.
 ================================================================ */
 
 /* Output / error fallback */
@@ -15,23 +15,23 @@
   margin-top: 1rem;
 }
 
-/* Score strip shared by all game modes */
+/* Score strip -- single flex row */
 .quiz-summary,
 .recall-summary {
   display: flex;
-  gap: 0.5rem 0.75rem;
   align-items: center;
-  flex-wrap: wrap;
-  padding: 0.7rem 1.1rem;
+  gap: 0.5rem;
+  padding: 0.55rem 1rem;
   background: var(--surface);
   border: 1px solid var(--border-strong);
   border-left: 3px solid var(--accent);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
   font-family: 'DM Mono', monospace;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 600;
   margin-top: 0.6rem;
+  flex-wrap: wrap;
 }
 
 /* Stat pills */
@@ -41,6 +41,7 @@
   border-radius: 99px;
   border: 1px solid;
   line-height: 1.4;
+  white-space: nowrap;
 }
 .summary-correct {
   color: var(--correct);
@@ -53,102 +54,81 @@
   border-color: color-mix(in srgb, var(--danger) 45%, transparent);
 }
 
-/* Hero percentage */
-.summary-pct {
-  color: var(--text);
-  margin-left: auto;
-  font-size: 1.4rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
-
-/* ── Missed words strip (table mode summary) ── */
-.summary-missed-words {
-  width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  align-items: center;
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--border);
-}
-
-.summary-missed-word {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.72rem;
-  background: var(--incorrect-light);
-  border: 1px solid color-mix(in srgb, var(--incorrect) 30%, transparent);
-  color: var(--incorrect);
-  border-radius: 99px;
-  padding: 0.12rem 0.55rem;
-  white-space: nowrap;
-}
-
-.summary-missed-actions {
-  margin-left: auto;
-  display: flex;
-  gap: 0.4rem;
-  flex-shrink: 0;
-}
-
+/* Inline action buttons */
 .summary-retry-btn {
   background: var(--accent);
   color: #fff;
-  border: none;
+  border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
-  padding: 0.3rem 0.8rem;
+  padding: 0.18rem 0.65rem;
   font-family: 'Sora', sans-serif;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background var(--transition-fast);
-}
-.summary-retry-btn:hover { background: var(--accent-hover); }
-
-.summary-export-btn {
-  background: var(--surface2);
-  color: var(--text);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  padding: 0.3rem 0.8rem;
-  font-family: 'Sora', sans-serif;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
   transition: background var(--transition-fast), border-color var(--transition-fast);
 }
-.summary-export-btn:hover { background: var(--surface); border-color: var(--accent); }
+.summary-retry-btn:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 
-/* ── Responsive ── */
+.summary-export-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.18rem 0.65rem;
+  font-family: 'Sora', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast), color var(--transition-fast),
+              border-color var(--transition-fast);
+}
+.summary-export-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+/* Hero percentage -- pushed to the far right */
+.summary-pct {
+  color: var(--text);
+  margin-left: auto;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Perfect score (100%) */
+.quiz-summary--perfect {
+  border-left-color: var(--correct);
+  animation: celebratePop 0.5s ease both;
+}
+.quiz-summary--perfect .summary-pct {
+  color: var(--correct);
+}
+
+/* Keep retry+export adjacent when wrapping on small screens */
+.summary-retry-btn,
+.summary-export-btn { flex-shrink: 0; }
+
+/* Responsive */
 @media (max-width: 768px) {
   .output { padding: 0.6rem 0.8rem; font-size: 0.75rem; margin-top: 0.8rem; }
-  .quiz-summary, .recall-summary {
-    gap: 0.45rem 0.6rem;
-    padding: 0.6rem 0.9rem;
-    font-size: 0.8rem;
-    margin-top: 0.5rem;
-  }
-  .summary-pct { font-size: 1.2rem; }
+  .quiz-summary, .recall-summary { gap: 0.4rem; padding: 0.5rem 0.75rem; font-size: 0.78rem; margin-top: 0.5rem; }
+  .summary-pct { font-size: 1.15rem; }
 }
 
 @media (max-width: 600px) {
   .output { padding: 0.5rem 0.7rem; font-size: 0.7rem; margin-top: 0.6rem; }
-  .quiz-summary, .recall-summary {
-    gap: 0.4rem 0.5rem;
-    padding: 0.55rem 0.8rem;
-    font-size: 0.76rem;
-    margin-top: 0.4rem;
-  }
-  .summary-correct, .summary-missed { flex: 1 1 auto; justify-content: center; }
-  .summary-pct { font-size: 1.15rem; margin-left: auto; }
+  .quiz-summary, .recall-summary { padding: 0.45rem 0.65rem; font-size: 0.74rem; margin-top: 0.4rem; }
+  .summary-pct { font-size: 1.05rem; }
 }
 
 @media (max-width: 480px) {
   .output { padding: 0.4rem 0.6rem; font-size: 0.65rem; }
-  .quiz-summary, .recall-summary { gap: 0.35rem; padding: 0.5rem 0.7rem; font-size: 0.72rem; }
-  .summary-pct { font-size: 1.05rem; }
+  .quiz-summary, .recall-summary { gap: 0.35rem; padding: 0.4rem 0.6rem; font-size: 0.7rem; }
+  .summary-pct { font-size: 0.95rem; }
 }

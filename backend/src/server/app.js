@@ -71,13 +71,13 @@ export function createApp({ nodeEnv = process.env.NODE_ENV || 'development' } = 
   // Static files + SPA fallback (skip in test — we only need the API)
   if (nodeEnv !== 'test') {
     if (nodeEnv === 'production') {
-      // Serve Vite build output; index.html is inside dist/
+      // Serve Vite build output; HTML entries are inside dist/
       app.use(express.static(path.join(projectRoot, 'dist')));
+      app.get('/admin', (_req, res) => res.sendFile(path.join(projectRoot, 'dist', 'admin.html')));
       app.get('*', (_req, res) => res.sendFile(path.join(projectRoot, 'dist', 'index.html')));
     } else {
-      // Dev: Vite handles the JS/TS; Express just serves public/ assets
+      // Dev: Vite handles JS/TS and serves admin.html at /admin; Express serves public/ static assets
       app.use(express.static(path.join(projectRoot, 'public')));
-      app.get('/admin', (_req, res) => res.sendFile(path.join(projectRoot, 'public', 'admin.html')));
       app.get('*', (_req, res) => res.sendFile(path.join(projectRoot, 'index.html')));
     }
   }

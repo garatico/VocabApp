@@ -60,13 +60,6 @@ const SCHEMA = `
     word_id INTEGER NOT NULL REFERENCES words(id) ON DELETE CASCADE,
     tag     TEXT    NOT NULL
   );
-
-  CREATE TABLE word_relations (
-    word_id    INTEGER NOT NULL REFERENCES words(id) ON DELETE CASCADE,
-    related_id INTEGER NOT NULL REFERENCES words(id) ON DELETE CASCADE,
-    relation   TEXT,
-    PRIMARY KEY (word_id, related_id, relation)
-  );
 `;
 
 const SEED_WORDS = [

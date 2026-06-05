@@ -51,7 +51,6 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   letter-spacing: 0.03em;
   align-self: stretch;           /* fills the full height of the controls row */
   box-shadow: 0 3px 12px rgba(61, 107, 79, 0.35);
-  position: relative;
 }
 #startBtn::after {
   content: ' →';
@@ -98,8 +97,19 @@ input[type="checkbox"]:hover { transform: scale(1.1); }
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
-  button, select { min-height: 44px; font-size: 0.8rem; }
-  /* Reduce hover lift on touch devices — no hover state anyway */
+  /* 44px tap targets on primary/secondary interactive elements */
+  input[type="text"],
+  input[type="number"],
+  select,
+  #startBtn,
+  .controls-row button,
+  #tableControls button,
+  .recall-input,
+  #answer {
+    min-height: 44px;
+  }
+
+  /* Reduce hover lift — no hover state on touch anyway */
   button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
   html.dark button:hover:not(:disabled) { box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
   input[type="checkbox"] { width: 18px; height: 18px; }

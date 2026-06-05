@@ -1,5 +1,5 @@
 /* ================================================================
-   PROGRESS BAR — animated gradient fill used in quiz mode.
+   PROGRESS BAR -- animated gradient fill used in quiz mode.
 ================================================================ */
 
 /* Shared fill style for all progress bars (.bar is the inner fill div) */
@@ -10,7 +10,29 @@
   min-width: 0;
   transition: width 0.5s ease-out, min-width 0.5s ease-out;
   border-radius: 99px;
+  position: relative;
+  overflow: hidden;
 }
+
+/* Shimmer sweep -- visible while bar is between 1%-99% */
+.bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent            0%,
+    rgba(255,255,255,0.28) 50%,
+    transparent            100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2.2s linear infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+/* Hide shimmer at 0% and 100% */
+.bar[style*="width: 0"]::after,
+.bar[style*="width: 100"]::after { display: none; }
 
 /* Show a sliver once there's any progress at all */
 .bar[style*="width"]:not([style*="width: 0"]) { min-width: 6px; }

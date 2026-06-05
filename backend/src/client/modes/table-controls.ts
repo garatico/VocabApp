@@ -35,10 +35,13 @@ function hideSummaries(): void {
   });
 }
 
-function showSummaries(html: string): void {
+function showSummaries(html: string, perfect = false): void {
   ['tableSummary', 'tableSummaryTop'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.style.display = 'flex'; el.innerHTML = html; }
+    if (!el) return;
+    el.style.display = 'flex';
+    el.innerHTML = html;
+    el.classList.toggle('quiz-summary--perfect', perfect);
   });
 }
 
@@ -49,28 +52,20 @@ function esc(s: string): string {
 function buildSummaryHtml(results: CheckResult[]): string {
   const correct = results.filter(r => r.ok).length;
   const total   = results.length;
+  const missed  = results.filter(r => !r.ok && r.word && r.expected);
   const pct     = total ? Math.round((correct / total) * 100) : 0;
 
   let html =
     `<span class="summary-correct">✓ ${correct} correct</span>` +
-    `<span class="summary-missed">✗ ${total - correct} missed</span>` +
-    `<span class="summary-pct">${pct}%</span>`;
+    `<span class="summary-missed">✗ ${total - correct} missed</span>`;
 
-  const missed    = results.filter(r => !r.ok && r.word && r.expected);
-  const MAX_CHIPS = 20;
   if (missed.length > 0) {
-    const chips = missed.length <= MAX_CHIPS
-      ? missed.map(r => `<span class="summary-missed-word">${esc(r.word!)} → ${esc(r.expected!)}</span>`).join('')
-      : '';
     html +=
-      `<div class="summary-missed-words">` +
-        chips +
-        `<span class="summary-missed-actions">` +
-          `<button class="summary-retry-btn">↺ Practice ${missed.length} missed</button>` +
-          `<button class="summary-export-btn">↓ Export missed</button>` +
-        `</span>` +
-      `</div>`;
+      `<button class="summary-retry-btn">↺ Practice ${missed.length}</button>` +
+      `<button class="summary-export-btn">↓ Export</button>`;
   }
+
+  html += `<span class="summary-pct">${pct}%</span>`;
   return html;
 }
 
@@ -123,7 +118,7 @@ function rebuildTable(cols: number, words?: Word[]): void {
   });
 }
 
-// ── Jump to first unanswered ──────────────────────────────────────────────────
+// ── Jump to first unanswered ────────────────────────────────────────────────────────────────────────────
 
 function jumpToFirstUnanswered(): void {
   const first = document.querySelector<HTMLInputElement>('#tableWrap input[data-word]:not(:disabled)');
@@ -133,7 +128,7 @@ function jumpToFirstUnanswered(): void {
   }
 }
 
-// ── After-summary button wiring ───────────────────────────────────────────────
+// ── After-summary button wiring ─────────────────────────────────────────────────────
 
 function wireSummaryButtons(): void {
   document.querySelectorAll<HTMLButtonElement>('.summary-retry-btn').forEach(btn => {
@@ -157,7 +152,7 @@ function wireSummaryButtons(): void {
   });
 }
 
-// ── Main bind ─────────────────────────────────────────────────────────────────
+// ── Main bind ─────────────────────────────────────────────────────────────────────────────────
 
 export function bindTableControls(): void {
   const tableReset   = document.getElementById('tableReset');
@@ -176,7 +171,8 @@ export function bindTableControls(): void {
       .map(r => tableController!.words.find(w => w.word === r.word))
       .filter((w): w is Word => w !== undefined);
 
-    showSummaries(buildSummaryHtml(results));
+    const allCorrect = results.every(r => r.ok);
+    showSummaries(buildSummaryHtml(results), allCorrect);
     wireSummaryButtons();
   });
 

@@ -13,9 +13,6 @@ import Database from 'better-sqlite3';
 import path     from 'path';
 import { fileURLToPath } from 'url';
 import { getSvgUrl } from './svg-loader.js';
-import { conjugate } from './verb-rules.js';
-import { SUPPORTED_LANGUAGES } from '../routes/admin/_utils.js';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 const appRoot    = path.join(__dirname, '../../../..');   // => VocabApp/
@@ -25,6 +22,12 @@ let db = null;
 
 // Per-language in-memory cache
 const vocabCache = new Map();
+
+/** Query the DB for languages that actually have data. */
+export function getSupportedLanguages() {
+  if (!db) initializeDatabase();
+  return db.prepare('SELECT DISTINCT language FROM words ORDER BY language').all().map(r => r.language);
+}
 
 
 // Running count of JSON parse failures since process start — surfaced in getDbInfo()
@@ -78,7 +81,7 @@ function initializeDatabase() {
 /**
  * Load vocabulary for a language from SQLite.
  */
-export async function loadVocabFile(language) {
+export function loadVocabFile(language) {
   const lang = language.toLowerCase();
 
   if (vocabCache.has(lang)) {
@@ -86,10 +89,11 @@ export async function loadVocabFile(language) {
     return { ...cached, cacheAge: Date.now() - cached.loadedAt, source: 'sqlite' };  // cacheAge in ms
   }
 
-  if (!SUPPORTED_LANGUAGES.includes(lang)) {
+  const supported = getSupportedLanguages();
+  if (!supported.includes(lang)) {
     const error = new Error(`Language not found: ${language}`);
     error.statusCode = 404;
-    error.availableLanguages = SUPPORTED_LANGUAGES;
+    error.availableLanguages = supported;
     throw error;
   }
 
@@ -138,28 +142,10 @@ export async function loadVocabFile(language) {
 
     const rows  = stmt.all(lang);
     const words = rows.map(row => {
-      // Resolve conjugations: prefer rule-based generation, fall back to stored JSON
-      let conjugations = null;
-      if (row.conjugation_class) {
-        try {
-          const overrides = row.conjugation_overrides
-            ? parseJsonField(row.conjugation_overrides, row.word, 'conjugation_overrides', {})
-            : {};
-          conjugations = conjugate(
-            row.infinitive || row.word,
-            row.conjugation_class,
-            overrides,
-            row.future_stem || null
-          );
-        } catch (err) {
-          console.warn(`verb-rules: failed to conjugate '${row.word}' [${row.conjugation_class}]: ${err.message}`);
-          if (row.conjugations) {
-            conjugations = parseJsonField(row.conjugations, row.word, 'conjugations');
-          }
-        }
-      } else if (row.conjugations) {
-        conjugations = parseJsonField(row.conjugations, row.word, 'conjugations');
-      }
+      // Conjugations are pre-computed by sync_db.py (Python owns the rule engine)
+      const conjugations = row.conjugations
+        ? parseJsonField(row.conjugations, row.word, 'conjugations')
+        : null;
 
       return {
         word:      row.word,
@@ -257,13 +243,13 @@ export function getDbInfo() {
 }
 
 /** Load all supported languages into cache at startup. */
-export async function preloadAll() {
+export function preloadAll() {
   console.log('Pre-loading vocabularies from SQLite...');
   const results = [];
 
-  for (const lang of SUPPORTED_LANGUAGES) {
+  for (const lang of getSupportedLanguages()) {
     try {
-      await loadVocabFile(lang);
+      loadVocabFile(lang);
       results.push({ language: lang, status: 'loaded' });
       console.log(`  ok ${lang}`);
     } catch (error) {
@@ -289,4 +275,4 @@ export function closeDatabase() {
   if (db) { db.close(); db = null; }
 }
 
-export default { loadVocabFile, clearCache, reloadDb, getDbInfo, getDb, setDb, preloadAll, closeDatabase };
+export default { loadVocabFile, getSupportedLanguages, clearCache, reloadDb, getDbInfo, getDb, setDb, preloadAll, closeDatabase };

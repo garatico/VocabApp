@@ -1,5 +1,5 @@
 /**
- * admin-api.js
+ * admin-api.ts
  *
  * Shared API utilities for the admin panel.
  * Imported by every other admin module.
@@ -9,8 +9,9 @@
  * Fetch a /api/admin endpoint.
  * Throws an Error (with the server's error message if available) on non-2xx responses.
  */
-export async function apiCall(endpoint, method = 'GET', data = null) {
-  const options = { method, headers: { 'Content-Type': 'application/json' } };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function apiCall(endpoint: string, method = 'GET', data: unknown = null): Promise<any> {
+  const options: RequestInit = { method, headers: { 'Content-Type': 'application/json' } };
   if (data !== null) options.body = JSON.stringify(data);
 
   const response = await fetch(`/api/admin${endpoint}`, options);
@@ -26,9 +27,8 @@ export async function apiCall(endpoint, method = 'GET', data = null) {
 
 /**
  * Show a transient status message in the editor status bar (#statusMessage).
- * type: 'info' | 'success' | 'error'
  */
-export function showStatus(message, type = 'info') {
+export function showStatus(message: string, type: 'info' | 'success' | 'error' = 'info'): void {
   const el = document.getElementById('statusMessage');
   if (!el) return;
   el.innerHTML = `<div class="status ${type}">${escapeHtml(message)}</div>`;
@@ -36,7 +36,7 @@ export function showStatus(message, type = 'info') {
 }
 
 /** Safely escape a string for insertion into innerHTML. */
-export function escapeHtml(text) {
+export function escapeHtml(text: string): string {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
