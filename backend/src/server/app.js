@@ -82,6 +82,7 @@ export function createApp({ nodeEnv = process.env.NODE_ENV || 'development' } = 
     }
   }
 
+
   app.use(errorHandler);
 
   return app;
