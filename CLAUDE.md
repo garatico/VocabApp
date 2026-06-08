@@ -81,24 +81,24 @@ VocabApp/
 │   │   │   │   │   ├── db.js            # /api/admin/stats, /meta, /cache/clear, /db/reload
 │   │   │   │   │   └── export.js        # POST /api/admin/export (CSV)
 │   │   │   │   └── public.js            # /api/vocab/:lang, /api/health, etc.
-│   │   │   ├── migrations/              # One-off schema migrations
 │   │   │   └── middleware/
 │   │   └── client/                      # TypeScript frontend (compiled by Vite)
 │   │       ├── app.ts                   # Entry point
 │   │       ├── types.ts                 # Shared type definitions
 │   │       ├── start-handler.ts         # Quiz start logic
+│   │       ├── admin/                   # Admin panel TypeScript (all in one subdir)
+│   │       │   ├── admin.ts             # Entry point (Vite MPA, loaded by admin.html)
+│   │       │   ├── admin-api.ts         # Shared fetch/status utilities
+│   │       │   ├── admin-editor.ts      # Word Editor tab
+│   │       │   ├── admin-stats.ts       # Statistics tab
+│   │       │   ├── admin-db.ts          # DB Admin tab (cache clear, CSV export)
+│   │       │   └── admin-conjugation.ts # Conjugation Practice tab
 │   │       ├── data/
 │   │       │   ├── visual-map.ts        # Word → image/emoji fallback map
 │   │       │   └── data-loader.ts
 │   │       ├── modes/
 │   │       │   ├── picture-mode.ts      # Picture Quiz (type/flashcard/click modes)
 │   │       │   └── …
-│   │       ├── admin.ts                 # Admin panel entry point (Vite MPA)
-│   │       ├── admin-api.ts             # Shared fetch/status utilities
-│   │       ├── admin-editor.ts          # Word Editor tab
-│   │       ├── admin-stats.ts           # Statistics tab
-│   │       ├── admin-db.ts              # DB Admin tab (cache clear, CSV export)
-│   │       ├── admin-conjugation.ts     # Conjugation Practice tab
 │   │       └── …
 │   ├── admin.html                       # Admin panel Vite entry (dev: /admin, prod: dist/admin.html)
 │   ├── public/
@@ -114,8 +114,14 @@ VocabApp/
 │   └── scripts/
 │       ├── validate.js                  # null-byte/syntax check — runs as pre-commit hook (npm run validate)
 │       ├── test-api.js                  # manual smoke-test for the running API
+│       ├── migrations/                  # One-off schema migration scripts (historical; already applied)
+│       │   ├── add-emoji.js
+│       │   ├── add-svg-code.js
+│       │   ├── add-verb-columns.js
+│       │   └── rename-display-to-translation.js
 │       └── data/                        # all Python data scripts
 │           ├── sync_db.py               # curated JSONL → vocabulary.db  (npm run sync)
+│           ├── delete_all.sql           # nuclear reset — deletes all rows from every table
 │           ├── download_images.py       # fetch Wikipedia photos → data/images/  (npm run download:images)
 │           ├── download_emoji.py        # fetch OpenMoji SVGs → data/emoji/  (npm run download:emoji)
 │           ├── check_visual_coverage.py # report picture-quiz visual gaps  (npm run check:visuals)
@@ -159,8 +165,4 @@ read from or write to `vocabulary.db`.
 - **Admin routes guard**: `isDevelopment` middleware in `admin.routes.js`
   returns 403 unless `NODE_ENV=development`. Tests set this before building
   the app.
-- **Conjugation is Python-owned**: `verb_rules.py` is the single conjugation engine. `sync_db.py` computes full conjugation forms at sync time and stores them in the `conjugations` column. The server reads pre-computed JSON — there is no runtime conjugation in JS.
-- **Synonyms not implemented**: `word_relations` table exists in the schema
-  but is empty — synonyms were never migrated from the old JSON format.
-  The admin edit form does not expose this field.
-
+- **Conjugation is Python-ow
