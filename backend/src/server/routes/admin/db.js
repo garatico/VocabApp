@@ -23,16 +23,44 @@ router.get('/stats', (req, res) => {
       const total   = db.prepare('SELECT COUNT(*) AS n FROM words WHERE language=?').get(lang).n;
       const withIPA = db.prepare("SELECT COUNT(*) AS n FROM words WHERE language=? AND ipa IS NOT NULL AND ipa!=''").get(lang).n;
       const withEx  = db.prepare('SELECT COUNT(DISTINCT we.word_id) AS n FROM word_examples we JOIN words w ON we.word_id=w.id WHERE w.language=?').get(lang).n;
-      const verbs   = db.prepare("SELECT COUNT(*) AS n FROM words WHERE language=? AND pos='verb'").get(lang).n;
-      const nouns   = db.prepare("SELECT COUNT(*) AS n FROM words WHERE language=? AND pos='noun'").get(lang).n;
-      const adjs    = db.prepare("SELECT COUNT(*) AS n FROM words WHERE language=? AND pos='adjective'").get(lang).n;
+      const withConj = db.prepare("SELECT COUNT(*) AS n FROM words WHERE language=? AND conjugations IS NOT NULL AND conjugations!=''").get(lang).n;
+      const withGender = db.prepare("SELECT COUNT(*) AS n FROM words WHERE language=? AND gender IS NOT NULL AND gender!=''").get(lang).n;
+
+      // POS breakdown
+      const posRows = db.prepare("SELECT pos, COUNT(*) AS n FROM words WHERE language=? AND pos IS NOT NULL GROUP BY pos ORDER BY n DESC").all(lang);
+      const posBreakdown = Object.fromEntries(posRows.map(r => [r.pos, r.n]));
+
+      // Domain breakdown — parse JSON arrays and count each domain tag
+      const domainRows = db.prepare("SELECT domains FROM words WHERE language=? AND domains IS NOT NULL AND domains!='[]'").all(lang);
+      const domainCounts = {};
+      for (const { domains } of domainRows) {
+        try {
+          const parsed = JSON.parse(domains);
+          for (const d of parsed) {
+            domainCounts[d] = (domainCounts[d] || 0) + 1;
+          }
+        } catch (_) { /* malformed JSON — skip */ }
+      }
+      const topDomains = Object.entries(domainCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([domain, count]) => ({ domain, count }));
+
+      const nouns = posBreakdown.noun || 0;
+      const verbs = posBreakdown.verb || 0;
 
       stats[lang] = {
-        total, withExamples: withEx, withIPA,
-        verbs, nouns, adjectives: adjs,
+        total,
+        withExamples: withEx,
+        withIPA,
+        withConjugations: withConj,
+        withGender,
+        posBreakdown,
+        topDomains,
         coverage: {
-          examples: total ? Math.round((withEx  / total) * 100) : 0,
-          ipa:      total ? Math.round((withIPA / total) * 100) : 0,
+          examples:     total ? Math.round((withEx    / total) * 100) : 0,
+          ipa:          total ? Math.round((withIPA   / total) * 100) : 0,
+          conjugations: verbs ? Math.round((withConj  / verbs) * 100) : 0,
+          gender:       nouns ? Math.round((withGender / nouns) * 100) : 0,
         },
       };
     }
@@ -59,8 +87,8 @@ router.get('/meta', (req, res) => {
       }
     }
 
-    const bands = db.prepare("SELECT DISTINCT band FROM words WHERE band IS NOT NULL ORDER BY band")
-      .all().map(r => r.band);
+    // Bands are derived from rank — return the fixed set rather than querying the DB column
+    const bands = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
     res.json({ success: true, pos, domains: [...domainSet].sort(), bands });
   } catch (err) {

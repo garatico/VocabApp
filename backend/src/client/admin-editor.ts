@@ -210,7 +210,7 @@ function populateForm(word: WordData): void {
 
   setSelectValue('editPos',        word.pos             ?? '');
   setSelectValue('editDifficulty', word.difficulty      ?? '');
-  setSelectValue('editBand',       word.frequency?.band ?? '');
+  // band is derived from rank server-side — not editable
 
   const editDomainEl = document.getElementById('editDomain') as HTMLSelectElement | null;
   const firstDomain  = word.domains?.[0] ?? '';
@@ -292,7 +292,6 @@ function collectFormData(): Omit<WordData, 'word'> {
       reflexive:  (document.getElementById('editReflexive')  as HTMLInputElement).checked,
     },
     frequency: {
-      band:             (document.getElementById('editBand') as HTMLSelectElement).value || null,
       rank:             rank       ? parseInt(rank, 10)     : null,
       corpus_frequency: corpusFreq ? parseFloat(corpusFreq) : null,
     },

@@ -1,68 +1,64 @@
 /**
- * domain-filter.ts  (v2 — chip/tag UI)
+ * domain-filter.ts
+ *
+ * Domain filter UI:
+ *  - Top 10 domains by word count shown as alphabetically-sorted pills
+ *  - Remaining domains in a scrollable dropdown with live search
+ *  - Selected domains shown as removable chips
  */
 
-const ALL_DOMAINS: readonly string[] = [
-  'ability','clarity','cognition','confidence','desire','emotion',
-  'feelings','hope','impression','mind','perception','potential','truth',
-  'age','business','communication','education','identity','language',
-  'law','learning','security','work',
-  'aesthetics','appearance','cleanliness','clothes','drinks','food',
-  'health','height','medical','physical_state','senses','size',
-  'speed','strength','temperature',
-  'animals','nature',
-  'events','existence','location','movement','occurrence','state',
-  'transport','travel',
-  'condition','distinction','freedom','importance','necessity',
-  'obligation','possibility','quality','quantity','simplicity',
-  'giving','ownership','possession','request','search','transaction',
-  'wealth','general',
-];
-
-const QUICK_PICKS: readonly string[] = [
-  'animals','food','drinks','nature','emotion',
-  'work','travel','clothes','health',
-];
+const TOP_N = 10;
 
 const selected = new Set<string>();
+
+// All domains sorted by count (populated by updateDomainFilter)
+let allByCount: { domain: string; count: number }[] = [];
+// Top-10 pill domains (alphabetical order)
+let pillDomains: string[] = [];
+// The rest go in the dropdown
+let dropdownDomains: string[] = [];
+
+let countEl:       HTMLElement | null      = null;
+let clearBtn:      HTMLElement | null      = null;
+let pillsEl:       HTMLElement | null      = null;
+let searchInput:   HTMLInputElement | null = null;
+let dropdownEl:    HTMLElement | null      = null;
+let chipsEl:       HTMLElement | null      = null;
 
 function fmt(d: string): string {
   return d.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());
 }
 
-let countEl:      HTMLElement | null      = null;
-let clearBtn:     HTMLElement | null      = null;
-let quickPicksEl: HTMLElement | null      = null;
-let searchInput:  HTMLInputElement | null = null;
-let suggestionsEl: HTMLElement | null     = null;
-let chipsEl:      HTMLElement | null      = null;
-let activeIdx = -1;
+// ── Rendering ──────────────────────────────────────────────────────────────────
 
-function renderAll(): void {
-  renderQuickPicks();
-  renderChips();
-  updateHeader();
-}
-
-function updateHeader(): void {
-  if (countEl) countEl.textContent = selected.size > 0 ? '(' + selected.size + ')' : '';
-  if (clearBtn) (clearBtn as HTMLElement).style.display = selected.size > 0 ? '' : 'none';
-}
-
-function renderQuickPicks(): void {
-  if (!quickPicksEl) return;
-  quickPicksEl.innerHTML = '';
-  for (const d of QUICK_PICKS) {
+function renderPills(): void {
+  if (!pillsEl) return;
+  pillsEl.innerHTML = '';
+  for (const d of pillDomains) {
+    const entry = allByCount.find(x => x.domain === d);
     const btn = document.createElement('button');
     btn.type      = 'button';
     btn.className = 'domain-qpick' + (selected.has(d) ? ' active' : '');
-    btn.textContent = fmt(d);
+
+    const label = document.createElement('span');
+    label.textContent = fmt(d);
+    btn.appendChild(label);
+
+    if (entry) {
+      const badge = document.createElement('span');
+      badge.className   = 'domain-qpick-count';
+      badge.textContent = String(entry.count);
+      btn.appendChild(badge);
+    }
+
     btn.addEventListener('click', () => {
       if (selected.has(d)) selected.delete(d);
       else                  selected.add(d);
-      renderAll();
+      renderPills();
+      renderChips();
+      updateHeader();
     });
-    quickPicksEl.appendChild(btn);
+    pillsEl.appendChild(btn);
   }
 }
 
@@ -74,63 +70,120 @@ function renderChips(): void {
   for (const d of selected) {
     const chip = document.createElement('span');
     chip.className = 'domain-chip';
-    const label = document.createTextNode(fmt(d));
+    chip.appendChild(document.createTextNode(fmt(d)));
     const x = document.createElement('button');
-    x.type      = 'button';
+    x.type = 'button';
     x.className = 'domain-chip-x';
     x.setAttribute('aria-label', 'Remove ' + fmt(d));
     x.textContent = '×';
     x.addEventListener('click', () => { selected.delete(d); renderAll(); });
-    chip.appendChild(label);
     chip.appendChild(x);
     chipsEl.appendChild(chip);
   }
 }
 
-function showSuggestions(query: string): void {
-  activeIdx = -1;
+let orBadgeEl: HTMLElement | null = null;
+
+function updateHeader(): void {
+  if (countEl) countEl.textContent = selected.size > 0 ? '(' + selected.size + ')' : '';
+  if (clearBtn) (clearBtn as HTMLElement).style.display = selected.size > 0 ? '' : 'none';
+  if (orBadgeEl) orBadgeEl.style.display = selected.size > 1 ? '' : 'none';
+}
+
+function renderAll(): void {
+  renderPills();
+  renderChips();
+  updateHeader();
+}
+
+// ── Dropdown ───────────────────────────────────────────────────────────────────
+
+function showDropdown(query: string): void {
+  if (!dropdownEl) return;
   const q = query.trim().toLowerCase();
-  if (!q) { hideSuggestions(); return; }
 
-  const matches = ALL_DOMAINS
-    .filter(d => !selected.has(d) && fmt(d).toLowerCase().includes(q))
-    .slice(0, 8);
+  let pool: { domain: string; count: number }[];
+  if (q) {
+    // All non-selected domains, ranked: starts-with first, then contains
+    const candidates = allByCount.filter(({ domain }) => !selected.has(domain));
+    const startsWith = candidates.filter(({ domain }) =>
+      fmt(domain).toLowerCase().startsWith(q)
+    );
+    const contains = candidates.filter(({ domain }) => {
+      const label = fmt(domain).toLowerCase();
+      return !label.startsWith(q) && label.includes(q);
+    });
+    pool = [...startsWith, ...contains];
+  } else {
+    // Empty query: full list of all non-selected domains, alphabetical
+    pool = allByCount
+      .filter(({ domain }) => !selected.has(domain))
+      .slice()
+      .sort((a, b) => a.domain.localeCompare(b.domain));
+  }
 
-  if (matches.length === 0) { hideSuggestions(); return; }
+  if (pool.length === 0) { hideDropdown(); return; }
 
-  suggestionsEl!.innerHTML = '';
-  for (const d of matches) {
+  dropdownEl.innerHTML = '';
+  for (const { domain, count } of pool) {
     const item = document.createElement('div');
     item.className      = 'domain-suggestion';
-    item.textContent    = fmt(d);
-    item.dataset.domain = d;
-    item.addEventListener('mousedown', e => { e.preventDefault(); addDomain(d); });
-    suggestionsEl!.appendChild(item);
+    item.dataset.domain = domain;
+
+    const name = document.createElement('span');
+    name.textContent = fmt(domain);
+    item.appendChild(name);
+
+    const badge = document.createElement('span');
+    badge.className   = 'domain-suggestion-count';
+    badge.textContent = String(count);
+    item.appendChild(badge);
+
+    item.addEventListener('mousedown', e => { e.preventDefault(); addDomain(domain); });
+    dropdownEl.appendChild(item);
   }
-  suggestionsEl!.hidden = false;
+  dropdownEl.hidden = false;
 }
 
-function hideSuggestions(): void {
-  if (suggestionsEl) { suggestionsEl.hidden = true; suggestionsEl.innerHTML = ''; }
-  activeIdx = -1;
-}
-
-function moveSuggestion(dir: number): void {
-  if (!suggestionsEl) return;
-  const items = suggestionsEl.querySelectorAll<HTMLElement>('.domain-suggestion');
-  if (!items.length) return;
-  if (activeIdx >= 0) items[activeIdx].classList.remove('highlighted');
-  activeIdx = Math.max(-1, Math.min(items.length - 1, activeIdx + dir));
-  if (activeIdx >= 0) {
-    items[activeIdx].classList.add('highlighted');
-    items[activeIdx].scrollIntoView({ block: 'nearest' });
-  }
+function hideDropdown(): void {
+  if (dropdownEl) { dropdownEl.hidden = true; dropdownEl.innerHTML = ''; }
 }
 
 function addDomain(d: string): void {
   selected.add(d);
   if (searchInput) searchInput.value = '';
-  hideSuggestions();
+  hideDropdown();
+  renderAll();
+}
+
+// ── Public API ─────────────────────────────────────────────────────────────────
+
+/**
+ * Called after vocabulary loads (or language changes) with live domain counts.
+ * Recomputes which domains are pills vs dropdown.
+ */
+export function updateDomainFilter(counts: { domain: string; count: number }[]): void {
+  allByCount = counts;
+
+  // Top N by count → sort alphabetically for display
+  pillDomains = counts
+    .slice(0, TOP_N)
+    .map(x => x.domain)
+    .sort((a, b) => a.localeCompare(b));
+
+  // Everything else → alphabetical for dropdown
+  const pillSet = new Set(pillDomains);
+  dropdownDomains = counts
+    .slice(TOP_N)
+    .map(x => x.domain)
+    .sort((a, b) => a.localeCompare(b));
+
+  // Remove any selected domains that no longer exist in the new language
+  const allKnown = new Set(counts.map(x => x.domain));
+  for (const d of selected) {
+    if (!allKnown.has(d)) selected.delete(d);
+  }
+
   renderAll();
 }
 
@@ -141,54 +194,74 @@ export function bindDomainFilter(): void {
   countEl  = document.getElementById('domainFilterCount');
   clearBtn = document.getElementById('clearAllDomains');
 
-  quickPicksEl    = document.createElement('div');
-  quickPicksEl.id = 'domainQuickPicks';
-  body.appendChild(quickPicksEl);
+  // OR logic badge — injected after the count element
+  orBadgeEl           = document.createElement('span');
+  orBadgeEl.id        = 'domainOrBadge';
+  orBadgeEl.textContent = 'OR';
+  orBadgeEl.title     = 'Words matching any selected domain are shown';
+  orBadgeEl.style.display = 'none';
+  countEl?.insertAdjacentElement('afterend', orBadgeEl);
 
+  // Pills row
+  pillsEl        = document.createElement('div');
+  pillsEl.id     = 'domainQuickPicks';
+  body.appendChild(pillsEl);
+
+  // Search + dropdown
   const searchWrap     = document.createElement('div');
   searchWrap.className = 'domain-search-wrap';
 
   searchInput             = document.createElement('input');
   searchInput.type        = 'text';
   searchInput.id          = 'domainSearchInput';
-  searchInput.placeholder = 'Search domains…';
+  searchInput.placeholder = 'More domains…';
   searchInput.autocomplete = 'off';
   searchInput.spellcheck  = false;
 
-  suggestionsEl        = document.createElement('div');
-  suggestionsEl.id     = 'domainSuggestions';
-  suggestionsEl.hidden = true;
+  dropdownEl        = document.createElement('div');
+  dropdownEl.id     = 'domainSuggestions';
+  dropdownEl.hidden = true;
 
   searchWrap.appendChild(searchInput);
-  searchWrap.appendChild(suggestionsEl);
+  searchWrap.appendChild(dropdownEl);
   body.appendChild(searchWrap);
 
+  // Selected chips
   chipsEl        = document.createElement('div');
   chipsEl.id     = 'domainChips';
   chipsEl.hidden = true;
   body.appendChild(chipsEl);
 
-  searchInput.addEventListener('input', () => showSuggestions(searchInput!.value));
+  // Events
+  searchInput.addEventListener('input',  () => showDropdown(searchInput!.value));
+  searchInput.addEventListener('focus',  () => showDropdown(searchInput!.value));
+  searchInput.addEventListener('blur',   () => setTimeout(hideDropdown, 150));
 
   searchInput.addEventListener('keydown', (e: KeyboardEvent) => {
-    switch (e.key) {
-      case 'ArrowDown': e.preventDefault(); moveSuggestion(+1); break;
-      case 'ArrowUp':   e.preventDefault(); moveSuggestion(-1); break;
-      case 'Enter': {
-        const hi    = suggestionsEl!.querySelector<HTMLElement>('.domain-suggestion.highlighted');
-        const first = suggestionsEl!.querySelector<HTMLElement>('.domain-suggestion');
-        const target = hi || first;
-        if (target?.dataset.domain) addDomain(target.dataset.domain);
-        break;
-      }
-      case 'Escape':
-        hideSuggestions();
-        searchInput!.value = '';
-        break;
+    if (!dropdownEl || dropdownEl.hidden) return;
+    const items = dropdownEl.querySelectorAll<HTMLElement>('.domain-suggestion');
+    if (!items.length) return;
+    const active = dropdownEl.querySelector<HTMLElement>('.domain-suggestion.highlighted');
+    const idx    = active ? [...items].indexOf(active) : -1;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      active?.classList.remove('highlighted');
+      const next = items[Math.min(idx + 1, items.length - 1)];
+      next.classList.add('highlighted');
+      next.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      active?.classList.remove('highlighted');
+      if (idx > 0) { items[idx - 1].classList.add('highlighted'); items[idx - 1].scrollIntoView({ block: 'nearest' }); }
+    } else if (e.key === 'Enter') {
+      const target = active || dropdownEl.querySelector<HTMLElement>('.domain-suggestion');
+      if (target?.dataset.domain) addDomain(target.dataset.domain);
+    } else if (e.key === 'Escape') {
+      hideDropdown(); searchInput!.value = '';
     }
   });
 
-  searchInput.addEventListener('blur', () => setTimeout(hideSuggestions, 150));
   clearBtn?.addEventListener('click', () => { selected.clear(); renderAll(); });
   renderAll();
 }

@@ -4,7 +4,7 @@ import { bindTableControls, resolveDirection } from './modes/table-controls.ts';
 import { bindQuizControls }                    from './quiz/quiz-controls.ts';
 import { bindStartHandler }                    from './start-handler.ts';
 import { bindClassFilter, getSelectedClasses } from './filters/class-filter.ts';
-import { bindDomainFilter, getSelectedDomains } from './filters/domain-filter.ts';
+import { bindDomainFilter, getSelectedDomains, updateDomainFilter } from './filters/domain-filter.ts';
 import { bindUIState, bindModeSwitch }          from './ui/ui-state.ts';
 import { buildFilterUI, initListFilter }        from './filters/word-filters.ts';
 import { loadWords }                            from './data/data-loader.ts';
@@ -107,6 +107,19 @@ async function loadAndBuildFilters(lang: string): Promise<void> {
     : sorted.filter((w: any) => w.pos == null || selected.includes(w.pos)).slice(0, size);
 
   buildFilterUI(sorted, currentBaseList);
+
+  // Compute domain counts from loaded vocabulary and update filter pills
+  const domainCounts = new Map<string, number>();
+  for (const w of sorted) {
+    for (const d of (w.domains ?? [])) {
+      domainCounts.set(d, (domainCounts.get(d) ?? 0) + 1);
+    }
+  }
+  const sortedCounts = [...domainCounts.entries()]
+    .map(([domain, count]) => ({ domain, count }))
+    .filter(x => x.count > 0)
+    .sort((a, b) => b.count - a.count);
+  updateDomainFilter(sortedCounts);
 }
 
 function getRecallTimerValue() {

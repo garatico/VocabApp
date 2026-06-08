@@ -9,7 +9,7 @@
  */
 
 import { Router }                            from 'express';
-import { getDb, clearCache }                 from '../../lib/vocab-loader.js';
+import { getDb, clearCache, bandFromRank }   from '../../lib/vocab-loader.js';
 import { getSvgUrl }                         from '../../lib/svg-loader.js';
 import { validateLanguage } from './_utils.js';
 
@@ -57,8 +57,9 @@ function formatWord(row, lang = 'spanish') {
       ipa:        row.ipa        || null,
       syllables:  row.syllables  ? row.syllables.split('-') : null,
     },
+    rank:      row.rank             || null,
     frequency: {
-      band:             row.band             || null,
+      band:             bandFromRank(row.rank),
       rank:             row.rank             || null,
       corpus_frequency: row.corpus_frequency || null,
     },
@@ -111,7 +112,11 @@ router.get('/vocab', (req, res) => {
       params.push(pat, pat, pat);
     }
     if (posFilter)    { conditions.push('w.pos = ?');           params.push(posFilter); }
-    if (bandFilter)   { conditions.push('w.band = ?');          params.push(bandFilter); }
+    if (bandFilter) {
+      const bandRanges = { A1: [1,500], A2: [501,1500], B1: [1501,3000], B2: [3001,5000], C1: [5001,7000], C2: [7001,99999] };
+      const range = bandRanges[bandFilter];
+      if (range) { conditions.push('w.rank BETWEEN ? AND ?'); params.push(range[0], range[1]); }
+    }
     if (domainFilter) {
       conditions.push('EXISTS (SELECT 1 FROM json_each(w.domains) WHERE json_each.value = ?)');
       params.push(domainFilter);
@@ -189,7 +194,6 @@ router.post('/vocab/:word', (req, res) => {
           notes            = ?,
           emoji            = ?,
           ipa              = ?,
-          band             = ?,
           domains          = ?,
           difficulty       = ?,
           gender           = ?,
@@ -208,7 +212,6 @@ router.post('/vocab/:word', (req, res) => {
         body.notes                           ?? null,
         body.emoji                           ?? null,
         body.linguistic?.ipa                 ?? null,
-        body.frequency?.band                 ?? null,
         body.domains != null ? JSON.stringify(body.domains) : null,
         body.difficulty                      ?? null,
         body.linguistic?.gender              ?? null,
@@ -256,7 +259,7 @@ router.post('/vocab', (req, res) => {
 
         db.prepare(`
           UPDATE words SET
-            translation = ?, pos = ?, notes = ?, ipa = ?, band = ?, domains = ?,
+            translation = ?, pos = ?, notes = ?, ipa = ?, domains = ?,
             updated_at  = CURRENT_TIMESTAMP
           WHERE id = ?
         `).run(
@@ -264,7 +267,6 @@ router.post('/vocab', (req, res) => {
           data.pos                  ?? null,
           data.notes                ?? null,
           data.linguistic?.ipa      ?? null,
-          data.frequency?.band      ?? null,
           data.domains != null ? JSON.stringify(data.domains) : null,
           wordId,
         );

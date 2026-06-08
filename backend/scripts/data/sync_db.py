@@ -323,7 +323,7 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> tu
             rank = w.get('rank') or 9999
             ling = w.get('linguistic') or {}
             conj = ling.get('conjugations')
-            doms = w.get('domains') or ['general']
+            doms = w.get('domains') or []
             syl  = ling.get('syllables')
             if isinstance(syl, list):
                 syl = '-'.join(s for s in syl if s) or None

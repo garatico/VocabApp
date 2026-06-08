@@ -13,6 +13,20 @@ import Database from 'better-sqlite3';
 import path     from 'path';
 import { fileURLToPath } from 'url';
 import { getSvgUrl } from './svg-loader.js';
+
+/**
+ * Derive CEFR band from curated rank.
+ * Cutoffs: A1 ≤500, A2 ≤1500, B1 ≤3000, B2 ≤5000, C1 ≤7000, C2 >7000
+ */
+export function bandFromRank(rank) {
+  if (rank == null) return null;
+  if (rank <= 500)  return 'A1';
+  if (rank <= 1500) return 'A2';
+  if (rank <= 3000) return 'B1';
+  if (rank <= 5000) return 'B2';
+  if (rank <= 7000) return 'C1';
+  return 'C2';
+}
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 const appRoot    = path.join(__dirname, '../../../..');   // => VocabApp/
@@ -122,7 +136,6 @@ export function loadVocabFile(language) {
         w.future_stem,
         w.conjugation_overrides,
         w.emoji,
-        w.band,
         w.rank,
         w.corpus_frequency,
         (SELECT json_group_array(gloss)
@@ -168,8 +181,9 @@ export function loadVocabFile(language) {
           conjugations,
           conjugation_class: row.conjugation_class || null,
         },
+        rank:      row.rank             || null,
         frequency: {
-          band:            row.band             || null,
+          band:            bandFromRank(row.rank),
           rank:            row.rank             || null,
           corpus_frequency:row.corpus_frequency || null,
         },
