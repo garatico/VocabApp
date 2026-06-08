@@ -32,7 +32,9 @@ export interface WordLinguistic {
 }
 
 export interface WordFrequency {
+  /** CEFR band derived from word.rank server-side — never stored in JSONL. */
   band:              string | null;
+  /** Raw corpus frequency rank (sorted by corpus_frequency). Distinct from word.rank (curated pedagogical rank). */
   rank:              number | null;
   corpus_frequency:  number | null;
 }
@@ -57,9 +59,8 @@ export interface Word {
   domains:    string[];
   tags:       string[];
   relations?: WordRelations;
-  /** Direct rank shortcut (mirrors frequency.rank; present on API response). */
+  /** Curated frequency rank (1 = most important). Present on API response. */
   rank?:      number | null;
   /** Legacy pipe-delimited answers string (pre-glosses schema). */
   answers?:   string;
 }
-

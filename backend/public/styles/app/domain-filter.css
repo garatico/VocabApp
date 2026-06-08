@@ -74,6 +74,20 @@
     border-color var(--transition-fast);
   white-space: nowrap;
 }
+.domain-qpick-count {
+  font-size: 0.72em;
+  font-weight: 700;
+  margin-left: 0.3em;
+  padding: 0.05em 0.3em;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.08);
+  color: inherit;
+  line-height: 1.4;
+}
+.domain-qpick.active .domain-qpick-count {
+  background: rgba(255,255,255,0.22);
+}
+
 .domain-qpick:hover {
   background: var(--accent-light);
   border-color: var(--accent);
@@ -87,6 +101,22 @@
 .domain-qpick.active:hover {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
+}
+
+/* ── OR logic badge ──────────────────────────────────────────────────────── */
+
+#domainOrBadge {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  user-select: none;
+  cursor: default;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.18);
 }
 
 /* ── Search input + dropdown ─────────────────────────────────────────────── */
@@ -124,8 +154,10 @@
   border-radius: var(--radius-sm);
   box-shadow: 0 4px 14px rgba(0,0,0,0.10);
   z-index: 50;
-  max-height: 200px;
+  max-height: 220px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
 }
 #domainSuggestions[hidden] { display: none !important; }
 
@@ -135,11 +167,31 @@
   cursor: pointer;
   color: var(--text);
   transition: background var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 .domain-suggestion:hover,
 .domain-suggestion.highlighted {
   background: var(--accent-light);
   color: var(--accent);
+}
+
+.domain-suggestion-count {
+  font-size: 0.78em;
+  font-weight: 700;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  padding: 0.05em 0.35em;
+  border-radius: 999px;
+  background: var(--surface2);
+  line-height: 1.4;
+}
+.domain-suggestion:hover .domain-suggestion-count,
+.domain-suggestion.highlighted .domain-suggestion-count {
+  background: var(--accent);
+  color: #fff;
 }
 
 /* ── Active chips ────────────────────────────────────────────────────────── */

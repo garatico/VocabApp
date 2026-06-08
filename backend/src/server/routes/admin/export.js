@@ -6,7 +6,7 @@
  */
 
 import { Router }                                 from 'express';
-import { getDb, getSupportedLanguages }           from '../../lib/vocab-loader.js';
+import { getDb, getSupportedLanguages, bandFromRank } from '../../lib/vocab-loader.js';
 import { validateLanguage }                       from './_utils.js';
 
 const router = Router();
@@ -50,7 +50,7 @@ router.post('/export', (req, res) => {
         esc(row.tags_raw || ''),
         esc(row.notes),
         esc((row.examples_raw || '').replace(/\|\|\|/g, '|')),
-        esc(row.ipa),         esc(row.band),     esc(row.gender),
+        esc(row.ipa),         esc(bandFromRank(row.rank)), esc(row.gender),
         esc(row.plural),      esc(row.infinitive),
         esc(row.reflexive ? 'true' : ''),
         esc(row.register),

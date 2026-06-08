@@ -1,3 +1,4 @@
+import { inferGender } from '../utils/gender.js';
 import { isCorrect }     from '../utils/utils.ts';
 import { attachTooltips } from '../utils/word-tooltip.ts';
 import type { Word }     from '../types.ts';
@@ -261,7 +262,8 @@ export function renderRecallMode({
         const chip = document.createElement('span');
         chip.className   = 'recall-missed-chip';
         chip.textContent = w.word;
-        if (w.linguistic?.gender) chip.title = w.linguistic.gender;
+        const gender = w.linguistic?.gender ?? (w.pos === 'noun' ? inferGender(w.word, lang) : null);
+        if (gender) chip.title = gender;
         scoreEl.appendChild(chip);
         if (i < missedWords.length - 1) {
           scoreEl.appendChild(document.createTextNode(' '));

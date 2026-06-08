@@ -36,10 +36,115 @@
 .stat-value { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
 
 /* Coverage progress bars */
-.coverage-bar { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+.coverage-bar   { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; }
+.coverage-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.coverage-fill  { height: 100%; transition: width 0.4s ease; border-radius: 3px; }
+.coverage-pct   { font-size: 0.75rem; color: var(--text-muted); min-width: 34px; text-align: right; }
+
+/* Legacy bar classes (keep for other uses) */
 .bar          { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
 .bar-fill     { height: 100%; background: var(--accent); transition: width 0.3s ease; }
 .bar-label    { font-size: 0.78rem; color: var(--text-muted); min-width: 36px; text-align: right; }
+
+/* ── Language tab bar ── */
+.stat-lang-tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.stat-lang-tab {
+  padding: 0.35rem 1.1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast),
+              border-color var(--transition-fast);
+}
+.stat-lang-tab:hover { background: var(--border); color: var(--text); }
+.stat-lang-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* ── Language stat sections ── */
+.stat-lang-section { margin-bottom: 2.5rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); }
+.stat-lang-section:last-child { border-bottom: none; margin-bottom: 0; }
+
+.stat-lang-heading {
+  font-size: 1.15rem; font-weight: 700; color: var(--accent);
+  margin: 0 0 1rem;
+}
+
+.stat-sublabel {
+  font-size: 0.68rem; font-weight: 500; color: var(--text-muted);
+  text-transform: none; letter-spacing: 0;
+}
+
+/* ── POS + Domain side-by-side panels ── */
+.stat-section-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.stat-subsection {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.stat-subsection-title {
+  font-size: 0.72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-muted); margin-bottom: 0.75rem;
+  display: flex; align-items: baseline; gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* POS rows */
+.pos-breakdown, .domain-breakdown {
+  display: flex; flex-direction: column; gap: 0.3rem;
+}
+
+.pos-row, .domain-row {
+  display: grid;
+  grid-template-columns: 7rem 3.5rem 1fr;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+}
+
+.pos-name, .domain-name {
+  color: var(--text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pos-count, .domain-count {
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  text-align: right;
+}
+
+.stat-empty {
+  font-size: 0.8rem; color: var(--text-muted); font-style: italic;
+}
+
+@media (max-width: 900px) {
+  .stat-section-row { grid-template-columns: 1fr; }
+}
 
 /* ── DB Admin grid ── */
 .db-admin-grid {
