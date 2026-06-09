@@ -281,8 +281,8 @@ function buildCard(
     inp.type           = 'text';
     inp.className      = 'conj-drill-input';
     inp.autocomplete   = 'off';
-    inp.autocorrect    = 'off';
-    inp.autocapitalize = 'off';
+    inp.setAttribute("autocorrect", "off");
+    inp.setAttribute("autocapitalize", "off");
     inp.spellcheck     = false;
     inp.placeholder    = 'Type conjugation…';
 
@@ -304,8 +304,8 @@ function buildCard(
   singleInp.type           = 'text';
   singleInp.className      = 'conj-drill-input';
   singleInp.autocomplete   = 'off';
-  singleInp.autocorrect    = 'off';
-  singleInp.autocapitalize = 'off';
+  singleInp.setAttribute("autocorrect", "off");
+  singleInp.setAttribute("autocapitalize", "off");
   singleInp.spellcheck     = false;
   singleInp.placeholder    = 'Type conjugation…';
 

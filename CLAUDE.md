@@ -69,19 +69,23 @@ VocabApp/
 ├── backend/
 │   ├── src/
 │   │   ├── server/
-│   │   │   ├── app.js                   # Express app factory (no listen)
-│   │   │   ├── index.js                 # Server entry point
+│   │   │   ├── app.ts                   # Express app factory (no listen)
+│   │   │   ├── index.ts                 # Server entry point
 │   │   │   ├── lib/
-│   │   │   │   ├── vocab-loader.js      # SQLite singleton + cache
-│   │   │   │   └── svg-loader.js        # SVG URL resolver
+│   │   │   │   ├── vocab-loader.ts      # SQLite singleton + cache
+│   │   │   │   ├── svg-loader.ts        # SVG URL resolver
+│   │   │   │   └── verb-rules.ts        # Spanish conjugation engine
 │   │   │   ├── routes/
-│   │   │   │   ├── admin.routes.js      # Mounts admin sub-routes
+│   │   │   │   ├── admin.routes.ts      # Mounts admin sub-routes
 │   │   │   │   ├── admin/
-│   │   │   │   │   ├── words.js         # GET/POST /api/admin/vocab
-│   │   │   │   │   ├── db.js            # /api/admin/stats, /meta, /cache/clear, /db/reload
-│   │   │   │   │   └── export.js        # POST /api/admin/export (CSV)
-│   │   │   │   └── public.js            # /api/vocab/:lang, /api/health, etc.
+│   │   │   │   │   ├── _utils.ts        # validateLanguage helper
+│   │   │   │   │   ├── words.ts         # GET/POST /api/admin/vocab
+│   │   │   │   │   ├── db.ts            # /api/admin/stats, /meta, /cache/clear, /db/reload
+│   │   │   │   │   └── export.ts        # POST /api/admin/export (CSV)
+│   │   │   │   └── public.ts            # /api/vocab/:lang, /api/health, etc.
 │   │   │   └── middleware/
+│   │   │       ├── cors.ts              # CORS middleware
+│   │   │       └── error-handler.ts     # Global error handler
 │   │   └── client/                      # TypeScript frontend (compiled by Vite)
 │   │       ├── app.ts                   # Entry point
 │   │       ├── types.ts                 # Shared type definitions
@@ -125,7 +129,7 @@ VocabApp/
 │           ├── download_images.py       # fetch Wikipedia photos → data/images/  (npm run download:images)
 │           ├── download_emoji.py        # fetch OpenMoji SVGs → data/emoji/  (npm run download:emoji)
 │           ├── check_visual_coverage.py # report picture-quiz visual gaps  (npm run check:visuals)
-│           ├── verb_rules.py            # Spanish conjugation rule engine (single source of truth)
+│           ├── verb_rules.py            # DEPRECATED — safe to delete; see verb-rules.js
 │           ├── corpus_to_curated.py     # corpus words → curated JSONL
 │           ├── corpus_builder.py        # spaCy corpus extraction helpers
 │           ├── lang_config.py           # shared language codes / tense maps
@@ -135,6 +139,7 @@ VocabApp/
     ├── curated/                         # Source-of-truth JSONL files per language
     ├── images/                          # Wikipedia photos (animals/, food/, nature/)
     └── emoji/                           # OpenMoji SVGs (animals/)
+mobile/                                  # Parked — not in active development; excluded from git
 ```
 
 ## Running Tests
@@ -165,4 +170,8 @@ read from or write to `vocabulary.db`.
 - **Admin routes guard**: `isDevelopment` middleware in `admin.routes.js`
   returns 403 unless `NODE_ENV=development`. Tests set this before building
   the app.
-- **Conjugation is Python-ow
+- **Conjugation is JS-owned**: `src/server/lib/verb-rules.js` is the single conjugation engine. `vocab-loader.js` calls `conjugate()` at language-load time for Spanish verbs (result cached in memory). The DB stores only `conjugation_class`, `conjugation_overrides`, and `future_stem` — not the computed tense forms. For irregular verbs (e.g. ser, estar), all forms live in `conjugation_overrides`; the JS engine returns those directly. French/Italian/Portuguese predate this system and still have pre-stored `conjugations` JSON in the DB, which `vocab-loader.js` reads as a fallback when `conjugation_class` is absent. `verb_rules.py` is deprecated and safe to delete.
+- **Synonyms not implemented**: `word_relations` table exists in the schema
+  but is empty — synonyms were never migrated from the old JSON format.
+  The admin edit form does not expose this field.
+

@@ -33,15 +33,6 @@ PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
 CURATED_DIR  = PROJECT_ROOT / 'data' / 'curated'
 DB_PATH      = PROJECT_ROOT / 'data' / 'vocabulary.db'
 
-# verb_rules lives alongside this script — import once at module load
-if str(SCRIPT_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPT_DIR))
-
-try:
-    from verb_rules import conjugate as _verb_rules_conjugate
-except ImportError:
-    _verb_rules_conjugate = None
-
 from lang_config import LANG_NAMES as LANGS, rank_to_difficulty
 
 # ── Schema ─────────────────────────────────────────────────────────────────────
@@ -332,21 +323,14 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> tu
             future_stem    = ling.get('future_stem') or None
             conj_overrides = ling.get('overrides')
 
-            # Compute full conjugations at sync time — Python owns the rule engine.
-            # This replaces runtime JS conjugation; verb-rules.js is deleted.
-            computed_conj = None
-            if conj_class and _verb_rules_conjugate is not None:
-                try:
-                    inf = ling.get('infinitive') or w.get('word', '')
-                    computed_conj = _verb_rules_conjugate(inf, conj_class, conj_overrides or {}, future_stem)
-                except Exception as e:
-                    print(f'  Warning: verb_rules failed for {w["word"]!r}: {e}')
+            # For rule-based verbs (conjugation_class set), conjugations are computed
+            # at runtime by verb-rules.js — nothing to store here beyond class/overrides.
+            # For legacy languages (French/Italian/Portuguese) without a rule engine,
+            # store the pre-computed conjugations JSON from the JSONL if present.
+            stored_conj = None if conj_class else conj
 
-            # Use computed forms if available, fall back to stored JSONL conjugations
-            final_conj = computed_conj or conj
-
-            pp  = (final_conj.get('past_participle') if isinstance(final_conj, dict) else None)
-            ger = (final_conj.get('gerund')          if isinstance(final_conj, dict) else None)
+            pp  = (conj.get('past_participle') if isinstance(conj, dict) else None)
+            ger = (conj.get('gerund')          if isinstance(conj, dict) else None)
 
             cursor.execute(UPSERT, (
                 lang_name,
@@ -361,7 +345,7 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> tu
                 rank,
                 ling.get('ipa') or None,
                 syl,
-                json.dumps(final_conj, ensure_ascii=False) if final_conj else None,
+                json.dumps(stored_conj, ensure_ascii=False) if stored_conj else None,
                 json.dumps(doms, ensure_ascii=False),
                 w.get('emoji') or None,
                 pp,

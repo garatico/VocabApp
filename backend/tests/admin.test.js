@@ -105,9 +105,9 @@ describe('GET /api/admin/stats', () => {
     const res = await request(app).get('/api/admin/stats');
     const s   = res.body.stats.spanish;
     expect(s.total).toBe(3);
-    expect(s.verbs).toBe(1);
-    expect(s.nouns).toBe(1);
-    expect(s.adjectives).toBe(1);
+    expect(s.posBreakdown.verb).toBe(1);
+    expect(s.posBreakdown.noun).toBe(1);
+    expect(s.posBreakdown.adjective).toBe(1);
     expect(typeof s.coverage.examples).toBe('number');
     expect(typeof s.coverage.ipa).toBe('number');
   });
@@ -116,7 +116,7 @@ describe('GET /api/admin/stats', () => {
     const res = await request(app).get('/api/admin/stats');
     const s   = res.body.stats.portuguese;
     expect(s.total).toBe(1);
-    expect(s.verbs).toBe(1);
+    expect(s.posBreakdown.verb).toBe(1);
   });
 
   it('unseeded languages are absent from stats (DB-driven language list)', async () => {
@@ -181,7 +181,7 @@ describe('POST /api/admin/vocab/:word', () => {
   it('updates frequency band', async () => {
     const res = await request(app)
       .post('/api/admin/vocab/hablar?lang=spanish')
-      .send({ pos: 'verb', frequency: { band: 'B1' } });
+      .send({ pos: 'verb', frequency: { rank: 2000 } });
     expect(res.status).toBe(200);
     expect(res.body.word.frequency.band).toBe('B1');
   });

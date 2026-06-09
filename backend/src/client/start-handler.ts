@@ -8,6 +8,36 @@ import { setTableController }             from './modes/table-controls.ts';
 import { setQuiz }                        from './quiz/quiz-controls.ts';
 import { filterWords }                    from './filters/word-filters.ts';
 
+import type { Word } from './types.ts';
+
+interface StartHandlerElements {
+  startBtn:        HTMLButtonElement;
+  tableWrap:       HTMLElement;
+  recallWrap:      HTMLElement;
+  pictureWrap:     HTMLElement;
+  conjugationWrap: HTMLElement | null;
+  output:          HTMLElement;
+}
+
+interface StartHandlerOptions {
+  getLang:            () => string;
+  getFullLang:        () => string;
+  getSize:            () => number;
+  getSizeMode?:       () => string;
+  getSelectedClasses?: () => string[];
+  getSelectedDomains?: () => string[];
+  getSortOrder?:      () => string;
+  getCols:            (opts: { max: number; fallback: number }) => number;
+  getDirection?:      () => string;
+  getRecallTimer:     () => { seconds: number; isHardStop: boolean };
+  onModeChange:       () => void;
+  onSingleStart:      () => void;
+  getBaseList:        () => Word[];
+  getAllWords?:        () => Word[];
+  elements:           StartHandlerElements;
+}
+
+
 export function bindStartHandler({
   getLang,
   getFullLang,
@@ -31,11 +61,11 @@ export function bindStartHandler({
     conjugationWrap,
     output,
   }
-}) {
+}: StartHandlerOptions) {
   // Helper function to get current mode from tab buttons
   function getCurrentMode() {
     const activeTab = document.querySelector('.mode-tab.active');
-    return activeTab ? activeTab.dataset.mode : 'table';
+    return activeTab ? (activeTab as HTMLElement).dataset.mode : 'table';
   }
 
   startBtn.addEventListener('click', async () => {
@@ -120,7 +150,7 @@ export function bindStartHandler({
           words: list,
           container: tableWrap,
           columns:   getCols({ max: 5, fallback: 2 }),
-          direction: getDirection ? getDirection() : 'target-en',
+          direction: (getDirection ? getDirection() : 'target-en') as import('./modes/table-mode.ts').TableDirection,
           onComplete: () => {
             const correct = list.length;
             const html = `<span class="summary-correct">✓ ${correct} correct</span><span class="summary-pct">100%</span>`;
@@ -153,7 +183,7 @@ export function bindStartHandler({
       if (currentMode === 'picture') {
         pictureWrap.innerHTML = '';
         const pictureSubMode = document.getElementById('pictureSubMode');
-        const pictureMode = pictureSubMode?.querySelector('.conj-toggle-btn.active')?.dataset.mode ?? 'type';
+        const pictureMode = (pictureSubMode?.querySelector('.conj-toggle-btn.active') as HTMLElement | null)?.dataset.mode ?? 'type';
 
         // Picture mode draws from the full word list (no size limit) so that
         // emoji/SVG words with ranks > the size slider are still reachable.
@@ -176,7 +206,7 @@ export function bindStartHandler({
           words: pictureWords,
           container: pictureWrap,
           lang: getFullLang ? getFullLang() : 'spanish',
-          mode: pictureMode,
+          mode: (pictureMode ?? 'type') as 'type' | 'click' | 'flashcard',
         });
       }
 
@@ -194,7 +224,7 @@ export function bindStartHandler({
 
     } catch (err) {
       output.style.display = 'block';
-      output.textContent   = 'Error: ' + err.message;
+      output.textContent   = 'Error: ' + (err as Error).message;
     } finally {
       startBtn.disabled    = false;
       startBtn.textContent = 'Start Quiz';

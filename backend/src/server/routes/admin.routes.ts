@@ -1,27 +1,28 @@
 /**
- * admin.routes.js
+ * admin.routes.ts
  *
  * Thin router that gates all admin routes behind a development-mode check
  * and delegates to the sub-routers in routes/admin/.
  *
  * Route map:
- *   /vocab, /vocab/:word  →  admin/words.js
+ *   /vocab, /vocab/:word  →  admin/words.ts
  *   /stats, /meta,
  *   /cache/clear,
- *   /db/reload            →  admin/db.js
- *   /export               →  admin/export.js
+ *   /db/reload            →  admin/db.ts
+ *   /export               →  admin/export.ts
  */
 
-import express      from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import wordRoutes   from './admin/words.js';
 import dbRoutes     from './admin/db.js';
 import exportRoutes from './admin/export.js';
 
 const router = express.Router();
 
-function isDevelopment(req, res, next) {
-  if (process.env.NODE_ENV !== 'development') {
-    return res.status(403).json({ error: 'Admin panel only available in development mode' });
+function isDevelopment(req: Request, res: Response, next: NextFunction): void {
+  if (process.env['NODE_ENV'] !== 'development') {
+    res.status(403).json({ error: 'Admin panel only available in development mode' });
+    return;
   }
   next();
 }
