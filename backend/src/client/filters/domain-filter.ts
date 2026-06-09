@@ -16,7 +16,6 @@ let allByCount: { domain: string; count: number }[] = [];
 // Top-10 pill domains (alphabetical order)
 let pillDomains: string[] = [];
 // The rest go in the dropdown
-let dropdownDomains: string[] = [];
 
 let countEl:       HTMLElement | null      = null;
 let clearBtn:      HTMLElement | null      = null;
@@ -171,12 +170,7 @@ export function updateDomainFilter(counts: { domain: string; count: number }[]):
     .map(x => x.domain)
     .sort((a, b) => a.localeCompare(b));
 
-  // Everything else → alphabetical for dropdown
-  const pillSet = new Set(pillDomains);
-  dropdownDomains = counts
-    .slice(TOP_N)
-    .map(x => x.domain)
-    .sort((a, b) => a.localeCompare(b));
+  // Everything else → alphabetical for dropdown (computed inline where needed)
 
   // Remove any selected domains that no longer exist in the new language
   const allKnown = new Set(counts.map(x => x.domain));
@@ -233,7 +227,9 @@ export function bindDomainFilter(): void {
   body.appendChild(chipsEl);
 
   // Events
-  searchInput.addEventListener('input',  () => showDropdown(searchInput!.value));
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  searchInput.addEventListener('input',  () => showDropdown(searchInput!.value)); // searchInput is non-null: we're inside a block guarded by its existence
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   searchInput.addEventListener('focus',  () => showDropdown(searchInput!.value));
   searchInput.addEventListener('blur',   () => setTimeout(hideDropdown, 150));
 
@@ -258,7 +254,8 @@ export function bindDomainFilter(): void {
       const target = active || dropdownEl.querySelector<HTMLElement>('.domain-suggestion');
       if (target?.dataset.domain) addDomain(target.dataset.domain);
     } else if (e.key === 'Escape') {
-      hideDropdown(); searchInput!.value = '';
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      hideDropdown(); searchInput!.value = ''; // searchInput is the element we just attached this listener to
     }
   });
 

@@ -17,7 +17,8 @@ function syncUI(): void {
     ?.classList.toggle('active', isAll);
 
   container.querySelectorAll<HTMLButtonElement>('.pos-chip[data-pos]').forEach(btn => {
-    btn.classList.toggle('active', selected.has(btn.dataset.pos!));
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    btn.classList.toggle('active', selected.has(btn.dataset.pos!)); // data-pos is set on every .pos-chip[data-pos] element
   });
 }
 

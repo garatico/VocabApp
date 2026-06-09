@@ -1,9 +1,10 @@
 /**
  * admin.routes.ts
  *
- * Thin router that gates all admin routes behind two checks:
+ * Thin router that gates all admin routes behind three checks:
  *   1. NODE_ENV must be 'development'
  *   2. Request must originate from localhost
+ *   3. Bearer token must match ADMIN_SECRET (if set in env)
  *
  * Route map:
  *   /vocab, /vocab/:word  →  admin/words.ts
@@ -17,10 +18,11 @@ import express, { Request, Response, NextFunction } from 'express';
 import wordRoutes   from './admin/words.js';
 import dbRoutes     from './admin/db.js';
 import exportRoutes from './admin/export.js';
+import { adminAuth } from '../middleware/admin-auth.js';
 
 const router = express.Router();
 
-function isDevelopment(req: Request, res: Response, next: NextFunction): void {
+function isDevelopment(_req: Request, res: Response, next: NextFunction): void {
   if (process.env['NODE_ENV'] !== 'development') {
     res.status(403).json({ error: 'Admin panel only available in development mode' });
     return;
@@ -41,6 +43,7 @@ function localhostOnly(req: Request, res: Response, next: NextFunction): void {
 
 router.use(isDevelopment);
 router.use(localhostOnly);
+router.use(adminAuth);
 router.use(wordRoutes);
 router.use(dbRoutes);
 router.use(exportRoutes);

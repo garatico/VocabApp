@@ -1,5 +1,4 @@
 import { inferGender } from '../utils/gender.js';
-import { isCorrect }     from '../utils/utils.ts';
 import { attachTooltips } from '../utils/word-tooltip.ts';
 import type { Word }     from '../types.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
@@ -282,7 +281,8 @@ export function renderRecallMode({
       updateTimerDisplay();
 
       if (secondsLeft <= 0) {
-        clearInterval(timerInterval!);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        clearInterval(timerInterval!); // timerInterval is set by startTimer() before this callback fires
         if (hardStop) {
           endSession();
         } else {

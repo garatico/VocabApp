@@ -329,7 +329,7 @@ async function saveWord(): Promise<void> {
     editFormWordMeta.textContent = metaParts.join('  ·  ');
 
     showStatus('Saved: ' + result.word.word, 'success');
-    loadWords();
+    void loadWords();
   } catch (err) {
     showStatus('Save error: ' + (err instanceof Error ? err.message : String(err)), 'error');
   } finally {
@@ -341,14 +341,14 @@ async function saveWord(): Promise<void> {
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 export function initEditor(): void {
-  langSelect.addEventListener('change', () => { clearForm(); loadWords(); });
+  langSelect.addEventListener('change', () => { clearForm(); void loadWords(); });
   filterPos.addEventListener('change', loadWords);
   filterBand.addEventListener('change', loadWords);
   filterDomain.addEventListener('change', loadWords);
 
   const debouncedLoad = debounce(loadWords, 350);
   searchInput.addEventListener('input', debouncedLoad);
-  searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); loadWords(); } });
+  searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); void loadWords(); } });
   searchBtn.addEventListener('click', loadWords);
 
   clearFiltersBtn.addEventListener('click', () => {
@@ -356,12 +356,12 @@ export function initEditor(): void {
     filterPos.value    = '';
     filterBand.value   = '';
     filterDomain.value = '';
-    loadWords();
+    void loadWords();
   });
 
   saveBtn.addEventListener('click', saveWord);
   resetBtn.addEventListener('click', () => { if (currentWord) populateForm(currentWord); });
   cancelBtn.addEventListener('click', clearForm);
 
-  loadWords();
+  void loadWords();
 }

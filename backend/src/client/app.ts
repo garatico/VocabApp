@@ -10,8 +10,9 @@ import { buildFilterUI, initListFilter }        from './filters/word-filters.ts'
 import { loadWords }                            from './data/data-loader.ts';
 import { initTheme }                            from './ui/theme-toggle.ts';
 import { mountUI }                              from './ui/ui.ts';
-import { renderPictureMode }                    from './modes/picture-mode.ts';
 import { initConjControls }                     from './modes/conjugation/controls.ts';
+import type { Word }                            from './types.ts';
+import { mustGet }                              from './utils/dom.ts';
 import { renderMyLists }                        from './modes/my-lists-mode.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
 import { Settings, bindSettings, applyFontSize } from './settings.ts';
@@ -21,22 +22,22 @@ import { initShortcuts }                         from './ui/shortcuts-overlay.ts
 
 const langSelect      = document.getElementById('langSelect')      as HTMLSelectElement | null;
 const sizeSelect      = document.getElementById('sizeSelect')      as HTMLSelectElement | null;
-const startBtn        = document.getElementById('startBtn')        as HTMLButtonElement | null;
-const output          = document.getElementById('output');
-const tableWrap       = document.getElementById('tableWrap');
-const recallWrap      = document.getElementById('recallWrap');
-const pictureWrap     = document.getElementById('pictureWrap');
-const conjugationWrap = document.getElementById('conjugationWrap');
-const myListsWrap     = document.getElementById('myListsWrap');
+const startBtn        = mustGet<HTMLButtonElement>('startBtn');
+const output          = mustGet('output');
+const tableWrap       = mustGet('tableWrap');
+const recallWrap      = mustGet('recallWrap');
+const pictureWrap     = mustGet('pictureWrap');
+const conjugationWrap = mustGet('conjugationWrap');
+const myListsWrap     = document.getElementById('myListsWrap');  // optional — page may omit it
 
-// Sections (hidden/shown by mode switch)
-const quizArea        = document.getElementById('quizArea');
-const tableArea       = document.getElementById('tableArea');
-const recallArea      = document.getElementById('recallArea');
-const pictureArea     = document.getElementById('pictureArea');
-const conjugationArea = document.getElementById('conjugationArea');
-const myListsArea     = document.getElementById('myListsArea');
-const settingsArea    = document.getElementById('settingsArea');
+// Sections (hidden/shown by mode switch — mustGet throws if HTML template drifts)
+const quizArea        = mustGet('quizArea');
+const tableArea       = mustGet('tableArea');
+const recallArea      = mustGet('recallArea');
+const pictureArea     = mustGet('pictureArea');
+const conjugationArea = mustGet('conjugationArea');
+const myListsArea     = mustGet('myListsArea');
+const settingsArea    = mustGet('settingsArea');
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -50,10 +51,6 @@ const S = {
   get: (k: string)            => localStorage.getItem(k),
   set: (k: string, v: string) => localStorage.setItem(k, v),
 };
-
-function saveSettings(): void {
-  // Called by each listener that changes a persisted value.
-}
 
 function restoreSettings(): void {
   if (langSelect) langSelect.value = S.get('vq_lang') ?? 'spanish';
@@ -84,8 +81,8 @@ function restoreSettings(): void {
 
 // ── Word list state ───────────────────────────────────────────────────────────
 
-const allWordsByLang: Record<string, any[]> = {};
-let currentBaseList: any[] = [];
+const allWordsByLang: Record<string, Word[]> = {};
+let currentBaseList: Word[] = [];
 
 async function loadAndBuildFilters(lang: string): Promise<void> {
   if (!allWordsByLang[lang]) {
@@ -104,7 +101,7 @@ async function loadAndBuildFilters(lang: string): Promise<void> {
   const selected = getSelectedClasses();
   currentBaseList = selected.length === 0
     ? (isMax ? sorted.slice() : sorted.slice(0, size))
-    : sorted.filter((w: any) => w.pos == null || selected.includes(w.pos)).slice(0, size);
+    : sorted.filter((w) => w.pos == null || selected.includes(w.pos)).slice(0, size);
 
   buildFilterUI(sorted, currentBaseList);
 
@@ -134,8 +131,8 @@ function getRecallTimerValue() {
 initTheme();
 
 const { updateModeUI } = bindModeSwitch({
-  quizArea: quizArea!, tableArea: tableArea!, recallArea: recallArea!, pictureArea: pictureArea!, conjugationArea: conjugationArea!,
-  extraAreas: { mylists: myListsArea!, settings: settingsArea! },
+  quizArea, tableArea, recallArea, pictureArea, conjugationArea,
+  extraAreas: { mylists: myListsArea, settings: settingsArea },
   onActivate: {
     conjugation: () => initConjControls(langSelect?.value || 'spanish'),
   },
@@ -171,14 +168,14 @@ bindStartHandler({
   onSingleStart:  showCurrent,
   getBaseList:    () => currentBaseList,
   getAllWords:     () => allWordsByLang[langSelect?.value ?? 'spanish'] || [],
-  elements:       { startBtn: startBtn!, tableWrap: tableWrap!, recallWrap: recallWrap!, pictureWrap: pictureWrap!, conjugationWrap, output: output! },
+  elements:       { startBtn, tableWrap, recallWrap, pictureWrap, conjugationWrap, output },
 });
 
 // ── Event listeners ───────────────────────────────────────────────────────────
 
 langSelect?.addEventListener('change', () => {
   S.set('vq_lang', langSelect.value);
-  loadAndBuildFilters(langSelect.value);
+  void loadAndBuildFilters(langSelect.value);
   refreshFilterSelect(langSelect.value);
   if (document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === 'conjugation') {
     initConjControls(langSelect.value);
@@ -187,7 +184,7 @@ langSelect?.addEventListener('change', () => {
 
 sizeSelect?.addEventListener('change', () => {
   S.set('vq_size', sizeSelect.value);
-  loadAndBuildFilters(langSelect?.value ?? 'spanish');
+  void loadAndBuildFilters(langSelect?.value ?? 'spanish');
 });
 
 (document.getElementById('sizeCustom') as HTMLInputElement | null)
@@ -236,7 +233,7 @@ document.getElementById('pictureSubMode')?.addEventListener('click', e => {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
-(async function init(): Promise<void> {
+void (async function init(): Promise<void> {
   mountUI();
   applyFontSize();        // apply saved font size before anything renders
   restoreSettings();
@@ -286,5 +283,5 @@ document.getElementById('pictureSubMode')?.addEventListener('click', e => {
   }
 
   updateModeUI();
-  await loadAndBuildFilters(langSelect?.value ?? 'spanish');
+    await loadAndBuildFilters(langSelect?.value ?? 'spanish');
 })();

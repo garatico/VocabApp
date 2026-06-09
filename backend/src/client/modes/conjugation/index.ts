@@ -265,7 +265,7 @@ function buildCard(
   const innerGrid = document.createElement('div');
   innerGrid.className = 'conj-inner-grid';
 
-  let inputs: HTMLInputElement[] = [];
+  const inputs: HTMLInputElement[] = [];
   const pronounRows: HTMLElement[] = [];
 
   pronouns.forEach((pronoun, i) => {
@@ -337,7 +337,8 @@ function buildCard(
       const answer = verb.linguistic?.conjugations?.[tenseKey] as string | null ?? null;
 
       const fresh = singleInp.cloneNode(true) as HTMLInputElement;
-      singleInp.parentNode!.replaceChild(fresh, singleInp);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      singleInp.parentNode!.replaceChild(fresh, singleInp); // parentNode is non-null: element is attached to the DOM
       singleInp = fresh;
 
       fresh.addEventListener('input', () => {
@@ -358,7 +359,8 @@ function buildCard(
 
       inputs.forEach((inp, i) => {
         const fresh = inp.cloneNode(true) as HTMLInputElement;
-        inp.parentNode!.replaceChild(fresh, inp);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        inp.parentNode!.replaceChild(fresh, inp); // parentNode is non-null: element is attached to the DOM
         inputs[i] = fresh;
 
         addNav(fresh, i);

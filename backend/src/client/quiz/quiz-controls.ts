@@ -1,7 +1,8 @@
 import type { Word } from '../types.js';
 import { speak }     from '../utils/tts.js';
-import { isCorrect, getPosLabel, getGlosses } from '../utils/utils.js';
+import { isCorrect, getGlosses } from '../utils/utils.js';
 import type { Quiz } from './quiz.js';
+import { mustGet }   from '../utils/dom.js';
 
 // ── Module state ───────────────────────────────────────────────────────────────
 
@@ -34,21 +35,21 @@ function fisherYates<T>(arr: T[]): T[] {
 export function bindQuizControls({ getLang }: { getLang: () => string }): { showCurrent: () => void } {
   getLangCode = getLang;
 
-  // DOM refs
-  const wordEl      = document.getElementById('word')!        as HTMLElement;
-  const answerEl    = document.getElementById('answer')!      as HTMLInputElement;
-  const feedbackEl  = document.getElementById('feedback')!    as HTMLElement;
-  const barEl       = document.getElementById('bar')!         as HTMLElement;
-  const statsEl     = document.getElementById('stats')!       as HTMLElement;
+  // DOM refs (mustGet throws immediately if the element is absent)
+  const wordEl      = mustGet<HTMLElement>('word');
+  const answerEl    = mustGet<HTMLInputElement>('answer');
+  const feedbackEl  = mustGet<HTMLElement>('feedback');
+  const barEl       = mustGet<HTMLElement>('bar');
+  const statsEl     = mustGet<HTMLElement>('stats');
   const statsTopEl  = document.getElementById('statsTop')     as HTMLElement | null;
-  const ttsBtn      = document.getElementById('ttsBtn')!      as HTMLButtonElement;
-  const btnCorrect  = document.getElementById('btnCorrect')!  as HTMLButtonElement;
+  const ttsBtn      = mustGet<HTMLButtonElement>('ttsBtn');
+  const btnCorrect  = mustGet<HTMLButtonElement>('btnCorrect');
   const revealBtn   = document.getElementById('quizGiveUp')   as HTMLButtonElement | null;
-  const endBtn      = document.getElementById('resetBtn')!    as HTMLButtonElement;
-  const prevBtn     = document.getElementById('quizPrev')!    as HTMLButtonElement;
-  const nextBtn     = document.getElementById('quizNext')!    as HTMLButtonElement;
-  const counterEl   = document.getElementById('quizCounter')! as HTMLElement;
-  const wordMetaEl  = document.getElementById('wordMeta')  as HTMLElement | null;
+  const endBtn      = mustGet<HTMLButtonElement>('resetBtn');
+  const prevBtn     = mustGet<HTMLButtonElement>('quizPrev');
+  const nextBtn     = mustGet<HTMLButtonElement>('quizNext');
+  const counterEl   = mustGet<HTMLElement>('quizCounter');
+  const wordMetaEl  = document.getElementById('wordMeta')     as HTMLElement | null;
 
   // ── Stats ──────────────────────────────────────────────────────────────────
 
@@ -262,7 +263,8 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
 
   ttsBtn.addEventListener('click', () => {
     if (deck.length === 0) return;
-    speak(deck[currentIndex].word, getLangCode!());
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    void speak(deck[currentIndex].word, getLangCode!()); // getLangCode is set by bindQuizControls before any click can fire
   });
 
   // ── Entry point (called by start-handler when single mode starts) ────────────

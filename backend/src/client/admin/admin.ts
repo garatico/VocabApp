@@ -46,7 +46,7 @@ initDbAdmin();
 initConjugation();
 
 // Pre-load data for the default visible tabs
-loadMeta();
-loadStatistics();
+void loadMeta();
+void loadStatistics();
 
-console.log('✓ Admin panel loaded');
+console.log('\u2713 Admin panel loaded');
