@@ -16,7 +16,7 @@ export const vocabRateLimiter = rateLimit({
   standardHeaders: true,   // Return rate limit info in RateLimit-* headers
   legacyHeaders:   false,
   message:         { error: 'Too many requests — please slow down.' },
-  skip: (req: Request) => {
+  skip: (_req: Request) => {
     // Never rate-limit in test or development — keeps tests fast and dev friction-free
     return process.env['NODE_ENV'] !== 'production';
   },

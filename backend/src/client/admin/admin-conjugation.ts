@@ -190,18 +190,18 @@ export function initConjugation(): void {
     selectedVerb = null;
     conjEmptyState.style.display = 'flex';
     conjTableCard.style.display  = 'none';
-    loadVerbs();
+    void loadVerbs();
   });
 
   conjTenseSelect.addEventListener('change', () => { renderTable(); });
 
   conjSearchBtn.addEventListener('click', loadVerbs);
   conjSearchInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') loadVerbs();
+    if (e.key === 'Enter') void loadVerbs();
   });
 
   conjClearBtn.addEventListener('click', clearInputs);
   conjResetBtn.addEventListener('click', () => { renderTable(); });
 
-  loadVerbs();
+  void loadVerbs();
 }

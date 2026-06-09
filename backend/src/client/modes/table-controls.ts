@@ -45,10 +45,6 @@ function showSummaries(html: string, perfect = false): void {
   });
 }
 
-function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
 function buildSummaryHtml(results: CheckResult[]): string {
   const correct = results.filter(r => r.ok).length;
   const total   = results.length;
@@ -168,7 +164,8 @@ export function bindTableControls(): void {
     lastMissedResults = results.filter(r => !r.ok);
     lastMissedWords   = lastMissedResults
       .filter(r => r.word)
-      .map(r => tableController!.words.find(w => w.word === r.word))
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      .map(r => tableController!.words.find(w => w.word === r.word)) // tableController is set before a quiz session can complete
       .filter((w): w is Word => w !== undefined);
 
     const allCorrect = results.every(r => r.ok);

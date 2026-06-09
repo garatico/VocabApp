@@ -15,6 +15,7 @@
  *  - Duplicate list
  */
 
+import type { Word as ApiWord } from '../types.ts';
 import {
   getListNames, getList, addToList, createList,
   deleteList, renameList, removeFromList,
@@ -60,11 +61,12 @@ const vocabCache    = new Map<string, VocabEntry[]>();
 const vocabMapCache = new Map<string, Map<string, VocabEntry>>();
 
 async function fetchVocab(lang: string): Promise<VocabEntry[]> {
-  if (vocabCache.has(lang)) return vocabCache.get(lang)!;
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  if (vocabCache.has(lang)) return vocabCache.get(lang)!; // safe: has() checked immediately above
   try {
     const res  = await fetch(`/api/vocab/${lang}`);
     const json = await res.json();
-    const data: any[] = json.data ?? [];
+    const data = (json.data ?? []) as ApiWord[];
     const entries: VocabEntry[] = data
       .filter(w => w.word)
       .map(w => ({
@@ -438,7 +440,7 @@ export function renderMyLists(container: HTMLElement): void {
       allVocab = entries;
       if (document.activeElement === addInp && addInp.value.trim()) renderAddResults(addInp.value.trim());
       renderWords(filterInp.value);
-    });
+    }).catch(console.error);
 
     // ── Sort ─────────────────────────────────────────────────────────────────
 

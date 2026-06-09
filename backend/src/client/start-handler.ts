@@ -1,5 +1,4 @@
 import { Quiz }                          from './quiz/quiz.ts';
-import { loadWords }                      from './data/data-loader.ts';
 import { renderTableMode }                from './modes/table-mode.ts';
 import { renderRecallMode }               from './modes/recall-mode.ts';
 import { renderPictureMode }              from './modes/picture-mode.ts';
@@ -39,7 +38,7 @@ interface StartHandlerOptions {
 
 
 export function bindStartHandler({
-  getLang,
+  getLang: _getLang,
   getFullLang,
   getSize,
   getSizeMode,     // 'window' (literal top N) | 'fill' (always return N unknowns)
@@ -98,17 +97,17 @@ export function bindStartHandler({
 
       if (sizeMode === 'fill' && isFinite(requestedSize) && list.length < requestedSize) {
         const allWords    = getAllWords ? getAllWords() : [];
-        const baseWordSet = new Set((getBaseList() as any[]).map(w => w.word));
+        const baseWordSet = new Set(getBaseList().map(w => w.word));
 
         // Candidates: words ranked beyond the current window
-        let extras: any[] = allWords.filter((w: any) => !baseWordSet.has(w.word));
+        let extras: Word[] = allWords.filter(w => !baseWordSet.has(w.word));
 
         // Apply list filter (same as applied to the base list above)
         extras = filterWords(extras);
 
         // Apply domain filter
         if (selectedDomains.length > 0) {
-          extras = extras.filter((w: any) => {
+          extras = extras.filter(w => {
             const doms = w.domains || [];
             return doms.length === 0 || doms.some((d: string) => selectedDomains.includes(d));
           });
@@ -117,7 +116,7 @@ export function bindStartHandler({
         // Apply POS class filter
         const selectedClasses = getSelectedClasses ? getSelectedClasses() : [];
         if (selectedClasses.length > 0) {
-          extras = extras.filter((w: any) => w.pos == null || selectedClasses.includes(w.pos));
+          extras = extras.filter(w => w.pos == null || selectedClasses.includes(w.pos));
         }
 
         const needed = requestedSize - list.length;

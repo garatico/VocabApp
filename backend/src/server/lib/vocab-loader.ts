@@ -89,16 +89,23 @@ interface VocabData {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 /**
- * Derive CEFR band from curated rank.
+ * CEFR band cutoffs: [band, maxRankInclusive].
+ * Exported so admin routes can derive SQL BETWEEN ranges from the same data.
  * Cutoffs: A1 ≤500, A2 ≤1500, B1 ≤3000, B2 ≤5000, C1 ≤7000, C2 >7000
  */
+export const BAND_CUTOFFS: ReadonlyArray<readonly [string, number]> = [
+  ['A1',   500],
+  ['A2',  1500],
+  ['B1',  3000],
+  ['B2',  5000],
+  ['C1',  7000],
+] as const;
+
 export function bandFromRank(rank: number | null): string | null {
   if (rank == null) return null;
-  if (rank <= 500)  return 'A1';
-  if (rank <= 1500) return 'A2';
-  if (rank <= 3000) return 'B1';
-  if (rank <= 5000) return 'B2';
-  if (rank <= 7000) return 'C1';
+  for (const [band, max] of BAND_CUTOFFS) {
+    if (rank <= max) return band;
+  }
   return 'C2';
 }
 
@@ -179,7 +186,8 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
   const lang = language.toLowerCase();
 
   if (vocabCache.has(lang)) {
-    const cached = vocabCache.get(lang)!;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const cached = vocabCache.get(lang)!; // safe: has() checked above
     return { ...cached, cacheAge: Date.now() - cached.loadedAt };
   }
 

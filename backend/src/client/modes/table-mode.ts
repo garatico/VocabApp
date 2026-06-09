@@ -1,5 +1,5 @@
 import type { Word } from '../types.js';
-import { isCorrect, isReverseCorrect, isCorrectStrict, isReverseCorrectStrict, getGlosses, buildGlossDisplay } from '../utils/utils.ts';
+import { isCorrect, isReverseCorrect, isCorrectStrict, isReverseCorrectStrict, buildGlossDisplay } from '../utils/utils.ts';
 import { attachTooltips }        from '../utils/word-tooltip.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker }        from '../utils/list-picker.ts';
@@ -274,7 +274,7 @@ export function renderTableMode({
           const next = allInputs.slice(idx + 1).find(i => !i.disabled);
           if (next) scrollToNext(next);
           updateProgress();
-          if (checkAllComplete() && onComplete) setTimeout(() => onComplete!(), 300);
+          if (checkAllComplete() && onComplete) { const cb = onComplete; setTimeout(() => cb(), 300); }
         }
 
         // ── Append input, then hint button based on hintMode ─────────────────

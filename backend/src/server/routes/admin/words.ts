@@ -10,7 +10,7 @@
 
 import { Router }                             from 'express';
 import Database                               from 'better-sqlite3';
-import { getDb, clearCache, bandFromRank }    from '../../lib/vocab-loader.js';
+import { getDb, clearCache, bandFromRank, BAND_CUTOFFS } from '../../lib/vocab-loader.js';
 import { getSvgUrl }                          from '../../lib/svg-loader.js';
 import { validateLanguage }                   from './_utils.js';
 
@@ -91,7 +91,7 @@ interface BatchUpdateItem {
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
-function formatWord(row: DbWordRow, lang = 'spanish') {
+function formatWord(row: DbWordRow, lang: string) {
   let domains: string[] = [];
   if (row.domains) {
     try { domains = JSON.parse(row.domains) as string[]; } catch (_) {}
@@ -171,12 +171,16 @@ router.get('/vocab', (req, res) => {
     }
     if (posFilter)  { conditions.push('w.pos = ?'); params.push(posFilter); }
     if (bandFilter) {
-      const bandRanges: Record<string, [number, number]> = {
-        A1: [1,500], A2: [501,1500], B1: [1501,3000],
-        B2: [3001,5000], C1: [5001,7000], C2: [7001,99999],
-      };
-      const range = bandRanges[bandFilter];
-      if (range) { conditions.push('w.rank BETWEEN ? AND ?'); params.push(range[0], range[1]); }
+      const idx  = BAND_CUTOFFS.findIndex(([b]) => b === bandFilter);
+      if (idx !== -1) {
+        const lo = idx === 0 ? 1 : BAND_CUTOFFS[idx - 1][1] + 1;
+        const hi = BAND_CUTOFFS[idx][1];
+        conditions.push('w.rank BETWEEN ? AND ?');
+        params.push(lo, hi);
+      } else if (bandFilter === 'C2') {
+        conditions.push('w.rank > ?');
+        params.push(BAND_CUTOFFS[BAND_CUTOFFS.length - 1][1]);
+      }
     }
     if (domainFilter) {
       conditions.push('EXISTS (SELECT 1 FROM json_each(w.domains) WHERE json_each.value = ?)');
@@ -215,7 +219,7 @@ router.get('/vocab/:word', (req, res) => {
   }
 });
 
-// POST /vocab/:word  — update a single word
+// POST /vocab/:word  — update a single word (PATCH semantics: only sent fields are written)
 router.post('/vocab/:word', (req, res) => {
   try {
     const db   = getDb();
@@ -238,53 +242,49 @@ router.post('/vocab/:word', (req, res) => {
     const wordId = wordRow.id;
 
     db.transaction(() => {
-      let syllablesVal: string | null = null;
-      if (body.linguistic?.syllables != null) {
-        syllablesVal = Array.isArray(body.linguistic.syllables)
-          ? body.linguistic.syllables.join('-')
-          : String(body.linguistic.syllables);
-      }
-      const reflexiveVal = body.linguistic?.reflexive != null
-        ? (body.linguistic.reflexive ? 1 : 0)
-        : null;
+      const setClauses: string[] = ['updated_at = CURRENT_TIMESTAMP'];
+      const params: unknown[]    = [];
 
-      db.prepare(`
-        UPDATE words SET
-          translation      = ?,
-          pos              = ?,
-          notes            = ?,
-          emoji            = ?,
-          ipa              = ?,
-          domains          = ?,
-          difficulty       = ?,
-          gender           = ?,
-          plural           = ?,
-          infinitive       = ?,
-          reflexive        = ?,
-          register         = ?,
-          syllables        = ?,
-          rank             = ?,
-          corpus_frequency = ?,
-          updated_at       = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `).run(
-        body.translation                     ?? null,
-        body.pos                             ?? null,
-        body.notes                           ?? null,
-        body.emoji                           ?? null,
-        body.linguistic?.ipa                 ?? null,
-        body.domains != null ? JSON.stringify(body.domains) : null,
-        body.difficulty                      ?? null,
-        body.linguistic?.gender              ?? null,
-        body.linguistic?.plural              ?? null,
-        body.linguistic?.infinitive          ?? null,
-        reflexiveVal,
-        body.linguistic?.register            ?? null,
-        syllablesVal,
-        body.frequency?.rank                 ?? null,
-        body.frequency?.corpus_frequency     ?? null,
-        wordId,
-      );
+      if ('translation' in body) { setClauses.push('translation = ?');      params.push(body.translation ?? null); }
+      if ('pos'         in body) { setClauses.push('pos = ?');              params.push(body.pos         ?? null); }
+      if ('notes'       in body) { setClauses.push('notes = ?');            params.push(body.notes       ?? null); }
+      if ('emoji'       in body) { setClauses.push('emoji = ?');            params.push(body.emoji       ?? null); }
+      if ('difficulty'  in body) { setClauses.push('difficulty = ?');       params.push(body.difficulty  ?? null); }
+      if ('domains'     in body) {
+        setClauses.push('domains = ?');
+        params.push(body.domains != null ? JSON.stringify(body.domains) : null);
+      }
+
+      if (body.linguistic) {
+        const ling = body.linguistic;
+        if ('ipa'        in ling) { setClauses.push('ipa = ?');        params.push(ling.ipa        ?? null); }
+        if ('gender'     in ling) { setClauses.push('gender = ?');     params.push(ling.gender     ?? null); }
+        if ('plural'     in ling) { setClauses.push('plural = ?');     params.push(ling.plural     ?? null); }
+        if ('infinitive' in ling) { setClauses.push('infinitive = ?'); params.push(ling.infinitive ?? null); }
+        if ('register'   in ling) { setClauses.push('register = ?');   params.push(ling.register   ?? null); }
+        if ('syllables'  in ling) {
+          const sv = ling.syllables != null
+            ? (Array.isArray(ling.syllables) ? ling.syllables.join('-') : String(ling.syllables))
+            : null;
+          setClauses.push('syllables = ?');
+          params.push(sv);
+        }
+        if ('reflexive' in ling) {
+          setClauses.push('reflexive = ?');
+          params.push(ling.reflexive != null ? (ling.reflexive ? 1 : 0) : null);
+        }
+      }
+
+      if (body.frequency) {
+        const freq = body.frequency;
+        if ('rank'             in freq) { setClauses.push('rank = ?');             params.push(freq.rank             ?? null); }
+        if ('corpus_frequency' in freq) { setClauses.push('corpus_frequency = ?'); params.push(freq.corpus_frequency ?? null); }
+      }
+
+      if (setClauses.length > 1) {
+        db.prepare(`UPDATE words SET ${setClauses.join(', ')} WHERE id = ?`)
+          .run(...params, wordId);
+      }
 
       if (Array.isArray(body.glosses))  replaceGlosses(db, wordId, body.glosses);
       if (Array.isArray(body.examples)) replaceExamples(db, wordId, body.examples);
@@ -299,7 +299,7 @@ router.post('/vocab/:word', (req, res) => {
   }
 });
 
-// POST /vocab  — batch update
+// POST /vocab  — batch update (PATCH semantics: only sent fields are written per word)
 router.post('/vocab', (req, res) => {
   try {
     const db   = getDb();
@@ -318,19 +318,25 @@ router.post('/vocab', (req, res) => {
         if (!row) continue;
         const wordId = row.id;
 
-        db.prepare(`
-          UPDATE words SET
-            translation = ?, pos = ?, notes = ?, ipa = ?, domains = ?,
-            updated_at  = CURRENT_TIMESTAMP
-          WHERE id = ?
-        `).run(
-          data.translation          ?? null,
-          data.pos                  ?? null,
-          data.notes                ?? null,
-          data.linguistic?.ipa      ?? null,
-          data.domains != null ? JSON.stringify(data.domains) : null,
-          wordId,
-        );
+        const setClauses: string[] = ['updated_at = CURRENT_TIMESTAMP'];
+        const params: unknown[]    = [];
+
+        if ('translation' in data) { setClauses.push('translation = ?'); params.push(data.translation ?? null); }
+        if ('pos'         in data) { setClauses.push('pos = ?');         params.push(data.pos         ?? null); }
+        if ('notes'       in data) { setClauses.push('notes = ?');       params.push(data.notes       ?? null); }
+        if ('domains'     in data) {
+          setClauses.push('domains = ?');
+          params.push(data.domains != null ? JSON.stringify(data.domains) : null);
+        }
+        if (data.linguistic && 'ipa' in data.linguistic) {
+          setClauses.push('ipa = ?');
+          params.push(data.linguistic.ipa ?? null);
+        }
+
+        if (setClauses.length > 1) {
+          db.prepare(`UPDATE words SET ${setClauses.join(', ')} WHERE id = ?`)
+            .run(...params, wordId);
+        }
 
         if (Array.isArray(data.glosses))  replaceGlosses(db, wordId, data.glosses);
         if (Array.isArray(data.examples)) replaceExamples(db, wordId, data.examples);

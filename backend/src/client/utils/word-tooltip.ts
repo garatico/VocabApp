@@ -11,10 +11,6 @@ import type { Word } from '../types.js';
 import { buildGlossDisplay } from './utils.js';
 import { PRONOUNS as LANG_PRONOUNS, TENSE_DEFS } from '../modes/conjugation/data.js';
 
-// Fallback tense display keys used when iterating conjugation tables
-const TENSES = ['present','preterite','imperfect','future','conditional','subjunctive','imperative'] as const;
-type Tense = typeof TENSES[number];
-
 /** Build a tense-key -> display-label map for the given language. */
 function tenseLabels(lang: string): Record<string, string> {
   const map: Record<string, string> = {};
@@ -345,7 +341,8 @@ export function attachTooltips(container: HTMLElement, opts: AttachTooltipOption
     el.addEventListener('mouseenter', () => {
       if (hideTimer) clearTimeout(hideTimer);
       try {
-        const word     = JSON.parse(el.dataset.wordJson!) as Word;
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const word     = JSON.parse(el.dataset.wordJson!) as Word; // element selected by [data-word-json], so attribute is always present
         const revealed = isWordRevealed(el);
         const lang     = getLang();
         lastAnchor     = el;
