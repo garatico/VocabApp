@@ -13,7 +13,8 @@ import { fileURLToPath } from 'url';
 
 import publicRoutes         from './routes/public.js';
 import adminRoutes          from './routes/admin.routes.js';
-import { corsMiddleware }   from './middleware/cors.js';
+import { corsMiddleware }       from './middleware/cors.js';
+import { vocabRateLimiter }    from './middleware/rate-limit.js';
 import { errorHandler }     from './middleware/error-handler.js';
 
 const __filename  = fileURLToPath(import.meta.url);
@@ -50,6 +51,7 @@ export function createApp({ nodeEnv = process.env['NODE_ENV'] || 'development' }
     });
   }
 
+  app.use('/api/vocab', vocabRateLimiter);
   app.use('/api', publicRoutes);
   app.use('/api/admin', adminRoutes);
 
