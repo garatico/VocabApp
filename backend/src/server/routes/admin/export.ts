@@ -1,21 +1,39 @@
 /**
- * routes/admin/export.js
+ * routes/admin/export.ts
  *
  * Data export:
  *   POST /export  — download full vocabulary as CSV
  */
 
-import { Router }                                 from 'express';
-import { getDb, getSupportedLanguages, bandFromRank } from '../../lib/vocab-loader.js';
-import { validateLanguage }                       from './_utils.js';
+import { Router }                                         from 'express';
+import { getDb, getSupportedLanguages, bandFromRank }     from '../../lib/vocab-loader.js';
+import { validateLanguage }                               from './_utils.js';
 
 const router = Router();
+
+interface ExportRow {
+  rank:          number | null;
+  word:          string;
+  translation:   string | null;
+  glosses_raw:   string | null;
+  pos:           string | null;
+  difficulty:    string | null;
+  tags_raw:      string | null;
+  notes:         string | null;
+  examples_raw:  string | null;
+  ipa:           string | null;
+  gender:        string | null;
+  plural:        string | null;
+  infinitive:    string | null;
+  reflexive:     number | null;
+  register:      string | null;
+}
 
 // POST /export
 router.post('/export', (req, res) => {
   try {
     const db   = getDb();
-    const lang = validateLanguage(req.body?.lang);
+    const lang = validateLanguage((req.body as { lang?: string } | undefined)?.lang);
     if (!lang)
       return res.status(400).json({ error: 'Invalid language. Must be one of: ' + getSupportedLanguages().join(', ') });
 
@@ -25,9 +43,9 @@ router.post('/export', (req, res) => {
         (SELECT GROUP_CONCAT(example,'|||') FROM (SELECT example FROM word_examples WHERE word_id=w.id ORDER BY rowid)) AS examples_raw,
         (SELECT GROUP_CONCAT(tag,'|') FROM word_tags WHERE word_id=w.id) AS tags_raw
       FROM words w WHERE w.language=? ORDER BY COALESCE(w.rank,9999), w.word
-    `).all(lang);
+    `).all(lang) as ExportRow[];
 
-    const esc = v => {
+    const esc = (v: unknown): string => {
       if (v == null) return '';
       const s = String(v);
       return (s.includes(',') || s.includes('"') || s.includes('\n'))
@@ -63,9 +81,8 @@ router.post('/export', (req, res) => {
     res.send(lines.join('\n'));
   } catch (err) {
     console.error('POST /admin/export:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: (err as Error).message });
   }
 });
-
 
 export default router;

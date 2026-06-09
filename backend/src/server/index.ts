@@ -2,18 +2,18 @@
  * VocabApp Backend — server entry point
  *
  * Creates the Express app and starts listening.
- * App logic lives in src/server/app.js so tests can import it without binding a port.
+ * App logic lives in src/server/app.ts so tests can import it without binding a port.
  */
 
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { createApp } from './app.js';
-import { preloadAll, closeDatabase } from './lib/vocab-loader.js';
-import { ensureSvgDirs } from './lib/svg-loader.js';
+import { createApp }                          from './app.js';
+import { preloadAll, closeDatabase }          from './lib/vocab-loader.js';
+import { ensureSvgDirs }                      from './lib/svg-loader.js';
 
-const PORT     = process.env.PORT || process.env.API_PORT || 3000;
-const NODE_ENV = process.env.NODE_ENV || 'development';
+const PORT     = process.env['PORT'] || process.env['API_PORT'] || 3000;
+const NODE_ENV = process.env['NODE_ENV'] || 'development';
 
 const app    = createApp({ nodeEnv: NODE_ENV });
 const server = app.listen(PORT, async () => {
@@ -41,7 +41,7 @@ const server = app.listen(PORT, async () => {
     await preloadAll();
     console.log('✅ All vocabularies loaded from SQLite');
   } catch (error) {
-    console.error('\n⚠️  Warning: Could not pre-load vocabularies:', error.message);
+    console.error('\n⚠️  Warning: Could not pre-load vocabularies:', (error as Error).message);
     console.error('App will still start; vocabulary loads on first request.');
   }
 });

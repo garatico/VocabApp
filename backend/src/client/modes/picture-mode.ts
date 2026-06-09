@@ -791,7 +791,7 @@ export function renderPictureMode({
       // 1. Local Wikipedia photo (highest quality)
       _imageUrl: getFallbackImageUrl(lang, w.word),
       // 2. SVG: server concept map → openmoji local/CDN fallback
-      svg_url: w.svg_url || getFallbackSvgUrl(lang, w.word) || undefined,
+      svg_url: w.svg_url || getFallbackSvgUrl(lang, w.word) || null,
       // 3. Emoji fallback (visual-map curated only — not DB emojis)
       _emoji: getFallbackEmoji(lang, w.word),
     }))

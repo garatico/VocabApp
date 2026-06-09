@@ -9,7 +9,9 @@
     "checkJs": false,
     "isolatedModules": true,
     "noEmit": true,
-    "skipLibCheck": true
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "types": ["vite/client"]
   },
   "include": ["src/client"]
 }

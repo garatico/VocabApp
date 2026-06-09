@@ -134,8 +134,8 @@ function getRecallTimerValue() {
 initTheme();
 
 const { updateModeUI } = bindModeSwitch({
-  quizArea, tableArea, recallArea, pictureArea, conjugationArea,
-  extraAreas: { mylists: myListsArea, settings: settingsArea },
+  quizArea: quizArea!, tableArea: tableArea!, recallArea: recallArea!, pictureArea: pictureArea!, conjugationArea: conjugationArea!,
+  extraAreas: { mylists: myListsArea!, settings: settingsArea! },
   onActivate: {
     conjugation: () => initConjControls(langSelect?.value || 'spanish'),
   },
@@ -171,7 +171,7 @@ bindStartHandler({
   onSingleStart:  showCurrent,
   getBaseList:    () => currentBaseList,
   getAllWords:     () => allWordsByLang[langSelect?.value ?? 'spanish'] || [],
-  elements:       { startBtn, tableWrap, recallWrap, pictureWrap, conjugationWrap, output },
+  elements:       { startBtn: startBtn!, tableWrap: tableWrap!, recallWrap: recallWrap!, pictureWrap: pictureWrap!, conjugationWrap, output: output! },
 });
 
 // ── Event listeners ───────────────────────────────────────────────────────────

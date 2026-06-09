@@ -3,7 +3,7 @@ import js from '@eslint/js';
 export default [
   js.configs.recommended,
   {
-    // Backend Node.js source
+    // Backend Node.js source (.js files — .ts files are checked by tsc)
     files: ['src/server/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
@@ -77,6 +77,6 @@ export default [
   {
     // TypeScript files are checked by `tsc --noEmit` (npm run typecheck).
     // ESLint has no TS parser installed, so exclude them to avoid parse errors.
-    ignores: ['node_modules/**', 'scripts/**', 'src/client/**/*.ts'],
+    ignores: ['node_modules/**', 'scripts/**', 'src/client/**/*.ts', 'src/server/**/*.ts'],
   },
 ];

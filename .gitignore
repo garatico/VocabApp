@@ -21,6 +21,7 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 desktop.ini
+.fuse_hidden*
 
 # Editor
 .vscode/
@@ -50,6 +51,9 @@ data/gloss_cache/
 
 # src
 backend/src_old/
+
+# Mobile app (parked — not in active development)
+mobile/
 
 vite.config.js.timestamp-*.mjs
 vitest.config.js.timestamp-*.mjs
