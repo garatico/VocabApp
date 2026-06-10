@@ -12,7 +12,7 @@ Canonical domains:
   transport, travel, work
 
 Usage:
-    python backend/scripts/data/canonicalize_domains.py [--dry-run]
+    python scripts/data/canonicalize_domains.py [--dry-run]
 """
 
 import argparse, json, sqlite3
@@ -20,7 +20,7 @@ from pathlib import Path
 from collections import Counter
 
 SCRIPT_DIR   = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
 JSONL_PATH   = PROJECT_ROOT / 'data' / 'curated' / 'spanish_curated.jsonl'
 DB_PATH      = PROJECT_ROOT / 'data' / 'vocabulary.db'
 

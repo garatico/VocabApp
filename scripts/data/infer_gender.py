@@ -6,7 +6,7 @@ Rule-based gender inference for Spanish nouns that are missing gender data.
 Updates the JSONL in place and patches the DB directly.
 
 Usage:
-    python backend/scripts/data/infer_gender.py [--dry-run]
+    python scripts/data/infer_gender.py [--dry-run]
 """
 
 import argparse
@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR   = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
 JSONL_PATH   = PROJECT_ROOT / 'data' / 'curated' / 'spanish_curated.jsonl'
 DB_PATH      = PROJECT_ROOT / 'data' / 'vocabulary.db'
 

@@ -12,9 +12,9 @@ What it does:
   5. Imports to vocabulary.db
 
 Usage:
-    python backend/scripts/data/sync_db.py
-    python backend/scripts/data/sync_db.py --langs spa
-    python backend/scripts/data/sync_db.py --dry-run    # skip DB write
+    python scripts/data/sync_db.py
+    python scripts/data/sync_db.py --langs spa
+    python scripts/data/sync_db.py --dry-run    # skip DB write
 """
 
 import argparse
@@ -29,7 +29,7 @@ from typing import Dict, List, Optional
 warnings.filterwarnings("ignore")
 
 SCRIPT_DIR   = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
 CURATED_DIR  = PROJECT_ROOT / 'data' / 'curated'
 DB_PATH      = PROJECT_ROOT / 'data' / 'vocabulary.db'
 

@@ -9,7 +9,7 @@ Sources (tried in order per concept):
   2. iNaturalist API     (great for animals, designed for bulk access)
 
 Run from the project root:
-    python backend/scripts/download_images.py
+    python scripts/download_images.py
 
 Requires: pip install requests
 
@@ -31,7 +31,7 @@ except ImportError:
     sys.exit(1)
 
 SCRIPT_DIR   = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
 IMAGES_ROOT  = PROJECT_ROOT / 'data' / 'images'
 
 # Domain classification — determines which subfolder each concept lands in.

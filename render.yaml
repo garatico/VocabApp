@@ -2,7 +2,6 @@ services:
   - type: web
     name: vocab-app
     runtime: node
-    rootDir: backend
     buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     envVars:

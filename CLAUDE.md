@@ -64,88 +64,93 @@ Always run this check when tests fail with parse errors after an Edit.
 
 ## Project Structure
 
+The app lives at the repo root (flattened from the old `backend/` subdir in
+June 2026 — there is no root/backend split anymore, and no wrapper package.json).
+
 ```
 VocabApp/
-├── backend/
-│   ├── src/
-│   │   ├── server/
-│   │   │   ├── app.ts                   # Express app factory (no listen)
-│   │   │   ├── index.ts                 # Server entry point
-│   │   │   ├── lib/
-│   │   │   │   ├── vocab-loader.ts      # SQLite singleton + cache
-│   │   │   │   ├── svg-loader.ts        # SVG URL resolver
-│   │   │   │   └── verb-rules.ts        # Spanish conjugation engine
-│   │   │   ├── routes/
-│   │   │   │   ├── admin.routes.ts      # Mounts admin sub-routes
-│   │   │   │   ├── admin/
-│   │   │   │   │   ├── _utils.ts        # validateLanguage helper
-│   │   │   │   │   ├── words.ts         # GET/POST /api/admin/vocab
-│   │   │   │   │   ├── db.ts            # /api/admin/stats, /meta, /cache/clear, /db/reload
-│   │   │   │   │   └── export.ts        # POST /api/admin/export (CSV)
-│   │   │   │   └── public.ts            # /api/vocab/:lang, /api/health, etc.
-│   │   │   └── middleware/
-│   │   │       ├── cors.ts              # CORS middleware
-│   │   │       └── error-handler.ts     # Global error handler
-│   │   └── client/                      # TypeScript frontend (compiled by Vite)
-│   │       ├── app.ts                   # Entry point
-│   │       ├── types.ts                 # Shared type definitions
-│   │       ├── start-handler.ts         # Quiz start logic
-│   │       ├── admin/                   # Admin panel TypeScript (all in one subdir)
-│   │       │   ├── admin.ts             # Entry point (Vite MPA, loaded by admin.html)
-│   │       │   ├── admin-api.ts         # Shared fetch/status utilities
-│   │       │   ├── admin-editor.ts      # Word Editor tab
-│   │       │   ├── admin-stats.ts       # Statistics tab
-│   │       │   ├── admin-db.ts          # DB Admin tab (cache clear, CSV export)
-│   │       │   └── admin-conjugation.ts # Conjugation Practice tab
-│   │       ├── data/
-│   │       │   ├── visual-map.ts        # Word → image/emoji fallback map
-│   │       │   └── data-loader.ts
-│   │       ├── modes/
-│   │       │   ├── picture-mode.ts      # Picture Quiz (type/flashcard/click modes)
-│   │       │   └── …
-│   │       └── …
-│   ├── admin.html                       # Admin panel Vite entry (dev: /admin, prod: dist/admin.html)
-│   ├── public/
-│   │   └── styles/
-│   ├── tests/
-│   │   ├── public.test.js
-│   │   ├── admin.test.js
-│   │   └── helpers/
-│   │       ├── app.js                   # buildTestApp() / teardownTestApp()
-│   │       ├── db.js                    # createTestDb() — in-memory SQLite seed
-│   │       └── sqlite-shim.js           # better-sqlite3 shim using sql.js WASM
-│   ├── vitest.config.js                 # aliases better-sqlite3 → sqlite-shim in tests
-│   └── scripts/
-│       ├── validate.js                  # null-byte/syntax check — runs as pre-commit hook (npm run validate)
-│       ├── test-api.js                  # manual smoke-test for the running API
-│       ├── migrations/                  # One-off schema migration scripts (historical; already applied)
-│       │   ├── add-emoji.js
-│       │   ├── add-svg-code.js
-│       │   ├── add-verb-columns.js
-│       │   └── rename-display-to-translation.js
-│       └── data/                        # all Python data scripts
-│           ├── sync_db.py               # curated JSONL → vocabulary.db  (npm run sync)
-│           ├── delete_all.sql           # nuclear reset — deletes all rows from every table
-│           ├── download_images.py       # fetch Wikipedia photos → data/images/  (npm run download:images)
-│           ├── download_emoji.py        # fetch OpenMoji SVGs → data/emoji/  (npm run download:emoji)
-│           ├── check_visual_coverage.py # report picture-quiz visual gaps  (npm run check:visuals)
-│           ├── verb_rules.py            # DEPRECATED — safe to delete; see verb-rules.js
-│           ├── corpus_to_curated.py     # corpus words → curated JSONL
-│           ├── corpus_builder.py        # spaCy corpus extraction helpers
-│           ├── lang_config.py           # shared language codes / tense maps
-│           └── review_glosses.py        # gloss cache review helper
-└── data/
-    ├── vocabulary.db                    # Production SQLite DB (never touched by tests)
-    ├── curated/                         # Source-of-truth JSONL files per language
-    ├── images/                          # Wikipedia photos (animals/, food/, nature/)
-    └── emoji/                           # OpenMoji SVGs (animals/)
-mobile/                                  # Parked — not in active development; excluded from git
+├── src/
+│   ├── server/
+│   │   ├── app.ts                   # Express app factory (no listen; trust proxy in prod)
+│   │   ├── index.ts                 # Server entry point
+│   │   ├── lib/
+│   │   │   ├── vocab-loader.ts      # SQLite singleton + cache
+│   │   │   ├── svg-loader.ts        # SVG URL resolver
+│   │   │   └── verb-rules.ts        # Spanish conjugation engine
+│   │   ├── routes/
+│   │   │   ├── admin.routes.ts      # Mounts admin sub-routes (dev-only + localhost + auth)
+│   │   │   ├── admin/
+│   │   │   │   ├── _utils.ts        # validateLanguage helper
+│   │   │   │   ├── words.ts         # GET/POST /api/admin/vocab
+│   │   │   │   ├── db.ts            # /api/admin/stats, /meta, /cache/clear, /db/reload
+│   │   │   │   └── export.ts        # POST /api/admin/export (CSV)
+│   │   │   └── public.ts            # /api/vocab/:lang, /api/health, etc.
+│   │   └── middleware/
+│   │       ├── cors.ts              # CORS — exact-origin matching via new URL()
+│   │       ├── admin-auth.ts        # Bearer ADMIN_SECRET, timingSafeEqual compare
+│   │       ├── rate-limit.ts        # express-rate-limit on /api/vocab
+│   │       └── error-handler.ts     # Global error handler
+│   └── client/                      # TypeScript frontend (compiled by Vite)
+│       ├── app.ts                   # Entry point
+│       ├── types.ts                 # Shared type definitions
+│       ├── start-handler.ts         # Quiz start logic
+│       ├── admin/                   # Admin panel TypeScript (all in one subdir)
+│       │   ├── admin.ts             # Entry point (Vite MPA, loaded by admin.html)
+│       │   ├── admin-api.ts         # Shared fetch/status utilities
+│       │   ├── admin-editor.ts      # Word Editor tab
+│       │   ├── admin-stats.ts       # Statistics tab
+│       │   ├── admin-db.ts          # DB Admin tab (cache clear, CSV export)
+│       │   └── admin-conjugation.ts # Conjugation Practice tab
+│       ├── data/
+│       │   ├── visual-map.ts        # Word → image/emoji fallback map
+│       │   └── data-loader.ts
+│       ├── modes/
+│       │   ├── picture-mode.ts      # Picture Quiz (type/flashcard/click modes)
+│       │   └── …
+│       └── …
+├── admin.html                       # Admin panel Vite entry (dev: /admin, prod: dist/admin.html)
+├── public/
+│   └── styles/
+├── tests/
+│   ├── public.test.js
+│   ├── admin.test.js
+│   ├── svg-loader.test.js
+│   ├── verb-rules.test.js
+│   ├── client/                      # client unit tests (pure utils)
+│   │   ├── match.test.ts
+│   │   └── gender.test.ts
+│   └── helpers/
+│       ├── app.js                   # buildTestApp() / teardownTestApp()
+│       ├── db.js                    # createTestDb() — in-memory SQLite seed
+│       └── sqlite-shim.js           # better-sqlite3 shim using sql.js WASM
+├── vitest.config.js                 # aliases better-sqlite3 → sqlite-shim in tests
+├── .github/workflows/ci.yml        # CI: validate, lint, typecheck, test, build
+├── scripts/
+│   ├── validate.js                  # null-byte/syntax check — runs as pre-commit hook (npm run validate)
+│   ├── test-api.js                  # manual smoke-test for the running API
+│   ├── migrations/                  # One-off schema migration scripts (historical; already applied)
+│   └── data/                        # all Python data scripts (PROJECT_ROOT = two parents up)
+│       ├── sync_db.py               # curated JSONL → vocabulary.db  (npm run sync)
+│       ├── delete_all.sql           # nuclear reset — deletes all rows from every table
+│       ├── download_images.py       # fetch Wikipedia photos → data/images/  (npm run download:images)
+│       ├── download_emoji.py        # fetch OpenMoji SVGs → data/emoji/  (npm run download:emoji)
+│       ├── check_visual_coverage.py # report picture-quiz visual gaps  (npm run check:visuals)
+│       ├── verb_rules.py            # DEPRECATED — safe to delete; see verb-rules.js
+│       ├── corpus_to_curated.py     # corpus words → curated JSONL
+│       ├── corpus_builder.py        # spaCy corpus extraction helpers
+│       ├── lang_config.py           # shared language codes / tense maps
+│       └── review_glosses.py        # gloss cache review helper
+├── data/
+│   ├── vocabulary.db                # Production SQLite DB (never touched by tests)
+│   ├── curated/                     # Source-of-truth JSONL files per language
+│   ├── images/                      # Wikipedia photos (animals/, food/, nature/)
+│   └── emoji/                       # OpenMoji SVGs (animals/)
+└── mobile/                          # Parked — not in active development; excluded from git
 ```
 
 ## Running Tests
 
 ```bash
-cd backend
 npm test              # run once
 npm run test:watch    # watch mode
 npm run test:coverage # run with V8 coverage report (outputs to coverage/)

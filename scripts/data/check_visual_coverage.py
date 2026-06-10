@@ -10,11 +10,11 @@ A word is considered "covered" if any of the following is true:
   3. It has an emoji field set in the JSONL entry
 
 Run from the project root:
-    python backend/scripts/check_visual_coverage.py
-    python backend/scripts/check_visual_coverage.py --top 50       # show top 50 gaps
-    python backend/scripts/check_visual_coverage.py --domain animals food
-    python backend/scripts/check_visual_coverage.py --pos noun verb
-    python backend/scripts/check_visual_coverage.py --covered       # show what IS covered
+    python scripts/check_visual_coverage.py
+    python scripts/check_visual_coverage.py --top 50       # show top 50 gaps
+    python scripts/check_visual_coverage.py --domain animals food
+    python scripts/check_visual_coverage.py --pos noun verb
+    python scripts/check_visual_coverage.py --covered       # show what IS covered
 """
 
 import argparse
@@ -26,8 +26,8 @@ from collections import defaultdict
 from pathlib import Path
 
 SCRIPT_DIR   = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
-VISUAL_MAP   = PROJECT_ROOT / 'backend' / 'src' / 'client' / 'data' / 'visual-map.ts'
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
+VISUAL_MAP   = PROJECT_ROOT / 'src' / 'client' / 'data' / 'visual-map.ts'
 CURATED_DIR  = PROJECT_ROOT / 'data' / 'curated'
 
 if str(SCRIPT_DIR) not in sys.path:

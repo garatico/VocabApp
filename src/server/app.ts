@@ -9,11 +9,13 @@ import express          from 'express';
 import fs               from 'fs';
 import path             from 'path';
 import compression      from 'compression';
+import helmet           from 'helmet';
 import { fileURLToPath } from 'url';
 
 import publicRoutes         from './routes/public.js';
 import adminRoutes          from './routes/admin.routes.js';
 import { corsMiddleware }       from './middleware/cors.js';
+import { dataDir }              from './lib/paths.js';
 import { vocabRateLimiter }    from './middleware/rate-limit.js';
 import { errorHandler }     from './middleware/error-handler.js';
 
@@ -39,6 +41,15 @@ export interface AppOptions {
 export function createApp({ nodeEnv = process.env['NODE_ENV'] || 'development' }: AppOptions = {}) {
   const app = express();
 
+  // Behind Render's proxy in production: trust the first X-Forwarded-For hop
+  // so req.ip is the real client IP (rate limiting, localhost checks).
+  if (nodeEnv === 'production') {
+    app.set('trust proxy', 1);
+  }
+
+  // Security headers. CSP is off for now — the SPA/admin HTML would need an
+  // audit for inline scripts/styles before enabling it.
+  app.use(helmet({ contentSecurityPolicy: false }));
   app.use(compression());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -55,9 +66,9 @@ export function createApp({ nodeEnv = process.env['NODE_ENV'] || 'development' }
   app.use('/api', publicRoutes);
   app.use('/api/admin', adminRoutes);
 
-  app.use('/svgs', express.static(path.join(projectRoot, '..', 'data', 'svgs')));
+  app.use('/svgs', express.static(path.join(dataDir, 'svgs')));
 
-  const dataRoot = path.join(projectRoot, '..', 'data');
+  const dataRoot = dataDir;
   for (const domain of subDirs(path.join(dataRoot, 'emoji'))) {
     app.use('/emoji', express.static(path.join(dataRoot, 'emoji', domain)));
   }

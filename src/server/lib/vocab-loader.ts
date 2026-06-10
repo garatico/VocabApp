@@ -11,7 +11,7 @@
 
 import Database from 'better-sqlite3';
 import path     from 'path';
-import { fileURLToPath } from 'url';
+import { dataDir } from './paths.js';
 import { getSvgUrl } from './svg-loader.js';
 import { conjugate, type VerbForms } from './verb-rules.js';
 
@@ -109,9 +109,6 @@ export function bandFromRank(rank: number | null): string | null {
   return 'C2';
 }
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
-const appRoot    = path.join(__dirname, '../../../..');
 
 // Singleton DB connection
 let db: Database.Database | null = null;
@@ -149,7 +146,7 @@ function parseJsonField<T>(
 function initializeDatabase(): void {
   if (db) return;
 
-  const dbPath = path.join(appRoot, 'data', 'vocabulary.db');
+  const dbPath = path.join(dataDir, 'vocabulary.db');
   try {
     console.log(`Connecting to SQLite database: ${dbPath}`);
     db = new Database(dbPath, { fileMustExist: true });
