@@ -30,7 +30,7 @@
     "check:visuals:food": "python3 scripts/data/check_visual_coverage.py --domain food"
   },
   "dependencies": {
-    "better-sqlite3": "^9.2.2",
+    "better-sqlite3": "^12.10.0",
     "compression": "^1.8.1",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
