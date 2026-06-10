@@ -39,8 +39,7 @@ __pycache__/
 *.pyo
 
 # Husky internals
-backend/.husky/_/
-.husky/
+.husky/_/
 
 # data
 wikipedia_freq_corpora/
@@ -50,10 +49,6 @@ data/old_jsonl/
 data/gloss_cache/
 
 # src
-backend/src_old/
+src_old/
 
-# Mobile app (parked — not in active development)
-mobile/
-
-vite.config.js.timestamp-*.mjs
-vitest.config.js.timestamp-*.mjs
+# Mobile app (parked — not in active development

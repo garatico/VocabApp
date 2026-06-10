@@ -9,7 +9,7 @@ Matches against English translation + glosses. Adds specific domains
 while preserving "essential"/"curated" tags.
 
 Usage:
-    python backend/scripts/data/infer_domains.py [--dry-run]
+    python scripts/data/infer_domains.py [--dry-run]
 """
 
 import argparse
@@ -20,7 +20,7 @@ from collections import Counter
 from pathlib import Path
 
 SCRIPT_DIR   = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
 JSONL_PATH   = PROJECT_ROOT / 'data' / 'curated' / 'spanish_curated.jsonl'
 DB_PATH      = PROJECT_ROOT / 'data' / 'vocabulary.db'
 

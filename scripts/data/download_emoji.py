@@ -5,7 +5,7 @@ download_emoji.py
 One-time script to download OpenMoji SVGs for all concepts in visual-map.ts.
 Run once from the project root:
 
-    python backend/scripts/download_emoji.py
+    python scripts/download_emoji.py
 
 SVGs land in data/emoji/animals/ and are served by Express at /emoji/*.svg.
 No CDN dependency after this runs.
@@ -17,7 +17,7 @@ import urllib.request
 from pathlib import Path
 
 SCRIPT_DIR   = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
 DEST         = PROJECT_ROOT / 'data' / 'emoji' / 'animals'
 CDN          = 'https://cdn.jsdelivr.net/npm/openmoji@15.0.0/color/svg'
 

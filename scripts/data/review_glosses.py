@@ -6,9 +6,9 @@ Scans the gloss cache for suspect entries and writes them to a JSONL report
 so they can be reviewed and corrected manually.
 
 Usage:
-    python backend/scripts/data/review_glosses.py --lang spa
-    python backend/scripts/data/review_glosses.py --lang spa --source google empty
-    python backend/scripts/data/review_glosses.py --lang spa --apply corrections.jsonl
+    python scripts/data/review_glosses.py --lang spa
+    python scripts/data/review_glosses.py --lang spa --source google empty
+    python scripts/data/review_glosses.py --lang spa --apply corrections.jsonl
 """
 
 import argparse
@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR   = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
 CACHE_DIR    = PROJECT_ROOT / 'data' / 'gloss_cache'
 PRESEED_DIR  = PROJECT_ROOT / 'data' / 'preseed'
 

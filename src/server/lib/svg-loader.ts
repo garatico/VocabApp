@@ -11,11 +11,8 @@
 
 import fs   from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { dataDir } from './paths.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
-const appRoot    = path.join(__dirname, '../../../..');
 
 // ── Concept map ───────────────────────────────────────────────────────────────
 
@@ -50,7 +47,7 @@ function conceptKeyFor(language: string, word: string): string | null {
 }
 
 function sharedSvgPath(key: string): string {
-  return path.join(appRoot, 'data', 'svgs', `${key}.svg`);
+  return path.join(dataDir, 'svgs', `${key}.svg`);
 }
 
 function fileExists(p: string): boolean {
@@ -76,7 +73,7 @@ export function getSvgUrl(language: string, word: string): string | null {
  * Ensure the shared SVG directory exists (called at server startup).
  */
 export function ensureSvgDirs(): boolean {
-  const sharedDir = path.join(appRoot, 'data', 'svgs');
+  const sharedDir = path.join(dataDir, 'svgs');
   try {
     if (!fs.existsSync(sharedDir)) {
       fs.mkdirSync(sharedDir, { recursive: true });

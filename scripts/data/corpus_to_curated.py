@@ -7,8 +7,8 @@ in the curated file, fetches English glosses, then appends them to
 spanish_curated.jsonl with needs_review: true.
 
 Run in batches (Wiktionary/Google Translate are rate-limited):
-    python backend/scripts/data/corpus_to_curated.py --batch 100
-    python backend/scripts/data/corpus_to_curated.py --batch 100   # run again for more
+    python scripts/data/corpus_to_curated.py --batch 100
+    python scripts/data/corpus_to_curated.py --batch 100   # run again for more
 
 Glosses are cached to disk so re-runs skip already-fetched words.
 
@@ -31,7 +31,7 @@ from typing import Dict, List, Optional, Tuple
 warnings.filterwarnings("ignore")
 
 SCRIPT_DIR   = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
 CURATED_PATH = PROJECT_ROOT / 'data' / 'curated' / 'spanish_curated.jsonl'
 OS_DIR       = PROJECT_ROOT / 'data' / 'opensubtitles_freq_corpora'
 CACHE_DIR    = PROJECT_ROOT / 'data' / 'gloss_cache'
@@ -369,7 +369,7 @@ def main(
 
     print(f'Appended : {len(new_entries)} entries to {CURATED_PATH.name}')
     print(f'\nNext steps:')
-    print(f'  1. python backend/scripts/data/sync_db.py --langs spa')
+    print(f'  1. python scripts/data/sync_db.py --langs spa')
     print(f'  2. Review entries flagged needs_review: true in the admin panel')
     print(f'  3. Run this script again to add another batch')
 
