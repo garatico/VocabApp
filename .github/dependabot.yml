@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # npm dependencies (app + tooling)
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dev-dependencies:
+        dependency-type: development
+
+  # GitHub Actions workflow versions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  # Python data pipeline
+  - package-ecosystem: pip
+    directory: /scripts/data
+    schedule:
+      interval: monthly

@@ -6,6 +6,7 @@ import { renderConjugationMode }          from './modes/conjugation/index.ts';
 import { setTableController }             from './modes/table-controls.ts';
 import { setQuiz }                        from './quiz/quiz-controls.ts';
 import { filterWords }                    from './filters/word-filters.ts';
+import { Settings }                       from './settings.ts';
 
 import type { Word } from './types.ts';
 
@@ -134,7 +135,11 @@ export function bindStartHandler({
       }
       // 'frequency' keeps the existing rank-based order from loadAndBuildFilters
 
-      setQuiz(new Quiz({ words: list, storageKey: `quick_quiz_state_${getFullLang ? getFullLang() : 'spanish'}` }));
+      setQuiz(new Quiz({
+        words:      list,
+        storageKey: `quick_quiz_state_${getFullLang ? getFullLang() : 'spanish'}`,
+        tolerance:  Settings.getTypoToleranceRatio(),
+      }));
 
       const currentMode = getCurrentMode();
 

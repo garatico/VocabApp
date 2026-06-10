@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-10
+
+### Changed
+- **Repo flattened**: the app now lives at the repo root — the `backend/` subdirectory
+  and wrapper package.json are gone. Render root directory setting updated to match.
+- Package renamed `vocab-app-backend` → `vocab-app`.
+- Pre-commit hook lightened to validate + lint-staged (full typecheck/tests moved to CI).
+- Stale documentation describing the pre-SQLite architecture removed; `docs/README.md`
+  added as an index. Deprecated `scripts/data/verb_rules.py` deleted.
+
+### Added
+- **Typo tolerance setting** (Settings → All Quizzes): Off / Low / Normal / High
+  controls how many misspelled letters quiz answers forgive (was hardcoded at ~25%).
+- GitHub Actions CI: validate, lint, typecheck, test, build on every push/PR.
+- Dependabot for npm, GitHub Actions, and pip updates.
+- Client unit tests (answer matching, quiz state machine, gender/plural inference,
+  diacritics/levenshtein utils) — suite now at 183 tests.
+- `scripts/data/requirements.txt` pinning the Python pipeline dependencies.
+- `DATA_DIR` env var to relocate the data directory.
+- ESLint now covers `src/client` (was server-only).
+
+### Security
+- CORS origins matched exactly via `new URL()` (substring localhost bypass fixed);
+  credentials only sent with a specific allowed origin.
+- `trust proxy` enabled in production so rate limiting sees real client IPs.
+- Admin bearer-token comparison made constant-time (`timingSafeEqual`).
+- `helmet` security headers added (CSP pending an inline-script audit).
+
+## [0.1.1] - 2026-05-15
+
 ### Added
 - Collapsible filter section with toggle button
 - Mobile & responsive design with 4 breakpoints (360px, 600px, 768px, 1024px)

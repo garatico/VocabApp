@@ -24,11 +24,14 @@ function fisherYates(length: number): number[] {
 export class Quiz {
   words:      Word[];
   storageKey: string;
+  tolerance:  number;
   state:      QuizState;
 
-  constructor({ words, storageKey }: { words: Word[]; storageKey?: string }) {
+  constructor({ words, storageKey, tolerance }: { words: Word[]; storageKey?: string; tolerance?: number }) {
     this.words      = words;
     this.storageKey = storageKey || 'quick_quiz_state';
+    // Fraction of the answer's length forgiven as typos (0 = exact match only).
+    this.tolerance  = tolerance ?? 0.25;
     this.state      = JSON.parse(localStorage.getItem(this.storageKey) || '{}') as QuizState;
 
     // Validate saved state against the current word list. Reset if:
@@ -87,9 +90,11 @@ export class Quiz {
     for (const cand of candidates) {
       const nc    = normalize(cand);
       if (nc === normInput) { ok = true; break; }
-      const dist  = levenshtein(nc, normInput);
-      const thresh = Math.max(1, Math.floor(nc.length * 0.25));
-      if (dist <= thresh) { ok = true; break; }
+      if (this.tolerance > 0) {
+        const dist   = levenshtein(nc, normInput);
+        const thresh = Math.max(1, Math.floor(nc.length * this.tolerance));
+        if (dist <= thresh) { ok = true; break; }
+      }
     }
 
     const key = w.word;
