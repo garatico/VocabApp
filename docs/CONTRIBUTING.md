@@ -15,7 +15,7 @@ vocab-app/
 │   ├── vocab-practice/  # Main practice app (organized by feature)
 │   ├── corpus-builder/  # Language corpus analysis
 │   └── data-processor/  # Data processing utilities
-├── backend/           # Express.js API server
+├── src/               # Express server (src/server) + Vite SPA (src/client)
 ├── shared/            # Shared code and utilities
 ├── scripts/           # Data generation and build scripts
 ├── tests/             # Test files (unit, integration, e2e)

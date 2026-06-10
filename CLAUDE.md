@@ -118,7 +118,9 @@ VocabApp/
 │   ├── verb-rules.test.js
 │   ├── client/                      # client unit tests (pure utils)
 │   │   ├── match.test.ts
-│   │   └── gender.test.ts
+│   │   ├── gender.test.ts
+│   │   ├── answers.test.ts
+│   │   └── quiz.test.ts
 │   └── helpers/
 │       ├── app.js                   # buildTestApp() / teardownTestApp()
 │       ├── db.js                    # createTestDb() — in-memory SQLite seed
@@ -135,7 +137,6 @@ VocabApp/
 │       ├── download_images.py       # fetch Wikipedia photos → data/images/  (npm run download:images)
 │       ├── download_emoji.py        # fetch OpenMoji SVGs → data/emoji/  (npm run download:emoji)
 │       ├── check_visual_coverage.py # report picture-quiz visual gaps  (npm run check:visuals)
-│       ├── verb_rules.py            # DEPRECATED — safe to delete; see verb-rules.js
 │       ├── corpus_to_curated.py     # corpus words → curated JSONL
 │       ├── corpus_builder.py        # spaCy corpus extraction helpers
 │       ├── lang_config.py           # shared language codes / tense maps
@@ -166,17 +167,4 @@ read from or write to `vocabulary.db`.
   routes import `getDb()` from it rather than opening their own connection.
 - **`setDb(testDb)`**: escape hatch added to `vocab-loader.js` so tests can
   inject an in-memory DB without touching the filesystem.
-- **Cache invalidation**: every admin write calls `clearCache(lang)` so the
-  public API immediately reflects changes without a restart.
-- **Admin panel is a Vite MPA entry**: `admin.html` at the project root is a
-  second Vite entry point (alongside `index.html`). In dev, `/admin` is served
-  by Vite directly (rewrite plugin). In production, Express serves
-  `dist/admin.html`. All admin TypeScript is bundled and type-checked by Vite.
-- **Admin routes guard**: `isDevelopment` middleware in `admin.routes.js`
-  returns 403 unless `NODE_ENV=development`. Tests set this before building
-  the app.
-- **Conjugation is JS-owned**: `src/server/lib/verb-rules.js` is the single conjugation engine. `vocab-loader.js` calls `conjugate()` at language-load time for Spanish verbs (result cached in memory). The DB stores only `conjugation_class`, `conjugation_overrides`, and `future_stem` — not the computed tense forms. For irregular verbs (e.g. ser, estar), all forms live in `conjugation_overrides`; the JS engine returns those directly. French/Italian/Portuguese predate this system and still have pre-stored `conjugations` JSON in the DB, which `vocab-loader.js` reads as a fallback when `conjugation_class` is absent. `verb_rules.py` is deprecated and safe to delete.
-- **Synonyms not implemented**: `word_relations` table exists in the schema
-  but is empty — synonyms were never migrated from the old JSON format.
-  The admin edit form does not expose this field.
-
+- **Cache invalidation**: every admin 

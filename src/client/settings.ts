@@ -13,6 +13,10 @@ const set = (k: string, v: string): void => { localStorage.setItem(P + k, v); };
 
 export type HintMode  = 'none' | 'first-letter' | 'full';
 export type MatchMode = 'fuzzy' | 'strict';
+export type TypoTolerance = 'off' | 'low' | 'normal' | 'high';
+
+// Fraction of an answer's length forgiven as typos in quiz checking.
+const TYPO_RATIOS: Record<TypoTolerance, number> = { off: 0, low: 0.15, normal: 0.25, high: 0.35 };
 export type FontSize  = 'xs' | 'small' | 'medium' | 'large' | 'xl';
 
 export const Settings = {
@@ -22,6 +26,8 @@ export const Settings = {
 
   // ── All quizzes ────────────────────────────────────────────────────────────
   getMatchMode: (): MatchMode => get('match_mode', 'fuzzy') as MatchMode,
+  getTypoTolerance: (): TypoTolerance => get('typo_tolerance', 'normal') as TypoTolerance,
+  getTypoToleranceRatio: (): number => TYPO_RATIOS[get('typo_tolerance', 'normal') as TypoTolerance] ?? 0.25,
 
   // ── Appearance ────────────────────────────────────────────────────────────
   getFontSize: (): FontSize => get('font_size', 'medium') as FontSize,
@@ -110,6 +116,14 @@ export function bindSettings(): void {
     set('match_mode', btn.dataset.match ?? 'fuzzy');
   });
 
+  // Typo tolerance
+  document.getElementById('settingTypo')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingTypo', btn);
+    set('typo_tolerance', btn.dataset.typo ?? 'normal');
+  });
+
   // Recall timer select
   const timerSel    = document.getElementById('settingTimer')       as HTMLSelectElement | null;
   const timerCustom = document.getElementById('settingTimerCustom') as HTMLInputElement  | null;
@@ -160,6 +174,12 @@ function restoreSettingsUI(): void {
   const savedMatch = get('match_mode', 'fuzzy');
   document.querySelectorAll<HTMLElement>('#settingMatch .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.match === savedMatch);
+  });
+
+  // Typo tolerance
+  const savedTypo = get('typo_tolerance', 'normal');
+  document.querySelectorAll<HTMLElement>('#settingTypo .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.typo === savedTypo);
   });
 
   // Timer
