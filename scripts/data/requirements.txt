@@ -6,7 +6,7 @@
 # DB sync, image download) — the app itself is pure Node.
 
 # Corpus extraction / lemmatization (corpus_builder.py, corpus_to_curated.py)
-spacy>=3.7
+spacy>=3.8.14
 
 # Verb conjugation for fr/ita/por during sync (sync_db.py, corpus_builder.py)
 mlconjug3>=3.10
