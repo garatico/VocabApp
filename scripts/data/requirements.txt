@@ -9,7 +9,7 @@
 spacy>=3.7
 
 # Verb conjugation for fr/ita/por during sync (sync_db.py, corpus_builder.py)
-mlconjug3>=3.10
+mlconjug3>=4.0.1
 
 # Gloss sources (corpus_to_curated.py)
 wiktionaryparser>=0.0.97
