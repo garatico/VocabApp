@@ -16,7 +16,7 @@ wiktionaryparser>=0.0.97
 deep-translator>=1.11
 
 # Wikipedia image download (download_images.py)
-requests>=2.31
+requests>=2.34.2
 
 # spaCy language models — install separately after spacy:
 #   python -m spacy download es_core_news_sm
