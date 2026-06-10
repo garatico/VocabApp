@@ -13,7 +13,7 @@ mlconjug3>=3.10
 
 # Gloss sources (corpus_to_curated.py)
 wiktionaryparser>=0.0.97
-deep-translator>=1.11
+deep-translator>=1.11.4
 
 # Wikipedia image download (download_images.py)
 requests>=2.31
