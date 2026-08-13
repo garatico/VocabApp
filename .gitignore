@@ -37,6 +37,7 @@ coverage/
 __pycache__/
 *.pyc
 *.pyo
+vite.config.js.timestamp-*
 
 # Husky internals
 .husky/_/
@@ -51,4 +52,5 @@ data/gloss_cache/
 # src
 src_old/
 
-# Mobile app (parked — not in active development
+# Mobile app (parked — not in active development; its node_modules is covered
+# by the node_modules/ rule above. The app's own sources are still tracked.)

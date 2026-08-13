@@ -7,6 +7,7 @@
 
 import type { Word } from '../types.js';
 import { showLoading, hideLoading, showErrorMessage } from '../ui/ui.js';
+import { logger } from '../utils/logger.js';
 
 interface VocabApiResponse {
   success: boolean;
@@ -35,7 +36,7 @@ export async function loadWords(lang: string): Promise<Word[]> {
     }
 
     const words = data.data ?? [];
-    console.log(`✓ Loaded ${words.length} words for ${lang}`);
+    logger.info(`✓ Loaded ${words.length} words for ${lang}`);
 
     cache[lang] = words;
     hideLoading();
@@ -43,9 +44,8 @@ export async function loadWords(lang: string): Promise<Word[]> {
   } catch (error) {
     hideLoading();
     const msg = error instanceof Error ? error.message : 'Failed to load vocabulary. Please try again.';
-    console.error('Error loading vocabulary:', error);
+    logger.error('Error loading vocabulary:', error);
     showErrorMessage(msg);
     throw error;
   }
 }
-

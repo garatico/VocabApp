@@ -13,6 +13,7 @@ import Database                               from 'better-sqlite3';
 import { getDb, clearCache, bandFromRank, BAND_CUTOFFS } from '../../lib/vocab-loader.js';
 import { getSvgUrl }                          from '../../lib/svg-loader.js';
 import { validateLanguage }                   from './_utils.js';
+import { logger }                             from '../../lib/logger.js';
 
 const router = Router();
 
@@ -199,7 +200,7 @@ router.get('/vocab', (req, res) => {
       words: rows.map(row => formatWord(row, lang)),
     });
   } catch (err) {
-    console.error('GET /admin/vocab:', err);
+    logger.error('GET /admin/vocab:', err);
     res.status(500).json({ error: (err as Error).message });
   }
 });
@@ -214,7 +215,7 @@ router.get('/vocab/:word', (req, res) => {
     if (!row) return res.status(404).json({ error: 'Word not found' });
     res.json({ success: true, word: formatWord(row, lang) });
   } catch (err) {
-    console.error('GET /admin/vocab/:word:', err);
+    logger.error('GET /admin/vocab/:word:', err);
     res.status(500).json({ error: (err as Error).message });
   }
 });
@@ -294,7 +295,7 @@ router.post('/vocab/:word', (req, res) => {
     const updated = db.prepare(WORD_SELECT + ' WHERE w.id = ?').get(wordId) as DbWordRow;
     res.json({ success: true, message: 'Word updated', word: formatWord(updated, lang) });
   } catch (err) {
-    console.error('POST /admin/vocab/:word:', err);
+    logger.error('POST /admin/vocab/:word:', err);
     res.status(500).json({ error: (err as Error).message });
   }
 });
@@ -347,7 +348,7 @@ router.post('/vocab', (req, res) => {
     clearCache(lang);
     res.json({ success: true, message: `Updated ${updated} of ${updates.length} words`, updated });
   } catch (err) {
-    console.error('POST /admin/vocab (batch):', err);
+    logger.error('POST /admin/vocab (batch):', err);
     res.status(500).json({ error: (err as Error).message });
   }
 });

@@ -14,6 +14,7 @@ import path     from 'path';
 import { dataDir } from './paths.js';
 import { getSvgUrl } from './svg-loader.js';
 import { conjugate, type VerbForms } from './verb-rules.js';
+import { logger } from './logger.js';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -132,7 +133,7 @@ function parseJsonField<T>(
   try {
     return JSON.parse(raw) as T;
   } catch (err) {
-    console.warn(
+    logger.warn(
       `vocab-loader: JSON parse error on '${word}' field '${field}': ${(err as Error).message}` +
       ` — raw: ${String(raw).slice(0, 120)}`
     );
@@ -148,12 +149,12 @@ function initializeDatabase(): void {
 
   const dbPath = path.join(dataDir, 'vocabulary.db');
   try {
-    console.log(`Connecting to SQLite database: ${dbPath}`);
+    logger.info(`Connecting to SQLite database: ${dbPath}`);
     db = new Database(dbPath, { fileMustExist: true });
     db.pragma('journal_mode = WAL');
-    console.log('Connected to SQLite database');
+    logger.info('Connected to SQLite database');
   } catch (error) {
-    console.error('Database connection error:', error);
+    logger.error('Database connection error:', error);
     if ((error as NodeJS.ErrnoException).code === 'SQLITE_CANTOPEN') {
       const err = Object.assign(new Error(`SQLite database not found at: ${dbPath}`), {
         statusCode: 500,
@@ -201,7 +202,7 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
     if (!db) initializeDatabase();
     const conn = db as Database.Database;
 
-    console.log(`Loading vocabulary for: ${lang}`);
+    logger.info(`Loading vocabulary for: ${lang}`);
 
     const stmt = conn.prepare(`
       SELECT
@@ -242,7 +243,7 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
           const inf = row.infinitive || row.word;
           conjugations = conjugate(inf, row.conjugation_class, overrides, row.future_stem ?? null);
         } catch (e) {
-          console.warn(`verb-rules: failed for '${row.word}' (${row.conjugation_class}): ${(e as Error).message}`);
+          logger.warn(`verb-rules: failed for '${row.word}' (${row.conjugation_class}): ${(e as Error).message}`);
         }
       } else if (row.conjugations) {
         // Legacy (French/Italian/Portuguese): read pre-stored JSON from DB
@@ -293,7 +294,7 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
     return { ...vocabData, cacheAge: 0 };
 
   } catch (error) {
-    console.error(`Error loading vocabulary for ${lang}:`, (error as Error).message);
+    logger.error(`Error loading vocabulary for ${lang}:`, (error as Error).message);
     if ((error as NodeJS.ErrnoException).code === 'SQLITE_CANTOPEN' ||
         (error as Error).message?.includes('no such file')) {
       throw Object.assign(new Error('Vocabulary database not found. Run setup first.'), { statusCode: 500 });
@@ -352,17 +353,17 @@ export function getDbInfo(): Record<string, unknown> {
 
 /** Load all supported languages into cache at startup. */
 export async function preloadAll(): Promise<{ language: string; status: string; error?: string }[]> {
-  console.log('Pre-loading vocabularies from SQLite...');
+  logger.info('Pre-loading vocabularies from SQLite...');
   const results: { language: string; status: string; error?: string }[] = [];
 
   for (const lang of getSupportedLanguages()) {
     try {
       loadVocabFile(lang);
       results.push({ language: lang, status: 'loaded' });
-      console.log(`  ok ${lang}`);
+      logger.info(`  ok ${lang}`);
     } catch (error) {
       results.push({ language: lang, status: 'failed', error: (error as Error).message });
-      console.log(`  fail ${lang}: ${(error as Error).message}`);
+      logger.info(`  fail ${lang}: ${(error as Error).message}`);
     }
   }
 

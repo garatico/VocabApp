@@ -10,6 +10,7 @@
 import type { Word } from '../types.js';
 import { buildGlossDisplay } from './utils.js';
 import { PRONOUNS as LANG_PRONOUNS, TENSE_DEFS } from '../modes/conjugation/data.js';
+import { logger } from './logger.js';
 
 /** Build a tense-key -> display-label map for the given language. */
 function tenseLabels(lang: string): Record<string, string> {
@@ -350,7 +351,7 @@ export function attachTooltips(container: HTMLElement, opts: AttachTooltipOption
         positionTooltip();
         getTooltip().classList.add('visible');
       } catch (e) {
-        console.warn('word-tooltip: failed to parse word JSON', e);
+        logger.warn('word-tooltip: failed to parse word JSON', e);
       }
     });
     el.addEventListener('mouseleave', () => scheduleHide());

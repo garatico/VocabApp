@@ -3,6 +3,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { logger } from '../lib/logger.js';
 
 export interface AppError extends Error {
   statusCode?:        number;
@@ -16,7 +17,7 @@ export function errorHandler(err: AppError, req: Request, res: Response, _next: 
   const statusCode   = err.statusCode || err.status || 500;
   const isDev        = process.env.NODE_ENV === 'development';
 
-  console.error(`[${timestamp}] ERROR:`, {
+  logger.error(`[${timestamp}] ERROR:`, {
     message: err.message,
     statusCode,
     path:    req.path,

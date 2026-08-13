@@ -10,6 +10,7 @@
 
 import { Router }                                                  from 'express';
 import { getDb, clearCache, reloadDb, getSupportedLanguages }      from '../../lib/vocab-loader.js';
+import { logger }                                                  from '../../lib/logger.js';
 
 const router = Router();
 
@@ -69,7 +70,7 @@ router.get('/stats', (req, res) => {
 
     res.json({ success: true, stats });
   } catch (err) {
-    console.error('GET /admin/stats:', err);
+    logger.error('GET /admin/stats:', err);
     res.status(500).json({ error: (err as Error).message });
   }
 });
@@ -87,14 +88,14 @@ router.get('/meta', (_req, res) => {
       try {
         (JSON.parse(r.domains) as string[]).forEach(d => domainSet.add(d));
       } catch (_) {
-        console.warn('GET /admin/meta: malformed domains JSON:', r.domains?.slice(0, 80));
+        logger.warn('GET /admin/meta: malformed domains JSON:', r.domains?.slice(0, 80));
       }
     }
 
     const bands = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
     res.json({ success: true, pos, domains: [...domainSet].sort(), bands });
   } catch (err) {
-    console.error('GET /admin/meta:', err);
+    logger.error('GET /admin/meta:', err);
     res.status(500).json({ error: (err as Error).message });
   }
 });
@@ -105,7 +106,7 @@ router.post('/cache/clear', (req, res) => {
     const lang = (req.body as { lang?: string } | undefined)?.lang || null;
     clearCache(lang ?? undefined);
     const msg = lang ? `Cache cleared for ${lang}` : 'All language caches cleared';
-    console.log('[admin]', msg);
+    logger.info('[admin]', msg);
     res.json({ success: true, message: msg });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -116,7 +117,7 @@ router.post('/cache/clear', (req, res) => {
 router.post('/db/reload', (_req, res) => {
   try {
     reloadDb();
-    console.log('[admin] DB connection reset — will reopen on next request');
+    logger.info('[admin] DB connection reset — will reopen on next request');
     res.json({ success: true, message: 'DB connection reset. Cache cleared. Will reopen on next request.' });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });

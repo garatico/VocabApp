@@ -8,6 +8,7 @@
 import { Router }                                         from 'express';
 import { getDb, getSupportedLanguages, bandFromRank }     from '../../lib/vocab-loader.js';
 import { validateLanguage }                               from './_utils.js';
+import { logger }                                         from '../../lib/logger.js';
 
 const router = Router();
 
@@ -80,7 +81,7 @@ router.post('/export', (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="${lang}_${date}.csv"`);
     res.send(lines.join('\n'));
   } catch (err) {
-    console.error('POST /admin/export:', err);
+    logger.error('POST /admin/export:', err);
     res.status(500).json({ error: (err as Error).message });
   }
 });

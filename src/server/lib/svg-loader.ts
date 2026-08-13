@@ -12,6 +12,7 @@
 import fs   from 'fs';
 import path from 'path';
 import { dataDir } from './paths.js';
+import { logger } from './logger.js';
 
 
 // ── Concept map ───────────────────────────────────────────────────────────────
@@ -80,7 +81,7 @@ export function ensureSvgDirs(): boolean {
     }
     return true;
   } catch (err) {
-    console.error('Error creating SVG directory:', (err as Error).message);
+    logger.error('Error creating SVG directory:', (err as Error).message);
     return false;
   }
 }

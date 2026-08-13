@@ -11,13 +11,14 @@ dotenv.config();
 import { createApp }                          from './app.js';
 import { preloadAll, closeDatabase }          from './lib/vocab-loader.js';
 import { ensureSvgDirs }                      from './lib/svg-loader.js';
+import { logger }                             from './lib/logger.js';
 
 const PORT     = process.env['PORT'] || process.env['API_PORT'] || 3000;
 const NODE_ENV = process.env['NODE_ENV'] || 'development';
 
 const app    = createApp({ nodeEnv: NODE_ENV });
 const server = app.listen(PORT, async () => {
-  console.log(`
+  logger.info(`
 ╔════════════════════════════════════════════════════════════╗
 ║                     VocabApp Backend                       ║
 ║                   SQLite Edition                           ║
@@ -36,22 +37,22 @@ const server = app.listen(PORT, async () => {
 
   try {
     ensureSvgDirs();
-    console.log('✅ SVG directories ready');
+    logger.info('✅ SVG directories ready');
 
     await preloadAll();
-    console.log('✅ All vocabularies loaded from SQLite');
+    logger.info('✅ All vocabularies loaded from SQLite');
   } catch (error) {
-    console.error('\n⚠️  Warning: Could not pre-load vocabularies:', (error as Error).message);
-    console.error('App will still start; vocabulary loads on first request.');
+    logger.error('\n⚠️  Warning: Could not pre-load vocabularies:', (error as Error).message);
+    logger.error('App will still start; vocabulary loads on first request.');
   }
 });
 
 process.on('SIGTERM', () => {
-  console.log('Shutting down...');
+  logger.info('Shutting down...');
   server.close(() => { closeDatabase(); process.exit(0); });
 });
 
 process.on('SIGINT', () => {
-  console.log('\nShutting down...');
+  logger.info('\nShutting down...');
   server.close(() => { closeDatabase(); process.exit(0); });
 });
