@@ -13,6 +13,10 @@ export default defineConfig({
     fileParallelism: false,
     // Only look in tests/ — never pick up frontend or other stray test files
     include: ['tests/**/*.test.{js,ts}'],
+    // Several tests drive error paths on purpose (unknown language, bad payloads),
+    // and the server logger would dump those stack traces to stderr. Silence it
+    // for the suite; tests/logger.test.js sets LOG_LEVEL itself per case.
+    env: { LOG_LEVEL: 'silent' },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

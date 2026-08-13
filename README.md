@@ -43,8 +43,9 @@ docs/          architecture notes, schema docs, guides
 ```
 
 Configuration lives in `.env` (see `.env.example`). The data directory can be
-relocated with `DATA_DIR`. Admin routes are development-only, localhost-only,
-and optionally protected with `ADMIN_SECRET`.
+relocated with `DATA_DIR`, and server log verbosity with `LOG_LEVEL`
+(`debug` | `info` | `warn` | `error` | `silent`). Admin routes are
+development-only, localhost-only, and optionally protected with `ADMIN_SECRET`.
 
 CI (GitHub Actions) runs validate, lint, typecheck, tests, and build on every
 push and PR. A husky pre-commit hook runs the validate check plus eslint on

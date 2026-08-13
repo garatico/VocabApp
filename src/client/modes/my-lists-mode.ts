@@ -22,6 +22,7 @@ import {
   refreshFilterSelect, getTotalListedCount, saveListFilterState,
 } from '../utils/word-lists.ts';
 import { stripDiacritics } from '../utils/match.ts';
+import { logger } from '../utils/logger.ts';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -440,7 +441,7 @@ export function renderMyLists(container: HTMLElement): void {
       allVocab = entries;
       if (document.activeElement === addInp && addInp.value.trim()) renderAddResults(addInp.value.trim());
       renderWords(filterInp.value);
-    }).catch(console.error);
+    }).catch(logger.error);
 
     // ── Sort ─────────────────────────────────────────────────────────────────
 

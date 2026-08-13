@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Leveled logging**: `src/server/lib/logger.ts` (debug/info/warn/error/silent,
+  stderr for warn+error) and `src/client/utils/logger.ts` (debug/info silenced in
+  production builds). Every `console.*` call in `src/` now routes through them.
+- `LOG_LEVEL` env var controls server verbosity; when unset it defaults per
+  `NODE_ENV` — `debug` in development, `info` in production, `warn` in test.
+- ESLint `no-console` is now an error across `src/**/*.ts`, with the two logger
+  modules exempt, so direct console calls can't creep back in.
+- Unit tests for the server logger's level resolution and sink routing —
+  suite now at 206 tests.
+
+### Changed
+- The test run sets `LOG_LEVEL=silent`, so tests that exercise error paths on
+  purpose no longer dump stack traces to stderr.
+- Dev dependencies bumped: vite 5 → 8, concurrently 9 → 10.
+
 ### Fixed
 - Picture mode showed `function Object() { [native code] }` for the Spanish word
   *constructor* — visual lookups (and quiz seen-stats) now use prototype-free

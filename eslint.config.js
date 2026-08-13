@@ -20,6 +20,9 @@ const tsServerConfig = tseslint.config({
     '@typescript-eslint/no-floating-promises':   'error',
     '@typescript-eslint/no-non-null-assertion':  'warn',
     'no-empty':                                  ['error', { allowEmptyCatch: true }],
+    // Server code logs through lib/logger.ts — see the override below, which
+    // re-permits console inside the logger itself.
+    'no-console':                                'error',
   },
 });
 
@@ -40,8 +43,18 @@ const tsClientConfig = tseslint.config({
     '@typescript-eslint/no-floating-promises':   'error',
     '@typescript-eslint/no-non-null-assertion':  'warn',
     'no-empty':                                  ['error', { allowEmptyCatch: true }],
+    // Client code logs through utils/logger.ts — see the override below, which
+    // re-permits console inside the logger itself.
+    'no-console':                                'error',
   },
 });
+
+// The two logger modules are the only place raw console access is allowed;
+// everything else in src/ must route through them.
+const loggerConfig = {
+  files: ['src/server/lib/logger.ts', 'src/client/utils/logger.ts'],
+  rules: { 'no-console': 'off' },
+};
 
 // ── JS configs ─────────────────────────────────────────────────────────────────
 
@@ -59,6 +72,9 @@ export default [
 
   // TypeScript — client
   ...tsClientConfig,
+
+  // Must come after the two TS configs so it wins for the logger files.
+  loggerConfig,
 
   {
     // Backend Node.js JS source (rare — most is TS now)

@@ -5,6 +5,7 @@
  */
 
 import { apiCall, showStatus, escapeHtml } from './admin-api.js';
+import { logger } from '../utils/logger.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -123,7 +124,7 @@ export async function loadMeta(): Promise<void> {
       });
     }
   } catch (err) {
-    console.warn('Could not load meta options:', err instanceof Error ? err.message : String(err));
+    logger.warn('Could not load meta options:', err instanceof Error ? err.message : String(err));
   }
 }
 

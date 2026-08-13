@@ -9,6 +9,7 @@ import { loadMeta, initEditor } from './admin-editor.js';
 import { loadStatistics, initStats } from './admin-stats.js';
 import { initDbAdmin } from './admin-db.js';
 import { initConjugation } from './admin-conjugation.js';
+import { logger } from '../utils/logger.js';
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
@@ -49,4 +50,4 @@ initConjugation();
 void loadMeta();
 void loadStatistics();
 
-console.log('\u2713 Admin panel loaded');
+logger.info('✓ Admin panel loaded');

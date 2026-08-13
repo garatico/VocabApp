@@ -18,6 +18,7 @@ import { corsMiddleware }       from './middleware/cors.js';
 import { dataDir }              from './lib/paths.js';
 import { vocabRateLimiter }    from './middleware/rate-limit.js';
 import { errorHandler }     from './middleware/error-handler.js';
+import { logger }           from './lib/logger.js';
 
 const __filename  = fileURLToPath(import.meta.url);
 const __dirname   = path.dirname(__filename);
@@ -57,7 +58,7 @@ export function createApp({ nodeEnv = process.env['NODE_ENV'] || 'development' }
 
   if (nodeEnv === 'development') {
     app.use((_req, _res, next) => {
-      console.log(`[${new Date().toISOString()}] ${_req.method} ${_req.path}`);
+      logger.debug(`[${new Date().toISOString()}] ${_req.method} ${_req.path}`);
       next();
     });
   }
