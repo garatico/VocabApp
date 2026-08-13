@@ -141,3 +141,22 @@ describe('Quiz typo tolerance option', () => {
     expect(q.check('to speek').ok).toBe(true);
   });
 });
+
+describe('prototype-key words (regression)', () => {
+  // Spanish "constructor" (= builder) used to resolve to Object.prototype.constructor
+  // in the seen-stats lookup, corrupting tallies.
+  const TRICKY: Word[] = [
+    word({ word: 'constructor', glosses: ['builder'] }),
+    word({ word: 'casa', glosses: ['house'] }),
+  ];
+
+  it('tallies stats correctly for a word named "constructor"', () => {
+    const q = new Quiz({ words: TRICKY, storageKey: 'k' });
+    while (q.current().word !== 'constructor') q.next();
+    expect(q.check('builder').ok).toBe(true);
+    expect(q.stats()).toMatchObject({ seen: 1, correct: 1, incorrect: 0 });
+    expect(q.uniqueCorrectCount()).toBe(1);
+    // and the tally landed in state, not on the global Object function
+    expect((Object as unknown as { correct?: number }).correct).toBeUndefined();
+  });
+});

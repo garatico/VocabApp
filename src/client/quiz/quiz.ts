@@ -74,8 +74,20 @@ export class Quiz {
     return { seen, total: this.words.length, correct, incorrect };
   }
 
+  // Own-property lookup — words like 'constructor' must not resolve to
+  // Object.prototype members (state.seen comes from JSON.parse, a plain object).
+  private seenEntry(key: string): SeenEntry {
+    if (!Object.prototype.hasOwnProperty.call(this.state.seen, key)) {
+      this.state.seen[key] = { correct: 0, incorrect: 0 };
+    }
+    return this.state.seen[key];
+  }
+
   uniqueCorrectCount(): number {
-    return this.words.filter(w => (this.state.seen[w.word]?.correct || 0) > 0).length;
+    return this.words.filter(w =>
+      Object.prototype.hasOwnProperty.call(this.state.seen, w.word)
+      && this.state.seen[w.word].correct > 0
+    ).length;
   }
 
   check(input: string): { ok: boolean; expected: string } {
@@ -97,20 +109,16 @@ export class Quiz {
       }
     }
 
-    const key = w.word;
-    if (!this.state.seen[key]) this.state.seen[key] = { correct: 0, incorrect: 0 };
-    if (ok) this.state.seen[key].correct++;
-    else    this.state.seen[key].incorrect++;
+    const entry = this.seenEntry(w.word);
+    if (ok) entry.correct++;
+    else    entry.incorrect++;
     this.save();
 
     return { ok, expected: candidates.join(', ') };
   }
 
   markCorrect(): void {
-    const w   = this.current();
-    const key = w.word;
-    if (!this.state.seen[key]) this.state.seen[key] = { correct: 0, incorrect: 0 };
-    this.state.seen[key].correct++;
+    this.seenEntry(this.current().word).correct++;
     this.save();
   }
 
