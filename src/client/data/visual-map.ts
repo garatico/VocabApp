@@ -361,16 +361,18 @@ function norm(s: string): string {
   return s.normalize('NFD').replace(/\p{Mn}/gu, '').toLowerCase();
 }
 
-// Lookup tables built once at module load (keys are normalized)
-const _emoji:  Record<string, Record<string, string>> = {};
-const _svgUrl: Record<string, Record<string, string>> = {};
+// Lookup tables built once at module load (keys are normalized).
+// Object.create(null) — no prototype, so words like 'constructor' (Spanish for
+// 'builder') can't accidentally resolve to Object.prototype members.
+const _emoji:  Record<string, Record<string, string>> = Object.create(null);
+const _svgUrl: Record<string, Record<string, string>> = Object.create(null);
 
 for (const c of CONCEPTS) {
   for (const [lang, words] of Object.entries(c.words) as [string, string[]][]) {
     for (const word of words) {
       const k = norm(word);
-      if (c.emoji)  (_emoji[lang]  ??= {})[k] = c.emoji;
-      if (c.svgUrl) (_svgUrl[lang] ??= {})[k] = c.svgUrl;
+      if (c.emoji)  (_emoji[lang]  ??= Object.create(null))[k] = c.emoji;
+      if (c.svgUrl) (_svgUrl[lang] ??= Object.create(null))[k] = c.svgUrl;
     }
   }
 }
@@ -503,7 +505,7 @@ const IMAGES: Record<string, string> = {
 };
 
 // Build reverse lookup per-language (Spanish words → image; extend for other langs as needed)
-const _imageUrl: Record<string, string> = {};
+const _imageUrl: Record<string, string> = Object.create(null);
 for (const [word, url] of Object.entries(IMAGES)) {
   _imageUrl[norm(word)] = url;
 }

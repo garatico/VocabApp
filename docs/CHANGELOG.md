@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Picture mode showed `function Object() { [native code] }` for the Spanish word
+  *constructor* — visual lookups (and quiz seen-stats) now use prototype-free
+  objects/own-property checks so words colliding with `Object.prototype` members
+  resolve correctly.
+
 ## [0.2.0] - 2026-06-10
 
 ### Changed
