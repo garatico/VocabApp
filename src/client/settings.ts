@@ -24,6 +24,18 @@ export const Settings = {
   getTableCols: (): number    => Math.max(1, Math.min(5, Number(get('table_cols', '2')))),
   getHintMode:  (): HintMode  => get('hint_mode',  'full')  as HintMode,
 
+  /**
+   * Words shown per page in table mode. 'all' (or any unparseable value)
+   * means no pagination, represented as Infinity so callers can slice with it
+   * directly.
+   */
+  getTablePageSize: (): number => {
+    const raw = get('table_page_size', '100');
+    if (raw === 'all') return Infinity;
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : Infinity;
+  },
+
   // ── All quizzes ────────────────────────────────────────────────────────────
   getMatchMode: (): MatchMode => get('match_mode', 'fuzzy') as MatchMode,
   getTypoTolerance: (): TypoTolerance => get('typo_tolerance', 'normal') as TypoTolerance,
@@ -67,6 +79,16 @@ function activateToggle(groupId: string, btn: HTMLButtonElement): void {
   btn.classList.add('active');
 }
 
+/**
+ * Notified when the words-per-page setting changes so table mode can
+ * re-paginate a quiz that's already on screen.
+ */
+let onPageSizeChange: (() => void) | null = null;
+
+export function setOnPageSizeChange(fn: () => void): void {
+  onPageSizeChange = fn;
+}
+
 export function bindSettings(): void {
   // Theme
   document.getElementById('settingTheme')?.addEventListener('click', e => {
@@ -98,6 +120,15 @@ export function bindSettings(): void {
     if (!btn) return;
     activateToggle('settingCols', btn);
     set('table_cols', btn.dataset.cols ?? '2');
+  });
+
+  // Words per page (table mode)
+  document.getElementById('settingPageSize')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingPageSize', btn);
+    set('table_page_size', btn.dataset.pagesize ?? '100');
+    onPageSizeChange?.();
   });
 
   // Hint mode
@@ -162,6 +193,12 @@ function restoreSettingsUI(): void {
   const savedCols = get('table_cols', '2');
   document.querySelectorAll<HTMLElement>('#settingCols .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.cols === savedCols);
+  });
+
+  // Words per page
+  const savedPageSize = get('table_page_size', '100');
+  document.querySelectorAll<HTMLElement>('#settingPageSize .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.pagesize === savedPageSize);
   });
 
   // Hint

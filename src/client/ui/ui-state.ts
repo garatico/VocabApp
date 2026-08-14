@@ -13,11 +13,11 @@ interface BindModeSwitchOptions {
 
 export function bindUIState(): void {
   const sizeSelect = document.getElementById('sizeSelect') as HTMLSelectElement;
+  const custom     = document.getElementById('sizeCustom') as HTMLInputElement | null;
 
   sizeSelect.addEventListener('change', () => {
-    const custom = document.getElementById('sizeCustom') as HTMLInputElement;
-    custom.style.display = sizeSelect.value === 'custom' ? 'inline-block' : 'none';
-    if (sizeSelect.value === 'custom') custom.focus();
+    if (custom) custom.style.display = sizeSelect.value === 'custom' ? 'inline-block' : 'none';
+    if (sizeSelect.value === 'custom') custom?.focus();
   });
 }
 
@@ -52,7 +52,9 @@ export function bindModeSwitch({
     const pictureModeControls = document.getElementById('pictureModeControls');
 
     if (classFilter)         classFilter.style.display         = mode === 'conjugation' ? 'none' : '';
-    if (listFilter)          listFilter.style.display          = mode === 'conjugation' ? 'none' : '';
+    // The list filter applies in conjugation mode too — Hide/Focus narrows the
+    // verbs you drill just as it narrows any other quiz.
+    if (listFilter)          listFilter.style.display          = '';
     if (directionGroup)      directionGroup.style.display      = mode === 'table'       ? ''     : 'none';
     if (conjModeControls)    conjModeControls.style.display    = mode === 'conjugation' ? ''     : 'none';
     if (pictureModeControls) pictureModeControls.style.display = mode === 'picture'     ? ''     : 'none';

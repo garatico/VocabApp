@@ -38,6 +38,20 @@ interface RenderTableModeOptions {
   onComplete?:   (() => void) | null;
   lang?:         string;
   initialState?: Map<string, InputSnapshot>;
+  /**
+   * Called whenever the answered count changes, with the counts for the words
+   * currently rendered. When supplied, the caller owns the progress bar — used
+   * by pagination so the bar can report the whole quiz rather than one page.
+   */
+  onProgress?:   ((answeredOnPage: number, totalOnPage: number) => void) | null;
+}
+
+/**
+ * The text a word reveals to, given a direction. Exported so paginated callers
+ * can score words on pages that were never rendered.
+ */
+export function revealTextFor(entry: Word, dir: 'target-en' | 'en-target'): string {
+  return dir === 'en-target' ? entry.word : buildGlossDisplay(entry);
 }
 
 export function renderTableMode({
@@ -48,6 +62,7 @@ export function renderTableMode({
   onComplete   = null,
   lang         = (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? 'spanish',
   initialState = new Map<string, InputSnapshot>(),
+  onProgress   = null,
 }: RenderTableModeOptions): TableController {
   if (!(container instanceof HTMLElement)) {
     throw new Error('renderTableMode: container element required');
@@ -73,7 +88,7 @@ export function renderTableMode({
   }
 
   function revealText(entry: Word, dir: 'target-en' | 'en-target'): string {
-    return dir === 'en-target' ? entry.word : buildGlossDisplay(entry);
+    return revealTextFor(entry, dir);
   }
 
   function checkInput(input: string, entry: Word, dir: 'target-en' | 'en-target'): boolean {
@@ -96,6 +111,14 @@ export function renderTableMode({
     const allInputs = Array.from(container.querySelectorAll<HTMLInputElement>('input[data-word]'));
     const correct   = allInputs.filter(inp => inp.disabled).length;
     const total     = allInputs.length;
+
+    // Paginated callers render the bar (and own the Give Up button state)
+    // themselves, so it can span every page rather than just this one.
+    if (onProgress) {
+      onProgress(correct, total);
+      return;
+    }
+
     const pct       = total > 0 ? Math.round((correct / total) * 100) : 0;
     const statsText = correct + '/' + total + ' answered';
 
@@ -121,6 +144,8 @@ export function renderTableMode({
     btn.title       = lists.length > 0 ? 'In lists: ' + lists.join(', ') : 'Add to a list';
     btn.textContent = '★';
     btn.hidden      = true;
+    // Keep Tab moving input → input; the star is still reachable by click.
+    btn.tabIndex    = -1;
 
     btn.addEventListener('click', e => {
       e.stopPropagation();
@@ -210,6 +235,8 @@ export function renderTableMode({
         const revealBtn = document.createElement('button');
         revealBtn.type      = 'button';
         revealBtn.className = 'reveal-btn';
+        // Tab should land on the next word's input, not on this button.
+        revealBtn.tabIndex  = -1;
 
         // ── Correct answer handler ───────────────────────────────────────────
         inp.addEventListener('input', () => {
@@ -278,7 +305,13 @@ export function renderTableMode({
         }
 
         // ── Append input, then hint button based on hintMode ─────────────────
-        tdInput.appendChild(inp);
+        // The row wrapper is a plain div, not the <td> itself: making the cell
+        // a flex container would take it out of the table layout and break the
+        // fixed column widths.
+        const inputRow = document.createElement('div');
+        inputRow.className = 'input-row';
+        tdInput.appendChild(inputRow);
+        inputRow.appendChild(inp);
 
         if (hintMode === 'none') {
           // No hint button
@@ -299,15 +332,15 @@ export function renderTableMode({
               doFullReveal();
             }
           });
-          tdInput.appendChild(revealBtn);
+          inputRow.appendChild(revealBtn);
         } else {
           revealBtn.textContent = '?';
           revealBtn.title       = 'Reveal answer (counts as missed)';
           revealBtn.addEventListener('click', doFullReveal);
-          tdInput.appendChild(revealBtn);
+          inputRow.appendChild(revealBtn);
         }
 
-        tdInput.appendChild(knownBtn);
+        inputRow.appendChild(knownBtn);
         tr.appendChild(tdWord);
         tr.appendChild(tdInput);
       }

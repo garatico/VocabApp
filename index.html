@@ -92,10 +92,10 @@
                 <option value="max">Max</option>
                 <option value="custom">Custom...</option>
               </select>
-              <input type="number" id="sizeCustom" min="1" max="9999" placeholder="e.g. 75" style="display:none;"/>
-              <div class="sort-order-toggle" id="sizeModeToggle" title="Top N: literal words 1–N. N New: always returns N words not in your lists, pulling deeper if needed.">
-                <button type="button" class="sort-order-btn active" data-mode="window">Top N</button>
-                <button type="button" class="sort-order-btn" data-mode="fill">N New</button>
+              <input type="number" id="sizeCustom" min="1" max="9999" step="1" placeholder="e.g. 750" style="display:none;"/>
+              <div class="sort-order-toggle" id="sizeModeToggle" title="By rank: the words ranked 1–N, whatever their status. Skip known: N words that aren't on any of your lists, digging further down the frequency list as needed.">
+                <button type="button" class="sort-order-btn active" data-mode="window" title="Take the words ranked 1–N in frequency order">By Rank</button>
+                <button type="button" class="sort-order-btn" data-mode="fill" title="Always return N words you haven't listed yet, pulling deeper if needed">Skip Known</button>
               </div>
             </div>
           </div>
@@ -126,31 +126,42 @@
         </div>
 
         <div id="classFilter">
-          <span class="filter-section-label">Part of Speech</span>
-          <button type="button" class="pos-chip pos-chip-all active">All</button>
-          <button type="button" class="pos-chip" data-pos="verb">Verbs</button>
-          <button type="button" class="pos-chip" data-pos="noun">Nouns</button>
-          <button type="button" class="pos-chip" data-pos="adjective">Adjectives</button>
-          <button type="button" class="pos-chip" data-pos="adverb">Adverbs</button>
-          <button type="button" class="pos-chip" data-pos="pronoun">Pronouns</button>
-          <button type="button" class="pos-chip" data-pos="preposition">Prepositions</button>
-          <button type="button" class="pos-chip" data-pos="conjunction">Conjunctions</button>
-          <button type="button" class="pos-chip" data-pos="article">Articles</button>
+          <button type="button" class="filter-collapse-btn" data-collapse="classFilterBody" aria-expanded="false" aria-controls="classFilterBody">
+            <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
+            <span class="filter-section-label">Part of Speech</span>
+          </button>
+          <div id="classFilterBody" class="filter-body">
+            <button type="button" class="pos-chip pos-chip-all active">All</button>
+            <button type="button" class="pos-chip" data-pos="verb">Verbs</button>
+            <button type="button" class="pos-chip" data-pos="noun">Nouns</button>
+            <button type="button" class="pos-chip" data-pos="adjective">Adjectives</button>
+            <button type="button" class="pos-chip" data-pos="adverb">Adverbs</button>
+            <button type="button" class="pos-chip" data-pos="pronoun">Pronouns</button>
+            <button type="button" class="pos-chip" data-pos="preposition">Prepositions</button>
+            <button type="button" class="pos-chip" data-pos="conjunction">Conjunctions</button>
+            <button type="button" class="pos-chip" data-pos="article">Articles</button>
+          </div>
         </div>
 
         <div id="listFilter">
           <div class="list-filter-wrap">
             <div class="list-filter-header">
-              <span class="filter-section-label">Lists</span>
+              <button type="button" class="filter-collapse-btn" data-collapse="listFilterBody" aria-expanded="false" aria-controls="listFilterBody">
+                <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
+                <span class="filter-section-label">Lists</span>
+              </button>
               <div class="list-filter-toggle" id="listFilterMode">
-                <button type="button" class="list-filter-btn active" data-mode="hide">Hide</button>
-                <button type="button" class="list-filter-btn" data-mode="focus">Focus</button>
+                <button type="button" class="list-filter-btn" data-mode="off" title="Ignore lists entirely — every word stays in the quiz">Off</button>
+                <button type="button" class="list-filter-btn active" data-mode="hide" title="Remove words on the checked lists from the quiz">Hide</button>
+                <button type="button" class="list-filter-btn" data-mode="focus" title="Quiz only words on the checked lists">Focus</button>
               </div>
               <span class="list-filter-count">(<span id="knownWordCount">0</span> listed)</span>
             </div>
-            <p class="list-filter-desc" id="listFilterDesc"></p>
-            <div class="list-filter-checkboxes" id="listFilterCheckboxes">
-              <span class="list-filter-empty">No lists yet — create one in My Lists</span>
+            <div id="listFilterBody" class="filter-body">
+              <p class="list-filter-desc" id="listFilterDesc"></p>
+              <div class="list-filter-checkboxes" id="listFilterCheckboxes">
+                <span class="list-filter-empty">No lists yet — create one in My Lists</span>
+              </div>
             </div>
           </div>
         </div>
@@ -159,27 +170,43 @@
         <div id="conjModeControls" class="mode-filter-panel" style="display:none">
           <!-- Top row: Display + Tense, each with label above -->
           <div class="conj-top-controls">
-            <div class="conj-control-group">
-              <span class="filter-section-label">Display</span>
-              <div class="conj-display-toggle" id="conjDisplayToggle">
-                <button class="conj-toggle-btn" data-mode="target">Spanish</button>
-                <button class="conj-toggle-btn active" data-mode="both">Spanish + English</button>
-                <button class="conj-toggle-btn" data-mode="english">English</button>
+            <div class="conj-control-group conj-control-group--full filter-box">
+              <button type="button" class="filter-collapse-btn" data-collapse="conjDisplayBody" aria-expanded="false" aria-controls="conjDisplayBody">
+                <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
+                <span class="filter-section-label">Display</span>
+              </button>
+              <div id="conjDisplayBody" class="filter-body">
+                <div class="conj-display-toggle" id="conjDisplayToggle">
+                  <button class="conj-toggle-btn" data-mode="target">Spanish</button>
+                  <button class="conj-toggle-btn active" data-mode="both">Spanish + English</button>
+                  <button class="conj-toggle-btn" data-mode="english">English</button>
+                </div>
               </div>
             </div>
-            <div class="conj-control-group">
+          </div>
+
+          <div class="conj-control-group conj-control-group--full filter-box">
+            <button type="button" class="filter-collapse-btn" data-collapse="conjTenseBody" aria-expanded="false" aria-controls="conjTenseBody">
+              <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
               <span class="filter-section-label">Tense</span>
+            </button>
+            <div id="conjTenseBody" class="filter-body">
               <select id="conjTenseSelect"><!-- populated by JS based on language --></select>
             </div>
           </div>
           <!-- Forms row: label + All/None above, 2×3 pronoun grid below -->
-          <div id="conjPronounRow" class="conj-pronoun-row">
+          <div id="conjPronounRow" class="conj-pronoun-row filter-box">
             <div class="conj-forms-header">
-              <span class="filter-section-label">Forms</span>
+              <button type="button" class="filter-collapse-btn" data-collapse="conjFormsBody" aria-expanded="false" aria-controls="conjFormsBody">
+                <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
+                <span class="filter-section-label">Forms</span>
+              </button>
               <button type="button" id="conjFormsAll">All</button>
               <button type="button" id="conjFormsNone">None</button>
             </div>
-            <div id="conjPronounToggles" class="conj-pronoun-toggles"></div>
+            <div id="conjFormsBody" class="filter-body">
+              <div id="conjPronounToggles" class="conj-pronoun-toggles"></div>
+            </div>
           </div>
         </div>
 
@@ -199,10 +226,13 @@
 
         <div id="domainFilterWrap">
           <div id="domainFilterHeader">
-            <span id="domainFilterLabel">Domains <span id="domainFilterCount"></span></span>
+            <button type="button" class="filter-collapse-btn" data-collapse="domainFilterBody" aria-expanded="false" aria-controls="domainFilterBody">
+              <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
+              <span id="domainFilterLabel" class="filter-section-label">Domains <span id="domainFilterCount"></span></span>
+            </button>
             <button type="button" id="clearAllDomains" style="display:none">Clear all</button>
           </div>
-          <div id="domainFilterBody"></div>
+          <div id="domainFilterBody" class="filter-body"></div>
         </div>
 
 
@@ -218,24 +248,60 @@
 
       <section id="tableArea">
         <div class="progressWrap">
-          <div class="progress"><div id="tableBarTop" class="bar"></div></div>
+          <div class="progress">
+            <div id="tableBarTop" class="bar"></div>
+            <div id="tableBarTopRevealed" class="bar-revealed"></div>
+            <div id="tableBarTopMissed" class="bar-missed"></div>
+          </div>
           <div id="tableStatsTop" class="small"></div>
         </div>
+        <div id="tableScoreTop" class="quiz-score"></div>
         <div id="tableSummaryTop" class="quiz-summary" style="display:none"></div>
 
         <div id="tableControls" class="controls-row">
-          <button id="tableJumpBtn" title="Jump to first unanswered (Ctrl+/)">↓ Gap</button>
+          <button id="tableJumpBtn" title="Jump to the first word you haven't answered (Ctrl+/)">↓ Next gap</button>
           <button id="tableExport">Export CSV</button>
           <button id="tableReset">Give Up</button>
         </div>
+
+        <div class="table-nav" id="tableJumpTop">
+          <div class="table-nav-side"></div>
+          <div class="table-pager" id="tablePagerTop" hidden>
+            <button type="button" class="pager-btn" data-page="prev" aria-label="Previous page">&#x2190;</button>
+            <span class="pager-status" id="tablePagerStatusTop"></span>
+            <button type="button" class="pager-btn" data-page="next" aria-label="Next page">&#x2192;</button>
+          </div>
+          <div class="table-nav-side table-nav-side--end">
+            <button type="button" class="jump-btn" data-jump="bottom">&#x2193; Jump to Bottom</button>
+          </div>
+        </div>
+
         <div id="tableWrap"></div>
+
+        <div class="table-nav" id="tableJumpBottom">
+          <div class="table-nav-side"></div>
+          <div class="table-pager" id="tablePagerBottom" hidden>
+            <button type="button" class="pager-btn" data-page="prev" aria-label="Previous page">&#x2190;</button>
+            <span class="pager-status" id="tablePagerStatusBottom"></span>
+            <button type="button" class="pager-btn" data-page="next" aria-label="Next page">&#x2192;</button>
+          </div>
+          <div class="table-nav-side table-nav-side--end">
+            <button type="button" class="jump-btn" data-jump="top">&#x2191; Jump to Top</button>
+          </div>
+        </div>
+
         <div id="tableFeedback" class="feedback"></div>
         <div id="tableSummary" class="quiz-summary" style="display:none"></div>
 
         <div class="progressWrap">
-          <div class="progress"><div id="tableBarBottom" class="bar"></div></div>
+          <div class="progress">
+            <div id="tableBarBottom" class="bar"></div>
+            <div id="tableBarBottomRevealed" class="bar-revealed"></div>
+            <div id="tableBarBottomMissed" class="bar-missed"></div>
+          </div>
           <div id="tableStatsBottom" class="small"></div>
         </div>
+        <div id="tableScoreBottom" class="quiz-score"></div>
       </section>
 
       <section id="recallArea" hidden>
@@ -327,6 +393,20 @@
                 <button type="button" class="sort-order-btn" data-cols="1">1</button>
                 <button type="button" class="sort-order-btn active" data-cols="2">2</button>
                 <button type="button" class="sort-order-btn" data-cols="3">3</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Words per page</span>
+                <span class="settings-desc">How many words a table page shows before it splits into pages you step through with the arrows — All puts everything on one page</span>
+              </div>
+              <div class="sort-order-toggle" id="settingPageSize">
+                <button type="button" class="sort-order-btn" data-pagesize="25">25</button>
+                <button type="button" class="sort-order-btn" data-pagesize="50">50</button>
+                <button type="button" class="sort-order-btn active" data-pagesize="100">100</button>
+                <button type="button" class="sort-order-btn" data-pagesize="200">200</button>
+                <button type="button" class="sort-order-btn" data-pagesize="all">All</button>
               </div>
             </div>
 

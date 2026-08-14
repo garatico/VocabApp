@@ -53,6 +53,29 @@
   gap: 0.25rem;
 }
 
+/* Tense sits on its own row below Display, spanning the panel like the other
+   filter blocks */
+.conj-control-group--full {
+  width: 100%;
+  flex: 1 1 100%;
+}
+.conj-control-group--full #conjTenseSelect,
+.conj-control-group--full .conj-display-toggle {
+  width: 100%;
+  max-width: none;
+}
+/* Segments share the width evenly when the toggle spans the panel */
+.conj-control-group--full .conj-display-toggle .conj-toggle-btn {
+  flex: 1;
+  justify-content: center;
+}
+
+/* Stack the top controls so Display and Tense each get a full-width row */
+.conj-top-controls {
+  flex-direction: column;
+  align-items: stretch;
+}
+
 /* Segmented display toggle */
 /* .conj-display-toggle and .conj-toggle-btn share rules with .sort-order-toggle/.sort-order-btn
    defined in controls-bar.css — only overrides belong here. */
@@ -94,53 +117,8 @@
   box-shadow: var(--shadow-sm);
 }
 
-.conj-prog-bars {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  min-width: 0;
-}
-
-.conj-prog-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.conj-prog-label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  width: 38px;
-  flex-shrink: 0;
-}
-
-.conj-prog-track {
-  flex: 1;
-  height: 8px;
-  background: var(--surface2);
-  border-radius: 99px;
-  overflow: hidden;
-}
-
-.conj-prog-fill {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, var(--accent), var(--accent-hover, var(--accent)));
-  border-radius: 99px;
-  transition: width 0.35s ease;
-}
-
-.conj-prog-stat {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-  min-width: 110px;
-  text-align: right;
-}
+/* (The old .conj-prog-* thin bars were replaced by the shared .progress /
+   .quiz-score components — see .conj-progress-block below.) */
 
 /* Give Up button */
 .conj-giveup-btn {
@@ -218,7 +196,7 @@
 
 .conj-row {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;   /* pronoun · input · reveal */
   align-items: center;
   gap: 0.4rem;
   padding: 0.4rem 0.65rem;
@@ -272,15 +250,58 @@
   -webkit-text-fill-color: var(--correct);
 }
 
-/* Give Up revealed — locked red */
+/* Peeked with the ? button — locked yellow, matching table mode */
 .conj-drill-input.revealed,
 .conj-drill-input.revealed:disabled {
+  border-color: color-mix(in srgb, var(--warning) 60%, transparent);
+  background: var(--warning-light);
+  color: color-mix(in srgb, var(--warning) 75%, var(--text));
+  cursor: default;
+  opacity: 1;
+  -webkit-text-fill-color: color-mix(in srgb, var(--warning) 75%, var(--text));
+}
+
+/* Given up — locked red */
+.conj-drill-input.missed,
+.conj-drill-input.missed:disabled {
   border-color: var(--incorrect);
   background: var(--incorrect-light);
   color: var(--incorrect);
   cursor: default;
   opacity: 1;
   -webkit-text-fill-color: var(--incorrect);
+}
+
+/* Per-form reveal button — sized for this row rather than the table's em scale */
+.conj-reveal-btn {
+  font-size: 0.8rem;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 0.3rem;
+}
+.conj-reveal-btn[hidden] { display: none; }
+
+/* Progress block: bar + score pills, stacked left of the Give Up button */
+.conj-progress-block {
+  flex: 1;
+  min-width: 0;
+}
+.conj-progress-block .progressWrap { margin-top: 0; }
+
+/* Two labelled progress groups (Forms and Verbs) stacked in the header block */
+.conj-progress-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.quiz-progress-group { min-width: 0; }
+.progress-group-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 0.15rem;
 }
 
 /* ── Pronoun toggle row (Forms) ── */
@@ -290,9 +311,13 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 0.35rem;
-  padding-top: 0.45rem;
-  border-top: 1px solid var(--border);
+  /* padding and border come from .filter-box — it's a boxed filter now */
+  padding: 0.4rem 0.6rem 0.5rem;
+  margin-top: 0.5rem;
 }
+/* Single-form tenses hide this row via the hidden attribute, which an author
+   `display` rule would otherwise override. */
+.conj-pronoun-row[hidden] { display: none; }
 
 /* All / None + label on one line above the grid */
 .conj-forms-header {
@@ -331,9 +356,12 @@
 }
 
 .conj-pronoun-toggle {
-  padding: 0.25rem 0.7rem;
-  font-size: 0.74rem;
-  font-weight: 600;
+  padding: 0.9rem 2rem;
+  min-height: 3.4rem;
+  min-width: 9rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   border: none;
   border-radius: 0;
   background: var(--surface);
@@ -366,8 +394,7 @@
   .conj-pronoun           { width: 62px; font-size: 0.72rem; }
   .conj-drill-input       { font-size: 0.82rem; }
   .conj-progress-section  { flex-wrap: wrap; }
-  .conj-prog-stat         { min-width: 90px; }
-  .conj-pronoun-toggle    { padding: 0.22rem 0.55rem; font-size: 0.7rem; }
+  .conj-pronoun-toggle    { padding: 0.7rem 1.2rem; min-height: 3rem; min-width: 7rem; font-size: 1.05rem; }
   #conjTenseSelect        { max-width: none; }
 }
 

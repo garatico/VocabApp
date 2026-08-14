@@ -428,6 +428,268 @@ export function renderMyLists(container: HTMLElement): void {
     const addResults = document.createElement('ul');
     addResults.className = 'ml-add-results'; addResults.hidden = true;
     addSection.appendChild(addResults);
+
+    // ── Bulk import ───────────────────────────────────────────────────────────
+    // Paste or drop a CSV / comma- or newline-separated list. Words are matched
+    // against the vocabulary for this language; anything unmatched is reported
+    // back rather than silently dropped.
+    const bulkToggle = document.createElement('button');
+    bulkToggle.type = 'button';
+    bulkToggle.className = 'ml-bulk-toggle';
+    bulkToggle.textContent = '⇪ Bulk import';
+    bulkToggle.title = 'Add many words at once from a pasted list or CSV file';
+
+    const bulkPanel = document.createElement('div');
+    bulkPanel.className = 'ml-bulk-panel';
+    bulkPanel.hidden = true;
+
+    const bulkArea = document.createElement('textarea');
+    bulkArea.className = 'ml-bulk-input';
+    bulkArea.rows = 4;
+    bulkArea.placeholder = 'hablar, comer, casa\nperro\nlibro…';
+
+    const bulkRow = document.createElement('div');
+    bulkRow.className = 'ml-bulk-row';
+
+    const bulkFile = document.createElement('input');
+    bulkFile.type = 'file';
+    bulkFile.accept = '.csv,.txt,text/csv,text/plain';
+    bulkFile.className = 'ml-bulk-file';
+
+    const bulkAdd = document.createElement('button');
+    bulkAdd.type = 'button';
+    bulkAdd.className = 'ml-bulk-add';
+    bulkAdd.textContent = 'Add to list';
+
+    const bulkReport = document.createElement('div');
+    bulkReport.className = 'ml-bulk-report';
+
+    bulkRow.append(bulkFile, bulkAdd);
+    bulkPanel.append(bulkArea, bulkRow, bulkReport);
+
+    bulkToggle.addEventListener('click', () => {
+      bulkPanel.hidden = !bulkPanel.hidden;
+      if (!bulkPanel.hidden) bulkArea.focus();
+    });
+
+    bulkFile.addEventListener('change', () => {
+      const file = bulkFile.files?.[0];
+      if (!file) return;
+      file.text().then(text => {
+        bulkArea.value = bulkArea.value ? `${bulkArea.value}\n${text}` : text;
+      }).catch(() => {
+        bulkReport.textContent = 'Could not read that file.';
+      });
+    });
+
+    /** Split on commas, newlines, tabs and semicolons; trim quotes and blanks. */
+    function parseBulk(text: string): string[] {
+      return text
+        .split(/[,\n\r\t;]+/)
+        .map(s => s.trim().replace(/^["']|["']$/g, ''))
+        .filter(Boolean);
+    }
+
+    /**
+     * Candidate matches for a token that didn't match exactly — inflections and
+     * near-spellings, e.g. "hablo"/"hablamos" → hablar, "gato" → gata.
+     */
+    function findVariations(token: string): VocabEntry[] {
+      const t = norm(token);
+      if (t.length < 3) return [];
+      const stem = t.slice(0, Math.max(3, t.length - 3));
+      return allVocab
+        .filter(e => {
+          const w = norm(e.word);
+          return w !== t && (w.startsWith(stem) || t.startsWith(norm(e.word).slice(0, Math.max(3, w.length - 2))));
+        })
+        .slice(0, 6);
+    }
+
+    /** Ask which of several candidates the user meant; resolves to picks. */
+    function askVariations(
+      pending: { token: string; options: VocabEntry[]; preferred?: string }[],
+    ): Promise<string[]> {
+      return new Promise(resolve => {
+        const chosen: string[] = [];
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'ml-variation-backdrop';
+
+        const dialog = document.createElement('div');
+        dialog.className = 'ml-variation-dialog';
+        dialog.setAttribute('role', 'dialog');
+        dialog.setAttribute('aria-modal', 'true');
+
+        const title = document.createElement('div');
+        title.className = 'ml-variation-title';
+        title.textContent = pending.length === 1
+          ? '1 word needs a choice'
+          : `${pending.length} words need a choice`;
+
+        const sub = document.createElement('div');
+        sub.className = 'ml-variation-sub';
+        sub.textContent = 'These weren’t exact matches. Pick the entry you meant, or skip.';
+
+        const body = document.createElement('div');
+        body.className = 'ml-variation-body';
+
+        pending.forEach(({ token, options, preferred }) => {
+          const row = document.createElement('div');
+          row.className = 'ml-variation-row';
+
+          const label = document.createElement('div');
+          label.className = 'ml-variation-token';
+          label.textContent = token;
+
+          const opts = document.createElement('div');
+          opts.className = 'ml-variation-options';
+
+          options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'ml-variation-option';
+            btn.textContent = opt.word + (opt.translation ? ` — ${opt.translation}` : '');
+            btn.addEventListener('click', () => {
+              const active = opts.querySelector('.ml-variation-option--picked');
+              if (active === btn) {
+                btn.classList.remove('ml-variation-option--picked');
+                row.dataset.picked = '';
+              } else {
+                active?.classList.remove('ml-variation-option--picked');
+                btn.classList.add('ml-variation-option--picked');
+                row.dataset.picked = opt.word;
+              }
+            });
+            if (preferred && opt.word === preferred) {
+              btn.classList.add('ml-variation-option--picked');
+              row.dataset.picked = opt.word;
+            }
+            opts.appendChild(btn);
+          });
+
+          row.append(label, opts);
+          body.appendChild(row);
+        });
+
+        const actions = document.createElement('div');
+        actions.className = 'ml-variation-actions';
+        const skipBtn = document.createElement('button');
+        skipBtn.type = 'button'; skipBtn.className = 'ml-variation-skip';
+        skipBtn.textContent = 'Skip all';
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button'; addBtn.className = 'ml-variation-add';
+        addBtn.textContent = 'Add selected';
+        actions.append(skipBtn, addBtn);
+
+        function close(result: string[]): void {
+          backdrop.remove();
+          resolve(result);
+        }
+
+        skipBtn.addEventListener('click', () => close([]));
+        addBtn.addEventListener('click', () => {
+          body.querySelectorAll<HTMLElement>('.ml-variation-row').forEach(r => {
+            if (r.dataset.picked) chosen.push(r.dataset.picked);
+          });
+          close(chosen);
+        });
+        backdrop.addEventListener('click', e => { if (e.target === backdrop) close([]); });
+
+        dialog.append(title, sub, body, actions);
+        backdrop.appendChild(dialog);
+        document.body.appendChild(backdrop);
+      });
+    }
+
+    bulkAdd.addEventListener('click', () => {
+      const tokens = parseBulk(bulkArea.value);
+      if (tokens.length === 0) {
+        bulkReport.textContent = 'Nothing to import — paste some words first.';
+        return;
+      }
+
+      // Keyed on the accent-stripped form, so "como" finds both *como* and
+      // *cómo*. Several entries can share a key — that's the ambiguity we ask
+      // about rather than silently picking one.
+      const byWord = new Map<string, VocabEntry[]>();
+      for (const entry of allVocab) {
+        const key = norm(entry.word);
+        const bucket = byWord.get(key);
+        if (bucket) bucket.push(entry);
+        else byWord.set(key, [entry]);
+      }
+
+      const existing = new Set(getList(lang, selectedList).map(w => w.toLowerCase()));
+      const added: string[] = [];
+      const already: string[] = [];
+      const unmatched: string[] = [];
+      const ambiguous: { token: string; options: VocabEntry[]; preferred?: string }[] = [];
+
+      function take(word: string): void {
+        if (existing.has(word.toLowerCase())) return;
+        addToList(lang, selectedList, word);
+        existing.add(word.toLowerCase());
+        added.push(word);
+      }
+
+      for (const token of tokens) {
+        const matches = byWord.get(norm(token)) ?? [];
+
+        // Several spellings differing only by accent (como / cómo) — always ask,
+        // even when one of them is typed exactly, since the accent carries the
+        // meaning. An exact hit is pre-selected so confirming is one click.
+        if (matches.length > 1) {
+          const exact = matches.find(m => m.word.toLowerCase() === token.toLowerCase());
+          ambiguous.push({ token, options: matches, preferred: exact?.word });
+          continue;
+        }
+
+        if (matches.length === 1) {
+          const only = matches[0].word;
+          if (existing.has(only.toLowerCase())) already.push(token);
+          else take(only);
+          continue;
+        }
+
+        const options = findVariations(token);
+        if (options.length > 0) ambiguous.push({ token, options });
+        else                    unmatched.push(token);
+      }
+
+      function finish(): void {
+        const parts = [`Added ${added.length}`];
+        if (already.length)   parts.push(`${already.length} already listed`);
+        if (unmatched.length) {
+          const preview = unmatched.slice(0, 8).join(', ');
+          parts.push(`${unmatched.length} not found (${preview}${unmatched.length > 8 ? '…' : ''})`);
+        }
+        bulkReport.textContent = parts.join(' · ');
+
+        if (added.length > 0) {
+          bulkArea.value = '';
+          countBadge.textContent = String(getList(lang, selectedList).length) + ' words';
+          updateBadge(); renderWords(filterInp.value.trim()); renderSidebar();
+        }
+      }
+
+      if (ambiguous.length > 0) {
+        void askVariations(ambiguous).then(picks => {
+          picks.forEach(take);
+          // Anything left unpicked is reported as not found
+          const picked = new Set(picks.map(p => norm(p)));
+          ambiguous.forEach(({ token, options }) => {
+            if (!options.some(o => picked.has(norm(o.word)))) unmatched.push(token);
+          });
+          finish();
+        });
+        return;
+      }
+
+      finish();
+    });
+
+    addSection.append(bulkToggle, bulkPanel);
     panel.appendChild(addSection);
 
     // Word list
@@ -766,6 +1028,9 @@ export function renderMyLists(container: HTMLElement): void {
           countBadge.textContent = String(getList(lang, selectedList).length) + ' words';
           updateBadge();
           if (addInp.value.trim()) renderAddResults(addInp.value.trim());
+          // Re-render the word list too, or the removed row stays on screen
+          // until some other action happens to redraw it.
+          renderWords(filterInp.value.trim());
           renderSidebar();
         });
 

@@ -14,17 +14,28 @@ const FILTER_STATE_PREFIX  = 'vq_listfilter_';
 
 type ListStore = Record<string, string[]>;
 
+/** 'off' keeps your list selections but stops them filtering the quiz. */
+export type ListFilterMode = 'off' | 'hide' | 'focus';
+
 export interface ListFilterState {
-  mode:     'hide' | 'focus';
+  mode:     ListFilterMode;
   selected: string[];
 }
+
+const LIST_FILTER_MODES: ListFilterMode[] = ['off', 'hide', 'focus'];
+
+export const LIST_FILTER_DESC: Record<ListFilterMode, string> = {
+  off:   'Lists are ignored — every word is in play',
+  hide:  'Checked lists are removed from the quiz',
+  focus: 'Quiz shows only words from checked lists',
+};
 
 export function getListFilterState(lang: string): ListFilterState {
   try {
     const raw = localStorage.getItem(FILTER_STATE_PREFIX + lang.toLowerCase());
     if (raw) {
       const parsed = JSON.parse(raw) as ListFilterState;
-      if ((parsed.mode === 'hide' || parsed.mode === 'focus') && Array.isArray(parsed.selected)) {
+      if (LIST_FILTER_MODES.includes(parsed.mode) && Array.isArray(parsed.selected)) {
         return parsed;
       }
     }
@@ -242,9 +253,7 @@ export function refreshFilterSelect(lang: string): void {
   // Description line — explains what the active mode does in plain language
   const desc = document.getElementById('listFilterDesc');
   if (desc) {
-    desc.textContent = state.mode === 'hide'
-      ? 'Checked lists are removed from the quiz'
-      : 'Quiz shows only words from checked lists';
+    desc.textContent = LIST_FILTER_DESC[state.mode];
   }
 
   // Update total-count badge

@@ -40,7 +40,25 @@
 }
 
 /* Size select + custom input + mode toggle side by side */
-.size-row { display: flex; gap: 0.35rem; align-items: center; }
+/* ── Shared control sizing across the whole controls bar ──
+   Language, Words, Order and Direction all use the same height and type scale
+   so the row reads as one set of controls. */
+#controls :is(#langSelect, #sizeSelect) {
+  min-height: 40px;
+  font-size: 0.92rem;
+  padding: 0.3rem 2rem 0.3rem 0.7rem;   /* room for the dropdown chevron */
+}
+/* The select must fit its longest option ("Custom…") without clipping */
+#sizeSelect { min-width: 8.5rem; }
+#langSelect { min-width: 9rem; }
+
+#controls :is(#sortOrderToggle, #directionToggle, #sizeModeToggle) :is(.sort-order-btn, .conj-toggle-btn) {
+  min-height: 40px;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.85rem;
+}
+
+.size-row { display: flex; gap: 0.4rem; align-items: stretch; }
 
 /* Vertical divider between control groups */
 .controls-sep {
@@ -73,9 +91,11 @@
   border-top: 1px solid var(--border-strong);
 }
 
-/* Within mode panels, labels head a section → use full text colour */
+/* Within mode panels, labels head a section → use full text colour.
+   In the collapsible sections the label is nested inside the toggle button. */
 .mode-filter-panel .conj-control-group > .filter-section-label,
-.mode-filter-panel .conj-forms-header  > .filter-section-label {
+.mode-filter-panel .conj-forms-header  > .filter-section-label,
+.mode-filter-panel .filter-collapse-btn .filter-section-label {
   color: var(--text);
   letter-spacing: 0.06em;
 }

@@ -1,9 +1,8 @@
 import { Quiz }                          from './quiz/quiz.ts';
-import { renderTableMode }                from './modes/table-mode.ts';
 import { renderRecallMode }               from './modes/recall-mode.ts';
 import { renderPictureMode }              from './modes/picture-mode.ts';
 import { renderConjugationMode }          from './modes/conjugation/index.ts';
-import { setTableController }             from './modes/table-controls.ts';
+import { startTableQuiz }                 from './modes/table-controls.ts';
 import { setQuiz }                        from './quiz/quiz-controls.ts';
 import { filterWords }                    from './filters/word-filters.ts';
 import { Settings }                       from './settings.ts';
@@ -150,14 +149,15 @@ export function bindStartHandler({
           if (el) { el.style.display = 'none'; el.innerHTML = ''; }
         });
 
-        const tableController = renderTableMode({
-          words: list,
-          container: tableWrap,
+        startTableQuiz({
+          words:     list,
           columns:   getCols({ max: 5, fallback: 2 }),
           direction: (getDirection ? getDirection() : 'target-en') as import('./modes/table-mode.ts').TableDirection,
+          lang:      getFullLang ? getFullLang() : 'spanish',
           onComplete: () => {
-            const correct = list.length;
-            const html = `<span class="summary-correct">✓ ${correct} correct</span><span class="summary-pct">100%</span>`;
+            // Counts live in the score block under the bar — this is just the
+            // "you finished" flourish.
+            const html = `<span class="summary-pct">100%</span>`;
             ['tableSummary', 'tableSummaryTop'].forEach(id => {
               const el = document.getElementById(id);
               if (!el) return;
@@ -167,7 +167,6 @@ export function bindStartHandler({
             });
           }
         });
-        setTableController(tableController);
       }
 
       if (currentMode === 'recall') {

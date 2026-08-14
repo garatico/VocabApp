@@ -4,6 +4,7 @@ import { bindTableControls, resolveDirection } from './modes/table-controls.ts';
 import { bindQuizControls }                    from './quiz/quiz-controls.ts';
 import { bindStartHandler }                    from './start-handler.ts';
 import { bindClassFilter, getSelectedClasses } from './filters/class-filter.ts';
+import { initSectionCollapse }                from './filters/section-collapse.ts';
 import { bindDomainFilter, getSelectedDomains, updateDomainFilter } from './filters/domain-filter.ts';
 import { bindUIState, bindModeSwitch }          from './ui/ui-state.ts';
 import { buildFilterUI, initListFilter }        from './filters/word-filters.ts';
@@ -55,6 +56,15 @@ const S = {
 function restoreSettings(): void {
   if (langSelect) langSelect.value = S.get('vq_lang') ?? 'spanish';
   if (sizeSelect) { const v = S.get('vq_size'); if (v) sizeSelect.value = v; }
+
+  // Custom word count — the select restores itself above, but the number input
+  // it reveals is display:none by default and starts empty, so without this a
+  // refresh silently fell back to the default size.
+  const sizeCustom = document.getElementById('sizeCustom') as HTMLInputElement | null;
+  if (sizeCustom && sizeSelect?.value === 'custom') {
+    sizeCustom.value         = S.get('vq_size_custom') ?? '';
+    sizeCustom.style.display = 'inline-block';
+  }
   const savedSizeMode = S.get('vq_size_mode');
   if (savedSizeMode) {
     document.querySelectorAll<HTMLElement>('#sizeModeToggle .sort-order-btn').forEach(b => {
@@ -187,8 +197,11 @@ sizeSelect?.addEventListener('change', () => {
   void loadAndBuildFilters(langSelect?.value ?? 'spanish');
 });
 
-(document.getElementById('sizeCustom') as HTMLInputElement | null)
-  ?.addEventListener('input', () => loadAndBuildFilters(langSelect?.value ?? 'spanish'));
+const sizeCustomInput = document.getElementById('sizeCustom') as HTMLInputElement | null;
+sizeCustomInput?.addEventListener('input', () => {
+  S.set('vq_size_custom', sizeCustomInput.value);
+  void loadAndBuildFilters(langSelect?.value ?? 'spanish');
+});
 
 document.getElementById('classFilter')
   ?.addEventListener('change', () => loadAndBuildFilters(langSelect?.value ?? 'spanish'));
@@ -240,6 +253,7 @@ void (async function init(): Promise<void> {
   bindUIState();
   bindClassFilter();
   bindDomainFilter();
+  initSectionCollapse();
   bindTableControls();
   bindSettings();
   initShortcuts();

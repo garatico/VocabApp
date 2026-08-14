@@ -25,6 +25,8 @@ button:is(
   .sort-order-btn, .conj-toggle-btn, .list-filter-btn, .filter-toggle-btn,
   .ml-icon-btn, .ml-move-btn, .ml-remove-btn, .ml-add-btn, .ml-add-all-btn,
   .ml-export-btn, .ml-move-tab, .ml-new-list-btn,
+  .reveal-btn, .known-btn, .pager-btn, .jump-btn, .filter-collapse-btn,
+  .ml-bulk-toggle, .ml-variation-option,
   .quiz-nav button
 ):hover:not(:disabled) {
   transform: none;

@@ -13,11 +13,45 @@
   white-space: nowrap;
 }
 
-/* When a filter-section-label heads its own block, give it more presence */
+/* When a filter-section-label heads its own block, give it more presence.
+   Part of Speech, Lists and Domains all use this, via the collapse button. */
 #classFilter > .filter-section-label,
-.list-filter-header > .filter-section-label {
+.list-filter-header > .filter-section-label,
+.filter-collapse-btn .filter-section-label {
   color: var(--text);
+  font-size: 0.74rem;
   letter-spacing: 0.06em;
+}
+
+/* Shared block treatment — Part of Speech, Lists, Domains and the conjugation
+   Display / Tense / Forms panels all sit on the same light tint so they read as
+   one family. */
+#classFilter,
+#listFilter,
+#domainFilterWrap,
+.filter-box {
+  background: color-mix(in srgb, var(--surface2) 45%, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+/* One gap between every filter block, whatever the mode */
+#classFilter,
+#listFilter,
+#domainFilterWrap,
+#conjModeControls .filter-box,
+#pictureModeControls .filter-box {
+  margin-top: 0.5rem;
+}
+#classFilter { margin-top: 0.5rem; }
+.filter-box {
+  padding: 0.4rem 0.6rem 0.5rem;
+}
+
+/* Clicking anywhere in the box that isn't a control toggles the section */
+.filter-block--toggleable { cursor: pointer; }
+.filter-block--toggleable :is(button, input, select, textarea, a, label) {
+  cursor: revert;
 }
 
 #classFilter {
@@ -25,12 +59,51 @@
   flex-wrap: wrap;
   gap: 0.35rem;
   align-items: center;
-  margin-top: 0;
   padding: 0.45rem 0.65rem;
-  background: var(--surface2);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
 }
+
+/* ── Collapsible filter sections (Part of Speech / Lists / Domains) ── */
+
+.filter-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.1rem 0.2rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  /* the label inside carries the type styling */
+  font: inherit;
+  color: inherit;
+}
+.filter-collapse-btn:hover .filter-section-label,
+.filter-collapse-btn:hover .filter-collapse-arrow {
+  color: var(--accent);
+}
+
+.filter-collapse-arrow {
+  display: inline-block;
+  font-size: 0.7rem;
+  line-height: 1;
+  color: var(--text-muted);
+  transition: transform var(--transition-fast), color var(--transition-fast);
+}
+/* Open: points down at the controls. Closed: points at its own label. */
+.filter-collapse-btn[aria-expanded="false"] .filter-collapse-arrow {
+  transform: rotate(-90deg);
+}
+
+.filter-body--collapsed { display: none; }
+
+/* The POS chips live in their own row so the header can sit above them */
+#classFilterBody {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  flex: 1 1 100%;
+}
+#classFilterBody.filter-body--collapsed { display: none; }
 
 /* ── POS pill chips (shared by quiz sidebar + lists mode) ── */
 
@@ -67,11 +140,7 @@
 
 /* ── List filter container — sits below #classFilter ── */
 #listFilter {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
   padding: 0.35rem 0.5rem 0.4rem;
-  margin-top: 0.5rem;
 }
 
 /* ── "Hide known" inline toggle (sits in the POS filter row) ── */
@@ -256,6 +325,11 @@
   color: #fff;
   transform: none;
   box-shadow: none;
+}
+/* Off active → solid slate, so white text stays legible in light mode */
+.list-filter-btn[data-mode="off"].active {
+  background: var(--text-muted);
+  color: var(--surface);
 }
 /* Hide active → accent green */
 .list-filter-btn[data-mode="hide"].active {
