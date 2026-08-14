@@ -73,7 +73,20 @@ CREATE TABLE IF NOT EXISTS word_tags (
     tag     TEXT    NOT NULL,
     UNIQUE(word_id, tag)
 );
+
+-- Indexes. The app's main query pulls every word for a language and attaches
+-- its glosses, examples and tags via correlated subqueries. Without these the
+-- child tables are fully scanned once per word: 9.3 seconds for 8,775 Spanish
+-- rows, versus 27 ms with them.
+CREATE INDEX IF NOT EXISTS idx_word_glosses_word_id  ON word_glosses(word_id);
+CREATE INDEX IF NOT EXISTS idx_word_examples_word_id ON word_examples(word_id);
+CREATE INDEX IF NOT EXISTS idx_word_tags_word_id     ON word_tags(word_id);
+CREATE INDEX IF NOT EXISTS idx_words_language        ON words(language);
+CREATE INDEX IF NOT EXISTS idx_words_lang_rank       ON words(language, rank);
 """
+
+
+INDEXES = [ln for ln in SCHEMA.splitlines() if ln.startswith('CREATE INDEX')]
 
 
 def connect(db_path: Path) -> sqlite3.Connection:
@@ -82,6 +95,22 @@ def connect(db_path: Path) -> sqlite3.Connection:
     conn.execute('PRAGMA foreign_keys = ON')
     conn.execute('PRAGMA journal_mode = WAL')
     return conn
+
+
+def ensure_indexes(conn: sqlite3.Connection) -> int:
+    """
+    Create any missing index. Cheap to run every time (IF NOT EXISTS), and it
+    means a database built before the indexes existed gets them on next sync
+    rather than needing a separate migration anyone could forget.
+    """
+    before = {r[0] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='index'")}
+    for stmt in INDEXES:
+        conn.execute(stmt)
+    conn.commit()
+    after = {r[0] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='index'")}
+    return len(after - before)
 
 
 def open_db(db_path: Path = DB_PATH, create: bool = True) -> sqlite3.Connection:
@@ -102,6 +131,9 @@ def open_db(db_path: Path = DB_PATH, create: bool = True) -> sqlite3.Connection:
             conn = connect(db_path)
             result = conn.execute('PRAGMA integrity_check').fetchone()
             if result and result[0] == 'ok':
+                added = ensure_indexes(conn)
+                if added:
+                    print(f'  Added {added} missing index(es)')
                 return conn
             conn.close()
             print(f'  DB integrity check failed ({result[0]}); rebuilding…')
