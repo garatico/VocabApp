@@ -32,7 +32,13 @@
     "data:images": "python scripts/data/pipeline.py images --write",
     "data:emoji": "python scripts/data/pipeline.py emoji --write",
     "data:check": "python scripts/data/pipeline.py check",
-    "data:env": "python scripts/data/pipeline.py env"
+    "data:env": "python scripts/data/pipeline.py env",
+    "export:vocab": "tsx scripts/export-static-vocab.ts",
+    "native:check": "tsx scripts/build-native.ts check",
+    "build:web": "tsx scripts/build-native.ts web",
+    "build:windows": "tsx scripts/build-native.ts windows",
+    "build:android": "tsx scripts/build-native.ts android",
+    "build:native": "tsx scripts/build-native.ts native"
   },
   "dependencies": {
     "better-sqlite3": "^9.2.2",
