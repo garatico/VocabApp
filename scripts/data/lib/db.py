@@ -1,42 +1,30 @@
-#!/usr/bin/env python3
 """
-sync_db.py
-==========
-Single command to take curated JSONL → fixed up → live in the DB.
+lib/db.py — everything that touches vocabulary.db
+=================================================
+Two jobs:
 
-What it does:
-  1. Loads {lang}_curated.jsonl
-  2. Fills any null preterite/imperfect conjugations (via mlconjug3)
-  3. Fixes cognate translation fields (promotes second gloss when translation == word)
-  4. Writes improved JSONL back
-  5. Imports to vocabulary.db
+  1. Opening the database safely. Every caller gets an integrity check, WAL
+     journalling, foreign keys on, and a hot backup before anything
+     destructive.
+  2. Writing entries into it — the upsert, the child tables, and the small
+     targeted patches the enrich step produces.
 
-Usage:
-    python scripts/data/sync_db.py
-    python scripts/data/sync_db.py --langs spa
-    python scripts/data/sync_db.py --dry-run    # skip DB write
+This module deliberately knows nothing about JSONL files. It takes entries
+(plain dicts) and hands back counts, so it can never disagree with
+lib/curated.py about what is on disk.
 """
 
-import argparse
 import json
 import shutil
 import sqlite3
-import sys
-import warnings
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
-warnings.filterwarnings("ignore")
+from .config import (DB_PATH, LANG_NAMES as LANGS,
+                     rank_to_band, rank_to_difficulty)
 
-SCRIPT_DIR   = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent
-CURATED_DIR  = PROJECT_ROOT / 'data' / 'curated'
-DB_PATH      = PROJECT_ROOT / 'data' / 'vocabulary.db'
-
-from lang_config import LANG_NAMES as LANGS, rank_to_difficulty
-
-# ── Schema ─────────────────────────────────────────────────────────────────────
-
+# Canonical schema. Only used when creating a database from scratch; existing
+# databases are migrated by the one-off scripts in scripts/migrations/.
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS words (
     id                    INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,17 +76,30 @@ CREATE TABLE IF NOT EXISTS word_tags (
 """
 
 
-def open_db(db_path: Path) -> sqlite3.Connection:
-    """Open the DB, rebuilding from scratch if it is missing or malformed."""
-    def _connect(path: Path) -> sqlite3.Connection:
-        conn = sqlite3.connect(str(path))
-        conn.execute('PRAGMA foreign_keys = ON')
-        conn.execute('PRAGMA journal_mode = WAL')
-        return conn
+def connect(db_path: Path) -> sqlite3.Connection:
+    """Open a connection with the pragmas the app expects."""
+    conn = sqlite3.connect(str(db_path))
+    conn.execute('PRAGMA foreign_keys = ON')
+    conn.execute('PRAGMA journal_mode = WAL')
+    return conn
+
+
+def open_db(db_path: Path = DB_PATH, create: bool = True) -> sqlite3.Connection:
+    """
+    Open the database, verifying its integrity first.
+
+    A corrupt database is moved aside as <name>.db.bak and replaced with a
+    fresh one built from SCHEMA.
+
+    create=False is for enrichment scripts that only ever UPDATE existing rows:
+    silently creating an empty database would make them report '0 rows updated'
+    against the wrong file instead of failing loudly.
+    """
+    db_path = Path(db_path)
 
     if db_path.exists():
         try:
-            conn = _connect(db_path)
+            conn = connect(db_path)
             result = conn.execute('PRAGMA integrity_check').fetchone()
             if result and result[0] == 'ok':
                 return conn
@@ -106,145 +107,57 @@ def open_db(db_path: Path) -> sqlite3.Connection:
             print(f'  DB integrity check failed ({result[0]}); rebuilding…')
         except Exception as e:
             print(f'  DB could not be opened ({e}); rebuilding…')
-        # Rename corrupted file as backup
+
+        if not create:
+            raise RuntimeError(f'{db_path} is corrupt and this script will not rebuild it')
+
         backup = db_path.with_suffix('.db.bak')
         shutil.move(str(db_path), str(backup))
         print(f'  Corrupt DB saved as {backup.name}')
 
+    elif not create:
+        raise FileNotFoundError(
+            f'{db_path} does not exist. Run `npm run sync -- --write` to build it first.'
+        )
+
     print(f'  Creating fresh DB at {db_path}')
-    conn = _connect(db_path)
+    conn = connect(db_path)
     conn.executescript(SCHEMA)
     conn.commit()
     return conn
 
-# ── Step 1: load ───────────────────────────────────────────────────────────────
 
-def load_curated(lang: str) -> List[dict]:
-    path = CURATED_DIR / f'{LANGS[lang]}_curated.jsonl'
-    if not path.exists():
-        print(f'  No curated file for {lang}: {path}')
-        return []
-    entries = []
-    with open(path, encoding='utf-8') as f:
-        for lineno, line in enumerate(f, 1):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                entries.append(json.loads(line))
-            except json.JSONDecodeError as e:
-                print(f'  Warning: skipping line {lineno}: {e}')
-    return entries
-
-
-def save_curated(entries: List[dict], lang: str) -> None:
-    path = CURATED_DIR / f'{LANGS[lang]}_curated.jsonl'
-    with open(path, 'w', encoding='utf-8') as f:
-        for e in entries:
-            f.write(json.dumps(e, ensure_ascii=False) + '\n')
-
-
-# ── Step 2: fill conjugations ──────────────────────────────────────────────────
-# Spanish verbs now use the rule engine (conjugation_class + overrides) so
-# mlconjug3 filling is no longer needed for Spanish.  Other languages that
-# still store a full conjugations dict are handled here.
-
-def fill_conjugations(entries: List[dict], lang: str) -> int:
-    """Fill null preterite/imperfect for verbs that use the legacy conjugations
-    dict (non-Spanish languages).  Spanish is skipped — its verbs use the
-    rule engine via conjugation_class + overrides instead."""
-    if lang == 'spa':
-        return 0  # Spanish uses verb_rules engine, not mlconjug3
-
+def backup_db(db_path: Path = DB_PATH) -> Optional[Path]:
+    """
+    Hot-copy the database to <name>.db.bak using SQLite's backup API, which is
+    safe to run against a live connection. Returns the backup path, or None if
+    there was nothing to back up.
+    """
+    db_path = Path(db_path)
+    if not db_path.exists():
+        return None
+    backup_path = db_path.with_suffix('.db.bak')
+    src = sqlite3.connect(str(db_path))
+    dst = sqlite3.connect(str(backup_path))
     try:
-        import mlconjug3
-        from lang_config import TENSE_MAP, MLCONJUG3_LANG
-    except ImportError:
-        print('  Conjugations: skipped (mlconjug3 not installed)')
-        return 0
-
-    tense_map     = TENSE_MAP.get(lang, {})
-    mlconjug_code = MLCONJUG3_LANG.get(lang)
-    if not tense_map or not mlconjug_code:
-        return 0
-
-    conjugator = mlconjug3.Conjugator(language=mlconjug_code)
-    filled = 0
-
-    for entry in entries:
-        if entry.get('pos') != 'verb':
-            continue
-        conj = entry.get('linguistic', {}).get('conjugations')
-        if not conj:
-            continue
-        needs_pret = conj.get('preterite') is None
-        needs_imp  = conj.get('imperfect') is None
-        if not needs_pret and not needs_imp:
-            continue
-
-        infinitive = entry.get('linguistic', {}).get('infinitive') or entry['word']
-        try:
-            verb_obj = conjugator.conjugate(infinitive)
-            info = getattr(verb_obj, 'conjug_info', None)
-            if callable(info):
-                info = info()
-        except Exception:
-            continue
-
-        changed = False
-        for tense_key, needs in [('preterite', needs_pret), ('imperfect', needs_imp)]:
-            if not needs:
-                continue
-            mood, label = tense_map.get(tense_key, (None, None))
-            if not mood:
-                continue
-            mood_data  = info.get(mood, {}) if info else {}
-            tense_data = mood_data.get(label) or mood_data.get(f'{mood} {label}')
-            if not tense_data:
-                continue
-            forms = [f if f and f not in ('-', '') else None for f in tense_data.values()]
-            if any(forms):
-                conj[tense_key] = forms
-                changed = True
-
-        if changed:
-            filled += 1
-
-    return filled
+        src.backup(dst)
+    finally:
+        dst.close()
+        src.close()
+    return backup_path
 
 
-# ── Step 3: fix cognate translation ─────────────────────────────────────────────
-
-def fix_translation(entries: List[dict]) -> int:
-    """Promote second gloss to translation when translation == word. Returns count fixed."""
-    fixed = 0
-    for entry in entries:
-        word    = entry.get('word', '')
-        translation = entry.get('translation', '')
-        glosses = entry.get('glosses') or []
-
-        if translation.lower() != word.lower() and translation:
-            continue  # already has a distinct English translation
-
-        better = next(
-            (g for g in glosses if g and g.lower() != word.lower()), None
-        )
-        if better:
-            entry['translation'] = better
-            fixed += 1
-
-    return fixed
-
-
-# ── Step 4: import to DB ───────────────────────────────────────────────────────
-
+# NOTE: keep this column list in sync with the table. band, corpus_frequency,
+# plural and reflexive were missing from it for a long time, so the data sat in
+# the curated JSONL and never reached the app.
 UPSERT = """
     INSERT INTO words
         (language, word, translation, pos, difficulty, notes,
          gender, register, infinitive, rank, ipa, syllables, conjugations, domains, emoji,
          past_participle, gerund,
-         conjugation_class, future_stem, conjugation_overrides)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         conjugation_class, future_stem, conjugation_overrides,
+         band, corpus_frequency, plural, reflexive)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(language, word) DO UPDATE SET
         translation = excluded.translation,
         pos                    = COALESCE(excluded.pos,             pos),
@@ -264,6 +177,10 @@ UPSERT = """
         conjugation_class      = excluded.conjugation_class,
         future_stem            = excluded.future_stem,
         conjugation_overrides  = excluded.conjugation_overrides,
+        band                   = excluded.band,
+        corpus_frequency       = COALESCE(excluded.corpus_frequency, corpus_frequency),
+        plural                 = COALESCE(excluded.plural,           plural),
+        reflexive              = COALESCE(excluded.reflexive,        reflexive),
         updated_at             = CURRENT_TIMESTAMP
 """
 
@@ -332,6 +249,14 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> tu
             pp  = (conj.get('past_participle') if isinstance(conj, dict) else None)
             ger = (conj.get('gerund')          if isinstance(conj, dict) else None)
 
+            freq = w.get('frequency') or {}
+            # Fall back to computing the band from the rank. Only ~5% of
+            # entries carry one explicitly, but every entry has a rank, so
+            # this fills the column for all of them from one rule.
+            band = freq.get('band') or rank_to_band(rank)
+            corpus_frequency = freq.get('corpus_frequency')
+            reflexive = ling.get('reflexive')
+
             cursor.execute(UPSERT, (
                 lang_name,
                 w['word'],
@@ -353,6 +278,10 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> tu
                 conj_class,
                 future_stem,
                 json.dumps(conj_overrides, ensure_ascii=False) if conj_overrides is not None else None,
+                band,
+                corpus_frequency,
+                ling.get('plural') or None,
+                1 if reflexive else (0 if reflexive is not None else None),
             ))
 
             row = cursor.execute(
@@ -394,85 +323,40 @@ def import_to_db(entries: List[dict], lang: str, conn: sqlite3.Connection) -> tu
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
-def backup_db(db_path: Path) -> Optional[Path]:
-    """Hot-copy the DB to a .bak file using SQLite's backup API.
-    Returns the backup path, or None if the DB doesn't exist yet."""
-    if not db_path.exists():
-        return None
-    backup_path = db_path.with_suffix('.db.bak')
-    src = sqlite3.connect(str(db_path))
-    dst = sqlite3.connect(str(backup_path))
-    try:
-        src.backup(dst)
-    finally:
-        dst.close()
-        src.close()
-    return backup_path
+
+# ── Targeted patches (used by the enrich step) ────────────────────────────────
+# The enrich step computes its changes against the curated JSONL, then applies
+# the same change to the DB so the two never drift. These run inside a single
+# transaction and only ever UPDATE existing rows.
+
+def patch_gender(conn: sqlite3.Connection,
+                 changes: Dict[str, str],
+                 language: str = 'spanish') -> int:
+    """Set gender on rows that don't have one yet. Returns rows updated."""
+    updated = 0
+    with conn:
+        for word, gender in changes.items():
+            updated += conn.execute(
+                "UPDATE words SET gender=?, updated_at=CURRENT_TIMESTAMP "
+                "WHERE word=? AND language=? AND (gender IS NULL OR gender='')",
+                (gender, word, language),
+            ).rowcount
+    return updated
 
 
-def sync(lang: str, dry_run: bool) -> None:
-    print(f'\n── {LANGS[lang].upper()} ({lang}) ──')
-
-    entries = load_curated(lang)
-    if not entries:
-        return
-    print(f'  Loaded       : {len(entries)} entries')
-
-    conj_filled   = fill_conjugations(entries, lang)
-    translation_fixed = fix_translation(entries)
-
-    if conj_filled:
-        print(f'  Conjugations : filled {conj_filled} verbs')
-    if translation_fixed:
-        print(f'  Translation  : fixed {translation_fixed} cognates')
-
-    if dry_run:
-        print(f'  DB           : skipped (--dry-run)')
-        return
-
-    # Back up the DB before touching it — restore manually if needed
-    bak = backup_db(DB_PATH)
-    if bak:
-        print(f'  Backup       : {bak.name}')
-
-    # Import to DB first (in a single transaction).
-    # Only write the JSONL changes if the DB write succeeds — keeps them in sync.
-    conn = open_db(DB_PATH)
-    try:
-        imported, skipped = import_to_db(entries, lang, conn)
-    except Exception as e:
-        print(f'  DB FAILED    : {e}')
-        print(f'  DB unchanged — restore from {bak.name if bak else "backup"} if needed')
-        conn.close()
-        return
-    conn.close()
-    print(f'  DB           : {imported} imported, {skipped} skipped')
-
-    # JSONL saved only after DB write confirmed — keeps source and DB in sync
-    if (conj_filled or translation_fixed):
-        save_curated(entries, lang)
-        print(f'  JSONL        : saved')
-
-
-def main():
-    parser = argparse.ArgumentParser(description='Sync curated JSONL → vocabulary.db')
-    parser.add_argument('--langs', nargs='+', default=list(LANGS.keys()),
-                        metavar='LANG', help=f'Language codes: {" ".join(LANGS)}')
-    parser.add_argument('--dry-run', action='store_true',
-                        help='Show what would change without writing anything')
-    args = parser.parse_args()
-
-    unknown = [l for l in args.langs if l not in LANGS]
-    if unknown:
-        print(f'Unknown language(s): {", ".join(unknown)}')
-        print(f'Valid: {", ".join(LANGS)}')
-        import sys; sys.exit(1)
-
-    for lang in args.langs:
-        sync(lang, args.dry_run)
-
-    print('\nDone.')
-
-
-if __name__ == '__main__':
-    main()
+def patch_domains(conn: sqlite3.Connection,
+                  entries: List[dict],
+                  language: str = 'spanish') -> int:
+    """Write each entry's domains list back to its row. Returns rows updated."""
+    updated = 0
+    with conn:
+        for e in entries:
+            domains = e.get('domains')
+            if not domains or domains == ['general']:
+                continue
+            updated += conn.execute(
+                "UPDATE words SET domains=?, updated_at=CURRENT_TIMESTAMP "
+                "WHERE word=? AND language=?",
+                (json.dumps(domains, ensure_ascii=False), e['word'], language),
+            ).rowcount
+    return updated
