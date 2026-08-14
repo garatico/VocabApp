@@ -174,6 +174,9 @@ def save_to_cache(lang: Lang, word: str, glosses: List[str], source: str,
 
 # ── Gloss fetching ─────────────────────────────────────────────────────────────
 
+_WIKT_FAILED = False
+
+
 def fetch_wiktionary(lang: Lang, word: str) -> Optional[List[str]]:
     """Try to get English definitions from Wiktionary."""
     try:
@@ -192,7 +195,18 @@ def fetch_wiktionary(lang: Lang, word: str) -> Optional[List[str]]:
                         if text and 2 < len(text) < 60:
                             glosses.append(text)
         return glosses[:4] if glosses else None
-    except Exception:
+    except Exception as exc:
+        # This used to swallow everything silently, which is why the gloss
+        # cache shows 26,010 lookups and zero Wiktionary hits with no trace of
+        # why. Report the first failure per run so a broken parser, a blocked
+        # network or an API change is visible rather than degrading quietly
+        # into Google-Translate-only mining.
+        global _WIKT_FAILED
+        if not _WIKT_FAILED:
+            _WIKT_FAILED = True
+            print(f'  Wiktionary lookups are failing ({type(exc).__name__}: {exc}).')
+            print('  Falling back to Google Translate for every word, which does not')
+            print('  reject non-words — expect corpus fragments in the results.')
         return None
 
 

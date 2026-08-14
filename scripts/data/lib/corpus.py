@@ -89,6 +89,11 @@ CONJ_VERB_SUFFIXES: Dict[str, Tuple[str, ...]] = {
         'íamos', 'íais', 'ían',
         # Preterite plurals
         'aron', 'ieron',
+        # Future indicative — '-ré -rás -rá -remos -réis -rán'. Unambiguously
+        # verbal: no Spanish noun ends this way.
+        'aré', 'eré', 'iré', 'arás', 'erás', 'irás', 'ará', 'erá', 'irá',
+        'aremos', 'eremos', 'iremos', 'aréis', 'eréis', 'iréis',
+        'arán', 'erán', 'irán',
     ),
     'fra': (
         # Conditional plurals / 3rd-person forms
@@ -148,6 +153,83 @@ KNOWN_CONJUGATED_FORMS: Dict[str, set] = {
         # riego=irrigation etc. are intentionally omitted since they're real nouns).
         'tengo', 'vengo', 'traigo', 'caigo', 'salgo', 'valgo', 'pongo',
         'apago', 'llego', 'entrego', 'distingo', 'extingo', 'cuelgo',
+        # Present subjunctive / 3s forms of very common verbs that spaCy tags
+        # as NOUN in isolation. Listed rather than pattern-matched because the
+        # endings (-a, -e) are the commonest noun endings in the language.
+        'pueda', 'puedas', 'pueden', 'quiera', 'quieras', 'quieren',
+        'lleva', 'llevan', 'deja', 'dejan', 'pasan',
+        'quedan', 'llaman', 'esperan',
+        # NOTE: espera (a wait), llama (flame/llama), queda (curfew) and pasa
+        # (raisin) are omitted — each is a noun as well as a verb form, and a
+        # false positive costs a real headword.
+        'verá', 'verás', 'verán', 'dirá', 'dirás', 'dirán',
+    },
+}
+
+# Past participles double as adjectives ('cansado', 'abierto'), so -ado/-ido
+# cannot simply be banned. These are the ones whose English gloss is plainly a
+# participle rather than a describable state, i.e. the ones that arrived as
+# verb forms rather than words in their own right.
+PARTICIPLE_BLOCKLIST: Dict[str, set] = {
+    'spa': {
+        # ONLY participles with no competing noun or adjective sense. This list
+        # was originally much longer and had to be cut back: hecho (fact),
+        # pasado (the past), sentido (meaning), partido (match), perdido,
+        # querido, estado (state), puesto (post), dicho (saying) and visto are
+        # all ordinary words. Form alone cannot separate a participle from a
+        # noun in Spanish, so when in doubt the word is kept — letting a verb
+        # form through is cheaper than deleting a real headword.
+        'matado', 'hablado', 'podido', 'tenido', 'sido', 'habido',
+        'venido', 'salido', 'traído', 'sabido', 'creído', 'leído',
+        'comido', 'bebido', 'vivido', 'llamado', 'llegado', 'dejado',
+        'quedado', 'tomado', 'pensado', 'mirado', 'cambiado',
+    },
+}
+
+ENCLITICS = ('me', 'te', 'lo', 'la', 'le', 'nos', 'los', 'las', 'les')
+
+
+def is_enclitic_form(word: str, lang_code: str,
+                     known_infinitives: Optional[set] = None) -> bool:
+    """
+    True for an infinitive carrying an attached object pronoun (hacerte,
+    decirle) — a duplicate of a headword already in the corpus.
+
+    The stem left after stripping the pronoun must be a verb we have actually
+    seen. Checking only that it *looks* like an infinitive is not enough:
+    estandarte minus 'te' is 'estandar', desarme minus 'me' is 'desar' and
+    gendarme minus 'me' is 'gendar' — all of which end in a valid infinitive
+    ending, and all three are real hand-curated nouns.
+
+    With no vocabulary to check against, this returns False. A filter that
+    cannot verify its guess should not be deleting words.
+
+    '-se' is deliberately not treated as an enclitic: reflexive infinitives
+    (divertirse, levantarse) are legitimate dictionary headwords.
+    """
+    if lang_code != 'spa' or not known_infinitives:
+        return False
+    endings = VERB_INFINITIVE_ENDINGS.get(lang_code, ())
+    for clitic in ENCLITICS:
+        if not word.endswith(clitic):
+            continue
+        stem = word[:-len(clitic)]
+        if (len(stem) >= 4
+                and any(stem.endswith(e) for e in endings)
+                and stem in known_infinitives):
+            return True
+    return False
+
+
+# Corpus fragments: subtitle truncations and OCR noise that are not words in
+# any language. Google Translate will happily "translate" all of these, which
+# is why they survived to reach the curated file.
+FRAGMENT_BLOCKLIST: Dict[str, set] = {
+    'spa': {
+        'dej', 'sigu', 'vién', 'irno', 'nén', 'qu', 'aqu', 'entend',
+        # Misspellings and mis-accentuations common in subtitle text.
+        'órden', 'porqué', 'exámen', 'jóven', 'imágen', 'contáctenos',
+        'tambi', 'despu', 'alg', 'porqu', 'hab', 'deb', 'ning', 'alguu',
     },
 }
 
@@ -660,6 +742,15 @@ def build_corpus_entries(rows: List[Tuple[int, str, int]],
     """
     lemma_map:         Dict[str, dict] = {}
     closed_class_freq: Dict[str, dict] = {}
+
+    # Infinitives we can vouch for, used to verify enclitic candidates.
+    known_infinitives: set = set()
+    if curated_map:
+        for entry in curated_map.values():
+            if entry.get('pos') == 'verb':
+                inf = (entry.get('linguistic') or {}).get('infinitive') or entry.get('word')
+                if inf:
+                    known_infinitives.add(inf.lower())
     total_rows = len(rows)
 
     for row_idx, (corpus_rank, word, count) in enumerate(rows):
@@ -702,6 +793,16 @@ def build_corpus_entries(rows: List[Tuple[int, str, int]],
         known_forms = KNOWN_CONJUGATED_FORMS.get(lang_code, set())
         if known_forms and w_lower in known_forms:
             continue
+        if w_lower in PARTICIPLE_BLOCKLIST.get(lang_code, set()):
+            continue
+        if w_lower in FRAGMENT_BLOCKLIST.get(lang_code, set()):
+            continue
+        if is_enclitic_form(w_lower, lang_code, known_infinitives):
+            continue
+        # NOTE: a "short word with an accent" heuristic was tried here and
+        # removed — it caught día, más, así, aquí, sí and él. Fragments are
+        # listed explicitly instead; there are few enough of them to enumerate,
+        # and a false positive costs a real word.
 
         if pos == 'PROPN':
             continue
