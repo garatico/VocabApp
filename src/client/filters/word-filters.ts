@@ -15,6 +15,8 @@ import {
   getListFilterState,
   saveListFilterState,
   refreshFilterSelect,
+  LIST_FILTER_DESC,
+  type ListFilterMode,
 } from '../utils/word-lists.ts';
 
 export interface FilterState {
@@ -52,7 +54,7 @@ export function filterWords(words: Word[]): Word[] {
   const lang  = (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? 'spanish';
   const state = getListFilterState(lang);
 
-  if (state.selected.length === 0) return words;
+  if (state.mode === 'off' || state.selected.length === 0) return words;
 
   // Build a union set of all words across the selected lists
   const wordSet = new Set<string>();
@@ -82,7 +84,7 @@ export function initListFilter(lang: string): void {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.list-filter-btn');
     if (!btn?.dataset.mode) return;
 
-    const mode    = btn.dataset.mode as 'hide' | 'focus';
+    const mode    = btn.dataset.mode as ListFilterMode;
     const curLang = (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? lang;
     const state   = getListFilterState(curLang);
     if (state.mode === mode) return;          // already active — no-op
@@ -101,10 +103,6 @@ export function initListFilter(lang: string): void {
 
     // Update description text immediately
     const desc = document.getElementById('listFilterDesc');
-    if (desc) {
-      desc.textContent = mode === 'hide'
-        ? 'Checked lists are removed from the quiz'
-        : 'Quiz shows only words from checked lists';
-    }
+    if (desc) desc.textContent = LIST_FILTER_DESC[mode];
   });
 }

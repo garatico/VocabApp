@@ -26,17 +26,30 @@ select:focus {
 /* ── Custom number input (quiz size) ── */
 #sizeCustom {
   font-family: 'Sora', sans-serif;
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  padding: 0.32rem 0.5rem;
-  width: 76px;
+  padding: 0.32rem 0.2rem 0.32rem 0.55rem;
+  width: 128px;          /* fits 4 digits plus the placeholder comfortably */
+  min-height: 40px;
+  box-sizing: border-box;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
+/* Native spin buttons, enlarged — always visible (not just on hover) and given
+   a wider, full-height hit area so they're easy to click. */
 #sizeCustom::-webkit-outer-spin-button,
-#sizeCustom::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#sizeCustom::-webkit-inner-spin-button {
+  -webkit-appearance: inner-spin-button;
+  appearance: auto;
+  opacity: 1;
+  width: 1.5rem;
+  height: 100%;
+  align-self: stretch;
+  margin-left: 0.3rem;
+  cursor: pointer;
+}
 #sizeCustom:focus {
   outline: none;
   border-color: var(--accent);

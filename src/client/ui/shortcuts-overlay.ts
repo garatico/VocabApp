@@ -27,6 +27,15 @@ const SHORTCUTS: ShortcutGroup[] = [
     ],
   },
   {
+    group: 'Conjugation',
+    items: [
+      { keys: ['Tab'],            desc: 'Next form within a verb' },
+      { keys: ['Shift', 'Tab'],  desc: 'Previous form within a verb' },
+      { keys: ['Ctrl', '↓'],     desc: 'Next verb' },
+      { keys: ['Ctrl', '↑'],     desc: 'Previous verb' },
+    ],
+  },
+  {
     group: 'Single Word Quiz',
     items: [
       { keys: ['Enter'],        desc: 'Submit answer' },

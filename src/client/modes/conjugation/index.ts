@@ -9,6 +9,8 @@ import {
   applyAllPronounToggles,
 } from './controls.js';
 import { buildGlossDisplay } from '../../utils/utils.js';
+import { buildScorePills, scorePct } from '../../ui/score-pills.js';
+import { Settings } from '../../settings.js';
 
 export interface ConjugationModeOptions {
   words:     Word[];
@@ -20,7 +22,11 @@ interface CardController {
   card:          HTMLElement;
   updateHeader:  () => void;
   updateInputs:  () => void;
-  revealAnswers: () => void;
+  /**
+   * Fill in every unanswered form. `mark` decides how they're scored:
+   * 'revealed' (peeked, yellow) or 'missed' (given up, red).
+   */
+  revealAnswers: (mark?: 'revealed' | 'missed') => void;
 }
 
 let _cleanup: (() => void) | null = null;
@@ -100,66 +106,130 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     if (pronounRow) pronounRow.hidden = single;
   }
 
+  // ── Progress: same segmented bar + score pills as table mode ───────────────
   const progressSection = document.createElement('div');
   progressSection.className = 'conj-progress-section';
 
-  const barsWrap = document.createElement('div');
-  barsWrap.className = 'conj-prog-bars';
+  const progressBlock = document.createElement('div');
+  progressBlock.className = 'conj-progress-block';
 
-  function makeBar(labelText: string): { fill: HTMLElement; stat: HTMLElement } {
-    const row   = document.createElement('div');
-    row.className = 'conj-prog-row';
-    const label = document.createElement('span');
-    label.className   = 'conj-prog-label';
+  /**
+   * One labelled progress group: heading, three-segment bar, side stat and a
+   * row of score pills — the same anatomy table mode uses.
+   */
+  function makeProgressGroup(labelText: string, hint: string): {
+    green: HTMLElement; yellow: HTMLElement; red: HTMLElement;
+    stat: HTMLElement; pills: HTMLElement;
+  } {
+    const group = document.createElement('div');
+    group.className = 'quiz-progress-group';
+
+    const label = document.createElement('div');
+    label.className   = 'progress-group-label';
     label.textContent = labelText;
+    label.title       = hint;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'progressWrap';
+
     const track = document.createElement('div');
-    track.className = 'conj-prog-track';
-    const fill = document.createElement('div');
-    fill.className = 'conj-prog-fill';
-    track.appendChild(fill);
-    const stat = document.createElement('span');
-    stat.className = 'conj-prog-stat';
-    row.append(label, track, stat);
-    barsWrap.appendChild(row);
-    return { fill, stat };
+    track.className = 'progress';
+    const green  = document.createElement('div'); green.className  = 'bar';
+    const yellow = document.createElement('div'); yellow.className = 'bar-revealed';
+    const red    = document.createElement('div'); red.className    = 'bar-missed';
+    track.append(green, yellow, red);
+
+    const stat = document.createElement('div');
+    stat.className = 'small';
+    wrap.append(track, stat);
+
+    const pills = document.createElement('div');
+    pills.className = 'quiz-score';
+
+    group.append(label, wrap, pills);
+    progressBlock.appendChild(group);
+    return { green, yellow, red, stat, pills };
   }
 
-  const { fill: verbsFill, stat: verbsStat } = makeBar('Verbs');
-  const { fill: formsFill, stat: formsStat } = makeBar('Forms');
+  const formsBar = makeProgressGroup('Forms', 'Progress across every individual conjugation');
+  const verbsBar = makeProgressGroup('Verbs', 'Progress across whole verbs — a verb counts once all its forms are done');
 
   const giveUpBtn = document.createElement('button');
   giveUpBtn.className   = 'conj-giveup-btn';
   giveUpBtn.textContent = 'Give Up';
 
-  progressSection.append(barsWrap, giveUpBtn);
+  progressSection.append(progressBlock, giveUpBtn);
 
   const cardsGrid = document.createElement('div');
   cardsGrid.className = 'conj-cards-grid';
 
-  function updateProgress(): void {
-    let totalForms = 0, correctForms = 0, completeVerbs = 0;
+  interface Counts { correct: number; revealed: number; missed: number; left: number; total: number }
+
+  /**
+   * Tally at both levels. A verb is scored by its weakest form: all correct →
+   * correct; otherwise fully answered with a missed form → missed, with only
+   * peeks → revealed; anything still blank → left.
+   */
+  function tally(): { forms: Counts; verbs: Counts } {
+    const forms: Counts = { correct: 0, revealed: 0, missed: 0, left: 0, total: 0 };
+    const verbs: Counts = { correct: 0, revealed: 0, missed: 0, left: 0, total: 0 };
 
     cardsGrid.querySelectorAll('.conj-card').forEach(card => {
-      let cardTotal = 0, cardCorrect = 0;
+      let cardTotal = 0, cardCorrect = 0, cardRevealed = 0, cardMissed = 0;
+
       card.querySelectorAll('.conj-row:not(.conj-row-hidden)').forEach(row => {
         const inp = row.querySelector<HTMLInputElement>('.conj-drill-input');
         if (!inp) return;
         cardTotal++;
-        if (inp.classList.contains('correct')) cardCorrect++;
+        if (inp.classList.contains('correct'))       cardCorrect++;
+        else if (inp.classList.contains('revealed')) cardRevealed++;
+        else if (inp.classList.contains('missed'))   cardMissed++;
       });
-      totalForms   += cardTotal;
-      correctForms += cardCorrect;
-      if (cardTotal > 0 && cardCorrect === cardTotal) completeVerbs++;
+
+      forms.total    += cardTotal;
+      forms.correct  += cardCorrect;
+      forms.revealed += cardRevealed;
+      forms.missed   += cardMissed;
+
+      if (cardTotal === 0) return;
+      verbs.total++;
+      if      (cardCorrect === cardTotal)                        verbs.correct++;
+      else if (cardCorrect + cardRevealed + cardMissed < cardTotal) verbs.left++;
+      else if (cardMissed > 0)                                   verbs.missed++;
+      else                                                       verbs.revealed++;
     });
 
-    const nVerbs = cardsGrid.querySelectorAll('.conj-card').length;
-    verbsFill.style.width = (nVerbs     ? (completeVerbs / nVerbs)    * 100 : 0) + '%';
-    formsFill.style.width = (totalForms ? (correctForms  / totalForms) * 100 : 0) + '%';
-    verbsStat.textContent = `${completeVerbs} / ${nVerbs} complete`;
-    formsStat.textContent = `${correctForms} / ${totalForms} correct`;
+    forms.left = forms.total - forms.correct - forms.revealed - forms.missed;
+    return { forms, verbs };
+  }
 
-    if (totalForms > 0 && correctForms === totalForms) {
-      showConjSummary(completeVerbs, nVerbs, correctForms, totalForms);
+  function paint(
+    bar: { green: HTMLElement; yellow: HTMLElement; red: HTMLElement; stat: HTMLElement; pills: HTMLElement },
+    c: Counts,
+    statText: string,
+  ): void {
+    const greenPct  = scorePct(c.correct,  c.total);
+    const yellowPct = scorePct(c.revealed, c.total);
+    const redPct    = scorePct(c.missed,   c.total);
+
+    bar.green.style.width  = greenPct + '%';
+    bar.yellow.style.left  = greenPct + '%';
+    bar.yellow.style.width = yellowPct + '%';
+    bar.red.style.left     = (greenPct + yellowPct) + '%';
+    bar.red.style.width    = redPct + '%';
+
+    bar.stat.textContent = statText;
+    bar.pills.innerHTML  = buildScorePills(c);
+  }
+
+  function updateProgress(): void {
+    const { forms, verbs } = tally();
+
+    paint(formsBar, forms, `${forms.correct + forms.revealed + forms.missed}/${forms.total} answered`);
+    paint(verbsBar, verbs, `${verbs.correct}/${verbs.total} fully conjugated`);
+
+    if (forms.total > 0 && forms.correct === forms.total) {
+      showConjSummary(verbs.correct, verbs.total, forms.correct, forms.total);
     }
   }
 
@@ -184,25 +254,12 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   updateProgress();
 
   giveUpBtn.addEventListener('click', () => {
-    cardUpdaters.forEach(u => u.revealAnswers());
+    cardUpdaters.forEach(u => u.revealAnswers('missed'));
     giveUpBtn.disabled = true;
     updateProgress();
     // Show a summary when giving up (progress may not be 100%)
-    let totalForms = 0, correctForms = 0, completeVerbs = 0;
-    cardsGrid.querySelectorAll('.conj-card').forEach(card => {
-      let cardTotal = 0, cardCorrect = 0;
-      card.querySelectorAll('.conj-row:not(.conj-row-hidden)').forEach(row => {
-        const inp = row.querySelector<HTMLInputElement>('.conj-drill-input');
-        if (!inp) return;
-        cardTotal++;
-        if (inp.classList.contains('correct')) cardCorrect++;
-      });
-      totalForms   += cardTotal;
-      correctForms += cardCorrect;
-      if (cardTotal > 0 && cardCorrect === cardTotal) completeVerbs++;
-    });
-    const nVerbs = cardsGrid.querySelectorAll('.conj-card').length;
-    showConjSummary(completeVerbs, nVerbs, correctForms, totalForms);
+    const { forms, verbs } = tally();
+    showConjSummary(verbs.correct, verbs.total, forms.correct, forms.total);
   });
 
   const handleTenseChange = (): void => {
@@ -224,12 +281,41 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     cardUpdaters.forEach(u => u.updateHeader());
   };
 
+  // ── Verb-to-verb navigation ────────────────────────────────────────────────
+  // Tab walks the forms within a verb; Ctrl/Cmd + ↓ or ↑ jumps whole verbs
+  // (ser → estar → haber), landing on the first form still to be filled.
+  const handleCardNav = (e: KeyboardEvent): void => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+
+    const cards = Array.from(cardsGrid.querySelectorAll<HTMLElement>('.conj-card'));
+    if (cards.length === 0) return;
+
+    const active  = document.activeElement as HTMLElement | null;
+    const current = active?.closest<HTMLElement>('.conj-card') ?? null;
+    const idx     = current ? cards.indexOf(current) : -1;
+
+    e.preventDefault();
+    const step   = e.key === 'ArrowDown' ? 1 : -1;
+    const next   = idx === -1
+      ? cards[step === 1 ? 0 : cards.length - 1]
+      : cards[(idx + step + cards.length) % cards.length];
+
+    const target =
+      next.querySelector<HTMLInputElement>('.conj-row:not(.conj-row-hidden) .conj-drill-input:not(:disabled)')
+      ?? next.querySelector<HTMLInputElement>('.conj-row:not(.conj-row-hidden) .conj-drill-input');
+    target?.focus();
+    next.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
   tenseSelect?.addEventListener('change', handleTenseChange);
   displayToggle?.addEventListener('click', handleDisplayClick);
+  document.addEventListener('keydown', handleCardNav);
 
   _cleanup = (): void => {
     tenseSelect?.removeEventListener('change', handleTenseChange);
     displayToggle?.removeEventListener('click', handleDisplayClick);
+    document.removeEventListener('keydown', handleCardNav);
     setProgressCallback(null);
   };
 }
@@ -268,6 +354,24 @@ function buildCard(
   const inputs: HTMLInputElement[] = [];
   const pronounRows: HTMLElement[] = [];
 
+  // Reveal buttons mirror table mode: hidden entirely when hints are off,
+  // otherwise a ? that fills the answer in and scores it as revealed.
+  const hintMode = Settings.getHintMode();
+
+  function makeRevealBtn(onReveal: () => void): HTMLButtonElement {
+    const btn = document.createElement('button');
+    btn.type        = 'button';
+    btn.className   = 'reveal-btn conj-reveal-btn';
+    btn.textContent = '?';
+    btn.title       = 'Reveal answer (counts as revealed)';
+    btn.tabIndex    = -1;      // Tab stays on the inputs
+    btn.hidden      = hintMode === 'none';
+    btn.addEventListener('click', onReveal);
+    return btn;
+  }
+
+  const revealBtns: HTMLButtonElement[] = [];
+
   pronouns.forEach((pronoun, i) => {
     const row = document.createElement('div');
     row.className  = 'conj-row';
@@ -286,7 +390,10 @@ function buildCard(
     inp.spellcheck     = false;
     inp.placeholder    = 'Type conjugation…';
 
-    row.append(label, inp);
+    const revealBtn = makeRevealBtn(() => { revealOne(i); });
+    revealBtns.push(revealBtn);
+
+    row.append(label, inp, revealBtn);
     innerGrid.appendChild(row);
     inputs.push(inp);
     pronounRows.push(row);
@@ -309,7 +416,9 @@ function buildCard(
   singleInp.spellcheck     = false;
   singleInp.placeholder    = 'Type conjugation…';
 
-  singleFormRow.append(singleLabel, singleInp);
+  const singleRevealBtn = makeRevealBtn(() => { revealOne('single'); });
+
+  singleFormRow.append(singleLabel, singleInp, singleRevealBtn);
   innerGrid.appendChild(singleFormRow);
 
   card.append(header, innerGrid);
@@ -396,40 +505,76 @@ function buildCard(
   function updateInputs(): void {
     const single = isSingleForm(getTenseKey());
 
-    inputs.forEach(inp => {
+    inputs.forEach((inp, i) => {
       inp.value    = '';
       inp.disabled = false;
-      inp.classList.remove('correct', 'revealed');
+      inp.classList.remove('correct', 'revealed', 'missed');
+      const btn = revealBtns[i];
+      if (btn) { btn.hidden = hintMode === 'none'; btn.textContent = '?'; }
     });
 
     singleInp.value = '';
     singleInp.disabled = false;
-    singleInp.classList.remove('correct', 'revealed');
+    singleInp.classList.remove('correct', 'revealed', 'missed');
+    singleRevealBtn.hidden      = hintMode === 'none';
+    singleRevealBtn.textContent = '?';
 
     setSingleMode(single);
     attachChecking();
   }
 
-  function revealAnswers(): void {
+  /** The answer for one slot — index for a pronoun row, 'single' for the odd ones. */
+  function answerFor(slot: number | 'single'): string | null {
     const tenseKey = getTenseKey();
+    if (slot === 'single') {
+      return (verb.linguistic?.conjugations?.[tenseKey] as string | null) ?? null;
+    }
+    const answers = (verb.linguistic?.conjugations as Record<string, string[]> | null)
+      ?.[tenseKey] ?? null;
+    return (Array.isArray(answers) ? answers[slot] : null) ?? null;
+  }
 
-    if (isSingleForm(tenseKey)) {
-      if (!singleInp.classList.contains('correct') && !singleInp.classList.contains('revealed')) {
-        const answer = verb.linguistic?.conjugations?.[tenseKey] as string | null;
-        singleInp.value = answer ?? '—';
-        singleInp.classList.add('revealed');
-        singleInp.disabled = true;
-      }
+  function fill(
+    inp: HTMLInputElement,
+    btn: HTMLButtonElement | undefined,
+    answer: string | null,
+    mark: 'revealed' | 'missed',
+  ): void {
+    if (inp.classList.contains('correct') ||
+        inp.classList.contains('revealed') ||
+        inp.classList.contains('missed')) return;
+    inp.value = answer ?? '—';
+    inp.classList.add(mark);
+    inp.disabled = true;
+    if (btn) btn.hidden = true;
+  }
+
+  /** Reveal one form via its ? button — scored as revealed, not missed. */
+  function revealOne(slot: number | 'single'): void {
+    const single = slot === 'single';
+    const inp    = single ? singleInp       : inputs[slot];
+    const btn    = single ? singleRevealBtn : revealBtns[slot];
+    const answer = answerFor(slot);
+
+    // First-letter mode gives one nudge before handing over the full answer.
+    if (hintMode === 'first-letter' && btn?.textContent === '?' && answer) {
+      inp.value       = answer[0];
+      inp.placeholder = `${answer.length} letters`;
+      inp.focus();
+      btn.textContent = '??';
+      btn.title       = 'Reveal full answer';
+      return;
+    }
+
+    fill(inp, btn, answer, 'revealed');
+    onProgress();
+  }
+
+  function revealAnswers(mark: 'revealed' | 'missed' = 'missed'): void {
+    if (isSingleForm(getTenseKey())) {
+      fill(singleInp, singleRevealBtn, answerFor('single'), mark);
     } else {
-      const answers = (verb.linguistic?.conjugations as Record<string, string[]> | null)
-        ?.[tenseKey] ?? null;
-      inputs.forEach((inp, i) => {
-        if (!inp.classList.contains('correct') && !inp.classList.contains('revealed')) {
-          inp.value = (Array.isArray(answers) ? answers[i] : null) ?? '—';
-          inp.classList.add('revealed');
-          inp.disabled = true;
-        }
-      });
+      inputs.forEach((inp, i) => fill(inp, revealBtns[i], answerFor(i), mark));
     }
   }
 

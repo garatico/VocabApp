@@ -12,6 +12,7 @@ data/*.db-shm
 data/*.db-wal
 data/*.db.bak
 data/curated/*.bak
+data/curated/*.tmp
 
 # Logs
 *.log

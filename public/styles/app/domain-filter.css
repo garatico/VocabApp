@@ -2,10 +2,11 @@
    DOMAIN FILTER v2 — chip/tag UI
 ================================================================ */
 
+/* Boxed to match #classFilter and #listFilter — background and border come
+   from the shared block rule in class-filter.css */
 #domainFilterWrap {
-  margin-top: 0.6rem;
-  padding-top: 0.55rem;
-  border-top: 1px solid var(--border-strong);
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.5rem 0.4rem;
 }
 
 /* ── Header ──────────────────────────────────────────────────────────────── */
@@ -17,12 +18,9 @@
   margin-bottom: 0.5rem;
 }
 
+/* Type styling comes from .filter-section-label so Part of Speech, Lists and
+   Domains all read the same; only the count keeps its own treatment. */
 #domainFilterLabel {
-  font-size: 0.66rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text);
   user-select: none;
 }
 
