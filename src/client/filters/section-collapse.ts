@@ -25,7 +25,7 @@ function apply(btn: HTMLElement, body: HTMLElement, open: boolean): void {
 }
 
 /** The boxed section a collapse button belongs to. */
-const BLOCK_SELECTOR = '#classFilter, #listFilter, #domainFilterWrap, .filter-box, .conj-pronoun-row';
+const BLOCK_SELECTOR = '#classFilter, #listFilter, #domainFilterWrap, .filter-box';
 
 /** Controls inside a section that must keep their own click behaviour. */
 const INTERACTIVE = 'button, input, select, textarea, a, label';

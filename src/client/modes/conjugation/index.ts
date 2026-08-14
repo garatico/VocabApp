@@ -7,6 +7,7 @@ import { foldKey as normalize } from '../../utils/match.ts';
 import { orderWords, WORD_ORDER_LABELS, saveSession, recordOutcome,
          type WordOrder } from '../../utils/session-history.ts';
 import { PRONOUNS, TENSE_DEFS } from './data.js';
+import { activeTenses } from './controls.js';
 import {
   setProgressCallback,
   applyAllPronounToggles,
@@ -35,6 +36,20 @@ interface CardController {
 let _cleanup: (() => void) | null = null;
 
 const SINGLE_FORM_TENSES = new Set(['past_participle', 'gerund']);
+
+/**
+ * Tense key -> display label, flattened across languages.
+ *
+ * buildCard is a module-level function with no access to the per-language
+ * tenseDefs, and the keys are shared across all four languages even where the
+ * labels differ, so the first definition wins.
+ */
+const TENSE_LABELS: Record<string, string> = Object.values(TENSE_DEFS)
+  .flat()
+  .reduce<Record<string, string>>((acc, def) => {
+    if (!(def.key in acc)) acc[def.key] = def.label;
+    return acc;
+  }, {});
 
 function isSingleForm(key: string): boolean {
   return SINGLE_FORM_TENSES.has(key);
@@ -93,20 +108,28 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   const pronouns  = PRONOUNS[lang]   ?? PRONOUNS.spanish;
   const tenseDefs = TENSE_DEFS[lang] ?? TENSE_DEFS.spanish;
 
-  const tenseSelect   = document.getElementById('conjTenseSelect') as HTMLSelectElement | null;
   const displayToggle = document.getElementById('conjDisplayToggle');
 
-  function getTenseKey(): string {
-    return tenseSelect?.value ?? tenseDefs[0].key;
+  /** Tenses to drill, always at least one. */
+  function selectedTenses(): string[] {
+    const picked = activeTenses().filter(k => tenseDefs.some(d => d.key === k));
+    return picked.length ? picked : [tenseDefs[0].key];
   }
+
+  function tenseLabel(key: string): string {
+    return tenseDefs.find(d => d.key === key)?.label ?? key;
+  }
+
   function getDisplayMode(): string {
     return displayToggle?.querySelector<HTMLElement>('.conj-toggle-btn.active')?.dataset.mode ?? 'both';
   }
 
   function syncPronounRowVisibility(): void {
-    const single     = isSingleForm(getTenseKey());
+    // Hidden only when *every* selected tense is a single-form one
+    // (participle, gerund) — those have no pronouns to filter.
+    const allSingle  = selectedTenses().every(isSingleForm);
     const pronounRow = document.getElementById('conjPronounRow');
-    if (pronounRow) pronounRow.hidden = single;
+    if (pronounRow) pronounRow.hidden = allSingle;
   }
 
   // ── Progress: same segmented bar + score pills as table mode ───────────────
@@ -126,7 +149,14 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   });
   const orderCount = document.createElement('span');
   orderCount.className = 'conj-order-count';
-  orderCount.textContent = `${verbs.length} verb${verbs.length === 1 ? '' : 's'}`;
+  function describeSet(): string {
+    const t = selectedTenses().length;
+    const v = verbs.length;
+    return t > 1
+      ? `${v} verb${v === 1 ? '' : 's'} × ${t} tenses = ${v * t} cards`
+      : `${v} verb${v === 1 ? '' : 's'}`;
+  }
+  orderCount.textContent = describeSet();
   orderRow.append(orderLabel, orderSel, orderCount);
 
   const progressSection = document.createElement('div');
@@ -259,16 +289,27 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   let cardUpdaters: CardController[] = [];
 
   /** (Re)build every card from `verbs`, in the current order. */
+  /** Tenses the cards currently on screen were built from. */
+  let builtTenses: string[] = [];
+
   function buildCards(): void {
     cardsGrid.innerHTML = '';
     cardUpdaters = [];
+    const tenses = selectedTenses();
+    builtTenses = [...tenses];
+
     verbs.forEach(verb => {
-      const updater = buildCard(verb, pronouns, getTenseKey, getDisplayMode, updateProgress);
-      // Needed to attribute a card's outcome back to its verb when the
-      // session is recorded.
-      updater.card.dataset.verb = verb.word;
-      cardsGrid.appendChild(updater.card);
-      cardUpdaters.push(updater);
+      tenses.forEach(tenseKey => {
+        const updater = buildCard(verb, pronouns, tenseKey, getDisplayMode, updateProgress);
+        // Needed to attribute a card's outcome back to its verb when the
+        // session is recorded. Several cards can share a verb now, so the
+        // recorder scores a verb correct only if every one of its cards is.
+        updater.card.dataset.verb  = verb.word;
+        updater.card.dataset.tense = tenseKey;
+
+        cardsGrid.appendChild(updater.card);
+        cardUpdaters.push(updater);
+      });
     });
   }
 
@@ -285,8 +326,10 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     if (conjRecorded) return;
     conjRecorded = true;
 
-    const correctWords: string[] = [];
-    const missedWords:  string[] = [];
+    // A verb can now have several cards, one per selected tense. It counts as
+    // correct only when every one of them is fully correct — otherwise
+    // knowing the present tense would mask not knowing the subjunctive.
+    const perVerb = new Map<string, { cards: number; clean: number }>();
     cardsGrid.querySelectorAll<HTMLElement>('.conj-card').forEach(card => {
       const word = card.dataset.verb;
       if (!word) return;
@@ -299,7 +342,16 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
         if (inp.classList.contains('correct')) correct++;
       });
       if (total === 0) return;
-      (correct === total ? correctWords : missedWords).push(word);
+      const acc = perVerb.get(word) ?? { cards: 0, clean: 0 };
+      acc.cards++;
+      if (correct === total) acc.clean++;
+      perVerb.set(word, acc);
+    });
+
+    const correctWords: string[] = [];
+    const missedWords:  string[] = [];
+    perVerb.forEach((acc, word) => {
+      (acc.clean === acc.cards ? correctWords : missedWords).push(word);
     });
     if (correctWords.length === 0 && missedWords.length === 0) return;
 
@@ -316,6 +368,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     });
   }
   buildCards();
+  updateTenseSummary();
 
   orderSel.addEventListener('change', () => {
     verbOrder = orderSel.value as WordOrder;
@@ -329,7 +382,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
       return;
     }
     buildCards();
-    if (!isSingleForm(getTenseKey())) applyAllPronounToggles(cardsGrid);
+    if (!selectedTenses().every(isSingleForm)) applyAllPronounToggles(cardsGrid);
     syncPronounRowVisibility();
     updateProgress();
   });
@@ -339,7 +392,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   // Only apply pronoun toggles for conjugation tenses — skipping it in
   // single-form mode prevents applyAllPronounToggles from re-showing the
   // pronoun rows that buildCard already hid via setSingleMode(true).
-  if (!isSingleForm(getTenseKey())) {
+  if (!selectedTenses().every(isSingleForm)) {
     applyAllPronounToggles(cardsGrid);
   }
   syncPronounRowVisibility();
@@ -357,15 +410,36 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   });
 
   const handleTenseChange = (): void => {
-    giveUpBtn.disabled = false;
-    clearConjSummary();
-    cardUpdaters.forEach(u => u.updateInputs());
-    if (!isSingleForm(getTenseKey())) {
-      applyAllPronounToggles(cardsGrid);
-    }
+    // Deliberately does NOT rebuild the cards.
+    //
+    // It used to, and with a few hundred cards on screen every chip click tore
+    // down and re-created the whole grid — which is what made the chips feel
+    // laggy. The selection is a choice about the *next* quiz, so it is only
+    // applied on Start Quiz. The summary line says so, otherwise the chips
+    // would look broken.
     syncPronounRowVisibility();
-    updateProgress();
+    updateTenseSummary(true);
   };
+
+  /**
+   * Describe the current tense selection, and whether it differs from what is
+   * actually on screen.
+   */
+  function updateTenseSummary(pending = false): void {
+    const el = document.getElementById('conjTenseSummary');
+    if (!el) return;
+    const names = selectedTenses().map(tenseLabel);
+    const shown = names.length <= 2 ? names.join(', ') : `${names.length} tenses`;
+    const differs = pending && !sameSet(selectedTenses(), builtTenses);
+    el.textContent = differs
+      ? `${shown} — press Start Quiz to apply`
+      : shown;
+    el.classList.toggle('conj-tf-summary--pending', differs);
+  }
+
+  function sameSet(a: string[], b: string[]): boolean {
+    return a.length === b.length && a.every(x => b.includes(x));
+  }
 
   const handleDisplayClick = (e: Event): void => {
     const btn = (e.target as Element).closest<HTMLElement>('.conj-toggle-btn');
@@ -402,12 +476,19 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     next.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
-  tenseSelect?.addEventListener('change', handleTenseChange);
+  const tenseChips = document.getElementById('conjTenseChips');
+  // Chips, All and None all change the selection, so listen on the
+  // container and on the two buttons that sit outside it.
+  tenseChips?.addEventListener('click', handleTenseChange);
+  document.getElementById('conjTensesAll')?.addEventListener('click', handleTenseChange);
+  document.getElementById('conjTensesNone')?.addEventListener('click', handleTenseChange);
   displayToggle?.addEventListener('click', handleDisplayClick);
   document.addEventListener('keydown', handleCardNav);
 
   _cleanup = (): void => {
-    tenseSelect?.removeEventListener('change', handleTenseChange);
+    tenseChips?.removeEventListener('click', handleTenseChange);
+    document.getElementById('conjTensesAll')?.removeEventListener('click', handleTenseChange);
+    document.getElementById('conjTensesNone')?.removeEventListener('click', handleTenseChange);
     displayToggle?.removeEventListener('click', handleDisplayClick);
     document.removeEventListener('keydown', handleCardNav);
     setProgressCallback(null);
@@ -419,20 +500,61 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
 function buildCard(
   verb:           Word,
   pronouns:       string[],
-  getTenseKey:    () => string,
+  tenseKey:       string,
   getDisplayMode: () => string,
   onProgress:     () => void,
 ): CardController {
+  // One card drills one tense. Multiple selected tenses produce multiple
+  // cards for the same verb rather than one card with several sections —
+  // the card's answer checking, pronoun toggles and progress tally are all
+  // written around a single tense, and splitting them would have meant
+  // rewriting all three.
+  const getTenseKey = (): string => tenseKey;
   const card = document.createElement('div');
   card.className = 'conj-card';
 
+  // Header is a two-column row: the verb and its meaning on the left, the
+  // tense and the reveal control on the right. The right half used to be
+  // empty, which on a half-width card is a lot of wasted space.
   const header = document.createElement('div');
   header.className = 'conj-card-header';
+
+  const headMain = document.createElement('div');
+  headMain.className = 'conj-head-main';
   const targetEl  = document.createElement('div');
   targetEl.className = 'conj-verb-spanish';
   const englishEl = document.createElement('div');
   englishEl.className = 'conj-verb-english';
-  header.append(targetEl, englishEl);
+  headMain.append(targetEl, englishEl);
+
+  const headSide = document.createElement('div');
+  headSide.className = 'conj-head-side';
+
+  // Tense name, always shown — it is the one thing that distinguishes two
+  // cards for the same verb.
+  const tenseEl = document.createElement('span');
+  tenseEl.className = 'conj-card-tense';
+  headSide.appendChild(tenseEl);
+
+  // Frequency band, if we have one. Free context in space that was empty.
+  const bandEl = document.createElement('span');
+  bandEl.className = 'conj-card-band';
+  const band = verb.frequency?.band ?? null;
+  if (band) bandEl.textContent = band; else bandEl.hidden = true;
+  headSide.appendChild(bandEl);
+
+  const revealAllBtn = document.createElement('button');
+  revealAllBtn.type      = 'button';
+  revealAllBtn.className = 'conj-reveal-all-btn';
+  revealAllBtn.textContent = 'Reveal all';
+  revealAllBtn.title = 'Fill in every form for this verb (scored as revealed)';
+  revealAllBtn.addEventListener('click', () => {
+    revealAnswers('revealed');
+    revealAllBtn.disabled = true;
+  });
+  headSide.appendChild(revealAllBtn);
+
+  header.append(headMain, headSide);
 
   function updateHeader(): void {
     const mode = getDisplayMode();
@@ -440,6 +562,7 @@ function buildCard(
     englishEl.textContent = buildGlossDisplay(verb);
     targetEl.hidden  = mode === 'english';
     englishEl.hidden = mode === 'target';
+    tenseEl.textContent = TENSE_LABELS[tenseKey] ?? tenseKey;
   }
 
   const innerGrid = document.createElement('div');
