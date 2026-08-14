@@ -179,6 +179,128 @@ function buildWeb(stepNo: number, total: number): void {
   console.log(`\n  dist/ is ${(dirSize(path.join(root, 'dist')) / 1048576).toFixed(1)} MB`);
 }
 
+
+// ── Tauri scaffolding ─────────────────────────────────────────────────────────
+
+/**
+ * Write src-tauri/ from scratch.
+ *
+ * `tauri init` is an interactive wizard; asking someone to answer six prompts
+ * correctly is not "one command". Everything it would have asked is already
+ * known from this repo — the dist directory, the dev server port, the app
+ * name — so the config is generated instead. Nothing here is overwritten if it
+ * already exists, so hand edits survive.
+ *
+ * Targets Tauri 2 (@tauri-apps/cli ^2). The schema differs from Tauri 1.
+ */
+function scaffoldTauri(): void {
+  const dir  = path.join(root, 'src-tauri');
+  const srcD = path.join(dir, 'src');
+  fs.mkdirSync(srcD, { recursive: true });
+
+  const write = (rel: string, body: string): void => {
+    const file = path.join(dir, rel);
+    if (fs.existsSync(file)) { console.log(`  kept    src-tauri/${rel}`); return; }
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, body, 'utf8');
+    console.log(`  created src-tauri/${rel}`);
+  };
+
+  write('tauri.conf.json', JSON.stringify({
+    $schema: 'https://schema.tauri.app/config/2',
+    productName: 'VocabApp',
+    version: '0.1.0',
+    identifier: 'com.vocabapp.desktop',
+    build: {
+      // This script builds the web assets before invoking tauri, so
+      // beforeBuildCommand is deliberately absent — setting it would run the
+      // whole export/stage/vite chain a second time.
+      frontendDist: '../dist',
+      devUrl: 'http://localhost:5173',
+      beforeDevCommand: 'npm run dev:fe',
+    },
+    app: {
+      windows: [{
+        title: 'VocabApp',
+        width: 1280,
+        height: 860,
+        minWidth: 900,
+        minHeight: 600,
+        resizable: true,
+      }],
+      // The app is entirely local; the default CSP blocks the inline styles
+      // and blob: URLs the export/download features rely on.
+      security: { csp: null },
+    },
+    bundle: {
+      active: true,
+      targets: ['msi', 'nsis'],
+      icon: [
+        'icons/32x32.png',
+        'icons/128x128.png',
+        'icons/128x128@2x.png',
+        'icons/icon.icns',
+        'icons/icon.ico',
+      ],
+    },
+  }, null, 2) + '\n');
+
+  write('Cargo.toml', `[package]
+name = "vocabapp"
+version = "0.1.0"
+description = "Vocabulary practice for Spanish, French, Italian and Portuguese"
+edition = "2021"
+rust-version = "1.77"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
+`);
+
+  write('build.rs', `fn main() {
+    tauri_build::build()
+}
+`);
+
+  write('src/main.rs', `// Prevents a console window appearing alongside the app on Windows release
+// builds. Debug builds keep it, which is where panics and logs show up.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+fn main() {
+    tauri::Builder::default()
+        .run(tauri::generate_context!())
+        .expect("error while running VocabApp");
+}
+`);
+
+  write('.gitignore', `/target
+`);
+
+  // Icons: `tauri icon` is non-interactive and produces every size and format
+  // the bundler needs, including the .ico Windows requires.
+  const iconsDir = path.join(dir, 'icons');
+  if (!fs.existsSync(path.join(iconsDir, 'icon.ico'))) {
+    const source = path.join(root, 'public', 'icons', 'icon-512.png');
+    if (fs.existsSync(source)) {
+      console.log('  generating icon set from public/icons/icon-512.png');
+      run(`npx tauri icon "${source}"`, 'Icon generation');
+    } else {
+      console.error('  public/icons/icon-512.png is missing — cannot generate icons.');
+      process.exit(1);
+    }
+  } else {
+    console.log('  kept    src-tauri/icons/');
+  }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 const target = (process.argv[2] ?? 'check') as Target;
@@ -210,25 +332,7 @@ if (target === 'windows' || target === 'native') {
   }
   buildWeb(1, 4);
   step(4, 4, 'Package with Tauri');
-  if (!fs.existsSync(path.join(root, 'src-tauri'))) {
-    // Flag names differ between Tauri 1 and 2 (--dist-dir vs --frontend-dist),
-    // so point at the interactive init rather than guessing the version.
-    console.error(
-      '  src-tauri/ is missing. Initialise it once:\n\n'
-      + '    npm i -D @tauri-apps/cli\n'
-      + '    npx tauri init\n\n'
-      + '  Answer:\n'
-      + '    App name ................. VocabApp\n'
-      + '    Window title ............. VocabApp\n'
-      + '    Web assets (frontend) .... ../dist\n'
-      + '    Dev server URL ........... http://localhost:5173\n'
-      + '    Frontend dev command ..... npm run dev:fe\n'
-      + '    Frontend build command ... (leave blank)\n\n'
-      + '  Leave the build command blank: this script already builds the web\n'
-      + '  assets before calling tauri, and setting it would do that twice.',
-    );
-    process.exit(1);
-  }
+  scaffoldTauri();
   run('npx tauri build', 'Tauri build');
   console.log('\n  Installer: src-tauri/target/release/bundle/');
 }
