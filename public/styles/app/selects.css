@@ -32,7 +32,9 @@ select:focus {
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   padding: 0.32rem 0.2rem 0.32rem 0.55rem;
-  width: 128px;          /* fits 4 digits plus the placeholder comfortably */
+  /* Narrow enough that revealing this input does not push #startBtn onto the
+     next row of the wrapping controls bar. Still fits 4 digits. */
+  width: 96px;
   min-height: 40px;
   box-sizing: border-box;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);

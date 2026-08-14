@@ -1,4 +1,5 @@
 import type { Word } from '../types.js';
+import { saveSession, recordOutcome } from '../utils/session-history.ts';
 import { speak }     from '../utils/tts.js';
 import { isCorrect, getGlosses } from '../utils/utils.js';
 import type { Quiz } from './quiz.js';
@@ -14,6 +15,8 @@ let deck:         Word[]      = [];   // shuffled word list for this session
 let mastered:     Set<string> = new Set();
 let currentIndex  = 0;
 let sessionActive = false;
+let sessionStart  = Date.now();   // for the elapsed-time history record
+let sessionSaved  = false;        // endSession also fires on Play Again
 
 export function setQuiz(instance: Quiz): void {
   quizInstance = instance;
@@ -122,6 +125,29 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
 
     const total  = deck.length;
     const done   = mastered.size;
+
+    // Feed the shared history and miss tally, like every other mode. Guarded
+    // because endSession also runs when the user hits Play Again.
+    if (!sessionSaved && total > 0) {
+      sessionSaved = true;
+      // The language selector is the source of truth here; this module is
+      // handed words rather than a language.
+      const lang = (document.getElementById('langSelect') as HTMLSelectElement | null)?.value
+                ?? 'spanish';
+      const correctWords = deck.filter(w => mastered.has(w.word)).map(w => w.word);
+      const missedWords  = deck.filter(w => !mastered.has(w.word)).map(w => w.word);
+      recordOutcome(lang, missedWords, correctWords);
+      saveSession(lang, {
+        at: new Date().toISOString(),
+        mode: 'single',
+        total,
+        correct: done,
+        unassisted: done,   // single-word mode has no per-word hint concept
+        hints: 0,
+        revealed: 0,
+        seconds: Math.max(1, Math.round((Date.now() - sessionStart) / 1000)),
+      });
+    }
     const missed = total - done;
     const pct    = total ? Math.round((done / total) * 100) : 0;
 
@@ -172,6 +198,8 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
   function startSession(words: Word[]): void {
     deck          = fisherYates([...words]);
     mastered      = new Set();
+    sessionStart  = Date.now();
+    sessionSaved  = false;
     currentIndex  = 0;
     sessionActive = true;
     endBtn.textContent = 'End Quiz';

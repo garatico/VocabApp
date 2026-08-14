@@ -48,6 +48,8 @@ export function bindModeSwitch({
     const classFilter         = document.getElementById('classFilter');
     const listFilter          = document.getElementById('listFilter');
     const directionGroup      = document.getElementById('directionGroup');
+    const recallTimerGroup    = document.getElementById('recallTimerGroup');
+    const sortOrderGroup      = document.getElementById('sortOrderGroup');
     const conjModeControls    = document.getElementById('conjModeControls');
     const pictureModeControls = document.getElementById('pictureModeControls');
 
@@ -56,6 +58,14 @@ export function bindModeSwitch({
     // verbs you drill just as it narrows any other quiz.
     if (listFilter)          listFilter.style.display          = '';
     if (directionGroup)      directionGroup.style.display      = mode === 'table'       ? ''     : 'none';
+    if (recallTimerGroup)    recallTimerGroup.style.display    = mode === 'recall'      ? ''     : 'none';
+    // Table, recall and conjugation each carry their own order control inside
+    // the quiz, so the global one would be a second, competing switch. Single
+    // and picture modes have no in-quiz equivalent, so they keep it.
+    if (sortOrderGroup) {
+      const hasOwnOrder = mode === 'table' || mode === 'recall' || mode === 'conjugation';
+      sortOrderGroup.style.display = hasOwnOrder ? 'none' : '';
+    }
     if (conjModeControls)    conjModeControls.style.display    = mode === 'conjugation' ? ''     : 'none';
     if (pictureModeControls) pictureModeControls.style.display = mode === 'picture'     ? ''     : 'none';
 

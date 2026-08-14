@@ -76,6 +76,14 @@ export function bindStartHandler({
       // do NOT rebuild the filter UI here so user selections are preserved.
       let list = filterWords(getBaseList());
 
+      // Conjugation mode only ever shows verbs, but the size window was being
+      // applied to words of every part of speech first — so "Top 100" handed
+      // conjugation 100 mixed words, of which ~13 were verbs. Narrow the pool
+      // up front so the requested size means what it says.
+      const modeAtStart = getCurrentMode();
+      const verbsOnly   = modeAtStart === 'conjugation';
+      if (verbsOnly) list = list.filter(w => w.pos === 'verb');
+
       // Apply domain filter from the HTML #domainFilter checkboxes.
       // Words with no domain data pass through unconditionally — domain
       // assignments only exist for Spanish, so filtering on them must not
@@ -101,6 +109,7 @@ export function bindStartHandler({
 
         // Candidates: words ranked beyond the current window
         let extras: Word[] = allWords.filter(w => !baseWordSet.has(w.word));
+        if (verbsOnly) extras = extras.filter(w => w.pos === 'verb');
 
         // Apply list filter (same as applied to the base list above)
         extras = filterWords(extras);
@@ -123,6 +132,22 @@ export function bindStartHandler({
         list = [...list, ...extras.slice(0, needed)];
       }
 
+      // Same top-up for plain "Top N": narrowing to verbs always leaves the
+      // list short, since verbs are a minority of any frequency window.
+      if (verbsOnly && isFinite(requestedSize) && list.length < requestedSize) {
+        const allWords = getAllWords ? getAllWords() : [];
+        const have     = new Set(list.map(w => w.word));
+        let extras     = allWords.filter(w => w.pos === 'verb' && !have.has(w.word));
+        extras = filterWords(extras);
+        if (selectedDomains.length > 0) {
+          extras = extras.filter(w => {
+            const doms = w.domains || [];
+            return doms.length === 0 || doms.some((d: string) => selectedDomains.includes(d));
+          });
+        }
+        list = [...list, ...extras.slice(0, requestedSize - list.length)];
+      }
+
       const sortOrder = getSortOrder ? getSortOrder() : 'frequency';
       if (sortOrder === 'random') {
         for (let i = list.length - 1; i > 0; i--) {
@@ -140,7 +165,7 @@ export function bindStartHandler({
         tolerance:  Settings.getTypoToleranceRatio(),
       }));
 
-      const currentMode = getCurrentMode();
+      const currentMode = modeAtStart;
 
       if (currentMode === 'table') {
         tableWrap.innerHTML = '';
@@ -154,18 +179,10 @@ export function bindStartHandler({
           columns:   getCols({ max: 5, fallback: 2 }),
           direction: (getDirection ? getDirection() : 'target-en') as import('./modes/table-mode.ts').TableDirection,
           lang:      getFullLang ? getFullLang() : 'spanish',
-          onComplete: () => {
-            // Counts live in the score block under the bar — this is just the
-            // "you finished" flourish.
-            const html = `<span class="summary-pct">100%</span>`;
-            ['tableSummary', 'tableSummaryTop'].forEach(id => {
-              const el = document.getElementById(id);
-              if (!el) return;
-              el.style.display = 'flex';
-              el.innerHTML = html;
-              el.classList.add('quiz-summary--perfect');
-            });
-          }
+          // Completion is shown by the progress bar itself now — it fills and
+          // its in-bar label reads 100%. A separate block that existed only to
+          // repeat "100%" was redundant.
+          onComplete: () => { /* nothing extra to show */ }
         });
       }
 

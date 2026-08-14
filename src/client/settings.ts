@@ -53,6 +53,15 @@ export const Settings = {
     return Number(v);
   },
   getHardStop: (): boolean => get('hard_stop', 'false') === 'true',
+
+  /**
+   * Recall: accept a word the moment it is typed, or wait for Enter.
+   *
+   * Auto-accept is faster but can only fire when the typed text cannot be
+   * extended into a longer word, since short words like 'e' and 'la' are also
+   * the openings of longer ones.
+   */
+  getRecallAutoEnter: (): boolean => get('recall_auto_enter', 'true') === 'true',
 };
 
 // ── Font size application ─────────────────────────────────────────────────────
@@ -155,9 +164,11 @@ export function bindSettings(): void {
     set('typo_tolerance', btn.dataset.typo ?? 'normal');
   });
 
-  // Recall timer select
-  const timerSel    = document.getElementById('settingTimer')       as HTMLSelectElement | null;
-  const timerCustom = document.getElementById('settingTimerCustom') as HTMLInputElement  | null;
+  // Recall timer + on-timeout now live in the controls bar next to Start Quiz,
+  // not in this modal — they are per-session choices, so they belong where the
+  // session starts. Same storage keys, so nothing else had to change.
+  const timerSel    = document.getElementById('recallTimerSelect') as HTMLSelectElement | null;
+  const timerCustom = document.getElementById('recallTimerCustom') as HTMLInputElement  | null;
   timerSel?.addEventListener('change', () => {
     if (timerCustom) timerCustom.style.display = timerSel.value === 'custom' ? 'inline-block' : 'none';
     if (timerSel.value === 'custom') timerCustom?.focus();
@@ -165,12 +176,19 @@ export function bindSettings(): void {
   });
   timerCustom?.addEventListener('input', () => set('recall_timer_custom', timerCustom.value));
 
-  // Hard stop
-  document.getElementById('settingHardStop')?.addEventListener('click', e => {
+  document.getElementById('recallHardStop')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
     if (!btn) return;
-    activateToggle('settingHardStop', btn);
+    activateToggle('recallHardStop', btn);
     set('hard_stop', btn.dataset.stop ?? 'false');
+  });
+
+  // Recall: auto-accept vs Enter
+  document.getElementById('settingRecallAutoEnter')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingRecallAutoEnter', btn);
+    set('recall_auto_enter', btn.dataset.auto ?? 'true');
   });
 
   restoreSettingsUI();
@@ -219,9 +237,9 @@ function restoreSettingsUI(): void {
     b.classList.toggle('active', b.dataset.typo === savedTypo);
   });
 
-  // Timer
-  const timerSel    = document.getElementById('settingTimer')       as HTMLSelectElement | null;
-  const timerCustom = document.getElementById('settingTimerCustom') as HTMLInputElement  | null;
+  // Timer (now in the controls bar)
+  const timerSel    = document.getElementById('recallTimerSelect') as HTMLSelectElement | null;
+  const timerCustom = document.getElementById('recallTimerCustom') as HTMLInputElement  | null;
   const savedTimer  = get('recall_timer', '300');
   if (timerSel) {
     const knownOption = timerSel.querySelector<HTMLOptionElement>(`option[value="${savedTimer}"]`);
@@ -238,7 +256,13 @@ function restoreSettingsUI(): void {
 
   // Hard stop
   const savedStop = get('hard_stop', 'false');
-  document.querySelectorAll<HTMLElement>('#settingHardStop .sort-order-btn').forEach(b => {
+  document.querySelectorAll<HTMLElement>('#recallHardStop .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.stop === savedStop);
+  });
+
+  // Recall auto-enter
+  const savedAuto = get('recall_auto_enter', 'true');
+  document.querySelectorAll<HTMLElement>('#settingRecallAutoEnter .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.auto === savedAuto);
   });
 }

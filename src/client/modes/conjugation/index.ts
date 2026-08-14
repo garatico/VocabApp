@@ -3,6 +3,9 @@
  */
 
 import type { Word } from '../../types.js';
+import { foldKey as normalize } from '../../utils/match.ts';
+import { orderWords, WORD_ORDER_LABELS, saveSession, recordOutcome,
+         type WordOrder } from '../../utils/session-history.ts';
 import { PRONOUNS, TENSE_DEFS } from './data.js';
 import {
   setProgressCallback,
@@ -42,12 +45,6 @@ const SINGLE_FORM_ROW_LABEL: Record<string, string> = {
   gerund:          'gerundio',
 };
 
-function normalize(s: string): string {
-  return s.trim().toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '');
-}
-
 function clearConjSummary(): void {
   ['conjSummaryTop', 'conjSummaryBottom'].forEach(id => {
     const el = document.getElementById(id);
@@ -76,7 +73,13 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
 
   container.innerHTML = '';
 
-  const verbs = words.filter(w => w.pos === 'verb');
+  // Order lives with the quiz, as it does in recall and table mode, so it can
+  // be changed without restarting. Shared implementation, so 'shuffle' and
+  // 'words I keep missing' behave identically in all three.
+  let verbOrder: WordOrder =
+    (localStorage.getItem('vq_conj_order') as WordOrder | null) ?? 'rank';
+  const allVerbs = words.filter(w => w.pos === 'verb');
+  let verbs = orderWords(allVerbs, verbOrder, lang);
 
   if (verbs.length === 0) {
     container.innerHTML = `
@@ -107,6 +110,25 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   }
 
   // ── Progress: same segmented bar + score pills as table mode ───────────────
+  // ── Order control ─────────────────────────────────────────────────────────
+  const orderRow = document.createElement('div');
+  orderRow.className = 'conj-order-row';
+  const orderLabel = document.createElement('span');
+  orderLabel.className = 'conj-order-label';
+  orderLabel.textContent = 'Order';
+  const orderSel = document.createElement('select');
+  orderSel.className = 'conj-order-select';
+  orderSel.title = 'Order of the verbs in this quiz';
+  WORD_ORDER_LABELS.forEach(([value, label]) => {
+    const o = document.createElement('option');
+    o.value = value; o.textContent = label; o.selected = value === verbOrder;
+    orderSel.appendChild(o);
+  });
+  const orderCount = document.createElement('span');
+  orderCount.className = 'conj-order-count';
+  orderCount.textContent = `${verbs.length} verb${verbs.length === 1 ? '' : 's'}`;
+  orderRow.append(orderLabel, orderSel, orderCount);
+
   const progressSection = document.createElement('div');
   progressSection.className = 'conj-progress-section';
 
@@ -229,18 +251,90 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     paint(verbsBar, verbs, `${verbs.correct}/${verbs.total} fully conjugated`);
 
     if (forms.total > 0 && forms.correct === forms.total) {
+      recordConjSession();
       showConjSummary(verbs.correct, verbs.total, forms.correct, forms.total);
     }
   }
 
-  const cardUpdaters: CardController[] = [];
-  verbs.forEach(verb => {
-    const updater = buildCard(verb, pronouns, getTenseKey, getDisplayMode, updateProgress);
-    cardsGrid.appendChild(updater.card);
-    cardUpdaters.push(updater);
+  let cardUpdaters: CardController[] = [];
+
+  /** (Re)build every card from `verbs`, in the current order. */
+  function buildCards(): void {
+    cardsGrid.innerHTML = '';
+    cardUpdaters = [];
+    verbs.forEach(verb => {
+      const updater = buildCard(verb, pronouns, getTenseKey, getDisplayMode, updateProgress);
+      // Needed to attribute a card's outcome back to its verb when the
+      // session is recorded.
+      updater.card.dataset.verb = verb.word;
+      cardsGrid.appendChild(updater.card);
+      cardUpdaters.push(updater);
+    });
+  }
+
+  const conjSessionStart = Date.now();
+  let conjRecorded = false;
+
+  /**
+   * Record the session once it finishes or is given up on.
+   *
+   * A verb counts as correct only when every one of its visible forms is
+   * correct — the same rule the verb-level progress bar uses.
+   */
+  function recordConjSession(): void {
+    if (conjRecorded) return;
+    conjRecorded = true;
+
+    const correctWords: string[] = [];
+    const missedWords:  string[] = [];
+    cardsGrid.querySelectorAll<HTMLElement>('.conj-card').forEach(card => {
+      const word = card.dataset.verb;
+      if (!word) return;
+      const rows = card.querySelectorAll('.conj-row:not(.conj-row-hidden)');
+      let total = 0, correct = 0;
+      rows.forEach(row => {
+        const inp = row.querySelector<HTMLInputElement>('.conj-drill-input');
+        if (!inp) return;
+        total++;
+        if (inp.classList.contains('correct')) correct++;
+      });
+      if (total === 0) return;
+      (correct === total ? correctWords : missedWords).push(word);
+    });
+    if (correctWords.length === 0 && missedWords.length === 0) return;
+
+    recordOutcome(lang, missedWords, correctWords);
+    saveSession(lang, {
+      at: new Date().toISOString(),
+      mode: 'conjugation',
+      total: correctWords.length + missedWords.length,
+      correct: correctWords.length,
+      unassisted: correctWords.length,
+      hints: 0,
+      revealed: missedWords.length,
+      seconds: Math.max(1, Math.round((Date.now() - conjSessionStart) / 1000)),
+    });
+  }
+  buildCards();
+
+  orderSel.addEventListener('change', () => {
+    verbOrder = orderSel.value as WordOrder;
+    localStorage.setItem('vq_conj_order', verbOrder);
+    verbs = orderWords(allVerbs, verbOrder, lang);
+    // Answers live in the DOM here rather than a state map, so re-ordering
+    // restarts the cards. Warn rather than silently discarding work.
+    const answered = cardUpdaters.some(u => u.card.querySelector('input:disabled'));
+    if (answered && !window.confirm('Re-ordering rebuilds the cards and clears answers so far. Continue?')) {
+      orderSel.value = verbOrder = (localStorage.getItem('vq_conj_order') as WordOrder) ?? 'rank';
+      return;
+    }
+    buildCards();
+    if (!isSingleForm(getTenseKey())) applyAllPronounToggles(cardsGrid);
+    syncPronounRowVisibility();
+    updateProgress();
   });
 
-  container.append(progressSection, cardsGrid);
+  container.append(orderRow, progressSection, cardsGrid);
 
   // Only apply pronoun toggles for conjugation tenses — skipping it in
   // single-form mode prevents applyAllPronounToggles from re-showing the

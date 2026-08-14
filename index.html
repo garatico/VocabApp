@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="description" content="VocabApp — practice Spanish, Portuguese, Italian and French vocabulary with flashcards, recall, picture quiz and conjugation drills."/>
 <title>VocabApp</title>
+
+<!-- Installable / offline (see public/sw.js) -->
+<link rel="manifest" href="/manifest.webmanifest"/>
+<meta name="theme-color" content="#3d6b4f" media="(prefers-color-scheme: light)"/>
+<meta name="theme-color" content="#1a1917" media="(prefers-color-scheme: dark)"/>
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png"/>
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="VocabApp"/>
 <!-- Shared tokens -->
 <link rel="stylesheet" href="/styles/shared/variables.css"/>
 <link rel="stylesheet" href="/styles/shared/reset.css"/>
@@ -102,7 +112,7 @@
 
           <div class="controls-sep" aria-hidden="true"></div>
 
-          <div class="control-group">
+          <div class="control-group" id="sortOrderGroup">
             <label>Order</label>
             <div class="sort-order-toggle" id="sortOrderToggle">
               <button class="sort-order-btn active" data-order="frequency" title="Order by word frequency">Freq</button>
@@ -117,6 +127,26 @@
               <button class="conj-toggle-btn active" data-direction="target-en">Word &#x2192; Meaning</button>
               <button class="conj-toggle-btn"        data-direction="en-target">Meaning &#x2192; Word</button>
               <button class="conj-toggle-btn"        data-direction="mixed">Mixed</button>
+            </div>
+          </div>
+
+          <div class="control-group" id="recallTimerGroup">
+            <label>Time limit</label>
+            <div class="size-row">
+              <select id="recallTimerSelect">
+                <option value="0">No timer</option>
+                <option value="60">1 min</option>
+                <option value="180">3 min</option>
+                <option value="300" selected>5 min</option>
+                <option value="600">10 min</option>
+                <option value="900">15 min</option>
+                <option value="custom">Custom&#x2026;</option>
+              </select>
+              <input type="number" id="recallTimerCustom" min="1" max="999" placeholder="mins" style="display:none;"/>
+              <div class="sort-order-toggle" id="recallHardStop" title="What happens when the timer runs out">
+                <button type="button" class="sort-order-btn active" data-stop="false">Keep going</button>
+                <button type="button" class="sort-order-btn" data-stop="true">Hard stop</button>
+              </div>
             </div>
           </div>
 
@@ -252,8 +282,8 @@
             <div id="tableBarTop" class="bar"></div>
             <div id="tableBarTopRevealed" class="bar-revealed"></div>
             <div id="tableBarTopMissed" class="bar-missed"></div>
+            <span id="tableStatsTop" class="progress-label"></span>
           </div>
-          <div id="tableStatsTop" class="small"></div>
         </div>
         <div id="tableScoreTop" class="quiz-score"></div>
         <div id="tableSummaryTop" class="quiz-summary" style="display:none"></div>
@@ -265,9 +295,13 @@
         </div>
 
         <div class="table-nav" id="tableJumpTop">
-          <div class="table-nav-side"></div>
+          <div class="table-nav-side">
+            <span class="inline-order-label">Order</span>
+            <select class="table-order-select" id="tableOrderSelect" aria-label="Word order" title="Order of the words in this quiz"></select>
+          </div>
           <div class="table-pager" id="tablePagerTop" hidden>
             <button type="button" class="pager-btn" data-page="prev" aria-label="Previous page">&#x2190;</button>
+            <select class="pager-select" id="tablePagerSelectTop" aria-label="Jump to page"></select>
             <span class="pager-status" id="tablePagerStatusTop"></span>
             <button type="button" class="pager-btn" data-page="next" aria-label="Next page">&#x2192;</button>
           </div>
@@ -282,6 +316,7 @@
           <div class="table-nav-side"></div>
           <div class="table-pager" id="tablePagerBottom" hidden>
             <button type="button" class="pager-btn" data-page="prev" aria-label="Previous page">&#x2190;</button>
+            <select class="pager-select" id="tablePagerSelectBottom" aria-label="Jump to page"></select>
             <span class="pager-status" id="tablePagerStatusBottom"></span>
             <button type="button" class="pager-btn" data-page="next" aria-label="Next page">&#x2192;</button>
           </div>
@@ -298,8 +333,8 @@
             <div id="tableBarBottom" class="bar"></div>
             <div id="tableBarBottomRevealed" class="bar-revealed"></div>
             <div id="tableBarBottomMissed" class="bar-missed"></div>
+            <span id="tableStatsBottom" class="progress-label"></span>
           </div>
-          <div id="tableStatsBottom" class="small"></div>
         </div>
         <div id="tableScoreBottom" class="quiz-score"></div>
       </section>
@@ -456,33 +491,15 @@
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Timer</span>
-                <span class="settings-desc">Time limit per recall session</span>
+                <span>Accepting a word</span>
+                <span class="settings-desc">Auto-accept as soon as you type it, or wait for Enter. Short words that start longer ones always wait for Enter.</span>
               </div>
-              <div class="settings-control">
-                <select id="settingTimer">
-                  <option value="0">No timer</option>
-                  <option value="60">1 min</option>
-                  <option value="180">3 min</option>
-                  <option value="300" selected>5 min</option>
-                  <option value="600">10 min</option>
-                  <option value="900">15 min</option>
-                  <option value="custom">Custom…</option>
-                </select>
-                <input type="number" id="settingTimerCustom" min="1" max="999" placeholder="mins" style="display:none;"/>
+              <div class="sort-order-toggle" id="settingRecallAutoEnter">
+                <button type="button" class="sort-order-btn active" data-auto="true">Auto</button>
+                <button type="button" class="sort-order-btn" data-auto="false">Press Enter</button>
               </div>
             </div>
 
-            <div class="settings-row">
-              <div class="settings-label">
-                <span>On timeout</span>
-                <span class="settings-desc">Whether the quiz locks up when the timer expires</span>
-              </div>
-              <div class="sort-order-toggle" id="settingHardStop">
-                <button type="button" class="sort-order-btn active" data-stop="false">Keep going</button>
-                <button type="button" class="sort-order-btn" data-stop="true">Hard stop</button>
-              </div>
-            </div>
           </div>
 
           <div class="settings-section">

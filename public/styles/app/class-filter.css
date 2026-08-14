@@ -35,12 +35,14 @@
   border-radius: var(--radius-sm);
 }
 
-/* One gap between every filter block, whatever the mode */
+/* One gap between every filter block, whatever the mode.
+   Boxes *inside* .mode-filter-panel are deliberately absent: that panel is a
+   flex column with `gap: 0.5rem`, so a margin here would stack on top of the
+   gap and make the Display / Tense / Forms spacing 1rem while everything
+   around it stayed at 0.5rem. */
 #classFilter,
 #listFilter,
-#domainFilterWrap,
-#conjModeControls .filter-box,
-#pictureModeControls .filter-box {
+#domainFilterWrap {
   margin-top: 0.5rem;
 }
 #classFilter { margin-top: 0.5rem; }
