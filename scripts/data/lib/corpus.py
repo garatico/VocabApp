@@ -1,13 +1,15 @@
 """
-corpus_builder.py - Wikipedia corpus extraction and entry building
-==================================================================
-Responsible for:
-  - Reading Wikipedia frequency corpus files
-  - spaCy lemmatisation and POS tagging
-  - mlconjug3 verb conjugation
-  - Building vocabulary entries from corpus rows
+lib/corpus.py — frequency-corpus extraction and entry building
+==============================================================
+Turns a raw frequency list into clean, open-class vocabulary entries:
 
-Used by corpus_to_curated.py.
+  * reading OpenSubtitles / Wikipedia frequency files
+  * spaCy lemmatisation and POS tagging
+  * filtering out proper nouns, numerals, English, and the conjugated verb
+    forms spaCy mislabels when handed a bare word with no sentence context
+  * mlconjug3 verb conjugation
+
+Pure library — no CLI. Driven by pipeline.py's `mine` step.
 """
 
 import re
@@ -17,9 +19,10 @@ import warnings
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from lang_config import (
+from .config import (
     LANG_NAMES, SPACY_MODELS, MLCONJUG3_LANG, TENSE_MAP,
     POS_GROUPS, WIKT_LANG, OS_LANG,
+    rank_to_band, rank_to_difficulty,
 )
 
 try:
@@ -157,27 +160,6 @@ ROMAN_NUMERAL_RE = re.compile(
     r'^m{0,4}(cm|cd|d?c{0,3})(xc|xl|l?x{0,3})(ix|iv|v?i{0,3})$',
     re.IGNORECASE
 )
-
-
-# ==============================================================================
-# RANK / BAND HELPERS
-# ==============================================================================
-
-def rank_to_band(rank: int) -> str:
-    if rank <= 100:  return 'A1'
-    if rank <= 500:  return 'A2'
-    if rank <= 1500: return 'B1'
-    if rank <= 3000: return 'B2'
-    if rank <= 6000: return 'C1'
-    return 'C2'
-
-
-def rank_to_difficulty(rank: int) -> int:
-    if rank <= 100:  return 1
-    if rank <= 500:  return 2
-    if rank <= 2000: return 3
-    if rank <= 5000: return 4
-    return 5
 
 
 # ==============================================================================
@@ -484,10 +466,17 @@ def parse_opensubtitles_line(line: str, rank: int) -> Optional[Tuple[int, str, i
         return None
 
 
-def find_os_corpus_file(lang: str, os_dir: Path) -> Optional[Path]:
+def find_os_corpus_file(lang: str, os_dir: Path,
+                        prefer: str = '50k') -> Optional[Path]:
     """
     Locate the OpenSubtitles frequency file for a language.
-    Directory structure: os_dir / {iso} / {iso}_50k.txt  (or _full.txt)
+    Directory structure: os_dir / {iso} / {iso}_50k.txt  and  {iso}_full.txt
+
+    prefer='50k'  the curated 50,000-word list. Sensible words, already
+                  filtered by whoever built it. The default.
+    prefer='full' the complete corpus — 1.2M lines for Spanish. Everything
+                  past the first ~50k is increasingly typos, proper nouns and
+                  inflected forms, so raise --min-count when using it.
     """
     iso = OS_LANG.get(lang)
     if not iso:
@@ -495,7 +484,10 @@ def find_os_corpus_file(lang: str, os_dir: Path) -> Optional[Path]:
     lang_dir = os_dir / iso
     if not lang_dir.exists():
         return None
-    for name in (f'{iso}_50k.txt', f'{iso}_full.txt'):
+
+    order = ((f'{iso}_full.txt', f'{iso}_50k.txt') if prefer == 'full'
+             else (f'{iso}_50k.txt', f'{iso}_full.txt'))
+    for name in order:
         candidate = lang_dir / name
         if candidate.exists():
             return candidate

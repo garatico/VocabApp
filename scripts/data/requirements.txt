@@ -5,17 +5,17 @@
 # Only needed for the data pipeline (corpus extraction, gloss fetching,
 # DB sync, image download) — the app itself is pure Node.
 
-# Corpus extraction / lemmatization (corpus_builder.py, corpus_to_curated.py)
+# Corpus extraction / lemmatization (pipeline.py mine)
 spacy>=3.7
 
-# Verb conjugation for fr/ita/por during sync (sync_db.py, corpus_builder.py)
+# Verb conjugation for fr/ita/por during sync (pipeline.py sync)
 mlconjug3>=3.10
 
-# Gloss sources (corpus_to_curated.py)
+# Gloss sources (pipeline.py mine)
 wiktionaryparser>=0.0.97
 deep-translator>=1.11
 
-# Wikipedia image download (download_images.py)
+# Wikipedia image download (pipeline.py images)
 requests>=2.31
 
 # spaCy language models — install separately after spacy:

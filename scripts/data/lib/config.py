@@ -1,13 +1,48 @@
 """
-lang_config.py - Shared language configuration for the VocabApp pipeline
-=========================================================================
-Single source of truth for language codes, model names, POS mappings,
-and shared utility functions.
-Imported by corpus_builder.py, corpus_to_curated.py, sync_db.py, and
-check_visual_coverage.py.
+lib/config.py — language configuration and filesystem paths
+============================================================
+Single source of truth for:
+
+  * which languages the pipeline handles, and the model / corpus / translator
+    code each one uses in every third-party library
+  * the frequency rank scales (rank → CEFR band, rank → 1-5 difficulty)
+  * every path the pipeline reads or writes
+
+Everything else imports from here, so adding a language or moving a directory
+is a one-file change. No side effects: importing this module only computes
+paths, it never creates or touches anything on disk.
 """
 
+from pathlib import Path
 from typing import Dict, Optional, Tuple
+
+# ── Paths ─────────────────────────────────────────────────────────────────────
+# scripts/data/lib/config.py → parents[3] is the repo root.
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+DATA_DIR    = PROJECT_ROOT / 'data'
+CURATED_DIR = DATA_DIR / 'curated'          # {language}_curated.jsonl — source of truth
+DB_PATH     = DATA_DIR / 'vocabulary.db'    # what the app actually serves
+OS_DIR      = DATA_DIR / 'opensubtitles_freq_corpora'
+WIKI_DIR    = DATA_DIR / 'wikipedia_freq_corpora'
+GLOSS_CACHE = DATA_DIR / 'gloss_cache'      # cached Wiktionary/Translate lookups
+PRESEED_DIR = DATA_DIR / 'preseed'          # earlier pipeline output, used by backfill
+IMAGES_DIR  = DATA_DIR / 'images'           # Wikipedia photos (animals/ food/ nature/)
+EMOJI_DIR   = DATA_DIR / 'emoji'            # OpenMoji SVGs
+
+VISUAL_MAP  = PROJECT_ROOT / 'src' / 'client' / 'data' / 'visual-map.ts'
+
+
+def curated_path(lang: str) -> Path:
+    """data/curated/spanish_curated.jsonl for 'spa'."""
+    return CURATED_DIR / f'{LANG_NAMES[lang]}_curated.jsonl'
+
+
+def gloss_cache_path(lang: str) -> Path:
+    """data/gloss_cache/gloss_cache_spa.jsonl for 'spa'."""
+    GLOSS_CACHE.mkdir(parents=True, exist_ok=True)
+    return GLOSS_CACHE / f'gloss_cache_{lang}.jsonl'
+
 
 # 3-letter code -> full language name (used for JSONL filenames, DB lang field)
 LANG_NAMES: Dict[str, str] = {
@@ -99,6 +134,13 @@ TENSE_MAP: Dict[str, Dict[str, Tuple[str, str]]] = {
 }
 
 
+# ── Frequency rank scales ─────────────────────────────────────────────────────
+# These two are the *only* definitions of these scales in the pipeline.
+# The corpus and mining code each used to carry their own copy
+# with different thresholds, which meant rank 1200 was B1 in one file and B2 in
+# the other. The thresholds kept here are the ones that produced the data
+# currently in vocabulary.db, so nothing already imported shifts band.
+
 def rank_to_difficulty(rank: Optional[int]) -> int:
     """Map a frequency rank to a 1-5 difficulty level (1 = most common)."""
     if not rank:     return 5
@@ -107,6 +149,17 @@ def rank_to_difficulty(rank: Optional[int]) -> int:
     if rank <= 1000: return 3
     if rank <= 2000: return 4
     return 5
+
+
+def rank_to_band(rank: Optional[int]) -> str:
+    """Map a frequency rank to a CEFR band (A1 = most common)."""
+    if not rank:     return 'C2'
+    if rank <= 200:  return 'A1'
+    if rank <= 500:  return 'A2'
+    if rank <= 1000: return 'B1'
+    if rank <= 2000: return 'B2'
+    if rank <= 4000: return 'C1'
+    return 'C2'
 
 
 # spaCy POS tag -> app POS group

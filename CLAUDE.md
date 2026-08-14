@@ -131,16 +131,18 @@ VocabApp/
 │   ├── validate.js                  # null-byte/syntax check — runs as pre-commit hook (npm run validate)
 │   ├── test-api.js                  # manual smoke-test for the running API
 │   ├── migrations/                  # One-off schema migration scripts (historical; already applied)
-│   └── data/                        # all Python data scripts (PROJECT_ROOT = two parents up)
-│       ├── sync_db.py               # curated JSONL → vocabulary.db  (npm run sync)
-│       ├── delete_all.sql           # nuclear reset — deletes all rows from every table
-│       ├── download_images.py       # fetch Wikipedia photos → data/images/  (npm run download:images)
-│       ├── download_emoji.py        # fetch OpenMoji SVGs → data/emoji/  (npm run download:emoji)
-│       ├── check_visual_coverage.py # report picture-quiz visual gaps  (npm run check:visuals)
-│       ├── corpus_to_curated.py     # corpus words → curated JSONL
-│       ├── corpus_builder.py        # spaCy corpus extraction helpers
-│       ├── lang_config.py           # shared language codes / tense maps
-│       └── review_glosses.py        # gloss cache review helper
+│   └── data/                        # Python data pipeline — ONE entry point
+│       ├── pipeline.py              # the only script you run (see below)
+│       ├── lib/                     # modules — no CLI, no side effects
+│       │   ├── __init__.py
+│       │   ├── config.py            # languages, models, paths, rank scales
+│       │   ├── corpus.py            # corpus reading, spaCy tagging, conjugation
+│       │   ├── curated.py           # the only reader/writer of curated JSONL,
+│       │   │                        #   plus mine/dedupe/backfill/enrich logic
+│       │   ├── db.py                # schema, safe open/backup, DB writes
+│       │   └── visuals.py           # image/emoji fetch, coverage report
+│       ├── requirements.txt         # spacy, mlconjug3, wiktionaryparser, deep_translator…
+│       └── delete_all.sql           # nuclear reset — deletes all rows from every table
 ├── data/
 │   ├── vocabulary.db                # Production SQLite DB (never touched by tests)
 │   ├── curated/                     # Source-of-truth JSONL files per language
@@ -148,6 +150,159 @@ VocabApp/
 │   └── emoji/                       # OpenMoji SVGs (animals/)
 └── mobile/                          # Parked — not in active development; excluded from git
 ```
+
+## The Data Pipeline (`scripts/data/pipeline.py`)
+
+**There is one script.** `pipeline.py` is the only executable in the pipeline;
+everything else is a module under `lib/` that it drives.
+
+```bash
+python scripts/data/pipeline.py all --langs spa            # preview
+python scripts/data/pipeline.py all --langs spa --write    # apply
+python scripts/data/pipeline.py                            # list the steps
+```
+
+| step       | what it does                                             | in `all`? |
+|------------|----------------------------------------------------------|-----------|
+| `mine`     | OpenSubtitles corpus → new curated entries (+ glosses)    | no — network, rate-limited, batched |
+| `dedupe`   | drop duplicate and junk entries                           | yes |
+| `backfill` | fill missing pos/glosses so `sync` stops skipping rows    | yes |
+| `enrich`   | gender, domains, canonical domain names (Spanish)         | yes |
+| `sync`     | curated JSONL → `vocabulary.db`                           | yes |
+| `images`   | Wikipedia/iNaturalist photos → `data/images/`              | no — network |
+| `emoji`    | OpenMoji SVGs → `data/emoji/`                              | no — network |
+| `check`    | Picture Quiz coverage report                              | read-only |
+
+npm aliases exist for each (`npm run data:all`, `data:sync`, `data:check`…);
+they pass `--write` where it applies, and `npm run data:all:dry` previews.
+
+### ⚠️ Dry run is the default
+
+**Nothing is written unless you pass `--write`** — every step, every time. It
+used to vary per script, which meant `infer_domains.py` rewrote the database on
+a bare run while `dedupe_curated.py` was a no-op. `--dry-run` is still accepted
+so old commands don't error, but it does nothing (it *is* the default).
+
+Two flags, identical on every step:
+
+| flag | meaning |
+|------|---------|
+| *(omitted)* | preview — reports what it would do, changes nothing |
+| `--write` / `-w` | apply, after taking a backup |
+| `--langs` / `-l` | `spa fra ita por`; several at once is fine; **omitted = all four** |
+
+Every run opens with a header stating the mode, the languages and what it is
+about to touch, and closes with whether anything was written:
+
+```
+======================================================================
+  STEP      : sync
+  MODE      : DRY RUN — nothing will be saved
+              this is the default; add --write to apply
+  LANGUAGES : spanish (spa)
+  WOULD EDIT: data/vocabulary.db
+======================================================================
+```
+
+Before anything is replaced it is backed up: curated JSONL to `.jsonl.bak`, the
+database to `vocabulary.db.bak`.
+
+### Windows notes
+
+`stdout` is forced to UTF-8 at the top of `pipeline.py`. The reports use box
+characters and arrows, which a cp1252 console cannot encode — without that
+reconfigure the very first banner raises `UnicodeEncodeError` and the run dies
+before doing anything. The npm aliases call `python`, not `python3`, which
+doesn't exist on Windows.
+
+### How the modules fit together
+
+Dependencies run one way, and `config` is the leaf:
+
+```
+config  ←  corpus  ←  curated  ←  pipeline
+config  ←  db      ←────────────╯
+config  ←  visuals ←───────────╯
+```
+
+- **`config.py`** — languages, model/corpus/translator codes, every path, and
+  the frequency rank scales. Adding a language or moving a directory is a
+  one-file change. `PROJECT_ROOT` is `Path(__file__).resolve().parents[3]`.
+- **`curated.py`** — the *only* reader and the *only* writer of the curated
+  JSONL. `read(lang)` / `write(lang, entries)`; `write` goes through a temp
+  file and an atomic rename, so an interrupted run can't truncate the source
+  of truth.
+- **`db.py`** — the only module that touches `vocabulary.db`. It takes entries
+  and returns counts; it never reads a file. `open_db(create=False)` fails
+  loudly on a missing DB rather than silently creating an empty one and
+  reporting "0 rows updated".
+
+**Pipeline steps are pure.** `dedupe_lang`, `backfill_lang`, `enrich_*` take an
+entry list, mutate or filter it, and return a report — none of them touch the
+filesystem. `pipeline.py` alone decides whether to persist. That is what makes
+`--write` a single reliable gate instead of a flag each step must remember to
+honour, and it is why the steps compose into `all` safely.
+
+### Mining: where the words come from, and what limits the yield
+
+`pipeline.py mine` → `curated.mine_lang` → `curated.extract_candidates` →
+`corpus.read_top_n_os` / `corpus.build_corpus_entries`.
+
+**spaCy is a hard requirement.** Without it `extract_candidates` catches the
+`ImportError` and returns an empty list, so `mine` silently yields zero words:
+
+```bash
+pip install -r scripts/data/requirements.txt
+python -m spacy download es_core_news_sm    # fr_ / it_ / pt_core_news_sm too
+```
+
+The knobs, in the order they cut the candidate pool:
+
+| flag | default | effect |
+|------|---------|--------|
+| `--corpus` | `50k` | `50k` reads `{iso}_50k.txt`; `full` reads `{iso}_full.txt` (1.2M lines for Spanish, 70k usable at `--min-count 100`) |
+| `--min-count` | 100 | words rarer than this are ignored |
+| `--top` | 0 (all) | caps how many corpus rows get scanned; every row costs one spaCy tag |
+| `--batch` | 500 | caps how many entries actually get appended per language per run |
+
+Then: already-curated words are skipped (their corpus frequency is copied onto
+the existing entry rather than discarded), the English blocklist applies, only
+noun/verb/adjective survive, and a word with no gloss is dropped.
+
+**Glosses are cached**, so re-mining is mostly free. `data/gloss_cache/` already
+holds 26,010 Spanish lookups with a 90% hit rate, ~16,700 of which are glossed
+words not yet in the curated file — those cost no network at all.
+
+### What fills each `words` column
+
+| column | filled by |
+|--------|-----------|
+| word, translation, pos, glosses | `mine` (corpus + Wiktionary/Translate) or hand-curation |
+| rank, difficulty, **band** | derived from frequency rank — `rank_to_band` / `rank_to_difficulty` in `config.py` |
+| **corpus_frequency** | `mine`, from the OpenSubtitles occurrence count |
+| gender, domains | `enrich` (Spanish rules only) |
+| conjugations, past_participle, gerund | `sync` via mlconjug3 — fra/ita/por only |
+| conjugation_class, future_stem, overrides | Spanish verbs; consumed by `verb-rules.ts` at runtime |
+| ipa, syllables, notes, register, plural, reflexive | **manual** — admin panel, no automated source |
+| emoji | nothing — Picture Quiz resolves visuals through `visual-map.ts` |
+
+**Keep `UPSERT`'s column list in sync with the table.** `band`,
+`corpus_frequency`, `plural` and `reflexive` were absent from it for a long
+time, so the data sat in the curated JSONL and silently never reached the app.
+`band` in particular is now computed from `rank` for every row rather than only
+the ~5% that carry one explicitly.
+
+### Gotchas worth keeping
+
+- `rank_to_band()` / `rank_to_difficulty()` live **only** in `config.py`. They
+  previously existed in two places with different thresholds (rank 1200 was B1
+  in one file and B2 in the other). Don't add a local copy.
+- `enrich_domains` runs its output through `canonicalize()` before storing it.
+  Without that, it hands out a name (`numbers_quantity`) that the canonicaliser
+  then deletes, so the next run re-assigns it — the two steps flip the same
+  entries forever and `all` never converges.
+- Enrichment rules are Spanish-only; `enrich` skips other languages with a note
+  rather than pretending to work.
 
 ## Running Tests
 
