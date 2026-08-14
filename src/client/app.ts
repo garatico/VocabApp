@@ -1,6 +1,7 @@
 // ── Imports ───────────────────────────────────────────────────────────────────
 
 import { bindTableControls, resolveDirection } from './modes/table-controls.ts';
+import { initPWA } from './utils/pwa.ts';
 import { bindQuizControls }                    from './quiz/quiz-controls.ts';
 import { bindStartHandler }                    from './start-handler.ts';
 import { bindClassFilter, getSelectedClasses } from './filters/class-filter.ts';
@@ -248,6 +249,7 @@ document.getElementById('pictureSubMode')?.addEventListener('click', e => {
 
 void (async function init(): Promise<void> {
   mountUI();
+  initPWA();              // service worker + offline indicator (production only)
   applyFontSize();        // apply saved font size before anything renders
   restoreSettings();
   bindUIState();

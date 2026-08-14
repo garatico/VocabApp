@@ -1,0 +1,90 @@
+/**
+ * vocab-source.ts — where vocabulary comes from.
+ *
+ * The web app fetches /api/vocab/:lang from Express. A packaged build — Tauri
+ * on Windows, Capacitor on Android — has no Node process to answer that, so it
+ * reads a static file exported by `npm run export:vocab` instead.
+ *
+ * Both produce the same envelope, so callers get one shape either way:
+ *
+ *   { language, count, data: Word[] }
+ *
+ * Order of attempts:
+ *   1. /api/vocab/:lang     live server, always freshest
+ *   2. /data/vocab-:lang.json   bundled export
+ *
+ * The API is tried first even in a packaged build: it costs one failed request
+ * on a file:// origin and means a packaged app pointed at a dev server picks up
+ * edits immediately. Once a language resolves, the working source is remembered
+ * so the fallback isn't re-probed on every language switch.
+ */
+
+import type { Word } from '../types.ts';
+import { logger } from '../utils/logger.ts';
+
+export type VocabOrigin = 'api' | 'static';
+
+export interface VocabPayload {
+  language: string;
+  count:    number;
+  data:     Word[];
+  origin:   VocabOrigin;
+}
+
+/** Remembered after the first success, so we stop probing a dead API. */
+let preferredOrigin: VocabOrigin | null = null;
+
+function apiUrl(lang: string): string    { return `/api/vocab/${lang}`; }
+function staticUrl(lang: string): string { return `/data/vocab-${lang}.json`; }
+
+async function tryFetch(url: string): Promise<{ data: Word[]; count: number } | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const json = await res.json() as { data?: Word[]; count?: number };
+    const data = Array.isArray(json.data) ? json.data : null;
+    if (!data) return null;
+    return { data, count: json.count ?? data.length };
+  } catch {
+    // Network error, bad JSON, or no such file — the caller decides what next.
+    return null;
+  }
+}
+
+/**
+ * Load one language, preferring the live API and falling back to the bundled
+ * export. Throws only when both are unavailable.
+ */
+export async function loadVocab(lang: string): Promise<VocabPayload> {
+  const order: VocabOrigin[] = preferredOrigin === 'static'
+    ? ['static', 'api']
+    : ['api', 'static'];
+
+  for (const origin of order) {
+    const url    = origin === 'api' ? apiUrl(lang) : staticUrl(lang);
+    const result = await tryFetch(url);
+    if (!result) continue;
+
+    if (preferredOrigin !== origin) {
+      logger.info(`vocab: loading from ${origin} (${url})`);
+      preferredOrigin = origin;
+    }
+    return { language: lang, count: result.count, data: result.data, origin };
+  }
+
+  throw new Error(
+    `Could not load vocabulary for "${lang}". `
+    + 'No server responded and no bundled copy was found at '
+    + `${staticUrl(lang)} — run "npm run export:vocab" for offline builds.`,
+  );
+}
+
+/** Which source last worked. Null until the first successful load. */
+export function currentOrigin(): VocabOrigin | null {
+  return preferredOrigin;
+}
+
+/** Reset the remembered source — used by tests and after a manual reload. */
+export function resetOrigin(): void {
+  preferredOrigin = null;
+}
