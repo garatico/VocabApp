@@ -211,9 +211,22 @@ if (target === 'windows' || target === 'native') {
   buildWeb(1, 4);
   step(4, 4, 'Package with Tauri');
   if (!fs.existsSync(path.join(root, 'src-tauri'))) {
-    console.error('  src-tauri/ is missing. Initialise it once with:\n'
-                + '    npx tauri init --app-name VocabApp --window-title VocabApp \\\n'
-                + '      --frontend-dist ../dist --dev-url http://localhost:5173');
+    // Flag names differ between Tauri 1 and 2 (--dist-dir vs --frontend-dist),
+    // so point at the interactive init rather than guessing the version.
+    console.error(
+      '  src-tauri/ is missing. Initialise it once:\n\n'
+      + '    npm i -D @tauri-apps/cli\n'
+      + '    npx tauri init\n\n'
+      + '  Answer:\n'
+      + '    App name ................. VocabApp\n'
+      + '    Window title ............. VocabApp\n'
+      + '    Web assets (frontend) .... ../dist\n'
+      + '    Dev server URL ........... http://localhost:5173\n'
+      + '    Frontend dev command ..... npm run dev:fe\n'
+      + '    Frontend build command ... (leave blank)\n\n'
+      + '  Leave the build command blank: this script already builds the web\n'
+      + '  assets before calling tauri, and setting it would do that twice.',
+    );
     process.exit(1);
   }
   run('npx tauri build', 'Tauri build');
@@ -229,9 +242,13 @@ if (target === 'android' || target === 'native') {
   if (target === 'android') buildWeb(1, 4);
   step(4, 4, 'Sync and assemble the APK');
   if (!fs.existsSync(path.join(root, 'android'))) {
-    console.error('  android/ is missing. Initialise it once with:\n'
-                + '    npx cap init VocabApp com.vocabapp.app --web-dir dist\n'
-                + '    npx cap add android');
+    console.error(
+      '  android/ is missing. Initialise it once:\n\n'
+      + '    npm i -D @capacitor/cli\n'
+      + '    npm i @capacitor/core @capacitor/android\n'
+      + '    npx cap init VocabApp com.vocabapp.app --web-dir dist\n'
+      + '    npx cap add android',
+    );
     process.exit(1);
   }
   run('npx cap sync android', 'Capacitor sync');
