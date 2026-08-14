@@ -52,23 +52,84 @@ export function applyAllPronounToggles(grid: Element): void {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
+const TENSE_KEY_PREFIX = 'vq_conj_tenses_';
+
+/** Tenses selected for a language, from storage. Empty if nothing saved. */
+export function readSelectedTenses(lang: string): string[] {
+  try {
+    const raw = localStorage.getItem(TENSE_KEY_PREFIX + lang);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr as string[] : [];
+  } catch { return []; }
+}
+
+function saveSelectedTenses(lang: string, keys: string[]): void {
+  try {
+    localStorage.setItem(TENSE_KEY_PREFIX + lang, JSON.stringify(keys));
+  } catch { /* quota */ }
+}
+
+/** Tenses currently ticked in the UI, in the order they appear. */
+export function activeTenses(): string[] {
+  return [...document.querySelectorAll<HTMLElement>('#conjTenseChips .conj-tense-chip.active')]
+    .map(el => el.dataset.tense ?? '')
+    .filter(Boolean);
+}
+
+let _tenseListenerLang: string | null = null;
+
+function ensureTenseChipListeners(lang: string): void {
+  const chips = document.getElementById('conjTenseChips');
+  if (!chips || _tenseListenerLang === lang) return;
+  _tenseListenerLang = lang;
+
+  chips.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLElement>('.conj-tense-chip');
+    if (!btn) return;
+    btn.classList.toggle('active');
+    // Never allow an empty selection — the quiz would have nothing to drill.
+    if (activeTenses().length === 0) btn.classList.add('active');
+    saveSelectedTenses(lang, activeTenses());
+  });
+
+  document.getElementById('conjTensesAll')?.addEventListener('click', () => {
+    chips.querySelectorAll('.conj-tense-chip').forEach(c => c.classList.add('active'));
+    saveSelectedTenses(lang, activeTenses());
+  });
+  document.getElementById('conjTensesNone')?.addEventListener('click', () => {
+    // "None" leaves the first tense on, for the same reason.
+    chips.querySelectorAll('.conj-tense-chip').forEach((c, i) => {
+      c.classList.toggle('active', i === 0);
+    });
+    saveSelectedTenses(lang, activeTenses());
+  });
+}
+
 export function initConjControls(lang: string): void {
   const tenseDefs = TENSE_DEFS[lang] ?? TENSE_DEFS.spanish;
   const pronouns  = PRONOUNS[lang]   ?? PRONOUNS.spanish;
   const langName  = capitalize(lang);
 
-  // 1. Tense select — preserve the previously chosen tense if it exists
-  const tenseSelect = document.getElementById('conjTenseSelect') as HTMLSelectElement | null;
-  if (tenseSelect) {
-    const prev = tenseSelect.value;
-    tenseSelect.innerHTML = '';
+  // 1. Tense chips — multi-select, replacing the single-choice <select>.
+  //    Selection is stored per language so switching back and forth keeps it.
+  const chips = document.getElementById('conjTenseChips');
+  if (chips) {
+    const saved = readSelectedTenses(lang);
+    chips.innerHTML = '';
     tenseDefs.forEach(def => {
-      const opt       = document.createElement('option');
-      opt.value       = def.key;
-      opt.textContent = def.label;
-      if (def.key === prev) opt.selected = true;
-      tenseSelect.appendChild(opt);
+      const btn = document.createElement('button');
+      btn.type          = 'button';
+      btn.className     = 'conj-tense-chip' + (saved.includes(def.key) ? ' active' : '');
+      btn.dataset.tense = def.key;
+      btn.textContent   = def.label;
+      chips.appendChild(btn);
     });
+    // Nothing valid saved — fall back to the first tense so the quiz is never
+    // empty on a fresh visit.
+    if (!chips.querySelector('.conj-tense-chip.active')) {
+      chips.querySelector('.conj-tense-chip')?.classList.add('active');
+    }
+    ensureTenseChipListeners(lang);
   }
 
   // 2. Display toggle labels

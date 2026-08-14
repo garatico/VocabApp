@@ -150,6 +150,15 @@
             </div>
           </div>
 
+          <div class="control-group" id="conjDisplayGroup" style="display:none">
+            <label>Display</label>
+            <div class="conj-display-toggle" id="conjDisplayToggle">
+              <button class="conj-toggle-btn" data-mode="target">Target</button>
+              <button class="conj-toggle-btn active" data-mode="both">Both</button>
+              <button class="conj-toggle-btn" data-mode="english">English</button>
+            </div>
+          </div>
+
           <div class="controls-sep" aria-hidden="true"></div>
 
           <button id="startBtn">Start Quiz</button>
@@ -198,44 +207,41 @@
 
         <!-- Conjugation-mode controls: shown only when Conjugation tab is active -->
         <div id="conjModeControls" class="mode-filter-panel" style="display:none">
-          <!-- Top row: Display + Tense, each with label above -->
-          <div class="conj-top-controls">
-            <div class="conj-control-group conj-control-group--full filter-box">
-              <button type="button" class="filter-collapse-btn" data-collapse="conjDisplayBody" aria-expanded="false" aria-controls="conjDisplayBody">
+          <!-- Tense and Forms share one box: they are two halves of the same
+               question (which conjugations am I drilling?), and splitting them
+               made the panel read as two unrelated filters. -->
+          <div class="filter-box conj-tense-forms">
+            <!-- One collapse for the pair: Tense and Forms are two halves of a
+                 single question, so collapsing them separately made the box
+                 feel like two filters that happened to share a border. -->
+            <div class="conj-tf-bar">
+              <button type="button" class="filter-collapse-btn" data-collapse="conjTenseFormsBody" aria-expanded="false" aria-controls="conjTenseFormsBody">
                 <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
-                <span class="filter-section-label">Display</span>
+                <span class="filter-section-label">Tense &amp; Forms</span>
               </button>
-              <div id="conjDisplayBody" class="filter-body">
-                <div class="conj-display-toggle" id="conjDisplayToggle">
-                  <button class="conj-toggle-btn" data-mode="target">Spanish</button>
-                  <button class="conj-toggle-btn active" data-mode="both">Spanish + English</button>
-                  <button class="conj-toggle-btn" data-mode="english">English</button>
-                </div>
-              </div>
+              <span id="conjTenseSummary" class="conj-tf-summary"></span>
             </div>
-          </div>
 
-          <div class="conj-control-group conj-control-group--full filter-box">
-            <button type="button" class="filter-collapse-btn" data-collapse="conjTenseBody" aria-expanded="false" aria-controls="conjTenseBody">
-              <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
-              <span class="filter-section-label">Tense</span>
-            </button>
-            <div id="conjTenseBody" class="filter-body">
-              <select id="conjTenseSelect"><!-- populated by JS based on language --></select>
-            </div>
-          </div>
-          <!-- Forms row: label + All/None above, 2×3 pronoun grid below -->
-          <div id="conjPronounRow" class="conj-pronoun-row filter-box">
-            <div class="conj-forms-header">
-              <button type="button" class="filter-collapse-btn" data-collapse="conjFormsBody" aria-expanded="false" aria-controls="conjFormsBody">
-                <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
-                <span class="filter-section-label">Forms</span>
-              </button>
-              <button type="button" id="conjFormsAll">All</button>
-              <button type="button" id="conjFormsNone">None</button>
-            </div>
-            <div id="conjFormsBody" class="filter-body">
-              <div id="conjPronounToggles" class="conj-pronoun-toggles"></div>
+            <div id="conjTenseFormsBody" class="filter-body conj-tf-body">
+              <div class="conj-tf-side">
+                <div class="conj-tf-header">
+                  <span class="filter-section-label">Tense</span>
+                  <button type="button" id="conjTensesAll">All</button>
+                  <button type="button" id="conjTensesNone">None</button>
+                </div>
+                <div id="conjTenseChips" class="conj-tense-chips"><!-- built by JS per language --></div>
+              </div>
+
+              <div class="conj-tf-divider" aria-hidden="true"></div>
+
+              <div class="conj-tf-side" id="conjPronounRow">
+                <div class="conj-tf-header">
+                  <span class="filter-section-label">Forms</span>
+                  <button type="button" id="conjFormsAll">All</button>
+                  <button type="button" id="conjFormsNone">None</button>
+                </div>
+                <div id="conjPronounToggles" class="conj-pronoun-toggles"></div>
+              </div>
             </div>
           </div>
         </div>

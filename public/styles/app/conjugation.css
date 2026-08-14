@@ -59,7 +59,6 @@
   width: 100%;
   flex: 1 1 100%;
 }
-.conj-control-group--full #conjTenseSelect,
 .conj-control-group--full .conj-display-toggle {
   width: 100%;
   max-width: none;
@@ -84,19 +83,6 @@
    defined in controls-bar.css — only overrides belong here. */
 
 /* Tense select — matches display toggle height */
-#conjTenseSelect {
-  padding: 0.2rem 0.55rem;
-  font-size: 0.74rem;
-  font-family: inherit;
-  font-weight: 600;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  cursor: pointer;
-  max-width: 220px;
-  height: 100%;           /* stretch to match the segmented toggle height */
-}
 
 /* ── Empty state ── */
 .conj-empty {
@@ -308,20 +294,8 @@
 }
 
 /* ── Pronoun toggle row (Forms) ── */
-.conj-pronoun-row {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.35rem;
-  /* padding and border come from .filter-box — it's a boxed filter now */
-  padding: 0.4rem 0.6rem 0.5rem;
-  /* No margin: the parent .mode-filter-panel already supplies a 0.5rem gap.
-     Having both made the Tense → Forms gap twice the Forms → Domains one. */
-}
 /* Single-form tenses hide this row via the hidden attribute, which an author
    `display` rule would otherwise override. */
-.conj-pronoun-row[hidden] { display: none; }
 
 /* All / None + label on one line above the grid */
 .conj-forms-header {
@@ -360,10 +334,13 @@
 }
 
 .conj-pronoun-toggle {
-  padding: 0.9rem 2rem;
-  min-height: 3.4rem;
-  min-width: 9rem;
-  font-size: 1.2rem;
+  /* Deliberately small: Forms is a secondary filter next to Tense, and the
+     2x3 grid above already communicates the shape. Was 0.9rem/3.4rem/1.2rem,
+     which made it the visual centre of the panel. */
+  padding: 0.4rem 0.7rem;
+  min-height: 2rem;
+  min-width: 4.5rem;
+  font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.01em;
   border: none;
@@ -398,8 +375,8 @@
   .conj-pronoun           { width: 62px; font-size: 0.72rem; }
   .conj-drill-input       { font-size: 0.82rem; }
   .conj-progress-section  { flex-wrap: wrap; }
-  .conj-pronoun-toggle    { padding: 0.7rem 1.2rem; min-height: 3rem; min-width: 7rem; font-size: 1.05rem; }
-  #conjTenseSelect        { max-width: none; }
+  /* Still a touch target on mobile, but no longer oversized. */
+  .conj-pronoun-toggle    { padding: 0.45rem 0.6rem; min-height: 2.4rem; min-width: 4rem; font-size: 0.82rem; }
 }
 
 @media (max-width: 480px) {
@@ -407,7 +384,6 @@
   .conj-top-controls   { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
   .conj-display-toggle { width: 100%; }
   .conj-toggle-btn     { flex: 1; justify-content: center; }
-  #conjTenseSelect     { width: 100%; max-width: none; }
 }
 
 /* ── In-quiz order control ─────────────────────────────────────
@@ -434,4 +410,235 @@
 }
 
 @media (max-width: 599px) {
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Merged Tense + Forms box
+   Two halves of one question — which conjugations am I drilling —
+   so they share a box with a divider rather than sitting as two
+   unrelated filters.
+   ═══════════════════════════════════════════════════════════════ */
+.conj-tense-forms {
+  /* Stacks a collapse bar above the two-column body. The side-by-side layout
+     now lives on .conj-tf-body, one level down. */
+  display: block;
+}
+
+.conj-tf-side {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.conj-tf-divider {
+  flex: 0 0 1px;
+  background: var(--border);
+  align-self: stretch;
+}
+
+.conj-tf-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.conj-tf-header .filter-section-label { margin-right: auto; }
+.conj-tf-header button {
+  font-size: 0.66rem;
+  padding: 0.12rem 0.4rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.conj-tf-header button:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Display toggle, now in the controls bar ────────────────── */
+#conjDisplayGroup .conj-display-toggle { display: flex; }
+#conjDisplayGroup .conj-toggle-btn {
+  font-size: 0.72rem;
+  padding: 0.3rem 0.6rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  /* Stack the two halves; the divider becomes a horizontal rule. */
+  .conj-tense-forms { flex-direction: column; gap: 0.6rem; }
+  .conj-tf-divider  { flex: 0 0 1px; width: 100%; height: 1px; }
+  .conj-tense-chip  { font-size: 0.68rem; padding: 0.3rem 0.55rem; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Tense colour coding
+   ───────────────────────────────────────────────────────────────
+   One hue per tense, applied to both the chip you pick and the
+   cards it produces. With several tenses selected the grid is
+   otherwise a wall of near-identical cards; the stripe down the
+   left of a card matches the chip that put it there.
+
+   Defined as --tense-hue on the element, so the chip and the card
+   derive their tint, border and badge from a single value.
+   ═══════════════════════════════════════════════════════════════ */
+[data-tense="present"]         { --tense-hue: 145; }  /* green   */
+[data-tense="preterite"]       { --tense-hue: 210; }  /* blue    */
+[data-tense="imperfect"]       { --tense-hue: 265; }  /* violet  */
+[data-tense="future"]          { --tense-hue:  25; }  /* orange  */
+[data-tense="conditional"]     { --tense-hue: 330; }  /* pink    */
+[data-tense="subjunctive"]     { --tense-hue: 190; }  /* teal    */
+[data-tense="past_participle"] { --tense-hue:  45; }  /* amber   */
+[data-tense="gerund"]          { --tense-hue: 285; }  /* purple  */
+
+/* ── Tense chips: bigger, and coloured when active ───────────── */
+.conj-tense-chip {
+  /* Fills its grid cell, so every chip is the same width. */
+  width: 100%;
+  text-align: left;
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 0.42rem 0.85rem;
+  min-height: 34px;
+  border-radius: 8px;
+  letter-spacing: 0.01em;
+}
+.conj-tense-chip:hover {
+  border-color: hsl(var(--tense-hue, 145) 45% 45%);
+  color: var(--text);
+  background: hsl(var(--tense-hue, 145) 45% 45% / 0.08);
+}
+.conj-tense-chip.active {
+  background:   hsl(var(--tense-hue, 145) 45% 45% / 0.16);
+  border-color: hsl(var(--tense-hue, 145) 45% 42%);
+  color:        hsl(var(--tense-hue, 145) 55% 30%);
+  font-weight: 700;
+  /* A solid bar on the left mirrors the stripe on the cards. */
+  box-shadow: inset 3px 0 0 hsl(var(--tense-hue, 145) 50% 42%);
+}
+
+/* ── Form (pronoun) toggles: smaller, secondary to the tenses ── */
+
+/* ── Cards carry their tense colour ──────────────────────────── */
+.conj-card[data-tense] {
+  border-left: 4px solid hsl(var(--tense-hue, 145) 45% 45%);
+}
+.conj-card-tense {
+  margin-left: auto;
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  padding: 0.1rem 0.5rem;
+  border-radius: 99px;
+  color:        hsl(var(--tense-hue, 145) 55% 30%);
+  background:   hsl(var(--tense-hue, 145) 45% 45% / 0.14);
+  border:       1px solid hsl(var(--tense-hue, 145) 45% 45% / 0.5);
+}
+
+/* Dark theme: the same hues need more lightness to stay legible. */
+@media (prefers-color-scheme: dark) {
+  .conj-tense-chip.active { color: hsl(var(--tense-hue, 145) 60% 72%); }
+  .conj-card-tense        { color: hsl(var(--tense-hue, 145) 60% 72%); }
+}
+:root[data-theme="dark"] .conj-tense-chip.active,
+:root[data-theme="dark"] .conj-card-tense {
+  color: hsl(var(--tense-hue, 145) 60% 72%);
+}
+
+@media (max-width: 767px) {
+  .conj-tense-chip    { font-size: 0.78rem; padding: 0.4rem 0.7rem; min-height: 38px; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Tense & Forms box — one collapse for the pair
+   ═══════════════════════════════════════════════════════════════ */
+.conj-tf-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.conj-tf-summary {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-left: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Selection changed but the grid has not been rebuilt yet. */
+.conj-tf-summary--pending {
+  color: var(--warning, #b7791f);
+  font-weight: 600;
+}
+
+.conj-tf-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  margin-top: 0.5rem;
+}
+.conj-tf-body.filter-body--collapsed { display: none; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Card header — two columns
+   The right half carried nothing before; on a half-width card that
+   is a lot of empty space next to a six-row conjugation table.
+   ═══════════════════════════════════════════════════════════════ */
+.conj-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.conj-head-main { min-width: 0; flex: 1; }
+.conj-head-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.conj-card-band {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 0.05rem 0.4rem;
+}
+
+.conj-reveal-all-btn {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.22rem 0.55rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast),
+              border-color var(--transition-fast),
+              color var(--transition-fast);
+}
+.conj-reveal-all-btn:hover:not(:disabled) {
+  background: var(--surface2);
+  border-color: hsl(var(--tense-hue, 145) 45% 45%);
+  color: hsl(var(--tense-hue, 145) 55% 32%);
+}
+.conj-reveal-all-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+@media (max-width: 767px) {
+  .conj-tense-chips { grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); }
+  .conj-tf-body     { flex-direction: column; gap: 0.6rem; }
+  .conj-tf-divider  { width: 100%; height: 1px; flex: 0 0 1px; }
+  .conj-tf-summary  { display: none; }
+  .conj-head-side   { gap: 0.25rem; }
 }
