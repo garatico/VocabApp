@@ -86,9 +86,12 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding-top: 0.5rem;
+  /* 0.5rem to match every other filter box in the stack (#classFilter,
+     #listFilter, #domainFilterWrap). This used to add padding-top and a
+     border on top of the margin, making the gap above it visibly larger
+     than the one between Forms and Domains. The boxes have their own
+     borders, so the extra separator was redundant. */
   margin-top: 0.5rem;
-  border-top: 1px solid var(--border-strong);
 }
 
 /* Within mode panels, labels head a section → use full text colour.
@@ -201,4 +204,102 @@
 @media (max-width: 480px) {
   #controls { padding: 0.5rem 0.6rem 0.55rem; padding-right: 2.75rem; }
   .size-row { width: 100%; }
+}
+
+/* ── Pager page-jump dropdown ──────────────────────────────────
+   Sits between the arrows and the word-count status. */
+
+.pager-status {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 599px) {
+  .pager-status { font-size: 0.66rem; }
+}
+
+/* ── Recall timer group ────────────────────────────────────────
+   Lives in the controls bar next to Start Quiz, shown only in
+   recall mode (see ui-state.ts). Compact so it does not push the
+   Start button onto a second row. */
+#recallTimerGroup .size-row {
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+}
+#recallTimerSelect {
+  min-width: 108px;
+}
+#recallTimerCustom {
+  width: 78px;
+}
+#recallHardStop .sort-order-btn {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  #recallTimerGroup .size-row { flex-wrap: wrap; }
+}
+
+/* ── Inline "Order" label ──────────────────────────────────────
+   Sits beside the in-quiz order dropdowns in table and recall, so
+   they read the same as the labelled one in conjugation. */
+.inline-order-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-right: 0.05rem;
+}
+
+@media (max-width: 599px) {
+  .inline-order-label { font-size: 0.58rem; }
+}
+
+
+/* ── Shared in-quiz select ─────────────────────────────────────
+   .pager-select, .table-order-select, .recall-order-select and
+   .conj-order-select were four near-identical copies of these
+   twelve properties. One rule now; the per-mode classes remain as
+   hooks for width overrides only. */
+.pager-select,
+.table-order-select,
+.recall-order-select,
+.conj-order-select {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.76rem;
+  padding: 0.22rem 1.35rem 0.22rem 0.5rem;
+  min-height: 30px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  max-width: 200px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.pager-select:hover,
+.table-order-select:hover,
+.recall-order-select:hover,
+.conj-order-select:hover { border-color: var(--accent); }
+
+.pager-select:focus,
+.table-order-select:focus,
+.recall-order-select:focus,
+.conj-order-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+@media (max-width: 599px) {
+  .pager-select,
+  .table-order-select,
+  .recall-order-select,
+  .conj-order-select { max-width: 140px; font-size: 0.7rem; }
 }

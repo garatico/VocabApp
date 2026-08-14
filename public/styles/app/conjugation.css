@@ -70,10 +70,13 @@
   justify-content: center;
 }
 
-/* Stack the top controls so Display and Tense each get a full-width row */
+/* Stack the top controls so Display and Tense each get a full-width row.
+   The gap must match .mode-filter-panel's, or the Display box sits at a
+   different distance from its neighbours than every other filter box. */
 .conj-top-controls {
   flex-direction: column;
   align-items: stretch;
+  gap: 0.5rem;
 }
 
 /* Segmented display toggle */
@@ -313,7 +316,8 @@
   gap: 0.35rem;
   /* padding and border come from .filter-box — it's a boxed filter now */
   padding: 0.4rem 0.6rem 0.5rem;
-  margin-top: 0.5rem;
+  /* No margin: the parent .mode-filter-panel already supplies a 0.5rem gap.
+     Having both made the Tense → Forms gap twice the Forms → Domains one. */
 }
 /* Single-form tenses hide this row via the hidden attribute, which an author
    `display` rule would otherwise override. */
@@ -390,7 +394,7 @@
 /* ── Responsive ── */
 @media (max-width: 640px) {
   .conj-cards-grid        { grid-template-columns: 1fr; }
-  .conj-top-controls      { gap: 0.75rem; }
+  .conj-top-controls      { gap: 0.5rem; }
   .conj-pronoun           { width: 62px; font-size: 0.72rem; }
   .conj-drill-input       { font-size: 0.82rem; }
   .conj-progress-section  { flex-wrap: wrap; }
@@ -404,4 +408,30 @@
   .conj-display-toggle { width: 100%; }
   .conj-toggle-btn     { flex: 1; justify-content: center; }
   #conjTenseSelect     { width: 100%; max-width: none; }
+}
+
+/* ── In-quiz order control ─────────────────────────────────────
+   Matches the equivalents in recall (action row) and table (pager
+   row): order belongs with the quiz, not the global controls bar. */
+.conj-order-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+}
+.conj-order-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+.conj-order-count {
+  margin-left: auto;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 599px) {
 }

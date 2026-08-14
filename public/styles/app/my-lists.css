@@ -20,15 +20,18 @@
 #myListsWrap {
   display: flex;
   flex-direction: row;
-  height: 74vh;
-  min-height: 420px;
+  /* Fill the viewport down to a small gutter rather than a fixed 74vh, so the
+     word list gets every pixel that is going spare. */
+  height: calc(100vh - 190px);
+  min-height: 560px;
+  max-height: 1100px;
 }
 
 /* ── Left pane: lang selector + list nav ────────────────────── */
 .ml-left-pane {
   display: flex;
   flex-direction: column;
-  width: 230px;
+  width: 290px;
   flex-shrink: 0;
   border-right: 1px solid var(--border);
   overflow: hidden;
@@ -141,10 +144,36 @@
 .ml-list-name {
   flex: 1;
   min-width: 0;
+  /* Wrap to a second line instead of truncating at the first ellipsis —
+     list names are user-written and were being cut off mid-word. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
 }
+
+/* Row actions sit on top of the name rather than squeezing it. Hidden until
+   hover (see .ml-list-actions), so the name gets the full width at rest. */
+.ml-list-item {
+  position: relative;
+}
+.ml-list-actions {
+  position: absolute;
+  right: 0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--surface2);
+  border-radius: var(--radius-sm, 6px);
+  padding: 0.1rem 0.15rem;
+  box-shadow: 0 0 0 4px var(--surface2);
+}
+.ml-list-item.active .ml-list-actions {
+  background: var(--accent-light);
+  box-shadow: 0 0 0 4px var(--accent-light);
+}
+.ml-list-item:focus-within .ml-list-actions { opacity: 1; }
 
 .ml-list-count {
   font-size: 0.66rem;
@@ -1114,3 +1143,296 @@
   /* Panel: minimal padding */
   .ml-panel { padding: 0.4rem 0.5rem; gap: 0.35rem; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   List toolbar — filter / sort / hide-mastered
+   Moved out of the panel header so it sits directly above the word
+   list it acts on, and sticks there while the list scrolls.
+   ═══════════════════════════════════════════════════════════════ */
+.ml-list-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  margin-top: 0.35rem;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-strong);
+  backdrop-filter: blur(6px);
+}
+
+.ml-list-toolbar .ml-panel-controls {
+  flex: 1;
+  gap: 0.5rem;
+}
+
+/* The filter is the primary control here, so give it real presence. */
+.ml-list-toolbar .ml-search {
+  font-size: 0.84rem;
+  padding: 0.42rem 0.6rem 0.42rem 1.9rem;
+  border-radius: 99px;
+  background: var(--bg) url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E") no-repeat 0.55rem center / 0.85rem;
+}
+
+.ml-list-toolbar .ml-sort-select,
+.ml-list-toolbar .ml-hide-mastered-btn {
+  font-size: 0.78rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+/* ── General polish ──────────────────────────────────────────── */
+
+/* Let the word list own the vertical space and scroll on its own, so the
+   header and toolbar stay put instead of scrolling away with it. */
+.ml-panel {
+  display: flex;
+  flex-direction: column;
+}
+.ml-word-list {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.ml-panel-header {
+  padding-bottom: 0.5rem;
+}
+
+/* Sidebar rows: more breathing room now that names can run to two lines. */
+.ml-list-item {
+  padding-top: 0.42rem;
+  padding-bottom: 0.42rem;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* Add-results dropdown — clearer separation from the page behind it. */
+.ml-add-results {
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.18));
+  max-height: 340px;
+  overflow-y: auto;
+}
+.ml-add-result-item {
+  transition: background var(--transition-fast);
+}
+.ml-add-result-item:hover,
+.ml-add-result-item.focused {
+  background: var(--accent-light);
+}
+
+/* The + button is the thing people aim at — make it a real target. */
+.ml-add-btn {
+  min-width: 26px;
+  min-height: 26px;
+  border-radius: 50%;
+  font-weight: 700;
+  line-height: 1;
+  transition: background var(--transition-fast), transform var(--transition-fast);
+}
+.ml-add-btn:hover {
+  background: var(--accent);
+  color: #fff;
+  transform: scale(1.12);
+}
+.ml-add-btn:active { transform: scale(0.94); }
+
+@media (max-width: 900px) {
+  /* Only the toolbar needs to wrap here. The stacked single-column layout
+     kicks in at 767px below, which already handles .ml-left-pane. */
+  .ml-list-toolbar {
+    flex-wrap: wrap;
+    padding: 0.5rem 0.6rem;
+  }
+  .ml-left-pane { width: 240px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CEFR level chips
+   ═══════════════════════════════════════════════════════════════ */
+.ml-band-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding: 0.35rem 0.85rem 0.1rem;
+}
+.ml-band-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-right: 0.2rem;
+}
+.ml-band-chip { font-family: 'DM Mono', monospace; letter-spacing: 0.02em; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Multi-select
+   ═══════════════════════════════════════════════════════════════ */
+.ml-word-check {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  margin-right: 0.15rem;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.ml-bulk-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+}
+.ml-bulk-count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-right: 0.3rem;
+  white-space: nowrap;
+}
+.ml-bulk-btn {
+  font-size: 0.72rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.ml-bulk-btn:hover { background: var(--surface2); border-color: var(--accent); }
+.ml-bulk-btn--danger:hover {
+  background: var(--danger-light);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Chunked rendering sentinel
+   ═══════════════════════════════════════════════════════════════ */
+.ml-chunk-sentinel {
+  padding: 0.7rem 0.85rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: center;
+  font-style: italic;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Undo toast
+   ═══════════════════════════════════════════════════════════════ */
+.ml-undo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem 0.6rem 1rem;
+  background: var(--text, #1c1c1c);
+  color: var(--surface, #fff);
+  border-radius: 99px;
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.3);
+  font-size: 0.82rem;
+  animation: ml-undo-in 0.16s ease-out;
+}
+@keyframes ml-undo-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+.ml-undo-msg { white-space: nowrap; }
+.ml-undo-btn {
+  background: none;
+  border: 1px solid currentColor;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  padding: 0.15rem 0.6rem;
+  border-radius: 99px;
+  cursor: pointer;
+}
+.ml-undo-btn:hover { background: rgba(255, 255, 255, 0.15); }
+.ml-undo-close {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+  padding: 0 0.15rem;
+}
+.ml-undo-close:hover { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ml-undo-toast { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Smart lists — saved queries, not stored word sets
+   ═══════════════════════════════════════════════════════════════ */
+.ml-smart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.55rem 0.65rem 0.3rem;
+  margin-top: 0.4rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+.ml-smart-hint {
+  font-size: 0.7rem;
+  font-style: italic;
+  opacity: 0.75;
+}
+.ml-smart-item .ml-list-name { font-weight: 500; }
+
+.ml-smart-desc {
+  margin: 0.15rem 0 0.5rem;
+  padding: 0 0.85rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.ml-smart-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.5rem 0.85rem 0.2rem;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.ml-smart-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.ml-smart-row .ml-band-label {
+  min-width: 72px;
+  margin-right: 0.1rem;
+}
+.ml-smart-row .ml-sort-select { font-size: 0.75rem; }

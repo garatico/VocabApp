@@ -42,3 +42,33 @@
   transition: width 0.5s ease-out;
   border-radius: 99px;
 }
+
+/* ── In-bar label ──────────────────────────────────────────────
+   The answered/total and percentage used to sit beside the bar,
+   with a separate block appearing at the end just to say "100%".
+   Both are now one label centred inside the bar itself. */
+.progress-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  pointer-events: none;
+  /* Sits above the coloured segments; the mix keeps it legible on both the
+     filled and unfilled halves without needing a shadow. */
+  mix-blend-mode: luminosity;
+  z-index: 2;
+}
+.progress-label--done {
+  color: #fff;
+  mix-blend-mode: normal;
+}
+
+@media (max-width: 599px) {
+  .progress-label { font-size: 0.62rem; }
+}

@@ -13,6 +13,7 @@
  */
 
 import { getFallbackEmoji, getFallbackSvgUrl, getFallbackImageUrl } from '../data/visual-map.ts';
+import { saveSession, recordOutcome } from '../utils/session-history.ts';
 import { attachTooltips    } from '../utils/word-tooltip.ts';
 import type { Word }        from '../types.ts';
 
@@ -320,6 +321,35 @@ function injectStyles(): void {
 
 // ── Summary helpers ────────────────────────────────────────────────────────────
 
+/** When the current picture session began, for the elapsed-time record. */
+let pictureStartedAt = Date.now();
+let pictureRecorded  = false;
+
+/**
+ * Fold a finished picture session into the shared history and miss tally.
+ *
+ * Picture mode reports completion from several places (typed give-up, typed
+ * all-correct, flashcard, click), so this guards against double-recording the
+ * same session.
+ */
+function recordPictureSession(
+  lang: string, correctWords: string[], missedWords: string[], total: number,
+): void {
+  if (pictureRecorded) return;
+  pictureRecorded = true;
+  recordOutcome(lang, missedWords, correctWords);
+  saveSession(lang, {
+    at: new Date().toISOString(),
+    mode: 'picture',
+    total,
+    correct: correctWords.length,
+    unassisted: correctWords.length,   // no per-word hints in picture mode
+    hints: 0,
+    revealed: missedWords.length,
+    seconds: Math.max(1, Math.round((Date.now() - pictureStartedAt) / 1000)),
+  });
+}
+
 function showPictureSummary(correct: number, total: number): void {
   const missed = total - correct;
   const pct    = total > 0 ? Math.round((correct / total) * 100) : 0;
@@ -357,7 +387,8 @@ function setProgress(correct: number, total: number): void {
 
 // ── Type-the-word mode (original) ─────────────────────────────────────────────
 
-function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLElement): void {
+function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLElement,
+                        lang: string): void {
   container.innerHTML = '';
   clearPictureSummary();
 
@@ -430,6 +461,12 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
     });
     giveUpBtn.disabled = true;
     setProgress(typedCorrect, cards.length);
+    recordPictureSession(
+      lang,
+      cards.filter(c => c.inp.classList.contains('correct')).map(c => c.word.word),
+      cards.filter(c => !c.inp.classList.contains('correct')).map(c => c.word.word),
+      cards.length,
+    );
     showPictureSummary(typedCorrect, cards.length);
   });
 
@@ -447,6 +484,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
     setProgress(correct, cards.length);
     if (correct === cards.length) {
       giveUpBtn.disabled = true;
+      recordPictureSession(lang, cards.map(c => c.word.word), [], cards.length);
       showPictureSummary(correct, cards.length);
     }
   }
@@ -454,7 +492,8 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
 
 // ── Flashcard (carousel) mode ──────────────────────────────────────────────────
 
-function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTMLElement): void {
+function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTMLElement,
+                             lang: string): void {
   container.innerHTML = '';
   clearPictureSummary();
 
@@ -566,7 +605,15 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
     setProgress(correct, words.length);
     const allDone = states.every(s => s.correct || s.revealed);
     giveUpBtn.disabled = allDone;
-    if (allDone) showPictureSummary(correct, words.length);
+    if (allDone) {
+      recordPictureSession(
+        lang,
+        words.filter((_, i) => states[i].correct).map(w => w.word),
+        words.filter((_, i) => !states[i].correct).map(w => w.word),
+        words.length,
+      );
+      showPictureSummary(correct, words.length);
+    }
   }
 
   // ── Events ────────────────────────────────────────────────────────────────
@@ -784,6 +831,8 @@ export function renderPictureMode({
   injectStyles();
   container.innerHTML = '';
   setProgress(0, 0);
+  pictureStartedAt = Date.now();
+  pictureRecorded  = false;
 
   const wordsWithVisuals: WordWithVisual[] = words
     .map(w => ({
@@ -805,8 +854,8 @@ export function renderPictureMode({
     }
     renderClickMode(wordsWithVisuals, container, playAgain);
   } else if (mode === 'flashcard') {
-    renderFlashcardMode(wordsWithVisuals, container);
+    renderFlashcardMode(wordsWithVisuals, container, lang);
   } else {
-    renderTypeMode(wordsWithVisuals, container);
+    renderTypeMode(wordsWithVisuals, container, lang);
   }
 }

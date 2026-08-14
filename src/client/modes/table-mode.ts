@@ -4,6 +4,7 @@ import { attachTooltips }        from '../utils/word-tooltip.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker }        from '../utils/list-picker.ts';
 import { Settings }              from '../settings.ts';
+import { missCount }             from '../utils/session-history.ts';
 
 export type TableDirection = 'target-en' | 'en-target' | 'mixed';
 
@@ -201,6 +202,14 @@ export function renderTableMode({
         if (isInAnyList(lang, w.word)) tdWord.classList.add('word-cell--known');
 
         // Rank / position indicator
+        // Repeat offenders from previous sessions, marked before you answer.
+        // Advisory only — it changes nothing about scoring.
+        const misses = missCount(lang, w.word);
+        if (misses >= 2) {
+          tdWord.classList.add('table-word--trouble');
+          tdWord.title = `Missed ${misses} time${misses === 1 ? '' : 's'} before`;
+        }
+
         const rankEl = document.createElement('span');
         rankEl.className   = 'table-word-rank';
         rankEl.textContent = String(w.rank || (i + j + 1));

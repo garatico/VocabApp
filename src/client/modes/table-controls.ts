@@ -7,6 +7,15 @@ import {
   type CheckResult,
 } from './table-mode.ts';
 import { Settings, setOnPageSizeChange } from '../settings.ts';
+// Mastery lives with the lists UI. Importing across modes is not lovely, but
+// the alternative is a second copy of the storage rules, which is how the two
+// disagreeing progress models got here in the first place.
+import { markMastered } from './my-lists-mode.ts';
+import { logger } from '../utils/logger.ts';
+import {
+  saveSession, recordOutcome, orderWords, WORD_ORDER_LABELS,
+  type WordOrder,
+} from '../utils/session-history.ts';
 import { buildScorePills, scorePct }     from '../ui/score-pills.ts';
 import type { Word } from '../types.js';
 
@@ -28,6 +37,10 @@ let sessionState: Map<string, InputSnapshot> = new Map();
 let quizColumns                            = 2;
 let quizLang                               = 'spanish';
 let onQuizComplete: (() => void) | null    = null;
+let quizStartedAt                          = Date.now();
+let sessionRecorded                        = false;
+let wordOrder: WordOrder =
+  (localStorage.getItem('vq_table_order') as WordOrder | null) ?? 'rank';
 
 export function getDirection(): TableDirection {
   return resolvedDirection;
@@ -190,7 +203,11 @@ function renderProgress(): void {
   const greenPct   = pct(correct);
   const yellowPct  = pct(revealed);
   const redPct     = pct(missed);
-  const statsText  = answered + '/' + total + ' answered';
+  // The label now lives inside the bar, so it carries the percentage too —
+  // there used to be a separate summary block that appeared solely to say
+  // "100%" once you finished.
+  const donePct    = total > 0 ? Math.round((answered / total) * 100) : 0;
+  const statsText  = total > 0 ? `${answered} / ${total}  ·  ${donePct}%` : '';
   const scoreHtml  = buildScorePills({ correct, revealed, missed, left, total });
 
   (['Top', 'Bottom'] as const).forEach(pos => {
@@ -211,7 +228,10 @@ function renderProgress(): void {
       redBar.style.left  = (greenPct + yellowPct) + '%';
       redBar.style.width = redPct + '%';
     }
-    if (stats) stats.textContent = statsText;
+    if (stats) {
+      stats.textContent = statsText;
+      stats.classList.toggle('progress-label--done', total > 0 && answered === total);
+    }
     if (score) score.innerHTML = scoreHtml;
   });
 
@@ -243,13 +263,80 @@ function updatePagers(): void {
     if (status) {
       const first = pageIndex * size + 1;
       const last  = pageIndex * size + shown;
-      status.textContent = `Page ${pageIndex + 1} of ${pages} · Words ${first}–${last}`;
+      // The total matters more than the slice — without it there is no way to
+      // tell whether "Words 1–100" is most of the set or a fraction of it.
+      status.textContent =
+        `Words ${first}–${last} of ${allWords.length.toLocaleString()}`;
+    }
+
+    // Page jump. Rebuilt only when the page count changes, since a long list
+    // can run to hundreds of options.
+    const sel = document.getElementById('tablePagerSelect' + pos) as HTMLSelectElement | null;
+    if (sel) {
+      if (sel.options.length !== pages) {
+        sel.innerHTML = '';
+        for (let i = 0; i < pages; i++) {
+          const opt = document.createElement('option');
+          opt.value = String(i);
+          const from = i * size + 1;
+          const to   = Math.min((i + 1) * size, allWords.length);
+          opt.textContent = `Page ${i + 1} of ${pages}  (${from}–${to})`;
+          sel.appendChild(opt);
+        }
+      }
+      sel.value = String(pageIndex);
     }
 
     const prev = pager?.querySelector<HTMLButtonElement>('[data-page="prev"]');
     const next = pager?.querySelector<HTMLButtonElement>('[data-page="next"]');
     if (prev) prev.disabled = pageIndex === 0;
     if (next) next.disabled = pageIndex >= pages - 1;
+  });
+}
+
+/**
+ * Fold a finished quiz back into mastery.
+ *
+ * Only words answered correctly count — 'peeked' means the answer was revealed
+ * and 'incorrect' speaks for itself. Without this the ▶ Quiz button was a
+ * dead end: you could quiz a list to death and its mastered count stayed at
+ * zero unless you ticked every word by hand.
+ */
+function recordMastery(): void {
+  // A quiz can report complete more than once as the last answers settle;
+  // only the first pass should be written.
+  if (sessionRecorded) return;
+  sessionRecorded = true;
+
+  syncSessionState();
+  const correct: string[] = [];
+  const missed:  string[] = [];
+  let revealed = 0;
+  for (const w of allWords) {
+    const cls = sessionState.get(w.word)?.stateClass;
+    if (cls === 'correct')     correct.push(w.word);
+    else if (cls === 'peeked') { revealed++; missed.push(w.word); }
+    else                       missed.push(w.word);
+  }
+
+  if (correct.length > 0) {
+    const added = markMastered(quizLang, correct);
+    if (added > 0) logger.info(`mastery: +${added} from quiz (${correct.length} correct)`);
+  }
+
+  // Shared with recall mode: the miss tally drives the 'words I keep missing'
+  // ordering and the repeat-offender marking in both.
+  recordOutcome(quizLang, missed, correct);
+
+  saveSession(quizLang, {
+    at: new Date().toISOString(),
+    mode: 'table',
+    total: allWords.length,
+    correct: correct.length,
+    unassisted: correct.length,   // table has no hint-per-word concept
+    hints: 0,
+    revealed,
+    seconds: Math.max(1, Math.round((Date.now() - quizStartedAt) / 1000)),
   });
 }
 
@@ -270,6 +357,7 @@ function renderCurrentPage(): void {
     onProgress:   () => {
       renderProgress();
       if (isQuizComplete() && onQuizComplete) {
+        recordMastery();
         const cb = onQuizComplete;
         setTimeout(() => cb(), 300);
       }
@@ -305,13 +393,17 @@ export function startTableQuiz({
   lang:       string;
   onComplete?: (() => void) | null;
 }): void {
-  allWords         = words;
+  // Order is a user choice, shared with recall mode so 'shuffle' and
+  // 'words I keep missing' mean the same thing in both.
+  allWords         = orderWords(words, wordOrder, lang);
   quizColumns      = columns;
   quizLang         = lang;
   resolvedDirection = direction;
   onQuizComplete   = onComplete ?? null;
   sessionState     = new Map();
   pageIndex        = 0;
+  quizStartedAt    = Date.now();
+  sessionRecorded  = false;
   lastMissedWords   = [];
   lastMissedResults = [];
   hideSummaries();
@@ -488,6 +580,35 @@ export function bindTableControls(): void {
       const btn = (e.target as Element).closest<HTMLButtonElement>('[data-page]');
       if (!btn || btn.disabled) return;
       goToPage(pageIndex + (btn.dataset.page === 'next' ? 1 : -1));
+    });
+  });
+
+  // Word order. Re-orders in place and rebuilds the current page; answers are
+  // kept, since sessionState is keyed by word rather than position.
+  const orderSel = document.getElementById('tableOrderSelect') as HTMLSelectElement | null;
+  if (orderSel) {
+    WORD_ORDER_LABELS.forEach(([value, label]) => {
+      const o = document.createElement('option');
+      o.value = value; o.textContent = label; o.selected = value === wordOrder;
+      orderSel.appendChild(o);
+    });
+    orderSel.addEventListener('change', () => {
+      wordOrder = orderSel.value as WordOrder;
+      localStorage.setItem('vq_table_order', wordOrder);
+      if (allWords.length === 0) return;
+      syncSessionState();
+      allWords  = orderWords(allWords, wordOrder, quizLang);
+      pageIndex = 0;
+      renderCurrentPage();
+    });
+  }
+
+  // Page jump dropdown (top and bottom)
+  ['tablePagerSelectTop', 'tablePagerSelectBottom'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', e => {
+      const sel = e.target as HTMLSelectElement;
+      const idx = Number(sel.value);
+      if (Number.isFinite(idx)) goToPage(idx);
     });
   });
 

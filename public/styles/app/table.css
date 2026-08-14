@@ -493,3 +493,31 @@
   #tableWrap .spanish-word { font-size: 0.95rem; }
   #tableWrap input[type="text"] { font-size: 0.95rem; min-height: 42px; }
 }
+
+/* ── Word order selector ───────────────────────────────────────
+   Left slot of the table nav bar, opposite the jump buttons. */
+
+/* ── Repeat offenders ──────────────────────────────────────────
+   Words missed twice or more in previous sessions, from the shared
+   miss tally. Advisory: scoring is unaffected. */
+.table-word--trouble {
+  box-shadow: inset 3px 0 0 var(--warning, #b7791f);
+}
+
+@media (max-width: 599px) {
+}
+
+/* A word can be both listed and a repeat offender. Show both markers as a
+   split bar rather than letting whichever rule loads last win. */
+#tableWrap td.word-cell--known.table-word--trouble {
+  box-shadow:
+    inset 3px 0 0 var(--accent),
+    inset 6px 0 0 var(--warning, #b7791f);
+}
+
+/* Label + dropdown as one unit in the table nav bar. */
+.table-nav-side {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}

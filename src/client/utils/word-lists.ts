@@ -261,23 +261,6 @@ export function refreshFilterSelect(lang: string): void {
   if (countEl) countEl.textContent = String(getTotalListedCount(lang));
 }
 
-// Backwards-compat shims
-export function markKnown(lang: string, word: string): void {
-  addToList(lang, DEFAULT_LIST, word);
-}
-
-export function unmarkKnown(lang: string, word: string): void {
-  removeFromList(lang, DEFAULT_LIST, word);
-}
-
-export function isKnown(lang: string, word: string): boolean {
-  return isInList(lang, DEFAULT_LIST, word);
-}
-
-export function getKnownCount(lang: string): number {
-  return getTotalListedCount(lang);
-}
-
-export function getKnownWords(lang: string): Set<string> {
-  return getAllListedWords(lang);
-}
+// The old "known words" concept was a shim over a default list and had no
+// remaining callers; mastery in my-lists-mode.ts is the single progress model
+// now. Removed rather than left to rot as a second, disagreeing source.
