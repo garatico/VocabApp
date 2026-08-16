@@ -1,0 +1,76 @@
+/**
+ * context.ts — the state the My Lists panes share, and the redraws they trigger.
+ *
+ * My Lists is two panes that talk to each other constantly: picking a list in
+ * the sidebar redraws the panel, adding a word in the panel updates the count
+ * in the sidebar. That used to be expressed as one very large closure, where
+ * every function could see every variable and the call graph was invisible.
+ *
+ * The state now lives in one object that is passed explicitly. Modules take
+ * `ctx` and mutate the fields they own, which makes the coupling greppable:
+ * searching for `ctx.selectedList` finds everything that depends on which list
+ * is open.
+ *
+ * `renderSidebar` and `renderPanel` are slots rather than imports because the
+ * two call each other. They are filled in by renderMyLists() once both exist;
+ * the defaults are no-ops so a partially-wired context cannot throw.
+ */
+
+import type { SortMode } from './types.ts';
+
+export interface ListsCtx {
+  // ── Selection state ────────────────────────────────────────────────────────
+  /** The language whose lists are shown. Owned by the sidebar's picker. */
+  lang: string;
+  /** Name of the open ordinary list, or '' when none exists. */
+  selectedList: string;
+  /** Name of the open smart list, or null. Never set alongside selectedList. */
+  selectedSmart: string | null;
+  sortMode: SortMode;
+  /** The one word whose detail row is open, or null. */
+  expandedWord: string | null;
+  hideMastered: boolean;
+  /** Empty means "no filter", not "nothing matches". */
+  readonly selectedPos: Set<string>;
+  readonly selectedBands: Set<string>;
+
+  // ── DOM roots ──────────────────────────────────────────────────────────────
+  readonly listNav: HTMLUListElement;
+  readonly panel: HTMLElement;
+
+  // ── Redraws ────────────────────────────────────────────────────────────────
+  /**
+   * Redraw the sidebar.
+   *
+   * `rerenderPanel` defaults to true, but callers that only changed the
+   * *contents* of the current list — adding, removing, moving a word — must
+   * pass false. renderPanel() clears the panel and rebuilds every control from
+   * scratch, which wiped the add-search box (and its results, and the filter
+   * text) out from under the user mid-interaction.
+   */
+  renderSidebar(rerenderPanel?: boolean): void;
+  /** Rebuild the right-hand pane from scratch for the current selection. */
+  renderPanel(): void;
+  /** Refresh the header word count and the quiz filter dropdown. */
+  updateBadge(): void;
+}
+
+export function createContext(
+  lang: string, listNav: HTMLUListElement, panel: HTMLElement,
+): ListsCtx {
+  return {
+    lang,
+    selectedList:  '',
+    selectedSmart: null,
+    sortMode:      'alpha-asc',
+    expandedWord:  null,
+    hideMastered:  false,
+    selectedPos:   new Set<string>(),
+    selectedBands: new Set<string>(),
+    listNav,
+    panel,
+    renderSidebar: () => {},
+    renderPanel:   () => {},
+    updateBadge:   () => {},
+  };
+}
