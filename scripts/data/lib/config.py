@@ -27,6 +27,7 @@ OS_DIR      = DATA_DIR / 'opensubtitles_freq_corpora'
 WIKI_DIR    = DATA_DIR / 'wikipedia_freq_corpora'
 GLOSS_CACHE = DATA_DIR / 'gloss_cache'      # cached Wiktionary/Translate lookups
 PRESEED_DIR = DATA_DIR / 'preseed'          # earlier pipeline output, used by backfill
+SEED_DIR    = DATA_DIR / 'seed'             # hand-written starter vocabularies
 IMAGES_DIR  = DATA_DIR / 'images'           # Wikipedia photos (animals/ food/ nature/)
 EMOJI_DIR   = DATA_DIR / 'emoji'            # OpenMoji SVGs
 
@@ -38,6 +39,11 @@ def curated_path(lang: str) -> Path:
     return CURATED_DIR / f'{LANG_NAMES[lang]}_curated.jsonl'
 
 
+def seed_path(lang: str) -> Path:
+    """data/seed/german.txt for 'deu'. May not exist — seeding is optional."""
+    return SEED_DIR / f'{LANG_NAMES[lang]}.txt'
+
+
 def gloss_cache_path(lang: str) -> Path:
     """data/gloss_cache/gloss_cache_spa.jsonl for 'spa'."""
     GLOSS_CACHE.mkdir(parents=True, exist_ok=True)
@@ -45,11 +51,17 @@ def gloss_cache_path(lang: str) -> Path:
 
 
 # 3-letter code -> full language name (used for JSONL filenames, DB lang field)
+#
+# Everything else in the pipeline iterates over this dict — --langs choices, the
+# "all languages" default, the help text. Adding a key here is what makes a
+# language exist; the maps below only say which code each library wants for it.
 LANG_NAMES: Dict[str, str] = {
     'spa': 'spanish',
     'fra': 'french',
     'ita': 'italian',
     'por': 'portuguese',
+    'deu': 'german',
+    'nld': 'dutch',
 }
 
 # 3-letter code -> spaCy model name
@@ -58,6 +70,8 @@ SPACY_MODELS: Dict[str, str] = {
     'ita': 'it_core_news_sm',
     'por': 'pt_core_news_sm',
     'spa': 'es_core_news_sm',
+    'deu': 'de_core_news_sm',
+    'nld': 'nl_core_news_sm',
 }
 
 # 3-letter code -> ISO 639-1 code used by deep_translator
@@ -66,6 +80,8 @@ LANG_SRC: Dict[str, str] = {
     'fra': 'fr',
     'ita': 'it',
     'por': 'pt',
+    'deu': 'de',
+    'nld': 'nl',
 }
 
 # 3-letter code -> ISO 639-1 code used by opensubtitles_freq_corpora directory names
@@ -74,6 +90,8 @@ OS_LANG: Dict[str, str] = {
     'fra': 'fr',
     'ita': 'it',
     'por': 'pt',
+    'deu': 'de',
+    'nld': 'nl',
 }
 
 # 3-letter code -> language name used by wiktionaryparser
@@ -82,15 +100,34 @@ WIKT_LANG: Dict[str, str] = {
     'fra': 'french',
     'ita': 'italian',
     'por': 'portuguese',
+    'deu': 'german',
+    'nld': 'dutch',
 }
 
 # 3-letter code -> mlconjug3 language code
+#
+# NO 'deu' OR 'nld' ENTRY, AND THAT IS NOT AN OVERSIGHT. mlconjug3 ships models
+# for en, es, fr, it, pt and ro only — no German, no Dutch. A missing key here
+# makes get_conjugator() return None, which build_conjugations() already
+# handles, so those verbs are imported with conjugations: null rather than
+# failing.
+#
+# LANGS_WITHOUT_CONJUGATION below exists so the pipeline can *say* that once,
+# instead of reporting it as several thousand individual failures.
 MLCONJUG3_LANG: Dict[str, str] = {
     'spa': 'es',
     'fra': 'fr',
     'ita': 'it',
     'por': 'pt',
 }
+
+# Languages with no automated conjugation source. Spanish is absent because it
+# has one of its own — the rules engine in src/server/lib/verb-rules.ts, driven
+# by conjugation_class rather than by mlconjug3.
+LANGS_WITHOUT_CONJUGATION = frozenset(
+    code for code in LANG_NAMES
+    if code not in MLCONJUG3_LANG and code != 'spa'
+)
 
 # App tense name -> (mlconjug3 mood, mlconjug3 tense label)
 # Lookup tries bare label first (French exact match), then mood-prefixed (spa/ita/por v4).
@@ -131,6 +168,8 @@ TENSE_MAP: Dict[str, Dict[str, Tuple[str, str]]] = {
         'subjunctive': ('Conjuntivo',  ' Subjuntivo Presente'),
         'imperative':  ('Imperativo',  'Afirmativo'),
     },
+    # No 'deu' — see MLCONJUG3_LANG. A tense map with no conjugator behind it
+    # would only produce a table of Nones.
 }
 
 

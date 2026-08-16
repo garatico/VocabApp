@@ -10,6 +10,9 @@ import { apiCall, escapeHtml } from './admin-api.js';
 
 // ── Pronoun & tense data ──────────────────────────────────────────────────────
 
+// German is absent on purpose. This tab is a drill over stored conjugations,
+// and German has none — see LANGUAGES in ../data/languages.ts. A pronoun row
+// here would produce an empty table rather than a practice exercise.
 const PRONOUNS: Record<string, string[]> = {
   spanish:    ['yo', 'tú', 'él / ella / Ud.', 'nosotros', 'vosotros', 'ellos / ellas / Uds.'],
   portuguese: ['eu', 'tu', 'ele / ela / você', 'nós', 'vós', 'eles / elas / vocês'],

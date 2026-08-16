@@ -11,25 +11,7 @@
   box-shadow: var(--shadow);
 }
 
-/* ── Empty state (before Start Quiz) ── */
-#conjugationWrap:empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 220px;
-  border: 2px dashed var(--border);
-  border-radius: var(--radius-sm);
-  margin: 0.5rem 0;
-}
-#conjugationWrap:empty::before {
-  content: 'Select your settings above and hit Start Quiz';
-  font-family: 'Sora', sans-serif;
-  font-size: 0.88rem;
-  color: var(--text-muted);
-  font-style: italic;
-  text-align: center;
-  padding: 1.5rem;
-}
+/* Empty state comes from the shared .ui-empty-slot group. */
 
 /* ── Summary cards (top/bottom of conjugation section) ─────── */
 #conjSummaryTop  { margin-bottom: 0.6rem; }
@@ -109,26 +91,10 @@
 /* (The old .conj-prog-* thin bars were replaced by the shared .progress /
    .quiz-score components — see .conj-progress-block below.) */
 
-/* Give Up button */
+/* Give Up — colours and states come from .ui-btn-danger. */
 .conj-giveup-btn {
-  flex-shrink: 0;
   padding: 0.45rem 1rem;
-  background: var(--danger-light);
-  border: 1px solid #e8a09a;
-  border-radius: var(--radius-sm);
   font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--danger);
-  cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
-  white-space: nowrap;
-}
-.conj-giveup-btn:hover:not(:disabled) {
-  background: #f9dbd8;
-}
-.conj-giveup-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
 }
 
 /* ── Cards grid: 2 columns ── */
@@ -277,21 +243,60 @@
 }
 .conj-progress-block .progressWrap { margin-top: 0; }
 
-/* Two labelled progress groups (Forms and Verbs) stacked in the header block */
+/* Two labelled progress groups (Forms and Verbs) stacked in the header block,
+   with both sets of score pills on a single row underneath them. Interleaving
+   bar/pills/bar/pills made the block twice as tall and put a row of pills
+   between the two bars it was meant to compare. */
 .conj-progress-block {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 0.45rem;
 }
 .quiz-progress-group { min-width: 0; }
-.progress-group-label {
-  font-size: 0.74rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  margin-bottom: 0.15rem;
+.conj-progress-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
 }
+/* The stat to the right of each bar is a different length ("48/300 Answered"
+   vs "3/50 Fully Conjugated"), and .progress is flex:1, so the two tracks
+   ended up different widths. Fixing the stat's width makes the bars line up
+   and be directly comparable, which is the only reason they are stacked. */
+.conj-progress-bars .progressWrap .small {
+  flex: 0 0 11rem;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.conj-progress-pills {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* Each row — the FORMS / VERBS label and its four pills — is boxed, using the
+   same shell as a filter box. Loose on the background the two rows ran into
+   one another and it was not obvious which set of pills belonged to which
+   bar. */
+.conj-progress-pills .conj-pills-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  flex-wrap: wrap;
+  padding: 0.4rem 0.6rem;
+  /* Tint, border and radius come from .ui-panel. */
+}
+.conj-pills-cell > .progress-group-label {
+  margin-bottom: 0;
+  flex: 0 0 3.2rem;   /* FORMS and VERBS align, so the pills line up too */
+}
+/* The pills carry their own top margin for the standalone table-mode layout,
+   which inside a box reads as the row being bottom-heavy. */
+.conj-pills-cell > .quiz-score { margin-top: 0; }
+/* Type from .ui-label. */
+.progress-group-label { margin-bottom: 0.15rem; }
 
 /* ── Pronoun toggle row (Forms) ── */
 /* Single-form tenses hide this row via the hidden attribute, which an author
@@ -304,21 +309,7 @@
   gap: 0.35rem;
 }
 
-/* All / None buttons */
-#conjFormsAll,
-#conjFormsNone {
-  font-size: 0.68rem;
-  padding: 0.15rem 0.45rem;
-  background: var(--surface2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-#conjFormsAll:hover,
-#conjFormsNone:hover { background: var(--border); }
+/* All / None buttons are .ui-btn-mini — nothing local left. */
 
 /* ── 2 × 3 conjugation-table-shaped grid ── */
 .conj-pronoun-toggles {
@@ -370,6 +361,7 @@
 
 /* ── Responsive ── */
 @media (max-width: 640px) {
+  /* Single column only on genuinely small screens. Desktop keeps two. */
   .conj-cards-grid        { grid-template-columns: 1fr; }
   .conj-top-controls      { gap: 0.5rem; }
   .conj-pronoun           { width: 62px; font-size: 0.72rem; }
@@ -395,19 +387,9 @@
   gap: 0.45rem;
   margin-bottom: 0.5rem;
 }
-.conj-order-label {
-  font-size: 0.64rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-muted);
-}
-.conj-order-count {
-  margin-left: auto;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-}
+/* .conj-order-label is .ui-label; .conj-order-count is .ui-stat. */
+.conj-order-label { --ui-label-size: 0.64rem; }
+.conj-order-count { margin-left: auto; }
 
 @media (max-width: 599px) {
 }
@@ -445,16 +427,14 @@
   gap: 0.35rem;
 }
 .conj-tf-header .filter-section-label { margin-right: auto; }
-.conj-tf-header button {
-  font-size: 0.66rem;
-  padding: 0.12rem 0.4rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text-muted);
-  cursor: pointer;
-}
-.conj-tf-header button:hover { border-color: var(--accent); color: var(--accent); }
+/* Buttons here are .ui-btn-mini. */
+
+/* ── Picture quiz style box ──────────────────────────────────
+   Same collapse bar as Tense & Forms, so the two mode panels behave
+   identically. The toggle spans the box and shares the width evenly. */
+#pictureStyleBody { margin-top: 0.5rem; }
+#pictureStyleBody .conj-display-toggle { display: flex; width: 100%; }
+#pictureStyleBody .conj-toggle-btn { flex: 1; justify-content: center; }
 
 /* ── Display toggle, now in the controls bar ────────────────── */
 #conjDisplayGroup .conj-display-toggle { display: flex; }
@@ -491,6 +471,17 @@
 [data-tense="subjunctive"]     { --tense-hue: 190; }  /* teal    */
 [data-tense="past_participle"] { --tense-hue:  45; }  /* amber   */
 [data-tense="gerund"]          { --tense-hue: 285; }  /* purple  */
+
+/* ── Tense chips: two columns ─────────────────────────────────
+   There was never a base rule here — only the 767px override — so the
+   container fell back to display:block and the width:100% chips stacked
+   one per line. */
+.conj-tense-chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  align-content: start;
+}
 
 /* ── Tense chips: bigger, and coloured when active ───────────── */
 .conj-tense-chip {
@@ -636,9 +627,126 @@
 .conj-reveal-all-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 @media (max-width: 767px) {
-  .conj-tense-chips { grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); }
+  .conj-tense-chips { grid-template-columns: 1fr 1fr; }
   .conj-tf-body     { flex-direction: column; gap: 0.6rem; }
   .conj-tf-divider  { width: 100%; height: 1px; flex: 0 0 1px; }
   .conj-tf-summary  { display: none; }
   .conj-head-side   { gap: 0.25rem; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Card metadata — rank, tense, regularity
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Frequency rank, top-left. Same badge as table mode's .table-word-rank —
+   same font, size, weight, offsets and opacity, so a word looks the same
+   wherever you meet it. */
+/* The badge itself is .ui-rank-badge, shared with table mode; the card only
+   has to provide the containing block. */
+.conj-card { position: relative; }
+
+.conj-card-tense-en {
+  font-size: 0.6rem;
+  font-style: italic;
+  color: var(--text-muted);
+  text-align: right;
+  line-height: 1.1;
+}
+
+/* ── Card header right side ───────────────────────────────────
+   Band, regularity and tense used to stack, making every card three
+   rows taller than its conjugation table needed. They are all one-word
+   labels, so they sit on a single line. */
+.conj-head-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.conj-head-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+.conj-card-tense { margin-left: 0; }
+
+/* ── Regularity filter chips ──────────────────────────────────
+   Same shape as the tense chips, tinted with the same colours the
+   matching pill on the card uses. */
+.conj-reg-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.conj-reg-chip {
+  width: 100%;
+  text-align: left;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 0.36rem 0.7rem;
+  min-height: 30px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition-fast),
+              border-color var(--transition-fast),
+              color var(--transition-fast);
+}
+.conj-reg-chip:hover { border-color: currentColor; color: var(--text); }
+.conj-reg-chip.active {
+  font-weight: 700;
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  box-shadow: inset 3px 0 0 currentColor;
+}
+.conj-reg-chip[data-reg="regular"].active   { color: var(--correct, #3d6b4f); }
+.conj-reg-chip[data-reg="ortho"].active     { color: var(--text); }
+.conj-reg-chip[data-reg="stem"].active      { color: var(--warning, #b7791f); }
+.conj-reg-chip[data-reg="irregular"].active { color: var(--danger, #b4453c); }
+
+/* Tense needs the room for two columns of chips; Forms and Regularity are
+   single-column lists. */
+.conj-tf-side--wide   { flex: 2 1 0; }
+.conj-tf-side--narrow { flex: 1 1 0; }
+
+/* Regularity pill. Three buckets rather than the 26 raw classes. */
+.conj-card-reg {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.08rem 0.42rem;
+  border-radius: 99px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.conj-card-reg--regular   { color: var(--correct, #3d6b4f); }
+.conj-card-reg--ortho     { color: var(--text-muted); }
+.conj-card-reg--stem      { color: var(--warning, #b7791f); }
+.conj-card-reg--irregular { color: var(--danger, #b4453c); }
+
+/* ── Tense chips: native name over the English ──────────────── */
+.conj-tense-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.05rem;
+  line-height: 1.15;
+}
+.conj-chip-native { font-size: 0.8rem; }
+.conj-chip-en {
+  font-size: 0.64rem;
+  font-weight: 400;
+  font-style: italic;
+  opacity: 0.75;
+}
+
+@media (max-width: 640px) {
+  .conj-card-rank     { font-size: 0.55rem; }
+  .conj-card-tense-en { display: none; }
 }

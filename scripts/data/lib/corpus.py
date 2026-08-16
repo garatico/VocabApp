@@ -63,6 +63,17 @@ VERB_INFINITIVE_ENDINGS: Dict[str, Tuple[str, ...]] = {
     'fra': ('er', 'ir', 're', 'oir', 'oire'),
     'ita': ('are', 'ere', 'ire'),
     'por': ('ar', 'er', 'ir'),
+    # German infinitives all end in -n: -en for almost everything, plus -ern
+    # (ändern), -eln (lächeln) and the two bare-'n' irregulars sein and tun.
+    # 'n' subsumes 'en', so one entry covers the lot — and unlike the Romance
+    # endings it is not a useful *filter*, since plenty of German nouns end in
+    # -en too (Wagen, Garten, Leben). It only rejects a spaCy verb lemma that
+    # is obviously not an infinitive.
+    'deu': ('en', 'n'),
+    # Dutch is the same shape: -en for almost every verb, with zijn, gaan,
+    # staan, doen, slaan and zien ending in a bare -n. Same caveat too —
+    # Dutch nouns end in -en as well (regen, morgen, wagen).
+    'nld': ('en', 'n'),
 }
 
 # Conjugated verb suffixes that are unambiguously verbal - never noun endings.
@@ -123,6 +134,28 @@ CONJ_VERB_SUFFIXES: Dict[str, Tuple[str, ...]] = {
         # Preterite plurals
         'aram', 'eram',
     ),
+    # 'deu' is deliberately empty on the first pass.
+    #
+    # Every German verb ending is also a noun ending. '-te' is the whole weak
+    # preterite (sagte) and also Tüte, Miete, Seite, Ente. '-t' is 3rd-person
+    # singular and also Stadt, Welt, Blatt, Wort, Nacht. '-en' is the plural,
+    # the infinitive, and half the nouns in the language. Past participles look
+    # like ge-...-t, but Gerät, Geschäft, Gesicht, Gewicht, Gebiet and Geschenk
+    # match that shape exactly and are ordinary nouns.
+    #
+    # The record on this is not good: four suffix heuristics were written for
+    # Spanish and all four had to be reverted after they ate real headwords
+    # (-arte took arte/parte/suerte; a short-word-with-accent rule took
+    # día/más/así). German is worse, not better. The entries here get filled in
+    # from a real mining run — enumerating observed junk — rather than guessed
+    # at in advance. Until then spaCy's POS tag and the lemma do the work, which
+    # is what the Romance filters are patching around rather than replacing.
+    'deu': (),
+    # Dutch, empty for the same reason and then some. '-t' is 2nd/3rd person
+    # singular and also nacht, licht, recht, gezicht. '-de'/'-te' is the weak
+    # past and also vriende-, einde, gebeurte-. '-en' is the infinitive, the
+    # plural, and a large share of the nouns. Fill from observed output.
+    'nld': (),
 }
 
 # Explicit per-language blocklist for high-frequency conjugated forms whose
@@ -455,16 +488,65 @@ def ensure_spacy_model(lang: str) -> bool:
             return False
 
 
-def analyze_word(nlp, word: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+# Languages that capitalise every noun. The OpenSubtitles frequency lists are
+# lowercased, so for these the case has to be put back — see display_lemma().
+NOUN_CAPITALISING_LANGS = {'deu'}
+
+
+def _tag_once(nlp, word: str) -> Tuple[Optional[str], Optional[str]]:
+    """(lemma, pos) for one surface form, or (None, None) on any failure."""
     try:
         doc = nlp(word)
         if doc and len(doc) > 0:
-            tok = doc[0]
-            pos = tok.pos_
-            return tok.lemma_.lower(), pos, POS_GROUPS.get(pos, 'other')
+            return doc[0].lemma_, doc[0].pos_
     except Exception:
         pass
-    return None, None, None
+    return None, None
+
+
+def analyze_word(nlp, word: str,
+                 lang_code: str = '') -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    """
+    Tag one corpus word. Returns (lemma_lowercased, pos, pos_group).
+
+    The lemma comes back lowercased because it is used as a dictionary key for
+    deduplication and blocklist lookups throughout. display_lemma() puts the
+    case back for storage.
+
+    German gets tagged twice. The corpus is entirely lowercase ("mann", "essen")
+    but de_core_news_sm is trained on properly-cased text, where capitalisation
+    is the single strongest signal that a token is a noun. Handed "mann" the
+    model has had that signal removed; handed "Mann" it has it back. So both are
+    tried, and a NOUN reading wins over a non-NOUN one — a false negative here
+    costs a noun its capital letter *and* mislabels its part of speech.
+    """
+    lemma, pos = _tag_once(nlp, word)
+
+    if lang_code in NOUN_CAPITALISING_LANGS and word[:1].islower():
+        titled_lemma, titled_pos = _tag_once(nlp, word.capitalize())
+        # Prefer whichever reading says NOUN. If they agree, or neither says
+        # NOUN, the lowercase reading stands.
+        if titled_pos in ('NOUN', 'PROPN') and pos not in ('NOUN', 'PROPN'):
+            lemma, pos = titled_lemma, titled_pos
+
+    if not lemma or not pos:
+        return None, None, None
+    return lemma.lower(), pos, POS_GROUPS.get(pos, 'other')
+
+
+def display_lemma(lemma: str, pos_group: str, lang_code: str) -> str:
+    """
+    How the word should actually be written.
+
+    Everywhere else the lemma is handled lowercased, because it is a lookup key.
+    This is the one point where it becomes text a learner reads, and for German
+    that means every noun takes a capital: das Essen (the meal) against essen
+    (to eat) is a distinction carried entirely by the first letter, and a
+    lowercase noun is simply a spelling error.
+    """
+    if lang_code in NOUN_CAPITALISING_LANGS and pos_group == 'noun':
+        return lemma[:1].upper() + lemma[1:]
+    return lemma
 
 
 def find_corpus_dir(lang: str, corpus_dir: Path) -> Optional[Path]:
@@ -625,12 +707,27 @@ def load_os_ranks(lang: str, os_dir: Path) -> Dict[str, dict]:
         return {}
 
 
+# Languages whose plurals are formed by adding -s / -es, so that stripping the
+# suffix reliably yields the singular.
+#
+# German is absent, and the omission matters: its plurals are formed by suffix,
+# umlaut, both or neither (Haus→Häuser, Mann→Männer, Kind→Kinder, Auto→Autos,
+# Fenster→Fenster), so a -s rule does not describe the language. What it does do
+# is merge unrelated pairs that happen to differ by one letter — Eis (ice) into
+# Ei (egg), Reis (rice) into Rei, Maus into Mau. spaCy's lemmatiser already
+# returns the singular for German, which is what this rule exists to approximate.
+PLURAL_S_LANGS = {'spa', 'fra', 'ita', 'por'}
+
+
 def deduplicate_lemma_map(lemma_map: Dict[str, dict],
                           lang_code: str) -> Dict[str, dict]:
     """
     Merge plural/feminine variants into their canonical singular/masculine form.
     """
     to_remove: set = set()
+
+    if lang_code not in PLURAL_S_LANGS:
+        return lemma_map
 
     for lemma, data in list(lemma_map.items()):
         if lemma in to_remove:
@@ -667,37 +764,63 @@ def deduplicate_lemma_map(lemma_map: Dict[str, dict],
 
 
 def load_english_blocklist(os_dir: Path,
+                           lang: str,
                            top_n: int = 10_000,
-                           spanish_whitelist_n: int = 3_000) -> set:
+                           whitelist_n: int = 3_000) -> set:
     """
     Build an English word blocklist from the OpenSubtitles English corpus.
 
-    Words are included if they appear in the top-N English OS words AND are
-    NOT in the top spanish_whitelist_n Spanish OS words. The cross-reference
-    prevents legitimate Spanish-English shared words (final, control, hotel,
-    no) from being incorrectly blocked.
+    Subtitle files carry a lot of untranslated English. A word is blocked if it
+    appears in the top-N English OS words AND is NOT among the top whitelist_n
+    words of the language being mined. That cross-reference is what stops
+    genuine shared vocabulary from being deleted.
+
+    The whitelist used to be read from the Spanish corpus for every language,
+    which was wrong for the other three and would be destructive for German:
+    hand, arm, finger, wind, ball, warm, land, best, wild, rat, gift and band
+    are all ordinary German words that sit in the English top 10,000 and not in
+    the Spanish top 3,000, so every one of them would have been dropped.
+
+    NOTE: nothing currently passes the result of this to build_corpus_entries —
+    `mine` relies on spaCy's POS tag instead. It is kept, and kept correct, for
+    the point at which that changes.
 
     Words shorter than 3 chars are always excluded.
     """
-    en_file = os_dir / 'en' / 'en_50k.txt'
-    es_file = os_dir / 'es' / 'es_50k.txt'
+    iso = OS_LANG.get(lang)
+    if not iso:
+        return set()
+
+    en_file     = os_dir / 'en' / 'en_50k.txt'
+    target_file = os_dir / iso / f'{iso}_50k.txt'
     if not en_file.exists():
         print(f"  Warning: English blocklist unavailable - {en_file} not found.")
         print("  English words (met, dino, amir, etc.) will not be filtered from OS corpus.")
         return set()
 
-    spanish_common: set = set()
-    if es_file.exists():
+    def top_words(path: Path, n: int) -> set:
+        words: set = set()
+        if not path.exists():
+            return words
         try:
-            with open(es_file, encoding='utf-8', errors='replace') as f:
+            with open(path, encoding='utf-8', errors='replace') as f:
                 for line_rank, raw in enumerate(f, start=1):
-                    if line_rank > spanish_whitelist_n:
+                    if line_rank > n:
                         break
                     parts = raw.strip().split()
                     if parts:
-                        spanish_common.add(parts[0].lower())
+                        words.add(parts[0].lower())
         except Exception:
             pass
+        return words
+
+    # Without this the blocklist is the whole English top-N, which for a
+    # Germanic target language would take a large bite out of real vocabulary.
+    target_common = top_words(target_file, whitelist_n)
+    if not target_common:
+        print(f"  Warning: no {iso} corpus to whitelist against ({target_file}).")
+        print(f"  Refusing to apply an unfiltered English blocklist to {lang}.")
+        return set()
 
     blocklist: set = set()
     try:
@@ -708,7 +831,7 @@ def load_english_blocklist(os_dir: Path,
                 parts = raw.strip().split()
                 if len(parts) >= 2 and len(parts[0]) >= 3:
                     word = parts[0].lower()
-                    if word not in spanish_common:
+                    if word not in target_common:
                         blocklist.add(word)
     except Exception:
         pass
@@ -757,7 +880,7 @@ def build_corpus_entries(rows: List[Tuple[int, str, int]],
         print(f"\r  [{row_idx + 1:,}/{total_rows:,}]  {word:<30}", end='', flush=True)
         if ' ' in word:
             continue
-        lemma, pos, pos_group = analyze_word(nlp, word)
+        lemma, pos, pos_group = analyze_word(nlp, word, lang_code)
         if not lemma:
             continue
 
@@ -838,9 +961,11 @@ def build_corpus_entries(rows: List[Tuple[int, str, int]],
 
     lemma_map    = deduplicate_lemma_map(lemma_map, lang_code)
     sorted_items = sorted(lemma_map.items(), key=lambda x: x[1]['_count'], reverse=True)
+    # The map is keyed by the lowercase lemma so dedup and blocklist lookups
+    # are case-insensitive; display_lemma restores the case on the way out.
     entries = [
         corpus_entry(
-            word=lemma,
+            word=display_lemma(lemma, data['_pos_group'], lang_code),
             pos_group=data['_pos_group'],
             rank_clean=data['_rank'],
             corpus_count=data['_count'],

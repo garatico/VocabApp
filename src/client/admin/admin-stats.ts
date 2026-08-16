@@ -24,8 +24,9 @@ interface LangStat {
   };
 }
 
-// Spanish first, then alphabetical
-const LANG_ORDER = ['spanish', 'french', 'italian', 'portuguese'];
+// Spanish first, then alphabetical. Any language absent from this list still
+// appears — it just sorts alphabetically after the ones named here.
+const LANG_ORDER = ['spanish', 'dutch', 'french', 'german', 'italian', 'portuguese'];
 function sortLangs(pairs: [string, LangStat][]): [string, LangStat][] {
   return [...pairs].sort((a, b) => {
     const ai = LANG_ORDER.indexOf(a[0]);

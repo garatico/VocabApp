@@ -29,9 +29,21 @@
   position: relative;
 }
 
-.mode-tab:hover {
+.mode-tab:hover:not(:disabled) {
   background: var(--border);
   color: var(--text);
+}
+
+/* A mode the current language can't do — Conjugation for German, which has no
+   conjugation data at all. Left visible rather than removed so the set of tabs
+   doesn't reshuffle on every language change; the title attribute carries the
+   reason. */
+.mode-tab:disabled,
+.mode-tab--unavailable {
+  opacity: 0.4;
+  cursor: not-allowed;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
 }
 
 .mode-tab.active {

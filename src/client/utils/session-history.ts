@@ -138,10 +138,10 @@ export function clearHistory(lang: string): void {
 export type WordOrder = 'rank' | 'alpha' | 'shuffle' | 'trouble';
 
 export const WORD_ORDER_LABELS: [WordOrder, string][] = [
-  ['rank',    'Most frequent first'],
+  ['rank',    'Most Frequent First'],
   ['alpha',   'A → Z'],
   ['shuffle', 'Shuffle'],
-  ['trouble', 'Words I keep missing first'],
+  ['trouble', 'Words I Keep Missing First'],
 ];
 
 /**

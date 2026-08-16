@@ -16,6 +16,9 @@ import { initConjControls }                     from './modes/conjugation/contro
 import type { Word }                            from './types.ts';
 import { mustGet }                              from './utils/dom.ts';
 import { renderMyLists }                        from './modes/my-lists-mode.ts';
+import { LANGUAGES, isoCode, supportsConjugation,
+         conjugationUnavailableReason }          from './data/languages.ts';
+import { availableLanguages }                    from './data/vocab-source.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
 import { Settings, bindSettings, applyFontSize } from './settings.ts';
 import { initShortcuts }                         from './ui/shortcuts-overlay.ts';
@@ -42,10 +45,8 @@ const myListsArea     = mustGet('myListsArea');
 const settingsArea    = mustGet('settingsArea');
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-
-const LANG_CODE: Record<string, string> = {
-  spanish: 'es', portuguese: 'pt', italian: 'it', french: 'fr',
-};
+// The language list and its per-language capabilities live in
+// data/languages.ts — see isoCode / supportsConjugation below.
 
 // ── Session state persistence (vq_ prefix = per-session UI state) ─────────────
 
@@ -53,6 +54,76 @@ const S = {
   get: (k: string)            => localStorage.getItem(k),
   set: (k: string, v: string) => localStorage.setItem(k, v),
 };
+
+/**
+ * Rebuild the language dropdown from LANGUAGES so the markup and the code
+ * can't disagree about which languages exist.
+ *
+ * `withData` is the set of languages the database actually has rows for. A
+ * language in LANGUAGES but not in that set is offered greyed out and labelled
+ * — German exists in the app before it has been mined, and "German (no data
+ * yet)" is a better answer than an error on selection. Null means we couldn't
+ * find out, in which case everything stays enabled.
+ */
+function buildLanguageOptions(withData: string[] | null = null): void {
+  if (!langSelect) return;
+  const previous = langSelect.value;
+  const have     = withData ? new Set(withData) : null;
+
+  langSelect.innerHTML = '';
+  for (const lang of LANGUAGES) {
+    const missing   = have !== null && !have.has(lang.name);
+    const opt       = document.createElement('option');
+    opt.value       = lang.name;
+    opt.textContent = missing ? `${lang.label} — no data yet` : lang.label;
+    opt.disabled    = missing;
+    langSelect.appendChild(opt);
+  }
+
+  // Don't leave a disabled language selected — a saved choice can outlive the
+  // data, and the DB gets rebuilt from scratch often enough for that to happen.
+  const stillValid = Boolean(previous) && (have === null || have.has(previous));
+  langSelect.value = stillValid ? previous : (LANGUAGES[0]?.name ?? 'spanish');
+}
+
+/**
+ * Ask the server (or the bundled manifest) which languages have data and mark
+ * the rest. Runs after the first render so the dropdown isn't waiting on it.
+ */
+async function markEmptyLanguages(): Promise<void> {
+  const have = await availableLanguages();
+  if (!have) return;                       // couldn't tell — leave everything on
+  const before = langSelect?.value;
+  buildLanguageOptions(have);
+  if (langSelect && langSelect.value !== before) {
+    // The saved language has no data; we fell back to the first one.
+    S.set('vq_lang', langSelect.value);
+    syncConjugationAvailability();
+    void loadAndBuildFilters(langSelect.value);
+  }
+}
+
+/**
+ * Conjugation mode needs conjugation data, and German has none — see
+ * data/languages.ts. Disable the tab rather than letting it open onto an empty
+ * grid, and say why on hover instead of leaving it mysteriously dead.
+ */
+function syncConjugationAvailability(): void {
+  const lang = langSelect?.value ?? 'spanish';
+  const tab  = document.querySelector<HTMLButtonElement>('.mode-tab[data-mode="conjugation"]');
+  if (!tab) return;
+
+  const available = supportsConjugation(lang);
+  tab.disabled = !available;
+  tab.classList.toggle('mode-tab--unavailable', !available);
+  tab.title = available ? '' : conjugationUnavailableReason(lang);
+
+  // Switching to a language that can't do the mode you're in shouldn't strand
+  // you on a dead tab.
+  if (!available && document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === 'conjugation') {
+    document.querySelector<HTMLElement>('.mode-tab[data-mode="table"]')?.click();
+  }
+}
 
 function restoreSettings(): void {
   if (langSelect) langSelect.value = S.get('vq_lang') ?? 'spanish';
@@ -78,6 +149,14 @@ function restoreSettings(): void {
   if (savedSort) {
     document.querySelectorAll<HTMLElement>('#sortOrderToggle .sort-order-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.order === savedSort);
+    });
+  }
+
+  // Picture quiz style
+  const savedPicStyle = S.get('vq_picture_style');
+  if (savedPicStyle) {
+    document.querySelectorAll<HTMLElement>('#pictureSubMode .conj-toggle-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.mode === savedPicStyle);
     });
   }
 
@@ -150,11 +229,11 @@ const { updateModeUI } = bindModeSwitch({
 });
 
 const { showCurrent } = bindQuizControls({
-  getLang: () => LANG_CODE[langSelect?.value ?? 'spanish'] || 'es',
+  getLang: () => isoCode(langSelect?.value),
 });
 
 bindStartHandler({
-  getLang:     () => LANG_CODE[langSelect?.value ?? 'spanish'] || 'es',
+  getLang:     () => isoCode(langSelect?.value),
   getFullLang: () => langSelect?.value ?? 'spanish',
   getSize: () => sizeSelect?.value === 'max'
     ? Infinity
@@ -186,6 +265,7 @@ bindStartHandler({
 
 langSelect?.addEventListener('change', () => {
   S.set('vq_lang', langSelect.value);
+  syncConjugationAvailability();
   void loadAndBuildFilters(langSelect.value);
   refreshFilterSelect(langSelect.value);
   if (document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === 'conjugation') {
@@ -237,12 +317,21 @@ document.querySelector('.mode-tabs')?.addEventListener('click', e => {
   if (tab?.dataset.mode) S.set('vq_mode', tab.dataset.mode);
 });
 
-// Picture sub-mode toggle
+// Picture sub-mode toggle. The box collapses, so the chosen style is echoed
+// into the header summary — otherwise a folded box says nothing at all.
+function syncPictureStyleSummary(): void {
+  const active = document.querySelector<HTMLElement>('#pictureSubMode .conj-toggle-btn.active');
+  const label  = document.getElementById('pictureStyleSummary');
+  if (label) label.textContent = active?.textContent ?? '';
+}
+
 document.getElementById('pictureSubMode')?.addEventListener('click', e => {
   const btn = (e.target as HTMLElement).closest<HTMLElement>('.conj-toggle-btn');
   if (!btn) return;
   document.querySelectorAll('#pictureSubMode .conj-toggle-btn')
     .forEach(b => b.classList.toggle('active', b === btn));
+  if (btn.dataset.mode) S.set('vq_picture_style', btn.dataset.mode);
+  syncPictureStyleSummary();
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -251,7 +340,9 @@ void (async function init(): Promise<void> {
   mountUI();
   initPWA();              // service worker + offline indicator (production only)
   applyFontSize();        // apply saved font size before anything renders
+  buildLanguageOptions(); // must precede restoreSettings — it sets .value
   restoreSettings();
+  syncConjugationAvailability();
   bindUIState();
   bindClassFilter();
   bindDomainFilter();
@@ -260,6 +351,7 @@ void (async function init(): Promise<void> {
   bindSettings();
   initShortcuts();
   initListFilter(langSelect?.value ?? 'spanish');
+  syncPictureStyleSummary();
 
   // ── Onboarding card ────────────────────────────────────────────────────────
   const onboardingCard    = document.getElementById('onboardingCard');
@@ -299,5 +391,7 @@ void (async function init(): Promise<void> {
   }
 
   updateModeUI();
-    await loadAndBuildFilters(langSelect?.value ?? 'spanish');
+  await loadAndBuildFilters(langSelect?.value ?? 'spanish');
+  // After the first render — greys out languages the database has no rows for.
+  void markEmptyLanguages();
 })();

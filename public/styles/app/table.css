@@ -36,28 +36,8 @@
   font-family: 'DM Mono', monospace;
 }
 
-/* ── Empty state (before Start Quiz) ── */
-#tableWrap:empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 240px;
-  border: 2px dashed var(--border);
-  border-radius: var(--radius);
-  margin: 0.5rem 0;
-  gap: 0.5rem;
-  background: linear-gradient(160deg, var(--surface) 0%, var(--surface2) 100%);
-}
-#tableWrap:empty::before {
-  content: '▶  Hit Start Quiz to begin';
-  font-family: 'Sora', sans-serif;
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-align: center;
-  padding: 0 1.5rem;
-}
+/* Empty state comes from the shared .ui-empty-slot group; the wording is
+   set as --empty-text on #tableWrap there. */
 #tableWrap:empty::after {
   content: 'Choose a language, word count, and mode above';
   font-family: 'Sora', sans-serif;
@@ -242,19 +222,8 @@
 
 /* ── Rank number overlay ──
    em-based so the frequency number scales with the font-size setting. */
-.table-word-rank {
-  position: absolute;
-  top: 3px;
-  left: 5px;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.55em;
-  font-weight: 600;
-  color: var(--text-muted);
-  line-height: 1;
-  pointer-events: none;
-  user-select: none;
-  opacity: 1;
-}
+/* .table-word-rank is .ui-rank-badge — shared with conjugation mode so a
+   word carries the same badge wherever you meet it. Nothing local. */
 
 /* ── Known-word button ── (box metrics shared with .reveal-btn above) */
 .known-btn {

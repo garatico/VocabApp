@@ -18,6 +18,9 @@
 <!-- Shared tokens -->
 <link rel="stylesheet" href="/styles/shared/variables.css"/>
 <link rel="stylesheet" href="/styles/shared/reset.css"/>
+<!-- Shared UI components. Must load before the per-mode sheets so a mode can
+     still override one property without restating the whole pattern. -->
+<link rel="stylesheet" href="/styles/shared/components.css"/>
 <!-- App styles -->
 <link rel="stylesheet" href="/styles/app/animations.css"/>
 <link rel="stylesheet" href="/styles/app/transitions.css"/>
@@ -83,11 +86,15 @@
         <div id="controls-top">
           <div class="control-group">
             <label for="langSelect">Language</label>
+            <!-- Options are rebuilt from LANGUAGES in data/languages.ts on
+                 load; these are the no-JS fallback and must match it. -->
             <select id="langSelect">
               <option value="spanish">Spanish</option>
               <option value="portuguese">Portuguese</option>
               <option value="italian">Italian</option>
               <option value="french">French</option>
+              <option value="german">German</option>
+              <option value="dutch">Dutch</option>
             </select>
           </div>
 
@@ -223,7 +230,7 @@
             </div>
 
             <div id="conjTenseFormsBody" class="filter-body conj-tf-body">
-              <div class="conj-tf-side">
+              <div class="conj-tf-side conj-tf-side--wide">
                 <div class="conj-tf-header">
                   <span class="filter-section-label">Tense</span>
                   <button type="button" id="conjTensesAll">All</button>
@@ -234,7 +241,7 @@
 
               <div class="conj-tf-divider" aria-hidden="true"></div>
 
-              <div class="conj-tf-side" id="conjPronounRow">
+              <div class="conj-tf-side conj-tf-side--narrow" id="conjPronounRow">
                 <div class="conj-tf-header">
                   <span class="filter-section-label">Forms</span>
                   <button type="button" id="conjFormsAll">All</button>
@@ -242,15 +249,41 @@
                 </div>
                 <div id="conjPronounToggles" class="conj-pronoun-toggles"></div>
               </div>
+
+              <div class="conj-tf-divider" aria-hidden="true"></div>
+
+              <!-- Which kinds of verb to drill. The buckets match the pill on
+                   each card, which is the same grouping of the 26 raw
+                   conjugation classes. -->
+              <div class="conj-tf-side conj-tf-side--narrow" id="conjRegularityRow">
+                <div class="conj-tf-header">
+                  <span class="filter-section-label">Regularity</span>
+                  <button type="button" id="conjRegAll">All</button>
+                </div>
+                <div id="conjRegChips" class="conj-reg-chips">
+                  <button type="button" class="conj-reg-chip active" data-reg="regular">Regular</button>
+                  <button type="button" class="conj-reg-chip active" data-reg="ortho">Spelling</button>
+                  <button type="button" class="conj-reg-chip active" data-reg="stem">Stem-change</button>
+                  <button type="button" class="conj-reg-chip active" data-reg="irregular">Irregular</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Picture-mode controls: shown only when Picture Quiz tab is active -->
         <div id="pictureModeControls" class="mode-filter-panel" style="display:none">
-          <div class="conj-top-controls">
-            <div class="conj-control-group">
-              <span class="filter-section-label">Quiz Style</span>
+          <!-- Collapsible, like every other filter box, so it folds away once
+               the style is chosen instead of permanently occupying a row. -->
+          <div class="filter-box">
+            <div class="conj-tf-bar">
+              <button type="button" class="filter-collapse-btn" data-collapse="pictureStyleBody" aria-expanded="false" aria-controls="pictureStyleBody">
+                <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
+                <span class="filter-section-label">Quiz Style</span>
+              </button>
+              <span id="pictureStyleSummary" class="conj-tf-summary"></span>
+            </div>
+            <div id="pictureStyleBody" class="filter-body">
               <div class="conj-display-toggle" id="pictureSubMode">
                 <button class="conj-toggle-btn active" data-mode="type">Type the Word</button>
                 <button class="conj-toggle-btn" data-mode="flashcard">Flashcard</button>
@@ -394,19 +427,31 @@
       </section>
 
       <section id="pictureArea" hidden>
+        <!-- Same anatomy as #tableArea: three-segment bar with an in-bar
+             label, then a row of score pills. -->
         <div class="progressWrap">
-          <div class="progress"><div id="pictureBarTop" class="bar"></div></div>
-          <div id="pictureStatsTop" class="small"></div>
+          <div class="progress">
+            <div id="pictureBarTop" class="bar"></div>
+            <div id="pictureBarTopRevealed" class="bar-revealed"></div>
+            <div id="pictureBarTopMissed" class="bar-missed"></div>
+            <span id="pictureStatsTop" class="progress-label"></span>
+          </div>
         </div>
+        <div id="pictureScoreTop" class="quiz-score quiz-score--boxed"></div>
         <div id="pictureSummaryTop" class="quiz-summary" style="display:none"></div>
 
         <div id="pictureWrap"></div>
         <div id="pictureSummaryBottom" class="quiz-summary" style="display:none"></div>
 
         <div class="progressWrap">
-          <div class="progress"><div id="pictureBarBottom" class="bar"></div></div>
-          <div id="pictureStatsBottom" class="small"></div>
+          <div class="progress">
+            <div id="pictureBarBottom" class="bar"></div>
+            <div id="pictureBarBottomRevealed" class="bar-revealed"></div>
+            <div id="pictureBarBottomMissed" class="bar-missed"></div>
+            <span id="pictureStatsBottom" class="progress-label"></span>
+          </div>
         </div>
+        <div id="pictureScoreBottom" class="quiz-score quiz-score--boxed"></div>
       </section>
 
       <section id="conjugationArea" hidden>

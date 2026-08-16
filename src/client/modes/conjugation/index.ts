@@ -6,13 +6,14 @@ import type { Word } from '../../types.js';
 import { foldKey as normalize } from '../../utils/match.ts';
 import { orderWords, WORD_ORDER_LABELS, saveSession, recordOutcome,
          type WordOrder } from '../../utils/session-history.ts';
-import { PRONOUNS, TENSE_DEFS } from './data.js';
-import { activeTenses } from './controls.js';
+import { PRONOUNS, TENSE_DEFS, TENSE_EN, TENSE_HELP, REGULARITY_HELP } from './data.js';
+import { activeTenses, activeRegularities } from './controls.js';
 import {
   setProgressCallback,
   applyAllPronounToggles,
 } from './controls.js';
 import { buildGlossDisplay } from '../../utils/utils.js';
+import { supportsConjugation, conjugationUnavailableReason } from '../../data/languages.js';
 import { buildScorePills, scorePct } from '../../ui/score-pills.js';
 import { Settings } from '../../settings.js';
 
@@ -44,6 +45,22 @@ const SINGLE_FORM_TENSES = new Set(['past_participle', 'gerund']);
  * tenseDefs, and the keys are shared across all four languages even where the
  * labels differ, so the first definition wins.
  */
+/**
+ * Bucket a conjugation_class into something a learner recognises.
+ *
+ * The data has 26 classes across four prefixes; "ortho-car" is a spelling
+ * adjustment that keeps the sound (buscar -> busqué) and is regular in every
+ * way that matters to a learner, so it reads as Regular with a note rather
+ * than as Irregular.
+ */
+function regularityOf(cls: string | null): { key: string; label: string } {
+  if (!cls)                        return { key: 'unknown',   label: '' };
+  if (cls.startsWith('regular'))   return { key: 'regular',   label: 'Regular' };
+  if (cls.startsWith('ortho'))     return { key: 'ortho',     label: 'Spelling' };
+  if (cls.startsWith('stem'))      return { key: 'stem',      label: 'Stem-change' };
+  return { key: 'irregular', label: 'Irregular' };
+}
+
 const TENSE_LABELS: Record<string, string> = Object.values(TENSE_DEFS)
   .flat()
   .reduce<Record<string, string>>((acc, def) => {
@@ -88,20 +105,51 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
 
   container.innerHTML = '';
 
+  // The tab is disabled for languages with no conjugation data, so this should
+  // be unreachable from the UI — but a stale saved mode or a direct call would
+  // otherwise render a grid of empty cards with nothing to check answers
+  // against, which looks like a bug rather than a missing feature.
+  if (!supportsConjugation(lang)) {
+    const box = document.createElement('div');
+    box.className = 'conj-empty';
+    const head = document.createElement('p');
+    head.textContent = 'Conjugation practice is not available for this language yet.';
+    const why = document.createElement('p');
+    why.className   = 'conj-empty-hint';
+    why.textContent = conjugationUnavailableReason(lang);
+    box.append(head, why);
+    container.appendChild(box);
+    return;
+  }
+
   // Order lives with the quiz, as it does in recall and table mode, so it can
   // be changed without restarting. Shared implementation, so 'shuffle' and
   // 'words I keep missing' behave identically in all three.
   let verbOrder: WordOrder =
     (localStorage.getItem('vq_conj_order') as WordOrder | null) ?? 'rank';
-  const allVerbs = words.filter(w => w.pos === 'verb');
+  // Regularity filter, from the chips in the Tense & Forms box. Applied here
+  // rather than at card-build time so the count in the order row, the progress
+  // bars and the session record all agree on what the quiz contains.
+  const regs      = activeRegularities();
+  const everyReg  = regs.length >= 4;
+  const rawVerbs  = words.filter(w => w.pos === 'verb');
+  const allVerbs  = everyReg
+    ? rawVerbs
+    // A verb with no recorded class has no bucket to be filtered into, so it
+    // survives — dropping it would silently hide most non-Spanish verbs.
+    : rawVerbs.filter(w => {
+        const cls = w.linguistic?.conjugation_class ?? null;
+        return cls == null || regs.includes(regularityOf(cls).key);
+      });
   let verbs = orderWords(allVerbs, verbOrder, lang);
 
   if (verbs.length === 0) {
-    container.innerHTML = `
-      <div class="conj-empty">
-        <p>No verbs in the current word list.</p>
-        <p class="conj-empty-hint">Make sure "Verbs" is checked in the class filter, then hit Start Quiz again.</p>
-      </div>`;
+    const why = rawVerbs.length > 0
+      ? `<p>No verbs match the current Regularity filter.</p>
+         <p class="conj-empty-hint">${rawVerbs.length} verb${rawVerbs.length === 1 ? '' : 's'} in the list — widen Regularity in the Tense &amp; Forms box, then hit Start Quiz again.</p>`
+      : `<p>No verbs in the current word list.</p>
+         <p class="conj-empty-hint">Make sure "Verbs" is checked in the class filter, then hit Start Quiz again.</p>`;
+    container.innerHTML = `<div class="conj-empty">${why}</div>`;
     return;
   }
 
@@ -152,9 +200,23 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   function describeSet(): string {
     const t = selectedTenses().length;
     const v = verbs.length;
-    return t > 1
+    const base = t > 1
       ? `${v} verb${v === 1 ? '' : 's'} × ${t} tenses = ${v * t} cards`
       : `${v} verb${v === 1 ? '' : 's'}`;
+
+    // Regularity breakdown of the verb set — how much of this quiz is the
+    // easy kind is worth knowing before you start.
+    const tally = { regular: 0, ortho: 0, stem: 0, irregular: 0, unknown: 0 };
+    verbs.forEach(vb => {
+      const k = regularityOf(vb.linguistic?.conjugation_class ?? null).key;
+      tally[k as keyof typeof tally]++;
+    });
+    const irregularish = tally.stem + tally.irregular;
+    const known        = v - tally.unknown;
+    if (known === 0) return base;
+
+    return `${base}  ·  ${tally.regular} regular, `
+         + `${tally.ortho} spelling, ${irregularish} irregular`;
   }
   orderCount.textContent = describeSet();
   orderRow.append(orderLabel, orderSel, orderCount);
@@ -165,9 +227,21 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   const progressBlock = document.createElement('div');
   progressBlock.className = 'conj-progress-block';
 
+  // The two bars stack, and both sets of score pills sit on one row beneath
+  // them. Keeping each group's pills directly under its own bar pushed the
+  // Verbs bar a full pill-row away from the Forms bar it is meant to be read
+  // against, and made the header block twice as tall as it needed to be.
+  const barsWrap = document.createElement('div');
+  barsWrap.className = 'conj-progress-bars';
+
+  const pillsRow = document.createElement('div');
+  pillsRow.className = 'conj-progress-pills';
+
+  progressBlock.append(barsWrap, pillsRow);
+
   /**
-   * One labelled progress group: heading, three-segment bar, side stat and a
-   * row of score pills — the same anatomy table mode uses.
+   * One labelled progress group: heading, three-segment bar and a side stat,
+   * plus a labelled cell of score pills on the shared row below.
    */
   function makeProgressGroup(labelText: string, hint: string): {
     green: HTMLElement; yellow: HTMLElement; red: HTMLElement;
@@ -195,11 +269,23 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     stat.className = 'small';
     wrap.append(track, stat);
 
+    group.append(label, wrap);
+    barsWrap.appendChild(group);
+
+    // The pills lose their neighbouring bar, so they carry the group name.
+    const cell = document.createElement('div');
+    cell.className = 'conj-pills-cell';
+    const cellLabel = document.createElement('span');
+    cellLabel.className   = 'progress-group-label';
+    cellLabel.textContent = labelText;
+    cellLabel.title       = hint;
+
     const pills = document.createElement('div');
     pills.className = 'quiz-score';
 
-    group.append(label, wrap, pills);
-    progressBlock.appendChild(group);
+    cell.append(cellLabel, pills);
+    pillsRow.appendChild(cell);
+
     return { green, yellow, red, stat, pills };
   }
 
@@ -277,8 +363,8 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   function updateProgress(): void {
     const { forms, verbs } = tally();
 
-    paint(formsBar, forms, `${forms.correct + forms.revealed + forms.missed}/${forms.total} answered`);
-    paint(verbsBar, verbs, `${verbs.correct}/${verbs.total} fully conjugated`);
+    paint(formsBar, forms, `${forms.correct + forms.revealed + forms.missed}/${forms.total} Answered`);
+    paint(verbsBar, verbs, `${verbs.correct}/${verbs.total} Fully Conjugated`);
 
     if (forms.total > 0 && forms.correct === forms.total) {
       recordConjSession();
@@ -291,6 +377,8 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   /** (Re)build every card from `verbs`, in the current order. */
   /** Tenses the cards currently on screen were built from. */
   let builtTenses: string[] = [];
+  /** Regularity buckets the current verb set was filtered to. */
+  const builtRegs: string[] = [...regs];
 
   function buildCards(): void {
     cardsGrid.innerHTML = '';
@@ -430,10 +518,16 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     if (!el) return;
     const names = selectedTenses().map(tenseLabel);
     const shown = names.length <= 2 ? names.join(', ') : `${names.length} tenses`;
-    const differs = pending && !sameSet(selectedTenses(), builtTenses);
+
+    // Regularity is only worth naming when it is actually narrowing things.
+    const nowRegs  = activeRegularities();
+    const regNote  = nowRegs.length >= 4 ? '' : ` · ${nowRegs.length} of 4 kinds`;
+
+    const differs = pending
+      && (!sameSet(selectedTenses(), builtTenses) || !sameSet(nowRegs, builtRegs));
     el.textContent = differs
-      ? `${shown} — press Start Quiz to apply`
-      : shown;
+      ? `${shown}${regNote} — press Start Quiz to apply`
+      : shown + regNote;
     el.classList.toggle('conj-tf-summary--pending', differs);
   }
 
@@ -477,18 +571,25 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   };
 
   const tenseChips = document.getElementById('conjTenseChips');
+  const regChips   = document.getElementById('conjRegChips');
   // Chips, All and None all change the selection, so listen on the
-  // container and on the two buttons that sit outside it.
+  // container and on the buttons that sit outside it. The regularity chips
+  // change the verb set rather than the tenses, but they are applied at the
+  // same moment — on Start Quiz — so they share the handler.
   tenseChips?.addEventListener('click', handleTenseChange);
+  regChips?.addEventListener('click', handleTenseChange);
   document.getElementById('conjTensesAll')?.addEventListener('click', handleTenseChange);
   document.getElementById('conjTensesNone')?.addEventListener('click', handleTenseChange);
+  document.getElementById('conjRegAll')?.addEventListener('click', handleTenseChange);
   displayToggle?.addEventListener('click', handleDisplayClick);
   document.addEventListener('keydown', handleCardNav);
 
   _cleanup = (): void => {
     tenseChips?.removeEventListener('click', handleTenseChange);
+    regChips?.removeEventListener('click', handleTenseChange);
     document.getElementById('conjTensesAll')?.removeEventListener('click', handleTenseChange);
     document.getElementById('conjTensesNone')?.removeEventListener('click', handleTenseChange);
+    document.getElementById('conjRegAll')?.removeEventListener('click', handleTenseChange);
     displayToggle?.removeEventListener('click', handleDisplayClick);
     document.removeEventListener('keydown', handleCardNav);
     setProgressCallback(null);
@@ -521,6 +622,15 @@ function buildCard(
 
   const headMain = document.createElement('div');
   headMain.className = 'conj-head-main';
+
+  // Frequency rank. Same badge as table mode — bare number, no '#', same
+  // corner and same type, so a word reads identically in both modes.
+  const rankEl = document.createElement('span');
+  rankEl.className = 'conj-card-rank';
+  if (verb.rank != null) rankEl.textContent = String(verb.rank);
+  else rankEl.hidden = true;
+  card.appendChild(rankEl);
+
   const targetEl  = document.createElement('div');
   targetEl.className = 'conj-verb-spanish';
   const englishEl = document.createElement('div');
@@ -530,18 +640,52 @@ function buildCard(
   const headSide = document.createElement('div');
   headSide.className = 'conj-head-side';
 
-  // Tense name, always shown — it is the one thing that distinguishes two
-  // cards for the same verb.
-  const tenseEl = document.createElement('span');
-  tenseEl.className = 'conj-card-tense';
-  headSide.appendChild(tenseEl);
+  // Band, regularity and tense are all one-word labels, so they share a line
+  // instead of stacking three deep. That was three rows of header above a
+  // six-row conjugation table, which made every card taller than its content.
+  const metaRow = document.createElement('div');
+  metaRow.className = 'conj-head-meta';
 
-  // Frequency band, if we have one. Free context in space that was empty.
+  // Frequency band, if we have one.
   const bandEl = document.createElement('span');
   bandEl.className = 'conj-card-band';
   const band = verb.frequency?.band ?? null;
   if (band) bandEl.textContent = band; else bandEl.hidden = true;
-  headSide.appendChild(bandEl);
+  metaRow.appendChild(bandEl);
+
+  // Regularity. conjugation_class encodes it: regular-*, ortho-* (spelling
+  // change only), stem-* (stem-changing) and irregular-*. Grouped into three
+  // buckets, because "ortho-car" means nothing to someone learning.
+  const regEl = document.createElement('span');
+  const cls   = verb.linguistic?.conjugation_class ?? null;
+  const kind  = regularityOf(cls);
+  regEl.className   = `conj-card-reg conj-card-reg--${kind.key}`;
+  regEl.textContent = kind.label;
+  // Explanation first, raw class second — the class name is only useful once
+  // you already know what the bucket means.
+  regEl.title       = (REGULARITY_HELP[kind.key] ?? '')
+                    + (cls ? `\n\nconjugation class: ${cls}` : '');
+  if (!cls) regEl.hidden = true;
+  metaRow.appendChild(regEl);
+
+  // Tense name, always shown — it is the one thing that distinguishes two
+  // cards for the same verb.
+  const tenseEl = document.createElement('span');
+  tenseEl.className = 'conj-card-tense';
+  tenseEl.title     = TENSE_HELP[tenseKey] ?? '';
+  metaRow.appendChild(tenseEl);
+
+  headSide.appendChild(metaRow);
+
+  // English tense name and Reveal all share the second line.
+  const footRow = document.createElement('div');
+  footRow.className = 'conj-head-foot';
+
+  const tenseEnEl = document.createElement('span');
+  tenseEnEl.className = 'conj-card-tense-en';
+  tenseEnEl.textContent = TENSE_EN[tenseKey] ?? '';
+  if (!tenseEnEl.textContent) tenseEnEl.hidden = true;
+  footRow.appendChild(tenseEnEl);
 
   const revealAllBtn = document.createElement('button');
   revealAllBtn.type      = 'button';
@@ -552,7 +696,9 @@ function buildCard(
     revealAnswers('revealed');
     revealAllBtn.disabled = true;
   });
-  headSide.appendChild(revealAllBtn);
+  footRow.appendChild(revealAllBtn);
+
+  headSide.appendChild(footRow);
 
   header.append(headMain, headSide);
 

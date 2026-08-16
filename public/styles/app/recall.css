@@ -27,25 +27,7 @@
   gap: 0.4rem;
 }
 
-/* ── Empty state (before Start Quiz) ── */
-#recallWrap:empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 220px;
-  border: 2px dashed var(--border);
-  border-radius: var(--radius-sm);
-  margin: 0.5rem 0;
-}
-#recallWrap:empty::before {
-  content: 'Select your settings above and hit Start Quiz';
-  font-family: 'Sora', sans-serif;
-  font-size: 0.88rem;
-  color: var(--text-muted);
-  font-style: italic;
-  text-align: center;
-  padding: 1.5rem;
-}
+/* Empty state comes from the shared .ui-empty-slot group. */
 
 .recall-wrap { display: flex; flex-direction: column; gap: 0.6rem; }
 
@@ -62,17 +44,11 @@
   color: var(--text-muted);
 }
 
+/* Colours and states from .ui-btn-danger. */
 .recall-giveup-btn {
-  background: var(--danger-light) !important;
-  color: var(--danger) !important;
-  border: 1px solid #e8a09a !important;
   font-size: 0.82rem;
   padding: 0.32rem 0.9rem;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-weight: 600;
 }
-.recall-giveup-btn:hover { background: #f9dbd8 !important; }
 
 .recall-input-row { display: flex; gap: 0.6rem; align-items: center; }
 
@@ -434,14 +410,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
 }
-.recall-history-head {
-  font-size: 0.66rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-muted);
-  margin-bottom: 0.45rem;
-}
+/* Type from .ui-label. */
+.recall-history-head { margin-bottom: 0.45rem; }
 .recall-history-chart {
   display: flex;
   align-items: flex-end;

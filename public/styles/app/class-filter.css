@@ -2,15 +2,9 @@
    CLASS FILTER — POS checkboxes row below the controls bar.
 ================================================================ */
 
-/* Shared small-caps label — used by POS, conjugation controls, domains, etc. */
+/* Type comes from .ui-label in shared/components.css. */
 .filter-section-label {
-  font-size: 0.74rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-muted);
   margin-right: 0.5rem;   /* more breathing room before the first chip */
-  white-space: nowrap;
 }
 
 /* When a filter-section-label heads its own block, give it more presence.
@@ -25,11 +19,11 @@
 
 /* Shared block treatment — Part of Speech, Lists, Domains and the conjugation
    Display / Tense / Forms panels all sit on the same light tint so they read as
-   one family. */
+   one family. The tint itself is .ui-panel in shared/components.css; these
+   three ids are aliases of it, the same way .filter-box is. */
 #classFilter,
 #listFilter,
-#domainFilterWrap,
-.filter-box {
+#domainFilterWrap {
   background: color-mix(in srgb, var(--surface2) 45%, var(--surface));
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -193,17 +187,7 @@
   margin-bottom: 0.6rem;
 }
 
-.filter-group-heading {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.66rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-muted);
-  margin-bottom: 0.35rem;
-}
+/* (.filter-group-heading removed — nothing in the app ever rendered it.) */
 
 .filter-toggle-btn {
   font-size: 0.63rem;

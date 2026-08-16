@@ -5,6 +5,7 @@ import { renderConjugationMode }          from './modes/conjugation/index.ts';
 import { startTableQuiz }                 from './modes/table-controls.ts';
 import { setQuiz }                        from './quiz/quiz-controls.ts';
 import { filterWords }                    from './filters/word-filters.ts';
+import { hasVisual }                      from './data/visual-map.ts';
 import { Settings }                       from './settings.ts';
 
 import type { Word } from './types.ts';
@@ -74,6 +75,7 @@ export function bindStartHandler({
     try {
       // Apply current filter checkbox state to the base list —
       // do NOT rebuild the filter UI here so user selections are preserved.
+      const fullLang = getFullLang ? getFullLang() : 'spanish';
       let list = filterWords(getBaseList());
 
       // Conjugation mode only ever shows verbs, but the size window was being
@@ -83,6 +85,12 @@ export function bindStartHandler({
       const modeAtStart = getCurrentMode();
       const verbsOnly   = modeAtStart === 'conjugation';
       if (verbsOnly) list = list.filter(w => w.pos === 'verb');
+
+      // Same problem, same fix: picture mode discards every word without a
+      // photo, SVG or emoji, so "Top 100" was producing however many of the
+      // top 100 happened to be illustrated rather than 100 pictures.
+      const visualsOnly = modeAtStart === 'picture';
+      if (visualsOnly) list = list.filter(w => hasVisual(fullLang, w.word));
 
       // Apply domain filter from the HTML #domainFilter checkboxes.
       // Words with no domain data pass through unconditionally — domain
@@ -109,7 +117,8 @@ export function bindStartHandler({
 
         // Candidates: words ranked beyond the current window
         let extras: Word[] = allWords.filter(w => !baseWordSet.has(w.word));
-        if (verbsOnly) extras = extras.filter(w => w.pos === 'verb');
+        if (verbsOnly)   extras = extras.filter(w => w.pos === 'verb');
+        if (visualsOnly) extras = extras.filter(w => hasVisual(fullLang, w.word));
 
         // Apply list filter (same as applied to the base list above)
         extras = filterWords(extras);
@@ -132,12 +141,15 @@ export function bindStartHandler({
         list = [...list, ...extras.slice(0, needed)];
       }
 
-      // Same top-up for plain "Top N": narrowing to verbs always leaves the
-      // list short, since verbs are a minority of any frequency window.
-      if (verbsOnly && isFinite(requestedSize) && list.length < requestedSize) {
+      // Same top-up for plain "Top N": narrowing to verbs or to illustrated
+      // words always leaves the list short, since both are a minority of any
+      // frequency window.
+      if ((verbsOnly || visualsOnly) && isFinite(requestedSize) && list.length < requestedSize) {
         const allWords = getAllWords ? getAllWords() : [];
         const have     = new Set(list.map(w => w.word));
-        let extras     = allWords.filter(w => w.pos === 'verb' && !have.has(w.word));
+        let extras     = allWords.filter(w => !have.has(w.word)
+                          && (verbsOnly  ? w.pos === 'verb'        : true)
+                          && (visualsOnly ? hasVisual(fullLang, w.word) : true));
         extras = filterWords(extras);
         if (selectedDomains.length > 0) {
           extras = extras.filter(w => {
@@ -146,6 +158,14 @@ export function bindStartHandler({
           });
         }
         list = [...list, ...extras.slice(0, requestedSize - list.length)];
+      }
+
+      // Hard cap. Everything above only ever *adds* words — the top-up blocks
+      // exist to compensate for narrowing filters. Without this the requested
+      // size was a floor rather than a limit, which is why "Top 1" in picture
+      // mode handed back every illustrated word it could find.
+      if (isFinite(requestedSize) && list.length > requestedSize) {
+        list = list.slice(0, requestedSize);
       }
 
       const sortOrder = getSortOrder ? getSortOrder() : 'frequency';
@@ -161,7 +181,7 @@ export function bindStartHandler({
 
       setQuiz(new Quiz({
         words:      list,
-        storageKey: `quick_quiz_state_${getFullLang ? getFullLang() : 'spanish'}`,
+        storageKey: `quick_quiz_state_${fullLang}`,
         tolerance:  Settings.getTypoToleranceRatio(),
       }));
 
@@ -178,7 +198,7 @@ export function bindStartHandler({
           words:     list,
           columns:   getCols({ max: 5, fallback: 2 }),
           direction: (getDirection ? getDirection() : 'target-en') as import('./modes/table-mode.ts').TableDirection,
-          lang:      getFullLang ? getFullLang() : 'spanish',
+          lang:      fullLang,
           // Completion is shown by the progress bar itself now — it fills and
           // its in-bar label reads 100%. A separate block that existed only to
           // repeat "100%" was redundant.
@@ -194,7 +214,7 @@ export function bindStartHandler({
           words: list,
           container: recallWrap,
           columns: getCols({ max: 3, fallback: 1 }),
-          lang: getFullLang ? getFullLang() : 'spanish',
+          lang: fullLang,
         });
 
         if (seconds > 0) controller.startTimer(seconds, isHardStop);
@@ -205,28 +225,22 @@ export function bindStartHandler({
         const pictureSubMode = document.getElementById('pictureSubMode');
         const pictureMode = (pictureSubMode?.querySelector('.conj-toggle-btn.active') as HTMLElement | null)?.dataset.mode ?? 'type';
 
-        // Picture mode draws from the full word list (no size limit) so that
-        // emoji/SVG words with ranks > the size slider are still reachable.
-        // We still respect the POS class filter and the static domain filter.
-        let pictureWords = getAllWords ? getAllWords() : list;
-
-        const selectedClasses = getSelectedClasses ? getSelectedClasses() : [];
-        if (selectedClasses.length > 0) {
-          pictureWords = pictureWords.filter(w => w.pos == null || selectedClasses.includes(w.pos));
-        }
-
-        if (selectedDomains.length > 0) {
-          pictureWords = pictureWords.filter(w => {
-            const doms = w.domains || [];
-            return doms.length === 0 || doms.some(d => selectedDomains.includes(d));
-          });
-        }
-
+        // Use the list built above. It has already been narrowed to words that
+        // actually have a visual, topped up from beyond the size window so the
+        // count is reachable, and capped at the requested size.
+        //
+        // It used to ignore `list` and re-read getAllWords() here — which is
+        // why every fix to the size handling above had no effect: "Top 1"
+        // computed a one-word list and then threw it away.
         renderPictureMode({
-          words: pictureWords,
+          words: list,
           container: pictureWrap,
-          lang: getFullLang ? getFullLang() : 'spanish',
+          lang: fullLang,
           mode: (pictureMode ?? 'type') as 'type' | 'click' | 'flashcard',
+          // Click mode needs 3 decoys per question and the quiz set may be
+          // smaller than that. Decoys are never scored, so they come from
+          // every illustrated word in the language rather than the quiz set.
+          distractorWords: (getAllWords ? getAllWords() : []).filter(w => hasVisual(fullLang, w.word)),
         });
       }
 
@@ -235,7 +249,7 @@ export function bindStartHandler({
         renderConjugationMode({
           words: list,
           container: conjugationWrap,
-          lang: getFullLang ? getFullLang() : 'spanish',
+          lang: fullLang,
         });
       }
 

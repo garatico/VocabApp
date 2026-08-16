@@ -1,0 +1,575 @@
+# dutch.txt — hand-curated seed vocabulary for German.
+#
+# Read by:  python scripts/data/pipeline.py seed --langs nld
+#
+# Why this file exists
+# -------------------
+# Every other language was bootstrapped by `mine`, which needs spaCy plus a
+# network connection for Wiktionary/Google Translate glosses. German had
+# neither available when it was added, and mining from a cold gloss cache is
+# a slow first run regardless. This is the manual alternative: a curated core
+# vocabulary that gives the language something usable on day one. `mine` then
+# builds on top of it and skips everything already here.
+#
+# Format
+# ------
+#   word|pos|gender|gloss;gloss;gloss
+#
+#   word    as it is actually written — Dutch nouns are lowercase, unlike German
+#   pos     noun | verb | adjective | adverb
+#   gender  common | neuter        (nouns only — de-words vs het-words)
+#   glosses English, most common sense first; the first becomes `translation`
+#
+# Blank lines and lines starting with # are ignored.
+#
+# What the pipeline adds
+# ----------------------
+# rank, band, difficulty and corpus_frequency are NOT written here. The seed
+# step reads them from data/opensubtitles_freq_corpora/nl/nl_50k.txt, so the
+# frequency data is real and this file cannot drift from it. Entries are
+# ordered by actual corpus frequency, so "Top 100" in the app means the 100
+# commonest of these.
+#
+# Part of speech and noun capitalisation are checked against HanTa when it is
+# installed (pip install HanTa) and disagreements are reported. German
+# homographs are separated by case — Frage/frage, Liebe/liebe, Arm/arm — so
+# the check tags nouns in their capitalised form.
+# NOTE: HanTa is a German tagger, so the seed step's POS cross-check is
+# skipped for Dutch. Mine with the nl_core_news_sm spaCy model to verify.
+#
+# ── Verbs ───────────────────────────────────────────────────────────────
+zijn|verb||to be
+hebben|verb||to have
+worden|verb||to become
+kunnen|verb||to be able to;can
+moeten|verb||to have to;must
+zeggen|verb||to say
+maken|verb||to make
+doen|verb||to do
+geven|verb||to give
+komen|verb||to come
+willen|verb||to want
+gaan|verb||to go
+weten|verb||to know
+zien|verb||to see
+laten|verb||to let;to leave
+staan|verb||to stand
+vinden|verb||to find;to think
+blijven|verb||to stay;to remain
+liggen|verb||to lie
+heten|verb||to be called
+denken|verb||to think
+nemen|verb||to take
+mogen|verb||to be allowed to;may
+geloven|verb||to believe
+houden|verb||to hold;to keep
+noemen|verb||to call;to name
+tonen|verb||to show
+leiden|verb||to lead
+spreken|verb||to speak
+brengen|verb||to bring
+leven|verb||to live
+rijden|verb||to drive;to ride
+bedoelen|verb||to mean
+vragen|verb||to ask
+kennen|verb||to know;to be acquainted with
+zetten|verb||to put;to set
+spelen|verb||to play
+werken|verb||to work
+gebruiken|verb||to use
+volgen|verb||to follow
+leren|verb||to learn;to teach
+begrijpen|verb||to understand
+krijgen|verb||to get;to receive
+beginnen|verb||to begin
+vertellen|verb||to tell
+proberen|verb||to try
+schrijven|verb||to write
+lopen|verb||to walk;to run
+eten|verb||to eat
+drinken|verb||to drink
+slapen|verb||to sleep
+wachten|verb||to wait
+horen|verb||to hear
+luisteren|verb||to listen
+lezen|verb||to read
+kopen|verb||to buy
+verkopen|verb||to sell
+openen|verb||to open
+sluiten|verb||to close
+zoeken|verb||to search;to look for
+helpen|verb||to help
+danken|verb||to thank
+lachen|verb||to laugh
+huilen|verb||to cry
+zingen|verb||to sing
+dansen|verb||to dance
+reizen|verb||to travel
+vliegen|verb||to fly
+zwemmen|verb||to swim
+koken|verb||to cook
+wassen|verb||to wash
+dragen|verb||to carry;to wear
+trekken|verb||to pull
+gooien|verb||to throw
+vallen|verb||to fall
+springen|verb||to jump
+zitten|verb||to sit
+leggen|verb||to lay;to put
+ontmoeten|verb||to meet
+verliezen|verb||to lose
+winnen|verb||to win
+eindigen|verb||to end
+antwoorden|verb||to answer
+uitleggen|verb||to explain
+vergeten|verb||to forget
+hopen|verb||to hope
+sterven|verb||to die
+doden|verb||to kill
+redden|verb||to rescue;to save
+vechten|verb||to fight
+gebeuren|verb||to happen
+lijken|verb||to seem
+bereiken|verb||to reach
+bieden|verb||to offer
+veranderen|verb||to change
+beslissen|verb||to decide
+kiezen|verb||to choose
+tellen|verb||to count
+bouwen|verb||to build
+sturen|verb||to send
+kijken|verb||to look;to watch
+merken|verb||to notice
+verlaten|verb||to leave
+stijgen|verb||to rise;to climb
+groeien|verb||to grow
+herinneren|verb||to remember;to remind
+wensen|verb||to wish
+betalen|verb||to pay
+verdienen|verb||to earn;to deserve
+studeren|verb||to study
+oefenen|verb||to practise
+herhalen|verb||to repeat
+toestaan|verb||to allow
+verbieden|verb||to forbid
+beloven|verb||to promise
+liegen|verb||to lie;to tell a lie
+stelen|verb||to steal
+roepen|verb||to call;to shout
+schreeuwen|verb||to scream
+fluisteren|verb||to whisper
+zwijgen|verb||to be silent
+ademen|verb||to breathe
+ruiken|verb||to smell
+proeven|verb||to taste
+voelen|verb||to feel
+aanraken|verb||to touch
+kussen|verb||to kiss
+trouwen|verb||to marry
+wonen|verb||to live;to reside
+huren|verb||to rent
+repareren|verb||to repair
+schoonmaken|verb||to clean
+winkelen|verb||to shop
+bestellen|verb||to order
+leveren|verb||to deliver
+ruilen|verb||to swap;to exchange
+lenen|verb||to lend;to borrow
+vieren|verb||to celebrate
+bezoeken|verb||to visit
+waarschuwen|verb||to warn
+dreigen|verb||to threaten
+beschermen|verb||to protect
+aanvallen|verb||to attack
+verdedigen|verb||to defend
+vergelijken|verb||to compare
+beschrijven|verb||to describe
+verwachten|verb||to expect
+ontdekken|verb||to discover
+uitvinden|verb||to invent
+onderzoeken|verb||to investigate
+bewijzen|verb||to prove
+twijfelen|verb||to doubt
+vertrouwen|verb||to trust
+haten|verb||to hate
+verrassen|verb||to surprise
+# ── Nouns ───────────────────────────────────────────────────────────────
+man|noun|common|man;husband
+vrouw|noun|common|woman;wife
+kind|noun|neuter|child
+mens|noun|common|human being;person
+mensen|noun|common|people
+jongen|noun|common|boy
+meisje|noun|neuter|girl
+vader|noun|common|father
+moeder|noun|common|mother
+zoon|noun|common|son
+dochter|noun|common|daughter
+broer|noun|common|brother
+zus|noun|common|sister
+ouders|noun|common|parents
+familie|noun|common|family
+vriend|noun|common|friend;boyfriend
+vriendin|noun|common|friend;girlfriend
+naam|noun|common|name
+huis|noun|neuter|house
+woning|noun|common|dwelling;flat
+kamer|noun|common|room
+keuken|noun|common|kitchen
+badkamer|noun|common|bathroom
+deur|noun|common|door
+raam|noun|neuter|window
+tafel|noun|common|table
+stoel|noun|common|chair
+bed|noun|neuter|bed
+vloer|noun|common|floor
+muur|noun|common|wall
+dak|noun|neuter|roof
+tuin|noun|common|garden
+stad|noun|common|city;town
+dorp|noun|neuter|village
+land|noun|neuter|country;land
+wereld|noun|common|world
+aarde|noun|common|earth
+straat|noun|common|street
+weg|noun|common|road;way
+plaats|noun|common|place
+auto|noun|common|car
+trein|noun|common|train
+bus|noun|common|bus
+vliegtuig|noun|neuter|aeroplane
+schip|noun|neuter|ship
+fiets|noun|common|bicycle
+reis|noun|common|journey;trip
+tijd|noun|common|time
+jaar|noun|neuter|year
+maand|noun|common|month
+week|noun|common|week
+dag|noun|common|day
+uur|noun|neuter|hour
+minuut|noun|common|minute
+ochtend|noun|common|morning
+avond|noun|common|evening
+nacht|noun|common|night
+middag|noun|common|afternoon
+klok|noun|common|clock
+zon|noun|common|sun
+maan|noun|common|moon
+ster|noun|common|star
+hemel|noun|common|sky;heaven
+wolk|noun|common|cloud
+regen|noun|common|rain
+sneeuw|noun|common|snow
+wind|noun|common|wind
+storm|noun|common|storm
+weer|noun|neuter|weather
+vuur|noun|neuter|fire
+water|noun|neuter|water
+lucht|noun|common|air;sky
+zee|noun|common|sea
+meer|noun|neuter|lake
+rivier|noun|common|river
+berg|noun|common|mountain
+bos|noun|neuter|forest
+boom|noun|common|tree
+bloem|noun|common|flower
+blad|noun|neuter|leaf
+gras|noun|neuter|grass
+steen|noun|common|stone
+zand|noun|neuter|sand
+dier|noun|neuter|animal
+hond|noun|common|dog
+kat|noun|common|cat
+paard|noun|neuter|horse
+vogel|noun|common|bird
+vis|noun|common|fish
+koe|noun|common|cow
+varken|noun|neuter|pig
+schaap|noun|neuter|sheep
+muis|noun|common|mouse
+beer|noun|common|bear
+wolf|noun|common|wolf
+eten|noun|neuter|food
+brood|noun|neuter|bread
+vlees|noun|neuter|meat
+melk|noun|common|milk
+kaas|noun|common|cheese
+boter|noun|common|butter
+ei|noun|neuter|egg
+suiker|noun|common|sugar
+zout|noun|neuter|salt
+fruit|noun|neuter|fruit
+appel|noun|common|apple
+groente|noun|common|vegetables
+aardappel|noun|common|potato
+rijst|noun|common|rice
+soep|noun|common|soup
+taart|noun|common|cake
+koffie|noun|common|coffee
+thee|noun|common|tea
+wijn|noun|common|wine
+bier|noun|neuter|beer
+sap|noun|neuter|juice
+honger|noun|common|hunger
+dorst|noun|common|thirst
+hoofd|noun|neuter|head
+gezicht|noun|neuter|face
+oog|noun|neuter|eye
+oor|noun|neuter|ear
+neus|noun|common|nose
+mond|noun|common|mouth
+tand|noun|common|tooth
+haar|noun|neuter|hair
+hals|noun|common|neck
+arm|noun|common|arm
+hand|noun|common|hand
+vinger|noun|common|finger
+been|noun|neuter|leg
+voet|noun|common|foot
+hart|noun|neuter|heart
+bloed|noun|neuter|blood
+lichaam|noun|neuter|body
+rug|noun|common|back
+buik|noun|common|belly
+huid|noun|common|skin
+bot|noun|neuter|bone
+werk|noun|neuter|work
+baan|noun|common|job
+geld|noun|neuter|money
+prijs|noun|common|price;prize
+bedrijf|noun|neuter|company
+kantoor|noun|neuter|office
+baas|noun|common|boss
+klant|noun|common|customer
+markt|noun|common|market
+winkel|noun|common|shop
+bank|noun|common|bank;bench
+rekening|noun|common|bill;account
+school|noun|common|school
+leraar|noun|common|teacher
+leerling|noun|common|pupil
+student|noun|common|student
+universiteit|noun|common|university
+klas|noun|common|class
+boek|noun|neuter|book
+papier|noun|neuter|paper
+pen|noun|common|pen
+vraag|noun|common|question
+antwoord|noun|neuter|answer
+woord|noun|neuter|word
+zin|noun|common|sentence
+taal|noun|common|language
+verhaal|noun|neuter|story
+brief|noun|common|letter
+krant|noun|common|newspaper
+beeld|noun|neuter|image
+film|noun|common|film
+muziek|noun|common|music
+lied|noun|neuter|song
+spel|noun|neuter|game
+bal|noun|common|ball
+sport|noun|common|sport
+ploeg|noun|common|team
+arts|noun|common|doctor
+ziekenhuis|noun|neuter|hospital
+medicijn|noun|neuter|medicine
+pijn|noun|common|pain
+ziekte|noun|common|illness
+gezondheid|noun|common|health
+leven|noun|neuter|life
+dood|noun|common|death
+liefde|noun|common|love
+angst|noun|common|fear
+vreugde|noun|common|joy
+geluk|noun|neuter|luck;happiness
+hoop|noun|common|hope
+droom|noun|common|dream
+gevoel|noun|neuter|feeling
+gedachte|noun|common|thought
+idee|noun|neuter|idea
+reden|noun|common|reason
+probleem|noun|neuter|problem
+oplossing|noun|common|solution
+ding|noun|neuter|thing
+deel|noun|neuter|part
+stuk|noun|neuter|piece
+einde|noun|neuter|end
+begin|noun|neuter|beginning
+kant|noun|common|side
+kleur|noun|common|colour
+licht|noun|neuter|light
+schaduw|noun|common|shadow
+kracht|noun|common|strength
+macht|noun|common|power
+oorlog|noun|common|war
+vrede|noun|common|peace
+recht|noun|neuter|right;law
+wet|noun|common|law
+politie|noun|common|police
+regering|noun|common|government
+volk|noun|neuter|people;nation
+groep|noun|common|group
+kerk|noun|common|church
+god|noun|common|god
+kleding|noun|common|clothing
+hemd|noun|neuter|shirt
+broek|noun|common|trousers
+jurk|noun|common|dress
+schoen|noun|common|shoe
+jas|noun|common|coat
+hoed|noun|common|hat
+tas|noun|common|bag
+sleutel|noun|common|key
+telefoon|noun|common|telephone
+computer|noun|common|computer
+mes|noun|neuter|knife
+lepel|noun|common|spoon
+vork|noun|common|fork
+bord|noun|neuter|plate
+glas|noun|neuter|glass
+fles|noun|common|bottle
+# ── Adjectives ──────────────────────────────────────────────────────────
+goed|adjective||good
+slecht|adjective||bad
+groot|adjective||big;tall
+klein|adjective||small
+nieuw|adjective||new
+oud|adjective||old
+jong|adjective||young
+lang|adjective||long;tall
+kort|adjective||short
+hoog|adjective||high
+laag|adjective||low
+diep|adjective||deep
+breed|adjective||wide
+smal|adjective||narrow
+dik|adjective||thick;fat
+dun|adjective||thin
+zwaar|adjective||heavy
+licht|adjective||light
+sterk|adjective||strong
+zwak|adjective||weak
+snel|adjective||fast
+langzaam|adjective||slow
+vroeg|adjective||early
+laat|adjective||late
+warm|adjective||warm
+koud|adjective||cold
+heet|adjective||hot
+koel|adjective||cool
+nat|adjective||wet
+droog|adjective||dry
+schoon|adjective||clean
+vies|adjective||dirty
+mooi|adjective||beautiful
+lelijk|adjective||ugly
+juist|adjective||correct
+verkeerd|adjective||wrong
+belangrijk|adjective||important
+mogelijk|adjective||possible
+nodig|adjective||necessary
+vrij|adjective||free
+vol|adjective||full
+leeg|adjective||empty
+open|adjective||open
+gesloten|adjective||closed
+rijk|adjective||rich
+arm|adjective||poor
+duur|adjective||expensive
+goedkoop|adjective||cheap
+gelukkig|adjective||happy
+verdrietig|adjective||sad
+moe|adjective||tired
+ziek|adjective||ill
+gezond|adjective||healthy
+hongerig|adjective||hungry
+vriendelijk|adjective||friendly
+boos|adjective||angry
+rustig|adjective||calm
+luid|adjective||loud
+zacht|adjective||soft;quiet
+helder|adjective||bright;clear
+donker|adjective||dark
+wit|adjective||white
+zwart|adjective||black
+rood|adjective||red
+blauw|adjective||blue
+groen|adjective||green
+geel|adjective||yellow
+bruin|adjective||brown
+grijs|adjective||grey
+eenvoudig|adjective||simple
+moeilijk|adjective||difficult
+makkelijk|adjective||easy
+duidelijk|adjective||clear
+veilig|adjective||safe
+gevaarlijk|adjective||dangerous
+grappig|adjective||funny
+ernstig|adjective||serious
+interessant|adjective||interesting
+saai|adjective||boring
+bekend|adjective||well-known
+vreemd|adjective||strange;foreign
+gelijk|adjective||equal;same
+soortgelijk|adjective||similar
+verschillend|adjective||different
+heel|adjective||whole
+half|adjective||half
+laatst|adjective||last
+volgend|adjective||next
+eerst|adjective||first
+ver|adjective||far
+dichtbij|adjective||near
+klaar|adjective||ready;finished
+lief|adjective||sweet;dear
+zoet|adjective||sweet
+zuur|adjective||sour
+bitter|adjective||bitter
+zout|adjective||salty
+hard|adjective||hard
+rond|adjective||round
+scherp|adjective||sharp
+# ── Adverbs ─────────────────────────────────────────────────────────────
+vandaag|adverb||today
+gisteren|adverb||yesterday
+morgen|adverb||tomorrow
+nu|adverb||now
+altijd|adverb||always
+nooit|adverb||never
+vaak|adverb||often
+soms|adverb||sometimes
+zelden|adverb||rarely
+gauw|adverb||soon
+al|adverb||already
+nog|adverb||still;yet
+weer|adverb||again
+hier|adverb||here
+daar|adverb||there
+boven|adverb||above
+beneden|adverb||below
+links|adverb||left
+rechts|adverb||right
+voor|adverb||in front
+achter|adverb||behind
+buiten|adverb||outside
+binnen|adverb||inside
+overal|adverb||everywhere
+nergens|adverb||nowhere
+samen|adverb||together
+alleen|adverb||alone;only
+misschien|adverb||perhaps
+zeker|adverb||certainly
+natuurlijk|adverb||of course
+echt|adverb||really
+heel|adverb||very
+nogal|adverb||quite
+genoeg|adverb||enough
+eerst|adverb||first
+eindelijk|adverb||finally
+plotseling|adverb||suddenly
+meteen|adverb||immediately
+net|adverb||just
+bijna|adverb||almost
+ongeveer|adverb||approximately
+graag|adverb||gladly
+helaas|adverb||unfortunately
