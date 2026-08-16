@@ -33,17 +33,48 @@ function stripParens(str: string): string {
 }
 
 /**
+ * Accept an English infinitive with or without its "to".
+ *
+ * Which form a gloss happens to use is an accident of where it came from, not
+ * a fact about the word: the Spanish set is written bare ("be", "is", "am"),
+ * every other language's is written with "to" ("to be"). A learner typing
+ * "buy" for *comprar* was being marked wrong for picking the other convention,
+ * and 21% of verbs accepted only one of the two.
+ *
+ * Applied to every gloss rather than only to verbs on purpose. `pos` is null
+ * on a fair number of mined rows, so gating on it would silently drop the bare
+ * form for any verb that happens to be untagged or tagged wrong. The price of
+ * being indiscriminate is that a noun also accepts "to <noun>", which is not a
+ * string anyone types.
+ *
+ * Both directions, because the data goes both ways — and unlike the curated
+ * files, nothing here is written to disk, so generating "to is" for the gloss
+ * "is" costs nothing and is never shown to anyone.
+ */
+function withInfinitiveForms(token: string): string[] {
+  if (token.startsWith('to ')) {
+    const bare = token.slice(3).trim();
+    return bare ? [token, bare] : [token];
+  }
+  return [token, `to ${token}`];
+}
+
+/**
  * Expand a single gloss into all matchable forms:
  * - strips parentheticals
  * - splits comma-separated alternatives ("a, an" → ["a", "an"])
- * Each token is normalised before returning.
+ * - accepts an infinitive with or without "to" (see withInfinitiveForms)
+ *
+ * `norm` is a parameter so the strict matcher can reuse this with a normaliser
+ * that keeps diacritics; the two used to be separate copies of the same chain
+ * and only one of them ever got fixed.
  */
-function glossToTokens(gloss: string): string[] {
-  const cleaned = stripParens(gloss);
-  return cleaned
+function glossToTokens(gloss: string, norm: (s?: string) => string = normalise): string[] {
+  return stripParens(gloss)
     .split(/[,/]/)
-    .map(t => normalise(t))
-    .filter(Boolean);
+    .map(t => norm(t))
+    .filter(Boolean)
+    .flatMap(withInfinitiveForms);
 }
 
 /**
@@ -87,14 +118,10 @@ export function isCorrectStrict(input: string, entry: Word): boolean {
   const attempt = normaliseStrict(input);
   if (!attempt) return false;
   if (Array.isArray(entry.glosses) && entry.glosses.length > 0) {
-    return entry.glosses.some(g =>
-      stripParens(g).split(/[,/]/).map(t => normaliseStrict(t)).filter(Boolean).includes(attempt)
-    );
+    return entry.glosses.some(g => glossToTokens(g, normaliseStrict).includes(attempt));
   }
   if (typeof entry.answers === 'string') {
-    return entry.answers.split('|').some(a =>
-      stripParens(a).split(/[,/]/).map(t => normaliseStrict(t)).filter(Boolean).includes(attempt)
-    );
+    return entry.answers.split('|').some(a => glossToTokens(a, normaliseStrict).includes(attempt));
   }
   return false;
 }
