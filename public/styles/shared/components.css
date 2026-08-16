@@ -1,0 +1,258 @@
+/* ================================================================
+   SHARED UI COMPONENTS
+
+   Patterns that were written out once per mode. Each is defined here
+   exactly once, and the existing class names are listed alongside the
+   canonical one so no markup had to change — a rule like
+
+       .ui-label,
+       .filter-section-label,
+       .progress-group-label { … }
+
+   means those three selectors *are* the component, not copies of it.
+   New markup should use the .ui-* name; the aliases exist so table,
+   recall, picture, conjugation and lists mode all stayed working.
+
+   Loaded before the per-mode sheets, so a mode can still override a
+   single property (usually font-size) without restating the pattern.
+================================================================ */
+
+
+/* ────────────────────────────────────────────────────────────────
+   1. Eyebrow label
+   The small upper-case caption above a control or panel. There were
+   fifteen of these, differing only in font-size (0.62–0.74rem) and
+   letter-spacing (0.04–0.10em) — differences no one could see side by
+   side, since they never appear side by side.
+
+   Size is a variable so the handful of places that genuinely want a
+   smaller one can set --ui-label-size instead of restating the rule.
+   ──────────────────────────────────────────────────────────────── */
+.ui-label,
+.filter-section-label,
+.progress-group-label,
+.conj-order-label,
+.inline-order-label,
+.control-group > label,
+.ml-lang-label,
+.ml-sidebar-title,
+.ml-band-label,
+.recall-history-head,
+.settings-section-title,
+.shortcuts-group-title,
+.word-meta {
+  font-size: var(--ui-label-size, 0.68rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* The three that are genuinely a different size, and why. */
+.filter-section-label   { --ui-label-size: 0.74rem; }  /* top-level section heading */
+.progress-group-label   { --ui-label-size: 0.74rem; }  /* pairs with the above */
+.control-group > label  { --ui-label-size: 0.74rem; }
+.settings-section-title { --ui-label-size: 0.62rem; letter-spacing: 0.1em; }
+.shortcuts-group-title  { --ui-label-size: 0.62rem; letter-spacing: 0.1em; }
+
+/* Titles that are primary text rather than a muted caption. */
+.ml-sidebar-title { color: var(--text); }
+
+/* Sits in a flow of its own rather than beside a control. */
+.word-meta { white-space: normal; }
+
+
+/* ────────────────────────────────────────────────────────────────
+   2. Monospace stat
+   The small counter beside a quiz: "5 verbs · 3 regular", "12 / 40",
+   the elapsed timer. Always DM Mono, always muted.
+   ──────────────────────────────────────────────────────────────── */
+.ui-stat,
+.conj-order-count,
+.pm-click-counter,
+.fc-counter {
+  font-family: 'DM Mono', monospace;
+  font-size: var(--ui-stat-size, 0.72rem);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.fc-counter { --ui-stat-size: 0.85rem; }
+
+
+/* ────────────────────────────────────────────────────────────────
+   3. Panel
+   A bordered, faintly tinted box: filter boxes, the score-pill rows,
+   the recall history card, the click-mode results panel.
+
+   Two fills. .ui-panel is the 45% tint used by every filter box;
+   .ui-panel--solid is flat --surface2, used where the panel sits on
+   top of another surface and needs more contrast.
+   ──────────────────────────────────────────────────────────────── */
+.ui-panel,
+.filter-box,
+.conj-pills-cell,
+.quiz-score--boxed {
+  background: color-mix(in srgb, var(--surface2) 45%, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.ui-panel--solid {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+
+/* ────────────────────────────────────────────────────────────────
+   4. Danger button
+   Give Up, in all five places it exists. The colours were hard-coded
+   hexes rather than tokens, so this button was the one control in the
+   app that stayed pale pink in dark mode.
+
+   !important is inherited from the rules this replaces: #tableReset
+   and friends sit inside `#tableControls button`, which is a more
+   specific selector setting a competing background.
+   ──────────────────────────────────────────────────────────────── */
+.ui-btn-danger,
+.conj-giveup-btn,
+.picture-give-up-btn,
+.pm-giveup-btn,
+.recall-giveup-btn,
+#tableReset,
+#resetBtn,
+#quizGiveUp {
+  background: var(--danger-light) !important;
+  color: var(--danger) !important;
+  border: 1px solid var(--danger-border) !important;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background var(--transition-fast),
+              border-color var(--transition-fast);
+}
+
+.ui-btn-danger:hover:not(:disabled),
+.conj-giveup-btn:hover:not(:disabled),
+.picture-give-up-btn:hover:not(:disabled),
+.pm-giveup-btn:hover:not(:disabled),
+.recall-giveup-btn:hover:not(:disabled),
+#tableReset:hover:not(:disabled),
+#resetBtn:hover:not(:disabled),
+#quizGiveUp:hover:not(:disabled) {
+  background: var(--danger-hover) !important;
+}
+
+.ui-btn-danger:disabled,
+.conj-giveup-btn:disabled,
+.picture-give-up-btn:disabled,
+.pm-giveup-btn:disabled,
+.recall-giveup-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+
+/* ────────────────────────────────────────────────────────────────
+   5. Mini button
+   The All / None / Clear pairs that sit next to a section label.
+   Deliberately tiny — they are an affordance on a heading, not a
+   control in their own right.
+   ──────────────────────────────────────────────────────────────── */
+.ui-btn-mini,
+.conj-tf-header button,
+#conjFormsAll,
+#conjFormsNone,
+#clearAllDomains {
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color var(--transition-fast),
+              color var(--transition-fast),
+              background var(--transition-fast);
+}
+
+.ui-btn-mini:hover,
+.conj-tf-header button:hover,
+#conjFormsAll:hover,
+#conjFormsNone:hover,
+#clearAllDomains:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+
+/* ────────────────────────────────────────────────────────────────
+   6. Rank badge
+   The frequency rank tucked into the top-left corner of a word cell
+   or a conjugation card. Identical definitions in table.css and
+   conjugation.css — a word should look the same wherever you meet it.
+
+   The parent needs `position: relative`.
+   ──────────────────────────────────────────────────────────────── */
+.ui-rank-badge,
+.table-word-rank,
+.conj-card-rank {
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.55em;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-muted);
+  pointer-events: none;
+  user-select: none;
+}
+
+
+/* ────────────────────────────────────────────────────────────────
+   7. Empty state
+   The dashed box a mode shows before its first run. Table, recall and
+   conjugation each had their own copy — recall's and conjugation's
+   byte-identical, table's with a different radius, weight, wording and
+   a gradient. Picture mode had none at all, so it just showed nothing.
+
+   One look, one definition; the wording is per-mode via --empty-text.
+   ──────────────────────────────────────────────────────────────── */
+.ui-empty-slot,
+#tableWrap:empty,
+#recallWrap:empty,
+#pictureWrap:empty,
+#conjugationWrap:empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  margin: 0.5rem 0;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(160deg, var(--surface) 0%, var(--surface2) 100%);
+}
+
+.ui-empty-slot::before,
+#tableWrap:empty::before,
+#recallWrap:empty::before,
+#pictureWrap:empty::before,
+#conjugationWrap:empty::before {
+  content: var(--empty-text, 'Select your settings above and hit Start Quiz');
+  font-family: 'Sora', sans-serif;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 1.5rem;
+}
+
+#tableWrap   { --empty-text: '\25B6  Hit Start Quiz to begin'; }
+#pictureWrap { --empty-text: 'Pick a quiz style above and hit Start Quiz'; }

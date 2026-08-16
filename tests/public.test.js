@@ -3,6 +3,7 @@
  *
  * Integration tests for the public API routes:
  *   GET /api/health
+ *   GET /api/languages
  *   GET /api/vocab/:language
  */
 
@@ -27,6 +28,26 @@ describe('GET /api/health', () => {
     expect(res.body.status).toBe('ok');
     expect(typeof res.body.timestamp).toBe('string');
     expect(typeof res.body.uptime).toBe('number');
+  });
+});
+
+
+describe('GET /api/languages', () => {
+  it('lists only the languages the DB actually has rows for', async () => {
+    const res = await request(app).get('/api/languages');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.languages)).toBe(true);
+    expect(res.body.languages).toContain('spanish');
+  });
+
+  it('omits a language the app offers but has never imported', async () => {
+    // This is the whole point of the endpoint: the client's language list is
+    // fixed, but a language is only usable once the pipeline has synced it.
+    // The dropdown greys out anything missing here rather than failing on
+    // selection.
+    const res = await request(app).get('/api/languages');
+    expect(res.body.languages).not.toContain('german');
   });
 });
 

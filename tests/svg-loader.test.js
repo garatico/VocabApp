@@ -123,3 +123,43 @@ describe('language case normalisation', () => {
     expect(getSvgUrl('FRENCH', 'chien')).toBe('/svgs/dog.svg');
   });
 });
+
+// ── Word normalisation ───────────────────────────────────────────────────────
+// The lookup was exact-match, so 'arbol' missed 'árbol'. It now normalises the
+// same way the client's visual-map does: lowercase, diacritics stripped.
+
+describe('word normalisation', () => {
+  it('matches a word typed without its accent', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    expect(getSvgUrl('spanish', 'arbol')).toBe('/svgs/tree.svg');
+    expect(getSvgUrl('spanish', 'árbol')).toBe('/svgs/tree.svg');
+  });
+
+  it('matches regardless of the word\'s case', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    expect(getSvgUrl('spanish', 'Perro')).toBe('/svgs/dog.svg');
+  });
+});
+
+// ── German ───────────────────────────────────────────────────────────────────
+// German nouns are stored capitalised, because that is how they are written.
+// The lookup has to accept both that and whatever a learner types.
+
+describe('german', () => {
+  it('resolves capitalised German nouns', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    expect(getSvgUrl('german', 'Hund')).toBe('/svgs/dog.svg');
+    expect(getSvgUrl('german', 'Katze')).toBe('/svgs/cat.svg');
+    expect(getSvgUrl('german', 'Baum')).toBe('/svgs/tree.svg');
+  });
+
+  it('resolves them lowercased too', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    expect(getSvgUrl('german', 'hund')).toBe('/svgs/dog.svg');
+  });
+
+  it('still returns null for a German word with no concept', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    expect(getSvgUrl('german', 'Fahrrad')).toBeNull();
+  });
+});

@@ -54,7 +54,9 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from lib import curated, db, visuals                      # noqa: E402
-from lib.config import DB_PATH, LANG_NAMES, curated_path  # noqa: E402
+from lib.config import (  # noqa: E402
+    DB_PATH, LANG_NAMES, OS_LANG, LANGS_WITHOUT_CONJUGATION, curated_path,
+)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -70,7 +72,7 @@ from lib.config import DB_PATH, LANG_NAMES, curated_path  # noqa: E402
 # ══════════════════════════════════════════════════════════════════════════════
 
 # Which languages to process. Remove any you don't want.
-RUN_LANGUAGES = ['spa', 'fra', 'ita', 'por']
+RUN_LANGUAGES = ['spa', 'fra', 'ita', 'por', 'deu', 'nld']
 
 # Mine new words from the corpora before the rest of the chain?
 # This is the slow part: uncached words need a network lookup, roughly a
@@ -99,6 +101,7 @@ PLAY_BUTTON_WRITES = True
 STEP_WRITES = {
     'all':      'data/curated/*.jsonl  and  data/vocabulary.db',
     'mine':     'data/curated/*.jsonl  (appends new entries)',
+    'seed':     'data/curated/*.jsonl  (appends new entries)',
     'dedupe':   'data/curated/*.jsonl',
     'backfill': 'data/curated/*.jsonl',
     'enrich':   'data/curated/*.jsonl  and  data/vocabulary.db',
@@ -111,8 +114,8 @@ STEP_WRITES = {
 }
 
 STEP_DETAIL = {
-    'all': 'dedupe → backfill → enrich → sync',
-    'everything': 'mine → dedupe → backfill → enrich → sync',
+    'all': 'seed → dedupe → backfill → enrich → sync',
+    'everything': 'mine → seed → dedupe → backfill → enrich → sync',
 }
 
 
@@ -210,6 +213,47 @@ def step_mine(args) -> None:
         print('  Next: pipeline.py all --langs … --write')
 
 
+def step_seed(args) -> None:
+    banner('SEED — hand-written word list → curated entries')
+    total = 0
+    for lang in resolve_langs(args):
+        lang_header(lang)
+        existing = curated.read(lang)
+        new, rep = curated.seed_lang(lang, existing)
+
+        if rep['problems']:
+            print(f'  Seed file    : {len(rep["problems"])} problem(s)')
+            for p in rep['problems'][:10]:
+                print(f'                 {p}')
+            if len(rep['problems']) > 10:
+                print(f'                 … and {len(rep["problems"]) - 10} more')
+        if not rep['seeds']:
+            continue
+
+        print(f'  Seed words   : {rep["seeds"]}')
+        print(f'  Already have : {rep["skipped"]}')
+        print(f'  New          : {len(new)}')
+        if rep['no_corpus']:
+            print(f'  Not in corpus: {len(rep["no_corpus"])} '
+                  f'(imported with frequency 0) e.g. {", ".join(rep["no_corpus"][:6])}')
+        if rep['pos_disagreements']:
+            # Not an error — German adjectives double as adverbs, and weiß is
+            # both "white" and "I know". Reported so a real mistake is visible.
+            print(f'  POS check    : {len(rep["pos_disagreements"])} disagree with HanTa')
+            for d in rep['pos_disagreements'][:8]:
+                print(f'                 {d}')
+            if len(rep['pos_disagreements']) > 8:
+                print(f'                 … and {len(rep["pos_disagreements"]) - 8} more')
+
+        if new:
+            persist(lang, existing + new, args.write, changed=True)
+            total += len(new)
+
+    print(f'\n  Total new entries: {total}')
+    if total and args.write:
+        print('  Next: pipeline.py all --langs … --write')
+
+
 def step_dedupe(args) -> None:
     banner('DEDUPE — drop duplicate and junk entries')
     drop = {w.strip().lower() for w in (args.drop_words or []) if w.strip()}
@@ -298,15 +342,13 @@ def step_sync(args) -> None:
         if bak:
             print(f'  DB backup    : {bak.name}')
 
-        conn = db.open_db(DB_PATH)
         try:
-            imported, skipped = db.import_to_db(entries, lang, conn)
+            with db.writable(DB_PATH) as conn:
+                imported, skipped = db.import_to_db(entries, lang, conn)
         except Exception as e:
             print(f'  DB FAILED    : {e}')
             print(f'  DB unchanged — restore from {bak.name if bak else "backup"} if needed')
             return
-        finally:
-            conn.close()
         print(f'  DB           : {imported} imported, {skipped} skipped')
 
         # The JSONL is only rewritten once the DB write has succeeded, so the
@@ -317,6 +359,10 @@ def step_sync(args) -> None:
 
 
 def step_all(args) -> None:
+    # Seeding is local and offline — no network, no spaCy — so unlike `mine` it
+    # belongs in the default chain. It is a no-op for a language with no seed
+    # file, and for one whose seed words are already curated.
+    step_seed(args)
     step_dedupe(args)
     step_backfill(args)
     step_enrich(args)
@@ -371,7 +417,8 @@ def step_everything(args) -> None:
         print(f'    {n}. mine up to {args.batch:,} new words for each of '
               f'{len(args.langs)} languages  (~{max(est, 1)} min, network)')
         n += 1
-    for label in ('remove duplicates and junk',
+    for label in ('import any hand-written seed lists (data/seed/)',
+                  'remove duplicates and junk',
                   'fill missing parts of speech and glosses',
                   'add gender and domains (Spanish)',
                   'load everything into vocabulary.db'):
@@ -383,6 +430,9 @@ def step_everything(args) -> None:
     try:
         if args.mine:
             step_mine(args)
+        # Seeding was missing here, so the play button — the one path that is
+        # supposed to do everything — was the only path that skipped it.
+        step_seed(args)
         step_dedupe(args)
         step_backfill(args)
         step_enrich(args)
@@ -477,9 +527,13 @@ def step_env(args) -> None:
         n = sum(1 for line in open(cp, encoding='utf-8') if line.strip()) if cp.exists() else 0
         cache = GLOSS_CACHE / f'gloss_cache_{code}.jsonl'
         nc = sum(1 for line in open(cache, encoding='utf-8') if line.strip()) if cache.exists() else 0
-        corpus = OS_DIR / {'spa': 'es', 'fra': 'fr', 'ita': 'it', 'por': 'pt'}[code]
+        # OS_LANG, not a local copy of it — this dict was inlined here and went
+        # stale the moment a fifth language was added, taking `env` down with a
+        # KeyError on the one command whose whole job is to report what's set up.
+        corpus = OS_DIR / OS_LANG[code]
         files = ', '.join(sorted(f.name for f in corpus.glob('*.txt'))) if corpus.exists() else 'none'
-        print(f'    {name:11s} curated {n:>6,}   glosses cached {nc:>6,}   corpus: {files}')
+        conj  = '' if code not in LANGS_WITHOUT_CONJUGATION else '   [no conjugation source]'
+        print(f'    {name:11s} curated {n:>6,}   glosses cached {nc:>6,}   corpus: {files}{conj}')
 
     if not ok:
         print(f'\n  >>> Something above is MISSING. Install into the interpreter '
@@ -512,9 +566,9 @@ Two flags matter, and they work the same way on every step
   (nothing)          PREVIEW. Reports what it would do, changes nothing.
   --write   / -w     APPLY. Saves the changes, after taking a backup.
 
-  --langs   / -l     Which languages: spa fra ita por.
+  --langs   / -l     Which languages: spa fra ita por deu nld.
                      Several at once is fine: --langs spa ita
-                     Leave it off and ALL FOUR are processed.
+                     Leave it off and ALL SIX are processed.
 
 So the shape of every command is:
 
@@ -617,6 +671,9 @@ Example
                    help='Wiktionary only, skip the Google Translate fallback')
     p.add_argument('--verbose', action='store_true')
     p.set_defaults(func=step_mine)
+
+    p = add('seed', 'import a hand-written word list from data/seed/')
+    p.set_defaults(func=step_seed)
 
     p = add('dedupe', 'drop duplicate and junk curated entries')
     p.add_argument('--drop-words', nargs='*', default=[],

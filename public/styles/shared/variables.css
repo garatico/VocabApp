@@ -27,8 +27,13 @@
   --accent-hover: #2e5340;
 
   /* Semantic — danger */
-  --danger:       #c0392b;
-  --danger-light: #fdf0ee;
+  --danger:        #c0392b;
+  --danger-light:  #fdf0ee;
+  /* Border and hover fill for danger buttons. These were hard-coded as
+     #e8a09a / #f9dbd8 in five places, which meant the Give Up buttons kept a
+     pale pink hover in dark mode. */
+  --danger-border: #e8a09a;
+  --danger-hover:  #f9dbd8;
 
   /* Semantic — quiz feedback */
   --correct:         #2e7d32;
@@ -81,8 +86,10 @@ html.dark {
   --accent-light: #1d3327;
   --accent-hover: #6db584;
 
-  --danger:       #e05c4b;
-  --danger-light: #2e1a18;
+  --danger:        #e05c4b;
+  --danger-light:  #2e1a18;
+  --danger-border: #6b3630;
+  --danger-hover:  #3d211e;
 
   --correct:         #4caf50;
   --correct-light:   #1a2e1b;

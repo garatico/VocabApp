@@ -23,3 +23,8 @@ requests>=2.31
 #   python -m spacy download fr_core_news_sm
 #   python -m spacy download it_core_news_sm
 #   python -m spacy download pt_core_news_sm
+
+# Optional. German POS tagger with its model bundled in the wheel, so it needs
+# no separate download. Used by the `seed` step to cross-check hand-written
+# parts of speech; seeding works without it, just unchecked.
+HanTa

@@ -29,6 +29,7 @@
     "data:backfill": "python scripts/data/pipeline.py backfill --write",
     "data:enrich": "python scripts/data/pipeline.py enrich --write",
     "data:mine": "python scripts/data/pipeline.py mine --write",
+    "data:seed": "python scripts/data/pipeline.py seed --write",
     "data:images": "python scripts/data/pipeline.py images --write",
     "data:emoji": "python scripts/data/pipeline.py emoji --write",
     "data:check": "python scripts/data/pipeline.py check",

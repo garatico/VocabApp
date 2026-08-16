@@ -11,7 +11,7 @@
  * know anything about the grid rendering.
  */
 
-import { PRONOUNS, TENSE_DEFS } from './data.js';
+import { PRONOUNS, TENSE_DEFS, TENSE_EN, TENSE_HELP, REGULARITY_HELP } from './data.js';
 
 // ── Module state ───────────────────────────────────────────────────────────────
 
@@ -105,6 +105,67 @@ function ensureTenseChipListeners(lang: string): void {
   });
 }
 
+// ── Regularity filter ─────────────────────────────────────────────────────────
+// Language-independent (the buckets are the same everywhere), so the chips are
+// static markup and only the selection needs storing.
+
+const REG_KEY  = 'vq_conj_regularity';
+const REG_KEYS = ['regular', 'ortho', 'stem', 'irregular'] as const;
+
+/** Regularity buckets currently ticked. Never empty — an empty set has no quiz. */
+export function activeRegularities(): string[] {
+  const on = [...document.querySelectorAll<HTMLElement>('#conjRegChips .conj-reg-chip.active')]
+    .map(el => el.dataset.reg ?? '')
+    .filter(Boolean);
+  return on.length ? on : [...REG_KEYS];
+}
+
+function saveRegularities(): void {
+  try { localStorage.setItem(REG_KEY, JSON.stringify(activeRegularities())); }
+  catch { /* quota */ }
+}
+
+let _regListenerAttached = false;
+
+function initRegularityChips(): void {
+  const box = document.getElementById('conjRegChips');
+  if (!box) return;
+
+  // "Stem-changing" and "Spelling" are not self-explanatory labels, so each
+  // chip explains its bucket with an example.
+  box.querySelectorAll<HTMLElement>('.conj-reg-chip').forEach(c => {
+    c.title = REGULARITY_HELP[c.dataset.reg ?? ''] ?? '';
+  });
+
+  // Restore. Nothing saved means everything on, which is the markup default.
+  try {
+    const raw = localStorage.getItem(REG_KEY);
+    const arr = raw ? JSON.parse(raw) : null;
+    if (Array.isArray(arr) && arr.length) {
+      box.querySelectorAll<HTMLElement>('.conj-reg-chip').forEach(c => {
+        c.classList.toggle('active', arr.includes(c.dataset.reg ?? ''));
+      });
+    }
+  } catch { /* corrupt payload — leave the markup default */ }
+
+  if (_regListenerAttached) return;
+  _regListenerAttached = true;
+
+  box.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLElement>('.conj-reg-chip');
+    if (!btn) return;
+    btn.classList.toggle('active');
+    // Same rule as the tense chips: never allow an empty selection.
+    if (box.querySelectorAll('.conj-reg-chip.active').length === 0) btn.classList.add('active');
+    saveRegularities();
+  });
+
+  document.getElementById('conjRegAll')?.addEventListener('click', () => {
+    box.querySelectorAll('.conj-reg-chip').forEach(c => c.classList.add('active'));
+    saveRegularities();
+  });
+}
+
 export function initConjControls(lang: string): void {
   const tenseDefs = TENSE_DEFS[lang] ?? TENSE_DEFS.spanish;
   const pronouns  = PRONOUNS[lang]   ?? PRONOUNS.spanish;
@@ -121,7 +182,20 @@ export function initConjControls(lang: string): void {
       btn.type          = 'button';
       btn.className     = 'conj-tense-chip' + (saved.includes(def.key) ? ' active' : '');
       btn.dataset.tense = def.key;
-      btn.textContent   = def.label;
+      // What the tense is actually for. The native name tells you nothing if
+      // you don't already know the tense, which is the case for most of the
+      // reason you'd be drilling it.
+      btn.title         = TENSE_HELP[def.key] ?? def.label;
+      // Native name over the English one — the native label is what you pick
+      // by, the English is what tells you what it means.
+      btn.innerHTML = '';
+      const native = document.createElement('span');
+      native.className = 'conj-chip-native';
+      native.textContent = def.label;
+      const en = document.createElement('span');
+      en.className = 'conj-chip-en';
+      en.textContent = TENSE_EN[def.key] ?? '';
+      btn.append(native, en);
       chips.appendChild(btn);
     });
     // Nothing valid saved — fall back to the first tense so the quiz is never
@@ -144,6 +218,7 @@ export function initConjControls(lang: string): void {
   // 3. Attach listeners once (idempotent)
   ensurePronounToggleListener();
   ensureFormsAllNoneListeners();
+  initRegularityChips();
 
   // 4. Rebuild pronoun pills only when the language changes so that user
   //    selections survive a Start Quiz re-render.

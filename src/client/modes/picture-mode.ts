@@ -15,6 +15,7 @@
 import { getFallbackEmoji, getFallbackSvgUrl, getFallbackImageUrl } from '../data/visual-map.ts';
 import { saveSession, recordOutcome } from '../utils/session-history.ts';
 import { attachTooltips    } from '../utils/word-tooltip.ts';
+import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import type { Word }        from '../types.ts';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -35,6 +36,15 @@ interface RenderPictureModeOptions {
   container: HTMLElement;
   lang?:     string;
   mode?:     'type' | 'flashcard' | 'click';
+  /**
+   * Extra illustrated words to draw click-mode distractors from.
+   *
+   * The quiz set is capped at the requested word count, so "Top 4" would
+   * otherwise leave three decoys at most — and "Top 1" none at all, making the
+   * single option correct by default. Distractors are never scored, so pulling
+   * them from outside the quiz set costs nothing.
+   */
+  distractorWords?: Word[];
 }
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
@@ -195,73 +205,150 @@ function injectStyles(): void {
   s.id = 'picture-click-styles';
   s.textContent = `
     /* ── Click mode layout ── */
+    /* Four cards on one row from 900px up, so the wrap has to be wide enough
+       to give each of them real size. 520px was sized for the old 2x2 grid
+       and squeezed four cards into ~110px each. */
     .pm-click-wrap {
-      max-width: 520px;
+      max-width: 1100px;
       margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
     }
+    /* Type from .ui-stat in shared/components.css. */
     .pm-click-counter {
       text-align: center;
-      font-size: 0.8rem;
-      color: var(--text-muted, #6b7280);
       margin-bottom: 0.75rem;
     }
     .pm-click-prompt {
       text-align: center;
       margin-bottom: 1.5rem;
     }
+    /* The target-language word, styled as it is everywhere else in the app:
+       DM Mono in the accent colour, same as .conj-verb-spanish and the table
+       mode word cells. */
     .pm-click-word {
+      font-family: 'DM Mono', monospace;
       font-size: 2.2rem;
       font-weight: 700;
-      color: var(--text, #111);
+      color: var(--accent);
+      letter-spacing: -0.01em;
       line-height: 1.2;
     }
     .pm-click-sub {
       font-size: 0.85rem;
-      color: var(--text-muted, #6b7280);
+      color: var(--text-muted);
       margin-top: 0.3rem;
     }
+    .pm-click-nav {
+      display: flex;
+      gap: 0.4rem;
+      margin-right: auto;
+    }
+    .pm-nav-btn {
+      font-family: 'Sora', sans-serif;
+      font-size: 0.78rem;
+      padding: 0.3rem 0.7rem;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .pm-nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .pm-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Back/Next on the left (via margin-right:auto on .pm-click-nav),
+       Give Up on the right. Mirrors table mode's controls row. */
+    .pm-click-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding-bottom: 0.6rem;
+      margin-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
     .pm-click-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.85rem;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      /* Centred as a block: with four wide cards the grid is narrower than
+         .pm-click-wrap on a big screen, and left-aligned it sat off to one
+         side of the prompt above it. */
+      justify-content: center;
+      width: 100%;
+      margin: 0 auto;
+    }
+    /* All four in one row from tablet up. At 2x2 with a 110px card the
+       photos were barely readable. */
+    @media (min-width: 900px) {
+      .pm-click-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
     .pm-click-card {
       border: 2px solid var(--border, #d1d5db);
-      border-radius: 10px;
+      border-radius: var(--radius, 12px);
       padding: 1rem;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 110px;
+      /* Square, so the image gets real height rather than a letterbox. */
+      aspect-ratio: 1;
       background: var(--card-bg, var(--surface, #fff));
-      transition: border-color 0.12s, transform 0.1s, background 0.12s;
+      box-shadow: var(--shadow-sm);
+      transition: border-color 0.12s, transform 0.1s, background 0.12s,
+                  box-shadow 0.12s;
       user-select: none;
     }
+    /* Desktop: give the photo room. Was min-height 200px, which at four
+       across on a wide screen left most of the card empty around a small
+       image. */
+    @media (min-width: 900px) {
+      .pm-click-card { min-height: 240px; }
+    }
+    @media (max-width: 899px) {
+      .pm-click-card { min-height: 180px; }
+    }
+    .pm-click-card:hover:not(.pm-locked) { box-shadow: var(--shadow); }
     .pm-click-card:hover:not(.pm-locked) {
-      border-color: var(--accent, #4f8ef7);
+      border-color: var(--accent);
       transform: translateY(-2px);
     }
+    .pm-click-card .picture-card-img {
+      width: 100%;
+      height: 100%;
+    }
     .pm-click-card img {
-      max-width: 72px;
-      max-height: 72px;
+      /* Was capped at 72px, sized for the old 110px card. That cap, not the
+         card size, is why the photos looked tiny. */
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
       object-fit: contain;
     }
     .pm-click-card .picture-card-emoji {
-      font-size: 3rem;
+      /* Scaled with the card — was 3rem for the 110px version. */
+      font-size: 5.5rem;
       line-height: 1;
     }
+    @media (max-width: 899px) {
+      .pm-click-card .picture-card-emoji { font-size: 4rem; }
+    }
+    /* Green / red match the correct and missed states everywhere else —
+       same tokens the table cells, conjugation inputs and score pills use. */
     .pm-click-card.pm-correct {
-      border-color: var(--correct, #22c55e);
-      background: color-mix(in srgb, var(--correct, #22c55e) 12%, transparent);
+      border-color: var(--correct);
+      background: var(--correct-light);
     }
     .pm-click-card.pm-wrong {
-      border-color: var(--danger, #ef4444);
-      background: color-mix(in srgb, var(--danger, #ef4444) 12%, transparent);
+      border-color: var(--incorrect, var(--danger));
+      background: var(--incorrect-light, var(--danger-light));
     }
     .pm-click-card.pm-reveal {
-      border-color: var(--correct, #22c55e);
-      background: color-mix(in srgb, var(--correct, #22c55e) 8%, transparent);
+      border-color: var(--correct);
+      background: color-mix(in srgb, var(--correct) 8%, transparent);
       opacity: 0.7;
     }
     .pm-click-card.pm-locked {
@@ -275,45 +362,38 @@ function injectStyles(): void {
       min-height: 1.4rem;
       color: var(--text-muted, #6b7280);
     }
-    .pm-click-feedback.ok  { color: var(--correct, #22c55e); }
-    .pm-click-feedback.bad { color: var(--danger, #ef4444); }
-    .pm-click-header {
-      display: flex;
-      justify-content: flex-end;
-      margin-bottom: 0.5rem;
-    }
+    .pm-click-feedback.ok  { color: var(--correct); }
+    .pm-click-feedback.bad { color: var(--incorrect, var(--danger)); }
+    /* Colours and states from .ui-btn-danger, same as every other Give Up. */
     .pm-giveup-btn {
-      padding: 0.3rem 1rem;
-      font-size: 0.82rem;
-      border: 1px solid var(--border, #d1d5db);
-      border-radius: 5px;
-      background: transparent;
-      color: var(--text-muted, #6b7280);
-      cursor: pointer;
-      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      padding: 0.45rem 1rem;
+      font-size: 0.875rem;
     }
-    .pm-giveup-btn:hover { background: var(--danger, #ef4444); color: #fff; border-color: var(--danger, #ef4444); }
-    .pm-giveup-btn:disabled { opacity: 0.4; cursor: default; }
     .pm-click-done {
       text-align: center;
       padding: 2rem 1rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
     }
     .pm-click-done h3 {
       font-size: 1.6rem;
       margin-bottom: 0.4rem;
     }
     .pm-click-done p {
-      color: var(--text-muted, #6b7280);
+      color: var(--text-muted);
       margin-bottom: 1.25rem;
     }
     .pm-click-done button {
+      font-family: 'Sora', sans-serif;
       padding: 0.5rem 1.5rem;
-      background: var(--accent, #4f8ef7);
+      background: var(--accent);
       color: #fff;
       border: none;
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       cursor: pointer;
       font-size: 0.95rem;
+      font-weight: 600;
     }
   `;
   document.head.appendChild(s);
@@ -372,17 +452,46 @@ function clearPictureSummary(): void {
 
 // ── Progress bar helpers ───────────────────────────────────────────────────────
 
-function setProgress(correct: number, total: number): void {
-  const pct  = total > 0 ? Math.round((correct / total) * 100) : 0;
-  const text = `${correct} / ${total}`;
-  const barTop      = document.getElementById('pictureBarTop');
-  const barBottom   = document.getElementById('pictureBarBottom');
-  const statsTop    = document.getElementById('pictureStatsTop');
-  const statsBottom = document.getElementById('pictureStatsBottom');
-  if (barTop)      (barTop    as HTMLElement).style.width = pct + '%';
-  if (barBottom)   (barBottom as HTMLElement).style.width = pct + '%';
-  if (statsTop)    statsTop.textContent    = text;
-  if (statsBottom) statsBottom.textContent = text;
+/**
+ * Paint the three-segment bar and the score pills, top and bottom.
+ *
+ * Same components table and conjugation mode use — green `.bar`, yellow
+ * `.bar-revealed`, red `.bar-missed` laid end to end, with `buildScorePills`
+ * underneath. Picture mode used to have a single green bar and a bare "3 / 20"
+ * caption, so the same session looked like a different app depending on which
+ * tab you were on.
+ *
+ * `revealed` covers answers filled in by Give Up; `missed` covers a wrong pick
+ * in click mode. A mode that cannot produce one of them just passes 0.
+ */
+function setProgress(correct: number, total: number, revealed = 0, missed = 0): void {
+  const counts = {
+    correct, revealed, missed,
+    left: Math.max(0, total - correct - revealed - missed),
+    total,
+  };
+
+  const pct = (n: number): number => scorePct(n, total);
+  const g = pct(correct), y = pct(revealed), r = pct(missed);
+  const done = correct + revealed + missed;
+
+  ([['Top', 'pictureScoreTop'], ['Bottom', 'pictureScoreBottom']] as const).forEach(([pos, scoreId]) => {
+    const green  = document.getElementById(`pictureBar${pos}`);
+    const yellow = document.getElementById(`pictureBar${pos}Revealed`);
+    const red    = document.getElementById(`pictureBar${pos}Missed`);
+    const stat   = document.getElementById(`pictureStats${pos}`);
+    const score  = document.getElementById(scoreId);
+
+    if (green)  green.style.width  = g + '%';
+    if (yellow) { yellow.style.left = g + '%';       yellow.style.width = y + '%'; }
+    if (red)    { red.style.left    = (g + y) + '%'; red.style.width    = r + '%'; }
+
+    if (stat) {
+      stat.textContent = total > 0 ? `${done} / ${total}` : '';
+      stat.classList.toggle('progress-label--done', total > 0 && done === total);
+    }
+    if (score) score.innerHTML = buildScorePills(counts);
+  });
 }
 
 // ── Type-the-word mode (original) ─────────────────────────────────────────────
@@ -460,7 +569,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
       }
     });
     giveUpBtn.disabled = true;
-    setProgress(typedCorrect, cards.length);
+    updateTypeProgress();
     recordPictureSession(
       lang,
       cards.filter(c => c.inp.classList.contains('correct')).map(c => c.word.word),
@@ -480,8 +589,11 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
   if (first) first.focus();
 
   function updateTypeProgress(): void {
-    const correct = cards.filter(({ inp }) => inp.classList.contains('correct')).length;
-    setProgress(correct, cards.length);
+    const correct  = cards.filter(({ inp }) => inp.classList.contains('correct')).length;
+    // Give Up fills the rest in; those are revealed, not missed, and are the
+    // yellow segment of the bar.
+    const revealed = cards.filter(({ inp }) => inp.classList.contains('revealed')).length;
+    setProgress(correct, cards.length, revealed);
     if (correct === cards.length) {
       giveUpBtn.disabled = true;
       recordPictureSession(lang, cards.map(c => c.word.word), [], cards.length);
@@ -601,8 +713,9 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
   }
 
   function updateProgress(): void {
-    const correct = states.filter(s => s.correct).length;
-    setProgress(correct, words.length);
+    const correct  = states.filter(s => s.correct).length;
+    const revealed = states.filter(s => !s.correct && s.revealed).length;
+    setProgress(correct, words.length, revealed);
     const allDone = states.every(s => s.correct || s.revealed);
     giveUpBtn.disabled = allDone;
     if (allDone) {
@@ -676,6 +789,8 @@ function renderClickMode(
   wordsWithVisuals: WordWithVisual[],
   container: HTMLElement,
   onPlayAgain: () => void,
+  /** Illustrated words available as decoys. A superset of the quiz set. */
+  distractorPool: WordWithVisual[] = wordsWithVisuals,
 ): void {
   if (wordsWithVisuals.length === 0) {
     container.innerHTML = `
@@ -687,13 +802,31 @@ function renderClickMode(
 
   clearPictureSummary();
 
-  const pool   = wordsWithVisuals;
-  const queue  = shuffle(pool);
+  const queue  = shuffle(wordsWithVisuals);
   let idx      = 0;
   let correct  = 0;
-  let answered = false;
 
-  setProgress(0, queue.length);
+  // Decoys come from the wider illustrated pool, not the quiz set, so a
+  // four-option grid is always possible no matter how small the quiz is. The
+  // quiz words are folded in and de-duplicated by word so a decoy can still be
+  // another word you are being tested on.
+  const seen: Record<string, true> = {};
+  const decoyPool: WordWithVisual[] = [...wordsWithVisuals, ...distractorPool]
+    .filter(w => (seen[w.word] ? false : (seen[w.word] = true)));
+
+  /**
+   * What was picked for each question, so a card can be revisited without
+   * losing its outcome. null means unanswered.
+   */
+  const results: ({ chosen: string; right: boolean } | null)[] = queue.map(() => null);
+  const answeredAt = (i: number): boolean => results[i] !== null;
+
+  /** A wrong pick is a miss, not a reveal — there is no hint to take here. */
+  function syncProgress(): void {
+    setProgress(correct, queue.length, 0, results.filter(r => r !== null && !r.right).length);
+  }
+
+  syncProgress();
 
   const wrap = document.createElement('div');
   wrap.className = 'pm-click-wrap';
@@ -707,11 +840,29 @@ function renderClickMode(
   giveUpBtn.textContent = 'Give Up';
   giveUpBtn.addEventListener('click', () => {
     giveUpBtn.disabled = true;
-    answered = true;
     showDone();
   });
 
-  header.appendChild(giveUpBtn);
+  // Back / forward. Answered cards are re-shown in their answered state, so
+  // you can look at what you got wrong without it counting twice.
+  const prevBtn = document.createElement('button');
+  prevBtn.className   = 'pm-nav-btn';
+  prevBtn.textContent = '\u2190 Back';
+  prevBtn.addEventListener('click', () => { if (idx > 0) { idx--; renderCard(queue[idx]); } });
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className   = 'pm-nav-btn';
+  nextBtn.textContent = 'Next \u2192';
+  nextBtn.addEventListener('click', () => {
+    if (idx < queue.length - 1) { idx++; renderCard(queue[idx]); }
+    else if (results.every(r => r !== null)) showDone();
+  });
+
+  const nav = document.createElement('div');
+  nav.className = 'pm-click-nav';
+  nav.append(prevBtn, nextBtn);
+
+  header.append(nav, giveUpBtn);
 
   // ── Rest of layout ──────────────────────────────────────────────────────────
   const counter = document.createElement('div');
@@ -739,15 +890,15 @@ function renderClickMode(
   container.appendChild(wrap);
 
   function renderCard(word: WordWithVisual): void {
-    answered             = false;
+    const prior = results[idx];
     giveUpBtn.disabled   = false;
     feedback.textContent = '';
     feedback.className   = 'pm-click-feedback';
 
-    counter.textContent = `${idx + 1} / ${queue.length}`;
+    syncNav();
     wordEl.textContent  = word.word;
 
-    const distractors = shuffle(pool.filter(w => w.word !== word.word)).slice(0, 3);
+    const distractors = shuffle(decoyPool.filter(w => w.word !== word.word)).slice(0, 3);
     const options     = shuffle([word, ...distractors]);
 
     clickGrid.innerHTML = '';
@@ -762,8 +913,8 @@ function renderClickMode(
       card.appendChild(clickImgWrap);
 
       card.addEventListener('click', () => {
-        if (answered) return;
-        answered           = true;
+        if (answeredAt(idx)) return;
+        results[idx] = { chosen: opt.word, right: opt.word === word.word };
         giveUpBtn.disabled = true;   // disable while feedback is showing
 
         clickGrid.querySelectorAll('.pm-click-card').forEach(c => c.classList.add('pm-locked'));
@@ -773,30 +924,59 @@ function renderClickMode(
           feedback.textContent = '✓ Correct!';
           feedback.classList.add('ok');
           correct++;
-          setProgress(correct, queue.length);
+          syncProgress();
         } else {
           card.classList.add('pm-wrong');
           feedback.textContent = `✗  That's "${opt.word}" — the answer was "${word.word}"`;
           feedback.classList.add('bad');
           clickGrid.querySelectorAll<HTMLElement>(`.pm-click-card[data-word="${CSS.escape(word.word)}"]`)
             .forEach(c => c.classList.add('pm-reveal'));
+          syncProgress();
         }
 
+        // Auto-advance, but only off the end of unanswered questions — going
+        // back to review should not immediately bounce you forward again.
         const delay = opt.word === word.word ? 650 : 1100;
         setTimeout(() => advance(), delay);
       });
 
       clickGrid.appendChild(card);
     });
+
+    // Revisiting an answered question: show it as it was left, locked.
+    if (prior) {
+      clickGrid.querySelectorAll('.pm-click-card').forEach(c => c.classList.add('pm-locked'));
+      const chosen = clickGrid.querySelector<HTMLElement>(
+        `.pm-click-card[data-word="${CSS.escape(prior.chosen)}"]`);
+      chosen?.classList.add(prior.right ? 'pm-correct' : 'pm-wrong');
+      if (!prior.right) {
+        clickGrid.querySelectorAll<HTMLElement>(
+          `.pm-click-card[data-word="${CSS.escape(word.word)}"]`)
+          .forEach(c => c.classList.add('pm-reveal'));
+        feedback.textContent = `✗  You picked "${prior.chosen}" — the answer was "${word.word}"`;
+        feedback.classList.add('bad');
+      } else {
+        feedback.textContent = '✓ Correct!';
+        feedback.classList.add('ok');
+      }
+    }
   }
 
   function advance(): void {
-    idx++;
-    if (idx >= queue.length) {
-      showDone();
-    } else {
-      renderCard(queue[idx]);
-    }
+    // Jump to the next question that has not been answered yet; if there is
+    // none, the round is over.
+    const nextUnanswered = results.findIndex((r, i) => r === null && i > idx);
+    const anyLeft        = results.some(r => r === null);
+    if (!anyLeft) { showDone(); return; }
+    idx = nextUnanswered >= 0 ? nextUnanswered : results.findIndex(r => r === null);
+    renderCard(queue[idx]);
+  }
+
+  /** Enable/disable the nav buttons for the current position. */
+  function syncNav(): void {
+    prevBtn.disabled = idx === 0;
+    nextBtn.disabled = idx >= queue.length - 1 && results.some(r => r === null);
+    counter.textContent = `${idx + 1} / ${queue.length}`;
   }
 
   function showDone(): void {
@@ -805,7 +985,7 @@ function renderClickMode(
 
     const done = document.createElement('div');
     done.className = 'pm-click-done';
-    done.innerHTML = `<h3>${pct === 100 ? '🎉 Perfect!' : pct >= 70 ? '👍 Nice work!' : '💪 Keep practising!'}</h3>`;
+    done.innerHTML = `<h3>${pct === 100 ? '🎉 Perfect!' : pct >= 70 ? '👍 Nice work!' : '💪 Keep practicing!'}</h3>`;
 
     const again = document.createElement('button');
     again.textContent = 'Play Again';
@@ -813,7 +993,7 @@ function renderClickMode(
 
     done.appendChild(again);
     container.appendChild(done);
-    setProgress(correct, queue.length);
+    syncProgress();
     showPictureSummary(correct, queue.length);
   }
 
@@ -827,6 +1007,7 @@ export function renderPictureMode({
   container,
   lang = 'spanish',
   mode = 'type',
+  distractorWords = [],
 }: RenderPictureModeOptions): void {
   injectStyles();
   container.innerHTML = '';
@@ -834,25 +1015,39 @@ export function renderPictureMode({
   pictureStartedAt = Date.now();
   pictureRecorded  = false;
 
-  const wordsWithVisuals: WordWithVisual[] = words
-    .map(w => ({
-      ...w,
-      // 1. Local Wikipedia photo (highest quality)
-      _imageUrl: getFallbackImageUrl(lang, w.word),
-      // 2. SVG: server concept map → openmoji local/CDN fallback
-      svg_url: w.svg_url || getFallbackSvgUrl(lang, w.word) || null,
-      // 3. Emoji fallback (visual-map curated only — not DB emojis)
-      _emoji: getFallbackEmoji(lang, w.word),
-    }))
-    .filter((w): w is WordWithVisual => !!(w._imageUrl || w.svg_url || w._emoji));
+  // Click mode is a narrow centred column, so the section's progress bar and
+  // score pills are constrained to the same width. Left full-bleed they ran
+  // past both sides of the quiz they describe; matched up they sit directly
+  // above the cards, which is where table mode puts its bar.
+  document.getElementById('pictureArea')?.classList.toggle('pm-mode-click', mode === 'click');
+
+  /** Attach every visual we can find, then drop anything left with none. */
+  function withVisuals(list: Word[]): WordWithVisual[] {
+    return list
+      .map(w => ({
+        ...w,
+        // 1. Local Wikipedia photo (highest quality)
+        _imageUrl: getFallbackImageUrl(lang, w.word),
+        // 2. SVG: server concept map → openmoji local/CDN fallback
+        svg_url: w.svg_url || getFallbackSvgUrl(lang, w.word) || null,
+        // 3. Emoji fallback (visual-map curated only — not DB emojis)
+        _emoji: getFallbackEmoji(lang, w.word),
+      }))
+      .filter((w): w is WordWithVisual => !!(w._imageUrl || w.svg_url || w._emoji));
+  }
+
+  const wordsWithVisuals = withVisuals(words);
 
   if (mode === 'click') {
+    // Resolved once rather than per question — this is every illustrated word
+    // in the language, and the visual lookup is not free.
+    const decoys = withVisuals(distractorWords);
     function playAgain(): void {
       container.innerHTML = '';
       setProgress(0, 0);
-      renderClickMode(wordsWithVisuals, container, playAgain);
+      renderClickMode(wordsWithVisuals, container, playAgain, decoys);
     }
-    renderClickMode(wordsWithVisuals, container, playAgain);
+    renderClickMode(wordsWithVisuals, container, playAgain, decoys);
   } else if (mode === 'flashcard') {
     renderFlashcardMode(wordsWithVisuals, container, lang);
   } else {

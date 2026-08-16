@@ -24,14 +24,8 @@
 .settings-section:first-child { padding-top: 0; }
 .settings-section:last-child  { border-bottom: none; padding-bottom: 0; }
 
-.settings-section-title {
-  font-size: 0.62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-  margin-bottom: 0.75rem;
-}
+/* Type from .ui-label. */
+.settings-section-title { margin-bottom: 0.75rem; }
 
 /* ── Row ── */
 .settings-row {

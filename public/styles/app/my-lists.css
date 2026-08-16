@@ -49,14 +49,8 @@
   flex-shrink: 0;
 }
 
-.ml-lang-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
+/* Type from .ui-label. */
+.ml-lang-label { --ui-label-size: 0.65rem; }
 
 .ml-lang-select {
   flex: 1;
@@ -80,13 +74,8 @@
   flex-shrink: 0;
 }
 
-.ml-sidebar-title {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text);
-}
+/* Type from .ui-label, which also gives it the primary text colour. */
+.ml-sidebar-title { --ui-label-size: 0.7rem; }
 
 .ml-new-list-btn {
   font-size: 0.72rem;
@@ -614,15 +603,37 @@
   white-space: nowrap;
   line-height: 1.5;
 }
-/* Colour by POS type */
-.ml-word-pos[data-pos="verb"]        { color: #2563eb; border-color: #bfdbfe; background: #eff6ff; }
-.ml-word-pos[data-pos="noun"]        { color: #16a34a; border-color: #bbf7d0; background: #f0fdf4; }
-.ml-word-pos[data-pos="adjective"]   { color: #d97706; border-color: #fde68a; background: #fffbeb; }
-.ml-word-pos[data-pos="adverb"]      { color: #9333ea; border-color: #e9d5ff; background: #faf5ff; }
+/* Colour by POS type.
+   One hue per part of speech, derived the same way the conjugation tense
+   chips derive theirs — see the --tense-hue block in conjugation.css. These
+   were four sets of fixed light-mode hexes, so in dark mode the badges stayed
+   pale blue and green on a dark row. */
+.ml-word-pos[data-pos="verb"]      { --pos-hue: 217; }  /* blue   */
+.ml-word-pos[data-pos="noun"]      { --pos-hue: 142; }  /* green  */
+.ml-word-pos[data-pos="adjective"] { --pos-hue:  32; }  /* amber  */
+.ml-word-pos[data-pos="adverb"]    { --pos-hue: 280; }  /* violet */
+
+.ml-word-pos[data-pos="verb"],
+.ml-word-pos[data-pos="noun"],
+.ml-word-pos[data-pos="adjective"],
+.ml-word-pos[data-pos="adverb"] {
+  color:        hsl(var(--pos-hue) 60% 34%);
+  border-color: hsl(var(--pos-hue) 55% 45% / 0.45);
+  background:   hsl(var(--pos-hue) 60% 50% / 0.10);
+}
+html.dark .ml-word-pos[data-pos="verb"],
+html.dark .ml-word-pos[data-pos="noun"],
+html.dark .ml-word-pos[data-pos="adjective"],
+html.dark .ml-word-pos[data-pos="adverb"] {
+  color: hsl(var(--pos-hue) 62% 70%);
+}
+
+/* The closed-class words share the muted default — colouring eight more
+   hues would make the list read as decoration rather than information. */
 .ml-word-pos[data-pos="pronoun"],
 .ml-word-pos[data-pos="preposition"],
 .ml-word-pos[data-pos="conjunction"],
-.ml-word-pos[data-pos="article"]     { color: var(--text-muted); }
+.ml-word-pos[data-pos="article"] { color: var(--text-muted); }
 
 /* Smaller variant used inside add-search results */
 .ml-word-pos--result {
@@ -821,15 +832,8 @@
   overflow: hidden;
 }
 
-.ml-move-popover-title {
-  font-size: 0.62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-muted);
-  padding: 0.3rem 0.55rem 0.2rem;
-  border-bottom: 1px solid var(--border);
-}
+/* (.ml-move-popover-title removed — the popover renders -tabs and -empty,
+   never a title.) */
 
 .ml-move-popover-item {
   display: block;
@@ -1263,12 +1267,9 @@
   gap: 0.3rem;
   padding: 0.35rem 0.85rem 0.1rem;
 }
+/* Type from .ui-label. */
 .ml-band-label {
-  font-size: 0.62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-muted);
+  --ui-label-size: 0.62rem;
   margin-right: 0.2rem;
 }
 .ml-band-chip { font-family: 'DM Mono', monospace; letter-spacing: 0.02em; }

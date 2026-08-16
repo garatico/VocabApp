@@ -31,13 +31,8 @@
   gap: 0.2rem;
 }
 
-.control-group > label {
-  font-size: 0.74rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-muted);
-}
+/* Type from .ui-label. Was weight 600 here and 700 in every other label —
+   an inconsistency, not a decision. */
 
 /* Size select + custom input + mode toggle side by side */
 /* ── Shared control sizing across the whole controls bar ──
@@ -247,13 +242,10 @@
 /* ── Inline "Order" label ──────────────────────────────────────
    Sits beside the in-quiz order dropdowns in table and recall, so
    they read the same as the labelled one in conjugation. */
+/* Type from .ui-label — same size as .conj-order-label, which is the point:
+   the three in-quiz order controls should read identically. */
 .inline-order-label {
-  font-size: 0.64rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-muted);
-  white-space: nowrap;
+  --ui-label-size: 0.64rem;
   margin-right: 0.05rem;
 }
 

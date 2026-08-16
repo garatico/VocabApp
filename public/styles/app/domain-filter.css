@@ -30,18 +30,9 @@
   color: var(--accent);
 }
 
-#clearAllDomains {
-  margin-left: auto;
-  font-size: 0.65rem;
-  padding: 0.12rem 0.45rem;
-  background: transparent;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  color: var(--text-muted);
-  font-weight: 600;
-  transition: background var(--transition-fast), color var(--transition-fast);
-}
+/* Box from .ui-btn-mini. The hover is deliberately different — this one
+   destroys a selection, the All / None pair only changes it. */
+#clearAllDomains { margin-left: auto; }
 #clearAllDomains:hover {
   background: var(--danger-light);
   color: var(--danger);

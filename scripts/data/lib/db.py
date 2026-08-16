@@ -17,6 +17,8 @@ lib/curated.py about what is on disk.
 import json
 import shutil
 import sqlite3
+import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -137,6 +139,22 @@ def open_db(db_path: Path = DB_PATH, create: bool = True) -> sqlite3.Connection:
                 return conn
             conn.close()
             print(f'  DB integrity check failed ({result[0]}); rebuilding…')
+        except sqlite3.OperationalError as e:
+            # An operational error is the environment failing, not the file
+            # being corrupt: a lock the filesystem can't grant, a disk I/O
+            # error on a network share or a mounted drive, the file open in
+            # another process. The rebuild path below MOVES THE DATABASE ASIDE
+            # and creates an empty one, which for a transient error would
+            # silently replace every word in the app with nothing. Refuse
+            # instead, and say what to try.
+            raise RuntimeError(
+                f'Could not open {db_path}: {e}\n'
+                f'  This is the filesystem or another process, not a corrupt file — '
+                f'a corrupt database fails integrity_check instead.\n'
+                f'  Close anything else using the database and try again. If the '
+                f'path is a network share or a mounted drive, run the pipeline '
+                f'against a local copy.'
+            ) from e
         except Exception as e:
             print(f'  DB could not be opened ({e}); rebuilding…')
 
@@ -161,22 +179,91 @@ def open_db(db_path: Path = DB_PATH, create: bool = True) -> sqlite3.Connection:
 
 def backup_db(db_path: Path = DB_PATH) -> Optional[Path]:
     """
-    Hot-copy the database to <name>.db.bak using SQLite's backup API, which is
-    safe to run against a live connection. Returns the backup path, or None if
+    Copy the database to <name>.db.bak. Returns the backup path, or None if
     there was nothing to back up.
+
+    Prefers SQLite's backup API, which is safe against a live connection. That
+    API needs file locks, and some filesystems cannot provide them — a network
+    share, or the Linux view of a mounted Windows drive, where it fails with
+    "disk I/O error" before the copy starts. Falling back to a plain file copy
+    is correct there: the pipeline is the only writer, and it has not opened
+    the database yet at this point.
+
+    Raising instead would mean the whole sync step aborts because the *backup*
+    failed, which is the one part of it that exists to make failure survivable.
     """
     db_path = Path(db_path)
     if not db_path.exists():
         return None
     backup_path = db_path.with_suffix('.db.bak')
-    src = sqlite3.connect(str(db_path))
-    dst = sqlite3.connect(str(backup_path))
+
     try:
-        src.backup(dst)
+        src = sqlite3.connect(str(db_path))
+        dst = sqlite3.connect(str(backup_path))
+        try:
+            src.backup(dst)
+        finally:
+            dst.close()
+            src.close()
+        return backup_path
+    except sqlite3.Error as exc:
+        try:
+            shutil.copy2(db_path, backup_path)
+            print(f'  DB backup    : SQLite backup API unavailable here ({exc}); '
+                  f'used a file copy instead')
+            return backup_path
+        except OSError as copy_exc:
+            print(f'  DB backup    : FAILED — {copy_exc}')
+            print('                 refusing to continue without a backup')
+            raise
+
+
+@contextmanager
+def writable(db_path: Path = DB_PATH):
+    """
+    Yield a connection to the database that is safe to write through.
+
+    Normally that is just the database. But SQLite needs file locks, and some
+    filesystems don't provide them — a network share, or a folder synced by
+    OneDrive/Dropbox, or the Linux view of a mounted Windows drive. There the
+    open fails with "disk I/O error" no matter how healthy the file is.
+
+    In that case the work happens on a scratch copy on local disk and the
+    result is copied back over the original when it succeeds. Copying rather
+    than renaming is deliberate: those same filesystems often refuse the
+    rename/unlink that shutil.move needs, while an in-place overwrite works.
+
+    It is also the safer order in general, and the one curated.write already
+    uses for the JSONL: a crash partway through an import leaves the real
+    database untouched instead of half-written.
+    """
+    db_path = Path(db_path)
+    try:
+        conn = open_db(db_path)
+    except RuntimeError as exc:
+        if 'Could not open' not in str(exc):
+            raise
+        print(f'  DB           : {db_path.name} cannot be locked here; '
+              f'working on a local copy')
+        with tempfile.TemporaryDirectory() as tmp:
+            scratch = Path(tmp) / db_path.name
+            shutil.copy2(db_path, scratch)
+            conn = open_db(scratch)
+            try:
+                yield conn
+                conn.commit()
+            finally:
+                conn.close()
+            # Only reached when the import didn't raise.
+            shutil.copyfile(scratch, db_path)
+            print(f'  DB           : copied back to {db_path}')
+        return
+
+    try:
+        yield conn
+        conn.commit()
     finally:
-        dst.close()
-        src.close()
-    return backup_path
+        conn.close()
 
 
 # NOTE: keep this column list in sync with the table. band, corpus_frequency,

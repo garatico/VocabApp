@@ -87,14 +87,8 @@
 }
 .shortcuts-group:last-child { margin-bottom: 0; }
 
-.shortcuts-group-title {
-  font-size: 0.62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-  margin-bottom: 0.5rem;
-}
+/* Type from .ui-label. */
+.shortcuts-group-title { margin-bottom: 0.5rem; }
 
 /* ── Row ── */
 .shortcuts-row {

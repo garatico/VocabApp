@@ -11,6 +11,17 @@
   box-shadow: var(--shadow);
 }
 
+/* Click mode is a narrow centred column. Constrain the section's own bar and
+   pills to match, so the bar sits directly over the cards the way table
+   mode's does instead of running past them on both sides. */
+#pictureArea.pm-mode-click > .progressWrap,
+#pictureArea.pm-mode-click > .quiz-score,
+#pictureArea.pm-mode-click > .quiz-summary {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* ── Empty state ────────────────────────────────────────────── */
 .picture-empty {
   padding: 3rem 2rem;
@@ -26,9 +37,22 @@
 /* ── Card grid ──────────────────────────────────────────────── */
 .picture-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  /* Was minmax(200px, ...) which packed 6-7 narrow cards across a wide
+     window and left the photos small. 5 per row on a desktop viewport gives
+     each image noticeably more space; auto-fill still collapses the count
+     gracefully as the window narrows. */
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 1.25rem;
   padding: 1rem 0;
+}
+
+@media (min-width: 1200px) {
+  .picture-grid { grid-template-columns: repeat(5, 1fr); }
+}
+@media (min-width: 1700px) {
+  /* Beyond 5 the cards start growing rather than multiplying, which is the
+     point — bigger images, not more of them. */
+  .picture-grid { grid-template-columns: repeat(5, 1fr); max-width: 1800px; }
 }
 
 /* ── Individual card ────────────────────────────────────────── */
@@ -41,7 +65,7 @@
   flex-direction: column;
   align-items: center;
   gap: 0.85rem;
-  position: relative; /* needed for overlay arrows */
+  position: relative; /* containing block for the tooltip */
   transition: border-color var(--transition-fast),
               background   var(--transition-fast);
 }
@@ -137,28 +161,12 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* Colours and states from .ui-btn-danger. It had its own border colour and
+   a brightness() hover, so it was the one Give Up in the app that darkened
+   instead of turning pink. */
 .picture-give-up-btn {
-  flex-shrink: 0;
   padding: 0.45rem 1rem;
-  background: var(--danger-light);
-  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
-  border-radius: var(--radius-sm);
   font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--danger);
-  cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
-  white-space: nowrap;
-}
-
-.picture-give-up-btn:hover:not(:disabled) {
-  background: var(--danger-light);
-  filter: brightness(0.95);
-}
-
-.picture-give-up-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
 }
 
 /* ================================================================
@@ -173,13 +181,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 0.3rem;           /* arrow · picture · arrow, none of them overlapping */
 }
 
 .vc-visual {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   height: 100%;
 }
 
@@ -193,13 +203,13 @@
   /* inherits font-size from outer context */
 }
 
-/* Arrows overlay the image edges, don't eat into it */
+/* Arrows sit *beside* the image, in the flow, not floated over its edges.
+   Overlaid they covered the left and right of the picture — which on a photo
+   of an animal is often the part that identifies it. They keep their space
+   when faded out, so showing them on hover doesn't shift the layout. */
 .vc-arrow {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  margin: auto;          /* vertical centering without transform — no jitter */
-  z-index: 2;
+  position: static;
+  flex: 0 0 auto;
   width: 1.6rem;
   height: 1.6rem;
   border-radius: 50%;
@@ -217,8 +227,8 @@
   user-select: none;
 }
 
-.vc-prev { left:  4px; }
-.vc-next { right: 4px; }
+/* .vc-prev / .vc-next need no positioning now — the flex order in .vc-inner
+   (prev, visual, next) already puts them on the right sides. */
 
 /* Show arrows on card hover */
 .picture-card:hover .vc-arrow,
@@ -294,11 +304,7 @@
   margin-bottom: 1rem;
 }
 
-.fc-counter {
-  font-size: 0.85rem;
-  color: var(--text-muted, #6b7280);
-  font-variant-numeric: tabular-nums;
-}
+/* Type from .ui-stat. */
 
 /* ── Arrow + card row ───────────────────────────────────────── */
 .fc-row {

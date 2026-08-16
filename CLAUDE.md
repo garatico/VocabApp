@@ -165,6 +165,7 @@ python scripts/data/pipeline.py                            # list the steps
 | step       | what it does                                             | in `all`? |
 |------------|----------------------------------------------------------|-----------|
 | `mine`     | OpenSubtitles corpus → new curated entries (+ glosses)    | no — network, rate-limited, batched |
+| `seed`     | `data/seed/<language>.txt` → new curated entries          | yes — local, offline, idempotent |
 | `dedupe`   | drop duplicate and junk entries                           | yes |
 | `backfill` | fill missing pos/glosses so `sync` stops skipping rows    | yes |
 | `enrich`   | gender, domains, canonical domain names (Spanish)         | yes |
@@ -189,7 +190,7 @@ Two flags, identical on every step:
 |------|---------|
 | *(omitted)* | preview — reports what it would do, changes nothing |
 | `--write` / `-w` | apply, after taking a backup |
-| `--langs` / `-l` | `spa fra ita por`; several at once is fine; **omitted = all four** |
+| `--langs` / `-l` | `spa fra ita por deu nld`; several at once is fine; **omitted = all six** |
 
 Every run opens with a header stating the mode, the languages and what it is
 about to touch, and closes with whether anything was written:
@@ -253,7 +254,7 @@ honour, and it is why the steps compose into `all` safely.
 
 ```bash
 pip install -r scripts/data/requirements.txt
-python -m spacy download es_core_news_sm    # fr_ / it_ / pt_core_news_sm too
+python -m spacy download es_core_news_sm    # fr_ / it_ / pt_ / de_core_news_sm too
 ```
 
 The knobs, in the order they cut the candidate pool:
@@ -266,8 +267,84 @@ The knobs, in the order they cut the candidate pool:
 | `--batch` | 500 | caps how many entries actually get appended per language per run |
 
 Then: already-curated words are skipped (their corpus frequency is copied onto
-the existing entry rather than discarded), the English blocklist applies, only
-noun/verb/adjective survive, and a word with no gloss is dropped.
+the existing entry rather than discarded), only noun/verb/adjective survive, and
+a word with no gloss is dropped.
+
+`corpus.load_english_blocklist` exists but **nothing calls it** — `mine` relies
+on spaCy's POS tag instead. It now takes the language it is filtering for; it
+used to whitelist against the Spanish corpus whatever the target, which would
+delete *hand, arm, finger, wind, ball, warm, land, best, wild, rat, gift, band*
+from German the moment anyone wired it up.
+
+### Seeding a language by hand (`seed`)
+
+`mine` needs spaCy and a network connection. `seed` needs neither: it reads
+`data/seed/<language>.txt`, a hand-written `word|pos|gender|gloss;gloss` list,
+and turns it into curated entries. That is how German was bootstrapped, and how
+any language can be given a usable core vocabulary before mining is possible.
+
+Only the words and their glosses are hand-written. **Rank, band, difficulty and
+`corpus_frequency` are read from the OpenSubtitles corpus by the step itself**,
+so the seed file carries no numbers and cannot drift out of step with the
+frequency data. Entries come out ordered by real corpus frequency, so "Top 100"
+in the app means the hundred commonest of them.
+
+It is idempotent — words already in the curated file are skipped — so it is safe
+to re-run, and safe to run after mining. It is in the `all` chain for that
+reason, and is a no-op for the four languages with no seed file.
+
+Part of speech and noun capitalisation are checked against **HanTa**
+(`pip install HanTa`) when it is installed; disagreements are reported, not
+enforced. HanTa rather than spaCy because its German model ships inside the
+wheel and needs no separate download. The check tags nouns in their capitalised
+form — handed lowercase, the tagger returns whichever verb or adjective the noun
+collides with (*frage* for Frage, *liebe* for Liebe, *arm* for Arm) and would
+report every one as an error.
+
+Roughly a dozen genuine disagreements survive for German and all are correct as
+written: `weiß` is *white* and *I know*; `ganz`, `rund` and `einfach` are
+adjective and adverb both.
+
+### German
+
+German is mined the same way as the other four, with three differences:
+
+- **The corpus is lowercase, German nouns are not.** `de_50k.txt` has `mann`,
+  not `Mann`, and case is the only thing separating *essen* (to eat) from
+  *Essen* (a meal). `analyze_word` tags German twice — once as given and once
+  capitalised, since `de_core_news_sm` is trained on cased text and capital
+  letters are its strongest noun signal — and `display_lemma` restores the
+  capital on any word tagged NOUN. Keys stay lowercase throughout; only the
+  stored `word` is cased.
+- **No conjugations.** mlconjug3 covers en/es/fr/it/pt/ro and has no German, so
+  German verbs import with `conjugations: null`. `LANGS_WITHOUT_CONJUGATION` in
+  `config.py` makes `sync` report that once instead of failing per verb. Giving
+  German real conjugations means writing a rules engine for it, the way Spanish
+  has `verb-rules.ts`.
+- **No plural merging.** `deduplicate_lemma_map`'s `-s`/`-es` rule is gated to
+  `PLURAL_S_LANGS`. German plurals are formed by suffix, umlaut, both or neither
+  (Haus→Häuser, Auto→Autos, Fenster→Fenster), so the rule does not describe the
+  language — what it *would* do is merge Eis (ice) into Ei (egg) and Reis (rice)
+  into Rei. spaCy already lemmatises German to the singular.
+
+**In the app**, German is offered in Table, Recall, Single Word, Picture Quiz
+and My Lists. Conjugation mode is disabled for it — the tab greys out with the
+reason on hover — because there is no conjugation data to drill.
+`src/client/data/languages.ts` is the single list of languages and their
+capabilities; the dropdown, the ISO codes and that tab gate all read from it,
+and `GET /api/languages` tells the dropdown which languages the DB actually has
+rows for so an un-mined language shows as "German — no data yet" rather than
+failing when picked.
+
+Answer matching runs through `foldKey`, which lowercases, so a learner typing
+*hund* is marked correct for *Hund*. Capitalisation is taught by what is shown,
+not enforced by the checker.
+
+`CONJ_VERB_SUFFIXES['deu']` is deliberately empty. Every German verb ending is
+also a noun ending (`-te`: sagte, but also Tüte/Miete/Seite; `-t`: 3rd person,
+but also Stadt/Welt/Wort). Fill it from observed junk in a real run — four
+Spanish suffix heuristics were written from first principles and all four had to
+be reverted after eating real headwords.
 
 **Glosses are cached**, so re-mining is mostly free. `data/gloss_cache/` already
 holds 26,010 Spanish lookups with a 90% hit rate, ~16,700 of which are glossed
@@ -281,7 +358,7 @@ words not yet in the curated file — those cost no network at all.
 | rank, difficulty, **band** | derived from frequency rank — `rank_to_band` / `rank_to_difficulty` in `config.py` |
 | **corpus_frequency** | `mine`, from the OpenSubtitles occurrence count |
 | gender, domains | `enrich` (Spanish rules only) |
-| conjugations, past_participle, gerund | `sync` via mlconjug3 — fra/ita/por only |
+| conjugations, past_participle, gerund | `sync` via mlconjug3 — fra/ita/por only; **deu has no source at all** |
 | conjugation_class, future_stem, overrides | Spanish verbs; consumed by `verb-rules.ts` at runtime |
 | ipa, syllables, notes, register, plural, reflexive | **manual** — admin panel, no automated source |
 | emoji | nothing — Picture Quiz resolves visuals through `visual-map.ts` |

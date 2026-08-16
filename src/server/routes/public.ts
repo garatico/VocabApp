@@ -6,7 +6,7 @@
  */
 
 import { Router }          from 'express';
-import { loadVocabFile }   from '../lib/vocab-loader.js';
+import { loadVocabFile, getSupportedLanguages } from '../lib/vocab-loader.js';
 
 const router = Router();
 
@@ -25,6 +25,21 @@ router.get('/vocab/:language', (req, res, next) => {
       metadata: { timestamp: new Date().toISOString(), cacheAge: vocab.cacheAge || 0 },
       data:     vocab.words,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/languages
+//
+// Which languages actually have rows in the database. The client offers a
+// fixed list (data/languages.ts) but a language only becomes usable once the
+// pipeline has mined and synced it, so this is what lets the dropdown say
+// "German — no data yet" instead of failing on selection.
+router.get('/languages', (_req, res, next) => {
+  try {
+    res.set('Cache-Control', 'public, max-age=60');
+    res.json({ success: true, languages: getSupportedLanguages() });
   } catch (error) {
     next(error);
   }
