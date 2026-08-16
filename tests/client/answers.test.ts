@@ -51,6 +51,57 @@ describe('isCorrect (lenient forward matching)', () => {
   });
 });
 
+describe('infinitives with and without "to"', () => {
+  // Every language but Spanish writes verb glosses as "to X"…
+  const comprar = word({ word: 'comprar', pos: 'verb', glosses: ['to buy'] });
+  // …and the Spanish set is written bare, so both directions have to work.
+  const ser = word({ word: 'ser', pos: 'verb', glosses: ['be', 'is', 'am'] });
+
+  it('accepts the bare form of a "to X" gloss', () => {
+    expect(isCorrect('buy', comprar)).toBe(true);
+    expect(isCorrect('to buy', comprar)).toBe(true);
+  });
+
+  it('accepts the "to X" form of a bare gloss', () => {
+    expect(isCorrect('to be', ser)).toBe(true);
+    expect(isCorrect('be', ser)).toBe(true);
+  });
+
+  it('still rejects a different verb', () => {
+    expect(isCorrect('sell', comprar)).toBe(false);
+    expect(isCorrect('to sell', comprar)).toBe(false);
+  });
+
+  it('handles multi-word and parenthesised infinitives', () => {
+    const kunnen = word({ word: 'kunnen', pos: 'verb', glosses: ['to be able to'] });
+    expect(isCorrect('be able to', kunnen)).toBe(true);
+    const savoir = word({ word: 'savoir', pos: 'verb', glosses: ['to know (facts)'] });
+    expect(isCorrect('know', savoir)).toBe(true);
+    expect(isCorrect('to know', savoir)).toBe(true);
+  });
+
+  it('applies to each comma-separated alternative', () => {
+    const w = word({ word: 'laten', pos: 'verb', glosses: ['to let, to leave'] });
+    expect(isCorrect('let', w)).toBe(true);
+    expect(isCorrect('leave', w)).toBe(true);
+  });
+
+  it('does not treat a bare "to" as an infinitive marker', () => {
+    const a = word({ word: 'a', pos: 'preposition', glosses: ['to'] });
+    expect(isCorrect('to', a)).toBe(true);
+    expect(isCorrect('', a)).toBe(false);
+  });
+
+  it('works for untagged rows, since pos is often null', () => {
+    const untagged = word({ word: 'kopen', glosses: ['to buy'] });
+    expect(isCorrect('buy', untagged)).toBe(true);
+  });
+
+  it('works via the pipe-separated answers field too', () => {
+    expect(isCorrect('buy', word({ word: 'comprar', answers: 'to buy|to purchase' }))).toBe(true);
+  });
+});
+
 describe('isReverseCorrect (English → target word)', () => {
   const habla = word({ word: 'habla', linguistic: { infinitive: 'hablar' } });
 
@@ -83,6 +134,11 @@ describe('strict variants (diacritics significant)', () => {
     const un = word({ word: 'un', glosses: ['a, an (masc. sing.)'] });
     expect(isCorrectStrict('an', un)).toBe(true);
     expect(isCorrectStrict('the', un)).toBe(false);
+  });
+
+  it('isCorrectStrict accepts the bare infinitive — "to" is not a diacritic', () => {
+    const comprar = word({ word: 'comprar', pos: 'verb', glosses: ['to buy'] });
+    expect(isCorrectStrict('buy', comprar)).toBe(true);
   });
 });
 
