@@ -900,22 +900,52 @@
 .conj-full-nav:hover:not(:disabled) { border-color: var(--text-muted); }
 .conj-full-nav:disabled { opacity: 0.4; cursor: default; }
 
-/* The row itself. Columns size to their content and scroll sideways rather
+/* The grid stacks verb blocks; the horizontal row is inside each one. */
+.conj-cards-grid--full {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.conj-verb-block {
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 12px);
+  background: var(--surface2);
+  overflow: hidden;
+}
+
+.conj-verb-block-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.conj-full-rank {
+  margin-left: auto;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* One verb's tenses. Columns size to their content and scroll sideways rather
    than squeezing, since a conjugation squeezed to four characters is not
    readable and not worth showing. */
-.conj-cards-grid--full {
+.conj-verb-row {
   display: flex;
   flex-direction: row;
   align-items: start;
   gap: 0.6rem;
   overflow-x: auto;
-  padding-bottom: 0.4rem;
+  padding: 0.6rem;
   scroll-snap-type: x proximity;
 }
 
-.conj-cards-grid--full .conj-card {
+.conj-verb-row .conj-card {
   flex: 0 0 auto;
-  width: min(19rem, 78vw);
+  width: min(19rem, 82vw);
   scroll-snap-align: start;
 }
 
@@ -923,13 +953,27 @@
    text inputs is miserable on a phone: focusing a field scrolls the row and
    you lose your place mid-answer. */
 @media (max-width: 640px) {
-  .conj-cards-grid--full {
+  .conj-verb-row {
     flex-direction: column;
     overflow-x: visible;
   }
-  .conj-cards-grid--full .conj-card { width: 100%; }
-  .conj-full-header { position: static; }
+  .conj-verb-row .conj-card { width: 100%; }
 }
+
+/* ── Pager ── */
+.conj-full-size-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.conj-full-size { min-height: 32px; }
+
 
 /* In Full Conjugation each card is one tense, so its pronouns run down a
    single column and the tenses are the columns of the chart. The card's
@@ -953,11 +997,6 @@
 .conj-cards-grid--full .conj-inner-grid .conj-row:last-child,
 .conj-cards-grid--full .conj-inner-grid .conj-row:nth-last-child(2):has(+ .conj-row-tense-hidden) {
   border-bottom: none;
-}
-
-/* Narrower now that it holds one column rather than two. */
-.conj-cards-grid--full .conj-card {
-  width: min(15rem, 72vw);
 }
 
 @media (max-width: 640px) {

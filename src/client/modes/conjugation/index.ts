@@ -484,8 +484,31 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
 
   let viewMode: 'grid' | 'full' =
     localStorage.getItem('vq_conj_view') === 'full' ? 'full' : 'grid';
-  let fullIndex = 0;
 
+  /**
+   * Full Conjugation is paged, not stepped.
+   *
+   * It used to show one verb with Prev/Next, which meant a click between every
+   * verb and no way to see how far through you were. Table mode had already
+   * answered this: a page of them, scrolled, with a pager. The only reason to
+   * page at all rather than render all 249 is that a verb here is one card per
+   * selected tense — eight tenses turns 249 verbs into 1,992 cards, each with
+   * six inputs.
+   */
+  const CONJ_PAGE_SIZES = [5, 10, 25, 50] as const;
+  const DEFAULT_PAGE_SIZE = 10;
+
+  let fullPage = 0;
+  let pageSize = (() => {
+    const n = Number(localStorage.getItem('vq_conj_page_size'));
+    return (CONJ_PAGE_SIZES as readonly number[]).includes(n) ? n : DEFAULT_PAGE_SIZE;
+  })();
+
+  const pageCount = (): number => Math.max(1, Math.ceil(verbs.length / pageSize));
+  const pageStart = (): number => fullPage * pageSize;
+  const pageVerbs = (): Word[] => verbs.slice(pageStart(), pageStart() + pageSize);
+
+  // ── Pager ──
   const fullHeader = document.createElement('div');
   fullHeader.className = 'conj-full-header';
 
@@ -499,79 +522,125 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   fullNext.className = 'conj-full-nav';
   fullNext.textContent = 'Next ▶';
 
-  const fullTitle = document.createElement('div');
-  fullTitle.className = 'conj-full-title';
-
-  const fullWord = document.createElement('span');
-  fullWord.className = 'conj-full-word';
-  const fullGloss = document.createElement('span');
-  fullGloss.className = 'conj-full-gloss';
-
-  const fullStar = document.createElement('button');
-  fullStar.type = 'button';
-  fullStar.tabIndex = -1;
-
   const fullCount = document.createElement('span');
   fullCount.className = 'conj-full-count';
 
-  fullTitle.append(fullWord, fullStar, fullGloss);
-  fullHeader.append(fullPrev, fullTitle, fullCount, fullNext);
+  const sizeLabel = document.createElement('label');
+  sizeLabel.className = 'conj-full-size-label';
+  sizeLabel.textContent = 'Per page';
 
-  function currentFullVerb(): Word | null {
-    return viewMode === 'full' ? verbs[fullIndex] ?? null : null;
-  }
-
-  function syncFullStar(): void {
-    const verb = currentFullVerb();
-    if (!verb) return;
-    const lists = getWordLists(lang, verb.word);
-    fullStar.className = 'known-btn conj-full-star'
-      + (lists.length > 0 ? ' known-btn--active' : '');
-    fullStar.title = lists.length > 0
-      ? 'In lists: ' + lists.join(', ')
-      : 'Add to a list';
-  }
-
-  fullStar.addEventListener('click', e => {
-    e.stopPropagation();
-    const verb = currentFullVerb();
-    if (!verb) return;
-    openListPicker({ anchorEl: fullStar, lang, word: verb.word, onClose: syncFullStar });
+  const sizeSel = document.createElement('select');
+  sizeSel.className = 'conj-order-select conj-full-size';
+  sizeSel.title = 'Verbs shown at once. Each verb is one card per selected tense.';
+  CONJ_PAGE_SIZES.forEach(n => {
+    const o = document.createElement('option');
+    o.value = String(n); o.textContent = String(n); o.selected = n === pageSize;
+    sizeSel.appendChild(o);
   });
+  sizeLabel.appendChild(sizeSel);
+
+  fullHeader.append(fullPrev, fullCount, sizeLabel, fullNext);
 
   function syncFullHeader(): void {
     fullHeader.hidden = viewMode !== 'full';
     cardsGrid.classList.toggle('conj-cards-grid--full', viewMode === 'full');
-    const verb = currentFullVerb();
-    if (!verb) return;
-    fullWord.textContent  = verb.word;
-    fullGloss.textContent = buildGlossDisplay(verb);
-    fullCount.textContent = `Verb ${fullIndex + 1} of ${verbs.length}`;
-    fullPrev.disabled = fullIndex === 0;
-    fullNext.disabled = fullIndex >= verbs.length - 1;
-    syncFullStar();
+    if (viewMode !== 'full') return;
+    const from = verbs.length === 0 ? 0 : pageStart() + 1;
+    const to   = Math.min(pageStart() + pageSize, verbs.length);
+    fullCount.textContent =
+      `Verbs ${from}–${to} of ${verbs.length}  ·  Page ${fullPage + 1} of ${pageCount()}`;
+    fullPrev.disabled = fullPage === 0;
+    fullNext.disabled = fullPage >= pageCount() - 1;
   }
 
   /**
-   * Move to another verb.
+   * Turn to another page.
    *
-   * The verb being left is banked first. Cards hold their answers in the DOM,
-   * so rebuilding for the next verb discards them — without banking, walking
-   * through forty verbs would record nothing at all.
+   * The page being left is banked first. Cards hold their answers in their
+   * inputs, so rebuilding for the next page destroys them — without banking,
+   * working through several pages would record only the last.
    */
-  function gotoVerb(index: number): void {
-    if (index < 0 || index >= verbs.length || index === fullIndex) return;
-    bankCurrentVerb();
-    fullIndex = index;
+  function gotoPage(index: number): void {
+    const target = Math.max(0, Math.min(index, pageCount() - 1));
+    if (target === fullPage) return;
+    bankVisibleVerbs();
+    fullPage = target;
     buildCards();
     applyAllPronounToggles(cardsGrid);
     syncDeselectedCells();
     updateProgress();
-    cardsGrid.querySelector<HTMLInputElement>(`${VISIBLE_ROW} .conj-drill-input`)?.focus();
+    cardsGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  fullPrev.addEventListener('click', () => gotoVerb(fullIndex - 1));
-  fullNext.addEventListener('click', () => gotoVerb(fullIndex + 1));
+  fullPrev.addEventListener('click', () => gotoPage(fullPage - 1));
+  fullNext.addEventListener('click', () => gotoPage(fullPage + 1));
+
+  sizeSel.addEventListener('change', () => {
+    bankVisibleVerbs();
+    pageSize = Number(sizeSel.value) || DEFAULT_PAGE_SIZE;
+    localStorage.setItem('vq_conj_page_size', String(pageSize));
+    // Stay near where you were rather than jumping to the top: the verb that
+    // started the old page is the one you were working on.
+    fullPage = Math.floor(pageStart() / pageSize);
+    buildCards();
+    applyAllPronounToggles(cardsGrid);
+    syncDeselectedCells();
+    updateProgress();
+  });
+
+  /**
+   * One verb's block in the paged view: a header, then its tense cards.
+   *
+   * The header is what the old single-verb view had at the top of the screen —
+   * name, gloss and the add-to-list star — repeated per verb now that several
+   * are on screen. The cards themselves still hide their own copy of it.
+   */
+  function buildVerbBlock(verb: Word): { el: HTMLElement; row: HTMLElement } {
+    const el = document.createElement('section');
+    el.className = 'conj-verb-block';
+    el.dataset.verbBlock = verb.word;
+
+    const head = document.createElement('div');
+    head.className = 'conj-verb-block-head';
+
+    const word = document.createElement('span');
+    word.className = 'conj-full-word';
+    word.textContent = verb.word;
+
+    const star = document.createElement('button');
+    star.type = 'button';
+    star.tabIndex = -1;
+    star.textContent = '★';
+
+    function syncStar(): void {
+      const lists = getWordLists(lang, verb.word);
+      star.className = 'known-btn conj-full-star'
+        + (lists.length > 0 ? ' known-btn--active' : '');
+      star.title = lists.length > 0 ? 'In lists: ' + lists.join(', ') : 'Add to a list';
+    }
+    syncStar();
+    star.addEventListener('click', e => {
+      e.stopPropagation();
+      openListPicker({ anchorEl: star, lang, word: verb.word, onClose: syncStar });
+    });
+
+    const gloss = document.createElement('span');
+    gloss.className = 'conj-full-gloss';
+    gloss.textContent = buildGlossDisplay(verb);
+
+    const rank = document.createElement('span');
+    rank.className = 'conj-full-rank';
+    if (verb.rank != null) rank.textContent = '#' + verb.rank;
+    else rank.hidden = true;
+
+    head.append(word, star, gloss, rank);
+
+    const row = document.createElement('div');
+    row.className = 'conj-verb-row';
+
+    el.append(head, row);
+    return { el, row };
+  }
 
   // The toggle's markup starts on Grid; the stored preference may not.
   viewToggle?.querySelectorAll<HTMLElement>('.conj-toggle-btn').forEach(b => {
@@ -592,13 +661,14 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     const tenses = selectedTenses();
     builtTenses = [...tenses];
 
-    // Full Conjugation drills one verb at a time; the grid drills all of them.
-    // Same cards either way — only how many verbs are on screen differs.
-    const shown = viewMode === 'full'
-      ? verbs.slice(fullIndex, fullIndex + 1)
-      : verbs;
+    // The grid shows every verb, one card per verb per tense, flowing into
+    // columns. Full Conjugation shows a page of verbs, each as its own block
+    // with its tenses in a row. Same cards either way.
+    const shown = viewMode === 'full' ? pageVerbs() : verbs;
 
     shown.forEach(verb => {
+      const block = viewMode === 'full' ? buildVerbBlock(verb) : null;
+
       tenses.forEach(tenseKey => {
         const updater = buildCard({
           verb, lang, pronouns, tenseKey, getDisplayMode, onProgress: updateProgress,
@@ -610,9 +680,11 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
         updater.card.dataset.verb  = verb.word;
         updater.card.dataset.tense = tenseKey;
 
-        cardsGrid.appendChild(updater.card);
+        (block ? block.row : cardsGrid).appendChild(updater.card);
         cardUpdaters.push(updater);
       });
+
+      if (block) cardsGrid.appendChild(block.el);
     });
 
     syncFullHeader();
@@ -631,30 +703,41 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   const banked = { correct: new Set<string>(), missed: new Set<string>() };
 
   /**
-   * Score the verb currently on screen and remember the result.
+   * Score every verb currently on screen and remember the results.
    *
-   * A verb that was not touched at all is not banked either way: skipping past
+   * Called when the page is about to be rebuilt: turning a page, changing the
+   * page size, or leaving the view. Each verb is scored across all of its
+   * cards, so knowing the present tense does not mask not knowing the
+   * subjunctive — the same rule recordConjSession applies.
+   *
+   * A verb that was not touched at all is not banked either way: scrolling past
    * something is not the same as getting it wrong, and recording it as missed
    * would poison the "words I keep missing" order.
    */
-  function bankCurrentVerb(): void {
-    const verb = currentFullVerb();
-    if (!verb) return;
+  function bankVisibleVerbs(): void {
+    if (viewMode !== 'full') return;
 
-    let total = 0, correct = 0, answered = 0;
+    const perVerb = new Map<string, { total: number; correct: number; answered: number }>();
+
     cardsGrid.querySelectorAll<HTMLElement>('.conj-card').forEach(card => {
+      const word = card.dataset.verb;
+      if (!word) return;
+      const acc = perVerb.get(word) ?? { total: 0, correct: 0, answered: 0 };
       card.querySelectorAll(VISIBLE_ROW).forEach(row => {
         const inp = row.querySelector<HTMLInputElement>('.conj-drill-input');
         if (!inp) return;
-        total++;
-        if (inp.classList.contains('correct')) { correct++; answered++; }
-        else if (inp.classList.contains('revealed') || inp.classList.contains('missed')) answered++;
+        acc.total++;
+        if (inp.classList.contains('correct')) { acc.correct++; acc.answered++; }
+        else if (inp.classList.contains('revealed') || inp.classList.contains('missed')) acc.answered++;
       });
+      perVerb.set(word, acc);
     });
 
-    if (total === 0 || answered === 0) return;
-    if (correct === total) banked.correct.add(verb.word);
-    else                   banked.missed.add(verb.word);
+    perVerb.forEach((acc, word) => {
+      if (acc.total === 0 || acc.answered === 0) return;
+      if (acc.correct === acc.total) banked.correct.add(word);
+      else                           banked.missed.add(word);
+    });
   }
 
   /**
@@ -729,10 +812,10 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
       orderSel.value = verbOrder = (localStorage.getItem('vq_conj_order') as WordOrder) ?? 'rank';
       return;
     }
-    // Re-ordering makes the old position meaningless — verb 3 is a different
-    // verb now — so Full Conjugation restarts at the top of the new order.
-    bankCurrentVerb();
-    fullIndex = 0;
+    // Re-ordering makes the old position meaningless — page 3 holds different
+    // verbs now — so Full Conjugation restarts at the top of the new order.
+    bankVisibleVerbs();
+    fullPage = 0;
     buildCards();
     applyAllPronounToggles(cardsGrid);
     syncDeselectedCells();
@@ -821,21 +904,21 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     const next = btn.dataset.view === 'full' ? 'full' : 'grid';
     if (next === viewMode) return;
 
-    // Leaving Full Conjugation banks the verb on screen; the cards are about to
-    // be rebuilt for every verb and its answers would go with them.
-    if (viewMode === 'full') bankCurrentVerb();
+    // Leaving Full Conjugation banks the verbs on screen; the cards are about
+    // to be rebuilt for every verb and their answers would go with them.
+    bankVisibleVerbs();
 
     viewMode = next;
     localStorage.setItem('vq_conj_view', viewMode);
     viewToggle.querySelectorAll('.conj-toggle-btn')
       .forEach(b => b.classList.toggle('active', b === btn));
 
-    // Entering Full Conjugation starts at the first verb not already banked, so
-    // switching views mid-session picks up roughly where the grid left off
-    // rather than sending you back to the top.
+    // Entering Full Conjugation opens on the page holding the first verb not
+    // already banked, so switching views mid-session picks up roughly where the
+    // grid left off rather than sending you back to the start.
     if (viewMode === 'full') {
-      const next = verbs.findIndex(v => !banked.correct.has(v.word) && !banked.missed.has(v.word));
-      fullIndex = next === -1 ? 0 : next;
+      const at = verbs.findIndex(v => !banked.correct.has(v.word) && !banked.missed.has(v.word));
+      fullPage = at === -1 ? 0 : Math.floor(at / pageSize);
     }
 
     buildCards();
@@ -851,15 +934,9 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     if (!(e.ctrlKey || e.metaKey)) return;
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
 
-    // In Full Conjugation the cards on screen are all one verb, so the same
-    // shortcut moves between verbs rather than between cards — otherwise it
-    // would cycle the tenses of the verb you are already on and never leave it.
-    if (viewMode === 'full') {
-      e.preventDefault();
-      gotoVerb(fullIndex + (e.key === 'ArrowDown' ? 1 : -1));
-      return;
-    }
-
+    // No special case for Full Conjugation any more. It used to hold a single
+    // verb, so stepping between cards would have cycled that verb's tenses for
+    // ever; a page holds many verbs, so walking the cards walks the verbs too.
     const cards = Array.from(cardsGrid.querySelectorAll<HTMLElement>('.conj-card'));
     if (cards.length === 0) return;
 
