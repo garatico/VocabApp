@@ -92,6 +92,12 @@ export const PRONOUNS: Record<string, string[]> = {
   portuguese: ['eu', 'tu', 'ele / ela', 'nos',      'vos',      'eles / elas'],
   italian:    ['io', 'tu', 'lui / lei', 'noi',      'voi',      'loro'],
   french:     ['je', 'tu', 'il / elle', 'nous',     'vous',     'ils / elles'],
+  // German and Dutch have three persons singular and three plural like the
+  // Romance five, but the polite form is the 3rd person plural rather than a
+  // separate slot, so it is shown alongside it: Sie and u sit where they are
+  // actually conjugated rather than implying a seventh cell that does not exist.
+  german:     ['ich', 'du', 'er / sie / es', 'wir', 'ihr',    'sie / Sie'],
+  dutch:      ['ik',  'jij', 'hij / zij',    'wij', 'jullie', 'zij'],
 };
 
 export const TENSE_DEFS: Record<string, TenseDef[]> = {
@@ -132,5 +138,21 @@ export const TENSE_DEFS: Record<string, TenseDef[]> = {
     { key: 'subjunctive',     label: 'Subjonctif Present' },
     { key: 'past_participle', label: 'Participe Passe' },
     { key: 'gerund',          label: 'Gerondif' },
+  ],
+  // German and Dutch start with present, simple past and the perfect
+  // participle. Those three are what a learner needs to say anything about the
+  // past: the everyday past in both languages is the perfect, which is the
+  // participle plus a conjugated auxiliary, so the participle earns its place
+  // more than the Präteritum does. The compound tenses are built from these
+  // rather than being separate forms to memorise, so they are not yet offered.
+  german: [
+    { key: 'present',         label: 'Präsens' },
+    { key: 'preterite',       label: 'Präteritum' },
+    { key: 'past_participle', label: 'Partizip II' },
+  ],
+  dutch: [
+    { key: 'present',         label: 'Tegenwoordige Tijd' },
+    { key: 'preterite',       label: 'Verleden Tijd' },
+    { key: 'past_participle', label: 'Voltooid Deelwoord' },
   ],
 };

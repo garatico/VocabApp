@@ -53,7 +53,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from lib import curated, db, visuals                      # noqa: E402
+from lib import conjugations, curated, db, visuals        # noqa: E402
 from lib.config import (  # noqa: E402
     DB_PATH, LANG_NAMES, OS_LANG, LANGS_WITHOUT_CONJUGATION, curated_path,
 )
@@ -105,6 +105,7 @@ STEP_WRITES = {
     'dedupe':   'data/curated/*.jsonl',
     'backfill': 'data/curated/*.jsonl',
     'enrich':   'data/curated/*.jsonl  and  data/vocabulary.db',
+    'conjugations': 'data/curated/*.jsonl  (German and Dutch verbs)',
     'sync':     'data/vocabulary.db',
     'images':   'data/images/',
     'emoji':    'data/emoji/',
@@ -356,6 +357,64 @@ def step_sync(args) -> None:
         if conj_filled or trans_fixed:
             curated.write(lang, entries)
             print('  JSONL        : saved')
+
+
+def step_conjugations(args) -> None:
+    banner('CONJUGATIONS — Wiktionary tables → curated JSONL (German, Dutch)')
+
+    langs = [l for l in resolve_langs(args) if l in conjugations.SUPPORTED]
+    if not langs:
+        print('  Nothing to do — this step covers German and Dutch only.')
+        print('  Spanish generates its forms from the rules engine; French,')
+        print('  Italian and Portuguese import theirs from mlconjug3 at sync.')
+        return
+
+    for lang in langs:
+        lang_header(lang)
+        entries = curated.read(lang)
+        if not entries:
+            continue
+
+        verbs = [e for e in entries if e.get('pos') == 'verb']
+        todo = [e for e in verbs
+                if not (e.get('linguistic') or {}).get('conjugations')]
+        cache = conjugations.load_cache(lang)
+
+        print(f'  Verbs        : {len(verbs)} ({len(todo)} without a table)')
+        print(f'  Cache        : {len(cache)} previously fetched')
+        if args.limit:
+            todo = todo[:args.limit]
+            print(f'  Limit        : {len(todo)} this run')
+
+        ok = 0
+        misses = []
+        for entry in todo:
+            word = entry['word']
+            forms, reason = conjugations.fetch_conjugation(lang, word, cache)
+            if forms:
+                ok += 1
+                entry.setdefault('linguistic', {})['conjugations'] = forms
+                # Shown for the first few so a systematic parse error is visible
+                # immediately rather than after several hundred requests.
+                if ok <= 5:
+                    print(f'    {word:18} {forms["present"][0]:14} '
+                          f'{forms["preterite"][0]:14} {forms["past_participle"]}')
+            else:
+                misses.append(f'{word} ({reason})')
+
+        print(f'  Fetched      : {ok}')
+        print(f'  No table     : {len(misses)}')
+        for m in misses[:10]:
+            print(f'    skipped: {m}')
+        if len(misses) > 10:
+            print(f'    …and {len(misses) - 10} more')
+
+        if not args.write:
+            print('  JSONL        : skipped (dry run — pass --write to apply)')
+            continue
+        if ok:
+            curated.write(lang, entries)
+            print('  JSONL        : saved — run `sync` to push them to the DB')
 
 
 def step_all(args) -> None:
@@ -687,6 +746,12 @@ Example
 
     p = add('enrich', 'gender, domains and canonical domain names')
     p.set_defaults(func=step_enrich)
+
+    p = add('conjugations', 'Wiktionary verb tables → curated JSONL (German, Dutch)')
+    p.add_argument('--limit', type=int, default=0, metavar='N',
+                   help='stop after N verbs this run (0 = all). Each is one '
+                        'network request at ~1/sec.')
+    p.set_defaults(func=step_conjugations)
 
     p = add('sync', 'curated JSONL → vocabulary.db')
     p.set_defaults(func=step_sync)

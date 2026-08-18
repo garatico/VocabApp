@@ -25,6 +25,7 @@
     "data:all": "python scripts/data/pipeline.py all --write",
     "data:all:dry": "python scripts/data/pipeline.py all",
     "data:sync": "python scripts/data/pipeline.py sync --write",
+    "data:conjugations": "python scripts/data/pipeline.py conjugations --write",
     "data:dedupe": "python scripts/data/pipeline.py dedupe --write",
     "data:backfill": "python scripts/data/pipeline.py backfill --write",
     "data:enrich": "python scripts/data/pipeline.py enrich --write",
