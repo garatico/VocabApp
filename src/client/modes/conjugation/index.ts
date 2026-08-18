@@ -72,6 +72,56 @@ function isSingleForm(key: string): boolean {
   return SINGLE_FORM_TENSES.has(key);
 }
 
+/**
+ * A pronoun row can be hidden for two unrelated reasons, so each owns a class.
+ *
+ *   conj-row-hidden        the pronoun is toggled off. Global, set by the
+ *                          pronoun toggles, and applies to every card at once.
+ *   conj-row-tense-hidden  this card drills a single-form tense (gerund,
+ *                          participle), which has no pronouns at all. Per card,
+ *                          set by setSingleMode.
+ *
+ * They used to share `conj-row-hidden`, and applyAllPronounToggles would clear
+ * it on every pronoun that was toggled *on* — re-showing the six empty pronoun
+ * boxes on a gerund card that setSingleMode had just hidden. It was worked
+ * around by skipping applyAllPronounToggles when every selected tense was
+ * single-form, which held only until multi-tense drilling made "Gerundio and
+ * Presente" a normal thing to pick: the guard sees a non-single tense in the
+ * selection and lets the toggles run over the gerund cards anyway.
+ *
+ * Separate classes mean neither mechanism can clear the other's decision.
+ */
+const VISIBLE_ROW = '.conj-row:not(.conj-row-hidden):not(.conj-row-tense-hidden)';
+
+/**
+ * Is this entry a headword, or is it one form of some other verb?
+ *
+ * *hay* is a real vocabulary entry — rank 48, its own glosses and usage notes —
+ * and belongs in Table, Recall and the lists. It is also the impersonal present
+ * of *haber*, which it records in `linguistic.infinitive`, so offering it here
+ * gave the learner a second card drilling one cell of a verb they already had.
+ *
+ * The test is the relationship, not the word, so anything else stored the same
+ * way drops out too. Two things it must *not* drop:
+ *
+ *   - A verb with no recorded infinitive. That is the common case (3,364 of the
+ *     3,373 verbs in the database) and it is its own headword.
+ *   - A reflexive. *ducharse*, *quejarse* and six others record the bare stem
+ *     in `infinitive` — `divertirse` → `divertir` — but they are headwords in
+ *     their own right and conjugate differently from the bare verb. Romance
+ *     languages attach the clitic to the end of the infinitive, so a form that
+ *     *begins* with the whole infinitive is a derived headword; an inflected
+ *     form of some other lemma is not (*hay* does not begin with *haber*).
+ *
+ * The `reflexive` column would be the honest way to ask this, but it is 0 on
+ * every row in the database — nothing populates it.
+ */
+function isOwnInfinitive(w: Word): boolean {
+  const inf = w.linguistic?.infinitive;
+  if (!inf) return true;
+  return normalize(w.word).startsWith(normalize(inf));
+}
+
 const SINGLE_FORM_ROW_LABEL: Record<string, string> = {
   past_participle: 'participio',
   gerund:          'gerundio',
@@ -132,7 +182,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   // bars and the session record all agree on what the quiz contains.
   const regs      = activeRegularities();
   const everyReg  = regs.length >= 4;
-  const rawVerbs  = words.filter(w => w.pos === 'verb');
+  const rawVerbs  = words.filter(w => w.pos === 'verb' && isOwnInfinitive(w));
   const allVerbs  = everyReg
     ? rawVerbs
     // A verb with no recorded class has no bucket to be filtered into, so it
@@ -300,6 +350,10 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
 
   const cardsGrid = document.createElement('div');
   cardsGrid.className = 'conj-cards-grid';
+  // Keep-shape leaves a blank cell where a deselected pronoun was, so the card
+  // still reads as a conjugation chart. Set here rather than per row because it
+  // is one decision for the whole quiz, and the pronoun toggles re-run often.
+  cardsGrid.classList.toggle('conj-cards-grid--keep-shape', Settings.getConjKeepShape());
 
   interface Counts { correct: number; revealed: number; missed: number; left: number; total: number }
 
@@ -315,7 +369,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     cardsGrid.querySelectorAll('.conj-card').forEach(card => {
       let cardTotal = 0, cardCorrect = 0, cardRevealed = 0, cardMissed = 0;
 
-      card.querySelectorAll('.conj-row:not(.conj-row-hidden)').forEach(row => {
+      card.querySelectorAll(VISIBLE_ROW).forEach(row => {
         const inp = row.querySelector<HTMLInputElement>('.conj-drill-input');
         if (!inp) return;
         cardTotal++;
@@ -421,7 +475,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     cardsGrid.querySelectorAll<HTMLElement>('.conj-card').forEach(card => {
       const word = card.dataset.verb;
       if (!word) return;
-      const rows = card.querySelectorAll('.conj-row:not(.conj-row-hidden)');
+      const rows = card.querySelectorAll(VISIBLE_ROW);
       let total = 0, correct = 0;
       rows.forEach(row => {
         const inp = row.querySelector<HTMLInputElement>('.conj-drill-input');
@@ -470,19 +524,17 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
       return;
     }
     buildCards();
-    if (!selectedTenses().every(isSingleForm)) applyAllPronounToggles(cardsGrid);
+    applyAllPronounToggles(cardsGrid);
     syncPronounRowVisibility();
     updateProgress();
   });
 
   container.append(orderRow, progressSection, cardsGrid);
 
-  // Only apply pronoun toggles for conjugation tenses — skipping it in
-  // single-form mode prevents applyAllPronounToggles from re-showing the
-  // pronoun rows that buildCard already hid via setSingleMode(true).
-  if (!selectedTenses().every(isSingleForm)) {
-    applyAllPronounToggles(cardsGrid);
-  }
+  // Unconditional: the pronoun toggles and the single-form tenses own separate
+  // classes now (see VISIBLE_ROW), so this can no longer un-hide the pronoun
+  // rows of a gerund or participle card.
+  applyAllPronounToggles(cardsGrid);
   syncPronounRowVisibility();
 
   setProgressCallback(updateProgress);
@@ -564,8 +616,8 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
       : cards[(idx + step + cards.length) % cards.length];
 
     const target =
-      next.querySelector<HTMLInputElement>('.conj-row:not(.conj-row-hidden) .conj-drill-input:not(:disabled)')
-      ?? next.querySelector<HTMLInputElement>('.conj-row:not(.conj-row-hidden) .conj-drill-input');
+      next.querySelector<HTMLInputElement>(`${VISIBLE_ROW} .conj-drill-input:not(:disabled)`)
+      ?? next.querySelector<HTMLInputElement>(`${VISIBLE_ROW} .conj-drill-input`);
     target?.focus();
     next.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
@@ -858,8 +910,10 @@ function buildCard(
   }
 
   function setSingleMode(single: boolean): void {
-    pronounRows.forEach(row => row.classList.toggle('conj-row-hidden', single));
-    singleFormRow.classList.toggle('conj-row-hidden', !single);
+    // conj-row-tense-hidden, not conj-row-hidden — see VISIBLE_ROW. The pronoun
+    // toggles own the other class and would undo this on their next pass.
+    pronounRows.forEach(row => row.classList.toggle('conj-row-tense-hidden', single));
+    singleFormRow.classList.toggle('conj-row-tense-hidden', !single);
     if (single) {
       singleLabel.textContent = SINGLE_FORM_ROW_LABEL[getTenseKey()] ?? getTenseKey();
     }

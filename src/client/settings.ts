@@ -62,6 +62,18 @@ export const Settings = {
    * the openings of longer ones.
    */
   getRecallAutoEnter: (): boolean => get('recall_auto_enter', 'true') === 'true',
+
+  // ── Conjugation ────────────────────────────────────────────────────────────
+
+  /**
+   * What a deselected pronoun leaves behind.
+   *
+   * True (the default) keeps the cell and blanks it, so dropping *vosotros*
+   * still gives a 2×3 chart with a hole in it and every other pronoun in the
+   * place a learner expects to find it. False removes the cell and lets the
+   * rest close up, which is denser but moves *ellos* into the *vosotros* slot.
+   */
+  getConjKeepShape: (): boolean => get('conj_keep_shape', 'true') === 'true',
 };
 
 // ── Font size application ─────────────────────────────────────────────────────
@@ -191,6 +203,19 @@ export function bindSettings(): void {
     set('recall_auto_enter', btn.dataset.auto ?? 'true');
   });
 
+  // Conjugation: what a deselected pronoun leaves behind
+  document.getElementById('settingConjShape')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingConjShape', btn);
+    const keep = btn.dataset.shape ?? 'true';
+    set('conj_keep_shape', keep);
+    // Applies to a quiz already on screen — it is only a layout choice, so
+    // there is no reason to make the learner restart to see it.
+    document.querySelector('.conj-cards-grid')
+      ?.classList.toggle('conj-cards-grid--keep-shape', keep === 'true');
+  });
+
   restoreSettingsUI();
 }
 
@@ -264,5 +289,11 @@ function restoreSettingsUI(): void {
   const savedAuto = get('recall_auto_enter', 'true');
   document.querySelectorAll<HTMLElement>('#settingRecallAutoEnter .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.auto === savedAuto);
+  });
+
+  // Conjugation chart shape
+  const savedShape = get('conj_keep_shape', 'true');
+  document.querySelectorAll<HTMLElement>('#settingConjShape .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.shape === savedShape);
   });
 }
