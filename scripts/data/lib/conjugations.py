@@ -55,6 +55,24 @@ WIKT_SECTION = {'deu': 'German', 'nld': 'Dutch'}
 
 CACHE_DIR = DATA_DIR / 'conj_cache'
 
+
+class ConjugationFetchError(RuntimeError):
+    """A failure about the run rather than about the verb. Never cached."""
+
+
+# Printed once when a run fails for network reasons rather than per verb, since
+# the same line repeated 172 times says no more than it does once.
+NETWORK_HINT = (
+    'Every fetch failed before reaching Wiktionary.\n'
+    '    If the reason mentions an expired certificate, it is this machine\'s\n'
+    '    root certificate list, not Wiktionary\'s — theirs is valid. Refresh\n'
+    '    the bundle Python verifies against:\n'
+    '\n'
+    '        pip install --upgrade certifi requests\n'
+    '\n'
+    '    Nothing was cached, so re-running picks up exactly where it stopped.'
+)
+
 # Wiktionary asks for a descriptive agent with contact info; anonymous scraping
 # from a default urllib agent is what gets a project blocked.
 USER_AGENT = (
@@ -102,12 +120,42 @@ def save_to_cache(lang_code: str, word: str, entry: dict) -> None:
 # ── Fetching ──────────────────────────────────────────────────────────────────
 
 def _fetch_html(word: str) -> Optional[str]:
-    """Rendered article HTML from the REST endpoint, or None."""
-    import urllib.request
-    import urllib.parse
-    import urllib.error
+    """
+    Rendered article HTML from the REST endpoint, or None for 404.
 
+    Uses `requests` rather than `urllib`, and the difference is not stylistic.
+    urllib verifies TLS against whatever root certificates the machine happens
+    to have, which on an older install means every fetch dies with
+
+        CERTIFICATE_VERIFY_FAILED: certificate has expired
+
+    naming a certificate that is the local one, not Wiktionary's — Wikimedia's
+    is fine. requests verifies against certifi's bundle, which is updated with
+    the package instead of with the operating system. `requests` is already a
+    pipeline dependency (visuals.py uses it for image downloads).
+    """
+    import urllib.parse
     url = 'https://en.wiktionary.org/api/rest_v1/page/html/' + urllib.parse.quote(word, safe='')
+
+    try:
+        import requests
+    except ImportError:
+        requests = None  # type: ignore[assignment]
+
+    if requests is not None:
+        try:
+            resp = requests.get(url, headers={'User-Agent': USER_AGENT}, timeout=20)
+        except requests.exceptions.SSLError as exc:
+            raise ConjugationFetchError(f'TLS verification failed ({exc})') from exc
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        return resp.text
+
+    # Fallback for an environment without requests. Same behaviour, minus the
+    # certifi bundle — so this is the path that hits the expired-root problem.
+    import urllib.request
+    import urllib.error
     req = urllib.request.Request(url, headers={'User-Agent': USER_AGENT})
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:
@@ -115,8 +163,6 @@ def _fetch_html(word: str) -> Optional[str]:
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
             return None
-        raise
-    except Exception:
         raise
 
 

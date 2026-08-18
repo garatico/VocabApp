@@ -404,6 +404,18 @@ def step_conjugations(args) -> None:
 
         print(f'  Fetched      : {ok}')
         print(f'  No table     : {len(misses)}')
+
+        # A run that fetched nothing and failed every time did not meet a
+        # language problem, it met a network one — say so once, with the fix,
+        # rather than printing the same line for every verb.
+        network_failures = [m for m in misses if 'fetch failed' in m]
+        if ok == 0 and network_failures and len(network_failures) == len(misses):
+            print()
+            print(f'  {conjugations.NETWORK_HINT}')
+            print()
+            print(f'  First error: {network_failures[0]}')
+            continue
+
         for m in misses[:10]:
             print(f'    skipped: {m}')
         if len(misses) > 10:
