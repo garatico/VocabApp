@@ -359,6 +359,36 @@
   display: none;
 }
 
+/*
+ * Rows that do not belong to this card's tense — the six pronoun rows on a
+ * gerund card, or the single-form row on every other card.
+ *
+ * A separate class from .conj-row-hidden on purpose: that one is owned by the
+ * pronoun toggles, which run across every card whenever a pronoun is switched
+ * on, and would otherwise clear this. Always display:none, never a blank cell —
+ * these rows are not part of the chart being drilled.
+ */
+.conj-row-tense-hidden {
+  display: none;
+}
+
+/*
+ * Keep-shape: a deselected pronoun leaves its cell behind, empty.
+ *
+ * visibility rather than display, so the cell still occupies its track and
+ * every other pronoun stays where a learner expects it — dropping vosotros
+ * gives a 2×3 chart with a hole, not a 2×3 chart with ellos moved up into the
+ * vosotros slot. visibility also hides the row's borders, so the gap reads as
+ * blank rather than as an empty box.
+ *
+ * Scoped to .conj-row-hidden so it applies only to the pronoun toggles; a row
+ * hidden because of the tense is genuinely absent and still collapses.
+ */
+.conj-cards-grid--keep-shape .conj-row-hidden:not(.conj-row-tense-hidden) {
+  display: grid;
+  visibility: hidden;
+}
+
 /* ── Responsive ── */
 @media (max-width: 640px) {
   /* Single column only on genuinely small screens. Desktop keeps two. */
