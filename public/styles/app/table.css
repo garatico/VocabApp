@@ -537,15 +537,19 @@
     white-space: nowrap;
   }
 
-  /* ── Pager: its own row ──
-     Was ← [Page 1 of 3] "Words 1-100 of 250" → on one line, which needs about
-     420px. The arrows stay pinned to the edges where a thumb reaches them, the
-     page select takes the middle, and the status moves underneath rather than
-     being clipped. */
+  /* ── Pager: one line ──
+     Was ← [Page 1 of 3 (1–100)] "Words 1-100 of 250" → , which needs about
+     420px, so the arrows ended up on rows of their own with the select
+     between them.
+
+     The select already says "Page 1 of 3 (1–100)", so the status beside it is
+     the same numbers a second time. Dropping it on a phone leaves arrows and
+     select on one line with room to spare, and the arrows stay at the edges
+     where a thumb reaches them. */
   .table-pager {
     flex: 1 1 100%;
     order: 1;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: space-between;
     gap: 0.4rem;
   }
@@ -564,11 +568,5 @@
     min-height: 40px;
   }
 
-  /* Full width on its own line, so it is never the thing that gets cut off. */
-  .table-pager .pager-status {
-    flex: 1 1 100%;
-    order: 1;
-    text-align: center;
-    font-size: 0.72rem;
-  }
+  .table-pager .pager-status { display: none; }
 }
