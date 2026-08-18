@@ -51,6 +51,7 @@ export function bindModeSwitch({
     const recallTimerGroup    = document.getElementById('recallTimerGroup');
     const sortOrderGroup      = document.getElementById('sortOrderGroup');
     const conjDisplayGroup    = document.getElementById('conjDisplayGroup');
+    const conjViewGroup       = document.getElementById('conjViewGroup');
     const conjModeControls    = document.getElementById('conjModeControls');
     const pictureModeControls = document.getElementById('pictureModeControls');
 
@@ -69,6 +70,7 @@ export function bindModeSwitch({
     }
     if (conjModeControls)    conjModeControls.style.display    = mode === 'conjugation' ? ''     : 'none';
     if (conjDisplayGroup)    conjDisplayGroup.style.display    = mode === 'conjugation' ? ''     : 'none';
+    if (conjViewGroup)       conjViewGroup.style.display       = mode === 'conjugation' ? ''     : 'none';
     if (pictureModeControls) pictureModeControls.style.display = mode === 'picture'     ? ''     : 'none';
 
     document.querySelectorAll<HTMLElement>('.mode-tab').forEach(btn => {

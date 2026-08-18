@@ -814,3 +814,143 @@
   .conj-card-rank     { font-size: 0.55rem; }
   .conj-card-tense-en { display: none; }
 }
+
+/* ── Add to list ── */
+
+.conj-verb-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.conj-verb-title-row .conj-verb-spanish { min-width: 0; }
+
+/* The star is quiet until the verb is in a list, so a wall of cards is not a
+   wall of stars. known-btn--active supplies the lit colour. */
+.conj-card-star,
+.conj-full-star {
+  flex: none;
+  padding: 0;
+  font-size: 0.9rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.conj-card:hover .conj-card-star,
+.conj-card-star:focus-visible,
+.conj-full-star:hover,
+.conj-full-star:focus-visible { opacity: 1; }
+
+.conj-card-star.known-btn--active,
+.conj-full-star.known-btn--active { opacity: 1; }
+
+.conj-card-star:active,
+.conj-full-star:active { transform: scale(1.2); }
+
+/* ── Full Conjugation ──
+
+   One verb, its tenses side by side, so the patterns that run *across* tenses
+   are visible — the future and conditional share a stem, the imperfect is
+   regular for all but three Spanish verbs. A grid sorted by verb can never
+   show that, because the tenses being compared are in different rows.
+
+   Same cards as the grid, laid out in a scrolling row rather than reflowed
+   into columns: every card keeps its own pronoun labels, so a short column
+   (gerund, participle) cannot knock the others out of alignment.
+*/
+
+.conj-full-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.65rem;
+  margin-bottom: 0.5rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.conj-full-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.conj-full-word {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.conj-full-gloss {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conj-full-count {
+  flex: none;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.conj-full-nav {
+  flex: none;
+  padding: 0.25rem 0.6rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.conj-full-nav:hover:not(:disabled) { border-color: var(--text-muted); }
+.conj-full-nav:disabled { opacity: 0.4; cursor: default; }
+
+/* The row itself. Columns size to their content and scroll sideways rather
+   than squeezing, since a conjugation squeezed to four characters is not
+   readable and not worth showing. */
+.conj-cards-grid--full {
+  display: flex;
+  flex-direction: row;
+  align-items: start;
+  gap: 0.6rem;
+  overflow-x: auto;
+  padding-bottom: 0.4rem;
+  scroll-snap-type: x proximity;
+}
+
+.conj-cards-grid--full .conj-card {
+  flex: 0 0 auto;
+  width: min(19rem, 78vw);
+  scroll-snap-align: start;
+}
+
+/* Falls back to stacking on narrow screens. A horizontal scroll containing
+   text inputs is miserable on a phone: focusing a field scrolls the row and
+   you lose your place mid-answer. */
+@media (max-width: 640px) {
+  .conj-cards-grid--full {
+    flex-direction: column;
+    overflow-x: visible;
+  }
+  .conj-cards-grid--full .conj-card { width: 100%; }
+  .conj-full-header { position: static; }
+}
