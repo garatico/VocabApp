@@ -828,7 +828,9 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow);
   min-width: 140px;
-  max-width: 200px;
+  /* See list-picker.css — capped to the viewport so it can never be positioned
+     partly off a narrow screen. 8px is the gap positionPopover keeps each side. */
+  max-width: min(200px, calc(100vw - 8px));
   overflow: hidden;
 }
 

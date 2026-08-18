@@ -6,6 +6,7 @@
  *  - Create a new list (inline text input)
  */
 
+import { positionPopover } from './popover-position.ts';
 import {
   getListNames,
   isInList,
@@ -168,23 +169,9 @@ function closeExistingPicker(): void {
 }
 
 function positionNear(picker: HTMLElement, anchor: HTMLElement): void {
-  const rect    = anchor.getBoundingClientRect();
-  const scrollX = window.scrollX;
-  const scrollY = window.scrollY;
-
-  let top  = rect.bottom + scrollY + 4;
-  let left = rect.left   + scrollX;
-
-  if (rect.bottom + 200 > window.innerHeight) {
-    top = rect.top + scrollY - 4;
-    picker.style.transform = 'translateY(-100%)';
-  }
-
-  const maxLeft = window.innerWidth + scrollX - 200;
-  left = Math.min(left, maxLeft);
-
-  picker.style.position = 'absolute';
-  picker.style.top      = top  + 'px';
-  picker.style.left     = left + 'px';
-  picker.style.zIndex   = '9999';
+  // Measured and clamped by the shared helper. This used to clamp against a
+  // hardcoded 200px that the CSS had since outgrown (max-width is 260px), so
+  // a star near the right edge of a phone put the picker partly off screen.
+  positionPopover(picker, anchor);
+  picker.style.zIndex = '9999';
 }

@@ -11,6 +11,7 @@
  */
 
 import { getListNames, addToList, removeFromList } from '../../utils/word-lists.ts';
+import { positionPopover } from '../../utils/popover-position.ts';
 import type { ListsCtx } from './context.ts';
 
 let activePopover: HTMLElement | null = null;
@@ -34,9 +35,6 @@ export function openMovePopover(
 
   const popover = document.createElement('div');
   popover.className = 'ml-move-popover';
-  const rect = anchorBtn.getBoundingClientRect();
-  popover.style.top  = (rect.bottom + 4) + 'px';
-  popover.style.left = Math.max(4, rect.right - 160) + 'px';
 
   // Mode tabs
   const tabs = document.createElement('div');
@@ -75,5 +73,9 @@ export function openMovePopover(
   }
 
   document.body.appendChild(popover);
+  // Positioned after appending, so it can be measured rather than guessed at.
+  // The old code aligned its right edge against a hardcoded 160px while the
+  // CSS max-width was 200px, which hung it off the side of a narrow screen.
+  positionPopover(popover, anchorBtn, { alignRight: true });
   activePopover = popover;
 }
