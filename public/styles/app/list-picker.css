@@ -10,7 +10,11 @@
   box-shadow: 0 4px 16px rgba(0,0,0,0.18);
   padding: 0.4rem 0;
   min-width: 180px;
-  max-width: 260px;
+  /* Never wider than the screen it has to fit on. Positioning alone cannot
+     save a popover that is bigger than the viewport, and 260px stops fitting
+     on a small phone once the font scale is turned up. The 8px is the 4px gap
+     positionPopover leaves on each side. */
+  max-width: min(260px, calc(100vw - 8px));
   z-index: 9999;
 }
 
