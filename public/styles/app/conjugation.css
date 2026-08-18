@@ -817,40 +817,16 @@
 
 /* ── Add to list ── */
 
+/* Centred, not baseline: the star is a circle now, and baseline-aligning a
+   round button against 1.2rem type sat it visibly low. */
 .conj-verb-title-row {
   display: flex;
-  align-items: baseline;
-  gap: 0.35rem;
+  align-items: center;
+  gap: 0.4rem;
   min-width: 0;
 }
 
 .conj-verb-title-row .conj-verb-spanish { min-width: 0; }
-
-/* The star is quiet until the verb is in a list, so a wall of cards is not a
-   wall of stars. known-btn--active supplies the lit colour. */
-.conj-card-star,
-.conj-full-star {
-  flex: none;
-  padding: 0;
-  font-size: 0.9rem;
-  line-height: 1;
-  background: none;
-  border: none;
-  cursor: pointer;
-  opacity: 0.35;
-  transition: opacity 0.15s, transform 0.15s;
-}
-
-.conj-card:hover .conj-card-star,
-.conj-card-star:focus-visible,
-.conj-full-star:hover,
-.conj-full-star:focus-visible { opacity: 1; }
-
-.conj-card-star.known-btn--active,
-.conj-full-star.known-btn--active { opacity: 1; }
-
-.conj-card-star:active,
-.conj-full-star:active { transform: scale(1.2); }
 
 /* ── Full Conjugation ──
 
@@ -954,3 +930,91 @@
   .conj-cards-grid--full .conj-card { width: 100%; }
   .conj-full-header { position: static; }
 }
+
+/* In Full Conjugation each card is one tense, so its pronouns run down a
+   single column and the tenses are the columns of the chart. The card's
+   normal 2×3 inner grid squeezed each input to about 9rem minus a 72px
+   pronoun label, which left a sliver too narrow to read what you typed. */
+.conj-cards-grid--full .conj-inner-grid {
+  grid-template-columns: 1fr;
+  grid-template-rows: none;
+  grid-auto-flow: row;
+}
+
+/* The 2-column border rules are positional and mean nothing in one column:
+   nth-child(n+4) drew a divider down the middle of rows 4-6, and 3 and 6 were
+   the bottom of each half-column. In a single column only the last row ends it. */
+.conj-cards-grid--full .conj-inner-grid .conj-row {
+  border-left: none;
+}
+.conj-cards-grid--full .conj-inner-grid .conj-row:nth-child(3) {
+  border-bottom: 1px solid var(--border);
+}
+.conj-cards-grid--full .conj-inner-grid .conj-row:last-child,
+.conj-cards-grid--full .conj-inner-grid .conj-row:nth-last-child(2):has(+ .conj-row-tense-hidden) {
+  border-bottom: none;
+}
+
+/* Narrower now that it holds one column rather than two. */
+.conj-cards-grid--full .conj-card {
+  width: min(15rem, 72vw);
+}
+
+@media (max-width: 640px) {
+  /* Stacked on a phone, so the two-column grid is right again — it is the
+     full width of the screen rather than one column of a scrolling row. */
+  .conj-cards-grid--full .conj-inner-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(3, auto);
+    grid-auto-flow: column;
+  }
+  .conj-cards-grid--full .conj-card { width: 100%; }
+}
+
+/* ── Add-to-list star ──
+   Outlined rather than a bare glyph. On a card header dense with badges
+   (rank, A1, IRREGULAR, the tense) an unenclosed ★ read as one more label
+   instead of as something to press. */
+.conj-card-star,
+.conj-full-star {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 1;
+  transition: color 0.15s, border-color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.conj-card-star:hover,
+.conj-full-star:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.conj-card-star:focus-visible,
+.conj-full-star:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* In a list — filled, so it reads as a state and not just a hover. */
+.conj-card-star.known-btn--active,
+.conj-full-star.known-btn--active {
+  color: var(--warning, #b7791f);
+  border-color: var(--warning, #b7791f);
+  background: var(--warning-light, transparent);
+}
+
+.conj-card-star:active,
+.conj-full-star:active { transform: scale(1.12); }
