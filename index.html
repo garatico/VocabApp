@@ -196,14 +196,25 @@
                 <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
                 <span class="filter-section-label">Lists</span>
               </button>
+              <!-- On/Off and the chain sit in the header, outside the
+                   collapsible body, so a collapsed filter still says whether it
+                   is doing anything and can be switched without expanding it.
+                   The On/Off button is the indicator as well as the control. -->
+              <button type="button" class="filter-active-btn filter-active-btn--on" id="listFilterActive"
+                      aria-pressed="true" title="This filter is on — click to switch it off without losing your selections">
+                <span class="filter-active-dot" aria-hidden="true"></span>
+                <span class="filter-active-label">On</span>
+              </button>
               <div class="list-filter-toggle" id="listFilterMode">
-                <button type="button" class="list-filter-btn" data-mode="off" title="Ignore lists entirely — every word stays in the quiz">Off</button>
                 <button type="button" class="list-filter-btn active" data-mode="hide" title="Remove words on the checked lists from the quiz">Hide</button>
                 <button type="button" class="list-filter-btn" data-mode="focus" title="Quiz only words on the checked lists">Focus</button>
               </div>
+              <button type="button" class="filter-chain-btn" id="listFilterChain"
+                      title="Copy this list filter to Table, Recall, Single Word, Picture Quiz and My Lists">&#128279;</button>
               <span class="list-filter-count">(<span id="knownWordCount">0</span> listed)</span>
             </div>
             <div id="listFilterBody" class="filter-body">
+              <p class="list-filter-chain-note" id="listFilterChainNote" role="status" hidden></p>
               <p class="list-filter-desc" id="listFilterDesc"></p>
               <div class="list-filter-checkboxes" id="listFilterCheckboxes">
                 <span class="list-filter-empty">No lists yet — create one in My Lists</span>

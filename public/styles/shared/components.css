@@ -256,3 +256,89 @@
 
 #tableWrap   { --empty-text: '\25B6  Hit Start Quiz to begin'; }
 #pictureWrap { --empty-text: 'Pick a quiz style above and hit Start Quiz'; }
+
+/* ================================================================
+   FILTER HEADER CONTROLS
+
+   On/Off and the chain live in a filter's header rather than its
+   body, because a collapsed filter still has to say whether it is
+   doing anything. The On/Off button is the state indicator as well
+   as the control — one element, so the two cannot disagree.
+
+   Shared by every filter box; the Lists filter is simply the first
+   to use them.
+================================================================ */
+
+.filter-active-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.12rem 0.45rem;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--text-muted);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.filter-active-btn:hover { border-color: var(--text-muted); }
+
+.filter-active-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: background 0.15s;
+}
+
+/* On. The dot carries the state as well as the word, so it survives
+   being read at a glance or by someone who cannot distinguish the
+   green from the grey. */
+.filter-active-btn--on {
+  color: var(--success, #16a34a);
+  border-color: var(--success, #16a34a);
+}
+
+.filter-active-btn--on .filter-active-dot {
+  background: var(--success, #16a34a);
+}
+
+/* An inactive filter's own controls are dimmed, so it cannot be
+   mistaken for one that is on and simply matching nothing. Pointer
+   events stay on: changing Hide/Focus while off is how you set up
+   what the filter will do before switching it on. */
+.list-filter-wrap--inactive .list-filter-toggle,
+.list-filter-wrap--inactive .list-filter-checkboxes {
+  opacity: 0.5;
+}
+
+.filter-chain-btn {
+  padding: 0.1rem 0.35rem;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.filter-chain-btn:hover {
+  color: var(--text);
+  background: var(--surface2);
+  border-color: var(--border);
+}
+
+.filter-chain-btn:active { transform: translateY(1px); }
+
+.list-filter-chain-note {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  color: var(--success, #16a34a);
+}
