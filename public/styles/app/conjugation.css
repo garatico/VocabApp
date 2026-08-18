@@ -1340,3 +1340,110 @@
   .conj-tf-header > .filter-section-label { flex: 1 1 auto; min-width: 0; }
   .conj-tf-header > button { flex: 0 0 auto; }
 }
+
+/* ================================================================
+   PAGER AND PROGRESS ON A PHONE
+================================================================ */
+
+/* Long label on a wide screen, short one on a narrow screen. Both are
+   always in the DOM; only one is ever displayed. */
+.conj-full-count--short { display: none; }
+
+@media (max-width: 599px) {
+  /* ── Pager: one line ──
+     Prev, the count, the page size and Next used to wrap onto two rows,
+     which put the size select under the buttons that page through. */
+  .conj-full-header {
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+    padding: 0.45rem 0.5rem;
+  }
+
+  .conj-full-count--long  { display: none; }
+  .conj-full-count--short { display: inline; }
+
+  .conj-full-count {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: center;
+    font-size: 0.72rem;
+  }
+
+  .conj-full-nav {
+    flex: 0 0 auto;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.72rem;
+    min-height: 40px;
+  }
+
+  /* The label is a tooltip's worth of text next to a self-explanatory
+     number; the select keeps the title attribute. */
+  .conj-full-size-label { flex: 0 0 auto; font-size: 0; gap: 0; }
+  .conj-full-size {
+    font-size: 0.74rem;
+    min-height: 40px;
+    padding-inline: 0.4rem 1.1rem;
+  }
+
+  /* ── Progress: shorter ──
+     Bar, its stat, and the two pill groups stacked out to most of a
+     phone screen before you reached a single verb. The stat sits on the
+     bar's line, and the group label sits on the pills' line, which takes
+     four rows out of the block. */
+  .conj-progress-section {
+    padding: 0.5rem 0.6rem;
+    gap: 0.45rem;
+  }
+
+  .conj-progress-bars { gap: 0.35rem; }
+
+  .conj-progress-bars .progressWrap {
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+  }
+
+  .conj-progress-bars .progress {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .conj-progress-bars .progressWrap .small {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-size: 0.68rem;
+  }
+
+  .progress-group-label {
+    font-size: 0.62rem;
+    margin-bottom: 0.05rem;
+  }
+
+  /* Label beside its pills rather than above them. */
+  .conj-pills-cell {
+    flex-wrap: wrap;
+    gap: 0.2rem 0.35rem;
+  }
+  .conj-pills-cell > .progress-group-label {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+  }
+  .conj-pills-cell .quiz-score { flex: 1 1 auto; }
+
+  .conj-pills-cell .score-pill {
+    font-size: 0.64rem;
+    padding: 0.12rem 0.35rem;
+  }
+
+  .conj-giveup-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  /* The verb/tense/card arithmetic beside Order is a caption, not a
+     control — it should not push the row it is in onto three lines. */
+  .conj-order-count {
+    flex: 1 1 100%;
+    font-size: 0.66rem;
+    line-height: 1.3;
+  }
+}

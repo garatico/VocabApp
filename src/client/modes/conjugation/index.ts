@@ -522,8 +522,16 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   fullNext.className = 'conj-full-nav';
   fullNext.textContent = 'Next ▶';
 
+  // Two labels, one shown at a time by CSS. "Verbs 1–10 of 249 · Page 1 of 25"
+  // does not fit on a phone beside two buttons and a select, and truncating it
+  // loses the numbers that are the whole point of a pager.
   const fullCount = document.createElement('span');
   fullCount.className = 'conj-full-count';
+  const countLong = document.createElement('span');
+  countLong.className = 'conj-full-count--long';
+  const countShort = document.createElement('span');
+  countShort.className = 'conj-full-count--short';
+  fullCount.append(countLong, countShort);
 
   const sizeLabel = document.createElement('label');
   sizeLabel.className = 'conj-full-size-label';
@@ -547,8 +555,9 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     if (viewMode !== 'full') return;
     const from = verbs.length === 0 ? 0 : pageStart() + 1;
     const to   = Math.min(pageStart() + pageSize, verbs.length);
-    fullCount.textContent =
+    countLong.textContent =
       `Verbs ${from}–${to} of ${verbs.length}  ·  Page ${fullPage + 1} of ${pageCount()}`;
+    countShort.textContent = `${from}–${to} / ${verbs.length}`;
     fullPrev.disabled = fullPage === 0;
     fullNext.disabled = fullPage >= pageCount() - 1;
   }
@@ -642,10 +651,8 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     return { el, row };
   }
 
-  // The toggle's markup starts on Grid; the stored preference may not.
-  viewToggle?.querySelectorAll<HTMLElement>('.conj-toggle-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.view === viewMode);
-  });
+  // The active class is kept in step by app.ts, which also owns the stored
+  // value; this render just reads it.
 
   let cardUpdaters: CardController[] = [];
 
@@ -908,10 +915,9 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     // to be rebuilt for every verb and their answers would go with them.
     bankVisibleVerbs();
 
+    // The stored value and the active class belong to the handler in app.ts,
+    // which is bound whether or not a quiz is running. This one only rebuilds.
     viewMode = next;
-    localStorage.setItem('vq_conj_view', viewMode);
-    viewToggle.querySelectorAll('.conj-toggle-btn')
-      .forEach(b => b.classList.toggle('active', b === btn));
 
     // Entering Full Conjugation opens on the page holding the first verb not
     // already banked, so switching views mid-session picks up roughly where the

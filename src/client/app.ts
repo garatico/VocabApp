@@ -326,6 +326,30 @@ document.querySelector('.mode-tabs')?.addEventListener('click', e => {
   reloadDomainFilter();
 });
 
+// ── Conjugation view (Grid / Full Conjugation) ────────────────────────────────
+//
+// Bound here as well as inside conjugation mode, because the toggle lives in
+// the controls bar and can be clicked before a quiz has started — at which
+// point nothing in conjugation/index.ts is listening yet. Without this the
+// button did not light up and the choice was never stored, so Start Quiz used
+// whatever was last saved: the control said one thing and the quiz did another.
+//
+// This handler owns the stored value and the active class. The one in
+// conjugation mode owns rebuilding the cards, and only runs while a quiz is on
+// screen.
+function syncConjViewToggle(): void {
+  const stored = localStorage.getItem('vq_conj_view') === 'full' ? 'full' : 'grid';
+  document.querySelectorAll<HTMLElement>('#conjViewToggle .conj-toggle-btn')
+    .forEach(b => b.classList.toggle('active', b.dataset.view === stored));
+}
+
+document.getElementById('conjViewToggle')?.addEventListener('click', e => {
+  const btn = (e.target as Element).closest<HTMLElement>('.conj-toggle-btn');
+  if (!btn?.dataset.view) return;
+  localStorage.setItem('vq_conj_view', btn.dataset.view === 'full' ? 'full' : 'grid');
+  syncConjViewToggle();
+});
+
 // Picture sub-mode toggle. The box collapses, so the chosen style is echoed
 // into the header summary — otherwise a folded box says nothing at all.
 function syncPictureStyleSummary(): void {
@@ -361,6 +385,7 @@ void (async function init(): Promise<void> {
   initShortcuts();
   initListFilter(langSelect?.value ?? 'spanish');
   syncPictureStyleSummary();
+  syncConjViewToggle();
 
   // ── Onboarding card ────────────────────────────────────────────────────────
   const onboardingCard    = document.getElementById('onboardingCard');
