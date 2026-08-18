@@ -148,8 +148,19 @@
 
 /* ── Responsive ── */
 @media (max-width: 767px) {
-  /* Shrink the right padding — toggle is 36px wide now so 2.75rem is enough */
-  #controls { padding-right: 5rem; }
+  /*
+   * The card is padded evenly; only the top row clears the ? button.
+   *
+   * It used to reserve 5rem down the entire right-hand side of #controls, for
+   * a button that is 30px wide and sits in the top corner. Everything in the
+   * card inherited that: the filter boxes had 16px of space on the left and 80
+   * on the right, which read as the whole panel being pushed off-centre, and
+   * the top row lost 80px it needed for the Language and Words controls.
+   *
+   * 2.5rem is the button's 30px plus its 0.6rem offset, rounded up.
+   */
+  #controls     { padding-right: 1rem; }
+  #controls-top { padding-right: 2.5rem; }
 }
 
 @media (max-width: 599px) {
@@ -191,13 +202,36 @@
   .control-group > label { font-size: 0.63rem; }
   .size-row { gap: 0.3rem; width: 100%; }
 
-  /* Sort-order segmented control: ensure it fills its container */
-  .sort-order-toggle { width: 100%; }
-  .sort-order-btn { min-height: 36px; font-size: 0.72rem; }
+  /*
+   * Both segmented controls, not just one.
+   *
+   * This said `.sort-order-toggle` alone, but Direction is built from
+   * `.conj-display-toggle` — the same component under its other name. So
+   * Direction never got the full-width rule, and its three labels ("Word →
+   * Meaning", "Meaning → Word", "Mixed") are far wider than a phone: the
+   * buttons would not shrink, so the row pushed the whole card wider than the
+   * screen and everything in it appeared cut off at the right.
+   */
+  .sort-order-toggle,
+  .conj-display-toggle { width: 100%; }
+
+  .sort-order-btn,
+  .conj-toggle-btn {
+    min-height: 36px;
+    font-size: 0.72rem;
+    /* Allowed to shrink and to break a long label rather than force the row
+       wider than its container. flex:1 alone does not permit shrinking below
+       the content's own width. */
+    min-width: 0;
+    padding-inline: 0.35rem;
+    white-space: normal;
+    line-height: 1.15;
+  }
 }
 
 @media (max-width: 480px) {
-  #controls { padding: 0.5rem 0.6rem 0.55rem; padding-right: 2.75rem; }
+  #controls     { padding: 0.5rem 0.6rem 0.55rem; }
+  #controls-top { padding-right: 2.5rem; }
   .size-row { width: 100%; }
 }
 

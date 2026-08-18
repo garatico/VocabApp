@@ -490,3 +490,59 @@
   align-items: center;
   gap: 0.4rem;
 }
+
+/* ── Order row on a phone ──
+ *
+ * .table-nav is a 1fr auto 1fr grid so the pager sits centred between the
+ * order control and the jump button. On a phone the pager is hidden, which
+ * leaves two 1fr columns — and the jump button does not wrap, so it takes
+ * whatever it needs and the order select is squeezed into what is left. The
+ * select ended up a few characters wide, showing "Mo…" instead of its value,
+ * next to a jump button several times its size.
+ *
+ * Flex row instead: each side takes its content's width, the select is given a
+ * floor so its value stays readable, and the button is allowed to shrink.
+ */
+@media (max-width: 599px) {
+  .table-nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .table-nav-side {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* Wide enough to read the selected order, and free to grow into the row. */
+  .table-order-select {
+    flex: 1 1 auto;
+    min-width: 8rem;
+    max-width: none;
+    font-size: 0.8rem;
+    min-height: 40px;
+  }
+
+  /* Was 0.4rem/0.9rem at 0.92rem type — a large target beside a squeezed
+     select. Sized to match the select and allowed to shrink, keeping a 44px
+     height so it stays comfortably tappable. */
+  .jump-btn {
+    flex: 0 1 auto;
+    min-width: 0;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.8rem;
+    min-height: 44px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* The pager keeps its own row when it is showing, rather than competing with
+     the two controls either side of it. */
+  .table-pager {
+    flex: 1 1 100%;
+    order: 1;
+  }
+}
