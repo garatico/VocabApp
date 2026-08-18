@@ -12,7 +12,8 @@
  * old single per-language filter to one setting per mode.
  */
 
-import { currentScope, FILTER_SCOPES, type FilterScope } from '../filters/filter-scope.ts';
+import { currentScope, type FilterScope } from '../filters/filter-scope.ts';
+import { bucketFor, SHARED_BUCKET, type Bucket } from '../filters/filter-state.ts';
 
 const LISTS_PREFIX         = 'vq_lists_';
 const OLD_PREFIX           = 'vq_known_';
@@ -45,11 +46,11 @@ export const LIST_FILTER_DESC: Record<ListFilterMode, string> = {
   focus: 'Quiz shows only words from checked lists',
 };
 
-function filterKey(lang: string, scope: FilterScope): string {
-  return `${FILTER_STATE_PREFIX}${lang.toLowerCase()}__${scope}`;
+function filterKey(lang: string, bucket: Bucket): string {
+  return `${FILTER_STATE_PREFIX}${lang.toLowerCase()}__${bucket}`;
 }
 
-/** The pre-per-mode key, read once by migrateListFilter(). */
+/** The pre-bucket key, read once by migrateListFilter(). */
 function legacyFilterKey(lang: string): string {
   return FILTER_STATE_PREFIX + lang.toLowerCase();
 }
@@ -57,12 +58,12 @@ function legacyFilterKey(lang: string): string {
 const migratedFilterLangs = new Set<string>();
 
 /**
- * Fold the old single per-language setting into one setting per mode.
+ * Move the old single per-language setting into the shared bucket.
  *
- * Everyone shared one filter before, so the honest upgrade is to give every
- * mode what they already had — nothing changes until they unchain one. Runs
- * once per language per page load, and removes the legacy key as it goes, so
- * it cannot re-run over a mode the user has since changed.
+ * Every mode was on one filter before, and every mode starts chained, so the
+ * shared bucket *is* what they all had — nothing changes until a mode is
+ * unlinked. Runs once per language per page load and removes the legacy key as
+ * it goes, so it cannot re-run over a bucket that has since been edited.
  */
 function migrateListFilter(lang: string): void {
   if (migratedFilterLangs.has(lang)) return;
@@ -86,21 +87,17 @@ function migrateListFilter(lang: string): void {
             : 'hide',
           selected,
         };
-    for (const scope of FILTER_SCOPES) {
-      if (localStorage.getItem(filterKey(lang, scope)) === null) {
-        localStorage.setItem(filterKey(lang, scope), JSON.stringify(state));
-      }
+    if (localStorage.getItem(filterKey(lang, SHARED_BUCKET)) === null) {
+      localStorage.setItem(filterKey(lang, SHARED_BUCKET), JSON.stringify(state));
     }
   } catch { /* a corrupt legacy value is not worth failing the page over */ }
 
   localStorage.removeItem(legacyFilterKey(lang));
 }
 
-/** @param scope defaults to the mode currently on screen. */
-export function getListFilterState(lang: string, scope: FilterScope = currentScope()): ListFilterState {
-  migrateListFilter(lang);
+function readBucket(lang: string, bucket: Bucket): ListFilterState {
   try {
-    const raw = localStorage.getItem(filterKey(lang, scope));
+    const raw = localStorage.getItem(filterKey(lang, bucket));
     if (raw) {
       const parsed = JSON.parse(raw) as ListFilterState;
       if (LIST_FILTER_MODES.includes(parsed.mode) && Array.isArray(parsed.selected)) {
@@ -113,33 +110,29 @@ export function getListFilterState(lang: string, scope: FilterScope = currentSco
   return { active: true, mode: 'hide', selected: [] };
 }
 
+/** @param scope defaults to the mode currently on screen. */
+export function getListFilterState(
+  lang: string, scope: FilterScope = currentScope(),
+): ListFilterState {
+  migrateListFilter(lang);
+  return readBucket(lang, bucketFor('list', scope));
+}
+
 export function saveListFilterState(
   lang: string, state: ListFilterState, scope: FilterScope = currentScope(),
 ): void {
   try {
-    localStorage.setItem(filterKey(lang, scope), JSON.stringify(state));
+    localStorage.setItem(filterKey(lang, bucketFor('list', scope)), JSON.stringify(state));
   } catch { /* ignore */ }
 }
 
-/**
- * Copy one mode's list filter onto every other mode — the chain button.
- *
- * Returns the modes that actually changed, so the caller can say what it did
- * rather than flashing a confirmation for a no-op.
- */
-export function linkListFilterToAllScopes(
-  lang: string, from: FilterScope = currentScope(),
-): FilterScope[] {
-  const state   = getListFilterState(lang, from);
-  const changed: FilterScope[] = [];
-  for (const scope of FILTER_SCOPES) {
-    if (scope === from) continue;
-    const before = JSON.stringify(getListFilterState(lang, scope));
-    if (before === JSON.stringify(state)) continue;
-    saveListFilterState(lang, { ...state, selected: [...state.selected] }, scope);
-    changed.push(scope);
-  }
-  return changed;
+/** Move the list filter between buckets — the chain button. See filter-state. */
+export function copyListFilterState(lang: string, from: Bucket, to: Bucket): void {
+  const state = readBucket(lang, from);
+  try {
+    localStorage.setItem(filterKey(lang, to),
+                         JSON.stringify({ ...state, selected: [...state.selected] }));
+  } catch { /* ignore */ }
 }
 
 function storageKey(lang: string): string {

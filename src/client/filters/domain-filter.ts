@@ -5,11 +5,75 @@
  *  - Top 10 domains by word count shown as alphabetically-sorted pills
  *  - Remaining domains in a scrollable dropdown with live search
  *  - Selected domains shown as removable chips
+ *
+ * The selection is a working Set kept in step with storage: every change ends
+ * in renderAll(), so that is where it is written back, and loadFromBucket()
+ * refills it whenever the language, the mode or the chain moves which bucket
+ * this filter is reading.
  */
+
+import { currentLangValue } from './filter-lang.ts';
+import { bucketFor, type Bucket } from './filter-state.ts';
+import {
+  bindFilterHeader, syncFilterHeader, type FilterHeaderConfig,
+} from './filter-header.ts';
 
 const TOP_N = 10;
 
 const selected = new Set<string>();
+/** Whether the filter is applied. Stored with the selection, not beside it. */
+let active = true;
+
+const KEY_PREFIX = 'vq_domainfilter_';
+
+interface DomainFilterState { active: boolean; selected: string[] }
+
+function key(lang: string, bucket: Bucket): string {
+  return `${KEY_PREFIX}${lang.toLowerCase()}__${bucket}`;
+}
+
+function readBucket(lang: string, bucket: Bucket): DomainFilterState {
+  try {
+    const raw = localStorage.getItem(key(lang, bucket));
+    if (raw) {
+      const parsed = JSON.parse(raw) as DomainFilterState;
+      if (Array.isArray(parsed.selected)) {
+        return { active: parsed.active !== false, selected: parsed.selected };
+      }
+    }
+  } catch { /* ignore */ }
+  return { active: true, selected: [] };
+}
+
+/** Write the working set back. Called from renderAll, which every change ends in. */
+function persist(): void {
+  try {
+    localStorage.setItem(
+      key(currentLangValue(), bucketFor('domain')),
+      JSON.stringify({ active, selected: [...selected] }),
+    );
+  } catch { /* quota */ }
+}
+
+function copyState(from: Bucket, to: Bucket): void {
+  const lang  = currentLangValue();
+  const state = readBucket(lang, from);
+  try {
+    localStorage.setItem(key(lang, to),
+                         JSON.stringify({ ...state, selected: [...state.selected] }));
+  } catch { /* quota */ }
+}
+
+const header: FilterHeaderConfig = {
+  id:          'domain',
+  activeBtnId: 'domainFilterActive',
+  chainBtnId:  'domainFilterChain',
+  noteId:      'domainFilterChainNote',
+  isActive:    () => active,
+  setActive:   on => { active = on; persist(); },
+  copyState,
+  onChange:    () => { loadFromBucket(); renderAll(); },
+};
 
 // All domains sorted by count (populated by updateDomainFilter)
 let allByCount: { domain: string; count: number }[] = [];
@@ -93,6 +157,10 @@ function renderAll(): void {
   renderPills();
   renderChips();
   updateHeader();
+  syncFilterHeader(header);
+  // Every mutation of `selected` ends here, so this is the one place the
+  // working set has to be written back.
+  persist();
 }
 
 // ── Dropdown ───────────────────────────────────────────────────────────────────
@@ -172,12 +240,36 @@ export function updateDomainFilter(counts: { domain: string; count: number }[]):
 
   // Everything else → alphabetical for dropdown (computed inline where needed)
 
-  // Remove any selected domains that no longer exist in the new language
+  // This fires on a language change, so the in-memory set still holds the
+  // previous language's domains. Reload before pruning, or the prune would
+  // write the old language's selections into the new one's bucket.
+  loadFromBucket();
+
+  // Remove any selected domains that do not exist in this language
   const allKnown = new Set(counts.map(x => x.domain));
   for (const d of selected) {
     if (!allKnown.has(d)) selected.delete(d);
   }
 
+  renderAll();
+}
+
+/**
+ * Re-read the selection for the current language and bucket.
+ *
+ * Called on a language change, a mode change and either header button, since
+ * all four can move which bucket this filter is reading from.
+ */
+export function loadFromBucket(): void {
+  const state = readBucket(currentLangValue(), bucketFor('domain'));
+  selected.clear();
+  state.selected.forEach(d => selected.add(d));
+  active = state.active;
+}
+
+/** Re-read and repaint after a mode change. */
+export function reloadDomainFilter(): void {
+  loadFromBucket();
   renderAll();
 }
 
@@ -260,9 +352,13 @@ export function bindDomainFilter(): void {
   });
 
   clearBtn?.addEventListener('click', () => { selected.clear(); renderAll(); });
+
+  bindFilterHeader(header);
+  loadFromBucket();
   renderAll();
 }
 
+/** Selected domains, or [] when the filter is switched off. */
 export function getSelectedDomains(): string[] {
-  return [...selected];
+  return active ? [...selected] : [];
 }

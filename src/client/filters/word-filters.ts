@@ -14,12 +14,14 @@ import {
   getList,
   getListFilterState,
   saveListFilterState,
-  linkListFilterToAllScopes,
+  copyListFilterState,
   refreshFilterSelect,
   LIST_FILTER_DESC,
   type ListFilterMode,
 } from '../utils/word-lists.ts';
-import { SCOPE_LABELS } from './filter-scope.ts';
+import {
+  bindFilterHeader, syncFilterHeader, type FilterHeaderConfig,
+} from './filter-header.ts';
 
 export interface FilterState {
   domains:      string[];
@@ -77,9 +79,30 @@ export function filterWords(words: Word[]): Word[] {
   }
 }
 
-function currentLang(fallback: string): string {
+function currentLang(fallback = 'spanish'): string {
   return (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? fallback;
 }
+
+/** Config for the shared On/Off + chain header. */
+const listHeader: FilterHeaderConfig = {
+  id:          'list',
+  activeBtnId: 'listFilterActive',
+  chainBtnId:  'listFilterChain',
+  noteId:      'listFilterChainNote',
+  isActive:    () => getListFilterState(currentLang()).active,
+  setActive:   on => {
+    const lang  = currentLang();
+    const state = getListFilterState(lang);
+    state.active = on;
+    saveListFilterState(lang, state);
+  },
+  copyState:   (from, to) => copyListFilterState(currentLang(), from, to),
+  onChange:    () => {
+    const lang = currentLang();
+    refreshFilterSelect(lang);
+    syncListFilterUI(lang);
+  },
+};
 
 /**
  * Repaint the header from stored state.
@@ -92,28 +115,16 @@ function currentLang(fallback: string): string {
 export function syncListFilterUI(lang: string): void {
   const state = getListFilterState(currentLang(lang));
 
-  const activeBtn = document.getElementById('listFilterActive');
-  if (activeBtn) {
-    activeBtn.classList.toggle('filter-active-btn--on', state.active);
-    activeBtn.setAttribute('aria-pressed', String(state.active));
-    activeBtn.title = state.active
-      ? 'This filter is on — click to switch it off without losing your selections'
-      : 'This filter is off — click to switch it back on';
-    const dot = activeBtn.querySelector('.filter-active-label');
-    if (dot) dot.textContent = state.active ? 'On' : 'Off';
-  }
+  syncFilterHeader(listHeader);
 
   document.querySelectorAll<HTMLButtonElement>('#listFilterMode .list-filter-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.mode === state.mode);
   });
 
+  // Drives the checked-item colour via CSS. The dimming while inactive is
+  // handled by syncFilterHeader, which puts filter-box--inactive on the wrap.
   const wrap = document.querySelector<HTMLElement>('.list-filter-wrap');
-  if (wrap) {
-    wrap.dataset.mode = state.mode;
-    // Dims the mode buttons and the checkbox list while off, so an inactive
-    // filter cannot be mistaken for one that is simply matching nothing.
-    wrap.classList.toggle('list-filter-wrap--inactive', !state.active);
-  }
+  if (wrap) wrap.dataset.mode = state.mode;
 
   const desc = document.getElementById('listFilterDesc');
   if (desc) {
@@ -129,13 +140,7 @@ export function syncListFilterUI(lang: string): void {
  * refreshFilterSelect rebuilds.
  */
 export function initListFilter(lang: string): void {
-  document.getElementById('listFilterActive')?.addEventListener('click', () => {
-    const curLang = currentLang(lang);
-    const state   = getListFilterState(curLang);
-    state.active  = !state.active;
-    saveListFilterState(curLang, state);
-    syncListFilterUI(curLang);
-  });
+  bindFilterHeader(listHeader);
 
   document.getElementById('listFilterMode')?.addEventListener('click', e => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.list-filter-btn');
@@ -151,18 +156,6 @@ export function initListFilter(lang: string): void {
     state.active = true;
     saveListFilterState(curLang, state);
     syncListFilterUI(curLang);
-  });
-
-  document.getElementById('listFilterChain')?.addEventListener('click', () => {
-    const curLang = currentLang(lang);
-    const changed = linkListFilterToAllScopes(curLang);
-    const note    = document.getElementById('listFilterChainNote');
-    if (!note) return;
-    note.textContent = changed.length === 0
-      ? 'Every mode already had this'
-      : `Copied to ${changed.map(s => SCOPE_LABELS[s]).join(', ')}`;
-    note.hidden = false;
-    window.setTimeout(() => { note.hidden = true; }, 4000);
   });
 
   syncListFilterUI(lang);
