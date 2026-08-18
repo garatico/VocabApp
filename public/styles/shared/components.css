@@ -310,13 +310,20 @@
 
 /* An inactive filter's own controls are dimmed, so it cannot be
    mistaken for one that is on and simply matching nothing. Pointer
-   events stay on: changing Hide/Focus while off is how you set up
-   what the filter will do before switching it on. */
-.list-filter-wrap--inactive .list-filter-toggle,
-.list-filter-wrap--inactive .list-filter-checkboxes {
+   events stay on: changing what a filter will do before switching it
+   on is a reasonable order to work in. */
+.filter-box--inactive .list-filter-toggle,
+.filter-box--inactive .list-filter-checkboxes,
+.filter-box--inactive #classFilterBody .pos-chip,
+.filter-box--inactive #domainFilterBody {
   opacity: 0.5;
 }
 
+/* ── Chain ──
+   Three states, and the icon carries them as well as the colour:
+   a whole link when chained, a broken one when not. Colour alone
+   would not survive being read quickly or by someone who cannot
+   distinguish the two hues. */
 .filter-chain-btn {
   padding: 0.1rem 0.35rem;
   font-size: 0.8rem;
@@ -326,18 +333,44 @@
   border: 1px solid transparent;
   border-radius: 5px;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  filter: grayscale(1);
+  opacity: 0.55;
+  transition: color 0.15s, border-color 0.15s, background 0.15s,
+              opacity 0.15s, filter 0.15s;
 }
 
 .filter-chain-btn:hover {
   color: var(--text);
   background: var(--surface2);
   border-color: var(--border);
+  opacity: 1;
 }
 
 .filter-chain-btn:active { transform: translateY(1px); }
 
-.list-filter-chain-note {
+/* Chained and sharing with at least one other mode. */
+.filter-chain-btn--on {
+  filter: none;
+  opacity: 1;
+  border-color: var(--border);
+  background: var(--surface2);
+}
+
+/* Chained, but every other mode has been unchained — the link is on
+   and holding nothing. Dashed rather than solid so it is visibly not
+   the same state as sharing with someone. */
+.filter-chain-btn--on.filter-chain-btn--alone {
+  border-style: dashed;
+  opacity: 0.75;
+}
+
+.filter-header-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.filter-chain-note {
   margin: 0 0 0.35rem;
   font-size: 0.72rem;
   color: var(--success, #16a34a);

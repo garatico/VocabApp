@@ -171,12 +171,20 @@
           <button id="startBtn">Start Quiz</button>
         </div>
 
-        <div id="classFilter">
+        <div id="classFilter" class="class-filter-wrap">
           <button type="button" class="filter-collapse-btn" data-collapse="classFilterBody" aria-expanded="false" aria-controls="classFilterBody">
             <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
             <span class="filter-section-label">Part of Speech</span>
           </button>
+          <span class="filter-header-controls">
+            <button type="button" class="filter-active-btn filter-active-btn--on" id="classFilterActive" aria-pressed="true">
+              <span class="filter-active-dot" aria-hidden="true"></span>
+              <span class="filter-active-label">On</span>
+            </button>
+            <button type="button" class="filter-chain-btn filter-chain-btn--on" id="classFilterChain" aria-pressed="true">&#128279;</button>
+          </span>
           <div id="classFilterBody" class="filter-body">
+            <p class="filter-chain-note" id="classFilterChainNote" role="status" hidden></p>
             <button type="button" class="pos-chip pos-chip-all active">All</button>
             <button type="button" class="pos-chip" data-pos="verb">Verbs</button>
             <button type="button" class="pos-chip" data-pos="noun">Nouns</button>
@@ -200,21 +208,23 @@
                    collapsible body, so a collapsed filter still says whether it
                    is doing anything and can be switched without expanding it.
                    The On/Off button is the indicator as well as the control. -->
-              <button type="button" class="filter-active-btn filter-active-btn--on" id="listFilterActive"
-                      aria-pressed="true" title="This filter is on — click to switch it off without losing your selections">
-                <span class="filter-active-dot" aria-hidden="true"></span>
-                <span class="filter-active-label">On</span>
-              </button>
+              <span class="filter-header-controls">
+                <button type="button" class="filter-active-btn filter-active-btn--on" id="listFilterActive" aria-pressed="true">
+                  <span class="filter-active-dot" aria-hidden="true"></span>
+                  <span class="filter-active-label">On</span>
+                </button>
+              </span>
               <div class="list-filter-toggle" id="listFilterMode">
                 <button type="button" class="list-filter-btn active" data-mode="hide" title="Remove words on the checked lists from the quiz">Hide</button>
                 <button type="button" class="list-filter-btn" data-mode="focus" title="Quiz only words on the checked lists">Focus</button>
               </div>
-              <button type="button" class="filter-chain-btn" id="listFilterChain"
-                      title="Copy this list filter to Table, Recall, Single Word, Picture Quiz and My Lists">&#128279;</button>
+              <span class="filter-header-controls">
+                <button type="button" class="filter-chain-btn filter-chain-btn--on" id="listFilterChain" aria-pressed="true">&#128279;</button>
+              </span>
               <span class="list-filter-count">(<span id="knownWordCount">0</span> listed)</span>
             </div>
             <div id="listFilterBody" class="filter-body">
-              <p class="list-filter-chain-note" id="listFilterChainNote" role="status" hidden></p>
+              <p class="filter-chain-note" id="listFilterChainNote" role="status" hidden></p>
               <p class="list-filter-desc" id="listFilterDesc"></p>
               <div class="list-filter-checkboxes" id="listFilterCheckboxes">
                 <span class="list-filter-empty">No lists yet — create one in My Lists</span>
@@ -310,9 +320,18 @@
               <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
               <span id="domainFilterLabel" class="filter-section-label">Domains <span id="domainFilterCount"></span></span>
             </button>
+            <span class="filter-header-controls">
+              <button type="button" class="filter-active-btn filter-active-btn--on" id="domainFilterActive" aria-pressed="true">
+                <span class="filter-active-dot" aria-hidden="true"></span>
+                <span class="filter-active-label">On</span>
+              </button>
+              <button type="button" class="filter-chain-btn filter-chain-btn--on" id="domainFilterChain" aria-pressed="true">&#128279;</button>
+            </span>
             <button type="button" id="clearAllDomains" style="display:none">Clear all</button>
           </div>
-          <div id="domainFilterBody" class="filter-body"></div>
+          <div id="domainFilterBody" class="filter-body">
+            <p class="filter-chain-note" id="domainFilterChainNote" role="status" hidden></p>
+          </div>
         </div>
 
 
