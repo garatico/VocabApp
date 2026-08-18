@@ -1098,3 +1098,206 @@
 @media (max-width: 380px) {
   .conj-tense-chips { grid-template-columns: 1fr; }
 }
+
+/* ================================================================
+   The verb name row is hidden by an attribute, so it needs a rule.
+
+   buildCard sets `titleRow.hidden = true` in Full Conjugation, where
+   the view header already carries the verb. The browser's own
+   `[hidden] { display: none }` loses to the author `display: flex`
+   above, so the row kept rendering: the verb name and its star
+   appeared on all eight cards of the same verb, and the star sat on
+   top of the A1 badge.
+
+   That star is the add-to-list control, filled because the verb is
+   on one of your lists. One per verb is the intent — the one in the
+   Full Conjugation header.
+================================================================ */
+.conj-verb-title-row[hidden] { display: none; }
+
+/* ── Full Conjugation card width ──
+   15rem could not hold the header: rank, level, regularity, tense
+   and Reveal all, plus a pronoun label and an input on every row. The
+   badges wrap now rather than being clipped, and the column is wide
+   enough for the input to show what you typed. */
+.conj-cards-grid--full .conj-card {
+  width: min(19rem, 82vw);
+}
+
+.conj-cards-grid--full .conj-card-header {
+  padding: 0.55rem 0.7rem;
+}
+
+.conj-cards-grid--full .conj-head-meta,
+.conj-cards-grid--full .conj-head-foot {
+  flex-wrap: wrap;
+  row-gap: 0.25rem;
+}
+
+/* The input is the point of the card; it gets what is left. */
+.conj-cards-grid--full .conj-row {
+  grid-template-columns: minmax(0, auto) minmax(4.5rem, 1fr) auto;
+  padding-inline: 0.5rem;
+}
+
+.conj-cards-grid--full .conj-pronoun {
+  width: auto;
+  max-width: 5.5rem;
+}
+
+/* ================================================================
+   CONJUGATION ON A PHONE — grid cards and the progress block
+================================================================ */
+@media (max-width: 640px) {
+  /* ── Grid view: one pronoun per row ──
+     The 2×3 inner grid halves an already-narrow card, so the input
+     was about five characters wide and the verb's gloss was clipped
+     mid-word. One column per row gives the input the card's width. */
+  .conj-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .conj-cards-grid:not(.conj-cards-grid--full) .conj-inner-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    grid-auto-flow: row;
+  }
+
+  .conj-cards-grid:not(.conj-cards-grid--full) .conj-inner-grid .conj-row {
+    border-left: none;
+  }
+  .conj-cards-grid:not(.conj-cards-grid--full) .conj-inner-grid .conj-row:nth-child(3) {
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Let the gloss use the width it has instead of being cut at the
+     card edge — there is room for two lines here. */
+  .conj-verb-english {
+    white-space: normal;
+    overflow: visible;
+  }
+
+  .conj-head-meta,
+  .conj-head-foot {
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
+  }
+}
+
+@media (max-width: 767px) {
+  /* ── Progress block ──
+     Bar, stat and two labelled cells of pills were laid out for a
+     wide row. Stacked on a phone the tracks collapsed to stubs beside
+     their fixed-width stat, and each pill cell became a tall box.
+
+     Full-width tracks, the stat under its own bar, and the pills as
+     one wrapping row rather than a boxed column. */
+  .conj-progress-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+    padding: 0.6rem 0.7rem;
+  }
+
+  .conj-progress-block { width: 100%; }
+
+  .conj-progress-bars .progressWrap {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem 0.5rem;
+  }
+
+  .conj-progress-bars .progress {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  /* Was a fixed width, which is what starved the track beside it. */
+  .conj-progress-bars .progressWrap .small {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    text-align: left;
+    font-size: 0.7rem;
+  }
+
+  .conj-progress-pills {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .conj-pills-cell {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.4rem;
+    padding: 0;
+    background: none;
+    border: none;
+  }
+
+  .conj-pills-cell .quiz-score {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .conj-pills-cell .score-pill {
+    font-size: 0.68rem;
+    padding: 0.15rem 0.4rem;
+  }
+
+  /* Full width at the bottom, where it cannot be hit by accident while
+     reaching for the last input. */
+  .conj-giveup-btn {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+/* ================================================================
+   TENSE, FORMS AND REGULARITY: ONE WIDTH
+
+   Stacked on a phone the three groups came out different widths —
+   Tense nearly full, Forms and Regularity noticeably short. The
+   sides stretch, but their contents did not: .conj-pronoun-toggles
+   is a grid sized by its cells' 4.5rem minimum, and the flex ratios
+   (--wide is flex:2, --narrow flex:1) still sit on the elements even
+   though they mean nothing once the container is a column.
+
+   Every group and every control in it takes the panel's full width,
+   so the three read as one set of filters rather than three boxes
+   that happen to be stacked.
+================================================================ */
+@media (max-width: 767px) {
+  .conj-tf-body > .conj-tf-side,
+  .conj-tf-side--wide,
+  .conj-tf-side--narrow {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: none;
+    align-items: stretch;
+  }
+
+  /* Header (label + All/None), chip grid, pronoun grid — all of it. */
+  .conj-tf-side > * { width: 100%; }
+
+  .conj-pronoun-toggles,
+  .conj-tense-chips,
+  .conj-reg-chips {
+    width: 100%;
+    max-width: none;
+  }
+
+  /* Header keeps its label left and its buttons right, on one line. */
+  .conj-tf-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .conj-tf-header > .filter-section-label { flex: 1 1 auto; min-width: 0; }
+  .conj-tf-header > button { flex: 0 0 auto; }
+}
