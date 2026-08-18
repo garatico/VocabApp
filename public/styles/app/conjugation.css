@@ -1000,13 +1000,18 @@
 }
 
 @media (max-width: 640px) {
-  /* Stacked on a phone, so the two-column grid is right again — it is the
-     full width of the screen rather than one column of a scrolling row. */
-  .conj-cards-grid--full .conj-inner-grid {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: repeat(3, auto);
-    grid-auto-flow: column;
-  }
+  /*
+   * One column here too.
+   *
+   * This used to put the 2×3 grid back, on the reasoning that a stacked card
+   * has the full width of the screen rather than one column of a scrolling
+   * row. The full width of a phone is still only ~360px, and half of that
+   * minus a 72px pronoun label leaves an input too narrow to read — the same
+   * mistake Grid view had, made a second time for the same wrong reason.
+   *
+   * Both views are one pronoun per row on a phone now, so a card reads the
+   * same wherever it appears.
+   */
   .conj-cards-grid--full .conj-card { width: 100%; }
 }
 
@@ -1188,25 +1193,32 @@
    CONJUGATION ON A PHONE — grid cards and the progress block
 ================================================================ */
 @media (max-width: 640px) {
-  /* ── Grid view: one pronoun per row ──
-     The 2×3 inner grid halves an already-narrow card, so the input
-     was about five characters wide and the verb's gloss was clipped
-     mid-word. One column per row gives the input the card's width. */
+  /* ── One pronoun per row, in both views ──
+     The 2×3 inner grid halves an already-narrow card, so the input was
+     about five characters wide and the verb's gloss was clipped
+     mid-word. One column per row gives the input the card's width.
+
+     Not scoped to either view: a card should read the same wherever it
+     appears, and scoping this to Grid is what let Full Conjugation keep
+     the two-column grid and reintroduce the problem. */
   .conj-cards-grid {
     grid-template-columns: 1fr;
   }
 
-  .conj-cards-grid:not(.conj-cards-grid--full) .conj-inner-grid {
+  .conj-inner-grid {
     grid-template-columns: 1fr;
     grid-template-rows: none;
     grid-auto-flow: row;
   }
 
-  .conj-cards-grid:not(.conj-cards-grid--full) .conj-inner-grid .conj-row {
+  .conj-inner-grid .conj-row {
     border-left: none;
   }
-  .conj-cards-grid:not(.conj-cards-grid--full) .conj-inner-grid .conj-row:nth-child(3) {
+  .conj-inner-grid .conj-row:nth-child(3) {
     border-bottom: 1px solid var(--border);
+  }
+  .conj-inner-grid .conj-row:last-child {
+    border-bottom: none;
   }
 
   /* Let the gloss use the width it has instead of being cut at the
