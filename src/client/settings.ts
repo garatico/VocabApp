@@ -19,6 +19,25 @@ export type TypoTolerance = 'off' | 'low' | 'normal' | 'high';
 const TYPO_RATIOS: Record<TypoTolerance, number> = { off: 0, low: 0.15, normal: 0.25, high: 0.35 };
 export type FontSize  = 'xs' | 'small' | 'medium' | 'large' | 'xl';
 
+export type ConjDeselected = 'close' | 'blank' | 'grey' | 'answer';
+const CONJ_DESELECTED: ConjDeselected[] = ['close', 'blank', 'grey', 'answer'];
+
+/** Grid class for each mode. 'close' needs none — it is the base behaviour. */
+export const CONJ_DESELECTED_CLASS: Record<ConjDeselected, string> = {
+  close:  '',
+  blank:  'conj-cards-grid--keep-blank',
+  grey:   'conj-cards-grid--keep-grey',
+  answer: 'conj-cards-grid--keep-answer',
+};
+
+/** Put the right modifier on the cards grid, clearing the other three. */
+export function applyConjDeselectedClass(grid: Element | null, mode: ConjDeselected): void {
+  if (!grid) return;
+  Object.values(CONJ_DESELECTED_CLASS).forEach(c => { if (c) grid.classList.remove(c); });
+  const cls = CONJ_DESELECTED_CLASS[mode];
+  if (cls) grid.classList.add(cls);
+}
+
 export const Settings = {
   // ── Table ──────────────────────────────────────────────────────────────────
   getTableCols: (): number    => Math.max(1, Math.min(5, Number(get('table_cols', '2')))),
@@ -68,12 +87,27 @@ export const Settings = {
   /**
    * What a deselected pronoun leaves behind.
    *
-   * True (the default) keeps the cell and blanks it, so dropping *vosotros*
-   * still gives a 2×3 chart with a hole in it and every other pronoun in the
-   * place a learner expects to find it. False removes the cell and lets the
-   * rest close up, which is denser but moves *ellos* into the *vosotros* slot.
+   * Anything but 'close' keeps the cell, so dropping *vosotros* still gives a
+   * 2×3 chart with every other pronoun where a learner expects to find it,
+   * rather than moving *ellos* up into the *vosotros* slot.
+   *
+   *   close   remove the cell; the rest close up. Denser, but the chart loses
+   *           its shape.
+   *   blank   keep the cell and its grid lines, hide the contents.
+   *   grey    keep the cell, show the pronoun and an empty disabled box, dimmed
+   *           — you can still see which pronoun you dropped.
+   *   answer  as grey, with the conjugation filled in. Turns a deselected
+   *           pronoun into a worked example rather than a blank.
    */
-  getConjKeepShape: (): boolean => get('conj_keep_shape', 'true') === 'true',
+  getConjDeselected: (): ConjDeselected => {
+    const raw = localStorage.getItem(P + 'conj_deselected');
+    if (raw && CONJ_DESELECTED.includes(raw as ConjDeselected)) return raw as ConjDeselected;
+    // Migrate the boolean this replaced. It only distinguished keep from close,
+    // and 'grey' is the keep variant that shows the most.
+    const legacy = localStorage.getItem(P + 'conj_keep_shape');
+    if (legacy === 'false') return 'close';
+    return 'grey';
+  },
 };
 
 // ── Font size application ─────────────────────────────────────────────────────
@@ -108,6 +142,17 @@ let onPageSizeChange: (() => void) | null = null;
 
 export function setOnPageSizeChange(fn: () => void): void {
   onPageSizeChange = fn;
+}
+
+/**
+ * Notified when the deselected-pronoun mode changes, so conjugation mode can
+ * fill in or clear the answers that 'answer' mode shows. The class alone
+ * cannot do that — it is content, not styling.
+ */
+let onConjDeselectedChange: (() => void) | null = null;
+
+export function setOnConjDeselectedChange(fn: (() => void) | null): void {
+  onConjDeselectedChange = fn;
 }
 
 export function bindSettings(): void {
@@ -208,12 +253,12 @@ export function bindSettings(): void {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
     if (!btn) return;
     activateToggle('settingConjShape', btn);
-    const keep = btn.dataset.shape ?? 'true';
-    set('conj_keep_shape', keep);
-    // Applies to a quiz already on screen — it is only a layout choice, so
+    const mode = (btn.dataset.shape ?? 'grey') as ConjDeselected;
+    set('conj_deselected', mode);
+    // Applies to a quiz already on screen — it is only a display choice, so
     // there is no reason to make the learner restart to see it.
-    document.querySelector('.conj-cards-grid')
-      ?.classList.toggle('conj-cards-grid--keep-shape', keep === 'true');
+    applyConjDeselectedClass(document.querySelector('.conj-cards-grid'), mode);
+    onConjDeselectedChange?.();
   });
 
   restoreSettingsUI();
@@ -292,7 +337,7 @@ function restoreSettingsUI(): void {
   });
 
   // Conjugation chart shape
-  const savedShape = get('conj_keep_shape', 'true');
+  const savedShape = Settings.getConjDeselected();
   document.querySelectorAll<HTMLElement>('#settingConjShape .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.shape === savedShape);
   });

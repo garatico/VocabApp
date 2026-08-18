@@ -559,11 +559,13 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span>Deselected pronouns</span>
-                <span class="settings-desc">Keep the gap leaves a blank cell where the pronoun was, so the card still reads as a full chart. Close up removes the cell and lets the rest move up.</span>
+                <span class="settings-desc">The first three keep the cell and its grid lines, so the card still reads as a full chart. Close up removes the cell and lets the rest move up into it.</span>
               </div>
               <div class="sort-order-toggle" id="settingConjShape">
-                <button type="button" class="sort-order-btn active" data-shape="true">Keep the gap</button>
-                <button type="button" class="sort-order-btn" data-shape="false">Close up</button>
+                <button type="button" class="sort-order-btn" data-shape="blank" title="Keep the cell and its grid lines, hide what is in it">Blank</button>
+                <button type="button" class="sort-order-btn active" data-shape="grey" title="Show the pronoun and an empty box, dimmed">Greyed out</button>
+                <button type="button" class="sort-order-btn" data-shape="answer" title="Dimmed, with the conjugation filled in">Show answer</button>
+                <button type="button" class="sort-order-btn" data-shape="close" title="Remove the cell; the rest close up">Close up</button>
               </div>
             </div>
 
