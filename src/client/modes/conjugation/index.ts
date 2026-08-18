@@ -134,6 +134,23 @@ function isOwnInfinitive(w: Word): boolean {
   return normalize(w.word).startsWith(normalize(inf));
 }
 
+/**
+ * Do we have anything to drill for this verb?
+ *
+ * A present-tense array of six empty strings is as useless as a null, and both
+ * occur: an import that found the headword but no table leaves the shape behind
+ * without the content. So the test is for a form with characters in it, not for
+ * the key being present.
+ */
+function hasAnyForms(w: Word): boolean {
+  const conj = w.linguistic?.conjugations as Record<string, unknown> | null | undefined;
+  if (!conj) return false;
+  return Object.values(conj).some(v =>
+    typeof v === 'string'
+      ? v.trim() !== ''
+      : Array.isArray(v) && v.some(f => typeof f === 'string' && f.trim() !== ''));
+}
+
 const SINGLE_FORM_ROW_LABEL: Record<string, string> = {
   past_participle: 'participio',
   gerund:          'gerundio',
@@ -194,7 +211,17 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   // bars and the session record all agree on what the quiz contains.
   const regs      = activeRegularities();
   const everyReg  = regs.length >= 4;
-  const rawVerbs  = words.filter(w => w.pos === 'verb' && isOwnInfinitive(w));
+  const verbEntries = words.filter(w => w.pos === 'verb' && isOwnInfinitive(w));
+
+  // Only verbs we actually have forms for. Spanish generates them from rules so
+  // this is a no-op there, but the imported languages are patchy — 41 of
+  // French's 1,337 verbs carry a table, and German and Dutch carry none until
+  // the conjugations pipeline step has been run. Without this the mode built a
+  // card per missing verb whose every cell was blank and whose every answer was
+  // null: uncompletable, and counted against the learner in the progress bars.
+  const rawVerbs = verbEntries.filter(hasAnyForms);
+  const noFormsCount = verbEntries.length - rawVerbs.length;
+
   const allVerbs  = everyReg
     ? rawVerbs
     // A verb with no recorded class has no bucket to be filtered into, so it
@@ -209,8 +236,11 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     const why = rawVerbs.length > 0
       ? `<p>No verbs match the current Regularity filter.</p>
          <p class="conj-empty-hint">${rawVerbs.length} verb${rawVerbs.length === 1 ? '' : 's'} in the list — widen Regularity in the Tense &amp; Forms box, then hit Start Quiz again.</p>`
-      : `<p>No verbs in the current word list.</p>
-         <p class="conj-empty-hint">Make sure "Verbs" is checked in the class filter, then hit Start Quiz again.</p>`;
+      : noFormsCount > 0
+        ? `<p>No conjugation data for the verbs in this list.</p>
+           <p class="conj-empty-hint">${noFormsCount} verb${noFormsCount === 1 ? '' : 's'} found, but none has a conjugation table yet. Run <code>npm run data:conjugations</code> to fetch them, then reload.</p>`
+        : `<p>No verbs in the current word list.</p>
+           <p class="conj-empty-hint">Make sure "Verbs" is checked in the class filter, then hit Start Quiz again.</p>`;
     container.innerHTML = `<div class="conj-empty">${why}</div>`;
     return;
   }

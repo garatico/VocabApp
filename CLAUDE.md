@@ -165,6 +165,7 @@ python scripts/data/pipeline.py                            # list the steps
 | step       | what it does                                             | in `all`? |
 |------------|----------------------------------------------------------|-----------|
 | `mine`     | OpenSubtitles corpus → new curated entries (+ glosses)    | no — network, rate-limited, batched |
+| `conjugations` | Wiktionary verb tables → curated JSONL (deu, nld only) | no — network, ~1 req/sec |
 | `seed`     | `data/seed/<language>.txt` → new curated entries          | yes — local, offline, idempotent |
 | `dedupe`   | drop duplicate and junk entries                           | yes |
 | `backfill` | fill missing pos/glosses so `sync` stops skipping rows    | yes |
@@ -316,20 +317,49 @@ German is mined the same way as the other four, with three differences:
   letters are its strongest noun signal — and `display_lemma` restores the
   capital on any word tagged NOUN. Keys stay lowercase throughout; only the
   stored `word` is cased.
-- **No conjugations.** mlconjug3 covers en/es/fr/it/pt/ro and has no German, so
-  German verbs import with `conjugations: null`. `LANGS_WITHOUT_CONJUGATION` in
-  `config.py` makes `sync` report that once instead of failing per verb. Giving
-  German real conjugations means writing a rules engine for it, the way Spanish
-  has `verb-rules.ts`.
+- **Conjugations come from Wiktionary, not from rules.** mlconjug3 covers
+  en/es/fr/it/pt/ro and has no German, so `sync` still imports German verbs with
+  `conjugations: null` and `LANGS_WITHOUT_CONJUGATION` still reports that once
+  rather than per verb. The forms are filled in by a separate step:
+
+  ```bash
+  python scripts/data/pipeline.py conjugations --langs deu --write
+  npm run data:conjugations          # both languages, then run sync
+  ```
+
+  A rules engine was the obvious plan and would not have helped. Of the 172
+  German verbs in the vocabulary roughly 75 are strong — *gehen, nehmen,
+  sprechen, ziehen, schwimmen* — and a strong verb's principal parts cannot be
+  derived from its infinitive. Whatever generates the weak ones, the hard part
+  is a table of ~150 verbs, so the only real question is where it comes from.
+  Hand-writing it was the alternative, and a wrong Präteritum stem is not a
+  crash: it is a confidently wrong answer a learner cannot doubt, that no test
+  here would catch. Wiktionary is checkable by opening the page.
+
+  Every parse is shape-checked — six present forms, six preterite, a participle,
+  nothing containing markup — and anything that fails is **skipped and reported**
+  rather than guessed. Conjugation mode drops verbs it has no forms for, so a
+  miss costs a verb you cannot drill, never a verb you are taught wrong.
+
+  Cached in `data/conj_cache/<language>.jsonl`, same shape as the gloss cache,
+  including negative results so a verb Wiktionary has no table for is not
+  refetched. Network failures are deliberately *not* cached — those are about
+  the run, not the verb.
 - **No plural merging.** `deduplicate_lemma_map`'s `-s`/`-es` rule is gated to
   `PLURAL_S_LANGS`. German plurals are formed by suffix, umlaut, both or neither
   (Haus→Häuser, Auto→Autos, Fenster→Fenster), so the rule does not describe the
   language — what it *would* do is merge Eis (ice) into Ei (egg) and Reis (rice)
   into Rei. spaCy already lemmatises German to the singular.
 
-**In the app**, German is offered in Table, Recall, Single Word, Picture Quiz
-and My Lists. Conjugation mode is disabled for it — the tab greys out with the
-reason on hover — because there is no conjugation data to drill.
+**In the app**, German is offered in every mode, Conjugation included, once the
+`conjugations` step has been run — it drills Präsens, Präteritum and Partizip II.
+Before that the mode opens on a message naming the command, rather than on cards
+with nothing in them.
+
+Conjugation mode only offers verbs it has forms for, in every language. That is
+not just a German concern: 41 of French's 1,337 verbs carry a table, so the mode
+used to build ~1,300 uncompletable cards whose blank cells counted against the
+learner in the progress bars.
 `src/client/data/languages.ts` is the single list of languages and their
 capabilities; the dropdown, the ISO codes and that tab gate all read from it,
 and `GET /api/languages` tells the dropdown which languages the DB actually has

@@ -28,3 +28,7 @@ requests>=2.31
 # no separate download. Used by the `seed` step to cross-check hand-written
 # parts of speech; seeding works without it, just unchecked.
 HanTa
+
+# Conjugation tables (pipeline.py conjugations) — parses Wiktionary's rendered
+# inflection tables for German and Dutch. mlconjug3 has no model for either.
+beautifulsoup4>=4.12

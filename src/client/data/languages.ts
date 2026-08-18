@@ -13,8 +13,18 @@
  *                            src/server/lib/verb-rules.ts
  *   french, italian, portuguese
  *                            a full table imported from mlconjug3 at sync time
- *   german, dutch            nothing. mlconjug3 covers en/es/fr/it/pt/ro only,
- *                            and no rules engine has been written for either.
+ *   german, dutch            a table fetched from Wiktionary by the
+ *                            `conjugations` pipeline step. mlconjug3 covers
+ *                            en/es/fr/it/pt/ro only, and a rules engine would
+ *                            not have helped: most of the German and Dutch
+ *                            verbs in the vocabulary are strong, so their
+ *                            principal parts have to be supplied as data
+ *                            whatever generates the rest.
+ *
+ * The flag says the app *can* drill the language, not that every verb has a
+ * table. Coverage is patchy in the imported languages — 41 of French's 1,337
+ * verbs carry one — so Conjugation mode drops verbs with no forms rather than
+ * offering a card that cannot be completed.
  *
  * So Conjugation mode is offered for four of the six, and disabled with an
  * explanation for the other two rather than opening onto an empty grid.
@@ -40,8 +50,8 @@ export const LANGUAGES: LanguageInfo[] = [
   { name: 'portuguese', label: 'Portuguese', iso: 'pt', hasConjugations: true,  capitalisesNouns: false },
   { name: 'italian',    label: 'Italian',    iso: 'it', hasConjugations: true,  capitalisesNouns: false },
   { name: 'french',     label: 'French',     iso: 'fr', hasConjugations: true,  capitalisesNouns: false },
-  { name: 'german',     label: 'German',     iso: 'de', hasConjugations: false, capitalisesNouns: true  },
-  { name: 'dutch',      label: 'Dutch',      iso: 'nl', hasConjugations: false, capitalisesNouns: false },
+  { name: 'german',     label: 'German',     iso: 'de', hasConjugations: true,  capitalisesNouns: true  },
+  { name: 'dutch',      label: 'Dutch',      iso: 'nl', hasConjugations: true,  capitalisesNouns: false },
 ];
 
 /** Language names in display order — the order of the dropdown. */
