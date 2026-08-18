@@ -15,7 +15,9 @@ import {
 import { buildGlossDisplay } from '../../utils/utils.js';
 import { supportsConjugation, conjugationUnavailableReason } from '../../data/languages.js';
 import { buildScorePills, scorePct } from '../../ui/score-pills.js';
-import { Settings } from '../../settings.js';
+import {
+  Settings, applyConjDeselectedClass, setOnConjDeselectedChange,
+} from '../../settings.js';
 
 export interface ConjugationModeOptions {
   words:     Word[];
@@ -32,6 +34,14 @@ interface CardController {
    * 'revealed' (peeked, yellow) or 'missed' (given up, red).
    */
   revealAnswers: (mark?: 'revealed' | 'missed') => void;
+  /**
+   * Put the right content in the cells of deselected pronouns.
+   *
+   * Only 'answer' mode needs it — the other three are pure CSS — but the clear
+   * half has to run whatever the mode, or an answer left over from a previous
+   * setting stays in the box after the pronoun is switched back on.
+   */
+  syncDeselected: () => void;
 }
 
 let _cleanup: (() => void) | null = null;
@@ -350,10 +360,10 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
 
   const cardsGrid = document.createElement('div');
   cardsGrid.className = 'conj-cards-grid';
-  // Keep-shape leaves a blank cell where a deselected pronoun was, so the card
-  // still reads as a conjugation chart. Set here rather than per row because it
-  // is one decision for the whole quiz, and the pronoun toggles re-run often.
-  cardsGrid.classList.toggle('conj-cards-grid--keep-shape', Settings.getConjKeepShape());
+  // How a deselected pronoun's cell is shown. On the grid rather than per row
+  // because it is one decision for the whole quiz, and the pronoun toggles
+  // re-run across every row often.
+  applyConjDeselectedClass(cardsGrid, Settings.getConjDeselected());
 
   interface Counts { correct: number; revealed: number; missed: number; left: number; total: number }
 
@@ -525,19 +535,29 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     }
     buildCards();
     applyAllPronounToggles(cardsGrid);
+    syncDeselectedCells();
     syncPronounRowVisibility();
     updateProgress();
   });
 
   container.append(orderRow, progressSection, cardsGrid);
 
+  /** Refresh what sits in the cells of deselected pronouns, on every card. */
+  function syncDeselectedCells(): void {
+    cardUpdaters.forEach(u => u.syncDeselected());
+  }
+
   // Unconditional: the pronoun toggles and the single-form tenses own separate
   // classes now (see VISIBLE_ROW), so this can no longer un-hide the pronoun
   // rows of a gerund or participle card.
   applyAllPronounToggles(cardsGrid);
+  syncDeselectedCells();
   syncPronounRowVisibility();
 
-  setProgressCallback(updateProgress);
+  // Toggling a pronoun re-runs the toggles and then this callback, which is
+  // where 'answer' mode gets its answers filled in or cleared again.
+  setProgressCallback(() => { syncDeselectedCells(); updateProgress(); });
+  setOnConjDeselectedChange(syncDeselectedCells);
   updateProgress();
 
   giveUpBtn.addEventListener('click', () => {
@@ -645,6 +665,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     displayToggle?.removeEventListener('click', handleDisplayClick);
     document.removeEventListener('keydown', handleCardNav);
     setProgressCallback(null);
+    setOnConjDeselectedChange(null);
   };
 }
 
@@ -816,7 +837,10 @@ function buildCard(
 
   // Single-form row (past_participle / gerund)
   const singleFormRow = document.createElement('div');
-  singleFormRow.className  = 'conj-row conj-row-hidden';
+  // conj-row-tense-hidden, matching what setSingleMode toggles. It used to
+  // start with conj-row-hidden, which setSingleMode no longer touches — so the
+  // row stayed hidden forever and a gerund card had no input at all.
+  singleFormRow.className  = 'conj-row conj-row-tense-hidden';
   singleFormRow.dataset.pi = 'single';
 
   const singleLabel = document.createElement('span');
@@ -995,9 +1019,33 @@ function buildCard(
     }
   }
 
+  function syncDeselected(): void {
+    const showAnswer = Settings.getConjDeselected() === 'answer';
+    pronounRows.forEach((row, i) => {
+      const inp = inputs[i];
+      if (!inp) return;
+      const off = row.classList.contains('conj-row-hidden');
+
+      if (off && showAnswer) {
+        // Never overwrite something the learner typed before switching the
+        // pronoun off — only an empty box, or one we filled ourselves.
+        if (inp.value === '' || inp.dataset.deselectedFill === '1') {
+          inp.value = answerFor(i) ?? '—';
+          inp.dataset.deselectedFill = '1';
+        }
+        return;
+      }
+
+      if (inp.dataset.deselectedFill === '1') {
+        inp.value = '';
+        delete inp.dataset.deselectedFill;
+      }
+    });
+  }
+
   setSingleMode(isSingleForm(getTenseKey()));
   updateHeader();
   attachChecking();
 
-  return { card, updateHeader, updateInputs, revealAnswers };
+  return { card, updateHeader, updateInputs, revealAnswers, syncDeselected };
 }

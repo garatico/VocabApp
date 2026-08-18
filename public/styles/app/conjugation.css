@@ -373,20 +373,54 @@
 }
 
 /*
- * Keep-shape: a deselected pronoun leaves its cell behind, empty.
+ * ── Deselected pronouns ──
  *
- * visibility rather than display, so the cell still occupies its track and
- * every other pronoun stays where a learner expects it — dropping vosotros
- * gives a 2×3 chart with a hole, not a 2×3 chart with ellos moved up into the
- * vosotros slot. visibility also hides the row's borders, so the gap reads as
- * blank rather than as an empty box.
+ * Three ways to keep the cell so the card still reads as a conjugation chart:
+ * dropping vosotros should give a 2×3 chart with a hole, not a 2×3 chart with
+ * ellos moved up into the vosotros slot.
  *
- * Scoped to .conj-row-hidden so it applies only to the pronoun toggles; a row
- * hidden because of the tense is genuinely absent and still collapses.
+ * All three restore `display` on the row itself, which is what keeps its
+ * borders — the grid lines — drawn. An earlier version put `visibility: hidden`
+ * on the row, which took the borders with it and left the gap looking like the
+ * chart simply stopped there. The hiding is on the row's *children* instead.
+ *
+ * Scoped with :not(.conj-row-tense-hidden) throughout, so a row hidden because
+ * this card drills a gerund stays genuinely absent — there is no chart shape to
+ * preserve for a form that has no pronouns.
  */
-.conj-cards-grid--keep-shape .conj-row-hidden:not(.conj-row-tense-hidden) {
+
+/* Blank — grid lines, nothing in them. */
+.conj-cards-grid--keep-blank .conj-row-hidden:not(.conj-row-tense-hidden) {
   display: grid;
+}
+.conj-cards-grid--keep-blank .conj-row-hidden:not(.conj-row-tense-hidden) > * {
   visibility: hidden;
+}
+
+/* Greyed out — you can still see which pronoun you dropped. */
+.conj-cards-grid--keep-grey   .conj-row-hidden:not(.conj-row-tense-hidden),
+.conj-cards-grid--keep-answer .conj-row-hidden:not(.conj-row-tense-hidden) {
+  display: grid;
+  opacity: 0.45;
+}
+
+/* Slightly less dimmed when it carries an answer, which is there to be read. */
+.conj-cards-grid--keep-answer .conj-row-hidden:not(.conj-row-tense-hidden) {
+  opacity: 0.6;
+}
+
+/* The reveal button is meaningless on a pronoun that is not being drilled. */
+.conj-cards-grid--keep-grey   .conj-row-hidden:not(.conj-row-tense-hidden) .conj-reveal-btn,
+.conj-cards-grid--keep-answer .conj-row-hidden:not(.conj-row-tense-hidden) .conj-reveal-btn {
+  visibility: hidden;
+}
+
+/* Not a field to fill in — flatten it so it does not invite typing. */
+.conj-cards-grid--keep-grey   .conj-row-hidden:not(.conj-row-tense-hidden) .conj-drill-input,
+.conj-cards-grid--keep-answer .conj-row-hidden:not(.conj-row-tense-hidden) .conj-drill-input {
+  background: transparent;
+  border-style: dashed;
+  cursor: default;
 }
 
 /* ── Responsive ── */
