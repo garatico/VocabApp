@@ -4,8 +4,15 @@
  * Multi-list known-word tracking, per language.
  * Storage: localStorage key `vq_lists_<lang>` => JSON object { [listName]: string[] }
  *
- * Migrates old `vq_known_<lang>` (single Set) to a list named "Known".
+ * The lists themselves are per language. The *filter* over them is per language
+ * and per mode (`vq_listfilter_<lang>__<scope>`), so Table can drill the list
+ * that Recall is hiding. See filters/filter-scope.ts.
+ *
+ * Migrates old `vq_known_<lang>` (single Set) to a list named "Known", and the
+ * old single per-language filter to one setting per mode.
  */
+
+import { currentScope, FILTER_SCOPES, type FilterScope } from '../filters/filter-scope.ts';
 
 const LISTS_PREFIX         = 'vq_lists_';
 const OLD_PREFIX           = 'vq_known_';
@@ -14,39 +21,125 @@ const FILTER_STATE_PREFIX  = 'vq_listfilter_';
 
 type ListStore = Record<string, string[]>;
 
-/** 'off' keeps your list selections but stops them filtering the quiz. */
-export type ListFilterMode = 'off' | 'hide' | 'focus';
+/**
+ * What the checked lists do to the quiz.
+ *
+ * 'off' used to be a third value here, meaning "keep my selections but stop
+ * filtering". That is the same question as whether the filter is switched on,
+ * which every other filter now answers with its own Active toggle — so it is
+ * `active: false` instead, and Hide/Focus is only ever the *kind* of filtering.
+ */
+export type ListFilterMode = 'hide' | 'focus';
 
 export interface ListFilterState {
+  /** False keeps the selections and stops them filtering. */
+  active:   boolean;
   mode:     ListFilterMode;
   selected: string[];
 }
 
-const LIST_FILTER_MODES: ListFilterMode[] = ['off', 'hide', 'focus'];
+const LIST_FILTER_MODES: ListFilterMode[] = ['hide', 'focus'];
 
 export const LIST_FILTER_DESC: Record<ListFilterMode, string> = {
-  off:   'Lists are ignored — every word is in play',
   hide:  'Checked lists are removed from the quiz',
   focus: 'Quiz shows only words from checked lists',
 };
 
-export function getListFilterState(lang: string): ListFilterState {
+function filterKey(lang: string, scope: FilterScope): string {
+  return `${FILTER_STATE_PREFIX}${lang.toLowerCase()}__${scope}`;
+}
+
+/** The pre-per-mode key, read once by migrateListFilter(). */
+function legacyFilterKey(lang: string): string {
+  return FILTER_STATE_PREFIX + lang.toLowerCase();
+}
+
+const migratedFilterLangs = new Set<string>();
+
+/**
+ * Fold the old single per-language setting into one setting per mode.
+ *
+ * Everyone shared one filter before, so the honest upgrade is to give every
+ * mode what they already had — nothing changes until they unchain one. Runs
+ * once per language per page load, and removes the legacy key as it goes, so
+ * it cannot re-run over a mode the user has since changed.
+ */
+function migrateListFilter(lang: string): void {
+  if (migratedFilterLangs.has(lang)) return;
+  migratedFilterLangs.add(lang);
+
+  const raw = localStorage.getItem(legacyFilterKey(lang));
+  if (!raw) return;
+
   try {
-    const raw = localStorage.getItem(FILTER_STATE_PREFIX + lang.toLowerCase());
+    const old = JSON.parse(raw) as { mode?: string; selected?: string[] };
+    const selected = Array.isArray(old.selected) ? old.selected : [];
+    // 'off' meant "stop filtering but keep my lists checked", which is exactly
+    // inactive. The kind of filtering it would do when switched back on is
+    // unknowable from the old value, so it gets the default.
+    const state: ListFilterState = old.mode === 'off'
+      ? { active: false, mode: 'hide', selected }
+      : {
+          active: true,
+          mode: LIST_FILTER_MODES.includes(old.mode as ListFilterMode)
+            ? old.mode as ListFilterMode
+            : 'hide',
+          selected,
+        };
+    for (const scope of FILTER_SCOPES) {
+      if (localStorage.getItem(filterKey(lang, scope)) === null) {
+        localStorage.setItem(filterKey(lang, scope), JSON.stringify(state));
+      }
+    }
+  } catch { /* a corrupt legacy value is not worth failing the page over */ }
+
+  localStorage.removeItem(legacyFilterKey(lang));
+}
+
+/** @param scope defaults to the mode currently on screen. */
+export function getListFilterState(lang: string, scope: FilterScope = currentScope()): ListFilterState {
+  migrateListFilter(lang);
+  try {
+    const raw = localStorage.getItem(filterKey(lang, scope));
     if (raw) {
       const parsed = JSON.parse(raw) as ListFilterState;
       if (LIST_FILTER_MODES.includes(parsed.mode) && Array.isArray(parsed.selected)) {
-        return parsed;
+        // active was added after the key existed, so absent means the old
+        // behaviour: a stored hide/focus was always doing something.
+        return { ...parsed, active: parsed.active !== false };
       }
     }
   } catch { /* ignore */ }
-  return { mode: 'hide', selected: [] };
+  return { active: true, mode: 'hide', selected: [] };
 }
 
-export function saveListFilterState(lang: string, state: ListFilterState): void {
+export function saveListFilterState(
+  lang: string, state: ListFilterState, scope: FilterScope = currentScope(),
+): void {
   try {
-    localStorage.setItem(FILTER_STATE_PREFIX + lang.toLowerCase(), JSON.stringify(state));
+    localStorage.setItem(filterKey(lang, scope), JSON.stringify(state));
   } catch { /* ignore */ }
+}
+
+/**
+ * Copy one mode's list filter onto every other mode — the chain button.
+ *
+ * Returns the modes that actually changed, so the caller can say what it did
+ * rather than flashing a confirmation for a no-op.
+ */
+export function linkListFilterToAllScopes(
+  lang: string, from: FilterScope = currentScope(),
+): FilterScope[] {
+  const state   = getListFilterState(lang, from);
+  const changed: FilterScope[] = [];
+  for (const scope of FILTER_SCOPES) {
+    if (scope === from) continue;
+    const before = JSON.stringify(getListFilterState(lang, scope));
+    if (before === JSON.stringify(state)) continue;
+    saveListFilterState(lang, { ...state, selected: [...state.selected] }, scope);
+    changed.push(scope);
+  }
+  return changed;
 }
 
 function storageKey(lang: string): string {

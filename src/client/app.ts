@@ -8,7 +8,7 @@ import { bindClassFilter, getSelectedClasses } from './filters/class-filter.ts';
 import { initSectionCollapse }                from './filters/section-collapse.ts';
 import { bindDomainFilter, getSelectedDomains, updateDomainFilter } from './filters/domain-filter.ts';
 import { bindUIState, bindModeSwitch }          from './ui/ui-state.ts';
-import { buildFilterUI, initListFilter }        from './filters/word-filters.ts';
+import { buildFilterUI, initListFilter, syncListFilterUI } from './filters/word-filters.ts';
 import { loadWords }                            from './data/data-loader.ts';
 import { initTheme }                            from './ui/theme-toggle.ts';
 import { mountUI }                              from './ui/ui.ts';
@@ -314,7 +314,14 @@ document.getElementById('directionToggle')?.addEventListener('click', e => {
 // Active mode tab
 document.querySelector('.mode-tabs')?.addEventListener('click', e => {
   const tab = (e.target as HTMLElement).closest<HTMLElement>('.mode-tab');
-  if (tab?.dataset.mode) S.set('vq_mode', tab.dataset.mode);
+  if (!tab?.dataset.mode) return;
+  S.set('vq_mode', tab.dataset.mode);
+  // The list filter is stored per mode, so the controls are now showing the
+  // previous tab's setting. Repaint the header and re-tick the checkboxes
+  // against the mode we just moved to.
+  const lang = langSelect?.value ?? 'spanish';
+  refreshFilterSelect(lang);
+  syncListFilterUI(lang);
 });
 
 // Picture sub-mode toggle. The box collapses, so the chosen style is echoed

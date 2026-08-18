@@ -12,6 +12,7 @@
  */
 
 import { getList, saveListFilterState, refreshFilterSelect } from '../../utils/word-lists.ts';
+import type { FilterScope } from '../../filters/filter-scope.ts';
 import type { ListsCtx } from './context.ts';
 import { cachedVocab, cachedVocabMap, fetchVocab } from './vocab-cache.ts';
 import { logger } from '../../utils/logger.ts';
@@ -102,12 +103,19 @@ export function renderPanel(ctx: ListsCtx): void {
   quizBtn.textContent = '▶ Quiz';
   quizBtn.addEventListener('click', () => {
     if (!ctx.selectedList) return;
-    saveListFilterState(ctx.lang, { mode: 'focus', selected: [ctx.selectedList] });
-    refreshFilterSelect(ctx.lang);
     // Quizzing from here means leaving this tab, so pick the mode the user was
     // last in — anything but this one, which has no quiz of its own.
     const savedMode = localStorage.getItem('vq_mode');
     const targetMode = (!savedMode || savedMode === 'mylists') ? 'table' : savedMode;
+    // The list filter is per mode, so this has to be written for the mode we
+    // are about to switch to. Writing it for My Lists would set up a filter on
+    // the tab we are leaving and land on an unfiltered quiz.
+    saveListFilterState(
+      ctx.lang,
+      { active: true, mode: 'focus', selected: [ctx.selectedList] },
+      targetMode as FilterScope,
+    );
+    refreshFilterSelect(ctx.lang);
     document.querySelector<HTMLElement>(`.mode-tab[data-mode="${targetMode}"]`)?.click();
     (document.getElementById('startBtn') as HTMLButtonElement | null)?.click();
   });
