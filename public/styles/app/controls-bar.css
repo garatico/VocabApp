@@ -161,38 +161,56 @@
    */
   #controls     { padding-right: 1rem; }
   #controls-top { padding-right: 2.5rem; }
+
+  /* Nothing in the card may be wider than the card. Without this a single
+     stubborn row (Direction, or the Words size-row) makes the whole page
+     scroll sideways, and every heading appears to start off the left edge. */
+  #controls, #controls-top, #controls-top > .control-group { min-width: 0; }
+  #controls { overflow-x: clip; }
 }
 
 @media (max-width: 599px) {
   .controls-sep { display: none; }
 
-  /* 2-column grid: Language | Top words / Order spans full width / Start full width */
+  /*
+   * One control per row.
+   *
+   * This was a 2-column grid with Language beside Words. Words is not one
+   * control — it is a select, a number input and a two-button toggle in a
+   * .size-row — so half a phone was never going to hold it, and the row pushed
+   * the whole card wider than the screen. Everything then looked clipped,
+   * including the controls that fitted perfectly well.
+   *
+   * A column costs vertical space and cannot overflow, which is the right
+   * trade at this width.
+   */
   #controls-top {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     gap: 0.5rem;
-    align-items: end;
   }
 
-  /* Language and Top words side by side */
-  #controls-top .control-group:nth-child(1),
-  #controls-top .control-group:nth-child(2) {
-    width: 100%;
-  }
+  #controls-top > .control-group { width: 100%; min-width: 0; }
 
-  /* Order toggle: span both columns */
-  #controls-top .control-group:nth-child(3) {
-    grid-column: 1 / -1;
-  }
+  /* The ? button is absolutely positioned in the card's top corner, so only
+     the row that sits under it needs to keep clear. Reserving the width down
+     the whole column is what made the filter boxes look off-centre. */
+  #controls-top { padding-right: 0; }
+  #controls-top > .control-group:first-child { padding-right: 2.5rem; }
 
-  /* Direction toggle: span both columns */
-  #controls-top #directionGroup {
-    grid-column: 1 / -1;
+  /* Words: select, custom number and the By Rank / Skip Known toggle. Wraps
+     onto as many rows as it needs instead of forcing the card wider. */
+  .size-row {
+    flex-wrap: wrap;
+    align-items: stretch;
   }
+  .size-row > select { flex: 1 1 8rem; min-width: 0; }
+  .size-row > input[type="number"] { flex: 1 1 5rem; min-width: 0; }
+  .size-row > .sort-order-toggle { flex: 1 1 100%; }
 
   /* Start button: full width */
   #startBtn {
-    grid-column: 1 / -1;
     width: 100%;
     padding: 0.5rem 0.8rem;
     font-size: 0.82rem;
@@ -231,7 +249,8 @@
 
 @media (max-width: 480px) {
   #controls     { padding: 0.5rem 0.6rem 0.55rem; }
-  #controls-top { padding-right: 2.5rem; }
+  #controls-top { padding-right: 0; }
+  #controls-top > .control-group:first-child { padding-right: 2.5rem; }
   .size-row { width: 100%; }
 }
 

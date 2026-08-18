@@ -1018,3 +1018,83 @@
 
 .conj-card-star:active,
 .conj-full-star:active { transform: scale(1.12); }
+
+/* ================================================================
+   TENSE & FORMS ON A PHONE
+
+   The three groups in this box were designed for a column roughly a
+   third of a desktop width. Stacked full-width on a phone they each
+   went wrong in a different way: the Forms grid stayed at its 4.5rem
+   minimum and sat in a narrow block on the left, Regularity ran as
+   one chip per line down four rows, and the tense chips were sized
+   for a column half as wide as they now had.
+
+   All three take the full width and divide it evenly.
+================================================================ */
+@media (max-width: 767px) {
+  /* ── Forms: the 2×3 pronoun grid ──
+     Full width with two equal columns. min-width on the cells is what
+     kept it narrow — it is a floor meant for a cramped desktop column,
+     and here it stops the grid using the room it has. */
+  .conj-pronoun-toggles {
+    width: 100%;
+  }
+
+  .conj-pronoun-toggle {
+    min-width: 0;
+    padding: 0.55rem 0.5rem;
+    min-height: 2.75rem;
+    font-size: 0.8rem;
+    text-align: center;
+  }
+
+  /* ── Regularity: two columns, matching Tense and Forms above it ──
+     Was a single column, so four chips took four rows in a box where
+     everything else is paired. */
+  .conj-reg-chips {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+
+  .conj-reg-chip {
+    min-width: 0;
+    text-align: center;
+    padding: 0.5rem 0.4rem;
+    min-height: 42px;
+    font-size: 0.76rem;
+  }
+
+  /* ── Tense: even columns, even heights ──
+     The chips carry two lines (the tense and its English name) and
+     some names wrap while others do not, so rows came out ragged.
+     Stretching them to a common height per row lines the grid up. */
+  .conj-tense-chips {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+    align-items: stretch;
+  }
+
+  .conj-tense-chip {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0.45rem 0.6rem;
+    min-height: 46px;
+    font-size: 0.78rem;
+  }
+
+  /* The All / None buttons above each group — real tap targets, and
+     out of the way of the labels they sit beside. */
+  .conj-tf-header button {
+    min-height: 32px;
+    padding-inline: 0.6rem;
+  }
+}
+
+/* One column is honest below this: two columns of "Preterito Imperfecto"
+   is two columns of hyphenation. */
+@media (max-width: 380px) {
+  .conj-tense-chips { grid-template-columns: 1fr; }
+}
