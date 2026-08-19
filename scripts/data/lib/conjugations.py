@@ -226,10 +226,19 @@ def parse_tables(html: str, lang_code: str) -> Tuple[Optional[dict], str]:
     # Row lookup by its header text. Wiktionary's German and Dutch verb tables
     # both label rows in the leftmost cell, so this does not depend on column
     # positions, which differ between the two languages' templates.
+    # Include terms, then terms that disqualify a row that matched one.
+    #
+    # The exclusions are the whole point: "present participle" contains
+    # "present", and claimed the present tense — a one-cell row where six were
+    # expected, which is what every verb failed on. Matching on a substring
+    # needs to say what the substring must *not* be part of.
     wanted = {
-        'present':         ('present', 'presens', 'tegenwoordige'),
-        'preterite':       ('preterite', 'past tense', 'imperfect', 'verleden'),
-        'past_participle': ('past participle', 'participle', 'voltooid'),
+        'present':         (('present', 'presens', 'tegenwoordige'),
+                            ('participle', 'participium', 'deelwoord', 'subjunctive')),
+        'preterite':       (('preterite', 'past tense', 'imperfect', 'verleden'),
+                            ('participle', 'subjunctive', 'perfect')),
+        'past_participle': (('past participle', 'voltooid deelwoord', 'partizip ii'),
+                            ()),
     }
     found: Dict[str, List[str]] = {}
 
@@ -239,15 +248,18 @@ def parse_tables(html: str, lang_code: str) -> Tuple[Optional[dict], str]:
             if len(cells) < 2:
                 continue
             label = cells[0].get_text(' ', strip=True).lower()
-            for key, needles in wanted.items():
+            for key, (needles, banned) in wanted.items():
                 if key in found:
                     continue
-                if any(n in label for n in needles):
-                    values: List[str] = []
-                    for c in cells[1:]:
-                        forms = _clean(c.get_text(' ', strip=True))
-                        values.append(forms[0] if forms else '')
-                    found[key] = values
+                if not any(n in label for n in needles):
+                    continue
+                if any(b in label for b in banned):
+                    continue
+                values: List[str] = []
+                for c in cells[1:]:
+                    forms = _clean(c.get_text(' ', strip=True))
+                    values.append(forms[0] if forms else '')
+                found[key] = values
 
     present = [v for v in found.get('present', []) if v]
     preterite = [v for v in found.get('preterite', []) if v]
@@ -265,6 +277,60 @@ def parse_tables(html: str, lang_code: str) -> Tuple[Optional[dict], str]:
         'preterite':       preterite[:6],
         'past_participle': participle,
     }, 'ok'
+
+
+def dump_tables(lang_code: str, word: str) -> str:
+    """
+    Print what Wiktionary's table actually looks like, row by row.
+
+    Written because the parser was guessing. Two rounds of "expected six forms,
+    found one" said the shape was wrong without saying what it was, and there is
+    no fixture for this — the page is the specification. `--dump haben` shows
+    every row's label and cells so the selectors can be written against the
+    thing rather than against an assumption about it.
+    """
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError:
+        return 'beautifulsoup4 not installed (pip install -r scripts/data/requirements.txt)'
+
+    try:
+        html = _fetch_html(word)
+    except Exception as exc:
+        return f'fetch failed: {exc}\n\n{NETWORK_HINT}'
+    if html is None:
+        return f'no Wiktionary page for {word!r}'
+
+    soup = BeautifulSoup(html, 'html.parser')
+    section_name = WIKT_SECTION[lang_code]
+
+    heading = None
+    for h in soup.find_all(['h2', 'h3']):
+        if h.get_text(strip=True).lower() == section_name.lower():
+            heading = h
+            break
+    if heading is None:
+        heads = [h.get_text(strip=True) for h in soup.find_all(['h2', 'h3'])][:20]
+        return f'no {section_name} section. Headings seen: {heads}'
+
+    scope = []
+    for el in heading.find_all_next():
+        if el.name == 'h2' and el is not heading:
+            break
+        scope.append(el)
+
+    out = [f'=== {word} ({section_name}) ===']
+    tables = [el for el in scope if el.name == 'table']
+    out.append(f'{len(tables)} table(s) in this section')
+
+    for ti, table in enumerate(tables):
+        classes = ' '.join(table.get('class') or [])
+        out.append(f'\n--- table {ti}  class={classes!r} ---')
+        for ri, row in enumerate(table.find_all('tr')):
+            cells = row.find_all(['th', 'td'])
+            texts = [c.get_text(' ', strip=True)[:28] for c in cells]
+            out.append(f'  r{ri:<3} [{len(cells)}] {texts}')
+    return '\n'.join(out)
 
 
 def fetch_conjugation(lang_code: str, word: str,
