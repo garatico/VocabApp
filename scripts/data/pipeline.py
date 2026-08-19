@@ -369,6 +369,12 @@ def step_conjugations(args) -> None:
         print('  Italian and Portuguese import theirs from mlconjug3 at sync.')
         return
 
+    if args.dump:
+        for lang in langs:
+            lang_header(lang)
+            print(conjugations.dump_tables(lang, args.dump))
+        return
+
     for lang in langs:
         lang_header(lang)
         entries = curated.read(lang)
@@ -763,6 +769,9 @@ Example
     p.add_argument('--limit', type=int, default=0, metavar='N',
                    help='stop after N verbs this run (0 = all). Each is one '
                         'network request at ~1/sec.')
+    p.add_argument('--dump', metavar='WORD',
+                   help='print one verb\'s Wiktionary tables row by row and '
+                        'stop. For working out why a verb will not parse.')
     p.set_defaults(func=step_conjugations)
 
     p = add('sync', 'curated JSONL → vocabulary.db')
