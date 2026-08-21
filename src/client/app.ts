@@ -22,11 +22,13 @@ import { availableLanguages }                    from './data/vocab-source.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
 import { Settings, bindSettings, applyFontSize } from './settings.ts';
 import { initShortcuts }                         from './ui/shortcuts-overlay.ts';
+import { openLanguagePicker, languagePickerLabel } from './ui/language-picker.ts';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
-const langSelect      = document.getElementById('langSelect')      as HTMLSelectElement | null;
-const sizeSelect      = document.getElementById('sizeSelect')      as HTMLSelectElement | null;
+const langSelect   = document.getElementById('langSelect')   as HTMLSelectElement | null;
+const sizeSelect   = document.getElementById('sizeSelect')   as HTMLSelectElement | null;
+const langPickerBtn = document.getElementById('langPickerBtn') as HTMLButtonElement | null;
 const startBtn        = mustGet<HTMLButtonElement>('startBtn');
 const output          = mustGet('output');
 const tableWrap       = mustGet('tableWrap');
@@ -65,25 +67,61 @@ const S = {
  * yet)" is a better answer than an error on selection. Null means we couldn't
  * find out, in which case everything stays enabled.
  */
-function buildLanguageOptions(withData: string[] | null = null): void {
-  if (!langSelect) return;
-  const previous = langSelect.value;
+function buildLanguageOptions(withData: string[] | null = null, select: HTMLSelectElement | null = langSelect): void {
+  if (!select) return;
+  const previous = select.value;
   const have     = withData ? new Set(withData) : null;
 
-  langSelect.innerHTML = '';
+  select.innerHTML = '';
   for (const lang of LANGUAGES) {
     const missing   = have !== null && !have.has(lang.name);
     const opt       = document.createElement('option');
     opt.value       = lang.name;
     opt.textContent = missing ? `${lang.label} — no data yet` : lang.label;
     opt.disabled    = missing;
-    langSelect.appendChild(opt);
+    select.appendChild(opt);
   }
 
   // Don't leave a disabled language selected — a saved choice can outlive the
   // data, and the DB gets rebuilt from scratch often enough for that to happen.
   const stillValid = Boolean(previous) && (have === null || have.has(previous));
-  langSelect.value = stillValid ? previous : (LANGUAGES[0]?.name ?? 'spanish');
+  select.value = stillValid ? previous : (LANGUAGES[0]?.name ?? 'spanish');
+}
+
+/**
+ * Extra languages merged into the primary in Table mode's word pool — the
+ * "+ Languages" picker's selection. Persisted sorted (by LANGUAGES order) so
+ * the same set always produces the same storage-key string regardless of
+ * check order — see getFullLang below.
+ */
+let extraLanguages = new Set<string>();
+
+/** Which languages the database actually has rows for — see markEmptyLanguages. */
+let dataAvailableLanguages: string[] | null = null;
+
+function updateLangPickerButton(): void {
+  if (!langPickerBtn) return;
+  // Filtered, not the raw set — if the primary language changes to match a
+  // checked extra, that extra silently drops out and the label should say so.
+  const active = new Set(LANGUAGES.map(l => l.name).filter(n => n !== langSelect?.value && extraLanguages.has(n)));
+  langPickerBtn.textContent = languagePickerLabel(active);
+  langPickerBtn.classList.toggle('lang-picker-btn--active', active.size > 0);
+}
+
+/**
+ * The extra languages currently in effect. Table-mode-only — other modes
+ * don't know how to render or score a mixed-language word list — so this is
+ * gated on the active tab rather than just the picker's own state, since a
+ * selection made on the Table tab stays in `extraLanguages` (just visually
+ * hidden) if the user switches tabs without clearing it.
+ */
+function getExtraLanguages(): string[] {
+  const activeMode = document.querySelector('.mode-tab.active')?.getAttribute('data-mode');
+  if (activeMode !== 'table') return [];
+  const primary = langSelect?.value;
+  return LANGUAGES
+    .map(l => l.name)
+    .filter(name => name !== primary && extraLanguages.has(name));
 }
 
 /**
@@ -93,6 +131,7 @@ function buildLanguageOptions(withData: string[] | null = null): void {
 async function markEmptyLanguages(): Promise<void> {
   const have = await availableLanguages();
   if (!have) return;                       // couldn't tell — leave everything on
+  dataAvailableLanguages = have;
   const before = langSelect?.value;
   buildLanguageOptions(have);
   if (langSelect && langSelect.value !== before) {
@@ -128,6 +167,15 @@ function syncConjugationAvailability(): void {
 function restoreSettings(): void {
   if (langSelect) langSelect.value = S.get('vq_lang') ?? 'spanish';
   if (sizeSelect) { const v = S.get('vq_size'); if (v) sizeSelect.value = v; }
+
+  // Extra languages (Table mode's "+ Languages" picker). A saved choice that
+  // matches the restored primary language is dropped — comparing a language
+  // with itself is meaningless, and the primary could have changed since.
+  const savedExtras = S.get('vq_extra_langs');
+  extraLanguages = new Set(
+    (savedExtras ? savedExtras.split(',') : []).filter(name => name && name !== langSelect?.value),
+  );
+  updateLangPickerButton();
 
   // Custom word count — the select restores itself above, but the number input
   // it reveals is display:none by default and starts empty, so without this a
@@ -174,24 +222,54 @@ function restoreSettings(): void {
 const allWordsByLang: Record<string, Word[]> = {};
 let currentBaseList: Word[] = [];
 
-async function loadAndBuildFilters(lang: string): Promise<void> {
+async function ensureLoaded(lang: string): Promise<Word[]> {
   if (!allWordsByLang[lang]) {
     const raw = await loadWords(lang);
     allWordsByLang[lang] = raw.slice().sort((a, b) => (a.rank || 9999) - (b.rank || 9999));
   }
+  return allWordsByLang[lang];
+}
 
-  const sorted   = allWordsByLang[lang];
+/** Apply the "Words" size control and the Part-of-Speech filter to one sorted pool. */
+function sizedSlice(sorted: Word[], size: number, isMax: boolean, selected: string[]): Word[] {
+  return selected.length === 0
+    ? (isMax ? sorted.slice() : sorted.slice(0, size))
+    : sorted.filter((w) => w.pos == null || selected.includes(w.pos)).slice(0, size);
+}
+
+async function loadAndBuildFilters(lang: string): Promise<void> {
+  const primarySorted = await ensureLoaded(lang);
+
   const isMax    = sizeSelect?.value === 'max';
   const size     = isMax
     ? Infinity
     : sizeSelect?.value === 'custom'
       ? Number((document.getElementById('sizeCustom') as HTMLInputElement)?.value) || 100
       : Number(sizeSelect?.value) || 100;
-
   const selected = getSelectedClasses();
-  currentBaseList = selected.length === 0
-    ? (isMax ? sorted.slice() : sorted.slice(0, size))
-    : sorted.filter((w) => w.pos == null || selected.includes(w.pos)).slice(0, size);
+
+  const extras = getExtraLanguages();
+  let sorted: Word[];
+
+  if (extras.length > 0) {
+    const allLangs = [lang, ...extras];
+    const pools     = [primarySorted, ...await Promise.all(extras.map(ensureLoaded))];
+    // Tag each word with its source language so table mode (and mastery,
+    // history, TTS, list-picker within it) can tell merged languages' words
+    // apart. allWordsByLang itself is left untagged — only these merged-pool
+    // copies carry `.language`.
+    const tagged = allLangs.map((l, i) => pools[i].map(w => ({ ...w, language: l })));
+    sorted = tagged.flat();
+
+    // Split the configured size evenly across however many languages are
+    // active rather than concatenating full lists — "Top 1000" merged should
+    // still read like "Top 1000", not "Top 1000 per language".
+    const share = isMax ? Infinity : Math.max(1, Math.floor(size / allLangs.length));
+    currentBaseList = tagged.flatMap(pool => sizedSlice(pool, share, isMax, selected));
+  } else {
+    sorted = primarySorted;
+    currentBaseList = sizedSlice(sorted, size, isMax, selected);
+  }
 
   buildFilterUI(sorted, currentBaseList);
 
@@ -234,7 +312,15 @@ const { showCurrent } = bindQuizControls({
 
 bindStartHandler({
   getLang:     () => isoCode(langSelect?.value),
-  getFullLang: () => langSelect?.value ?? 'spanish',
+  // A merged multi-language session gets a combined identifier so its own
+  // top-level quiz-state storage key doesn't collide with any single
+  // language's key. Every actual mastery/history/list write still goes to
+  // the real per-word language — see table-controls.ts's recordMastery.
+  getFullLang: () => {
+    const primary = langSelect?.value ?? 'spanish';
+    const extras   = getExtraLanguages();
+    return extras.length > 0 ? [primary, ...extras].join('+') : primary;
+  },
   getSize: () => sizeSelect?.value === 'max'
     ? Infinity
     : sizeSelect?.value === 'custom'
@@ -266,11 +352,27 @@ bindStartHandler({
 langSelect?.addEventListener('change', () => {
   S.set('vq_lang', langSelect.value);
   syncConjugationAvailability();
+  updateLangPickerButton();
   void loadAndBuildFilters(langSelect.value);
   refreshFilterSelect(langSelect.value);
   if (document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === 'conjugation') {
     initConjControls(langSelect.value);
   }
+});
+
+langPickerBtn?.addEventListener('click', () => {
+  openLanguagePicker({
+    anchorEl:  langPickerBtn,
+    exclude:   langSelect?.value ?? 'spanish',
+    selected:  extraLanguages,
+    available: dataAvailableLanguages ? new Set(dataAvailableLanguages) : null,
+    onChange: updated => {
+      extraLanguages = updated;
+      S.set('vq_extra_langs', [...extraLanguages].join(','));
+      updateLangPickerButton();
+      void loadAndBuildFilters(langSelect?.value ?? 'spanish');
+    },
+  });
 });
 
 sizeSelect?.addEventListener('change', () => {
@@ -324,6 +426,10 @@ document.querySelector('.mode-tabs')?.addEventListener('click', e => {
   syncListFilterUI(lang);
   syncClassFilterUI();
   reloadDomainFilter();
+  // getExtraLanguages() is gated on the active tab, so the base word pool
+  // needs rebuilding on every switch into or out of Table mode — the picker's
+  // own selection doesn't change, only whether it currently applies.
+  void loadAndBuildFilters(lang);
 });
 
 // ── Conjugation view (Grid / Full Conjugation) ────────────────────────────────

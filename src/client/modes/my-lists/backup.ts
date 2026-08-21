@@ -12,11 +12,12 @@
 
 import {
   getListNames, getList, createList, addToList,
+  getMultiListNames, getMultiList, createMultiList, addToMultiList, type MultiListEntry,
 } from '../../utils/word-lists.ts';
 import { getMastered, saveMastered } from './mastery.ts';
 
 const LANGS_FOR_BACKUP = ['spanish', 'portuguese', 'italian', 'french'] as const;
-const BACKUP_VERSION = 2;
+const BACKUP_VERSION = 3;
 
 export interface ListsBackup {
   version:    number;
@@ -24,9 +25,11 @@ export interface ListsBackup {
   lists:      Record<string, Record<string, string[]>>;
   /** v2: one set per language. v1 files nest it per list — see applyBackup. */
   mastery:    Record<string, string[] | Record<string, string[]>>;
+  /** v3+. Absent in older files — restores as "nothing to add". */
+  multiLists?: Record<string, MultiListEntry[]>;
 }
 
-/** Serialise every list, in every language, plus mastery. */
+/** Serialise every list, in every language, plus mastery and cross-language lists. */
 export function buildBackup(): ListsBackup {
   const backup: ListsBackup = {
     version: BACKUP_VERSION,
@@ -44,6 +47,13 @@ export function buildBackup(): ListsBackup {
     }
     if (mastered.length) backup.mastery[l] = mastered;
   }
+
+  const multiNames = getMultiListNames();
+  if (multiNames.length > 0) {
+    backup.multiLists = {};
+    for (const name of multiNames) backup.multiLists[name] = getMultiList(name);
+  }
+
   return backup;
 }
 
@@ -92,6 +102,25 @@ export function applyBackup(raw: string): string {
       });
     }
     saveMastered(l, merged);
+  }
+
+  // Cross-language lists. Absent entirely in v1/v2 files — nothing to add.
+  for (const [name, entries] of Object.entries(data.multiLists ?? {})) {
+    if (!Array.isArray(entries)) continue;
+    let target = name;
+    if (getMultiListNames().includes(target)) {
+      let n = 2;
+      while (getMultiListNames().includes(`${name} (restored ${n})`)) n++;
+      target = `${name} (restored ${n})`;
+      renamed++;
+    }
+    createMultiList(target);
+    entries.forEach(e => {
+      if (e && typeof e.word === 'string' && typeof e.language === 'string') {
+        addToMultiList(target, e.word, e.language); words++;
+      }
+    });
+    restored++;
   }
 
   return `Restored ${restored} list${restored === 1 ? '' : 's'} (${words} words)`

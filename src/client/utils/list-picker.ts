@@ -14,7 +14,14 @@ import {
   removeFromList,
   createList,
   getWordLists,
+  getMultiListNames,
+  isInMultiList,
+  addToMultiList,
+  removeFromMultiList,
+  createMultiList,
+  getMultiListLanguages,
 } from './word-lists.ts';
+import { buildLangBadge } from '../ui/lang-badge.ts';
 
 export interface ListPickerOptions {
   anchorEl: HTMLElement;
@@ -33,9 +40,10 @@ export function openListPicker({ anchorEl, lang, word, onClose }: ListPickerOpti
   function rebuild(): void {
     picker.innerHTML = '';
 
-    const names = getListNames(lang);
+    const names      = getListNames(lang);
+    const multiNames = getMultiListNames();
 
-    if (names.length === 0) {
+    if (names.length === 0 && multiNames.length === 0) {
       const empty       = document.createElement('p');
       empty.className   = 'list-picker-empty';
       empty.textContent = 'No lists yet.';
@@ -64,6 +72,43 @@ export function openListPicker({ anchorEl, lang, word, onClose }: ListPickerOpti
         row.appendChild(label);
         picker.appendChild(row);
       });
+
+      // Cross-language lists — shown for any word regardless of its own
+      // language, so a French word can join a list that also holds Spanish
+      // and Portuguese ones. Checking a box tags this word with `lang`, the
+      // language it actually is, not whatever else is already in the list.
+      if (multiNames.length > 0) {
+        const divider = document.createElement('div');
+        divider.className = 'list-picker-divider';
+        divider.textContent = 'Cross-language lists';
+        picker.appendChild(divider);
+
+        multiNames.forEach(listName => {
+          const row     = document.createElement('label');
+          row.className = 'list-picker-row';
+
+          const cb   = document.createElement('input');
+          cb.type    = 'checkbox';
+          cb.checked = isInMultiList(listName, word, lang);
+          cb.addEventListener('change', () => {
+            if (cb.checked) {
+              addToMultiList(listName, word, lang);
+            } else {
+              removeFromMultiList(listName, word, lang);
+            }
+            updateAnchorState();
+          });
+
+          const label       = document.createElement('span');
+          label.className   = 'list-picker-row-label';
+          label.textContent = listName;
+
+          row.appendChild(cb);
+          row.appendChild(label);
+          row.appendChild(buildLangBadge(getMultiListLanguages(listName)));
+          picker.appendChild(row);
+        });
+      }
     }
 
     const newBtn         = document.createElement('button');
@@ -95,11 +140,24 @@ export function openListPicker({ anchorEl, lang, word, onClose }: ListPickerOpti
     cancelBtn.className   = 'list-picker-cancel-btn';
     cancelBtn.textContent = '✕';
 
+    const crossLabel      = document.createElement('label');
+    crossLabel.className  = 'list-picker-cross-toggle';
+    const crossCb         = document.createElement('input');
+    crossCb.type          = 'checkbox';
+    const crossText       = document.createElement('span');
+    crossText.textContent = 'Cross-language list';
+    crossLabel.append(crossCb, crossText);
+
     function confirm(): void {
       const name = inp.value.trim();
       if (!name) return;
-      createList(lang, name);
-      addToList(lang, name, word);
+      if (crossCb.checked) {
+        createMultiList(name);
+        addToMultiList(name, word, lang);
+      } else {
+        createList(lang, name);
+        addToList(lang, name, word);
+      }
       rebuild();
       updateAnchorState();
     }
@@ -117,11 +175,15 @@ export function openListPicker({ anchorEl, lang, word, onClose }: ListPickerOpti
     row.appendChild(okBtn);
     row.appendChild(cancelBtn);
     picker.appendChild(row);
+    picker.appendChild(crossLabel);
     inp.focus();
   }
 
   function updateAnchorState(): void {
-    const lists = getWordLists(lang, word);
+    const lists = [
+      ...getWordLists(lang, word),
+      ...getMultiListNames().filter(name => isInMultiList(name, word, lang)),
+    ];
     if (lists.length > 0) {
       anchorEl.classList.add('known-btn--active');
     } else {

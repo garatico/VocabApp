@@ -1,6 +1,7 @@
 import {
   renderTableMode,
   revealTextFor,
+  rowKey,
   type TableController,
   type TableDirection,
   type InputSnapshot,
@@ -108,12 +109,15 @@ function snapshotState(): Map<string, InputSnapshot> {
   wrap.querySelectorAll<HTMLInputElement>('input[data-word]').forEach(inp => {
     const word = inp.dataset.word;
     if (!word) return;
+    // Composite rowKey (lang:word), not bare word text — a Compare-mode table
+    // can hold the same spelling from two languages.
+    const key = `${inp.dataset.lang ?? quizLang}:${word}`;
     const knownBtn = inp.closest('td')?.querySelector<HTMLButtonElement>('.known-btn');
     const stateClass =
       inp.classList.contains('correct')   ? 'correct'   as const :
       inp.classList.contains('peeked')    ? 'peeked'    as const :
       inp.classList.contains('incorrect') ? 'incorrect' as const : '' as const;
-    snap.set(word, {
+    snap.set(key, {
       value:           inp.value,
       disabled:        inp.disabled,
       stateClass,
@@ -176,12 +180,13 @@ export interface ProgressCounts {
 
 /** Exported for tests — counts for a set of words against the answer record. */
 export function countProgress(
-  words: readonly { word: string }[],
+  words: readonly { word: string; language?: string }[],
   state: ReadonlyMap<string, { disabled: boolean; stateClass: string }>,
+  fallbackLang = 'spanish',
 ): ProgressCounts {
   let correct = 0, revealed = 0, missed = 0;
   for (const w of words) {
-    const snap = state.get(w.word);
+    const snap = state.get(rowKey(w, fallbackLang));
     if (!snap?.disabled) continue;
     if (snap.stateClass === 'correct')     correct++;
     else if (snap.stateClass === 'peeked') revealed++;
@@ -193,7 +198,7 @@ export function countProgress(
 }
 
 function globalProgress(): ProgressCounts {
-  return countProgress(allWords, sessionState);
+  return countProgress(allWords, sessionState, quizLang);
 }
 
 function renderProgress(): void {
@@ -309,35 +314,47 @@ function recordMastery(): void {
   sessionRecorded = true;
 
   syncSessionState();
-  const correct: string[] = [];
-  const missed:  string[] = [];
-  let revealed = 0;
+
+  // Grouped by each word's actual language (falling back to quizLang for an
+  // ordinary single-language quiz) rather than one bucket for the whole
+  // session — a Compare-mode quiz mixing two languages must still write
+  // mastery/history/session records into the right language's storage,
+  // exactly as if it had been quizzed on its own.
+  interface Bucket { correct: string[]; missed: string[]; revealed: number; }
+  const byLang = new Map<string, Bucket>();
   for (const w of allWords) {
-    const cls = sessionState.get(w.word)?.stateClass;
-    if (cls === 'correct')     correct.push(w.word);
-    else if (cls === 'peeked') { revealed++; missed.push(w.word); }
-    else                       missed.push(w.word);
+    const wl = w.language ?? quizLang;
+    let bucket = byLang.get(wl);
+    if (!bucket) { bucket = { correct: [], missed: [], revealed: 0 }; byLang.set(wl, bucket); }
+
+    const cls = sessionState.get(rowKey(w, quizLang))?.stateClass;
+    if (cls === 'correct')     bucket.correct.push(w.word);
+    else if (cls === 'peeked') { bucket.revealed++; bucket.missed.push(w.word); }
+    else                       bucket.missed.push(w.word);
   }
 
-  if (correct.length > 0) {
-    const added = markMastered(quizLang, correct);
-    if (added > 0) logger.info(`mastery: +${added} from quiz (${correct.length} correct)`);
+  const seconds = Math.max(1, Math.round((Date.now() - quizStartedAt) / 1000));
+  for (const [wl, { correct, missed, revealed }] of byLang) {
+    if (correct.length > 0) {
+      const added = markMastered(wl, correct);
+      if (added > 0) logger.info(`mastery: +${added} from quiz (${correct.length} correct)`);
+    }
+
+    // Shared with recall mode: the miss tally drives the 'words I keep
+    // missing' ordering and the repeat-offender marking in both.
+    recordOutcome(wl, missed, correct);
+
+    saveSession(wl, {
+      at: new Date().toISOString(),
+      mode: 'table',
+      total: correct.length + missed.length,
+      correct: correct.length,
+      unassisted: correct.length,   // table has no hint-per-word concept
+      hints: 0,
+      revealed,
+      seconds,
+    });
   }
-
-  // Shared with recall mode: the miss tally drives the 'words I keep missing'
-  // ordering and the repeat-offender marking in both.
-  recordOutcome(quizLang, missed, correct);
-
-  saveSession(quizLang, {
-    at: new Date().toISOString(),
-    mode: 'table',
-    total: allWords.length,
-    correct: correct.length,
-    unassisted: correct.length,   // table has no hint-per-word concept
-    hints: 0,
-    revealed,
-    seconds: Math.max(1, Math.round((Date.now() - quizStartedAt) / 1000)),
-  });
 }
 
 // ── Rendering ─────────────────────────────────────────────────────────────────
@@ -394,8 +411,10 @@ export function startTableQuiz({
   onComplete?: (() => void) | null;
 }): void {
   // Order is a user choice, shared with recall mode so 'shuffle' and
-  // 'words I keep missing' mean the same thing in both.
-  allWords         = orderWords(words, wordOrder, lang);
+  // 'words I keep missing' mean the same thing in both. Resolved per word so
+  // a Compare-mode list (mixed languages) still reads each word's own miss
+  // tally rather than one language's.
+  allWords         = orderWords(words, wordOrder, w => w.language ?? lang);
   quizColumns      = columns;
   quizLang         = lang;
   resolvedDirection = direction;
@@ -426,7 +445,7 @@ export function setTableController(controller: TableController): void {
 // ── Scoring across every page ─────────────────────────────────────────────────
 
 function directionFor(word: Word): 'target-en' | 'en-target' {
-  const saved = sessionState.get(word.word)?.dir;
+  const saved = sessionState.get(rowKey(word, quizLang))?.dir;
   if (saved) return saved;
   return resolvedDirection === 'en-target' ? 'en-target' : 'target-en';
 }
@@ -442,7 +461,8 @@ function giveUpAll(): CheckResult[] {
 
   const results: CheckResult[] = [];
   for (const w of allWords) {
-    const snap = sessionState.get(w.word);
+    const key  = rowKey(w, quizLang);
+    const snap = sessionState.get(key);
 
     if (snap?.stateClass === 'correct') {
       results.push({ word: w.word, ok: true });
@@ -455,7 +475,7 @@ function giveUpAll(): CheckResult[] {
 
     if (!snap?.disabled) {
       // Never answered (and possibly never rendered) — record it as revealed.
-      sessionState.set(w.word, {
+      sessionState.set(key, {
         value:           expected,
         disabled:        true,
         stateClass:      'incorrect',
@@ -485,7 +505,7 @@ function jumpToFirstUnanswered(): void {
   // Nothing left on this page — jump to the first page that still has a gap.
   syncSessionState();
   const size = getPageSize();
-  const idx  = allWords.findIndex(w => !sessionState.get(w.word)?.disabled);
+  const idx  = allWords.findIndex(w => !sessionState.get(rowKey(w, quizLang))?.disabled);
   if (idx === -1 || !Number.isFinite(size)) return;
   goToPage(Math.floor(idx / size));
   document.querySelector<HTMLInputElement>('#tableWrap input[data-word]:not(:disabled)')?.focus();
@@ -528,10 +548,16 @@ export function bindTableControls(): void {
     if (allWords.length === 0) return;
     const results = giveUpAll();
 
-    lastMissedResults = results.filter(r => !r.ok);
-    lastMissedWords   = lastMissedResults
-      .map(r => allWords.find(w => w.word === r.word))
-      .filter((w): w is Word => w !== undefined);
+    // giveUpAll() pushes exactly one result per word, in allWords order — zip
+    // by index rather than matching on word text, which could pick the wrong
+    // word in a Compare-mode table where two languages share a spelling.
+    lastMissedResults = [];
+    lastMissedWords    = [];
+    results.forEach((r, i) => {
+      if (r.ok) return;
+      lastMissedResults.push(r);
+      lastMissedWords.push(allWords[i]);
+    });
 
     const allCorrect = results.every(r => r.ok);
     showSummaries(buildSummaryHtml(results), allCorrect);
@@ -597,7 +623,7 @@ export function bindTableControls(): void {
       localStorage.setItem('vq_table_order', wordOrder);
       if (allWords.length === 0) return;
       syncSessionState();
-      allWords  = orderWords(allWords, wordOrder, quizLang);
+      allWords  = orderWords(allWords, wordOrder, w => w.language ?? quizLang);
       pageIndex = 0;
       renderCurrentPage();
     });

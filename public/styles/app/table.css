@@ -269,6 +269,41 @@
   user-select: none;
 }
 
+/* ── Compare/Multi-language indicator ──
+   Applied only when 2+ languages are active in table mode — a word's
+   `.language` differing from the table's primary language gets a
+   `lang-tag-<name>` class (table-mode.ts). Absent in ordinary single-language
+   mode, so none of this ever applies there. Comes after the "known" styling
+   above so a tagged word's tint wins the background layer while the known
+   star/edge (which don't depend on background) stay visible on top. */
+#tableWrap td.lang-tag-spanish    { background: var(--lang-spanish-bg); }
+#tableWrap td.lang-tag-portuguese { background: var(--lang-portuguese-bg); }
+#tableWrap td.lang-tag-italian    { background: var(--lang-italian-bg); }
+#tableWrap td.lang-tag-french     { background: var(--lang-french-bg); }
+#tableWrap td.lang-tag-german     { background: var(--lang-german-bg); }
+#tableWrap td.lang-tag-dutch      { background: var(--lang-dutch-bg); }
+
+/* Flag style: same tagging, but a flag glyph behind the word instead of a
+   tinted background — no image asset, just the Unicode flag character, read
+   from data-flag (table-mode.ts sets it from Settings.getLangFlag, so a
+   per-language flag override shows here without touching this stylesheet). */
+#tableWrap.lang-indicator-flag td[class*="lang-tag-"] {
+  background: var(--surface2);
+  position: relative;
+  overflow: hidden;
+}
+#tableWrap.lang-indicator-flag td[class*="lang-tag-"]::before {
+  content: attr(data-flag);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.6rem;
+  opacity: 0.32;
+  pointer-events: none;
+}
+
 /* ── Navigation row: page selection centred, jump button on the right ──
    A 3-column grid keeps the pager centred whether or not the jump button is
    there, and both sit on one line with identical spacing to the table. */

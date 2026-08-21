@@ -149,11 +149,15 @@ export const WORD_ORDER_LABELS: [WordOrder, string][] = [
  *
  * Kept here rather than in either mode so recall and table can't drift apart
  * on what "shuffle" or "trouble" means.
+ *
+ * `lang` is normally one language for the whole list. A multi-language table
+ * (Compare mode) mixes words from different languages' miss tallies into one
+ * list, so `lang` also accepts a per-word resolver for that case.
  */
 export function orderWords<T extends { word: string; rank?: number | null }>(
   words: readonly T[],
   order: WordOrder,
-  lang: string,
+  lang: string | ((w: T) => string),
 ): T[] {
   const out = [...words];
   switch (order) {
@@ -169,9 +173,17 @@ export function orderWords<T extends { word: string; rank?: number | null }>(
       return out;
     }
     case 'trouble': {
-      const counts = getMisses(lang);
+      // Cache per-language miss tallies so a per-word resolver doesn't re-read
+      // storage for every comparison.
+      const missesByLang = new Map<string, MissCounts>();
+      const missesFor = (w: T): number => {
+        const l = typeof lang === 'function' ? lang(w) : lang;
+        let counts = missesByLang.get(l);
+        if (!counts) { counts = getMisses(l); missesByLang.set(l, counts); }
+        return counts[w.word] ?? 0;
+      };
       return out.sort((a, b) => {
-        const d = (counts[b.word] ?? 0) - (counts[a.word] ?? 0);
+        const d = missesFor(b) - missesFor(a);
         return d !== 0 ? d : (a.rank ?? 9999) - (b.rank ?? 9999);
       });
     }

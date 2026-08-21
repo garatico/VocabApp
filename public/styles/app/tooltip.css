@@ -25,6 +25,39 @@
 }
 #wordTooltip.visible { opacity: 1; pointer-events: auto; }
 
+/* ── Compare/Multi-language indicator ──
+   Same lang-tag-<name> class and Off/Color/Flag mode as table mode
+   (table.css), applied directly to #wordTooltip since a tooltip only ever
+   describes one word. Only present when that word carries a `.language` —
+   i.e. only while 2+ languages are merged into the table. */
+#wordTooltip.lang-tag-spanish    { background: var(--lang-spanish-bg); }
+#wordTooltip.lang-tag-portuguese { background: var(--lang-portuguese-bg); }
+#wordTooltip.lang-tag-italian    { background: var(--lang-italian-bg); }
+#wordTooltip.lang-tag-french     { background: var(--lang-french-bg); }
+#wordTooltip.lang-tag-german     { background: var(--lang-german-bg); }
+#wordTooltip.lang-tag-dutch      { background: var(--lang-dutch-bg); }
+
+#wordTooltip.lang-indicator-flag[class*="lang-tag-"] {
+  background: var(--surface);
+}
+#wordTooltip.lang-indicator-flag[class*="lang-tag-"]::before {
+  content: attr(data-flag);
+  position: absolute;
+  /* Negative z-index keeps this behind #wordTooltip's own in-flow content
+     (word, badges, glosses...) while still painting above its background —
+     #wordTooltip already establishes a stacking context via position+z-index
+     above, so this stays scoped to it rather than escaping underneath
+     something else on the page. */
+  z-index: -1;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  opacity: 0.28;
+  pointer-events: none;
+}
+
 /* ── Word heading ── */
 .tt-word { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.35rem; }
 
@@ -42,6 +75,20 @@
 .tt-band     { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
 .tt-diff     { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
 .tt-register { background: var(--danger-light); color: var(--danger); }
+/* Language bubble — only present when the word carries `.language`
+   (Compare/Multi-language table). Shown regardless of the Off/Color/Flag
+   indicator setting — see word-tooltip.ts — so there's always some way to
+   tell a mixed-in word's language even with the table's own indicator off. */
+.tt-lang {
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+.tt-lang.lang-tag-spanish    { background: var(--lang-spanish-bg); }
+.tt-lang.lang-tag-portuguese { background: var(--lang-portuguese-bg); }
+.tt-lang.lang-tag-italian    { background: var(--lang-italian-bg); }
+.tt-lang.lang-tag-french     { background: var(--lang-french-bg); }
+.tt-lang.lang-tag-german     { background: var(--lang-german-bg); }
+.tt-lang.lang-tag-dutch      { background: var(--lang-dutch-bg); }
 
 /* ── Glosses ── */
 .tt-glosses     { color: var(--text-muted); margin-bottom: 0.5rem; }

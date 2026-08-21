@@ -37,33 +37,104 @@ let preferredOrigin: VocabOrigin | null = null;
 function apiUrl(lang: string): string    { return `/api/vocab/${lang}`; }
 function staticUrl(lang: string): string { return `/data/vocab-${lang}.json`; }
 
-async function tryFetch(url: string): Promise<{ data: Word[]; count: number } | null> {
+interface FetchOutcome {
+  ok:        boolean;
+  data:      Word[];
+  count:     number;
+  /** Worth retrying: a network error or a gateway status, not a real 404/400. */
+  retryable: boolean;
+}
+
+export interface LoadVocabCallbacks {
+  /** Fires before each retry of the API attempt (Render cold-boot backoff). */
+  onRetry?:    (attempt: number, total: number) => void;
+  /** Fires as response bytes arrive, so a multi-MB language can show real
+   *  download progress instead of a stalled spinner. Bytes are post-decompression
+   *  and cumulative; there's no reliable total to divide by (gzip'd
+   *  Content-Length describes the wire size, not the decoded size). */
+  onProgress?: (loadedBytes: number) => void;
+}
+
+/**
+ * Read a response body via its stream so `onProgress` can report bytes as
+ * they arrive, rather than waiting for the whole multi-MB file (Spanish is
+ * ~4.7MB) to land before anything happens. Falls back to a plain read when
+ * streaming isn't available or no one's listening.
+ */
+async function readBody(res: Response, onProgress?: (loadedBytes: number) => void): Promise<string> {
+  // Check onProgress first: calling getReader() locks the body stream even
+  // if it's never read, which makes the res.text() fallback below hang.
+  if (!onProgress || !res.body) return res.text();
+  const reader = res.body.getReader();
+
+  const decoder = new TextDecoder();
+  let text        = '';
+  let loadedBytes = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    loadedBytes += value.byteLength;
+    text        += decoder.decode(value, { stream: true });
+    onProgress(loadedBytes);
+  }
+  text += decoder.decode();
+  return text;
+}
+
+async function tryFetch(url: string, onProgress?: (loadedBytes: number) => void): Promise<FetchOutcome> {
   try {
     const res = await fetch(url);
-    if (!res.ok) return null;
-    const json = await res.json() as { data?: Word[]; count?: number };
+    if (!res.ok) {
+      // 502/503/504 is what Render's proxy returns while a sleeping free-tier
+      // dyno is still waking up — worth another attempt. Anything else (404,
+      // 400) means the URL itself is wrong and won't fix itself on retry.
+      return { ok: false, data: [], count: 0, retryable: [502, 503, 504].includes(res.status) };
+    }
+    const json = JSON.parse(await readBody(res, onProgress)) as { data?: Word[]; count?: number };
     const data = Array.isArray(json.data) ? json.data : null;
-    if (!data) return null;
-    return { data, count: json.count ?? data.length };
+    if (!data) return { ok: false, data: [], count: 0, retryable: false };
+    return { ok: true, data, count: json.count ?? data.length, retryable: false };
   } catch {
-    // Network error, bad JSON, or no such file — the caller decides what next.
-    return null;
+    // Network error (including a dyno that hasn't started accepting
+    // connections yet) — retryable.
+    return { ok: false, data: [], count: 0, retryable: true };
   }
+}
+
+/**
+ * Render's free tier spins a sleeping instance down and takes up to roughly a
+ * minute to wake one back up; the request that wakes it usually fails once or
+ * twice with a gateway error before the app is actually listening. Retry with
+ * backoff instead of falling straight through to the static export on the
+ * first blip — about 45s of patience across 5 attempts.
+ */
+const API_RETRY_DELAYS_MS = [1000, 3000, 6000, 12000, 20000];
+
+async function tryFetchWithRetry(url: string, callbacks: LoadVocabCallbacks): Promise<FetchOutcome> {
+  let result = await tryFetch(url, callbacks.onProgress);
+  for (let attempt = 0; !result.ok && result.retryable && attempt < API_RETRY_DELAYS_MS.length; attempt++) {
+    callbacks.onRetry?.(attempt + 1, API_RETRY_DELAYS_MS.length);
+    await new Promise(resolve => setTimeout(resolve, API_RETRY_DELAYS_MS[attempt]));
+    result = await tryFetch(url, callbacks.onProgress);
+  }
+  return result;
 }
 
 /**
  * Load one language, preferring the live API and falling back to the bundled
  * export. Throws only when both are unavailable.
  */
-export async function loadVocab(lang: string): Promise<VocabPayload> {
+export async function loadVocab(lang: string, callbacks: LoadVocabCallbacks = {}): Promise<VocabPayload> {
   const order: VocabOrigin[] = preferredOrigin === 'static'
     ? ['static', 'api']
     : ['api', 'static'];
 
   for (const origin of order) {
     const url    = origin === 'api' ? apiUrl(lang) : staticUrl(lang);
-    const result = await tryFetch(url);
-    if (!result) continue;
+    const result = origin === 'api'
+      ? await tryFetchWithRetry(url, callbacks)
+      : await tryFetch(url, callbacks.onProgress);
+    if (!result.ok) continue;
 
     if (preferredOrigin !== origin) {
       logger.info(`vocab: loading from ${origin} (${url})`);

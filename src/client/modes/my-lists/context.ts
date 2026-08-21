@@ -26,6 +26,13 @@ export interface ListsCtx {
   selectedList: string;
   /** Name of the open smart list, or null. Never set alongside selectedList. */
   selectedSmart: string | null;
+  /**
+   * Name of the open cross-language list, or null. Never set alongside
+   * selectedList/selectedSmart — a cross-language list isn't scoped to
+   * `lang` at all, so it gets its own render path (multi-panel.ts) rather
+   * than reusing panel.ts's single-language assumptions.
+   */
+  selectedMultiList: string | null;
   sortMode: SortMode;
   /** The one word whose detail row is open, or null. */
   expandedWord: string | null;
@@ -62,6 +69,7 @@ export function createContext(
     lang,
     selectedList:  '',
     selectedSmart: null,
+    selectedMultiList: null,
     sortMode:      'alpha-asc',
     expandedWord:  null,
     hideMastered:  false,

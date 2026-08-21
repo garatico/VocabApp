@@ -213,4 +213,21 @@ describe('orderWords', () => {
   it('handles an empty set', () => {
     expect(orderWords([], 'shuffle', 'spanish')).toEqual([]);
   });
+
+  it('trouble accepts a per-word language resolver, for a merged Compare-mode list', () => {
+    // Two languages, sharing a spelling ('actor' is a word in both) — each
+    // must read its own miss tally, not get mixed up with the other's.
+    const mixed = [
+      { word: 'actor', rank: 1, language: 'spanish' },
+      { word: 'actor', rank: 1, language: 'portuguese' },
+      { word: 'casa',  rank: 2, language: 'spanish' },
+    ];
+    recordOutcome('spanish', ['actor', 'actor', 'actor']);   // spanish actor: 3
+    recordOutcome('portuguese', ['actor']);                  // portuguese actor: 1
+
+    const ordered = orderWords(mixed, 'trouble', (w: (typeof mixed)[number]) => w.language);
+    expect(ordered.map(w => `${w.language}:${w.word}`)).toEqual([
+      'spanish:actor', 'portuguese:actor', 'spanish:casa',
+    ]);
+  });
 });

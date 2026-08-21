@@ -12,6 +12,8 @@
 
 import {
   getListNames, getList, createList, deleteList, renameList, addToList,
+  getMultiListNames, getMultiList, getMultiListLanguages, getMultiListCount,
+  createMultiList, deleteMultiList, renameMultiList, addToMultiList,
 } from '../../utils/word-lists.ts';
 import { logger } from '../../utils/logger.ts';
 import type { ListsCtx } from './context.ts';
@@ -23,6 +25,7 @@ import {
   getSmartNames, getSmartLists, saveSmartRule, deleteSmartList,
   describeSmart, DEFAULT_SMART_RULE,
 } from './smart-lists.ts';
+import { buildLangBadge } from '../../ui/lang-badge.ts';
 
 /** The languages the pane offers. Ordinary lists exist per language. */
 const SIDEBAR_LANGS = ['spanish', 'portuguese', 'italian', 'french'] as const;
@@ -118,11 +121,18 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     ctx.listNav.innerHTML = '';
     const names = getListNames(ctx.lang);
 
+    // Smart lists and cross-language lists aren't scoped to ctx.lang and must
+    // render regardless of whether *ordinary* lists exist — an early return
+    // here used to skip both sections entirely whenever names was empty,
+    // which is the common case for someone who only uses cross-language
+    // lists, or hasn't made an ordinary list yet.
     if (names.length === 0) {
       const empty = document.createElement('li');
       empty.className = 'ml-list-empty'; empty.textContent = 'No lists yet.';
       ctx.listNav.appendChild(empty); ctx.selectedList = '';
-      ctx.renderPanel();
+      renderSmartNav();
+      renderMultiNav();
+      if (rerenderPanel) ctx.renderPanel();
       return;
     }
 
@@ -184,13 +194,14 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       actions.appendChild(dupBtn); actions.appendChild(renameBtn); actions.appendChild(deleteBtn);
       li.appendChild(nameSpan); li.appendChild(countSpan); li.appendChild(actions);
       li.addEventListener('click', () => {
-        ctx.selectedList = name; ctx.selectedSmart = null;
+        ctx.selectedList = name; ctx.selectedSmart = null; ctx.selectedMultiList = null;
         closePopover(); render(); ctx.renderPanel();
       });
       ctx.listNav.appendChild(li);
     });
 
     renderSmartNav();
+    renderMultiNav();
     if (rerenderPanel) ctx.renderPanel();
   }
 
@@ -211,7 +222,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       const name = window.prompt('Name this smart list:', 'New words to learn');
       if (!name?.trim()) return;
       saveSmartRule(ctx.lang, name.trim(), { ...DEFAULT_SMART_RULE });
-      ctx.selectedList = ''; ctx.selectedSmart = name.trim();
+      ctx.selectedList = ''; ctx.selectedSmart = name.trim(); ctx.selectedMultiList = null;
       render();
     });
     head.append(headLabel, addSmart);
@@ -253,7 +264,105 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
 
       li.append(nameSpan, actions);
       li.addEventListener('click', () => {
-        ctx.selectedSmart = name; closePopover(); render();
+        ctx.selectedSmart = name; ctx.selectedMultiList = null; closePopover(); render();
+      });
+      ctx.listNav.appendChild(li);
+    });
+  }
+
+  // ── Cross-language lists ────────────────────────────────────────────────────
+  //
+  // Not scoped to ctx.lang — a cross-language list holds words from however
+  // many languages have been added to it via the star-button picker. This
+  // section mirrors renderSmartNav()'s shape (head row with "+ New", one li
+  // per list) but drives multi-panel.ts instead of panel.ts/smart-panel.ts.
+
+  function renderMultiNav(): void {
+    const names = getMultiListNames();
+
+    const head = document.createElement('li');
+    head.className = 'ml-smart-head';
+    const headLabel = document.createElement('span');
+    headLabel.textContent = 'Cross-Language Lists';
+    const addMulti = document.createElement('button');
+    addMulti.type = 'button'; addMulti.className = 'ml-new-list-btn';
+    addMulti.title = 'Create a list that can hold words from any language';
+    addMulti.textContent = '+ New';
+    addMulti.addEventListener('click', () => {
+      const name = window.prompt('Name this cross-language list:', 'Hard words');
+      if (!name?.trim()) return;
+      if (!createMultiList(name.trim())) { alert(`A cross-language list named "${name.trim()}" already exists.`); return; }
+      ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedMultiList = name.trim();
+      render();
+    });
+    head.append(headLabel, addMulti);
+    ctx.listNav.appendChild(head);
+
+    if (names.length === 0) {
+      const hint = document.createElement('li');
+      hint.className = 'ml-list-empty ml-smart-hint';
+      hint.textContent = 'Add words to one from the ★ button on any word';
+      ctx.listNav.appendChild(hint);
+      return;
+    }
+
+    names.forEach(name => {
+      const li = document.createElement('li');
+      li.className = 'ml-list-item' + (name === ctx.selectedMultiList ? ' active' : '');
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'ml-list-name'; nameSpan.textContent = name; nameSpan.title = name;
+
+      const countSpan = document.createElement('span');
+      countSpan.className = 'ml-list-count';
+      countSpan.textContent = String(getMultiListCount(name));
+
+      const badge = buildLangBadge(getMultiListLanguages(name));
+
+      const actions = document.createElement('span');
+      actions.className = 'ml-list-actions';
+
+      const renameBtn = document.createElement('button');
+      renameBtn.type = 'button'; renameBtn.className = 'ml-icon-btn';
+      renameBtn.title = 'Rename'; renameBtn.textContent = '✏';
+      renameBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const newName = window.prompt('Rename cross-language list:', name);
+        if (!newName?.trim() || newName.trim() === name) return;
+        if (renameMultiList(name, newName.trim())) {
+          if (ctx.selectedMultiList === name) ctx.selectedMultiList = newName.trim();
+          render();
+        } else {
+          alert(`A cross-language list named "${newName.trim()}" already exists.`);
+        }
+      });
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button'; deleteBtn.className = 'ml-icon-btn ml-icon-btn--danger';
+      deleteBtn.title = 'Delete list'; deleteBtn.textContent = '🗑';
+      deleteBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (!window.confirm(`Delete cross-language list "${name}" and all its words?`)) return;
+        const entries      = getMultiList(name);
+        const wasSelected  = ctx.selectedMultiList === name;
+
+        deleteMultiList(name);
+        if (wasSelected) ctx.selectedMultiList = null;
+        render();
+
+        showUndo(`Deleted "${name}" (${entries.length} words)`, () => {
+          createMultiList(name);
+          entries.forEach(e => addToMultiList(name, e.word, e.language));
+          if (wasSelected) ctx.selectedMultiList = name;
+          render();
+        });
+      });
+
+      actions.appendChild(renameBtn); actions.appendChild(deleteBtn);
+      li.append(nameSpan, badge, countSpan, actions);
+      li.addEventListener('click', () => {
+        ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedMultiList = name;
+        closePopover(); render();
       });
       ctx.listNav.appendChild(li);
     });

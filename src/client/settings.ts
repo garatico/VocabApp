@@ -1,4 +1,5 @@
 import { applyTheme, type ThemeValue } from './ui/theme-toggle.ts';
+import { LANGUAGES, languageInfo } from './data/languages.ts';
 
 /**
  * settings.ts — persistent quiz preferences.
@@ -21,6 +22,8 @@ export type FontSize  = 'xs' | 'small' | 'medium' | 'large' | 'xl';
 
 export type ConjDeselected = 'close' | 'blank' | 'grey' | 'answer';
 const CONJ_DESELECTED: ConjDeselected[] = ['close', 'blank', 'grey', 'answer'];
+
+export type LangIndicator = 'off' | 'color' | 'flag';
 
 /** Grid class for each mode. 'close' needs none — it is the base behaviour. */
 export const CONJ_DESELECTED_CLASS: Record<ConjDeselected, string> = {
@@ -108,7 +111,41 @@ export const Settings = {
     if (legacy === 'false') return 'close';
     return 'grey';
   },
+
+  // ── Multi-Language Table ──────────────────────────────────────────────────
+
+  /**
+   * How table mode shows which language a merged-in word belongs to.
+   * Defaults on ('color') — the whole point of the indicator is telling
+   * mixed-in words apart at a glance, so it shows the moment 2+ languages are
+   * active rather than waiting to be found in Settings.
+   */
+  getLangIndicator: (): LangIndicator => get('lang_indicator', 'color') as LangIndicator,
+
+  /** A per-language color override, or null to use that language's CSS default. */
+  getLangColor: (name: string): string | null => localStorage.getItem(P + 'lang_color_' + name),
+
+  /** A per-language flag override (any country that language is a main language in), or its default. */
+  getLangFlag: (name: string): string => localStorage.getItem(P + 'lang_flag_' + name) ?? languageInfo(name).flagEmoji,
 };
+
+// ── Language color application ────────────────────────────────────────────────
+
+/**
+ * Apply any saved per-language color overrides as inline :root properties, so
+ * they win over the stylesheet defaults without editing the stylesheet.
+ * Called at startup and whenever a color input changes.
+ */
+export function applyLangColors(): void {
+  for (const lang of LANGUAGES) {
+    const override = Settings.getLangColor(lang.name);
+    if (override) {
+      document.documentElement.style.setProperty(lang.colorVar, override);
+    } else {
+      document.documentElement.style.removeProperty(lang.colorVar);
+    }
+  }
+}
 
 // ── Font size application ─────────────────────────────────────────────────────
 
@@ -261,7 +298,85 @@ export function bindSettings(): void {
     onConjDeselectedChange?.();
   });
 
+  // Multi-language table indicator (Off / Color / Flag)
+  document.getElementById('settingLangIndicator')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingLangIndicator', btn);
+    set('lang_indicator', (btn.dataset.indicator ?? 'color') as LangIndicator);
+  });
+
+  buildLangAppearanceRows();
+  applyLangColors();
   restoreSettingsUI();
+}
+
+/**
+ * One row per language — flag select, color swatch — built from LANGUAGES
+ * rather than hand-written per language, so a language added there doesn't
+ * need a matching row added here by hand.
+ */
+function buildLangAppearanceRows(): void {
+  const list = document.getElementById('settingLangColors');
+  if (!list) return;
+  list.innerHTML = '';
+
+  for (const lang of LANGUAGES) {
+    const row     = document.createElement('div');
+    row.className = 'lang-appearance-row';
+
+    const name       = document.createElement('span');
+    name.className   = 'lang-appearance-name';
+    name.textContent = lang.label;
+
+    const flagSelect      = document.createElement('select');
+    flagSelect.className  = 'lang-appearance-flag';
+    flagSelect.dataset.lang = lang.name;
+    flagSelect.title      = `Flag shown for ${lang.label} in Flag mode`;
+    const currentFlag = Settings.getLangFlag(lang.name);
+    for (const opt of lang.flagOptions) {
+      const o       = document.createElement('option');
+      o.value       = opt.emoji;
+      o.textContent = `${opt.emoji} ${opt.label}`;
+      o.selected    = opt.emoji === currentFlag;
+      flagSelect.appendChild(o);
+    }
+    flagSelect.addEventListener('change', () => {
+      set('lang_flag_' + lang.name, flagSelect.value);
+    });
+
+    const colorLabel      = document.createElement('label');
+    colorLabel.className  = 'lang-appearance-color';
+    colorLabel.title      = `Cell color for ${lang.label} in Color mode`;
+    const colorInput      = document.createElement('input');
+    colorInput.type       = 'color';
+    colorInput.dataset.lang = lang.name;
+    colorInput.value = Settings.getLangColor(lang.name)
+      ?? rgbToHex(getComputedStyle(document.documentElement).getPropertyValue(lang.colorVar));
+    colorInput.addEventListener('input', () => {
+      set('lang_color_' + lang.name, colorInput.value);
+      applyLangColors();
+    });
+    colorLabel.appendChild(colorInput);
+
+    row.append(name, flagSelect, colorLabel);
+    list.appendChild(row);
+  }
+}
+
+/**
+ * `<input type="color">` requires a #rrggbb value; the CSS default is
+ * already hex, but read via getComputedStyle it can come back as
+ * `rgb(r, g, b)` depending on the browser. Falls back to a neutral grey
+ * if parsing fails for any reason rather than leaving the input blank.
+ */
+function rgbToHex(color: string): string {
+  const trimmed = color.trim();
+  if (trimmed.startsWith('#')) return trimmed;
+  const m = trimmed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (!m) return '#cccccc';
+  const [, r, g, b] = m;
+  return '#' + [r, g, b].map(n => Number(n).toString(16).padStart(2, '0')).join('');
 }
 
 function restoreSettingsUI(): void {
@@ -340,5 +455,11 @@ function restoreSettingsUI(): void {
   const savedShape = Settings.getConjDeselected();
   document.querySelectorAll<HTMLElement>('#settingConjShape .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.shape === savedShape);
+  });
+
+  // Multi-language table indicator
+  const savedIndicator = Settings.getLangIndicator();
+  document.querySelectorAll<HTMLElement>('#settingLangIndicator .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.indicator === savedIndicator);
   });
 }

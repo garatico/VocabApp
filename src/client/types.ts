@@ -63,4 +63,12 @@ export interface Word {
   rank?:      number | null;
   /** Legacy pipe-delimited answers string (pre-glosses schema). */
   answers?:   string;
+  /**
+   * Which language this word belongs to. Absent on every normal single-language
+   * load — the language is implied by which array you fetched. Only set when a
+   * word is merged into a multi-language list (see table-mode's Compare
+   * language), so per-row code can tell two languages' words apart once they
+   * share a container.
+   */
+  language?: string;
 }

@@ -53,6 +53,26 @@
   padding: 0.3rem 0.85rem;
 }
 
+/* "+ Languages" trigger — sized to match the selects either side of it. */
+.lang-picker-btn {
+  min-height: 40px;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.85rem;
+  background: var(--surface2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lang-picker-btn:hover  { border-color: var(--accent); }
+.lang-picker-btn--active {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .size-row { display: flex; gap: 0.4rem; align-items: stretch; }
 
 /* Vertical divider between control groups */
