@@ -13,6 +13,8 @@
  * no DOM and no panel state.
  */
 
+import { readJson, writeJson, remove as removeKey, keys as storageKeys, isStringArray }
+  from '../../utils/storage.ts';
 import { logger } from '../../utils/logger.ts';
 
 function masteryKey(lang: string): string {
@@ -34,36 +36,28 @@ export function migrateMastery(lang: string): void {
   if (migratedLangs.has(lang)) return;
   migratedLangs.add(lang);
 
-  const legacyKeys: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (!k) continue;
+  const legacyKeys = storageKeys().filter(k => {
     const m = LEGACY_MASTERY_RE.exec(k);
-    if (m && m[1] === lang) legacyKeys.push(k);
-  }
+    return m !== null && m[1] === lang;
+  });
   if (legacyKeys.length === 0) return;
 
   const merged = getMastered(lang);
   for (const k of legacyKeys) {
-    try {
-      const arr = JSON.parse(localStorage.getItem(k) ?? '[]');
-      if (Array.isArray(arr)) arr.forEach((w: string) => merged.add(w));
-    } catch { /* a corrupt legacy key is not worth failing the page over */ }
-    localStorage.removeItem(k);
+    // A corrupt legacy key reads as empty rather than failing the page.
+    readJson<string[]>(k, [], isStringArray).forEach(w => merged.add(w));
+    removeKey(k);
   }
   saveMastered(lang, merged);
   logger.info(`mastery: merged ${legacyKeys.length} per-list key(s) into ${masteryKey(lang)}`);
 }
 
 export function getMastered(lang: string): Set<string> {
-  try {
-    const raw = localStorage.getItem(masteryKey(lang));
-    return new Set(raw ? JSON.parse(raw) : []);
-  } catch { return new Set(); }
+  return new Set(readJson<string[]>(masteryKey(lang), [], isStringArray));
 }
 
 export function saveMastered(lang: string, mastered: Set<string>): void {
-  localStorage.setItem(masteryKey(lang), JSON.stringify([...mastered]));
+  writeJson(masteryKey(lang), [...mastered]);
 }
 
 /** Mark words mastered from anywhere (used by the quiz-completion hook). */

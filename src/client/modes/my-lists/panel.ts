@@ -15,6 +15,7 @@ import { getList, saveListFilterState, refreshFilterSelect } from '../../utils/w
 import type { FilterScope } from '../../filters/filter-scope.ts';
 import type { ListsCtx } from './context.ts';
 import { cachedVocab, cachedVocabMap, fetchVocab } from './vocab-cache.ts';
+import { readString } from '../../utils/storage.ts';
 import { logger } from '../../utils/logger.ts';
 import { createAddSearch } from './add-search.ts';
 import { createBulkImport } from './bulk-import.ts';
@@ -108,7 +109,7 @@ export function renderPanel(ctx: ListsCtx): void {
     if (!ctx.selectedList) return;
     // Quizzing from here means leaving this tab, so pick the mode the user was
     // last in — anything but this one, which has no quiz of its own.
-    const savedMode = localStorage.getItem('vq_mode');
+    const savedMode = readString('vq_mode');
     const targetMode = (!savedMode || savedMode === 'mylists') ? 'table' : savedMode;
     // The list filter is per mode, so this has to be written for the mode we
     // are about to switch to. Writing it for My Lists would set up a filter on

@@ -10,18 +10,19 @@ import { loadStatistics, initStats } from './admin-stats.js';
 import { initDbAdmin } from './admin-db.js';
 import { initConjugation } from './admin-conjugation.js';
 import { logger } from '../utils/logger.js';
+import { readString, writeString } from '../utils/storage.ts';
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
 const themeToggle = document.getElementById('themeToggle');
 
-if (localStorage.getItem('admin-theme') === 'dark') {
+if (readString('admin-theme') === 'dark') {
   document.documentElement.classList.add('dark');
 }
 
 themeToggle?.addEventListener('click', () => {
   document.documentElement.classList.toggle('dark');
-  localStorage.setItem(
+  writeString(
     'admin-theme',
     document.documentElement.classList.contains('dark') ? 'dark' : 'light'
   );

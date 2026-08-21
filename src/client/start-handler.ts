@@ -6,6 +6,7 @@ import { startTableQuiz }                 from './modes/table-controls.ts';
 import { setQuiz }                        from './quiz/quiz-controls.ts';
 import { filterWords }                    from './filters/word-filters.ts';
 import { hasVisual }                      from './data/visual-map.ts';
+import { shuffleInPlace }                from './utils/shuffle.ts';
 import { Settings }                       from './settings.ts';
 
 import type { Word } from './types.ts';
@@ -170,10 +171,7 @@ export function bindStartHandler({
 
       const sortOrder = getSortOrder ? getSortOrder() : 'frequency';
       if (sortOrder === 'random') {
-        for (let i = list.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [list[i], list[j]] = [list[j], list[i]];
-        }
+        shuffleInPlace(list);
       } else if (sortOrder === 'alpha') {
         list.sort((a, b) => (a.word || '').localeCompare(b.word || ''));
       }

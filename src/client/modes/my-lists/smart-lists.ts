@@ -30,19 +30,17 @@ export const DEFAULT_SMART_RULE: SmartRule = {
   bands: [], pos: [], mastered: 'no', listed: 'no', limit: 100, sort: 'rank',
 };
 
+import { readJson, writeJson, isRecord } from '../../utils/storage.ts';
 const SMART_PREFIX = 'vq_smart_';
 
 function smartKey(lang: string): string { return SMART_PREFIX + lang.toLowerCase(); }
 
 export function getSmartLists(lang: string): Record<string, SmartRule> {
-  try {
-    const raw = localStorage.getItem(smartKey(lang));
-    return raw ? JSON.parse(raw) as Record<string, SmartRule> : {};
-  } catch { return {}; }
+  return readJson<Record<string, SmartRule>>(smartKey(lang), {}, isRecord);
 }
 
 function saveSmartLists(lang: string, all: Record<string, SmartRule>): void {
-  localStorage.setItem(smartKey(lang), JSON.stringify(all));
+  writeJson(smartKey(lang), all);
 }
 
 export function getSmartNames(lang: string): string[] {

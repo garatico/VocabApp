@@ -17,6 +17,8 @@
  * per section.
  */
 
+import { readString, writeString } from '../utils/storage.ts';
+
 const KEY_PREFIX = 's_section_open_';
 
 function apply(btn: HTMLElement, body: HTMLElement, open: boolean): void {
@@ -39,13 +41,13 @@ export function initSectionCollapse(): void {
 
     // Restore — sections start collapsed so the controls bar stays compact on
     // first load; once you open one, that choice sticks.
-    const saved = localStorage.getItem(KEY_PREFIX + targetId);
+    const saved = readString(KEY_PREFIX + targetId);
     apply(btn, body, saved === 'true');
 
     function toggle(): void {
       const open = btn.getAttribute('aria-expanded') !== 'true';
       apply(btn, body as HTMLElement, open);
-      localStorage.setItem(KEY_PREFIX + (targetId as string), String(open));
+      writeString(KEY_PREFIX + (targetId as string), String(open));
     }
 
     btn.addEventListener('click', toggle);

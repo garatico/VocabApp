@@ -25,6 +25,7 @@
  */
 
 import { currentScope, FILTER_SCOPES, type FilterScope } from './filter-scope.ts';
+import { readJson, writeJson, isRecord } from '../utils/storage.ts';
 
 /** Filters that have shareable state. Conjugation's boxes are single-mode. */
 export type FilterId = 'list' | 'class' | 'domain';
@@ -41,14 +42,11 @@ export const SHARED_BUCKET: Bucket = 'shared';
 type ChainMap = Partial<Record<FilterScope, boolean>>;
 
 function readChainMap(id: FilterId): ChainMap {
-  try {
-    const raw = localStorage.getItem(CHAIN_KEY + id);
-    return raw ? JSON.parse(raw) as ChainMap : {};
-  } catch { return {}; }
+  return readJson<ChainMap>(CHAIN_KEY + id, {}, isRecord);
 }
 
 function writeChainMap(id: FilterId, map: ChainMap): void {
-  try { localStorage.setItem(CHAIN_KEY + id, JSON.stringify(map)); } catch { /* quota */ }
+  writeJson(CHAIN_KEY + id, map);
 }
 
 /**
@@ -76,6 +74,36 @@ export function chainedCount(id: FilterId): number {
 export function bucketFor(id: FilterId, scope: FilterScope = currentScope()): Bucket {
   return isChained(id, scope) ? SHARED_BUCKET : scope;
 }
+
+/**
+ * The bucket to *read*, given whether this mode has one of its own yet.
+ *
+ * Chain flags are global and buckets are per language, and those two facts
+ * collide. Unlink Recall while you are studying Spanish and only Spanish's
+ * Recall bucket gets written; the flag, though, applies to French too. So the
+ * next time you opened French, Recall was unlinked and reading a bucket that
+ * had never existed — which reads as "no filtering", and your French filter
+ * silently switched itself off in that one mode.
+ *
+ * Falling back to the shared bucket until the mode is actually used in this
+ * language is the same promise `toggleChain` makes: unlinking changes nothing
+ * at the moment of the click, and divergence starts at the first edit. The
+ * first write in French Recall creates its own bucket and it goes its own way
+ * from there.
+ *
+ * @param hasBucket  Whether a bucket has ever been written for this filter, in
+ *                   the current language. Only the caller knows its key shape.
+ */
+export function bucketForRead(
+  id: FilterId,
+  hasBucket: (bucket: Bucket) => boolean,
+  scope: FilterScope = currentScope(),
+): Bucket {
+  const own = bucketFor(id, scope);
+  if (own === SHARED_BUCKET) return own;
+  return hasBucket(own) ? own : SHARED_BUCKET;
+}
+
 
 /**
  * Chain or unchain a mode, moving its state so nothing visibly changes at the

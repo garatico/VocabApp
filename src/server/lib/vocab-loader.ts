@@ -12,6 +12,10 @@
 import Database from 'better-sqlite3';
 import path     from 'path';
 import { dataDir } from './paths.js';
+import {
+  checkDatabase, BAND_CUTOFFS as REQUIRED_BANDS, REBUILD_INSTRUCTION,
+  MINIMUM_SCHEMA_VERSION, type DatabaseReport,
+} from './data-requirements.js';
 import { getSvgUrl } from './svg-loader.js';
 import { conjugate, type VerbForms } from './verb-rules.js';
 import { logger } from './logger.js';
@@ -91,16 +95,15 @@ interface VocabData {
 
 /**
  * CEFR band cutoffs: [band, maxRankInclusive].
- * Exported so admin routes can derive SQL BETWEEN ranges from the same data.
- * Cutoffs: A1 ≤500, A2 ≤1500, B1 ≤3000, B2 ≤5000, C1 ≤7000, C2 >7000
+ *
+ * Defined in data-requirements.ts, and display-only: the database has no band
+ * column, so `bandFromRank` below is the only thing that decides what a rank
+ * is called. It used to be a shared fact with the pipeline, maintained by hand
+ * on both sides of a project boundary, and the two disagreed for a long time.
+ *
+ * Re-exported so admin routes can derive SQL BETWEEN ranges from the same data.
  */
-export const BAND_CUTOFFS: ReadonlyArray<readonly [string, number]> = [
-  ['A1',   500],
-  ['A2',  1500],
-  ['B1',  3000],
-  ['B2',  5000],
-  ['C1',  7000],
-] as const;
+export const BAND_CUTOFFS = REQUIRED_BANDS;
 
 export function bandFromRank(rank: number | null): string | null {
   if (rank == null) return null;
@@ -144,6 +147,52 @@ function parseJsonField<T>(
 
 // ── DB init ────────────────────────────────────────────────────────────────────
 
+/** What the last startup check found. Surfaced by getDbInfo for the admin UI. */
+let dataReport: DatabaseReport | null = null;
+
+/**
+ * Check the database we were just handed against what this app needs.
+ *
+ * A SQLite file is not self-describing in any way that matters here. One built
+ * by the current pipeline and one built by a version whose conjugation parser
+ * stored 'wurde ich ward' as a verb form are both valid SQLite with plausible
+ * rows in every column, and until the pipeline started stamping them there was
+ * no way to tell them apart — which is the same bug, one layer out, as a
+ * cached parse verdict that outlived its parser.
+ *
+ * Structural damage throws. Everything else is logged and the server carries
+ * on: an old database is usually fine, and a server that refuses to start
+ * because its data is a version behind is worse than the problem it reports.
+ */
+function verifyDatabase(conn: Database.Database, dbPath: string): void {
+  const report = checkDatabase(conn);
+  dataReport = report;
+
+  for (const warning of report.warnings) {
+    logger.warn(`vocabulary.db: ${warning} — to fix, ${REBUILD_INSTRUCTION}`);
+  }
+
+  if (report.fatal.length) {
+    const err = Object.assign(new Error(
+      `vocabulary.db at ${dbPath} cannot serve this app: ${report.fatal.join('; ')}. ` +
+      `This app does not build its data — ${REBUILD_INSTRUCTION}.`
+    ), { statusCode: 500, expectedPath: dbPath, database: report });
+    logger.error(err.message);
+    // Thrown rather than tolerated: every query below names these columns, so
+    // the alternative is the same failure on the first request instead of at
+    // boot, with no instruction attached and a user watching.
+    db = null;
+    throw err;
+  }
+
+  const built = report.builtAt ? `, built ${report.builtAt}` : '';
+  logger.info(
+    `vocabulary.db: schema v${report.schemaVersion ?? 'unstamped'}, ` +
+    `pipeline v${report.pipelineVersion ?? 'unstamped'}${built}`
+  );
+}
+
+
 function initializeDatabase(): void {
   if (db) return;
 
@@ -153,13 +202,19 @@ function initializeDatabase(): void {
     db = new Database(dbPath, { fileMustExist: true });
     db.pragma('journal_mode = WAL');
     logger.info('Connected to SQLite database');
+    verifyDatabase(db, dbPath);
   } catch (error) {
     logger.error('Database connection error:', error);
     if ((error as NodeJS.ErrnoException).code === 'SQLITE_CANTOPEN') {
-      const err = Object.assign(new Error(`SQLite database not found at: ${dbPath}`), {
-        statusCode: 500,
-        expectedPath: dbPath,
-      });
+      // This app does not build its own database, so "not found" is nearly
+      // always DATA_DIR pointing somewhere the data is not — which is easy to
+      // do now that the pipeline that writes it is a separate project. Say
+      // where it looked and what would change it, rather than only what failed.
+      const err = Object.assign(new Error(
+        `SQLite database not found at: ${dbPath}\n` +
+        `This app is given its database rather than building one. ` +
+        `Set DATA_DIR to the directory holding vocabulary.db, or ${REBUILD_INSTRUCTION}.`
+      ), { statusCode: 500, expectedPath: dbPath });
       throw err;
     }
     throw error;
@@ -297,7 +352,9 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
     logger.error(`Error loading vocabulary for ${lang}:`, (error as Error).message);
     if ((error as NodeJS.ErrnoException).code === 'SQLITE_CANTOPEN' ||
         (error as Error).message?.includes('no such file')) {
-      throw Object.assign(new Error('Vocabulary database not found. Run setup first.'), { statusCode: 500 });
+      throw Object.assign(new Error(
+        `Vocabulary database not found. Set DATA_DIR, or ${REBUILD_INSTRUCTION}.`
+      ), { statusCode: 500 });
     }
     if (!(error as { statusCode?: number }).statusCode) {
       (error as { statusCode: number }).statusCode = 500;
@@ -318,6 +375,7 @@ export function clearCache(language: string | null = null): void {
 /** Close and null the DB connection so the next request reopens the file from disk. */
 export function reloadDb(): void {
   vocabCache.clear();
+  dataReport = null;
   if (db) { try { db.close(); } catch (_) {} db = null; }
 }
 
@@ -338,6 +396,18 @@ export function getDbInfo(): Record<string, unknown> {
     parseErrors: parseErrorCount,
     languages: [],
   };
+
+  // The admin DB panel is where someone looks when the data seems wrong, so
+  // "which pipeline built this" belongs on it.
+  if (dataReport) {
+    (info as Record<string, unknown>)['data'] = {
+      schemaVersion:   dataReport.schemaVersion,
+      pipelineVersion: dataReport.pipelineVersion,
+      builtAt:         dataReport.builtAt,
+      minimumSchema:   MINIMUM_SCHEMA_VERSION,
+      warnings:        dataReport.warnings,
+    };
+  }
 
   vocabCache.forEach((data, lang) => {
     info.languages.push({

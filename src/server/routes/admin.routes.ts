@@ -2,9 +2,14 @@
  * admin.routes.ts
  *
  * Thin router that gates all admin routes behind three checks:
- *   1. NODE_ENV must be 'development'
+ *   1. The app's environment must be 'development'
  *   2. Request must originate from localhost
  *   3. Bearer token must match ADMIN_SECRET (if set in env)
+ *
+ * Check 1 reads the environment `createApp` was given. It used to read
+ * `process.env.NODE_ENV` directly, which is why the test helper had to set
+ * that variable to 'development' while telling `createApp` it was 'test' —
+ * one app claiming to be in two environments at once.
  *
  * Route map:
  *   /vocab, /vocab/:word  →  admin/words.ts
@@ -20,16 +25,6 @@ import dbRoutes     from './admin/db.js';
 import exportRoutes from './admin/export.js';
 import { adminAuth } from '../middleware/admin-auth.js';
 
-const router = express.Router();
-
-function isDevelopment(_req: Request, res: Response, next: NextFunction): void {
-  if (process.env['NODE_ENV'] !== 'development') {
-    res.status(403).json({ error: 'Admin panel only available in development mode' });
-    return;
-  }
-  next();
-}
-
 function localhostOnly(req: Request, res: Response, next: NextFunction): void {
   const ip = req.ip ?? req.socket.remoteAddress ?? '';
   // Accept IPv4 loopback, IPv6 loopback, and IPv4-mapped IPv6 loopback
@@ -41,11 +36,23 @@ function localhostOnly(req: Request, res: Response, next: NextFunction): void {
   next();
 }
 
-router.use(isDevelopment);
-router.use(localhostOnly);
-router.use(adminAuth);
-router.use(wordRoutes);
-router.use(dbRoutes);
-router.use(exportRoutes);
+export function makeAdminRoutes(nodeEnv: string): express.Router {
+  const router = express.Router();
 
-export default router;
+  function developmentOnly(_req: Request, res: Response, next: NextFunction): void {
+    if (nodeEnv !== 'development') {
+      res.status(403).json({ error: 'Admin panel only available in development mode' });
+      return;
+    }
+    next();
+  }
+
+  router.use(developmentOnly);
+  router.use(localhostOnly);
+  router.use(adminAuth);
+  router.use(wordRoutes);
+  router.use(dbRoutes);
+  router.use(exportRoutes);
+
+  return router;
+}

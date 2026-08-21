@@ -12,9 +12,10 @@
  * old single per-language filter to one setting per mode.
  */
 
-import { readJson, writeJson, isRecord } from './storage.ts';
+import { readString, readJson, writeJson, remove as removeKey, isRecord, isStringArray }
+  from './storage.ts';
 import { currentScope, type FilterScope } from '../filters/filter-scope.ts';
-import { bucketFor, SHARED_BUCKET, type Bucket } from '../filters/filter-state.ts';
+import { bucketFor, bucketForRead, SHARED_BUCKET, type Bucket } from '../filters/filter-state.ts';
 import { buildLangBadge } from '../ui/lang-badge.ts';
 
 const LISTS_PREFIX         = 'vq_lists_';
@@ -168,11 +169,9 @@ function migrateListFilter(lang: string): void {
   if (migratedFilterLangs.has(lang)) return;
   migratedFilterLangs.add(lang);
 
-  const raw = localStorage.getItem(legacyFilterKey(lang));
-  if (!raw) return;
-
-  try {
-    const old = JSON.parse(raw) as { mode?: string; selected?: string[] };
+  const old = readJson<{ mode?: string; selected?: string[] } | null>(
+    legacyFilterKey(lang), null, isRecord);
+  if (old) {
     const selected = Array.isArray(old.selected) ? old.selected : [];
     // 'off' meant "stop filtering but keep my lists checked", which is exactly
     // inactive. The kind of filtering it would do when switched back on is
@@ -186,26 +185,22 @@ function migrateListFilter(lang: string): void {
             : 'hide',
           selected,
         };
-    if (localStorage.getItem(filterKey(lang, SHARED_BUCKET)) === null) {
-      localStorage.setItem(filterKey(lang, SHARED_BUCKET), JSON.stringify(state));
+    // A corrupt legacy value reads as absent rather than failing the page.
+    if (readString(filterKey(lang, SHARED_BUCKET)) === null) {
+      writeJson(filterKey(lang, SHARED_BUCKET), state);
     }
-  } catch { /* a corrupt legacy value is not worth failing the page over */ }
+  }
 
-  localStorage.removeItem(legacyFilterKey(lang));
+  removeKey(legacyFilterKey(lang));
 }
 
 function readBucket(lang: string, bucket: Bucket): ListFilterState {
-  try {
-    const raw = localStorage.getItem(filterKey(lang, bucket));
-    if (raw) {
-      const parsed = JSON.parse(raw) as ListFilterState;
-      if (LIST_FILTER_MODES.includes(parsed.mode) && Array.isArray(parsed.selected)) {
-        // active was added after the key existed, so absent means the old
-        // behaviour: a stored hide/focus was always doing something.
-        return { ...parsed, active: parsed.active !== false };
-      }
-    }
-  } catch { /* ignore */ }
+  const parsed = readJson<ListFilterState | null>(filterKey(lang, bucket), null, isRecord);
+  if (parsed && LIST_FILTER_MODES.includes(parsed.mode) && Array.isArray(parsed.selected)) {
+    // active was added after the key existed, so absent means the old
+    // behaviour: a stored hide/focus was always doing something.
+    return { ...parsed, active: parsed.active !== false };
+  }
   return { active: true, mode: 'hide', selected: [] };
 }
 
@@ -214,24 +209,20 @@ export function getListFilterState(
   lang: string, scope: FilterScope = currentScope(),
 ): ListFilterState {
   migrateListFilter(lang);
-  return readBucket(lang, bucketFor('list', scope));
+  return readBucket(lang, bucketForRead('list',
+    b => readString(filterKey(lang, b)) !== null, scope));
 }
 
 export function saveListFilterState(
   lang: string, state: ListFilterState, scope: FilterScope = currentScope(),
 ): void {
-  try {
-    localStorage.setItem(filterKey(lang, bucketFor('list', scope)), JSON.stringify(state));
-  } catch { /* ignore */ }
+  writeJson(filterKey(lang, bucketFor('list', scope)), state);
 }
 
 /** Move the list filter between buckets — the chain button. See filter-state. */
 export function copyListFilterState(lang: string, from: Bucket, to: Bucket): void {
   const state = readBucket(lang, from);
-  try {
-    localStorage.setItem(filterKey(lang, to),
-                         JSON.stringify({ ...state, selected: [...state.selected] }));
-  } catch { /* ignore */ }
+  writeJson(filterKey(lang, to), { ...state, selected: [...state.selected] });
 }
 
 function storageKey(lang: string): string {
@@ -240,37 +231,25 @@ function storageKey(lang: string): string {
 
 function loadStore(lang: string): ListStore {
   maybeRunMigration(lang);
-  try {
-    const raw = localStorage.getItem(storageKey(lang));
-    if (!raw) return {};
-    return JSON.parse(raw) as ListStore;
-  } catch {
-    return {};
-  }
+  return readJson<ListStore>(storageKey(lang), {}, isRecord);
 }
 
 function saveStore(lang: string, store: ListStore): void {
-  try {
-    localStorage.setItem(storageKey(lang), JSON.stringify(store));
-  } catch {}
+  writeJson(storageKey(lang), store);
 }
 
 function maybeRunMigration(lang: string): void {
   const newKey = storageKey(lang);
-  if (localStorage.getItem(newKey) !== null) return;
+  if (readString(newKey) !== null) return;
 
-  const oldKey = OLD_PREFIX + lang.toLowerCase();
-  const oldRaw = localStorage.getItem(oldKey);
-  if (!oldRaw) return;
+  const oldKey   = OLD_PREFIX + lang.toLowerCase();
+  const oldWords = readJson<string[]>(oldKey, [], isStringArray);
+  if (readString(oldKey) === null) return;
 
-  try {
-    const oldWords: string[] = JSON.parse(oldRaw);
-    if (oldWords.length > 0) {
-      const store: ListStore = { [DEFAULT_LIST]: oldWords };
-      localStorage.setItem(newKey, JSON.stringify(store));
-    }
-    localStorage.removeItem(oldKey);
-  } catch {}
+  if (oldWords.length > 0) {
+    writeJson(newKey, { [DEFAULT_LIST]: oldWords } satisfies ListStore);
+  }
+  removeKey(oldKey);
 }
 
 export function getListNames(lang: string): string[] {

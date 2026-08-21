@@ -15,7 +15,11 @@
 import { getFallbackEmoji, getFallbackSvgUrl, getFallbackImageUrl } from '../data/visual-map.ts';
 import { saveSession, recordOutcome } from '../utils/session-history.ts';
 import { attachTooltips    } from '../utils/word-tooltip.ts';
+import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summary.ts';
 import { buildScorePills, scorePct } from '../ui/score-pills.ts';
+import { matchesAnswer     } from '../utils/utils.ts';
+import { shuffle           } from '../utils/shuffle.ts';
+import { Settings          } from '../settings.ts';
 import type { Word }        from '../types.ts';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -49,23 +53,17 @@ interface RenderPictureModeOptions {
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
 
-function normalise(str = ''): string {
-  return str.trim().toLowerCase().normalize('NFD')
-    .replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ');
-}
-
+/**
+ * The learner is shown a picture and types the target-language word — the same
+ * question Table mode asks in its `en-target` direction, so it is graded by the
+ * same shared matcher and honours the same Flexible/Strict setting.
+ *
+ * This was a local copy that compared against `word.word` only and read no
+ * setting at all, so Strict silently did nothing here while working in the tab
+ * next door, and an irregular form was never accepted for its infinitive.
+ */
 function wordIsCorrect(input: string, word: WordWithVisual): boolean {
-  const attempt = normalise(input);
-  return !!attempt && normalise(word.word) === attempt;
-}
-
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
+  return matchesAnswer(input, word, 'en-target', Settings.getMatchMode());
 }
 
 // Returns all available visuals for a word, in priority order:
@@ -432,22 +430,16 @@ function recordPictureSession(
 
 function showPictureSummary(correct: number, total: number): void {
   const missed = total - correct;
-  const pct    = total > 0 ? Math.round((correct / total) * 100) : 0;
-  const html   =
-    `<span class="summary-correct">✓ ${correct} correct</span>` +
-    `<span class="summary-missed">✗ ${missed} missed</span>` +
-    `<span class="summary-pct">${pct}%</span>`;
-  ['pictureSummaryTop', 'pictureSummaryBottom'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.style.display = 'flex'; el.innerHTML = html; }
-  });
+  showSummary('picture',
+    summaryChip('correct', `✓ ${correct} correct`) +
+    summaryChip('missed',  `✗ ${missed} missed`) +
+    summaryChip('pct',     `${percent(correct, total)}%`),
+    total > 0 && missed === 0,
+  );
 }
 
 function clearPictureSummary(): void {
-  ['pictureSummaryTop', 'pictureSummaryBottom'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.style.display = 'none'; el.innerHTML = ''; }
-  });
+  clearSummary('picture');
 }
 
 // ── Progress bar helpers ───────────────────────────────────────────────────────

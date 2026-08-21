@@ -9,6 +9,7 @@ import {
   recordOutcome, missCount, orderWords, WORD_ORDER_LABELS,
   type WordOrder, type SessionRecord,
 } from '../utils/session-history.ts';
+import { readString, writeString } from '../utils/storage.ts';
 import { foldKey as recallKey, levenshteinCapped as editDistance }
   from '../utils/match.ts';
 
@@ -70,7 +71,7 @@ export function renderRecallMode({
   // Order is a user choice now — always-by-rank meant you learned grid
   // positions rather than words.
   let wordOrder: WordOrder =
-    (localStorage.getItem('vq_recall_order') as WordOrder | null) ?? 'rank';
+    (readString('vq_recall_order') as WordOrder | null) ?? 'rank';
   let sorted = orderWords(words, wordOrder, lang);
 
   const wrap = document.createElement('div');
@@ -250,7 +251,7 @@ export function renderRecallMode({
 
   orderSel.addEventListener('change', () => {
     wordOrder = orderSel.value as WordOrder;
-    localStorage.setItem('vq_recall_order', wordOrder);
+    writeString('vq_recall_order', wordOrder);
     sorted = orderWords(words, wordOrder, lang);
     rebuildGrid();
     inp.focus();

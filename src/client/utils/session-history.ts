@@ -15,6 +15,9 @@
  * lucky session doesn't erase a word you have fumbled five times.
  */
 
+import { shuffleInPlace } from './shuffle.ts';
+import { readJson, writeJson, remove as removeKey, isNumberRecord } from './storage.ts';
+
 export type QuizMode = 'recall' | 'table' | 'picture' | 'single' | 'conjugation';
 
 export interface SessionRecord {
@@ -41,13 +44,8 @@ export const TROUBLE_THRESHOLD = 2;
 // ── Sessions ──────────────────────────────────────────────────────────────────
 
 export function getSessions(lang: string, mode?: QuizMode): SessionRecord[] {
-  try {
-    const raw = localStorage.getItem(SESSION_PREFIX + lang.toLowerCase());
-    const arr = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(arr)) return [];
-    const all = arr as SessionRecord[];
-    return mode ? all.filter(s => s.mode === mode) : all;
-  } catch { return []; }
+  const all = readJson<SessionRecord[]>(SESSION_PREFIX + lang.toLowerCase(), [], Array.isArray);
+  return mode ? all.filter(s => s.mode === mode) : all;
 }
 
 /**
@@ -59,9 +57,8 @@ export function getSessions(lang: string, mode?: QuizMode): SessionRecord[] {
 export function saveSession(lang: string, entry: SessionRecord): SessionRecord[] {
   const prior = getSessions(lang);
   const next  = [...prior, entry].slice(-HISTORY_KEEP);
-  try {
-    localStorage.setItem(SESSION_PREFIX + lang.toLowerCase(), JSON.stringify(next));
-  } catch { /* quota exceeded — history is a nicety, never fail the session */ }
+  // A dropped write (quota) is fine — history is a nicety, never fail a session.
+  writeJson(SESSION_PREFIX + lang.toLowerCase(), next);
   return prior.filter(s => s.mode === entry.mode);
 }
 
@@ -76,17 +73,11 @@ export function wordsPerMinute(count: number, seconds: number): number {
 export type MissCounts = Record<string, number>;
 
 export function getMisses(lang: string): MissCounts {
-  try {
-    const raw = localStorage.getItem(MISS_PREFIX + lang.toLowerCase());
-    const obj = raw ? JSON.parse(raw) : {};
-    return (obj && typeof obj === 'object') ? obj as MissCounts : {};
-  } catch { return {}; }
+  return readJson<MissCounts>(MISS_PREFIX + lang.toLowerCase(), {}, isNumberRecord);
 }
 
 function saveMisses(lang: string, counts: MissCounts): void {
-  try {
-    localStorage.setItem(MISS_PREFIX + lang.toLowerCase(), JSON.stringify(counts));
-  } catch { /* quota */ }
+  writeJson(MISS_PREFIX + lang.toLowerCase(), counts);
 }
 
 /**
@@ -129,8 +120,8 @@ export function troubleWords(lang: string, min = TROUBLE_THRESHOLD): string[] {
 }
 
 export function clearHistory(lang: string): void {
-  localStorage.removeItem(SESSION_PREFIX + lang.toLowerCase());
-  localStorage.removeItem(MISS_PREFIX + lang.toLowerCase());
+  removeKey(SESSION_PREFIX + lang.toLowerCase());
+  removeKey(MISS_PREFIX + lang.toLowerCase());
 }
 
 // ── Word ordering ─────────────────────────────────────────────────────────────
@@ -163,15 +154,10 @@ export function orderWords<T extends { word: string; rank?: number | null }>(
   switch (order) {
     case 'alpha':
       return out.sort((a, b) => a.word.localeCompare(b.word));
-    case 'shuffle': {
-      // Fisher–Yates. Deliberately not seeded: a fresh order every session is
-      // the point, otherwise you memorise positions instead of words.
-      for (let i = out.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [out[i], out[j]] = [out[j], out[i]];
-      }
-      return out;
-    }
+    case 'shuffle':
+      // Deliberately not seeded: a fresh order every session is the point,
+      // otherwise you memorise positions instead of words.
+      return shuffleInPlace(out);
     case 'trouble': {
       // Cache per-language miss tallies so a per-word resolver doesn't re-read
       // storage for every comparison.

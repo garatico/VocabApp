@@ -1,9 +1,11 @@
-import type { Word } from '../types.js';
+import type { Word } from '../types.ts';
 import { saveSession, recordOutcome } from '../utils/session-history.ts';
-import { speak }     from '../utils/tts.js';
-import { isCorrect, getGlosses } from '../utils/utils.js';
-import type { Quiz } from './quiz.js';
-import { mustGet }   from '../utils/dom.js';
+import { speak }     from '../utils/tts.ts';
+import { matchesAnswer, getGlosses } from '../utils/utils.ts';
+import { shuffle }   from '../utils/shuffle.ts';
+import { Settings }  from '../settings.ts';
+import type { Quiz } from './quiz.ts';
+import { mustGet }   from '../utils/dom.ts';
 
 // ── Module state ───────────────────────────────────────────────────────────────
 
@@ -20,17 +22,6 @@ let sessionSaved  = false;        // endSession also fires on Play Again
 
 export function setQuiz(instance: Quiz): void {
   quizInstance = instance;
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-function fisherYates<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
@@ -196,7 +187,7 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
   }
 
   function startSession(words: Word[]): void {
-    deck          = fisherYates([...words]);
+    deck          = shuffle(words);
     mastered      = new Set();
     sessionStart  = Date.now();
     sessionSaved  = false;
@@ -213,7 +204,10 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
   answerEl.addEventListener('input', () => {
     if (!sessionActive || deck.length === 0) return;
     const word = deck[currentIndex];
-    if (!isCorrect(answerEl.value, word)) return;
+    // The target word is shown and the learner types the English, so this is
+    // the `target-en` direction — same matcher, same Flexible/Strict setting as
+    // Table and Picture mode.
+    if (!matchesAnswer(answerEl.value, word, 'target-en', Settings.getMatchMode())) return;
 
     mastered.add(word.word);
     feedbackEl.textContent = '✓ Correct!';
