@@ -14,6 +14,7 @@ import { initTheme }                            from './ui/theme-toggle.ts';
 import { mountUI }                              from './ui/ui.ts';
 import { initConjControls }                     from './modes/conjugation/controls.ts';
 import type { Word }                            from './types.ts';
+import { readString, writeString, remove as removeKey } from './utils/storage.ts';
 import { mustGet }                              from './utils/dom.ts';
 import { renderMyLists }                        from './modes/my-lists-mode.ts';
 import { LANGUAGES, isoCode, supportsConjugation,
@@ -53,8 +54,8 @@ const settingsArea    = mustGet('settingsArea');
 // ── Session state persistence (vq_ prefix = per-session UI state) ─────────────
 
 const S = {
-  get: (k: string)            => localStorage.getItem(k),
-  set: (k: string, v: string) => localStorage.setItem(k, v),
+  get: (k: string)            => readString(k),
+  set: (k: string, v: string) => { writeString(k, v); },
 };
 
 /**
@@ -444,7 +445,7 @@ document.querySelector('.mode-tabs')?.addEventListener('click', e => {
 // conjugation mode owns rebuilding the cards, and only runs while a quiz is on
 // screen.
 function syncConjViewToggle(): void {
-  const stored = localStorage.getItem('vq_conj_view') === 'full' ? 'full' : 'grid';
+  const stored = readString('vq_conj_view') === 'full' ? 'full' : 'grid';
   document.querySelectorAll<HTMLElement>('#conjViewToggle .conj-toggle-btn')
     .forEach(b => b.classList.toggle('active', b.dataset.view === stored));
 }
@@ -452,7 +453,7 @@ function syncConjViewToggle(): void {
 document.getElementById('conjViewToggle')?.addEventListener('click', e => {
   const btn = (e.target as Element).closest<HTMLElement>('.conj-toggle-btn');
   if (!btn?.dataset.view) return;
-  localStorage.setItem('vq_conj_view', btn.dataset.view === 'full' ? 'full' : 'grid');
+  writeString('vq_conj_view', btn.dataset.view === 'full' ? 'full' : 'grid');
   syncConjViewToggle();
 });
 
@@ -503,13 +504,13 @@ void (async function init(): Promise<void> {
   }
   function dismissOnboarding(): void {
     onboardingCard?.setAttribute('hidden', '');
-    localStorage.setItem('s_onboarding_seen', '1');
+    writeString('s_onboarding_seen', '1');
   }
 
-  if (!localStorage.getItem('s_onboarding_seen')) showOnboarding();
+  if (!readString('s_onboarding_seen')) showOnboarding();
   onboardingDismiss?.addEventListener('click', dismissOnboarding);
   showOnboardingBtn?.addEventListener('click', () => {
-    localStorage.removeItem('s_onboarding_seen');
+    removeKey('s_onboarding_seen');
     showOnboarding();
     // Switch back to table mode so the card is visible
     const tableTab = document.querySelector<HTMLElement>('.mode-tab[data-mode="table"]');

@@ -53,21 +53,16 @@ export function applyAllPronounToggles(grid: Element): void {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
+import { readJson, writeJson, isStringArray } from '../../utils/storage.ts';
 const TENSE_KEY_PREFIX = 'vq_conj_tenses_';
 
 /** Tenses selected for a language, from storage. Empty if nothing saved. */
 export function readSelectedTenses(lang: string): string[] {
-  try {
-    const raw = localStorage.getItem(TENSE_KEY_PREFIX + lang);
-    const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr as string[] : [];
-  } catch { return []; }
+  return readJson<string[]>(TENSE_KEY_PREFIX + lang, [], isStringArray);
 }
 
 function saveSelectedTenses(lang: string, keys: string[]): void {
-  try {
-    localStorage.setItem(TENSE_KEY_PREFIX + lang, JSON.stringify(keys));
-  } catch { /* quota */ }
+  writeJson(TENSE_KEY_PREFIX + lang, keys);
 }
 
 /** Tenses currently ticked in the UI, in the order they appear. */
@@ -122,8 +117,7 @@ export function activeRegularities(): string[] {
 }
 
 function saveRegularities(): void {
-  try { localStorage.setItem(REG_KEY, JSON.stringify(activeRegularities())); }
-  catch { /* quota */ }
+  writeJson(REG_KEY, activeRegularities());
 }
 
 let _regListenerAttached = false;
@@ -138,16 +132,14 @@ function initRegularityChips(): void {
     c.title = REGULARITY_HELP[c.dataset.reg ?? ''] ?? '';
   });
 
-  // Restore. Nothing saved means everything on, which is the markup default.
-  try {
-    const raw = localStorage.getItem(REG_KEY);
-    const arr = raw ? JSON.parse(raw) : null;
-    if (Array.isArray(arr) && arr.length) {
-      box.querySelectorAll<HTMLElement>('.conj-reg-chip').forEach(c => {
-        c.classList.toggle('active', arr.includes(c.dataset.reg ?? ''));
-      });
-    }
-  } catch { /* corrupt payload — leave the markup default */ }
+  // Restore. Nothing saved — or a corrupt payload — means everything on,
+  // which is the markup default.
+  const saved = readJson<string[]>(REG_KEY, [], isStringArray);
+  if (saved.length) {
+    box.querySelectorAll<HTMLElement>('.conj-reg-chip').forEach(c => {
+      c.classList.toggle('active', saved.includes(c.dataset.reg ?? ''));
+    });
+  }
 
   if (_regListenerAttached) return;
   _regListenerAttached = true;
@@ -239,6 +231,7 @@ export function initConjControls(lang: string): void {
 
   _lastConjLang = lang;
 }
+
 
 function ensurePronounToggleListener(): void {
   if (_pronTogListenerAttached) return;

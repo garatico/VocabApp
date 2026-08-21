@@ -13,6 +13,8 @@ import { Settings, setOnPageSizeChange } from '../settings.ts';
 // disagreeing progress models got here in the first place.
 import { markMastered } from './my-lists-mode.ts';
 import { logger } from '../utils/logger.ts';
+import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summary.ts';
+import { readString, writeString } from '../utils/storage.ts';
 import {
   saveSession, recordOutcome, orderWords, WORD_ORDER_LABELS,
   type WordOrder,
@@ -41,7 +43,7 @@ let onQuizComplete: (() => void) | null    = null;
 let quizStartedAt                          = Date.now();
 let sessionRecorded                        = false;
 let wordOrder: WordOrder =
-  (localStorage.getItem('vq_table_order') as WordOrder | null) ?? 'rank';
+  (readString('vq_table_order') as WordOrder | null) ?? 'rank';
 
 export function getDirection(): TableDirection {
   return resolvedDirection;
@@ -60,23 +62,6 @@ export function resolveDirection(): TableDirection {
 
 // ── Summaries ─────────────────────────────────────────────────────────────────
 
-function hideSummaries(): void {
-  ['tableSummary', 'tableSummaryTop'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.style.display = 'none'; el.innerHTML = ''; }
-  });
-}
-
-function showSummaries(html: string, perfect = false): void {
-  ['tableSummary', 'tableSummaryTop'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.style.display = 'flex';
-    el.innerHTML = html;
-    el.classList.toggle('quiz-summary--perfect', perfect);
-  });
-}
-
 /**
  * The end-of-quiz strip. Correct/missed counts deliberately live only in the
  * live score block under the progress bar — this strip carries the actions and
@@ -84,9 +69,7 @@ function showSummaries(html: string, perfect = false): void {
  */
 function buildSummaryHtml(results: CheckResult[]): string {
   const correct = results.filter(r => r.ok).length;
-  const total   = results.length;
   const missed  = results.filter(r => !r.ok && r.word && r.expected);
-  const pct     = total ? Math.round((correct / total) * 100) : 0;
 
   let html = '';
 
@@ -96,7 +79,7 @@ function buildSummaryHtml(results: CheckResult[]): string {
       `<button class="summary-export-btn">↓ Export</button>`;
   }
 
-  html += `<span class="summary-pct">${pct}%</span>`;
+  html += summaryChip('pct', `${percent(correct, results.length)}%`);
   return html;
 }
 
@@ -425,7 +408,7 @@ export function startTableQuiz({
   sessionRecorded  = false;
   lastMissedWords   = [];
   lastMissedResults = [];
-  hideSummaries();
+  clearSummary('table');
   renderCurrentPage();
 }
 
@@ -434,7 +417,7 @@ function restartWith(words: Word[]): void {
   allWords     = words;
   sessionState = new Map();
   pageIndex    = 0;
-  hideSummaries();
+  clearSummary('table');
   renderCurrentPage();
 }
 
@@ -560,7 +543,7 @@ export function bindTableControls(): void {
     });
 
     const allCorrect = results.every(r => r.ok);
-    showSummaries(buildSummaryHtml(results), allCorrect);
+    showSummary('table', buildSummaryHtml(results), allCorrect);
     wireSummaryButtons();
   });
 
@@ -620,7 +603,7 @@ export function bindTableControls(): void {
     });
     orderSel.addEventListener('change', () => {
       wordOrder = orderSel.value as WordOrder;
-      localStorage.setItem('vq_table_order', wordOrder);
+      writeString('vq_table_order', wordOrder);
       if (allWords.length === 0) return;
       syncSessionState();
       allWords  = orderWords(allWords, wordOrder, w => w.language ?? quizLang);

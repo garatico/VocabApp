@@ -1,5 +1,7 @@
-import type { Word } from '../types.js';
-import { normalize, levenshtein } from '../utils/match.js';
+import type { Word } from '../types.ts';
+import { normalize, levenshtein } from '../utils/match.ts';
+import { shuffledIndices } from '../utils/shuffle.ts';
+import { readJson, writeJson, remove as removeKey, isRecord } from '../utils/storage.ts';
 
 interface SeenEntry {
   correct:   number;
@@ -10,15 +12,6 @@ interface QuizState {
   order: number[];
   pos:   number;
   seen:  Record<string, SeenEntry>;
-}
-
-function fisherYates(length: number): number[] {
-  const arr = Array.from({ length }, (_, i) => i);
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
 }
 
 export class Quiz {
@@ -32,7 +25,9 @@ export class Quiz {
     this.storageKey = storageKey || 'quick_quiz_state';
     // Fraction of the answer's length forgiven as typos (0 = exact match only).
     this.tolerance  = tolerance ?? 0.25;
-    this.state      = JSON.parse(localStorage.getItem(this.storageKey) || '{}') as QuizState;
+    // Corrupt or truncated state (an interrupted write) falls back to empty and
+    // is rebuilt below — it used to throw out of the constructor.
+    this.state      = readJson<Partial<QuizState>>(this.storageKey, {}, isRecord) as QuizState;
 
     // Validate saved state against the current word list. Reset if:
     //  - no order exists
@@ -43,7 +38,7 @@ export class Quiz {
       && this.state.order.every(i => i >= 0 && i < this.words.length);
 
     if (!orderValid) {
-      this.state.order = fisherYates(this.words.length);
+      this.state.order = shuffledIndices(this.words.length);
       this.state.pos   = 0;
       this.state.seen  = {};
       this.save();
@@ -51,7 +46,7 @@ export class Quiz {
   }
 
   save(): void {
-    localStorage.setItem(this.storageKey, JSON.stringify(this.state));
+    writeJson(this.storageKey, this.state);
   }
 
   current(): Word {
@@ -127,8 +122,8 @@ export class Quiz {
   }
 
   reset(): void {
-    localStorage.removeItem(this.storageKey);
-    this.state = { order: fisherYates(this.words.length), pos: 0, seen: {} };
+    removeKey(this.storageKey);
+    this.state = { order: shuffledIndices(this.words.length), pos: 0, seen: {} };
     this.save();
   }
 }

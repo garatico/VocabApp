@@ -15,6 +15,9 @@
  * pronoun in its own box, and does not use the shared word filters at all.
  */
 
+
+import { readString } from '../utils/storage.ts';
+
 export type FilterScope = 'table' | 'recall' | 'single' | 'picture' | 'mylists';
 
 export const FILTER_SCOPES: FilterScope[] = ['table', 'recall', 'single', 'picture', 'mylists'];
@@ -37,6 +40,6 @@ const SCOPE_SET = new Set<string>(FILTER_SCOPES);
  * inventing a sixth bucket no control can reach.
  */
 export function currentScope(): FilterScope {
-  const raw = localStorage.getItem('vq_mode') ?? '';
+  const raw = readString('vq_mode') ?? '';
   return SCOPE_SET.has(raw) ? raw as FilterScope : 'table';
 }

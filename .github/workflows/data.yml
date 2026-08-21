@@ -1,0 +1,67 @@
+name: Data
+
+# VocabApp-Data builds the vocabulary database the app consumes. It is a
+# separate project living in a subdirectory for now, so this workflow runs
+# entirely inside it — the day the folder moves to its own repository, this
+# file moves with it and needs no edits beyond dropping `working-directory`.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  pipeline:
+    # Nothing here needs spaCy, mlconjug3 or a network: those are the optional
+    # halves, and the tests cover the paths that must work without them —
+    # which is also an honest simulation of a fresh clone.
+    #
+    # `working-directory` is this project rather than the repo root, so this
+    # file keeps working unchanged once VocabApp-Data moves out on its own.
+    name: Data pipeline (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: VocabApp-Data
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install test tooling
+        run: python -m pip install --upgrade pip pytest ruff
+
+      - name: Lint
+        run: python -m ruff check pipeline
+
+      - name: Test
+        # -m "not network" so a runner behind a proxy fails on its own merits
+        # rather than on Wiktionary being unreachable.
+        run: python -m pytest pipeline/tests -q -m "not network"
+
+      - name: The pipeline still runs end to end
+        # A smoke test against a throwaway DATA_DIR: preview, then a real
+        # write, then a repeat that must be a clean no-op. Exit code 2 means
+        # "nothing happened", which is exactly what the repeat should report —
+        # and the old pipeline could not have told you either way.
+        run: |
+          set -e
+          export DATA_DIR="$RUNNER_TEMP/vocab-data"
+          mkdir -p "$DATA_DIR/curated"
+          cp pipeline/tests/fixtures/*.jsonl "$DATA_DIR/curated/"
+
+          python pipeline/pipeline.py all --langs spa
+          python pipeline/pipeline.py all --langs spa --write
+
+          set +e
+          python pipeline/pipeline.py dedupe --langs spa --write
+          code=$?
+          set -e
+          if [ "$code" -ne 2 ]; then
+            echo "expected exit 2 (nothing to do) from the repeat run, got $code"
+            exit 1
+          fi
+          echo "pipeline smoke test passed"

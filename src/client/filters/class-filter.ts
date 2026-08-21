@@ -12,7 +12,7 @@
  */
 
 import { currentLangValue } from './filter-lang.ts';
-import { bucketFor, type Bucket } from './filter-state.ts';
+import { bucketFor, bucketForRead, type Bucket } from './filter-state.ts';
 import {
   bindFilterHeader, syncFilterHeader, type FilterHeaderConfig,
 } from './filter-header.ts';
@@ -24,6 +24,7 @@ interface ClassFilterState {
   selected: string[];
 }
 
+import { readJson, readString, writeJson, isRecord } from '../utils/storage.ts';
 const DEFAULT_STATE: ClassFilterState = { active: true, selected: [] };
 
 function key(lang: string, bucket: Bucket): string {
@@ -31,35 +32,26 @@ function key(lang: string, bucket: Bucket): string {
 }
 
 function readBucket(lang: string, bucket: Bucket): ClassFilterState {
-  try {
-    const raw = localStorage.getItem(key(lang, bucket));
-    if (raw) {
-      const parsed = JSON.parse(raw) as ClassFilterState;
-      if (Array.isArray(parsed.selected)) {
-        return { active: parsed.active !== false, selected: parsed.selected };
-      }
-    }
-  } catch { /* ignore */ }
+  const parsed = readJson<ClassFilterState | null>(key(lang, bucket), null, isRecord);
+  if (parsed && Array.isArray(parsed.selected)) {
+    return { active: parsed.active !== false, selected: parsed.selected };
+  }
   return { ...DEFAULT_STATE, selected: [] };
 }
 
 function getState(): ClassFilterState {
-  return readBucket(currentLangValue(), bucketFor('class'));
+  const lang = currentLangValue();
+  return readBucket(lang, bucketForRead('class', b => readString(key(lang, b)) !== null));
 }
 
 function saveState(state: ClassFilterState): void {
-  try {
-    localStorage.setItem(key(currentLangValue(), bucketFor('class')), JSON.stringify(state));
-  } catch { /* quota */ }
+  writeJson(key(currentLangValue(), bucketFor('class')), state);
 }
 
 function copyState(from: Bucket, to: Bucket): void {
   const lang  = currentLangValue();
   const state = readBucket(lang, from);
-  try {
-    localStorage.setItem(key(lang, to),
-                         JSON.stringify({ ...state, selected: [...state.selected] }));
-  } catch { /* quota */ }
+  writeJson(key(lang, to), { ...state, selected: [...state.selected] });
 }
 
 const header: FilterHeaderConfig = {
@@ -127,6 +119,14 @@ export function bindClassFilter(): void {
   bindFilterHeader(header);
   syncUI();
 }
+
+/**
+ * The chain button's payload mover, exposed for tests.
+ *
+ * `bindFilterHeader` normally supplies it through the header config, which
+ * needs a DOM. The copy itself does not, and it is the half worth testing.
+ */
+export const copyStateForTest = copyState;
 
 /**
  * Selected POS values, or [] when the filter is off or "All" is active.

@@ -13,7 +13,7 @@
  */
 
 import { currentLangValue } from './filter-lang.ts';
-import { bucketFor, type Bucket } from './filter-state.ts';
+import { bucketFor, bucketForRead, type Bucket } from './filter-state.ts';
 import {
   bindFilterHeader, syncFilterHeader, type FilterHeaderConfig,
 } from './filter-header.ts';
@@ -24,6 +24,7 @@ const selected = new Set<string>();
 /** Whether the filter is applied. Stored with the selection, not beside it. */
 let active = true;
 
+import { readJson, readString, writeJson, isRecord } from '../utils/storage.ts';
 const KEY_PREFIX = 'vq_domainfilter_';
 
 interface DomainFilterState { active: boolean; selected: string[] }
@@ -33,35 +34,22 @@ function key(lang: string, bucket: Bucket): string {
 }
 
 function readBucket(lang: string, bucket: Bucket): DomainFilterState {
-  try {
-    const raw = localStorage.getItem(key(lang, bucket));
-    if (raw) {
-      const parsed = JSON.parse(raw) as DomainFilterState;
-      if (Array.isArray(parsed.selected)) {
-        return { active: parsed.active !== false, selected: parsed.selected };
-      }
-    }
-  } catch { /* ignore */ }
+  const parsed = readJson<DomainFilterState | null>(key(lang, bucket), null, isRecord);
+  if (parsed && Array.isArray(parsed.selected)) {
+    return { active: parsed.active !== false, selected: parsed.selected };
+  }
   return { active: true, selected: [] };
 }
 
 /** Write the working set back. Called from renderAll, which every change ends in. */
 function persist(): void {
-  try {
-    localStorage.setItem(
-      key(currentLangValue(), bucketFor('domain')),
-      JSON.stringify({ active, selected: [...selected] }),
-    );
-  } catch { /* quota */ }
+  writeJson(key(currentLangValue(), bucketFor('domain')), { active, selected: [...selected] });
 }
 
 function copyState(from: Bucket, to: Bucket): void {
   const lang  = currentLangValue();
   const state = readBucket(lang, from);
-  try {
-    localStorage.setItem(key(lang, to),
-                         JSON.stringify({ ...state, selected: [...state.selected] }));
-  } catch { /* quota */ }
+  writeJson(key(lang, to), { ...state, selected: [...state.selected] });
 }
 
 const header: FilterHeaderConfig = {
@@ -114,20 +102,20 @@ function renderPills(): void {
       btn.appendChild(badge);
     }
 
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', () => changeSelection(() => {
       if (selected.has(d)) selected.delete(d);
-      else                  selected.add(d);
-      renderPills();
-      renderChips();
-      updateHeader();
-    });
+      else                 selected.add(d);
+    }));
     pillsEl.appendChild(btn);
   }
 }
 
 function renderChips(): void {
   if (!chipsEl) return;
-  if (selected.size === 0) { chipsEl.hidden = true; return; }
+  // Emptied as well as hidden: leaving the old chips in the DOM meant a
+  // selection cleared by a mode switch was one CSS slip away from still
+  // being on screen.
+  if (selected.size === 0) { chipsEl.hidden = true; chipsEl.innerHTML = ''; return; }
   chipsEl.hidden   = false;
   chipsEl.innerHTML = '';
   for (const d of selected) {
@@ -139,7 +127,7 @@ function renderChips(): void {
     x.className = 'domain-chip-x';
     x.setAttribute('aria-label', 'Remove ' + fmt(d));
     x.textContent = '×';
-    x.addEventListener('click', () => { selected.delete(d); renderAll(); });
+    x.addEventListener('click', () => changeSelection(() => selected.delete(d)));
     chip.appendChild(x);
     chipsEl.appendChild(chip);
   }
@@ -161,6 +149,27 @@ function renderAll(): void {
   // Every mutation of `selected` ends here, so this is the one place the
   // working set has to be written back.
   persist();
+}
+
+/**
+ * Change the selection and make the change stick.
+ *
+ * Every mutation of `selected` goes through here. That used to be a convention
+ * — "every change ends in renderAll()" — and the Top-10 pills quietly broke it:
+ * their click handler open-coded renderAll's first three lines and left off the
+ * `persist()`. So picking a domain from a pill drew correctly and stored
+ * nothing, which meant it did not survive a mode switch, did not follow the
+ * chain to a linked mode, and was gone on reload. Removing the same domain
+ * again *did* persist, because the chip's × button called renderAll — so the
+ * filter appeared to work intermittently, which is the hardest kind of broken
+ * to report.
+ *
+ * A convention that four call sites keep and one forgets is not a convention.
+ * This is the same rule with somewhere to put it.
+ */
+function changeSelection(mutate: () => void): void {
+  mutate();
+  renderAll();
 }
 
 // ── Dropdown ───────────────────────────────────────────────────────────────────
@@ -217,10 +226,9 @@ function hideDropdown(): void {
 }
 
 function addDomain(d: string): void {
-  selected.add(d);
   if (searchInput) searchInput.value = '';
   hideDropdown();
-  renderAll();
+  changeSelection(() => selected.add(d));
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
@@ -247,11 +255,11 @@ export function updateDomainFilter(counts: { domain: string; count: number }[]):
 
   // Remove any selected domains that do not exist in this language
   const allKnown = new Set(counts.map(x => x.domain));
-  for (const d of selected) {
-    if (!allKnown.has(d)) selected.delete(d);
-  }
-
-  renderAll();
+  changeSelection(() => {
+    for (const d of selected) {
+      if (!allKnown.has(d)) selected.delete(d);
+    }
+  });
 }
 
 /**
@@ -261,7 +269,8 @@ export function updateDomainFilter(counts: { domain: string; count: number }[]):
  * all four can move which bucket this filter is reading from.
  */
 export function loadFromBucket(): void {
-  const state = readBucket(currentLangValue(), bucketFor('domain'));
+  const lang  = currentLangValue();
+  const state = readBucket(lang, bucketForRead('domain', b => readString(key(lang, b)) !== null));
   selected.clear();
   state.selected.forEach(d => selected.add(d));
   active = state.active;
@@ -351,7 +360,7 @@ export function bindDomainFilter(): void {
     }
   });
 
-  clearBtn?.addEventListener('click', () => { selected.clear(); renderAll(); });
+  clearBtn?.addEventListener('click', () => changeSelection(() => selected.clear()));
 
   bindFilterHeader(header);
   loadFromBucket();

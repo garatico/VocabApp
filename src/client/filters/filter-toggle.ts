@@ -4,6 +4,8 @@
  * Handles the collapse/expand functionality for the "Refine Results" filter section.
  */
 
+import { readString, writeString } from '../utils/storage.ts';
+
 export function initializeFilterToggle(): void {
   const filterToggle = document.getElementById('filterToggle');
   const wordFilters  = document.getElementById('wordFilters');
@@ -22,11 +24,11 @@ export function initializeFilterToggle(): void {
       wordFilters.classList.add('collapsed');
     }
 
-    localStorage.setItem('filterExpanded', String(newState));
+    writeString('filterExpanded', String(newState));
   });
 
-  // Restore previous state from localStorage
-  const savedState = localStorage.getItem('filterExpanded');
+  // Restore previous state
+  const savedState = readString('filterExpanded');
   if (savedState === 'false') {
     filterToggle.setAttribute('aria-expanded', 'false');
     wordFilters.classList.add('collapsed');

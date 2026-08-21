@@ -1,3 +1,4 @@
+import { readString, writeString, remove as removeKey } from './utils/storage.ts';
 import { applyTheme, type ThemeValue } from './ui/theme-toggle.ts';
 import { LANGUAGES, languageInfo } from './data/languages.ts';
 
@@ -9,8 +10,8 @@ import { LANGUAGES, languageInfo } from './data/languages.ts';
  */
 
 const P = 's_';
-const get = (k: string, fallback: string): string => localStorage.getItem(P + k) ?? fallback;
-const set = (k: string, v: string): void => { localStorage.setItem(P + k, v); };
+const get = (k: string, fallback: string): string => readString(P + k) ?? fallback;
+const set = (k: string, v: string): void => { writeString(P + k, v); };
 
 export type HintMode  = 'none' | 'first-letter' | 'full';
 export type MatchMode = 'fuzzy' | 'strict';
@@ -103,11 +104,11 @@ export const Settings = {
    *           pronoun into a worked example rather than a blank.
    */
   getConjDeselected: (): ConjDeselected => {
-    const raw = localStorage.getItem(P + 'conj_deselected');
+    const raw = readString(P + 'conj_deselected');
     if (raw && CONJ_DESELECTED.includes(raw as ConjDeselected)) return raw as ConjDeselected;
     // Migrate the boolean this replaced. It only distinguished keep from close,
     // and 'grey' is the keep variant that shows the most.
-    const legacy = localStorage.getItem(P + 'conj_keep_shape');
+    const legacy = readString(P + 'conj_keep_shape');
     if (legacy === 'false') return 'close';
     return 'grey';
   },
@@ -123,10 +124,10 @@ export const Settings = {
   getLangIndicator: (): LangIndicator => get('lang_indicator', 'color') as LangIndicator,
 
   /** A per-language color override, or null to use that language's CSS default. */
-  getLangColor: (name: string): string | null => localStorage.getItem(P + 'lang_color_' + name),
+  getLangColor: (name: string): string | null => readString(P + 'lang_color_' + name),
 
   /** A per-language flag override (any country that language is a main language in), or its default. */
-  getLangFlag: (name: string): string => localStorage.getItem(P + 'lang_flag_' + name) ?? languageInfo(name).flagEmoji,
+  getLangFlag: (name: string): string => readString(P + 'lang_flag_' + name) ?? languageInfo(name).flagEmoji,
 };
 
 // ── Language color application ────────────────────────────────────────────────
@@ -200,9 +201,9 @@ export function bindSettings(): void {
     activateToggle('settingTheme', btn);
     const value = (btn.dataset.theme ?? 'system') as ThemeValue;
     if (value === 'system') {
-      localStorage.removeItem('theme');
+      removeKey('theme');
     } else {
-      localStorage.setItem('theme', value);
+      writeString('theme', value);
     }
     applyTheme(value);
   });
@@ -381,7 +382,7 @@ function rgbToHex(color: string): string {
 
 function restoreSettingsUI(): void {
   // Theme
-  const savedTheme = localStorage.getItem('theme') ?? 'system';
+  const savedTheme = readString('theme') ?? 'system';
   document.querySelectorAll<HTMLElement>('#settingTheme .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.theme === savedTheme);
   });

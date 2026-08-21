@@ -3,6 +3,8 @@
  */
 
 import type { Word } from '../../types.js';
+import { showSummary, clearSummary, summaryChip, percent } from '../../ui/quiz-summary.ts';
+import { readString, writeString } from '../../utils/storage.ts';
 import { foldKey as normalize } from '../../utils/match.ts';
 import { orderWords, WORD_ORDER_LABELS, saveSession, recordOutcome,
          type WordOrder } from '../../utils/session-history.ts';
@@ -157,24 +159,20 @@ const SINGLE_FORM_ROW_LABEL: Record<string, string> = {
 };
 
 function clearConjSummary(): void {
-  ['conjSummaryTop', 'conjSummaryBottom'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.style.display = 'none'; el.innerHTML = ''; }
-  });
+  clearSummary('conjugation');
 }
 
 function showConjSummary(completeVerbs: number, nVerbs: number, correctForms: number, totalForms: number): void {
-  const verbPct  = nVerbs     ? Math.round((completeVerbs / nVerbs)    * 100) : 0;
-  const formPct  = totalForms ? Math.round((correctForms  / totalForms) * 100) : 0;
-  const pct      = Math.round((verbPct + formPct) / 2);
-  const html =
-    '<span class="summary-correct">✓ ' + completeVerbs + ' / ' + nVerbs + ' verbs</span>' +
-    '<span class="summary-correct">✓ ' + correctForms + ' / ' + totalForms + ' forms</span>' +
-    '<span class="summary-pct">' + pct + '%</span>';
-  ['conjSummaryTop', 'conjSummaryBottom'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.style.display = 'flex'; el.innerHTML = html; }
-  });
+  // Verbs and forms weigh equally: finishing half the verbs perfectly and
+  // half-finishing all of them are the same score, which is the honest reading
+  // of a grid you are filling in.
+  const pct = Math.round((percent(completeVerbs, nVerbs) + percent(correctForms, totalForms)) / 2);
+  showSummary('conjugation',
+    summaryChip('correct', `✓ ${completeVerbs} / ${nVerbs} verbs`) +
+    summaryChip('correct', `✓ ${correctForms} / ${totalForms} forms`) +
+    summaryChip('pct',     `${pct}%`),
+    totalForms > 0 && correctForms === totalForms,
+  );
 }
 
 export function renderConjugationMode({ words, container, lang = 'spanish' }: ConjugationModeOptions): void {
@@ -205,7 +203,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   // be changed without restarting. Shared implementation, so 'shuffle' and
   // 'words I keep missing' behave identically in all three.
   let verbOrder: WordOrder =
-    (localStorage.getItem('vq_conj_order') as WordOrder | null) ?? 'rank';
+    (readString('vq_conj_order') as WordOrder | null) ?? 'rank';
   // Regularity filter, from the chips in the Tense & Forms box. Applied here
   // rather than at card-build time so the count in the order row, the progress
   // bars and the session record all agree on what the quiz contains.
@@ -483,7 +481,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   // implementation of them would be a second set of bugs.
 
   let viewMode: 'grid' | 'full' =
-    localStorage.getItem('vq_conj_view') === 'full' ? 'full' : 'grid';
+    readString('vq_conj_view') === 'full' ? 'full' : 'grid';
 
   /**
    * Full Conjugation is paged, not stepped.
@@ -500,7 +498,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
 
   let fullPage = 0;
   let pageSize = (() => {
-    const n = Number(localStorage.getItem('vq_conj_page_size'));
+    const n = Number(readString('vq_conj_page_size'));
     return (CONJ_PAGE_SIZES as readonly number[]).includes(n) ? n : DEFAULT_PAGE_SIZE;
   })();
 
@@ -587,7 +585,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   sizeSel.addEventListener('change', () => {
     bankVisibleVerbs();
     pageSize = Number(sizeSel.value) || DEFAULT_PAGE_SIZE;
-    localStorage.setItem('vq_conj_page_size', String(pageSize));
+    writeString('vq_conj_page_size', String(pageSize));
     // Stay near where you were rather than jumping to the top: the verb that
     // started the old page is the one you were working on.
     fullPage = Math.floor(pageStart() / pageSize);
@@ -810,13 +808,13 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
 
   orderSel.addEventListener('change', () => {
     verbOrder = orderSel.value as WordOrder;
-    localStorage.setItem('vq_conj_order', verbOrder);
+    writeString('vq_conj_order', verbOrder);
     verbs = orderWords(allVerbs, verbOrder, lang);
     // Answers live in the DOM here rather than a state map, so re-ordering
     // restarts the cards. Warn rather than silently discarding work.
     const answered = cardUpdaters.some(u => u.card.querySelector('input:disabled'));
     if (answered && !window.confirm('Re-ordering rebuilds the cards and clears answers so far. Continue?')) {
-      orderSel.value = verbOrder = (localStorage.getItem('vq_conj_order') as WordOrder) ?? 'rank';
+      orderSel.value = verbOrder = (readString('vq_conj_order') as WordOrder) ?? 'rank';
       return;
     }
     // Re-ordering makes the old position meaningless — page 3 holds different

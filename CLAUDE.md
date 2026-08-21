@@ -126,290 +126,21 @@ VocabApp/
 │       ├── db.js                    # createTestDb() — in-memory SQLite seed
 │       └── sqlite-shim.js           # better-sqlite3 shim using sql.js WASM
 ├── vitest.config.js                 # aliases better-sqlite3 → sqlite-shim in tests
-├── .github/workflows/ci.yml        # CI: validate, lint, typecheck, test, build
+├── .vscode/                         # shared run configs — the ▶ play button
+├── .github/workflows/ci.yml         # CI for the app; VocabApp-Data has data.yml
 ├── scripts/
-│   ├── validate.js                  # null-byte/syntax check — runs as pre-commit hook (npm run validate)
-│   ├── test-api.js                  # manual smoke-test for the running API
-│   ├── migrations/                  # One-off schema migration scripts (historical; already applied)
-│   └── data/                        # Python data pipeline — ONE entry point
-│       ├── pipeline.py              # the only script you run (see below)
-│       ├── lib/                     # modules — no CLI, no side effects
-│       │   ├── __init__.py
-│       │   ├── config.py            # languages, models, paths, rank scales
-│       │   ├── corpus.py            # corpus reading, spaCy tagging, conjugation
-│       │   ├── curated.py           # the only reader/writer of curated JSONL,
-│       │   │                        #   plus mine/dedupe/backfill/enrich logic
-│       │   ├── db.py                # schema, safe open/backup, DB writes
-│       │   └── visuals.py           # image/emoji fetch, coverage report
-│       ├── requirements.txt         # spacy, mlconjug3, wiktionaryparser, deep_translator…
-│       └── delete_all.sql           # nuclear reset — deletes all rows from every table
-├── data/
-│   ├── vocabulary.db                # Production SQLite DB (never touched by tests)
-│   ├── curated/                     # Source-of-truth JSONL files per language
+│   ├── validate.js                  # null-byte/syntax check — pre-commit hook (npm run validate)
+│   └── test-api.js                  # manual smoke-test for the running API
+├── data/                            # what the app is *given*; relocate with DATA_DIR
+│   ├── vocabulary.db                # built elsewhere — see VocabApp-Data
 │   ├── images/                      # Wikipedia photos (animals/, food/, nature/)
-│   └── emoji/                       # OpenMoji SVGs (animals/)
+│   ├── emoji/                       # OpenMoji SVGs (animals/)
+│   └── svgs/                        # shared custom SVGs
+├── VocabApp-Data/                   # SEPARATE PROJECT — builds the database.
+│                                    #   Sitting here for now; meant to move out.
+│                                    #   Nothing in src/ or tests/ may read it.
 └── mobile/                          # Parked — not in active development; excluded from git
 ```
-
-## The Data Pipeline (`scripts/data/pipeline.py`)
-
-**There is one script.** `pipeline.py` is the only executable in the pipeline;
-everything else is a module under `lib/` that it drives.
-
-```bash
-python scripts/data/pipeline.py all --langs spa            # preview
-python scripts/data/pipeline.py all --langs spa --write    # apply
-python scripts/data/pipeline.py                            # list the steps
-```
-
-| step       | what it does                                             | in `all`? |
-|------------|----------------------------------------------------------|-----------|
-| `mine`     | OpenSubtitles corpus → new curated entries (+ glosses)    | no — network, rate-limited, batched |
-| `conjugations` | Wiktionary verb tables → curated JSONL (deu, nld only) | no — network, ~1 req/sec |
-| `seed`     | `data/seed/<language>.txt` → new curated entries          | yes — local, offline, idempotent |
-| `dedupe`   | drop duplicate and junk entries                           | yes |
-| `backfill` | fill missing pos/glosses so `sync` stops skipping rows    | yes |
-| `enrich`   | gender, domains, canonical domain names (Spanish)         | yes |
-| `sync`     | curated JSONL → `vocabulary.db`                           | yes |
-| `images`   | Wikipedia/iNaturalist photos → `data/images/`              | no — network |
-| `emoji`    | OpenMoji SVGs → `data/emoji/`                              | no — network |
-| `check`    | Picture Quiz coverage report                              | read-only |
-
-npm aliases exist for each (`npm run data:all`, `data:sync`, `data:check`…);
-they pass `--write` where it applies, and `npm run data:all:dry` previews.
-
-### ⚠️ Dry run is the default
-
-**Nothing is written unless you pass `--write`** — every step, every time. It
-used to vary per script, which meant `infer_domains.py` rewrote the database on
-a bare run while `dedupe_curated.py` was a no-op. `--dry-run` is still accepted
-so old commands don't error, but it does nothing (it *is* the default).
-
-Two flags, identical on every step:
-
-| flag | meaning |
-|------|---------|
-| *(omitted)* | preview — reports what it would do, changes nothing |
-| `--write` / `-w` | apply, after taking a backup |
-| `--langs` / `-l` | `spa fra ita por deu nld`; several at once is fine; **omitted = all six** |
-
-Every run opens with a header stating the mode, the languages and what it is
-about to touch, and closes with whether anything was written:
-
-```
-======================================================================
-  STEP      : sync
-  MODE      : DRY RUN — nothing will be saved
-              this is the default; add --write to apply
-  LANGUAGES : spanish (spa)
-  WOULD EDIT: data/vocabulary.db
-======================================================================
-```
-
-Before anything is replaced it is backed up: curated JSONL to `.jsonl.bak`, the
-database to `vocabulary.db.bak`.
-
-### Windows notes
-
-`stdout` is forced to UTF-8 at the top of `pipeline.py`. The reports use box
-characters and arrows, which a cp1252 console cannot encode — without that
-reconfigure the very first banner raises `UnicodeEncodeError` and the run dies
-before doing anything. The npm aliases call `python`, not `python3`, which
-doesn't exist on Windows.
-
-### How the modules fit together
-
-Dependencies run one way, and `config` is the leaf:
-
-```
-config  ←  corpus  ←  curated  ←  pipeline
-config  ←  db      ←────────────╯
-config  ←  visuals ←───────────╯
-```
-
-- **`config.py`** — languages, model/corpus/translator codes, every path, and
-  the frequency rank scales. Adding a language or moving a directory is a
-  one-file change. `PROJECT_ROOT` is `Path(__file__).resolve().parents[3]`.
-- **`curated.py`** — the *only* reader and the *only* writer of the curated
-  JSONL. `read(lang)` / `write(lang, entries)`; `write` goes through a temp
-  file and an atomic rename, so an interrupted run can't truncate the source
-  of truth.
-- **`db.py`** — the only module that touches `vocabulary.db`. It takes entries
-  and returns counts; it never reads a file. `open_db(create=False)` fails
-  loudly on a missing DB rather than silently creating an empty one and
-  reporting "0 rows updated".
-
-**Pipeline steps are pure.** `dedupe_lang`, `backfill_lang`, `enrich_*` take an
-entry list, mutate or filter it, and return a report — none of them touch the
-filesystem. `pipeline.py` alone decides whether to persist. That is what makes
-`--write` a single reliable gate instead of a flag each step must remember to
-honour, and it is why the steps compose into `all` safely.
-
-### Mining: where the words come from, and what limits the yield
-
-`pipeline.py mine` → `curated.mine_lang` → `curated.extract_candidates` →
-`corpus.read_top_n_os` / `corpus.build_corpus_entries`.
-
-**spaCy is a hard requirement.** Without it `extract_candidates` catches the
-`ImportError` and returns an empty list, so `mine` silently yields zero words:
-
-```bash
-pip install -r scripts/data/requirements.txt
-python -m spacy download es_core_news_sm    # fr_ / it_ / pt_ / de_core_news_sm too
-```
-
-The knobs, in the order they cut the candidate pool:
-
-| flag | default | effect |
-|------|---------|--------|
-| `--corpus` | `50k` | `50k` reads `{iso}_50k.txt`; `full` reads `{iso}_full.txt` (1.2M lines for Spanish, 70k usable at `--min-count 100`) |
-| `--min-count` | 100 | words rarer than this are ignored |
-| `--top` | 0 (all) | caps how many corpus rows get scanned; every row costs one spaCy tag |
-| `--batch` | 500 | caps how many entries actually get appended per language per run |
-
-Then: already-curated words are skipped (their corpus frequency is copied onto
-the existing entry rather than discarded), only noun/verb/adjective survive, and
-a word with no gloss is dropped.
-
-`corpus.load_english_blocklist` exists but **nothing calls it** — `mine` relies
-on spaCy's POS tag instead. It now takes the language it is filtering for; it
-used to whitelist against the Spanish corpus whatever the target, which would
-delete *hand, arm, finger, wind, ball, warm, land, best, wild, rat, gift, band*
-from German the moment anyone wired it up.
-
-### Seeding a language by hand (`seed`)
-
-`mine` needs spaCy and a network connection. `seed` needs neither: it reads
-`data/seed/<language>.txt`, a hand-written `word|pos|gender|gloss;gloss` list,
-and turns it into curated entries. That is how German was bootstrapped, and how
-any language can be given a usable core vocabulary before mining is possible.
-
-Only the words and their glosses are hand-written. **Rank, band, difficulty and
-`corpus_frequency` are read from the OpenSubtitles corpus by the step itself**,
-so the seed file carries no numbers and cannot drift out of step with the
-frequency data. Entries come out ordered by real corpus frequency, so "Top 100"
-in the app means the hundred commonest of them.
-
-It is idempotent — words already in the curated file are skipped — so it is safe
-to re-run, and safe to run after mining. It is in the `all` chain for that
-reason, and is a no-op for the four languages with no seed file.
-
-Part of speech and noun capitalisation are checked against **HanTa**
-(`pip install HanTa`) when it is installed; disagreements are reported, not
-enforced. HanTa rather than spaCy because its German model ships inside the
-wheel and needs no separate download. The check tags nouns in their capitalised
-form — handed lowercase, the tagger returns whichever verb or adjective the noun
-collides with (*frage* for Frage, *liebe* for Liebe, *arm* for Arm) and would
-report every one as an error.
-
-Roughly a dozen genuine disagreements survive for German and all are correct as
-written: `weiß` is *white* and *I know*; `ganz`, `rund` and `einfach` are
-adjective and adverb both.
-
-### German
-
-German is mined the same way as the other four, with three differences:
-
-- **The corpus is lowercase, German nouns are not.** `de_50k.txt` has `mann`,
-  not `Mann`, and case is the only thing separating *essen* (to eat) from
-  *Essen* (a meal). `analyze_word` tags German twice — once as given and once
-  capitalised, since `de_core_news_sm` is trained on cased text and capital
-  letters are its strongest noun signal — and `display_lemma` restores the
-  capital on any word tagged NOUN. Keys stay lowercase throughout; only the
-  stored `word` is cased.
-- **Conjugations come from Wiktionary, not from rules.** mlconjug3 covers
-  en/es/fr/it/pt/ro and has no German, so `sync` still imports German verbs with
-  `conjugations: null` and `LANGS_WITHOUT_CONJUGATION` still reports that once
-  rather than per verb. The forms are filled in by a separate step:
-
-  ```bash
-  python scripts/data/pipeline.py conjugations --langs deu --write
-  npm run data:conjugations          # both languages, then run sync
-  ```
-
-  A rules engine was the obvious plan and would not have helped. Of the 172
-  German verbs in the vocabulary roughly 75 are strong — *gehen, nehmen,
-  sprechen, ziehen, schwimmen* — and a strong verb's principal parts cannot be
-  derived from its infinitive. Whatever generates the weak ones, the hard part
-  is a table of ~150 verbs, so the only real question is where it comes from.
-  Hand-writing it was the alternative, and a wrong Präteritum stem is not a
-  crash: it is a confidently wrong answer a learner cannot doubt, that no test
-  here would catch. Wiktionary is checkable by opening the page.
-
-  Every parse is shape-checked — six present forms, six preterite, a participle,
-  nothing containing markup — and anything that fails is **skipped and reported**
-  rather than guessed. Conjugation mode drops verbs it has no forms for, so a
-  miss costs a verb you cannot drill, never a verb you are taught wrong.
-
-  Cached in `data/conj_cache/<language>.jsonl`, same shape as the gloss cache,
-  including negative results so a verb Wiktionary has no table for is not
-  refetched. Network failures are deliberately *not* cached — those are about
-  the run, not the verb.
-- **No plural merging.** `deduplicate_lemma_map`'s `-s`/`-es` rule is gated to
-  `PLURAL_S_LANGS`. German plurals are formed by suffix, umlaut, both or neither
-  (Haus→Häuser, Auto→Autos, Fenster→Fenster), so the rule does not describe the
-  language — what it *would* do is merge Eis (ice) into Ei (egg) and Reis (rice)
-  into Rei. spaCy already lemmatises German to the singular.
-
-**In the app**, German is offered in every mode, Conjugation included, once the
-`conjugations` step has been run — it drills Präsens, Präteritum and Partizip II.
-Before that the mode opens on a message naming the command, rather than on cards
-with nothing in them.
-
-Conjugation mode only offers verbs it has forms for, in every language. That is
-not just a German concern: 41 of French's 1,337 verbs carry a table, so the mode
-used to build ~1,300 uncompletable cards whose blank cells counted against the
-learner in the progress bars.
-`src/client/data/languages.ts` is the single list of languages and their
-capabilities; the dropdown, the ISO codes and that tab gate all read from it,
-and `GET /api/languages` tells the dropdown which languages the DB actually has
-rows for so an un-mined language shows as "German — no data yet" rather than
-failing when picked.
-
-Answer matching runs through `foldKey`, which lowercases, so a learner typing
-*hund* is marked correct for *Hund*. Capitalisation is taught by what is shown,
-not enforced by the checker.
-
-`CONJ_VERB_SUFFIXES['deu']` is deliberately empty. Every German verb ending is
-also a noun ending (`-te`: sagte, but also Tüte/Miete/Seite; `-t`: 3rd person,
-but also Stadt/Welt/Wort). Fill it from observed junk in a real run — four
-Spanish suffix heuristics were written from first principles and all four had to
-be reverted after eating real headwords.
-
-**Glosses are cached**, so re-mining is mostly free. `data/gloss_cache/` already
-holds 26,010 Spanish lookups with a 90% hit rate, ~16,700 of which are glossed
-words not yet in the curated file — those cost no network at all.
-
-### What fills each `words` column
-
-| column | filled by |
-|--------|-----------|
-| word, translation, pos, glosses | `mine` (corpus + Wiktionary/Translate) or hand-curation |
-| rank, difficulty, **band** | derived from frequency rank — `rank_to_band` / `rank_to_difficulty` in `config.py` |
-| **corpus_frequency** | `mine`, from the OpenSubtitles occurrence count |
-| gender, domains | `enrich` (Spanish rules only) |
-| conjugations, past_participle, gerund | `sync` via mlconjug3 — fra/ita/por only; **deu has no source at all** |
-| conjugation_class, future_stem, overrides | Spanish verbs; consumed by `verb-rules.ts` at runtime |
-| ipa, syllables, notes, register, plural, reflexive | **manual** — admin panel, no automated source |
-| emoji | nothing — Picture Quiz resolves visuals through `visual-map.ts` |
-
-**Keep `UPSERT`'s column list in sync with the table.** `band`,
-`corpus_frequency`, `plural` and `reflexive` were absent from it for a long
-time, so the data sat in the curated JSONL and silently never reached the app.
-`band` in particular is now computed from `rank` for every row rather than only
-the ~5% that carry one explicitly.
-
-### Gotchas worth keeping
-
-- `rank_to_band()` / `rank_to_difficulty()` live **only** in `config.py`. They
-  previously existed in two places with different thresholds (rank 1200 was B1
-  in one file and B2 in the other). Don't add a local copy.
-- `enrich_domains` runs its output through `canonicalize()` before storing it.
-  Without that, it hands out a name (`numbers_quantity`) that the canonicaliser
-  then deletes, so the next run re-assigns it — the two steps flip the same
-  entries forever and `all` never converges.
-- Enrichment rules are Spanish-only; `enrich` skips other languages with a note
-  rather than pretending to work.
 
 ## Running Tests
 
@@ -429,4 +160,45 @@ read from or write to `vocabulary.db`.
   routes import `getDb()` from it rather than opening their own connection.
 - **`setDb(testDb)`**: escape hatch added to `vocab-loader.js` so tests can
   inject an in-memory DB without touching the filesystem.
-- **Cache invalidation**: every admin 
+- **Cache invalidation**: every admin route that writes calls `clearCache()`
+  on the languages it touched, so the next request reloads from SQLite rather
+  than serving the copy from before the edit.
+- **`createApp({ nodeEnv, serveStatic })` is authoritative**: CORS, rate
+  limiting, error detail, cache lifetimes and the admin gate are all built from
+  the value passed in. Nothing re-reads `process.env.NODE_ENV` behind it. They
+  used to, which is why the test helper had to set the env var *and* pass a
+  different value to `createApp` — an app told it was in two environments at
+  once. `serveStatic` is separate from `nodeEnv` so a test app can be a
+  *development* app that doesn't serve the SPA.
+- **This app does not build its data.** VocabApp-Data does, and it is a
+  separate project that happens to live in a subdirectory for now. Nothing in
+  `src/` or `tests/` may read a file out of it —
+  `tests/data-requirements.test.js` fails if anything starts to, because a path
+  that works while the two sit side by side breaks the moment the folder moves,
+  which is the entire point.
+- **`src/server/lib/data-requirements.ts` says what the app needs**: which
+  tables and columns, the oldest schema it can read, and the band cutoffs it
+  displays. It is deliberately *not* a copy of the producer's schema. Two
+  independent statements that must agree beat one shared file, because the
+  disagreement is the thing worth hearing about.
+- **The database says what built it**, and `checkDatabase` reads that at
+  startup: it refuses to boot if a column the SELECT names is missing — the app
+  would throw on the first request anyway, and failing at boot with an
+  instruction is strictly better — and warns but keeps serving if the data is
+  merely older. `getDbInfo` surfaces the same for the admin panel.
+- **`band` is computed here and nowhere else.** The database has no band
+  column. It used to: the pipeline wrote one on every sync and this app never
+  selected it, recomputing the band from `rank` on every load. So it was a
+  second copy of a derived value maintained across a project boundary, and the
+  two disagreed for a long time — 500/1500/3000/5000/7000 here against
+  200/500/1000/2000/4000 there, so a word ranked 3000 was B1 on screen and C1
+  in the data. The fix was to stop shipping the derived value, which leaves
+  nothing to keep in step.
+- **Flat asset URLs, explicit index**: `data/images/` and `data/emoji/` are
+  partitioned by domain on disk and flat in the URL space. `lib/flat-static.ts`
+  builds one filename → path index and *reports* a name that exists in two
+  domains, rather than a stack of `express.static` mounts where one file
+  silently shadows the other.
+
+---
+

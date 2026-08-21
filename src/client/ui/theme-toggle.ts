@@ -1,3 +1,5 @@
+import { readString } from '../utils/storage.ts';
+
 const STORAGE_KEY = 'theme';
 const DARK_CLASS  = 'dark';
 
@@ -13,12 +15,12 @@ export function applyTheme(value: ThemeValue): void {
 }
 
 export function initTheme(): void {
-  const saved = (localStorage.getItem(STORAGE_KEY) ?? 'system') as ThemeValue;
+  const saved = (readString(STORAGE_KEY) ?? 'system') as ThemeValue;
   applyTheme(saved);
 
   // React to OS-level theme changes when 'system' is the active preference
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-    if ((localStorage.getItem(STORAGE_KEY) ?? 'system') === 'system') {
+    if ((readString(STORAGE_KEY) ?? 'system') === 'system') {
       document.documentElement.classList.toggle(DARK_CLASS, e.matches);
     }
   });
