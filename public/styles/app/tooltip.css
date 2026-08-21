@@ -41,7 +41,7 @@
   background: var(--surface);
 }
 #wordTooltip.lang-indicator-flag[class*="lang-tag-"]::before {
-  content: attr(data-flag);
+  content: '';
   position: absolute;
   /* Negative z-index keeps this behind #wordTooltip's own in-flow content
      (word, badges, glosses...) while still painting above its background —
@@ -49,11 +49,11 @@
      above, so this stays scoped to it rather than escaping underneath
      something else on the page. */
   z-index: -1;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 4rem;
+  inset: 12%;
+  background-image: var(--flag-img);
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
   opacity: 0.28;
   pointer-events: none;
 }
@@ -80,6 +80,9 @@
    indicator setting — see word-tooltip.ts — so there's always some way to
    tell a mixed-in word's language even with the table's own indicator off. */
 .tt-lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   color: var(--text);
   border: 1px solid var(--border-strong);
 }

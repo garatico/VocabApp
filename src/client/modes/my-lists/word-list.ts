@@ -28,7 +28,7 @@ import { getMastered, saveMastered } from './mastery.ts';
 import { closePopover, openMovePopover } from './move-popover.ts';
 import { showUndo } from './undo-toast.ts';
 import {
-  POS_ABBREV, POS_LABEL, POS_CHIPS, WORD_CHUNK, type VocabEntry,
+  POS_ABBREV, POS_CHIPS, WORD_CHUNK, type VocabEntry,
 } from './types.ts';
 
 export interface WordListDeps {
@@ -188,33 +188,41 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
   }
 
   // ── Stats ──────────────────────────────────────────────────────────────────
+  // Just rank range and mastered count — POS breakdown used to be duplicated
+  // here too, but the POS chips above already show a count per part of speech
+  // (see updateChipCounts), so restating it here was the same number twice.
 
   function renderStats(words: string[]): void {
+    statsRow.innerHTML = '';
+    if (words.length === 0) return;
+    let minRank = Infinity; let maxRank = -Infinity; let rankedCount = 0;
     const vm = cachedVocabMap(ctx.lang);
-    if (!vm || words.length === 0) { statsRow.innerHTML = ''; return; }
-    const counts: Record<string, number> = {};
-    let minRank = Infinity; let maxRank = -Infinity; let rankedCount = 0; let unlabeled = 0;
     for (const w of words) {
-      const e = vm.get(w);
-      if (e?.pos) counts[e.pos] = (counts[e.pos] ?? 0) + 1;
-      else unlabeled++;
-      if (e?.rank != null) {
-        if (e.rank < minRank) minRank = e.rank;
-        if (e.rank > maxRank) maxRank = e.rank;
+      const rank = vm?.get(w)?.rank;
+      if (rank != null) {
+        if (rank < minRank) minRank = rank;
+        if (rank > maxRank) maxRank = rank;
         rankedCount++;
       }
     }
-    const parts: string[] = Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([pos, n]) => `${n} ${POS_LABEL[pos] ?? pos}`);
-    if (unlabeled > 0) parts.push(`${unlabeled} other`);
-    if (rankedCount > 1)        parts.push(`ranks #${minRank}–#${maxRank}`);
-    else if (rankedCount === 1) parts.push(`rank #${minRank}`);
+    if (rankedCount > 1) {
+      const chip = document.createElement('span');
+      chip.className = 'ml-stat-chip ml-stat-chip--ranks';
+      chip.textContent = `Ranks #${minRank}–#${maxRank}`;
+      statsRow.appendChild(chip);
+    } else if (rankedCount === 1) {
+      const chip = document.createElement('span');
+      chip.className = 'ml-stat-chip ml-stat-chip--ranks';
+      chip.textContent = `Rank #${minRank}`;
+      statsRow.appendChild(chip);
+    }
     const masteredCount = words.filter(w => getMastered(ctx.lang).has(w)).length;
-    if (masteredCount > 0) parts.push(`${masteredCount} mastered`);
-    statsRow.innerHTML = parts
-      .map(p => `<span class="ml-stat-chip">${p}</span>`)
-      .join('');
+    if (masteredCount > 0) {
+      const chip = document.createElement('span');
+      chip.className = 'ml-stat-chip ml-stat-chip--mastered';
+      chip.textContent = `${masteredCount} Mastered`;
+      statsRow.appendChild(chip);
+    }
   }
 
   // ── Chip counts ────────────────────────────────────────────────────────────
@@ -231,7 +239,7 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     for (const [pos, btn] of posChipBtns) {
       const n = counts[pos] ?? 0;
       const chipDef = POS_CHIPS.find(c => c.value === pos);
-      btn.textContent = n > 0 ? `${chipDef?.label ?? pos} (${n})` : (chipDef?.label ?? pos);
+      btn.textContent = `${chipDef?.label ?? pos} (${n})`;
     }
   }
 

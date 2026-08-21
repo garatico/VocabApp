@@ -5,6 +5,7 @@ import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker }        from '../utils/list-picker.ts';
 import { Settings }              from '../settings.ts';
 import { missCount }             from '../utils/session-history.ts';
+import { flagUrl }               from '../data/languages.ts';
 
 export type TableDirection = 'target-en' | 'en-target' | 'mixed';
 
@@ -52,7 +53,7 @@ interface RenderTableModeOptions {
  * can score words on pages that were never rendered.
  */
 export function revealTextFor(entry: Word, dir: 'target-en' | 'en-target'): string {
-  return dir === 'en-target' ? entry.word : buildGlossDisplay(entry);
+  return dir === 'en-target' ? entry.word : buildGlossDisplay(entry, Settings.getAnswerGlossCount());
 }
 
 /**
@@ -97,7 +98,7 @@ export function renderTableMode({
   }
 
   function labelText(entry: Word, dir: 'target-en' | 'en-target'): string {
-    return dir === 'en-target' ? buildGlossDisplay(entry) : entry.word;
+    return dir === 'en-target' ? buildGlossDisplay(entry, Settings.getQuestionGlossCount()) : entry.word;
   }
 
   function revealText(entry: Word, dir: 'target-en' | 'en-target'): string {
@@ -214,10 +215,12 @@ export function renderTableMode({
 
         if (indicatorMode !== 'off' && w.language) {
           tdWord.classList.add(`lang-tag-${w.language}`);
-          // Read by the flag-mode CSS (content: attr(data-flag)) — resolving
-          // it here means a Settings flag override just works, no stylesheet
-          // change needed.
-          tdWord.dataset.flag = Settings.getLangFlag(w.language);
+          // Read by the flag-mode CSS (background-image: var(--flag-img)) —
+          // resolving it here means a Settings flag override just works, no
+          // stylesheet change needed.
+          if (indicatorMode === 'flag') {
+            tdWord.style.setProperty('--flag-img', `url("${flagUrl(Settings.getLangFlag(w.language))}")`);
+          }
         }
 
         if (isInAnyList(wordLang, w.word)) tdWord.classList.add('word-cell--known');

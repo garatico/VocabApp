@@ -69,10 +69,24 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.3rem;
   padding: 0.45rem 0.65rem 0.35rem;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
+
+/* Backup/restore used to be bare icons (⭳/⭱) — hard to tell apart at a
+   glance. Text label needs a bit more room than the plain icon buttons. */
+.ml-text-btn {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  white-space: nowrap;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+.ml-text-btn:hover { border-color: var(--accent); }
 
 /* Type from .ui-label, which also gives it the primary text colour. */
 .ml-sidebar-title { --ui-label-size: 0.7rem; }
@@ -252,6 +266,25 @@
   font-family: 'DM Mono', monospace;
 }
 
+.ml-panel-list-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.ml-panel-flag {
+  font-size: 0.9rem;
+}
+
+.ml-export-format-label {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .ml-panel-controls {
   display: flex;
   align-items: center;
@@ -301,10 +334,20 @@
   margin-bottom: 0.35rem;
 }
 
+/* ── Search box + bulk-import toggle, side by side ── */
+.ml-add-top-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.ml-add-top-row .ml-add-row {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ── Bulk import ── */
 .ml-bulk-toggle {
-  align-self: flex-start;
-  margin-top: 0.4rem;
+  flex-shrink: 0;
   padding: 0.25rem 0.6rem;
   background: transparent;
   border: 1px dashed var(--border-strong);
@@ -313,6 +356,7 @@
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
 }
 .ml-bulk-toggle:hover {
   border-color: var(--accent);
@@ -878,17 +922,30 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   padding: 0.05rem 0;
 }
 
+/* Bigger, capitalized, and a distinct color from the POS/Level pill filters
+   (.pos-chip) below — these two are read-only facts about the current view,
+   not togglable filters, so they should not look like more buttons in the
+   same row. */
 .ml-stat-chip {
   display: inline-block;
-  font-size: 0.67rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  background: var(--surface2);
-  border: 1px solid var(--border);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   border-radius: 999px;
-  padding: 0.1rem 0.55rem;
+  padding: 0.2rem 0.7rem;
   white-space: nowrap;
   line-height: 1.5;
+}
+.ml-stat-chip--ranks {
+  color: var(--accent);
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+}
+.ml-stat-chip--mastered {
+  color: #16a34a;
+  background: #f0fdf4;
+  border: 1px solid #16a34a;
 }
 
 /* ── Export format selector ──────────────────────────────────── */
@@ -1109,6 +1166,10 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   /* Add-words input */
   .ml-add-input { font-size: 0.9rem; min-height: 40px; }
 
+  /* Bulk-import toggle drops below the search box rather than squeezing it */
+  .ml-add-top-row { flex-wrap: wrap; }
+  .ml-add-top-row .ml-add-row { flex: 1 1 100%; }
+
   /* POS chip row: allow wrap, ensure chips are tappable */
   .ml-pos-row { gap: 0.3rem; }
 
@@ -1141,7 +1202,8 @@ html.dark .ml-word-pos[data-pos="adverb"] {
 
 @media (max-width: 480px) {
   /* Hide format selector -- default export fine on mobile */
-  .ml-export-format-sel { display: none; }
+  .ml-export-format-sel,
+  .ml-export-format-label { display: none; }
 
   .ml-panel-title { font-size: 0.88rem; }
   .ml-panel-count { display: none; }

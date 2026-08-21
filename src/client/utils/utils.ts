@@ -213,13 +213,18 @@ export function getGlosses(entry: Word): string[] {
  * - Verbs: filter to "to X" forms and join with " / "  (e.g. "to speak / to talk")
  * - Everything else: join all glosses with " / "        (e.g. "of / from")
  * Falls back to entry.translation, then entry.word.
+ *
+ * @param maxGlosses Cap on how many senses are joined in, keeping the first
+ * N — callers that let a learner tune this (table mode's question/answer
+ * gloss-count settings) pass it; everyone else gets every sense, unchanged.
  */
-export function buildGlossDisplay(entry: Word): string {
+export function buildGlossDisplay(entry: Word, maxGlosses = Infinity): string {
   const glosses = getGlosses(entry);
   if (glosses.length === 0) return entry.translation ?? entry.word ?? '';
+  let chosen = glosses;
   if (entry.pos === 'verb') {
     const toForms = glosses.filter(g => g.toLowerCase().startsWith('to '));
-    return (toForms.length > 0 ? toForms : glosses).join(' / ');
+    if (toForms.length > 0) chosen = toForms;
   }
-  return glosses.join(' / ');
+  return chosen.slice(0, maxGlosses).join(' / ');
 }

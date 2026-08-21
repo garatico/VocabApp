@@ -190,6 +190,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.15rem;
   min-width: 1.3rem;
   padding: 0.05rem 0.3rem;
   border-radius: var(--radius-sm);
@@ -200,8 +201,6 @@
 .lang-badge--mixed {
   background: var(--surface3);
   border: 1px solid var(--border-strong);
-  letter-spacing: -0.15em;
-  padding-right: 0.45rem;
 }
 .lang-badge--empty {
   background: none;

@@ -46,13 +46,6 @@ export const POS_ABBREV: Record<string, string> = {
   conjunction: 'conj', article: 'art',
 };
 
-/** Full pluralised labels for the stats row. */
-export const POS_LABEL: Record<string, string> = {
-  verb: 'Verbs', noun: 'Nouns', adjective: 'Adjectives',
-  adverb: 'Adverbs', pronoun: 'Pronouns', preposition: 'Prepositions',
-  conjunction: 'Conjunctions', article: 'Articles',
-};
-
 /** The chip row above the word list. The empty value is the "All" chip. */
 export const POS_CHIPS: readonly { value: string; label: string }[] = [
   { value: '',            label: 'All'          },

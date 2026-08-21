@@ -25,6 +25,7 @@ import { renderMultiPanel } from './multi-panel.ts';
 import { exportList } from './export-list.ts';
 import { closePopover, clickedOutsidePopover } from './move-popover.ts';
 import { BANDS, POS_CHIPS, type ExportFormat, type SortMode, type VocabEntry } from './types.ts';
+import { buildLangBadge } from '../../ui/lang-badge.ts';
 
 /**
  * The outside-click listener is captured on the document, so it has to be
@@ -65,6 +66,13 @@ export function renderPanel(ctx: ListsCtx): void {
 
   const titleGroup = document.createElement('div');
   titleGroup.className = 'ml-panel-title-group';
+
+  const listLabel = document.createElement('span');
+  listLabel.className = 'ml-panel-list-label'; listLabel.textContent = 'List:';
+
+  const flagBadge = buildLangBadge([ctx.lang]);
+  flagBadge.classList.add('ml-panel-flag');
+
   const title = document.createElement('h2');
   title.className = 'ml-panel-title'; title.textContent = ctx.selectedList;
   const countBadge = document.createElement('span');
@@ -78,6 +86,9 @@ export function renderPanel(ctx: ListsCtx): void {
   const exportBtn = document.createElement('button');
   exportBtn.type = 'button'; exportBtn.className = 'ml-export-btn';
   exportBtn.textContent = '↓ Export';
+
+  const exportFmtLabel = document.createElement('span');
+  exportFmtLabel.className = 'ml-export-format-label'; exportFmtLabel.textContent = 'Export Format:';
 
   const exportFmtSel = document.createElement('select');
   exportFmtSel.className = 'ml-export-format-sel';
@@ -124,8 +135,10 @@ export function renderPanel(ctx: ListsCtx): void {
     (document.getElementById('startBtn') as HTMLButtonElement | null)?.click();
   });
 
+  titleGroup.appendChild(listLabel); titleGroup.appendChild(flagBadge);
   titleGroup.appendChild(title); titleGroup.appendChild(countBadge);
-  titleGroup.appendChild(exportBtn); titleGroup.appendChild(exportFmtSel);
+  titleGroup.appendChild(exportBtn);
+  titleGroup.appendChild(exportFmtLabel); titleGroup.appendChild(exportFmtSel);
   titleGroup.appendChild(quizBtn);
 
   // Stats row — filled in by the word list on every render.
@@ -169,6 +182,9 @@ export function renderPanel(ctx: ListsCtx): void {
 
   const posRow = document.createElement('div');
   posRow.className = 'ml-pos-row';
+  const posLabel = document.createElement('span');
+  posLabel.className = 'ml-band-label'; posLabel.textContent = 'Part of Speech';
+  posRow.appendChild(posLabel);
   const posChipBtns = new Map<string, HTMLButtonElement>();
   POS_CHIPS.forEach(({ value, label }) => {
     const chip = document.createElement('button');
@@ -267,9 +283,15 @@ export function renderPanel(ctx: ListsCtx): void {
     ctx.renderSidebar(false);
   });
 
-  addSection.appendChild(add.row);
+  // Search box and bulk-import toggle share a line — the toggle used to sit
+  // below, easy to miss next to the much larger search box above it.
+  const addTopRow = document.createElement('div');
+  addTopRow.className = 'ml-add-top-row';
+  addTopRow.append(add.row, bulk.toggle);
+
+  addSection.appendChild(addTopRow);
   addSection.appendChild(add.results);
-  addSection.append(bulk.toggle, bulk.panel);
+  addSection.appendChild(bulk.panel);
   ctx.panel.appendChild(addSection);
 
   // ── Word list ──────────────────────────────────────────────────────────────
