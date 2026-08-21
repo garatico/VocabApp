@@ -17,6 +17,7 @@ import type { Word }                            from './types.ts';
 import { readString, writeString, remove as removeKey } from './utils/storage.ts';
 import { mustGet }                              from './utils/dom.ts';
 import { renderMyLists }                        from './modes/my-lists-mode.ts';
+import { renderHistory }                        from './modes/history-mode.ts';
 import { LANGUAGES, isoCode, supportsConjugation,
          conjugationUnavailableReason }          from './data/languages.ts';
 import { availableLanguages }                    from './data/vocab-source.ts';
@@ -37,6 +38,7 @@ const recallWrap      = mustGet('recallWrap');
 const pictureWrap     = mustGet('pictureWrap');
 const conjugationWrap = mustGet('conjugationWrap');
 const myListsWrap     = document.getElementById('myListsWrap');  // optional — page may omit it
+const historyWrap     = document.getElementById('historyWrap');  // optional — page may omit it
 
 // Sections (hidden/shown by mode switch — mustGet throws if HTML template drifts)
 const quizArea        = mustGet('quizArea');
@@ -45,6 +47,7 @@ const recallArea      = mustGet('recallArea');
 const pictureArea     = mustGet('pictureArea');
 const conjugationArea = mustGet('conjugationArea');
 const myListsArea     = mustGet('myListsArea');
+const historyArea     = mustGet('historyArea');
 const settingsArea    = mustGet('settingsArea');
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -109,16 +112,19 @@ function updateLangPickerButton(): void {
   langPickerBtn.classList.toggle('lang-picker-btn--active', active.size > 0);
 }
 
+/** Modes that know how to render/score a mixed-language word list. */
+const MULTI_LANG_MODES = new Set(['table', 'recall', 'conjugation']);
+
 /**
- * The extra languages currently in effect. Table-mode-only — other modes
- * don't know how to render or score a mixed-language word list — so this is
- * gated on the active tab rather than just the picker's own state, since a
- * selection made on the Table tab stays in `extraLanguages` (just visually
- * hidden) if the user switches tabs without clearing it.
+ * The extra languages currently in effect. Gated on the active tab rather
+ * than just the picker's own state, since a selection made on one of the
+ * multi-language modes stays in `extraLanguages` (just visually hidden) if
+ * the user switches to a mode that doesn't support a merge without clearing
+ * it.
  */
 function getExtraLanguages(): string[] {
   const activeMode = document.querySelector('.mode-tab.active')?.getAttribute('data-mode');
-  if (activeMode !== 'table') return [];
+  if (!activeMode || !MULTI_LANG_MODES.has(activeMode)) return [];
   const primary = langSelect?.value;
   return LANGUAGES
     .map(l => l.name)
@@ -301,9 +307,12 @@ initTheme();
 
 const { updateModeUI } = bindModeSwitch({
   quizArea, tableArea, recallArea, pictureArea, conjugationArea,
-  extraAreas: { mylists: myListsArea, settings: settingsArea },
+  extraAreas: { mylists: myListsArea, settings: settingsArea, history: historyArea },
   onActivate: {
-    conjugation: () => initConjControls(langSelect?.value || 'spanish'),
+    conjugation: () => initConjControls(langSelect?.value || 'spanish', getExtraLanguages()),
+    // Re-rendered fresh on every visit (unlike My Lists' one-time eager
+    // render) so a session finished elsewhere always shows up.
+    history: () => { if (historyWrap) renderHistory(historyWrap, langSelect?.value ?? 'spanish'); },
   },
 });
 
@@ -322,6 +331,7 @@ bindStartHandler({
     const extras   = getExtraLanguages();
     return extras.length > 0 ? [primary, ...extras].join('+') : primary;
   },
+  getExtraLanguages,
   getSize: () => sizeSelect?.value === 'max'
     ? Infinity
     : sizeSelect?.value === 'custom'
@@ -344,7 +354,20 @@ bindStartHandler({
   onModeChange:   updateModeUI,
   onSingleStart:  showCurrent,
   getBaseList:    () => currentBaseList,
-  getAllWords:     () => allWordsByLang[langSelect?.value ?? 'spanish'] || [],
+  // The size-window top-up logic (start-handler.ts) pulls from here when a
+  // narrowing filter — verbs-only, illustrated-only — leaves the sized list
+  // short. Needs the same per-word `.language` tagging loadAndBuildFilters
+  // already gives `currentBaseList`, or a top-up word in a merged session
+  // falls back to the render's own (possibly combined) `lang` prop instead
+  // of its real language — table-controls.ts and conjugation/index.ts both
+  // read `w.language ?? lang` for mastery/history and per-verb tense
+  // filtering, and a bogus combined fallback breaks both silently.
+  getAllWords: () => {
+    const primary = langSelect?.value ?? 'spanish';
+    const extras  = getExtraLanguages();
+    if (extras.length === 0) return allWordsByLang[primary] || [];
+    return [primary, ...extras].flatMap(l => (allWordsByLang[l] || []).map(w => ({ ...w, language: l })));
+  },
   elements:       { startBtn, tableWrap, recallWrap, pictureWrap, conjugationWrap, output },
 });
 
@@ -357,7 +380,7 @@ langSelect?.addEventListener('change', () => {
   void loadAndBuildFilters(langSelect.value);
   refreshFilterSelect(langSelect.value);
   if (document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === 'conjugation') {
-    initConjControls(langSelect.value);
+    initConjControls(langSelect.value, getExtraLanguages());
   }
 });
 
@@ -372,6 +395,12 @@ langPickerBtn?.addEventListener('click', () => {
       S.set('vq_extra_langs', [...extraLanguages].join(','));
       updateLangPickerButton();
       void loadAndBuildFilters(langSelect?.value ?? 'spanish');
+      // Rebuild the tense chip union live if the picker was opened from the
+      // Conjugation tab, so a newly-added language's tenses show up without
+      // waiting for the next Start Quiz.
+      if (document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === 'conjugation') {
+        initConjControls(langSelect?.value ?? 'spanish', getExtraLanguages());
+      }
     },
   });
 });
@@ -457,21 +486,15 @@ document.getElementById('conjViewToggle')?.addEventListener('click', e => {
   syncConjViewToggle();
 });
 
-// Picture sub-mode toggle. The box collapses, so the chosen style is echoed
-// into the header summary — otherwise a folded box says nothing at all.
-function syncPictureStyleSummary(): void {
-  const active = document.querySelector<HTMLElement>('#pictureSubMode .conj-toggle-btn.active');
-  const label  = document.getElementById('pictureStyleSummary');
-  if (label) label.textContent = active?.textContent ?? '';
-}
-
+// Picture sub-mode toggle — now an always-visible control-group (see
+// #pictureStyleGroup in index.html), not a collapsible box, so there is no
+// header summary to keep in sync any more.
 document.getElementById('pictureSubMode')?.addEventListener('click', e => {
   const btn = (e.target as HTMLElement).closest<HTMLElement>('.conj-toggle-btn');
   if (!btn) return;
   document.querySelectorAll('#pictureSubMode .conj-toggle-btn')
     .forEach(b => b.classList.toggle('active', b === btn));
   if (btn.dataset.mode) S.set('vq_picture_style', btn.dataset.mode);
-  syncPictureStyleSummary();
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -491,7 +514,6 @@ void (async function init(): Promise<void> {
   bindSettings();
   initShortcuts();
   initListFilter(langSelect?.value ?? 'spanish');
-  syncPictureStyleSummary();
   syncConjViewToggle();
 
   // ── Onboarding card ────────────────────────────────────────────────────────
@@ -519,7 +541,7 @@ void (async function init(): Promise<void> {
 
   // Restore active mode tab (must happen after bindModeSwitch set up click handlers)
   const savedMode = S.get('vq_mode');
-  if (savedMode && savedMode !== 'mylists' && savedMode !== 'settings') {
+  if (savedMode && savedMode !== 'mylists' && savedMode !== 'settings' && savedMode !== 'history') {
     const tab = document.querySelector<HTMLElement>(`.mode-tab[data-mode="${savedMode}"]`);
     tab?.click();
   }

@@ -20,6 +20,7 @@ import {
   type WordOrder,
 } from '../utils/session-history.ts';
 import { buildScorePills, scorePct }     from '../ui/score-pills.ts';
+import { createStopwatch } from '../ui/stopwatch.ts';
 import type { Word } from '../types.js';
 
 let tableController:  TableController | null = null;
@@ -40,7 +41,14 @@ let sessionState: Map<string, InputSnapshot> = new Map();
 let quizColumns                            = 2;
 let quizLang                               = 'spanish';
 let onQuizComplete: (() => void) | null    = null;
-let quizStartedAt                          = Date.now();
+// Lazy: table-pagination.test.ts and table-compare.test.ts import this module
+// in a plain node environment (no `document`) to exercise the pure paging
+// helpers below, so nothing at module scope may touch the DOM.
+let stopwatch: ReturnType<typeof createStopwatch> | null = null;
+function getStopwatch(): ReturnType<typeof createStopwatch> {
+  if (!stopwatch) stopwatch = createStopwatch(document.getElementById('tableStopwatch'));
+  return stopwatch;
+}
 let sessionRecorded                        = false;
 let wordOrder: WordOrder =
   (readString('vq_table_order') as WordOrder | null) ?? 'rank';
@@ -316,7 +324,8 @@ function recordMastery(): void {
     else                       bucket.missed.push(w.word);
   }
 
-  const seconds = Math.max(1, Math.round((Date.now() - quizStartedAt) / 1000));
+  getStopwatch().stop();
+  const seconds = getStopwatch().elapsedSeconds();
   for (const [wl, { correct, missed, revealed }] of byLang) {
     if (correct.length > 0) {
       const added = markMastered(wl, correct);
@@ -404,7 +413,7 @@ export function startTableQuiz({
   onQuizComplete   = onComplete ?? null;
   sessionState     = new Map();
   pageIndex        = 0;
-  quizStartedAt    = Date.now();
+  getStopwatch().start();
   sessionRecorded  = false;
   lastMissedWords   = [];
   lastMissedResults = [];

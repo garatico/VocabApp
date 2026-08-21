@@ -391,3 +391,23 @@
   font-size: 0.72rem;
   color: var(--success, #16a34a);
 }
+
+/* ────────────────────────────────────────────────────────────────
+   Quiz stopwatch (ui/stopwatch.ts)
+   The live count-up "how long have I been at this" readout, shared by
+   every quiz mode's in-quiz controls row. A small muted badge rather
+   than a prominent number — Recall mode's own countdown timer
+   (.recall-timer) is the thing meant to grab attention; this is a
+   secondary stat next to it.
+   ──────────────────────────────────────────────────────────────── */
+.quiz-stopwatch {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface2);
+  white-space: nowrap;
+}

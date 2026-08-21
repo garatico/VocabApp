@@ -7,7 +7,7 @@
  *   click — one Spanish prompt at a time; user picks the correct image
  *           from a 2×2 grid (1 correct + 3 distractors)
  *
- * The sub-mode toggle lives in #pictureModeControls (index.html) and is
+ * The sub-mode toggle lives in #pictureStyleGroup (index.html) and is
  * shown/hidden by ui-state.js alongside the conjugation controls.
  * start-handler.js reads the active button and passes `mode` here.
  */
@@ -20,6 +20,7 @@ import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import { matchesAnswer     } from '../utils/utils.ts';
 import { shuffle           } from '../utils/shuffle.ts';
 import { Settings          } from '../settings.ts';
+import { createStopwatch   } from '../ui/stopwatch.ts';
 import type { Word }        from '../types.ts';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -399,8 +400,27 @@ function injectStyles(): void {
 
 // ── Summary helpers ────────────────────────────────────────────────────────────
 
-/** When the current picture session began, for the elapsed-time record. */
-let pictureStartedAt = Date.now();
+// Live clock for the current session. One shared element moved into whichever
+// sub-mode's own controls bar is currently on screen (type/flashcard/click
+// each build their own bar; only one is ever rendered at a time) — see
+// mountPictureStopwatch(). Lazy so nothing at module scope touches `document`
+// — keeps this file importable from a plain node test environment.
+let pictureStopwatchState: { el: HTMLElement; stopwatch: ReturnType<typeof createStopwatch> } | null = null;
+function getPictureStopwatch(): { el: HTMLElement; stopwatch: ReturnType<typeof createStopwatch> } {
+  if (!pictureStopwatchState) {
+    const el = document.createElement('span');
+    el.className = 'quiz-stopwatch';
+    el.title     = 'Time spent on this quiz';
+    pictureStopwatchState = { el, stopwatch: createStopwatch(el) };
+  }
+  return pictureStopwatchState;
+}
+
+/** Move the shared stopwatch element into a sub-mode's own controls bar. */
+function mountPictureStopwatch(bar: HTMLElement): void {
+  bar.appendChild(getPictureStopwatch().el);
+}
+
 let pictureRecorded  = false;
 
 /**
@@ -415,6 +435,7 @@ function recordPictureSession(
 ): void {
   if (pictureRecorded) return;
   pictureRecorded = true;
+  getPictureStopwatch().stopwatch.stop();
   recordOutcome(lang, missedWords, correctWords);
   saveSession(lang, {
     at: new Date().toISOString(),
@@ -424,7 +445,7 @@ function recordPictureSession(
     unassisted: correctWords.length,   // no per-word hints in picture mode
     hints: 0,
     revealed: missedWords.length,
-    seconds: Math.max(1, Math.round((Date.now() - pictureStartedAt) / 1000)),
+    seconds: getPictureStopwatch().stopwatch.elapsedSeconds(),
   });
 }
 
@@ -572,6 +593,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
   });
 
   bar.appendChild(giveUpBtn);
+  mountPictureStopwatch(bar);
   container.appendChild(bar);
   container.appendChild(grid);
   attachTooltips(grid, { hideWordWhenUnrevealed: true });
@@ -630,6 +652,7 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
   counter.className = 'fc-counter';
 
   bar.append(giveUpBtn, counter);
+  mountPictureStopwatch(bar);
 
   // ── Card row: prev arrow + card + next arrow ─────────────────────────────
   const row = document.createElement('div');
@@ -855,6 +878,7 @@ function renderClickMode(
   nav.append(prevBtn, nextBtn);
 
   header.append(nav, giveUpBtn);
+  mountPictureStopwatch(header);
 
   // ── Rest of layout ──────────────────────────────────────────────────────────
   const counter = document.createElement('div');
@@ -1004,7 +1028,7 @@ export function renderPictureMode({
   injectStyles();
   container.innerHTML = '';
   setProgress(0, 0);
-  pictureStartedAt = Date.now();
+  getPictureStopwatch().stopwatch.start();
   pictureRecorded  = false;
 
   // Click mode is a narrow centred column, so the section's progress bar and

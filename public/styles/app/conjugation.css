@@ -493,12 +493,14 @@
 .conj-tf-header .filter-section-label { margin-right: auto; }
 /* Buttons here are .ui-btn-mini. */
 
-/* ── Picture quiz style box ──────────────────────────────────
-   Same collapse bar as Tense & Forms, so the two mode panels behave
-   identically. The toggle spans the box and shares the width evenly. */
-#pictureStyleBody { margin-top: 0.5rem; }
-#pictureStyleBody .conj-display-toggle { display: flex; width: 100%; }
-#pictureStyleBody .conj-toggle-btn { flex: 1; justify-content: center; }
+/* ── Picture quiz style toggle — now a plain control-group next to Order,
+   not a collapsible box. Same toggle sizing as the Display toggle below. ── */
+#pictureStyleGroup .conj-display-toggle { display: flex; }
+#pictureStyleGroup .conj-toggle-btn {
+  font-size: 0.72rem;
+  padding: 0.3rem 0.6rem;
+  white-space: nowrap;
+}
 
 /* ── Display toggle, now in the controls bar ────────────────── */
 #conjDisplayGroup .conj-display-toggle { display: flex; }

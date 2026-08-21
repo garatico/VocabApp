@@ -159,8 +159,38 @@ function initRegularityChips(): void {
   });
 }
 
-export function initConjControls(lang: string): void {
-  const tenseDefs = TENSE_DEFS[lang] ?? TENSE_DEFS.spanish;
+/**
+ * The tense chip row for a multi-language session: every tense any of the
+ * active languages has, deduplicated by key. A verb whose own language
+ * doesn't have a ticked tense simply contributes no card for it (see
+ * index.ts's buildCards()) rather than the chip being disabled — so the row
+ * stays one flat list instead of needing per-language sub-groups.
+ *
+ * The primary language's own label/order wins for any key it has (that's
+ * what you're most likely reading); a key only an extra language has falls
+ * back to the shared English name, since there's no "primary" native label
+ * for it. In practice this fallback is rare: German/Dutch's three tenses are
+ * a strict subset of the Romance languages', so mixing them in adds no new
+ * chips at all — it only shows up the other way around (German/Dutch as the
+ * primary language, a Romance language as an extra).
+ */
+export function unionTenseDefs(lang: string, extraLangs: string[]): { key: string; label: string; native: boolean }[] {
+  const defs: { key: string; label: string; native: boolean }[] = [];
+  const seen = new Set<string>();
+  for (const l of [lang, ...extraLangs]) {
+    for (const def of TENSE_DEFS[l] ?? TENSE_DEFS.spanish) {
+      if (seen.has(def.key)) continue;
+      seen.add(def.key);
+      defs.push(l === lang
+        ? { ...def, native: true }
+        : { key: def.key, label: TENSE_EN[def.key] ?? def.key, native: false });
+    }
+  }
+  return defs;
+}
+
+export function initConjControls(lang: string, extraLangs: string[] = []): void {
+  const tenseDefs = unionTenseDefs(lang, extraLangs);
   const pronouns  = PRONOUNS[lang]   ?? PRONOUNS.spanish;
   const langName  = capitalize(lang);
 
@@ -185,10 +215,16 @@ export function initConjControls(lang: string): void {
       const native = document.createElement('span');
       native.className = 'conj-chip-native';
       native.textContent = def.label;
-      const en = document.createElement('span');
-      en.className = 'conj-chip-en';
-      en.textContent = TENSE_EN[def.key] ?? '';
-      btn.append(native, en);
+      btn.append(native);
+      // A chip borrowed from an extra language (the primary doesn't have
+      // this tense) already shows the English name as its "native" label —
+      // repeating it in the sub-label would just say the same word twice.
+      if (def.native) {
+        const en = document.createElement('span');
+        en.className = 'conj-chip-en';
+        en.textContent = TENSE_EN[def.key] ?? '';
+        btn.append(en);
+      }
       chips.appendChild(btn);
     });
     // Nothing valid saved — fall back to the first tense so the quiz is never

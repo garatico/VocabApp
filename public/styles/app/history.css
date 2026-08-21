@@ -1,0 +1,179 @@
+/* ================================================================
+   HISTORY — quiz history and "words to review" tab
+================================================================ */
+
+/* ── Section card (mirrors #myListsArea's own card style) ────── */
+#historyArea {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 0.6rem;
+  overflow: hidden;
+}
+
+.history-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem 1.1rem;
+}
+
+/* ── Language selector ────────────────────────────────────────── */
+.history-lang-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.history-lang-select {
+  font-size: 0.82rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* ── Shared panel shell ───────────────────────────────────────── */
+.history-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface2);
+}
+.history-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.history-panel-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-right: auto;
+}
+.history-empty {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Words to review ──────────────────────────────────────────── */
+.history-study-btn {
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.history-study-btn:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.history-trouble-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.history-trouble-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.4rem 0.15rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.history-trouble-item:last-child { border-bottom: none; }
+.history-trouble-word {
+  font-weight: 600;
+  color: var(--text);
+  flex-shrink: 0;
+}
+.history-trouble-trans {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.history-trouble-miss {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-family: 'DM Mono', monospace;
+  color: var(--danger, #dc2626);
+  background: var(--danger-light, rgba(220, 38, 38, 0.1));
+  border-radius: 999px;
+  padding: 0.08rem 0.5rem;
+}
+
+/* ── Recent sessions ──────────────────────────────────────────── */
+.history-mode-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+/* Scrolls on its own instead of being clipped by #historyArea's
+   overflow:hidden — six columns don't fit a phone at a readable size no
+   matter how tight the padding, so this is the fallback once the
+   responsive column trimming below still isn't enough. */
+.history-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.history-session-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.history-session-table th {
+  text-align: left;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--border-strong);
+}
+.history-session-table td {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  white-space: nowrap;
+}
+.history-session-table tr:last-child td { border-bottom: none; }
+.history-session-date { white-space: nowrap; color: var(--text-muted); }
+.history-session-mono { font-family: 'DM Mono', monospace; }
+
+/* ── Responsive ── */
+@media (max-width: 767px) {
+  .history-wrap { padding: 0.6rem 0.65rem 0.85rem; }
+  .history-session-table { font-size: 0.74rem; }
+  .history-session-table th, .history-session-table td { padding: 0.28rem 0.35rem; }
+}
+
+@media (max-width: 480px) {
+  /* Pace is the least essential column on a narrow screen. */
+  .history-session-table th:last-child,
+  .history-session-table td:last-child { display: none; }
+}

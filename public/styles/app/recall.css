@@ -137,6 +137,44 @@
   font-weight: 600;
 }
 
+/* ── Compare/Multi-language indicator ──
+   Same lang-tag-<name> class and Off/Color/Flag mode as table mode
+   (table.css) — a cell only carries it once a word merged in from a
+   multi-language Recall session (recall-mode.ts) carries `.language`.
+   :not(.recalled):not(.missed) so a word's correct/incorrect state — the
+   far more important signal — always wins the background once answered,
+   rather than the tint being clobbered back to the language color. Table
+   mode never needs this guard: its answer-state coloring lives on the
+   input element, a different node from the one carrying lang-tag-*. */
+.recall-cell.lang-tag-spanish:not(.recalled):not(.missed)    { background: var(--lang-spanish-bg); }
+.recall-cell.lang-tag-portuguese:not(.recalled):not(.missed) { background: var(--lang-portuguese-bg); }
+.recall-cell.lang-tag-italian:not(.recalled):not(.missed)    { background: var(--lang-italian-bg); }
+.recall-cell.lang-tag-french:not(.recalled):not(.missed)     { background: var(--lang-french-bg); }
+.recall-cell.lang-tag-german:not(.recalled):not(.missed)     { background: var(--lang-german-bg); }
+.recall-cell.lang-tag-dutch:not(.recalled):not(.missed)      { background: var(--lang-dutch-bg); }
+
+.recall-grid-wrap.lang-indicator-flag .recall-cell[class*="lang-tag-"] {
+  /* Unconditional — ::before needs a positioning context regardless of
+     answer state, even though the watermark itself is suppressed below. */
+  position: relative;
+  overflow: hidden;
+}
+.recall-grid-wrap.lang-indicator-flag .recall-cell[class*="lang-tag-"]:not(.recalled):not(.missed) {
+  background: var(--surface2);
+}
+.recall-grid-wrap.lang-indicator-flag .recall-cell[class*="lang-tag-"]:not(.recalled):not(.missed)::before {
+  content: '';
+  position: absolute;
+  inset: 12%;
+  background-image: var(--flag-img);
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 15%;
+  opacity: 0.32;
+  pointer-events: none;
+}
+
 .recall-grid-wrap { display: grid; gap: 0.75rem; padding-bottom: 0.75rem; }
 
 /* ── Size slider ── */

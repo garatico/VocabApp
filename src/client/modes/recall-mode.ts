@@ -4,6 +4,7 @@ import type { Word }     from '../types.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker }            from '../utils/list-picker.ts';
 import { getFontScaleForRecall, Settings } from '../settings.ts';
+import { languageInfo, flagUrl } from '../data/languages.ts';
 import {
   saveSession, getSessions, wordsPerMinute as wpm,
   recordOutcome, missCount, orderWords, WORD_ORDER_LABELS,
@@ -12,10 +13,7 @@ import {
 import { readString, writeString } from '../utils/storage.ts';
 import { foldKey as recallKey, levenshteinCapped as editDistance }
   from '../utils/match.ts';
-
-const LANG_LABELS: Record<string, string> = {
-  spanish: 'Spanish', portuguese: 'Portuguese', italian: 'Italian', french: 'French',
-};
+import { createStopwatch, formatClock } from '../ui/stopwatch.ts';
 
 interface RenderRecallModeOptions {
   words:     Word[];
@@ -44,6 +42,23 @@ export function renderRecallMode({
 
   const cols = Math.max(1, Math.min(3, Number(columns) || 1));
 
+  // `lang` is a combined "spanish+italian"-style id when a multi-language
+  // session is active (see app.ts's getFullLang) — every word in that case
+  // carries its own real `.language`, so `lang` itself is only ever read as
+  // the *fallback* for an untagged (single-language) word below. The one
+  // place the raw primary name is needed on its own — display text, not a
+  // per-word fallback — `lang`'s first segment is always it.
+  const primaryLang = lang.split('+')[0];
+
+  // A word's identity for session state: two languages can share a spelling
+  // (Spanish/Italian/Portuguese "de", "no", "e"...) once merged, so keying
+  // purely by word text — the single-language design this file started
+  // with — would make one cell stand in for two different words. Mirrors
+  // table-mode.ts's rowKey().
+  function cellKey(w: Word): string {
+    return `${w.language ?? lang}:${w.word}`;
+  }
+
   const recalled      = new Set<string>();
   const revealed      = new Set<string>();
   // Words that received a hint before being recalled. Tracked per word rather
@@ -51,16 +66,15 @@ export function renderRecallMode({
   // produced it without ever seeing part of it.
   const hinted        = new Set<string>();
   let hintsUsed       = 0;
-  const startedAt     = Date.now();
+  // Headless — recall already renders its own pace text (rate + clock
+  // together), not a bare readout, so nothing is mounted.
+  const stopwatch = createStopwatch(null);
+  stopwatch.start();
   let paceTimer: ReturnType<typeof setInterval> | null = null;
-
-  function elapsedSeconds(): number {
-    return Math.max(1, Math.round((Date.now() - startedAt) / 1000));
-  }
 
   function unassistedCount(): number {
     let n = 0;
-    recalled.forEach(w => { if (!hinted.has(w)) n++; });
+    recalled.forEach(k => { if (!hinted.has(k)) n++; });
     return n;
   }
   let timerInterval: ReturnType<typeof setInterval> | null = null;
@@ -72,7 +86,16 @@ export function renderRecallMode({
   // positions rather than words.
   let wordOrder: WordOrder =
     (readString('vq_recall_order') as WordOrder | null) ?? 'rank';
-  let sorted = orderWords(words, wordOrder, lang);
+  let sorted = orderWords(words, wordOrder, w => w.language ?? lang);
+
+  // Reverse lookup from cellKey back to the Word it names — every function
+  // below that only has a key (from `recalled`/`revealed`/DOM lookups) needs
+  // this to get back to something revealCell()/isInAnyList()/etc. can use.
+  let wordByKey = new Map<string, Word>();
+  function reindexWordByKey(): void {
+    wordByKey = new Map(sorted.map(w => [cellKey(w), w]));
+  }
+  reindexWordByKey();
 
   const wrap = document.createElement('div');
   wrap.className = 'recall-wrap';
@@ -139,7 +162,7 @@ export function renderRecallMode({
 
   const inp = document.createElement('input');
   inp.type         = 'text';
-  inp.placeholder  = 'Type a ' + (LANG_LABELS[lang] || 'word') + '…';
+  inp.placeholder  = 'Type a ' + languageInfo(primaryLang).label + ' word…';
   inp.className    = 'recall-input';
   inp.autocomplete = 'off';
 
@@ -169,6 +192,14 @@ export function renderRecallMode({
    */
   function rebuildGrid(): void {
     gridWrap.innerHTML = '';
+
+    // Compare/Multi-language indicator — see table.css. Off by setting means
+    // no lang-tag-* class is ever added below; a single-language session
+    // never has a word carrying `.language` either way, so this is a no-op
+    // there regardless of the setting.
+    const indicatorMode = Settings.getLangIndicator();
+    gridWrap.classList.toggle('lang-indicator-flag', indicatorMode === 'flag');
+
     // Chunked distribution: table 0 gets words 0…chunkSize-1,
     // table 1 gets words chunkSize…2*chunkSize-1, etc.
     // Each table reads top-to-bottom in order, so stacking on mobile is seamless.
@@ -192,11 +223,22 @@ export function renderRecallMode({
         const tdWord = document.createElement('td');
         tdWord.className        = 'recall-cell';
         tdWord.dataset.word     = w.word;
+        tdWord.dataset.cellKey  = cellKey(w);
         tdWord.dataset.wordJson = JSON.stringify(w);
         tdWord.textContent      = '';
 
-        if (isInAnyList(lang, w.word)) {
+        const wordLang = w.language ?? lang;
+        if (isInAnyList(wordLang, w.word)) {
           tdWord.classList.add('recall-cell--known');
+        }
+        // Same Off/Color/Flag indicator as table mode's Compare feature,
+        // mirrored onto the recall grid — only relevant once a word actually
+        // carries `.language` (a merged, multi-language session).
+        if (indicatorMode !== 'off' && w.language) {
+          tdWord.classList.add(`lang-tag-${w.language}`);
+          if (indicatorMode === 'flag') {
+            tdWord.style.setProperty('--flag-img', `url("${flagUrl(Settings.getLangFlag(w.language))}")`);
+          }
         }
 
         tr.appendChild(tdNum);
@@ -210,8 +252,8 @@ export function renderRecallMode({
     attachTooltips(gridWrap, { hideWordWhenUnrevealed: true });
 
     // Repaint anything already answered, and mark repeat offenders.
-    recalled.forEach(w => revealCell(w, 'recalled'));
-    revealed.forEach(w => revealCell(w, 'missed'));
+    recalled.forEach(k => { const w = wordByKey.get(k); if (w) revealCell(w, 'recalled'); });
+    revealed.forEach(k => { const w = wordByKey.get(k); if (w) revealCell(w, 'missed'); });
     markTroubleCells();
     if (promptsOn) applyPrompts();
   }
@@ -223,10 +265,10 @@ export function renderRecallMode({
    */
   function markTroubleCells(): void {
     sorted.forEach(w => {
-      const n = missCount(lang, w.word);
+      const n = missCount(w.language ?? lang, w.word);
       if (n < 2) return;
       const cell = gridWrap.querySelector<HTMLTableCellElement>(
-        'td.recall-cell[data-word="' + CSS.escape(w.word) + '"]'
+        'td.recall-cell[data-cell-key="' + CSS.escape(cellKey(w)) + '"]'
       );
       if (!cell) return;
       cell.classList.add('recall-cell--trouble');
@@ -252,7 +294,9 @@ export function renderRecallMode({
   orderSel.addEventListener('change', () => {
     wordOrder = orderSel.value as WordOrder;
     writeString('vq_recall_order', wordOrder);
-    sorted = orderWords(words, wordOrder, lang);
+    // Reordering permutes the same Word objects — wordByKey's contents don't
+    // change, only rebuildGrid()'s traversal order, so no reindex needed.
+    sorted = orderWords(words, wordOrder, w => w.language ?? lang);
     rebuildGrid();
     inp.focus();
   });
@@ -270,9 +314,10 @@ export function renderRecallMode({
    */
   function applyPrompts(): void {
     sorted.forEach(w => {
-      if (recalled.has(w.word) || revealed.has(w.word)) return;
+      const k = cellKey(w);
+      if (recalled.has(k) || revealed.has(k)) return;
       const cell = gridWrap.querySelector<HTMLTableCellElement>(
-        'td.recall-cell[data-word="' + CSS.escape(w.word) + '"]'
+        'td.recall-cell[data-cell-key="' + CSS.escape(k) + '"]'
       );
       if (!cell) return;
       if (promptsOn) {
@@ -286,9 +331,23 @@ export function renderRecallMode({
   }
 
   // Accent-insensitive index, built once. Typing 'corazon' has to find
-  // 'corazón' — exact matching made correct answers read as wrong.
-  const byKey = new Map<string, Word>();
-  sorted.forEach(w => { if (!byKey.has(recallKey(w.word))) byKey.set(recallKey(w.word), w); });
+  // 'corazón' — exact matching made correct answers read as wrong. A bucket
+  // rather than one Word per key because a merged multi-language session can
+  // have two languages share a folded spelling (Spanish/Italian/Portuguese
+  // "de") — matchesFor() below picks whichever of them is still outstanding.
+  const byKey = new Map<string, Word[]>();
+  sorted.forEach(w => {
+    const k = recallKey(w.word);
+    const bucket = byKey.get(k);
+    if (bucket) bucket.push(w); else byKey.set(k, [w]);
+  });
+
+  /** Every word this folded spelling could mean, unrecalled ones first. */
+  function matchesFor(key: string): Word[] {
+    const bucket = byKey.get(key);
+    if (!bucket) return [];
+    return [...bucket].sort((a, b) => Number(recalled.has(cellKey(a))) - Number(recalled.has(cellKey(b))));
+  }
 
   let feedbackTimer: ReturnType<typeof setTimeout> | null = null;
   function flash(text: string, cls: string, ms = 900): void {
@@ -312,7 +371,7 @@ export function renderRecallMode({
    */
   function couldExtend(key: string): boolean {
     for (const w of sorted) {
-      if (recalled.has(w.word)) continue;
+      if (recalled.has(cellKey(w))) continue;
       const k = recallKey(w.word);
       if (k.length > key.length && k.startsWith(key)) return true;
     }
@@ -321,9 +380,10 @@ export function renderRecallMode({
 
   /** Accept a match. Returns false if it was already recalled. */
   function acceptMatch(match: Word): boolean {
-    if (recalled.has(match.word)) return false;
-    recalled.add(match.word);
-    revealCell(match.word, 'recalled');
+    const k = cellKey(match);
+    if (recalled.has(k)) return false;
+    recalled.add(k);
+    revealCell(match, 'recalled');
     updateScore();
     // Show the properly accented spelling back, so an unaccented guess still
     // teaches the correct form.
@@ -338,13 +398,13 @@ export function renderRecallMode({
     if (!val) return;
 
     const key   = recallKey(val);
-    const match = byKey.get(key);
+    const match = matchesFor(key).find(w => !recalled.has(cellKey(w)));
 
     // Two gates. The setting is the user's preference; couldExtend is a
     // correctness requirement that holds even when auto-accept is on, because
     // 'e' is both a word and the first letter of 'essere'.
     if (!Settings.getRecallAutoEnter()) return;
-    if (match && !recalled.has(match.word) && !couldExtend(key)) acceptMatch(match);
+    if (match && !couldExtend(key)) acceptMatch(match);
   });
 
   // Everything that judges a *finished* guess happens on Enter. Doing any of
@@ -355,10 +415,12 @@ export function renderRecallMode({
     if (!val) return;
     const key = recallKey(val);
 
-    const match = byKey.get(key);
-    if (match) {
-      if (acceptMatch(match)) return;
-      flash('Already got ' + match.word, 'dup', 900);
+    const candidates = matchesFor(key);
+    if (candidates.length > 0) {
+      const match = candidates.find(w => !recalled.has(cellKey(w)));
+      if (match) { acceptMatch(match); return; }
+      // Every word this spelling could mean is already recalled.
+      flash('Already got ' + candidates[0].word, 'dup', 900);
       inp.select();          // keep the text so it can be edited, not retyped
       return;
     }
@@ -366,7 +428,7 @@ export function renderRecallMode({
     let best: Word | null = null;
     let bestDist = 3;
     for (const w of sorted) {
-      if (recalled.has(w.word)) continue;
+      if (recalled.has(cellKey(w))) continue;
       const d = editDistance(key, recallKey(w.word), 2);
       if (d < bestDist) { bestDist = d; best = w; if (d === 1) break; }
     }
@@ -386,17 +448,17 @@ export function renderRecallMode({
   let hintLevel = 0;
 
   function nextUnrecalled(): Word | null {
-    return sorted.find(w => !recalled.has(w.word)) ?? null;
+    return sorted.find(w => !recalled.has(cellKey(w))) ?? null;
   }
 
   hintBtn.addEventListener('click', () => {
     if (finished) return;
-    if (!hintWord || recalled.has(hintWord.word)) { hintWord = nextUnrecalled(); hintLevel = 0; }
+    if (!hintWord || recalled.has(cellKey(hintWord))) { hintWord = nextUnrecalled(); hintLevel = 0; }
     if (!hintWord) return;
 
     hintLevel = Math.min(hintLevel + 1, hintWord.word.length - 1);
     // Any hint on a word means recalling it no longer counts as unassisted.
-    hinted.add(hintWord.word);
+    hinted.add(cellKey(hintWord));
     const shown  = hintWord.word.slice(0, hintLevel);
     const hidden = '·'.repeat(Math.max(0, hintWord.word.length - hintLevel));
     flash(`${shown}${hidden}  (${hintWord.word.length} letters)`, 'hint', 3000);
@@ -407,10 +469,10 @@ export function renderRecallMode({
 
   revealBtn.addEventListener('click', () => {
     if (finished) return;
-    const target = (hintWord && !recalled.has(hintWord.word)) ? hintWord : nextUnrecalled();
+    const target = (hintWord && !recalled.has(cellKey(hintWord))) ? hintWord : nextUnrecalled();
     if (!target) return;
-    revealCell(target.word, 'missed');
-    revealed.add(target.word);
+    revealCell(target, 'missed');
+    revealed.add(cellKey(target));
     hintWord = null; hintLevel = 0;
     flash('Revealed: ' + target.word, 'miss', 1600);
     updateScore();
@@ -422,22 +484,23 @@ export function renderRecallMode({
 
   giveUpBtn.addEventListener('click', endSession);
 
-  function revealCell(word: string, state: 'recalled' | 'missed'): void {
+  function revealCell(w: Word, state: 'recalled' | 'missed'): void {
+    const wordLang = w.language ?? lang;
     const cell = gridWrap.querySelector<HTMLTableCellElement>(
-      'td.recall-cell[data-word="' + CSS.escape(word) + '"]'
+      'td.recall-cell[data-cell-key="' + CSS.escape(cellKey(w)) + '"]'
     );
     if (!cell) return;
 
-    cell.textContent = word;
+    cell.textContent = w.word;
     cell.classList.remove('recalled', 'missed', 'recall-cell--known');
     cell.classList.add(state);
 
     if (state === 'recalled') {
       const btn       = document.createElement('button');
       btn.type        = 'button';
-      btn.className   = 'recall-known-btn' + (isInAnyList(lang, word) ? ' known-btn--active' : '');
-      btn.title       = isInAnyList(lang, word)
-        ? 'In lists: ' + getWordLists(lang, word).join(', ')
+      btn.className   = 'recall-known-btn' + (isInAnyList(wordLang, w.word) ? ' known-btn--active' : '');
+      btn.title       = isInAnyList(wordLang, w.word)
+        ? 'In lists: ' + getWordLists(wordLang, w.word).join(', ')
         : 'Add to a list';
       btn.textContent = '★';
 
@@ -445,13 +508,13 @@ export function renderRecallMode({
         e.stopPropagation();
         openListPicker({
           anchorEl: btn,
-          lang,
-          word,
+          lang: wordLang,
+          word: w.word,
           onClose: () => {
-            const inAny = isInAnyList(lang, word);
+            const inAny = isInAnyList(wordLang, w.word);
             btn.classList.toggle('known-btn--active', inAny);
             btn.title = inAny
-              ? 'In lists: ' + getWordLists(lang, word).join(', ')
+              ? 'In lists: ' + getWordLists(wordLang, w.word).join(', ')
               : 'Add to a list';
           },
         });
@@ -477,11 +540,9 @@ export function renderRecallMode({
    */
   function updatePace(): void {
     if (finished) return;
-    const secs = elapsedSeconds();
-    const rate = wpm(recalled.size, secs);
-    const mins = Math.floor(secs / 60);
-    const rem  = secs % 60;
-    const clock = `${mins}:${String(rem).padStart(2, '0')}`;
+    const secs  = stopwatch.elapsedSeconds();
+    const rate  = wpm(recalled.size, secs);
+    const clock = formatClock(secs);
 
     const best = bestPriorRate();
     const cmp  = (best > 0 && rate > 0)
@@ -494,7 +555,9 @@ export function renderRecallMode({
   }
 
   function bestPriorRate(): number {
-    const hist = getSessions(lang, 'recall');
+    // Primary language only — `lang` can be a combined "es+it" id in a
+    // merged session, which has no history of its own to compare against.
+    const hist = getSessions(primaryLang, 'recall');
     let best = 0;
     for (const h of hist) {
       const r = wpm(h.correct, h.seconds);
@@ -530,31 +593,57 @@ export function renderRecallMode({
     inp.disabled       = true;
     giveUpBtn.disabled = true;
 
-    const missedWords = sorted.filter(w => !recalled.has(w.word));
-    missedWords.forEach(w => revealCell(w.word, 'missed'));
+    const missedWords = sorted.filter(w => !recalled.has(cellKey(w)));
+    missedWords.forEach(w => revealCell(w, 'missed'));
 
     const missed     = missedWords.length;
     const pct        = Math.round((recalled.size / sorted.length) * 100);
     const unassisted = unassistedCount();
-    const seconds    = elapsedSeconds();
+    stopwatch.stop();
+    const seconds    = stopwatch.elapsedSeconds();
     const rate       = wpm(recalled.size, seconds);
 
     if (paceTimer) { clearInterval(paceTimer); paceTimer = null; }
 
-    // Record the session and compare against what came before.
-    const prior = saveSession(lang, {
-      at: new Date().toISOString(),
-      mode: 'recall',
-      total: sorted.length,
-      correct: recalled.size,
-      unassisted,
-      hints: hintsUsed,
-      revealed: revealed.size,
-      seconds,
+    // Persist per-language: a merged session must still write its
+    // history/misses into each word's *actual* language's storage, not one
+    // shared bucket under the (possibly combined) `lang` id — mirrors
+    // table-controls.ts's recordMastery(). `seconds`/`unassisted`/`hints`
+    // describe the whole sitting, not any one language, so the same values
+    // land on every bucket; `total`/`correct`/`revealed` are the per-language
+    // subset, so each language's own history stays accurate.
+    interface Bucket { correct: string[]; missed: string[]; revealedWords: string[]; }
+    const byLang = new Map<string, Bucket>();
+    function bucketFor(wl: string): Bucket {
+      let b = byLang.get(wl);
+      if (!b) { b = { correct: [], missed: [], revealedWords: [] }; byLang.set(wl, b); }
+      return b;
+    }
+    sorted.forEach(w => {
+      const wl = w.language ?? lang;
+      const k  = cellKey(w);
+      if (recalled.has(k)) bucketFor(wl).correct.push(w.word);
+      else                 bucketFor(wl).missed.push(w.word);
+      if (revealed.has(k)) bucketFor(wl).revealedWords.push(w.word);
     });
 
-    // Feed the miss tally so repeatedly-fumbled words can be resurfaced.
-    recordOutcome(lang, missedWords.map(w => w.word), [...recalled]);
+    let prior:         SessionRecord[]      = [];
+    let primaryRecord: SessionRecord | null = null;
+    for (const [wl, b] of byLang) {
+      const record: SessionRecord = {
+        at: new Date().toISOString(),
+        mode: 'recall',
+        total: b.correct.length + b.missed.length,
+        correct: b.correct.length,
+        unassisted,
+        hints: hintsUsed,
+        revealed: b.revealedWords.length,
+        seconds,
+      };
+      const bucketPrior = saveSession(wl, record);
+      recordOutcome(wl, b.missed, b.correct);
+      if (wl === primaryLang) { prior = bucketPrior; primaryRecord = record; }
+    }
 
     const priorBestRate  = prior.reduce((b, h) => Math.max(b, wpm(h.correct, h.seconds)), 0);
     const priorBestCount = prior.reduce((b, h) => Math.max(b, h.correct), 0);
@@ -599,18 +688,18 @@ export function renderRecallMode({
     paceEl.textContent = verdict + hintNote;
     paceEl.classList.toggle('recall-pace--best', recalled.size > priorBestCount && prior.length > 0);
 
-    renderHistoryPanel([...prior, {
-      at: new Date().toISOString(), mode: 'recall' as const,
-      total: sorted.length, correct: recalled.size, unassisted,
-      hints: hintsUsed, revealed: revealed.size, seconds,
-    }]);
+    // The chart's own scale only makes sense within one language, so it
+    // tracks the primary language's history — same reasoning as `prior`
+    // above — rather than the whole (possibly merged) session's totals.
+    if (primaryRecord) renderHistoryPanel([...prior, primaryRecord]);
 
     // Gender still worth surfacing, as a tooltip on the revealed cell.
     missedWords.forEach(w => {
-      const gender = w.linguistic?.gender ?? (w.pos === 'noun' ? inferGender(w.word, lang) : null);
+      const wordLang = w.language ?? lang;
+      const gender = w.linguistic?.gender ?? (w.pos === 'noun' ? inferGender(w.word, wordLang) : null);
       if (!gender) return;
       const cell = gridWrap.querySelector<HTMLTableCellElement>(
-        'td.recall-cell[data-word="' + CSS.escape(w.word) + '"]'
+        'td.recall-cell[data-cell-key="' + CSS.escape(cellKey(w)) + '"]'
       );
       if (cell) cell.title = gender;
     });

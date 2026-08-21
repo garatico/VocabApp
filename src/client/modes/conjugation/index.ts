@@ -9,7 +9,7 @@ import { foldKey as normalize } from '../../utils/match.ts';
 import { orderWords, WORD_ORDER_LABELS, saveSession, recordOutcome,
          type WordOrder } from '../../utils/session-history.ts';
 import { PRONOUNS, TENSE_DEFS, TENSE_EN, TENSE_HELP, REGULARITY_HELP } from './data.js';
-import { activeTenses, activeRegularities } from './controls.js';
+import { activeTenses, activeRegularities, unionTenseDefs } from './controls.js';
 import {
   setProgressCallback,
   applyAllPronounToggles,
@@ -17,16 +17,31 @@ import {
 import { buildGlossDisplay } from '../../utils/utils.js';
 import { getWordLists } from '../../utils/word-lists.ts';
 import { openListPicker } from '../../utils/list-picker.ts';
-import { supportsConjugation, conjugationUnavailableReason } from '../../data/languages.js';
+import { supportsConjugation, conjugationUnavailableReason, languageInfo } from '../../data/languages.js';
+import { createFlagImg } from '../../ui/flag-icon.js';
+import { createStopwatch } from '../../ui/stopwatch.js';
 import { buildScorePills, scorePct } from '../../ui/score-pills.js';
 import {
   Settings, applyConjDeselectedClass, setOnConjDeselectedChange,
 } from '../../settings.js';
 
 export interface ConjugationModeOptions {
-  words:     Word[];
-  container: HTMLElement;
-  lang?:     string;
+  words:      Word[];
+  container:  HTMLElement;
+  lang?:      string;
+  /** Extra languages merged in via the "+ Languages" picker — see app.ts. */
+  extraLangs?: string[];
+}
+
+/**
+ * A verb's identity for session state: two languages can share a spelling
+ * (Spanish "no"/Italian "no", Spanish "amar" / Portuguese "amar") once
+ * merged, so keying purely by word text — which card.dataset.verb used to do
+ * — would fold two different verbs' answers into one tally. Mirrors
+ * table-mode.ts's rowKey() / recall-mode.ts's cellKey().
+ */
+function verbKey(word: string, verbLang: string): string {
+  return `${verbLang}:${word}`;
 }
 
 interface CardController {
@@ -53,13 +68,6 @@ let _cleanup: (() => void) | null = null;
 const SINGLE_FORM_TENSES = new Set(['past_participle', 'gerund']);
 
 /**
- * Tense key -> display label, flattened across languages.
- *
- * buildCard is a module-level function with no access to the per-language
- * tenseDefs, and the keys are shared across all four languages even where the
- * labels differ, so the first definition wins.
- */
-/**
  * Bucket a conjugation_class into something a learner recognises.
  *
  * The data has 26 classes across four prefixes; "ortho-car" is a spelling
@@ -74,13 +82,6 @@ function regularityOf(cls: string | null): { key: string; label: string } {
   if (cls.startsWith('stem'))      return { key: 'stem',      label: 'Stem-change' };
   return { key: 'irregular', label: 'Irregular' };
 }
-
-const TENSE_LABELS: Record<string, string> = Object.values(TENSE_DEFS)
-  .flat()
-  .reduce<Record<string, string>>((acc, def) => {
-    if (!(def.key in acc)) acc[def.key] = def.label;
-    return acc;
-  }, {});
 
 function isSingleForm(key: string): boolean {
   return SINGLE_FORM_TENSES.has(key);
@@ -175,25 +176,34 @@ function showConjSummary(completeVerbs: number, nVerbs: number, correctForms: nu
   );
 }
 
-export function renderConjugationMode({ words, container, lang = 'spanish' }: ConjugationModeOptions): void {
+export function renderConjugationMode({ words, container, lang = 'spanish', extraLangs = [] }: ConjugationModeOptions): void {
   if (_cleanup) { _cleanup(); _cleanup = null; }
   setProgressCallback(null);
   clearConjSummary();
 
   container.innerHTML = '';
 
+  // `lang` is a combined "spanish+italian"-style id when a multi-language
+  // session is active (see app.ts's getFullLang), same convention Table and
+  // Recall mode already receive — every merged word carries its own real
+  // `.language`, so `lang` itself is read as a *fallback* everywhere below.
+  // The one place the raw primary name is needed on its own — the
+  // conjugation-support gate and the chip-union builder, neither of which is
+  // a per-word fallback — `lang`'s first segment is always it.
+  const primaryLang = lang.split('+')[0];
+
   // The tab is disabled for languages with no conjugation data, so this should
   // be unreachable from the UI — but a stale saved mode or a direct call would
   // otherwise render a grid of empty cards with nothing to check answers
   // against, which looks like a bug rather than a missing feature.
-  if (!supportsConjugation(lang)) {
+  if (!supportsConjugation(primaryLang)) {
     const box = document.createElement('div');
     box.className = 'conj-empty';
     const head = document.createElement('p');
     head.textContent = 'Conjugation practice is not available for this language yet.';
     const why = document.createElement('p');
     why.className   = 'conj-empty-hint';
-    why.textContent = conjugationUnavailableReason(lang);
+    why.textContent = conjugationUnavailableReason(primaryLang);
     box.append(head, why);
     container.appendChild(box);
     return;
@@ -228,7 +238,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
         const cls = w.linguistic?.conjugation_class ?? null;
         return cls == null || regs.includes(regularityOf(cls).key);
       });
-  let verbs = orderWords(allVerbs, verbOrder, lang);
+  let verbs = orderWords(allVerbs, verbOrder, w => w.language ?? lang);
 
   if (verbs.length === 0) {
     const why = rawVerbs.length > 0
@@ -243,8 +253,11 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     return;
   }
 
-  const pronouns  = PRONOUNS[lang]   ?? PRONOUNS.spanish;
-  const tenseDefs = TENSE_DEFS[lang] ?? TENSE_DEFS.spanish;
+  // The union across every active language — matches the chip row
+  // initConjControls() builds, so selectedTenses() below validates a ticked
+  // chip against the same universe it was drawn from. Rendering a card still
+  // narrows to *this verb's own* language's tenses — see buildCards().
+  const tenseDefs = unionTenseDefs(primaryLang, extraLangs);
 
   const displayToggle = document.getElementById('conjDisplayToggle');
   const viewToggle    = document.getElementById('conjViewToggle');
@@ -310,7 +323,12 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
          + `${tally.ortho} spelling, ${irregularish} irregular`;
   }
   orderCount.textContent = describeSet();
-  orderRow.append(orderLabel, orderSel, orderCount);
+  const stopwatchEl = document.createElement('span');
+  stopwatchEl.className = 'quiz-stopwatch';
+  stopwatchEl.title     = 'Time spent on this quiz';
+  const stopwatch = createStopwatch(stopwatchEl);
+  stopwatch.start();
+  orderRow.append(orderLabel, orderSel, orderCount, stopwatchEl);
 
   const progressSection = document.createElement('div');
   progressSection.className = 'conj-progress-section';
@@ -603,6 +621,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
    * are on screen. The cards themselves still hide their own copy of it.
    */
   function buildVerbBlock(verb: Word): { el: HTMLElement; row: HTMLElement } {
+    const verbLang = verb.language ?? lang;
     const el = document.createElement('section');
     el.className = 'conj-verb-block';
     el.dataset.verbBlock = verb.word;
@@ -620,7 +639,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     star.textContent = '★';
 
     function syncStar(): void {
-      const lists = getWordLists(lang, verb.word);
+      const lists = getWordLists(verbLang, verb.word);
       star.className = 'known-btn conj-full-star'
         + (lists.length > 0 ? ' known-btn--active' : '');
       star.title = lists.length > 0 ? 'In lists: ' + lists.join(', ') : 'Add to a list';
@@ -628,7 +647,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     syncStar();
     star.addEventListener('click', e => {
       e.stopPropagation();
-      openListPicker({ anchorEl: star, lang, word: verb.word, onClose: syncStar });
+      openListPicker({ anchorEl: star, lang: verbLang, word: verb.word, onClose: syncStar });
     });
 
     const gloss = document.createElement('span');
@@ -641,6 +660,9 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     else rank.hidden = true;
 
     head.append(word, star, gloss, rank);
+    // Only present in a merged multi-language session — a single-language
+    // one never has `.language` set, so this never appears there.
+    if (verb.language) head.appendChild(createFlagImg(Settings.getLangFlag(verb.language), languageInfo(verb.language).label));
 
     const row = document.createElement('div');
     row.className = 'conj-verb-row';
@@ -672,18 +694,34 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     const shown = viewMode === 'full' ? pageVerbs() : verbs;
 
     shown.forEach(verb => {
+      const verbLang = verb.language ?? lang;
+      // A globally-ticked tense this verb's own language doesn't have (e.g.
+      // 'imperfect' ticked while German is merged in, which only has three
+      // tenses) contributes no card for it — the alternative is a card with
+      // every field blank and nothing to check it against.
+      const verbTenseDefs = TENSE_DEFS[verbLang] ?? TENSE_DEFS.spanish;
+      const tensesForVerb = tenses.filter(t => verbTenseDefs.some(d => d.key === t));
+      if (tensesForVerb.length === 0) return;
+
       const block = viewMode === 'full' ? buildVerbBlock(verb) : null;
 
-      tenses.forEach(tenseKey => {
+      tensesForVerb.forEach(tenseKey => {
         const updater = buildCard({
-          verb, lang, pronouns, tenseKey, getDisplayMode, onProgress: updateProgress,
+          verb, lang: verbLang, pronouns: PRONOUNS[verbLang] ?? PRONOUNS.spanish,
+          tenseKey,
+          tenseNativeLabel: verbTenseDefs.find(d => d.key === tenseKey)?.label ?? tenseKey,
+          getDisplayMode, onProgress: updateProgress,
           hideVerbName: viewMode === 'full',
         });
         // Needed to attribute a card's outcome back to its verb when the
         // session is recorded. Several cards can share a verb now, so the
         // recorder scores a verb correct only if every one of its cards is.
-        updater.card.dataset.verb  = verb.word;
-        updater.card.dataset.tense = tenseKey;
+        // verbLang alongside the bare word: two languages can share a
+        // spelling once merged (see verbKey()), so the word alone isn't a
+        // safe key any more.
+        updater.card.dataset.verb     = verb.word;
+        updater.card.dataset.verbLang = verbLang;
+        updater.card.dataset.tense    = tenseKey;
 
         (block ? block.row : cardsGrid).appendChild(updater.card);
         cardUpdaters.push(updater);
@@ -695,7 +733,6 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     syncFullHeader();
   }
 
-  const conjSessionStart = Date.now();
   let conjRecorded = false;
 
   /**
@@ -705,7 +742,14 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
    * live in its inputs, so the evidence is destroyed on every navigation. Each
    * verb is scored as it is left instead.
    */
-  const banked = { correct: new Set<string>(), missed: new Set<string>() };
+  // Keyed by verbKey() rather than bare word — two languages can share a
+  // spelling once merged, so recall-mode.ts/table-mode.ts's word-collision
+  // fix applies here too.
+  interface BankedVerb { word: string; language: string; }
+  const banked = {
+    correct: new Map<string, BankedVerb>(),
+    missed:  new Map<string, BankedVerb>(),
+  };
 
   /**
    * Score every verb currently on screen and remember the results.
@@ -722,12 +766,15 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   function bankVisibleVerbs(): void {
     if (viewMode !== 'full') return;
 
-    const perVerb = new Map<string, { total: number; correct: number; answered: number }>();
+    interface Acc { word: string; language: string; total: number; correct: number; answered: number; }
+    const perVerb = new Map<string, Acc>();
 
     cardsGrid.querySelectorAll<HTMLElement>('.conj-card').forEach(card => {
       const word = card.dataset.verb;
       if (!word) return;
-      const acc = perVerb.get(word) ?? { total: 0, correct: 0, answered: 0 };
+      const verbLang = card.dataset.verbLang ?? lang;
+      const key = verbKey(word, verbLang);
+      const acc = perVerb.get(key) ?? { word, language: verbLang, total: 0, correct: 0, answered: 0 };
       card.querySelectorAll(VISIBLE_ROW).forEach(row => {
         const inp = row.querySelector<HTMLInputElement>('.conj-drill-input');
         if (!inp) return;
@@ -735,13 +782,14 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
         if (inp.classList.contains('correct')) { acc.correct++; acc.answered++; }
         else if (inp.classList.contains('revealed') || inp.classList.contains('missed')) acc.answered++;
       });
-      perVerb.set(word, acc);
+      perVerb.set(key, acc);
     });
 
-    perVerb.forEach((acc, word) => {
+    perVerb.forEach((acc, key) => {
       if (acc.total === 0 || acc.answered === 0) return;
-      if (acc.correct === acc.total) banked.correct.add(word);
-      else                           banked.missed.add(word);
+      const entry = { word: acc.word, language: acc.language };
+      if (acc.correct === acc.total) banked.correct.set(key, entry);
+      else                           banked.missed.set(key, entry);
     });
   }
 
@@ -758,10 +806,12 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     // A verb can now have several cards, one per selected tense. It counts as
     // correct only when every one of them is fully correct — otherwise
     // knowing the present tense would mask not knowing the subjunctive.
-    const perVerb = new Map<string, { cards: number; clean: number }>();
+    interface Acc { word: string; language: string; cards: number; clean: number; }
+    const perVerb = new Map<string, Acc>();
     cardsGrid.querySelectorAll<HTMLElement>('.conj-card').forEach(card => {
       const word = card.dataset.verb;
       if (!word) return;
+      const verbLang = card.dataset.verbLang ?? lang;
       const rows = card.querySelectorAll(VISIBLE_ROW);
       let total = 0, correct = 0;
       rows.forEach(row => {
@@ -771,37 +821,57 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
         if (inp.classList.contains('correct')) correct++;
       });
       if (total === 0) return;
-      const acc = perVerb.get(word) ?? { cards: 0, clean: 0 };
+      const key = verbKey(word, verbLang);
+      const acc = perVerb.get(key) ?? { word, language: verbLang, cards: 0, clean: 0 };
       acc.cards++;
       if (correct === total) acc.clean++;
-      perVerb.set(word, acc);
+      perVerb.set(key, acc);
     });
 
-    const correctWords: string[] = [];
-    const missedWords:  string[] = [];
-    perVerb.forEach((acc, word) => {
-      (acc.clean === acc.cards ? correctWords : missedWords).push(word);
+    // Grouped by each verb's actual language (falling back to the render's
+    // primary `lang` for an ordinary single-language session) rather than one
+    // flat list — a merged Conjugation session must still write history/
+    // misses into each verb's real language, exactly as table-controls.ts's
+    // recordMastery() does for Table mode's own Compare feature.
+    interface Bucket { correct: string[]; missed: string[]; }
+    const byLang = new Map<string, Bucket>();
+    function bucketFor(wl: string): Bucket {
+      let b = byLang.get(wl);
+      if (!b) { b = { correct: [], missed: [] }; byLang.set(wl, b); }
+      return b;
+    }
+    perVerb.forEach(acc => {
+      bucketFor(acc.language)[acc.clean === acc.cards ? 'correct' : 'missed'].push(acc.word);
     });
 
     // Verbs already navigated past in Full Conjugation. Their cards are long
     // gone — rebuilt over for the next verb — so their outcome was banked at
     // the moment they were left.
-    banked.correct.forEach(w => { if (!missedWords.includes(w)) correctWords.push(w); });
-    banked.missed.forEach(w  => { if (!correctWords.includes(w)) missedWords.push(w); });
-
-    if (correctWords.length === 0 && missedWords.length === 0) return;
-
-    recordOutcome(lang, missedWords, correctWords);
-    saveSession(lang, {
-      at: new Date().toISOString(),
-      mode: 'conjugation',
-      total: correctWords.length + missedWords.length,
-      correct: correctWords.length,
-      unassisted: correctWords.length,
-      hints: 0,
-      revealed: missedWords.length,
-      seconds: Math.max(1, Math.round((Date.now() - conjSessionStart) / 1000)),
+    banked.correct.forEach(({ word, language }) => {
+      const bucket = bucketFor(language);
+      if (!bucket.missed.includes(word)) bucket.correct.push(word);
     });
+    banked.missed.forEach(({ word, language }) => {
+      const bucket = bucketFor(language);
+      if (!bucket.correct.includes(word)) bucket.missed.push(word);
+    });
+
+    stopwatch.stop();
+    const seconds = stopwatch.elapsedSeconds();
+    for (const [wl, bucket] of byLang) {
+      if (bucket.correct.length === 0 && bucket.missed.length === 0) continue;
+      recordOutcome(wl, bucket.missed, bucket.correct);
+      saveSession(wl, {
+        at: new Date().toISOString(),
+        mode: 'conjugation',
+        total: bucket.correct.length + bucket.missed.length,
+        correct: bucket.correct.length,
+        unassisted: bucket.correct.length,
+        hints: 0,
+        revealed: bucket.missed.length,
+        seconds,
+      });
+    }
   }
   buildCards();
   updateTenseSummary();
@@ -809,7 +879,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
   orderSel.addEventListener('change', () => {
     verbOrder = orderSel.value as WordOrder;
     writeString('vq_conj_order', verbOrder);
-    verbs = orderWords(allVerbs, verbOrder, lang);
+    verbs = orderWords(allVerbs, verbOrder, w => w.language ?? lang);
     // Answers live in the DOM here rather than a state map, so re-ordering
     // restarts the cards. Warn rather than silently discarding work.
     const answered = cardUpdaters.some(u => u.card.querySelector('input:disabled'));
@@ -921,7 +991,10 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     // already banked, so switching views mid-session picks up roughly where the
     // grid left off rather than sending you back to the start.
     if (viewMode === 'full') {
-      const at = verbs.findIndex(v => !banked.correct.has(v.word) && !banked.missed.has(v.word));
+      const at = verbs.findIndex(v => {
+        const key = verbKey(v.word, v.language ?? lang);
+        return !banked.correct.has(key) && !banked.missed.has(key);
+      });
       fullPage = at === -1 ? 0 : Math.floor(at / pageSize);
     }
 
@@ -987,28 +1060,36 @@ export function renderConjugationMode({ words, container, lang = 'spanish' }: Co
     document.removeEventListener('keydown', handleCardNav);
     setProgressCallback(null);
     setOnConjDeselectedChange(null);
+    stopwatch.stop();
   };
 }
 
 // ── Card builder ──────────────────────────────────────────────────────────────
 
 interface BuildCardOptions {
-  verb:           Word;
-  lang:           string;
-  pronouns:       string[];
-  tenseKey:       string;
-  getDisplayMode: () => string;
-  onProgress:     () => void;
+  verb:             Word;
+  lang:             string;
+  pronouns:         string[];
+  tenseKey:         string;
+  /**
+   * This tense's name in `verb`'s own language — not the flattened,
+   * Spanish-biased TENSE_LABELS module map, which would show "Presente" on
+   * a German card. Resolved by the caller (buildCards()), which already
+   * knows the verb's own language.
+   */
+  tenseNativeLabel: string;
+  getDisplayMode:   () => string;
+  onProgress:       () => void;
   /**
    * Full Conjugation stacks one card per tense for a single verb, where the
    * verb name and its star are already in the view header — repeating them on
    * every card would be six copies of the same line.
    */
-  hideVerbName?:  boolean;
+  hideVerbName?:    boolean;
 }
 
 function buildCard({
-  verb, lang, pronouns, tenseKey, getDisplayMode, onProgress, hideVerbName = false,
+  verb, lang, pronouns, tenseKey, tenseNativeLabel, getDisplayMode, onProgress, hideVerbName = false,
 }: BuildCardOptions): CardController {
   // One card drills one tense. Multiple selected tenses produce multiple
   // cards for the same verb rather than one card with several sections —
@@ -1089,6 +1170,10 @@ function buildCard({
   if (band) bandEl.textContent = band; else bandEl.hidden = true;
   metaRow.appendChild(bandEl);
 
+  // Only present in a merged multi-language session — a single-language one
+  // never has `.language` set, so no card ever pays for this otherwise.
+  if (verb.language) metaRow.appendChild(createFlagImg(Settings.getLangFlag(verb.language), languageInfo(verb.language).label));
+
   // Regularity. conjugation_class encodes it: regular-*, ortho-* (spelling
   // change only), stem-* (stem-changing) and irregular-*. Grouped into three
   // buckets, because "ortho-car" means nothing to someone learning.
@@ -1146,7 +1231,7 @@ function buildCard({
     // stays hidden whatever the target/english toggle says.
     targetEl.hidden  = hideVerbName || mode === 'english';
     englishEl.hidden = hideVerbName || mode === 'target';
-    tenseEl.textContent = TENSE_LABELS[tenseKey] ?? tenseKey;
+    tenseEl.textContent = tenseNativeLabel;
   }
 
   const innerGrid = document.createElement('div');
