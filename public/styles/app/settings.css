@@ -118,8 +118,14 @@
 }
 
 @media (max-width: 640px) {
+  /* Name gets its own row (spanning all three columns below); flag icon,
+     flag select and the color swatch share the second row — the select
+     used to force a third row on its own (grid-column: 1 / -1), pushing the
+     swatch down to a fourth. Column 2 (1fr) is the select, so it still gets
+     the room its longer option labels ("Liechtenstein") need. */
   .lang-appearance-row  { grid-template-columns: auto 1fr auto; row-gap: 0.35rem; }
-  .lang-appearance-flag { grid-column: 1 / -1; min-width: 0; width: 100%; }
+  .lang-appearance-name { grid-column: 1 / -1; }
+  .lang-appearance-flag { min-width: 0; width: 100%; }
 }
 
 /* ── Control area (right side of row) ── */

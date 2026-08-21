@@ -1311,7 +1311,13 @@ html.dark .ml-word-pos[data-pos="adverb"] {
 }
 .ml-add-btn:active { transform: scale(0.94); }
 
-@media (max-width: 900px) {
+/* min-width guard so this stays a "narrow desktop, still side-by-side" rule
+   — without it, `.ml-left-pane { width: 240px }` also matched at true mobile
+   widths (a max-width query has no lower bound of its own) and silently
+   overrode the 767px rule below's `width: 100%`, since it comes later in the
+   cascade at equal specificity. That left the stacked sidebar 240px wide on
+   a 375px screen with ~120px of dead space beside it. */
+@media (min-width: 768px) and (max-width: 900px) {
   /* Only the toolbar needs to wrap here. The stacked single-column layout
      kicks in at 767px below, which already handles .ml-left-pane. */
   .ml-list-toolbar {
@@ -1319,6 +1325,15 @@ html.dark .ml-word-pos[data-pos="adverb"] {
     padding: 0.5rem 0.6rem;
   }
   .ml-left-pane { width: 240px; }
+}
+
+@media (max-width: 767px) {
+  /* Toolbar wrapping still applies once stacked — the rule above no longer
+     covers this range now that it has a floor. */
+  .ml-list-toolbar {
+    flex-wrap: wrap;
+    padding: 0.5rem 0.6rem;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════

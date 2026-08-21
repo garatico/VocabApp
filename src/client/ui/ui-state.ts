@@ -1,6 +1,9 @@
 type CoreMode = 'table' | 'recall' | 'single' | 'picture' | 'conjugation';
 type Mode = CoreMode | string;
 
+/** Modes that know how to render/score a mixed-language word list — mirrors app.ts's own copy. */
+const MULTI_LANG_MODES = new Set(['table', 'recall', 'conjugation']);
+
 interface BindModeSwitchOptions {
   quizArea:         HTMLElement;
   tableArea:        HTMLElement;
@@ -43,7 +46,7 @@ export function bindModeSwitch({
 
     // Hide the entire controls card for modes that don't use it
     const controlsEl = document.getElementById('controls');
-    if (controlsEl) controlsEl.hidden = mode === 'mylists' || mode === 'settings';
+    if (controlsEl) controlsEl.hidden = mode === 'mylists' || mode === 'settings' || mode === 'history';
 
     const classFilter         = document.getElementById('classFilter');
     const listFilter          = document.getElementById('listFilter');
@@ -53,7 +56,7 @@ export function bindModeSwitch({
     const conjDisplayGroup    = document.getElementById('conjDisplayGroup');
     const conjViewGroup       = document.getElementById('conjViewGroup');
     const conjModeControls    = document.getElementById('conjModeControls');
-    const pictureModeControls = document.getElementById('pictureModeControls');
+    const pictureStyleGroup   = document.getElementById('pictureStyleGroup');
     const compareGroup        = document.getElementById('compareGroup');
 
     if (classFilter)         classFilter.style.display         = mode === 'conjugation' ? 'none' : '';
@@ -61,10 +64,10 @@ export function bindModeSwitch({
     // verbs you drill just as it narrows any other quiz.
     if (listFilter)          listFilter.style.display          = '';
     if (directionGroup)      directionGroup.style.display      = mode === 'table'       ? ''     : 'none';
-    // Compare (two languages merged into one table) is a table-mode-only
-    // feature for now — other modes don't know how to render or score a
-    // mixed-language word list yet.
-    if (compareGroup)        compareGroup.style.display        = mode === 'table'       ? ''     : 'none';
+    // Compare (two or more languages merged into one quiz) is supported by
+    // Table, Recall and Conjugation — the other modes don't know how to
+    // render or score a mixed-language word list.
+    if (compareGroup)        compareGroup.style.display        = MULTI_LANG_MODES.has(mode) ? '' : 'none';
     if (recallTimerGroup)    recallTimerGroup.style.display    = mode === 'recall'      ? ''     : 'none';
     // Table, recall and conjugation each carry their own order control inside
     // the quiz, so the global one would be a second, competing switch. Single
@@ -76,7 +79,7 @@ export function bindModeSwitch({
     if (conjModeControls)    conjModeControls.style.display    = mode === 'conjugation' ? ''     : 'none';
     if (conjDisplayGroup)    conjDisplayGroup.style.display    = mode === 'conjugation' ? ''     : 'none';
     if (conjViewGroup)       conjViewGroup.style.display       = mode === 'conjugation' ? ''     : 'none';
-    if (pictureModeControls) pictureModeControls.style.display = mode === 'picture'     ? ''     : 'none';
+    if (pictureStyleGroup)   pictureStyleGroup.style.display   = mode === 'picture'     ? ''     : 'none';
 
     document.querySelectorAll<HTMLElement>('.mode-tab').forEach(btn => {
       const isActive = btn.dataset.mode === mode;

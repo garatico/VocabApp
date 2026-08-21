@@ -45,6 +45,7 @@
 <link rel="stylesheet" href="/styles/app/responsive.css"/>
 <link rel="stylesheet" href="/styles/app/list-picker.css"/>
 <link rel="stylesheet" href="/styles/app/my-lists.css"/>
+<link rel="stylesheet" href="/styles/app/history.css"/>
 <link rel="stylesheet" href="/styles/app/settings.css"/>
 <link rel="stylesheet" href="/styles/app/font-size.css"/>
 <link rel="stylesheet" href="/styles/app/shortcuts.css"/>
@@ -77,6 +78,7 @@
         <button class="mode-tab" data-mode="picture" role="tab" aria-selected="false">Picture Quiz</button>
         <button class="mode-tab" data-mode="conjugation" role="tab" aria-selected="false">Conjugation</button>
         <button class="mode-tab" data-mode="mylists" role="tab" aria-selected="false">My Lists</button>
+        <button class="mode-tab" data-mode="history" role="tab" aria-selected="false">History</button>
         <button class="mode-tab" data-mode="settings" role="tab" aria-selected="false">⚙ Settings</button>
         <a href="/admin" class="mode-tab admin-tab" title="Open Admin Panel" hidden>Admin ↗</a>
       </div>
@@ -137,6 +139,20 @@
             </div>
           </div>
 
+          <!-- Picture Quiz only: which of the three sub-modes to run. Sits
+               next to Order (the pre-quiz order control Picture Quiz also
+               keeps — see ui-state.ts's hasOwnOrder check), always visible
+               rather than a collapsible filter box, since it's a core setup
+               choice for this mode, not an incidental narrowing filter. -->
+          <div class="control-group" id="pictureStyleGroup" style="display:none">
+            <label>Quiz Style</label>
+            <div class="conj-display-toggle" id="pictureSubMode">
+              <button class="conj-toggle-btn active" data-mode="type">Type the Word</button>
+              <button class="conj-toggle-btn" data-mode="flashcard">Flashcard</button>
+              <button class="conj-toggle-btn" data-mode="click">Click the Picture</button>
+            </div>
+          </div>
+
           <div class="control-group" id="directionGroup">
             <label>Direction</label>
             <div class="conj-display-toggle" id="directionToggle">
@@ -186,6 +202,70 @@
           <div class="controls-sep" aria-hidden="true"></div>
 
           <button id="startBtn">Start Quiz</button>
+        </div>
+
+        <!-- Conjugation-mode controls: shown only when Conjugation tab is
+             active. Placed first among the filter boxes — Tense & Forms is
+             the filter that defines what a Conjugation quiz drills, so it
+             leads rather than sitting below Part of Speech/Lists. -->
+        <div id="conjModeControls" class="mode-filter-panel" style="display:none">
+          <!-- Tense and Forms share one box: they are two halves of the same
+               question (which conjugations am I drilling?), and splitting them
+               made the panel read as two unrelated filters. -->
+          <div class="filter-box conj-tense-forms">
+            <!-- One collapse for the pair: Tense and Forms are two halves of a
+                 single question, so collapsing them separately made the box
+                 feel like two filters that happened to share a border.
+                 Starts open (data-default-open) — it's the primary lens for
+                 this mode, not an incidental narrowing filter like the rest. -->
+            <div class="conj-tf-bar">
+              <button type="button" class="filter-collapse-btn" data-collapse="conjTenseFormsBody" data-default-open="true" aria-expanded="true" aria-controls="conjTenseFormsBody">
+                <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
+                <span class="filter-section-label">Tense &amp; Forms</span>
+              </button>
+              <span id="conjTenseSummary" class="conj-tf-summary"></span>
+            </div>
+
+            <div id="conjTenseFormsBody" class="filter-body conj-tf-body">
+              <div class="conj-tf-side conj-tf-side--wide">
+                <div class="conj-tf-header">
+                  <span class="filter-section-label">Tense</span>
+                  <button type="button" id="conjTensesAll">All</button>
+                  <button type="button" id="conjTensesNone">None</button>
+                </div>
+                <div id="conjTenseChips" class="conj-tense-chips"><!-- built by JS per language --></div>
+              </div>
+
+              <div class="conj-tf-divider" aria-hidden="true"></div>
+
+              <div class="conj-tf-side conj-tf-side--narrow" id="conjPronounRow">
+                <div class="conj-tf-header">
+                  <span class="filter-section-label">Forms</span>
+                  <button type="button" id="conjFormsAll">All</button>
+                  <button type="button" id="conjFormsNone">None</button>
+                </div>
+                <div id="conjPronounToggles" class="conj-pronoun-toggles"></div>
+              </div>
+
+              <div class="conj-tf-divider" aria-hidden="true"></div>
+
+              <!-- Which kinds of verb to drill. The buckets match the pill on
+                   each card, which is the same grouping of the 26 raw
+                   conjugation classes. -->
+              <div class="conj-tf-side conj-tf-side--narrow" id="conjRegularityRow">
+                <div class="conj-tf-header">
+                  <span class="filter-section-label">Regularity</span>
+                  <button type="button" id="conjRegAll">All</button>
+                </div>
+                <div id="conjRegChips" class="conj-reg-chips">
+                  <button type="button" class="conj-reg-chip active" data-reg="regular">Regular</button>
+                  <button type="button" class="conj-reg-chip active" data-reg="ortho">Spelling</button>
+                  <button type="button" class="conj-reg-chip active" data-reg="stem">Stem-change</button>
+                  <button type="button" class="conj-reg-chip active" data-reg="irregular">Irregular</button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div id="classFilter" class="class-filter-wrap">
@@ -250,87 +330,6 @@
           </div>
         </div>
 
-        <!-- Conjugation-mode controls: shown only when Conjugation tab is active -->
-        <div id="conjModeControls" class="mode-filter-panel" style="display:none">
-          <!-- Tense and Forms share one box: they are two halves of the same
-               question (which conjugations am I drilling?), and splitting them
-               made the panel read as two unrelated filters. -->
-          <div class="filter-box conj-tense-forms">
-            <!-- One collapse for the pair: Tense and Forms are two halves of a
-                 single question, so collapsing them separately made the box
-                 feel like two filters that happened to share a border. -->
-            <div class="conj-tf-bar">
-              <button type="button" class="filter-collapse-btn" data-collapse="conjTenseFormsBody" aria-expanded="false" aria-controls="conjTenseFormsBody">
-                <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
-                <span class="filter-section-label">Tense &amp; Forms</span>
-              </button>
-              <span id="conjTenseSummary" class="conj-tf-summary"></span>
-            </div>
-
-            <div id="conjTenseFormsBody" class="filter-body conj-tf-body">
-              <div class="conj-tf-side conj-tf-side--wide">
-                <div class="conj-tf-header">
-                  <span class="filter-section-label">Tense</span>
-                  <button type="button" id="conjTensesAll">All</button>
-                  <button type="button" id="conjTensesNone">None</button>
-                </div>
-                <div id="conjTenseChips" class="conj-tense-chips"><!-- built by JS per language --></div>
-              </div>
-
-              <div class="conj-tf-divider" aria-hidden="true"></div>
-
-              <div class="conj-tf-side conj-tf-side--narrow" id="conjPronounRow">
-                <div class="conj-tf-header">
-                  <span class="filter-section-label">Forms</span>
-                  <button type="button" id="conjFormsAll">All</button>
-                  <button type="button" id="conjFormsNone">None</button>
-                </div>
-                <div id="conjPronounToggles" class="conj-pronoun-toggles"></div>
-              </div>
-
-              <div class="conj-tf-divider" aria-hidden="true"></div>
-
-              <!-- Which kinds of verb to drill. The buckets match the pill on
-                   each card, which is the same grouping of the 26 raw
-                   conjugation classes. -->
-              <div class="conj-tf-side conj-tf-side--narrow" id="conjRegularityRow">
-                <div class="conj-tf-header">
-                  <span class="filter-section-label">Regularity</span>
-                  <button type="button" id="conjRegAll">All</button>
-                </div>
-                <div id="conjRegChips" class="conj-reg-chips">
-                  <button type="button" class="conj-reg-chip active" data-reg="regular">Regular</button>
-                  <button type="button" class="conj-reg-chip active" data-reg="ortho">Spelling</button>
-                  <button type="button" class="conj-reg-chip active" data-reg="stem">Stem-change</button>
-                  <button type="button" class="conj-reg-chip active" data-reg="irregular">Irregular</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Picture-mode controls: shown only when Picture Quiz tab is active -->
-        <div id="pictureModeControls" class="mode-filter-panel" style="display:none">
-          <!-- Collapsible, like every other filter box, so it folds away once
-               the style is chosen instead of permanently occupying a row. -->
-          <div class="filter-box">
-            <div class="conj-tf-bar">
-              <button type="button" class="filter-collapse-btn" data-collapse="pictureStyleBody" aria-expanded="false" aria-controls="pictureStyleBody">
-                <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
-                <span class="filter-section-label">Quiz Style</span>
-              </button>
-              <span id="pictureStyleSummary" class="conj-tf-summary"></span>
-            </div>
-            <div id="pictureStyleBody" class="filter-body">
-              <div class="conj-display-toggle" id="pictureSubMode">
-                <button class="conj-toggle-btn active" data-mode="type">Type the Word</button>
-                <button class="conj-toggle-btn" data-mode="flashcard">Flashcard</button>
-                <button class="conj-toggle-btn" data-mode="click">Click the Picture</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div id="domainFilterWrap">
           <div id="domainFilterHeader">
             <button type="button" class="filter-collapse-btn" data-collapse="domainFilterBody" aria-expanded="false" aria-controls="domainFilterBody">
@@ -378,6 +377,7 @@
           <button id="tableJumpBtn" title="Jump to the first word you haven't answered (Ctrl+/)">↓ Next gap</button>
           <button id="tableExport">Export CSV</button>
           <button id="tableReset">Give Up</button>
+          <span id="tableStopwatch" class="quiz-stopwatch" title="Time spent on this quiz">0:00</span>
         </div>
 
         <div class="table-nav" id="tableJumpTop">
@@ -465,6 +465,7 @@
           <button id="quizGiveUp">Reveal Answer</button>
           <button id="ttsBtn" aria-label="Listen to pronunciation">&#x1F50A;</button>
           <button id="resetBtn">End Quiz</button>
+          <span id="quizStopwatch" class="quiz-stopwatch" title="Time spent on this quiz">0:00</span>
         </div>
         <div id="quizSummaryBottom" class="quiz-summary" style="display:none"></div>
 
@@ -509,6 +510,10 @@
 
       <section id="myListsArea" hidden>
         <div id="myListsWrap"></div>
+      </section>
+
+      <section id="historyArea" hidden>
+        <div id="historyWrap"></div>
       </section>
 
       <section id="settingsArea" hidden>

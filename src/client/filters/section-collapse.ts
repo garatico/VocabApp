@@ -40,9 +40,12 @@ export function initSectionCollapse(): void {
     if (!body) return;
 
     // Restore — sections start collapsed so the controls bar stays compact on
-    // first load; once you open one, that choice sticks.
+    // first load; once you open one, that choice sticks. A section can opt
+    // into starting open instead via data-default-open (Tense & Forms, the
+    // one filter that defines what Conjugation mode is even drilling).
     const saved = readString(KEY_PREFIX + targetId);
-    apply(btn, body, saved === 'true');
+    const defaultOpen = btn.dataset.defaultOpen === 'true';
+    apply(btn, body, saved === null ? defaultOpen : saved === 'true');
 
     function toggle(): void {
       const open = btn.getAttribute('aria-expanded') !== 'true';

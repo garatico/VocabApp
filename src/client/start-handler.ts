@@ -23,6 +23,10 @@ interface StartHandlerElements {
 interface StartHandlerOptions {
   getLang:            () => string;
   getFullLang:        () => string;
+  /** Extra languages merged in via the "+ Languages" picker — Conjugation
+   *  mode needs the list itself (not just the combined getFullLang id) to
+   *  build its multi-language tense chip row. */
+  getExtraLanguages?: () => string[];
   getSize:            () => number;
   getSizeMode?:       () => string;
   getSelectedClasses?: () => string[];
@@ -42,6 +46,7 @@ interface StartHandlerOptions {
 export function bindStartHandler({
   getLang: _getLang,
   getFullLang,
+  getExtraLanguages,
   getSize,
   getSizeMode,     // 'window' (literal top N) | 'fill' (always return N unknowns)
   getSelectedClasses,
@@ -248,6 +253,7 @@ export function bindStartHandler({
           words: list,
           container: conjugationWrap,
           lang: fullLang,
+          extraLangs: getExtraLanguages ? getExtraLanguages() : [],
         });
       }
 

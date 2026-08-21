@@ -6,6 +6,7 @@ import { shuffle }   from '../utils/shuffle.ts';
 import { Settings }  from '../settings.ts';
 import type { Quiz } from './quiz.ts';
 import { mustGet }   from '../utils/dom.ts';
+import { createStopwatch } from '../ui/stopwatch.ts';
 
 // ── Module state ───────────────────────────────────────────────────────────────
 
@@ -17,7 +18,14 @@ let deck:         Word[]      = [];   // shuffled word list for this session
 let mastered:     Set<string> = new Set();
 let currentIndex  = 0;
 let sessionActive = false;
-let sessionStart  = Date.now();   // for the elapsed-time history record
+// Lazy — avoids touching `document` at module scope, so this file stays safe
+// to import from a plain node test environment (see table-controls.ts's own
+// getStopwatch() for the concrete case this guards against).
+let stopwatch: ReturnType<typeof createStopwatch> | null = null;
+function getStopwatch(): ReturnType<typeof createStopwatch> {
+  if (!stopwatch) stopwatch = createStopwatch(document.getElementById('quizStopwatch'));
+  return stopwatch;
+}
 let sessionSaved  = false;        // endSession also fires on Play Again
 
 export function setQuiz(instance: Quiz): void {
@@ -119,6 +127,7 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
 
     // Feed the shared history and miss tally, like every other mode. Guarded
     // because endSession also runs when the user hits Play Again.
+    getStopwatch().stop();
     if (!sessionSaved && total > 0) {
       sessionSaved = true;
       // The language selector is the source of truth here; this module is
@@ -136,7 +145,7 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
         unassisted: done,   // single-word mode has no per-word hint concept
         hints: 0,
         revealed: 0,
-        seconds: Math.max(1, Math.round((Date.now() - sessionStart) / 1000)),
+        seconds: getStopwatch().elapsedSeconds(),
       });
     }
     const missed = total - done;
@@ -189,7 +198,7 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
   function startSession(words: Word[]): void {
     deck          = shuffle(words);
     mastered      = new Set();
-    sessionStart  = Date.now();
+    getStopwatch().start();
     sessionSaved  = false;
     currentIndex  = 0;
     sessionActive = true;

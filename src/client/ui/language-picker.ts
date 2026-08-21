@@ -41,6 +41,32 @@ export function openLanguagePicker({ anchorEl, exclude, selected, onChange, avai
   picker.className = 'list-picker-popover';
   picker.id        = 'languagePickerPopover';
 
+  // One offered language per checkbox — kept so "All"/"None" can sync every
+  // box's visual state without re-reading the DOM.
+  const checkboxes: { lang: string; cb: HTMLInputElement; missing: boolean }[] = [];
+
+  const actions = document.createElement('div');
+  actions.className = 'list-picker-actions';
+  const allBtn = document.createElement('button');
+  allBtn.type = 'button'; allBtn.className = 'ui-btn-mini'; allBtn.textContent = 'All';
+  allBtn.addEventListener('click', () => {
+    checkboxes.forEach(({ lang, cb, missing }) => {
+      if (missing) return;
+      cb.checked = true;
+      selected.add(lang);
+    });
+    onChange(new Set(selected));
+  });
+  const noneBtn = document.createElement('button');
+  noneBtn.type = 'button'; noneBtn.className = 'ui-btn-mini'; noneBtn.textContent = 'None';
+  noneBtn.addEventListener('click', () => {
+    checkboxes.forEach(({ cb }) => { cb.checked = false; });
+    selected.clear();
+    onChange(new Set(selected));
+  });
+  actions.append(allBtn, noneBtn);
+  picker.appendChild(actions);
+
   for (const lang of LANGUAGES) {
     if (lang.name === exclude) continue;
     const missing = available !== null && !available.has(lang.name);
@@ -58,6 +84,7 @@ export function openLanguagePicker({ anchorEl, exclude, selected, onChange, avai
       else            selected.delete(lang.name);
       onChange(new Set(selected));
     });
+    checkboxes.push({ lang: lang.name, cb, missing });
 
     const label       = document.createElement('span');
     label.textContent = missing ? `${lang.label} — no data yet` : lang.label;
