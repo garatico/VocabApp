@@ -40,12 +40,45 @@
   flex-shrink: 0;
 }
 
+/* A language with no data yet — same "greyed out, not clickable" treatment
+   as its disabled <option> in the primary language select. */
+.list-picker-row--disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+.list-picker-row--disabled:hover { background: transparent; color: var(--text-muted); }
+.list-picker-row--disabled input[type="checkbox"] { cursor: not-allowed; }
+
 .list-picker-empty {
   padding: 0.4rem 0.75rem;
   font-size: 0.78rem;
   color: var(--text-muted);
   margin: 0;
 }
+
+.list-picker-row-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.list-picker-divider {
+  padding: 0.4rem 0.75rem 0.2rem;
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  margin-top: 0.25rem;
+}
+
+.list-picker-cross-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem 0.1rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.list-picker-cross-toggle input { accent-color: var(--accent); cursor: pointer; }
 
 .list-picker-new-btn {
   display: block;
@@ -145,4 +178,32 @@
   font-size: 0.68rem;
   color: var(--text-muted);
   white-space: nowrap;
+}
+
+/* ── Language badge — which language a list is in, or "Mixed" ──
+   Shared by the list-filter checkboxes, the My Lists sidebar, and the
+   star-button picker (lang-badge.ts). A single language reuses the same
+   lang-tag-<name> background as table mode/the tooltip (tooltip.css); this
+   is a small pill, not a full-cell tint, so a slightly stronger look than
+   the cell background is fine here — no need for a separate token set. */
+.lang-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.3rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+.lang-badge--mixed {
+  background: var(--surface3);
+  border: 1px solid var(--border-strong);
+  letter-spacing: -0.15em;
+  padding-right: 0.45rem;
+}
+.lang-badge--empty {
+  background: none;
+  color: var(--text-muted);
 }

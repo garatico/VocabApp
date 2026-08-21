@@ -20,6 +20,7 @@ import { createAddSearch } from './add-search.ts';
 import { createBulkImport } from './bulk-import.ts';
 import { createWordList } from './word-list.ts';
 import { renderSmartPanel } from './smart-panel.ts';
+import { renderMultiPanel } from './multi-panel.ts';
 import { exportList } from './export-list.ts';
 import { closePopover, clickedOutsidePopover } from './move-popover.ts';
 import { BANDS, POS_CHIPS, type ExportFormat, type SortMode, type VocabEntry } from './types.ts';
@@ -45,6 +46,8 @@ export function renderPanel(ctx: ListsCtx): void {
   closePopover();
   ctx.expandedWord = null;
   ctx.panel.innerHTML = '';
+
+  if (ctx.selectedMultiList) { renderMultiPanel(ctx, ctx.selectedMultiList); return; }
 
   if (ctx.selectedSmart) { renderSmartPanel(ctx, ctx.selectedSmart); return; }
 

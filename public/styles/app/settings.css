@@ -57,6 +57,65 @@
   line-height: 1.5;
 }
 
+/* ── Subsection — a full-width block under a .settings-row, for content that
+   doesn't fit the label-left/control-right layout (a per-language list). ── */
+.settings-subsection {
+  padding: 0.6rem 0 0.2rem;
+  border-top: 1px solid var(--border);
+}
+.settings-subsection .settings-label { margin-bottom: 0.6rem; }
+
+/* ── Per-language flag + color (Multi-Language Table) ──
+   One line per language: name, flag select, color swatch — same shape as
+   every other list of language-scoped controls in this app. */
+.lang-appearance-list {
+  display: flex;
+  flex-direction: column;
+}
+.lang-appearance-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+}
+.lang-appearance-row + .lang-appearance-row {
+  border-top: 1px solid var(--border);
+}
+.lang-appearance-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+}
+.lang-appearance-flag {
+  min-width: 9.5rem;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+}
+.lang-appearance-color {
+  display: inline-flex;
+  cursor: pointer;
+}
+.lang-appearance-color input[type="color"] {
+  width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .lang-appearance-row  { grid-template-columns: 1fr auto; row-gap: 0.35rem; }
+  .lang-appearance-flag { grid-column: 1 / -1; min-width: 0; width: 100%; }
+}
+
 /* ── Control area (right side of row) ── */
 .settings-control {
   display: flex;

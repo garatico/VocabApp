@@ -1,5 +1,5 @@
-import type { Word } from '../types.js';
-import { isCorrect, isReverseCorrect, isCorrectStrict, isReverseCorrectStrict, buildGlossDisplay } from '../utils/utils.ts';
+import type { Word } from '../types.ts';
+import { matchesAnswer, buildGlossDisplay } from '../utils/utils.ts';
 import { attachTooltips }        from '../utils/word-tooltip.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker }        from '../utils/list-picker.ts';
@@ -55,6 +55,16 @@ export function revealTextFor(entry: Word, dir: 'target-en' | 'en-target'): stri
   return dir === 'en-target' ? entry.word : buildGlossDisplay(entry);
 }
 
+/**
+ * Key for a word row that's unique even when a Compare-mode table mixes two
+ * languages that happen to share a spelling. Falls back to `fallbackLang` for
+ * an ordinary single-language word (no `.language` set), so this degrades to
+ * plain word-text keying everywhere outside Compare mode.
+ */
+export function rowKey(w: { word: string; language?: string }, fallbackLang: string): string {
+  return `${w.language ?? fallbackLang}:${w.word}`;
+}
+
 export function renderTableMode({
   words,
   container,
@@ -73,8 +83,10 @@ export function renderTableMode({
   const hintMode  = Settings.getHintMode();
   const matchMode = Settings.getMatchMode();
 
-  // O(1) word lookup — avoids O(n²) words.find() inside forEach loops
-  const wordMap = new Map<string, Word>(words.map(w => [w.word, w]));
+  // O(1) word lookup — avoids O(n²) words.find() inside forEach loops.
+  // Keyed by rowKey rather than bare word text so a Compare-mode table mixing
+  // two languages can't collide on a shared spelling.
+  const wordMap = new Map<string, Word>(words.map(w => [rowKey(w, lang), w]));
 
   // Only shake inputs when a manageable number are affected
   const SHAKE_THRESHOLD = 30;
@@ -93,14 +105,7 @@ export function renderTableMode({
   }
 
   function checkInput(input: string, entry: Word, dir: 'target-en' | 'en-target'): boolean {
-    if (matchMode === 'strict') {
-      return dir === 'en-target'
-        ? isReverseCorrectStrict(input, entry)
-        : isCorrectStrict(input, entry);
-    }
-    return dir === 'en-target'
-      ? isReverseCorrect(input, entry)
-      : isCorrect(input, entry);
+    return matchesAnswer(input, entry, dir, matchMode);
   }
 
   function checkAllComplete(): boolean {
@@ -138,7 +143,8 @@ export function renderTableMode({
   }
 
   function buildKnownBtn(w: Word, tdWord: HTMLElement): HTMLButtonElement {
-    const lists = getWordLists(lang, w.word);
+    const wordLang = w.language ?? lang;
+    const lists = getWordLists(wordLang, w.word);
     const btn   = document.createElement('button');
     btn.type        = 'button';
     btn.className   = 'known-btn' + (lists.length > 0 ? ' known-btn--active' : '');
@@ -152,10 +158,10 @@ export function renderTableMode({
       e.stopPropagation();
       openListPicker({
         anchorEl: btn,
-        lang,
+        lang: wordLang,
         word: w.word,
         onClose: () => {
-          const inAny = isInAnyList(lang, w.word);
+          const inAny = isInAnyList(wordLang, w.word);
           if (inAny) {
             btn.classList.add('known-btn--active');
             tdWord.classList.add('word-cell--known');
@@ -180,6 +186,12 @@ export function renderTableMode({
     const table       = document.createElement('table');
     const pairsPerRow = cols;
 
+    // Compare/Multi-language indicator — see table.css. Off by setting means
+    // no lang-tag-* class is ever added below; single-language mode never has
+    // a word carrying `.language` either way, so this is a no-op there.
+    const indicatorMode = Settings.getLangIndicator();
+    container.classList.toggle('lang-indicator-flag', indicatorMode === 'flag');
+
     for (let i = 0; i < words.length; i += pairsPerRow) {
       const tr = document.createElement('tr');
 
@@ -196,15 +208,24 @@ export function renderTableMode({
           continue;
         }
 
-        const snap = initialState.get(w.word);
+        const wordLang = w.language ?? lang;
+        const snap = initialState.get(rowKey(w, lang));
         const dir  = snap?.dir ?? entryDir(w);
 
-        if (isInAnyList(lang, w.word)) tdWord.classList.add('word-cell--known');
+        if (indicatorMode !== 'off' && w.language) {
+          tdWord.classList.add(`lang-tag-${w.language}`);
+          // Read by the flag-mode CSS (content: attr(data-flag)) — resolving
+          // it here means a Settings flag override just works, no stylesheet
+          // change needed.
+          tdWord.dataset.flag = Settings.getLangFlag(w.language);
+        }
+
+        if (isInAnyList(wordLang, w.word)) tdWord.classList.add('word-cell--known');
 
         // Rank / position indicator
         // Repeat offenders from previous sessions, marked before you answer.
         // Advisory only — it changes nothing about scoring.
-        const misses = missCount(lang, w.word);
+        const misses = missCount(wordLang, w.word);
         if (misses >= 2) {
           tdWord.classList.add('table-word--trouble');
           tdWord.title = `Missed ${misses} time${misses === 1 ? '' : 's'} before`;
@@ -224,6 +245,10 @@ export function renderTableMode({
         const inp        = document.createElement('input');
         inp.type         = 'text';
         inp.dataset.word = w.word;
+        // Read back alongside data-word to rebuild the composite rowKey — see
+        // rowKey() above. Always set, even outside Compare mode, so callers
+        // never have to special-case "no language tag on this row".
+        inp.dataset.lang = wordLang;
         inp.dataset.dir  = dir;
         inp.placeholder  = dir === 'en-target' ? 'Type in target language…' : 'Type translation…';
 
@@ -255,7 +280,7 @@ export function renderTableMode({
             inp.classList.add('correct');
 
             knownBtn.hidden = false;
-            if (isInAnyList(lang, w.word)) {
+            if (isInAnyList(wordLang, w.word)) {
               knownBtn.classList.add('known-btn--active');
               tdWord.classList.add('word-cell--known');
             }
@@ -301,7 +326,7 @@ export function renderTableMode({
           inp.disabled = true;
           inp.classList.add('peeked');
           knownBtn.hidden = false;
-          if (isInAnyList(lang, w.word)) {
+          if (isInAnyList(wordLang, w.word)) {
             knownBtn.classList.add('known-btn--active');
             tdWord.classList.add('word-cell--known');
           }
@@ -366,12 +391,17 @@ export function renderTableMode({
     firstUnanswered?.focus();
   }
 
+  /** Rebuild wordMap's key from an input's dataset — the DOM-side half of rowKey(). */
+  function inputRowKey(inp: HTMLInputElement): string {
+    return `${inp.dataset.lang ?? lang}:${inp.dataset.word ?? ''}`;
+  }
+
   function checkAll(): CheckResult[] {
     const results: CheckResult[] = [];
     container.querySelectorAll<HTMLInputElement>('input[data-word]').forEach(inp => {
       if (inp.classList.contains('correct')) { results.push({ ok: true });  return; }
       if (inp.classList.contains('peeked'))  { results.push({ ok: false }); return; }
-      const entry = wordMap.get(inp.dataset.word ?? '');
+      const entry = wordMap.get(inputRowKey(inp));
       if (!entry) return;
       const dir      = (inp.dataset.dir ?? 'target-en') as 'target-en' | 'en-target';
       const revealed = revealText(entry, dir);
@@ -416,7 +446,7 @@ export function renderTableMode({
         results.push({ word: inp.dataset.word, ok: false, expected: inp.value });
         return;
       }
-      const entry = wordMap.get(inp.dataset.word ?? '');
+      const entry = wordMap.get(inputRowKey(inp));
       if (!entry) return;
       const dir      = (inp.dataset.dir ?? 'target-en') as 'target-en' | 'en-target';
       const revealed = revealText(entry, dir);

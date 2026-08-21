@@ -54,12 +54,17 @@ export function bindModeSwitch({
     const conjViewGroup       = document.getElementById('conjViewGroup');
     const conjModeControls    = document.getElementById('conjModeControls');
     const pictureModeControls = document.getElementById('pictureModeControls');
+    const compareGroup        = document.getElementById('compareGroup');
 
     if (classFilter)         classFilter.style.display         = mode === 'conjugation' ? 'none' : '';
     // The list filter applies in conjugation mode too — Hide/Focus narrows the
     // verbs you drill just as it narrows any other quiz.
     if (listFilter)          listFilter.style.display          = '';
     if (directionGroup)      directionGroup.style.display      = mode === 'table'       ? ''     : 'none';
+    // Compare (two languages merged into one table) is a table-mode-only
+    // feature for now — other modes don't know how to render or score a
+    // mixed-language word list yet.
+    if (compareGroup)        compareGroup.style.display        = mode === 'table'       ? ''     : 'none';
     if (recallTimerGroup)    recallTimerGroup.style.display    = mode === 'recall'      ? ''     : 'none';
     // Table, recall and conjugation each carry their own order control inside
     // the quiz, so the global one would be a second, competing switch. Single

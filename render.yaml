@@ -2,7 +2,7 @@ services:
   - type: web
     name: vocab-app
     runtime: node
-    buildCommand: npm install --include=dev && npm run build
+    buildCommand: npm install --include=dev && npm run export:vocab && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV

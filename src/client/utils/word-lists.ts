@@ -12,15 +12,114 @@
  * old single per-language filter to one setting per mode.
  */
 
+import { readJson, writeJson, isRecord } from './storage.ts';
 import { currentScope, type FilterScope } from '../filters/filter-scope.ts';
 import { bucketFor, SHARED_BUCKET, type Bucket } from '../filters/filter-state.ts';
+import { buildLangBadge } from '../ui/lang-badge.ts';
 
 const LISTS_PREFIX         = 'vq_lists_';
 const OLD_PREFIX           = 'vq_known_';
 const DEFAULT_LIST         = 'Known';
 const FILTER_STATE_PREFIX  = 'vq_listfilter_';
+const MULTI_LISTS_KEY      = 'vq_lists_multi';
 
 type ListStore = Record<string, string[]>;
+
+// ── Cross-language lists ────────────────────────────────────────────────────
+//
+// A separate, global (not per-language) store, additive alongside the
+// per-language one above — no existing call site or storage shape changes.
+// A list holds `{word, language}` pairs rather than bare word strings, since
+// membership must survive two languages sharing a spelling (the same
+// collision this app already handles via table-mode.ts's rowKey()).
+
+export interface MultiListEntry {
+  word:     string;
+  language: string;
+}
+
+type MultiListStore = Record<string, MultiListEntry[]>;
+
+function isMultiListEntry(v: unknown): v is MultiListEntry {
+  return isRecord(v) && typeof v['word'] === 'string' && typeof v['language'] === 'string';
+}
+
+function isMultiListStore(v: unknown): v is MultiListStore {
+  return isRecord(v) && Object.values(v).every(
+    entries => Array.isArray(entries) && entries.every(isMultiListEntry),
+  );
+}
+
+function loadMultiStore(): MultiListStore {
+  return readJson<MultiListStore>(MULTI_LISTS_KEY, {}, isMultiListStore);
+}
+
+function saveMultiStore(store: MultiListStore): void {
+  writeJson(MULTI_LISTS_KEY, store);
+}
+
+export function getMultiListNames(): string[] {
+  return Object.keys(loadMultiStore());
+}
+
+export function getMultiList(listName: string): MultiListEntry[] {
+  const store = loadMultiStore();
+  return store[listName] ? [...store[listName]] : [];
+}
+
+/** Distinct languages present — empty for a new list with no words yet. */
+export function getMultiListLanguages(listName: string): string[] {
+  return [...new Set(getMultiList(listName).map(e => e.language))];
+}
+
+export function isInMultiList(listName: string, word: string, language: string): boolean {
+  const store = loadMultiStore();
+  return !!store[listName]?.some(e => e.word === word && e.language === language);
+}
+
+export function addToMultiList(listName: string, word: string, language: string): void {
+  const store = loadMultiStore();
+  if (!store[listName]) store[listName] = [];
+  if (!store[listName].some(e => e.word === word && e.language === language)) {
+    store[listName].push({ word, language });
+    saveMultiStore(store);
+  }
+}
+
+export function removeFromMultiList(listName: string, word: string, language: string): void {
+  const store = loadMultiStore();
+  if (!store[listName]) return;
+  store[listName] = store[listName].filter(e => !(e.word === word && e.language === language));
+  if (store[listName].length === 0) delete store[listName];
+  saveMultiStore(store);
+}
+
+export function createMultiList(listName: string): boolean {
+  const store = loadMultiStore();
+  if (store[listName]) return false;
+  store[listName] = [];
+  saveMultiStore(store);
+  return true;
+}
+
+export function deleteMultiList(listName: string): void {
+  const store = loadMultiStore();
+  delete store[listName];
+  saveMultiStore(store);
+}
+
+export function renameMultiList(oldName: string, newName: string): boolean {
+  const store = loadMultiStore();
+  if (!store[oldName] || store[newName]) return false;
+  store[newName] = store[oldName];
+  delete store[oldName];
+  saveMultiStore(store);
+  return true;
+}
+
+export function getMultiListCount(listName: string): number {
+  return loadMultiStore()[listName]?.length ?? 0;
+}
 
 /**
  * What the checked lists do to the quiz.
@@ -317,8 +416,13 @@ export function refreshFilterSelect(lang: string): void {
       countSpan.className   = 'list-filter-item-count';
       countSpan.textContent = String(getListCount(lang, name));
 
+      // Every list here is single-language by construction (this store is
+      // keyed per language) — the badge is still worth showing for the same
+      // reason table mode shows one on every cell: consistent visual
+      // language identity everywhere a list/word appears in the app.
       label.appendChild(cb);
       label.appendChild(nameSpan);
+      label.appendChild(buildLangBadge([lang]));
       label.appendChild(countSpan);
       container.appendChild(label);
     }

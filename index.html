@@ -98,6 +98,15 @@
             </select>
           </div>
 
+          <!-- Table mode only: merges one or more additional languages' words
+               into the same table, tagged per-row so scoring/mastery/lists
+               still land in the right language. Hidden on every other tab —
+               see ui-state.ts. Opens a checkbox popover — language-picker.ts. -->
+          <div class="control-group" id="compareGroup">
+            <label>Languages</label>
+            <button type="button" id="langPickerBtn" class="lang-picker-btn">+ Languages</button>
+          </div>
+
           <div class="control-group">
             <label>Words</label>
             <div class="size-row">
@@ -543,6 +552,32 @@
                 <button type="button" class="sort-order-btn" data-hint="none">None</button>
                 <button type="button" class="sort-order-btn" data-hint="first-letter">First letter</button>
                 <button type="button" class="sort-order-btn active" data-hint="full">Full reveal</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Multi-Language Table</div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Language indicator</span>
+                <span class="settings-desc">When 2+ languages are merged into one table (the "+ Languages" picker), how each word's language is shown — Off leaves cells plain, Color tints the cell, Flag shows a faint flag behind the word</span>
+              </div>
+              <div class="sort-order-toggle" id="settingLangIndicator">
+                <button type="button" class="sort-order-btn" data-indicator="off">Off</button>
+                <button type="button" class="sort-order-btn active" data-indicator="color">Color</button>
+                <button type="button" class="sort-order-btn" data-indicator="flag">Flag</button>
+              </div>
+            </div>
+
+            <div class="settings-subsection">
+              <div class="settings-label">
+                <span>Language appearance</span>
+                <span class="settings-desc">Override each language's flag (Flag mode) and cell color (Color mode) above</span>
+              </div>
+              <div class="lang-appearance-list" id="settingLangColors">
+                <!-- One row per language, built from LANGUAGES — see settings.ts -->
               </div>
             </div>
           </div>

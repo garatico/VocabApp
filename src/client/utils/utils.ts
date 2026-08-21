@@ -1,5 +1,10 @@
 import type { Word } from '../types.js';
 
+/** "spanish" -> "Spanish". Language codes and other plain-ASCII labels only. */
+export function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 /**
  * Normalise a string for loose comparison:
  * trim whitespace, collapse internal spaces, lowercase, strip accents.
@@ -133,6 +138,40 @@ export function isReverseCorrectStrict(input: string, entry: Word): boolean {
     .filter((w): w is string => typeof w === 'string' && w.length > 0)
     .map(w => normaliseStrict(w));
   return targets.includes(attempt);
+}
+
+/** Which way round the question is asked. */
+export type AnswerDirection = 'target-en' | 'en-target';
+
+/** Whether accents count. Mirrors Settings.getMatchMode(). */
+export type AnswerMatchMode = 'fuzzy' | 'strict';
+
+/**
+ * The one entry point for "is this typed answer right?".
+ *
+ * Every typing quiz — table, picture, single word — asks the same question and
+ * must answer it the same way, including whether the learner's Flexible/Strict
+ * setting is honoured. It was previously a four-way `if` written out in table
+ * mode, and picture mode had its own local matcher that ignored the setting
+ * entirely: the same typo was accepted in one tab and rejected in the next.
+ *
+ * `mode` is a parameter rather than a `Settings` read so this stays pure and
+ * testable; callers pass `Settings.getMatchMode()`.
+ */
+export function matchesAnswer(
+  input: string,
+  entry: Word,
+  dir:   AnswerDirection,
+  mode:  AnswerMatchMode = 'fuzzy',
+): boolean {
+  if (mode === 'strict') {
+    return dir === 'en-target'
+      ? isReverseCorrectStrict(input, entry)
+      : isCorrectStrict(input, entry);
+  }
+  return dir === 'en-target'
+    ? isReverseCorrect(input, entry)
+    : isCorrect(input, entry);
 }
 
 /** Return prompt + hint for display. */

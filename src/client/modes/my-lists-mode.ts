@@ -22,6 +22,7 @@
  *   sidebar.ts      left pane
  *   panel.ts        right pane for an ordinary list
  *   smart-panel.ts  right pane for a smart list
+ *   multi-panel.ts  right pane for a cross-language list (view/remove only)
  *   word-list.ts    rows, chunked rendering, multi-select and bulk actions
  *   add-search.ts   the "search vocabulary to add" box
  *   bulk-import.ts  paste or drop a list of words

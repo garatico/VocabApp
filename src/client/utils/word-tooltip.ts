@@ -11,6 +11,8 @@ import type { Word } from '../types.js';
 import { buildGlossDisplay } from './utils.js';
 import { PRONOUNS as LANG_PRONOUNS, TENSE_DEFS } from '../modes/conjugation/data.js';
 import { logger } from './logger.js';
+import { languageInfo, LANGUAGES } from '../data/languages.js';
+import { Settings } from '../settings.js';
 
 /** Build a tense-key -> display-label map for the given language. */
 function tenseLabels(lang: string): Record<string, string> {
@@ -123,6 +125,18 @@ function buildMetaRow(word: Word): HTMLElement {
     posEl.className   = 'tt-badge tt-pos';
     posEl.textContent = word.pos;
     row.appendChild(posEl);
+  }
+
+  // Only present on a word merged in from Compare/Multi-language table mode
+  // — an ordinary single-language word never carries `.language`. Shown next
+  // to the part-of-speech badge regardless of the table's own indicator
+  // setting, so there's always a way to tell a mixed-in word's language.
+  if (word.language) {
+    const info  = languageInfo(word.language);
+    const langEl = document.createElement('span');
+    langEl.className   = `tt-badge tt-lang lang-tag-${word.language}`;
+    langEl.textContent = `${Settings.getLangFlag(word.language)} ${info.label}`;
+    row.appendChild(langEl);
   }
 
   if (word.frequency?.band) {
@@ -279,10 +293,29 @@ function buildConjSection(word: Word, lang: string): HTMLElement | null {
   return section;
 }
 
+/** Clear whatever the previous hover's word left on the shared tooltip element. */
+function resetLangBackground(tt: HTMLElement): void {
+  for (const l of LANGUAGES) tt.classList.remove(`lang-tag-${l.name}`);
+  tt.classList.remove('lang-indicator-flag');
+  delete tt.dataset.flag;
+}
+
 function populateTooltip(word: Word, revealed: boolean, lang: string, hideWordWhenUnrevealed = false): void {
   const tt = getTooltip();
   tt.innerHTML   = '';
   tt.style.width = '';
+  resetLangBackground(tt);
+
+  // Same Off/Color/Flag indicator as table mode, mirrored onto the tooltip —
+  // only relevant when this word actually carries a `.language` (Compare/
+  // Multi-language table); an ordinary single-language word never does.
+  if (word.language && Settings.getLangIndicator() !== 'off') {
+    tt.classList.add(`lang-tag-${word.language}`);
+    if (Settings.getLangIndicator() === 'flag') {
+      tt.classList.add('lang-indicator-flag');
+      tt.dataset.flag = Settings.getLangFlag(word.language);
+    }
+  }
 
   const heading = document.createElement('div');
   heading.className   = 'tt-word';

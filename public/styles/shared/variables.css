@@ -67,6 +67,20 @@
 
   /* Extra surface step between --surface2 and --border */
   --surface3: #e6e5df;
+
+  /* Table mode's Compare/Multi-language indicator — one tinted cell
+     background per language. Distinct hues from each other and from the
+     semantic colors above (a reddish Spanish row must not read as an error).
+     Saturated enough to read as a color, not a stain — the first pass here
+     was too close to --surface2 to tell apart at a glance. Settings can
+     override any of these per-language as an inline :root property; these
+     are just the defaults. */
+  --lang-spanish-bg:    #f0b8ac;
+  --lang-portuguese-bg: #a8e0b8;
+  --lang-italian-bg:    #d4b3f0;
+  --lang-french-bg:     #a8bdf5;
+  --lang-german-bg:     #9de8dc;
+  --lang-dutch-bg:      #f5c088;
 }
 
 /* ── Dark mode ──────────────────────────────────────────────── */
@@ -108,4 +122,11 @@ html.dark {
 
   --focus-ring: rgba(90, 158, 114, 0.25);
   --surface3:   #333229;
+
+  --lang-spanish-bg:    #5a2e24;
+  --lang-portuguese-bg: #1f5236;
+  --lang-italian-bg:    #4a2d68;
+  --lang-french-bg:     #2a3570;
+  --lang-german-bg:     #1a5548;
+  --lang-dutch-bg:      #6b4415;
 }

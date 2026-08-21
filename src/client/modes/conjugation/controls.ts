@@ -12,6 +12,7 @@
  */
 
 import { PRONOUNS, TENSE_DEFS, TENSE_EN, TENSE_HELP, REGULARITY_HELP } from './data.js';
+import { capitalize } from '../../utils/utils.js';
 
 // ── Module state ───────────────────────────────────────────────────────────────
 
@@ -237,12 +238,6 @@ export function initConjControls(lang: string): void {
   }
 
   _lastConjLang = lang;
-}
-
-// ── Private helpers ────────────────────────────────────────────────────────────
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function ensurePronounToggleListener(): void {
