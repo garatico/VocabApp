@@ -283,23 +283,24 @@
 #tableWrap td.lang-tag-german     { background: var(--lang-german-bg); }
 #tableWrap td.lang-tag-dutch      { background: var(--lang-dutch-bg); }
 
-/* Flag style: same tagging, but a flag glyph behind the word instead of a
-   tinted background — no image asset, just the Unicode flag character, read
-   from data-flag (table-mode.ts sets it from Settings.getLangFlag, so a
-   per-language flag override shows here without touching this stylesheet). */
+/* Flag style: same tagging, but a flag image watermarked behind the word
+   instead of a tinted background — read from the --flag-img custom property
+   (table-mode.ts sets it from Settings.getLangFlag, so a per-language flag
+   override shows here without touching this stylesheet). */
 #tableWrap.lang-indicator-flag td[class*="lang-tag-"] {
   background: var(--surface2);
   position: relative;
   overflow: hidden;
 }
 #tableWrap.lang-indicator-flag td[class*="lang-tag-"]::before {
-  content: attr(data-flag);
+  content: '';
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 3.6rem;
+  inset: 12%;
+  background-image: var(--flag-img);
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 15%;
   opacity: 0.32;
   pointer-events: none;
 }

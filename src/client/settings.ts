@@ -1,6 +1,7 @@
 import { readString, writeString, remove as removeKey } from './utils/storage.ts';
 import { applyTheme, type ThemeValue } from './ui/theme-toggle.ts';
-import { LANGUAGES, languageInfo } from './data/languages.ts';
+import { LANGUAGES, languageInfo, flagUrl } from './data/languages.ts';
+import { createFlagImg } from './ui/flag-icon.ts';
 
 /**
  * settings.ts — persistent quiz preferences.
@@ -46,6 +47,16 @@ export const Settings = {
   // ── Table ──────────────────────────────────────────────────────────────────
   getTableCols: (): number    => Math.max(1, Math.min(5, Number(get('table_cols', '2')))),
   getHintMode:  (): HintMode  => get('hint_mode',  'full')  as HintMode,
+
+  /**
+   * How many English senses buildGlossDisplay() joins with " / " before
+   * cutting the rest — separately for the question box (dir 'en-target',
+   * default 1) and the answer box (dir 'target-en', default 2). A word like
+   * *coger* can carry half a dozen glosses; showing all of them read as the
+   * quiz handing over the answer.
+   */
+  getQuestionGlossCount: (): number => Math.max(1, Math.min(5, Number(get('question_gloss_count', '1')))),
+  getAnswerGlossCount:   (): number => Math.max(1, Math.min(5, Number(get('answer_gloss_count', '2')))),
 
   /**
    * Words shown per page in table mode. 'all' (or any unparseable value)
@@ -126,8 +137,22 @@ export const Settings = {
   /** A per-language color override, or null to use that language's CSS default. */
   getLangColor: (name: string): string | null => readString(P + 'lang_color_' + name),
 
-  /** A per-language flag override (any country that language is a main language in), or its default. */
-  getLangFlag: (name: string): string => readString(P + 'lang_flag_' + name) ?? languageInfo(name).flagEmoji,
+  /**
+   * A per-language flag override (any country that language is a main
+   * language in), or its default. Returns a country code (public/flags/
+   * filename), not the language's own ISO code — `languageInfo().iso` is
+   * that.
+   *
+   * Validated against `flagOptions` rather than trusted outright: this used
+   * to store the Unicode flag emoji itself, and a value written under that
+   * scheme would otherwise resolve to a country nothing offers any more.
+   */
+  getLangFlag: (name: string): string => {
+    const info  = languageInfo(name);
+    const saved = readString(P + 'lang_flag_' + name);
+    const match = info.flagOptions.find(o => o.country === saved);
+    return match ? match.country : info.flagCountry;
+  },
 };
 
 // ── Language color application ────────────────────────────────────────────────
@@ -243,6 +268,20 @@ export function bindSettings(): void {
     set('hint_mode', btn.dataset.hint ?? 'full');
   });
 
+  // Question / answer gloss count
+  document.getElementById('settingQuestionGlosses')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingQuestionGlosses', btn);
+    set('question_gloss_count', btn.dataset.count ?? '1');
+  });
+  document.getElementById('settingAnswerGlosses')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingAnswerGlosses', btn);
+    set('answer_gloss_count', btn.dataset.count ?? '2');
+  });
+
   // Match mode
   document.getElementById('settingMatch')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
@@ -330,6 +369,8 @@ function buildLangAppearanceRows(): void {
     name.className   = 'lang-appearance-name';
     name.textContent = lang.label;
 
+    const flagPreview = createFlagImg(Settings.getLangFlag(lang.name), lang.label);
+
     const flagSelect      = document.createElement('select');
     flagSelect.className  = 'lang-appearance-flag';
     flagSelect.dataset.lang = lang.name;
@@ -337,13 +378,14 @@ function buildLangAppearanceRows(): void {
     const currentFlag = Settings.getLangFlag(lang.name);
     for (const opt of lang.flagOptions) {
       const o       = document.createElement('option');
-      o.value       = opt.emoji;
-      o.textContent = `${opt.emoji} ${opt.label}`;
-      o.selected    = opt.emoji === currentFlag;
+      o.value       = opt.country;
+      o.textContent = opt.label;
+      o.selected    = opt.country === currentFlag;
       flagSelect.appendChild(o);
     }
     flagSelect.addEventListener('change', () => {
       set('lang_flag_' + lang.name, flagSelect.value);
+      flagPreview.src = flagUrl(flagSelect.value);
     });
 
     const colorLabel      = document.createElement('label');
@@ -360,7 +402,7 @@ function buildLangAppearanceRows(): void {
     });
     colorLabel.appendChild(colorInput);
 
-    row.append(name, flagSelect, colorLabel);
+    row.append(name, flagPreview, flagSelect, colorLabel);
     list.appendChild(row);
   }
 }
@@ -409,6 +451,16 @@ function restoreSettingsUI(): void {
   const savedHint = get('hint_mode', 'full');
   document.querySelectorAll<HTMLElement>('#settingHint .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.hint === savedHint);
+  });
+
+  // Question / answer gloss count
+  const savedQuestionGlosses = get('question_gloss_count', '1');
+  document.querySelectorAll<HTMLElement>('#settingQuestionGlosses .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.count === savedQuestionGlosses);
+  });
+  const savedAnswerGlosses = get('answer_gloss_count', '2');
+  document.querySelectorAll<HTMLElement>('#settingAnswerGlosses .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.count === savedAnswerGlosses);
   });
 
   // Match

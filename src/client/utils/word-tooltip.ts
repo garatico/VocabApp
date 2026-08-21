@@ -11,8 +11,9 @@ import type { Word } from '../types.js';
 import { buildGlossDisplay } from './utils.js';
 import { PRONOUNS as LANG_PRONOUNS, TENSE_DEFS } from '../modes/conjugation/data.js';
 import { logger } from './logger.js';
-import { languageInfo, LANGUAGES } from '../data/languages.js';
+import { languageInfo, LANGUAGES, flagUrl } from '../data/languages.js';
 import { Settings } from '../settings.js';
+import { createFlagImg } from '../ui/flag-icon.js';
 
 /** Build a tense-key -> display-label map for the given language. */
 function tenseLabels(lang: string): Record<string, string> {
@@ -135,7 +136,8 @@ function buildMetaRow(word: Word): HTMLElement {
     const info  = languageInfo(word.language);
     const langEl = document.createElement('span');
     langEl.className   = `tt-badge tt-lang lang-tag-${word.language}`;
-    langEl.textContent = `${Settings.getLangFlag(word.language)} ${info.label}`;
+    langEl.appendChild(createFlagImg(Settings.getLangFlag(word.language), info.label));
+    langEl.append(' ' + info.label);
     row.appendChild(langEl);
   }
 
@@ -297,7 +299,7 @@ function buildConjSection(word: Word, lang: string): HTMLElement | null {
 function resetLangBackground(tt: HTMLElement): void {
   for (const l of LANGUAGES) tt.classList.remove(`lang-tag-${l.name}`);
   tt.classList.remove('lang-indicator-flag');
-  delete tt.dataset.flag;
+  tt.style.removeProperty('--flag-img');
 }
 
 function populateTooltip(word: Word, revealed: boolean, lang: string, hideWordWhenUnrevealed = false): void {
@@ -313,7 +315,7 @@ function populateTooltip(word: Word, revealed: boolean, lang: string, hideWordWh
     tt.classList.add(`lang-tag-${word.language}`);
     if (Settings.getLangIndicator() === 'flag') {
       tt.classList.add('lang-indicator-flag');
-      tt.dataset.flag = Settings.getLangFlag(word.language);
+      tt.style.setProperty('--flag-img', `url("${flagUrl(Settings.getLangFlag(word.language))}")`);
     }
   }
 

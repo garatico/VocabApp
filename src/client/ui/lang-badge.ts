@@ -9,6 +9,7 @@
 
 import { languageInfo } from '../data/languages.ts';
 import { Settings } from '../settings.ts';
+import { createFlagImg } from './flag-icon.ts';
 
 /**
  * @param languages Distinct languages present in the list. Empty (a
@@ -29,13 +30,13 @@ export function buildLangBadge(languages: string[]): HTMLElement {
   if (languages.length === 1) {
     const info = languageInfo(languages[0]);
     badge.classList.add(`lang-tag-${languages[0]}`);
-    badge.textContent = Settings.getLangFlag(languages[0]);
+    badge.appendChild(createFlagImg(Settings.getLangFlag(languages[0]), info.label));
     badge.title = info.label;
     return badge;
   }
 
   badge.classList.add('lang-badge--mixed');
-  badge.textContent = languages.map(l => Settings.getLangFlag(l)).join('');
+  languages.forEach(l => badge.appendChild(createFlagImg(Settings.getLangFlag(l), languageInfo(l).label)));
   badge.title = 'Mixed: ' + languages.map(l => languageInfo(l).label).join(', ');
   return badge;
 }

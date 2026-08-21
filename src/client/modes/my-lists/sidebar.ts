@@ -75,15 +75,15 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   newListBtn.addEventListener('click', () => startCreateList());
 
   const backupBtn = document.createElement('button');
-  backupBtn.type = 'button'; backupBtn.className = 'ml-icon-btn ml-backup-btn';
+  backupBtn.type = 'button'; backupBtn.className = 'ml-icon-btn ml-text-btn ml-backup-btn';
   backupBtn.title = 'Download a backup of every list, in every language';
-  backupBtn.textContent = '⭳';
+  backupBtn.textContent = '⭳ Backup';
   backupBtn.addEventListener('click', () => downloadBackup());
 
   const restoreBtn = document.createElement('button');
-  restoreBtn.type = 'button'; restoreBtn.className = 'ml-icon-btn ml-restore-btn';
+  restoreBtn.type = 'button'; restoreBtn.className = 'ml-icon-btn ml-text-btn ml-restore-btn';
   restoreBtn.title = 'Restore lists from a backup file (merges, never overwrites)';
-  restoreBtn.textContent = '⭱';
+  restoreBtn.textContent = '⭱ Restore';
 
   const restoreInput = document.createElement('input');
   restoreInput.type = 'file'; restoreInput.accept = 'application/json,.json';

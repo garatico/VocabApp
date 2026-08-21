@@ -7,7 +7,12 @@
  * finding all four, so it lives here now and they read from it.
  *
  * `hasConjugations` is the interesting field. It is not a preference — it
- * records whether any conjugation data exists for that language at all:
+ * records whether any conjugation data exists for that language at all.
+ *
+ * Flags are self-hosted SVGs (public/flags/, see the README there) rather
+ * than Unicode flag emoji: Windows' bundled emoji font has no flag glyphs, so
+ * a regional-indicator pair like 🇪🇸 renders as the literal letters "ES" on
+ * a lot of Windows browsers instead of a flag.
  *
  *   spanish                  generated at load time by the rules engine in
  *                            src/server/lib/verb-rules.ts
@@ -44,71 +49,75 @@ export interface LanguageInfo {
   /** Are nouns written with a capital letter? Affects answer matching. */
   capitalisesNouns: boolean;
   /**
-   * Table mode's Compare/Multi-language indicator: a Unicode flag (no image
-   * asset — rendered like any other character) and the CSS custom property
-   * carrying its tinted cell-background color. See table.css and
-   * variables.css for the `--lang-<name>-bg` definitions this points at.
-   * `flagEmoji` is the default — `flagOptions[0]` — overridable per-language
+   * Table mode's Compare/Multi-language indicator: a flag image and the CSS
+   * custom property carrying its tinted cell-background color. See table.css
+   * and variables.css for the `--lang-<name>-bg` definitions this points at.
+   * `flagCountry` is the default — `flagOptions[0]` — overridable per-language
    * in Settings (Settings.getLangFlag) to any country the language is a main
-   * language in, e.g. Portuguese as 🇧🇷 instead of 🇵🇹.
+   * language in, e.g. Portuguese as Brazil instead of Portugal.
    */
-  flagEmoji:   string;
+  flagCountry: string;
   colorVar:    string;
-  flagOptions: { emoji: string; label: string }[];
+  flagOptions: { country: string; label: string }[];
+}
+
+/** public/flags/<country>.svg — see the README there. */
+export function flagUrl(country: string): string {
+  return `/flags/${country}.svg`;
 }
 
 // Curated, not exhaustive — a handful of the countries each language is a
 // main language in, biased toward population/recognizability. Spanish alone
 // is an official language in ~20 countries; the point here is a manageable
 // picker, not a complete list.
-const FLAG_OPTIONS: Record<string, { emoji: string; label: string }[]> = {
+const FLAG_OPTIONS: Record<string, { country: string; label: string }[]> = {
   spanish: [
-    { emoji: '🇪🇸', label: 'Spain' },
-    { emoji: '🇲🇽', label: 'Mexico' },
-    { emoji: '🇦🇷', label: 'Argentina' },
-    { emoji: '🇨🇴', label: 'Colombia' },
-    { emoji: '🇵🇪', label: 'Peru' },
-    { emoji: '🇨🇱', label: 'Chile' },
+    { country: 'es', label: 'Spain' },
+    { country: 'mx', label: 'Mexico' },
+    { country: 'ar', label: 'Argentina' },
+    { country: 'co', label: 'Colombia' },
+    { country: 'pe', label: 'Peru' },
+    { country: 'cl', label: 'Chile' },
   ],
   portuguese: [
-    { emoji: '🇵🇹', label: 'Portugal' },
-    { emoji: '🇧🇷', label: 'Brazil' },
-    { emoji: '🇦🇴', label: 'Angola' },
-    { emoji: '🇲🇿', label: 'Mozambique' },
+    { country: 'pt', label: 'Portugal' },
+    { country: 'br', label: 'Brazil' },
+    { country: 'ao', label: 'Angola' },
+    { country: 'mz', label: 'Mozambique' },
   ],
   italian: [
-    { emoji: '🇮🇹', label: 'Italy' },
-    { emoji: '🇨🇭', label: 'Switzerland' },
-    { emoji: '🇸🇲', label: 'San Marino' },
+    { country: 'it', label: 'Italy' },
+    { country: 'ch', label: 'Switzerland' },
+    { country: 'sm', label: 'San Marino' },
   ],
   french: [
-    { emoji: '🇫🇷', label: 'France' },
-    { emoji: '🇨🇦', label: 'Canada' },
-    { emoji: '🇧🇪', label: 'Belgium' },
-    { emoji: '🇨🇭', label: 'Switzerland' },
-    { emoji: '🇸🇳', label: 'Senegal' },
+    { country: 'fr', label: 'France' },
+    { country: 'ca', label: 'Canada' },
+    { country: 'be', label: 'Belgium' },
+    { country: 'ch', label: 'Switzerland' },
+    { country: 'sn', label: 'Senegal' },
   ],
   german: [
-    { emoji: '🇩🇪', label: 'Germany' },
-    { emoji: '🇦🇹', label: 'Austria' },
-    { emoji: '🇨🇭', label: 'Switzerland' },
-    { emoji: '🇱🇮', label: 'Liechtenstein' },
+    { country: 'de', label: 'Germany' },
+    { country: 'at', label: 'Austria' },
+    { country: 'ch', label: 'Switzerland' },
+    { country: 'li', label: 'Liechtenstein' },
   ],
   dutch: [
-    { emoji: '🇳🇱', label: 'Netherlands' },
-    { emoji: '🇧🇪', label: 'Belgium' },
-    { emoji: '🇸🇷', label: 'Suriname' },
-    { emoji: '🇦🇼', label: 'Aruba' },
+    { country: 'nl', label: 'Netherlands' },
+    { country: 'be', label: 'Belgium' },
+    { country: 'sr', label: 'Suriname' },
+    { country: 'aw', label: 'Aruba' },
   ],
 };
 
 export const LANGUAGES: LanguageInfo[] = [
-  { name: 'spanish',    label: 'Spanish',    iso: 'es', hasConjugations: true,  capitalisesNouns: false, colorVar: '--lang-spanish-bg',    flagOptions: FLAG_OPTIONS['spanish'],    flagEmoji: FLAG_OPTIONS['spanish'][0].emoji },
-  { name: 'portuguese', label: 'Portuguese', iso: 'pt', hasConjugations: true,  capitalisesNouns: false, colorVar: '--lang-portuguese-bg', flagOptions: FLAG_OPTIONS['portuguese'], flagEmoji: FLAG_OPTIONS['portuguese'][0].emoji },
-  { name: 'italian',    label: 'Italian',    iso: 'it', hasConjugations: true,  capitalisesNouns: false, colorVar: '--lang-italian-bg',    flagOptions: FLAG_OPTIONS['italian'],    flagEmoji: FLAG_OPTIONS['italian'][0].emoji },
-  { name: 'french',     label: 'French',     iso: 'fr', hasConjugations: true,  capitalisesNouns: false, colorVar: '--lang-french-bg',     flagOptions: FLAG_OPTIONS['french'],     flagEmoji: FLAG_OPTIONS['french'][0].emoji },
-  { name: 'german',     label: 'German',     iso: 'de', hasConjugations: true,  capitalisesNouns: true,  colorVar: '--lang-german-bg',     flagOptions: FLAG_OPTIONS['german'],     flagEmoji: FLAG_OPTIONS['german'][0].emoji },
-  { name: 'dutch',      label: 'Dutch',      iso: 'nl', hasConjugations: true,  capitalisesNouns: false, colorVar: '--lang-dutch-bg',      flagOptions: FLAG_OPTIONS['dutch'],      flagEmoji: FLAG_OPTIONS['dutch'][0].emoji },
+  { name: 'spanish',    label: 'Spanish',    iso: 'es', hasConjugations: true,  capitalisesNouns: false, colorVar: '--lang-spanish-bg',    flagOptions: FLAG_OPTIONS['spanish'],    flagCountry: FLAG_OPTIONS['spanish'][0].country },
+  { name: 'portuguese', label: 'Portuguese', iso: 'pt', hasConjugations: true,  capitalisesNouns: false, colorVar: '--lang-portuguese-bg', flagOptions: FLAG_OPTIONS['portuguese'], flagCountry: FLAG_OPTIONS['portuguese'][0].country },
+  { name: 'italian',    label: 'Italian',    iso: 'it', hasConjugations: true,  capitalisesNouns: false, colorVar: '--lang-italian-bg',    flagOptions: FLAG_OPTIONS['italian'],    flagCountry: FLAG_OPTIONS['italian'][0].country },
+  { name: 'french',     label: 'French',     iso: 'fr', hasConjugations: true,  capitalisesNouns: false, colorVar: '--lang-french-bg',     flagOptions: FLAG_OPTIONS['french'],     flagCountry: FLAG_OPTIONS['french'][0].country },
+  { name: 'german',     label: 'German',     iso: 'de', hasConjugations: true,  capitalisesNouns: true,  colorVar: '--lang-german-bg',     flagOptions: FLAG_OPTIONS['german'],     flagCountry: FLAG_OPTIONS['german'][0].country },
+  { name: 'dutch',      label: 'Dutch',      iso: 'nl', hasConjugations: true,  capitalisesNouns: false, colorVar: '--lang-dutch-bg',      flagOptions: FLAG_OPTIONS['dutch'],      flagCountry: FLAG_OPTIONS['dutch'][0].country },
 ];
 
 /** Language names in display order — the order of the dropdown. */
