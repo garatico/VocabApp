@@ -103,18 +103,15 @@ function snapshotState(): Map<string, InputSnapshot> {
     // Composite rowKey (lang:word), not bare word text — a Compare-mode table
     // can hold the same spelling from two languages.
     const key = `${inp.dataset.lang ?? quizLang}:${word}`;
-    const knownBtn = inp.closest('td')?.querySelector<HTMLButtonElement>('.known-btn');
     const stateClass =
       inp.classList.contains('correct')   ? 'correct'   as const :
       inp.classList.contains('peeked')    ? 'peeked'    as const :
       inp.classList.contains('incorrect') ? 'incorrect' as const : '' as const;
     snap.set(key, {
-      value:           inp.value,
-      disabled:        inp.disabled,
+      value:    inp.value,
+      disabled: inp.disabled,
       stateClass,
-      dir:             (inp.dataset.dir ?? 'target-en') as 'target-en' | 'en-target',
-      knownBtnVisible: knownBtn ? !knownBtn.hidden : false,
-      knownBtnActive:  knownBtn?.classList.contains('known-btn--active') ?? false,
+      dir:      (inp.dataset.dir ?? 'target-en') as 'target-en' | 'en-target',
     });
   });
   return snap;
@@ -326,6 +323,7 @@ function recordMastery(): void {
 
   getStopwatch().stop();
   const seconds = getStopwatch().elapsedSeconds();
+  const langs = [...byLang.keys()];
   for (const [wl, { correct, missed, revealed }] of byLang) {
     if (correct.length > 0) {
       const added = markMastered(wl, correct);
@@ -345,6 +343,9 @@ function recordMastery(): void {
       hints: 0,
       revealed,
       seconds,
+      lang: wl,
+      langs: langs.length > 1 ? langs : undefined,
+      direction: resolvedDirection,
     });
   }
 }
@@ -468,12 +469,10 @@ function giveUpAll(): CheckResult[] {
     if (!snap?.disabled) {
       // Never answered (and possibly never rendered) — record it as revealed.
       sessionState.set(key, {
-        value:           expected,
-        disabled:        true,
-        stateClass:      'incorrect',
-        dir:             directionFor(w),
-        knownBtnVisible: snap?.knownBtnVisible ?? false,
-        knownBtnActive:  snap?.knownBtnActive ?? false,
+        value:      expected,
+        disabled:   true,
+        stateClass: 'incorrect',
+        dir:        directionFor(w),
       });
     }
 

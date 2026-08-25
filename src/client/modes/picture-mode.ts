@@ -19,7 +19,7 @@ import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summ
 import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import { matchesAnswer     } from '../utils/utils.ts';
 import { shuffle           } from '../utils/shuffle.ts';
-import { Settings          } from '../settings.ts';
+import { Settings, applyAutofillAttr } from '../settings.ts';
 import { createStopwatch   } from '../ui/stopwatch.ts';
 import type { Word }        from '../types.ts';
 
@@ -446,6 +446,7 @@ function recordPictureSession(
     hints: 0,
     revealed: missedWords.length,
     seconds: getPictureStopwatch().stopwatch.elapsedSeconds(),
+    lang,
   });
 }
 
@@ -541,7 +542,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
     inp.className   = 'picture-card-input';
     inp.placeholder = '…';
     inp.dataset.word = word.word;
-    inp.setAttribute('autocomplete', 'off');
+    applyAutofillAttr(inp);
     inp.setAttribute('spellcheck', 'false');
 
     inp.addEventListener('input', () => {
@@ -681,7 +682,7 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
   inp.type        = 'text';
   inp.className   = 'picture-card-input fc-input';
   inp.placeholder = '…';
-  inp.setAttribute('autocomplete', 'off');
+  applyAutofillAttr(inp);
   inp.setAttribute('spellcheck',   'false');
 
   inputWrap.appendChild(inp);
@@ -804,6 +805,7 @@ function renderClickMode(
   wordsWithVisuals: WordWithVisual[],
   container: HTMLElement,
   onPlayAgain: () => void,
+  lang: string,
   /** Illustrated words available as decoys. A superset of the quiz set. */
   distractorPool: WordWithVisual[] = wordsWithVisuals,
 ): void {
@@ -997,6 +999,17 @@ function renderClickMode(
 
   function showDone(): void {
     const pct = Math.round((correct / queue.length) * 100);
+    // Unlike Type and Flashcard mode, Click has no per-word reveal — a wrong
+    // pick already counts the word as done, and Give Up here never filled in
+    // the rest the way theirs does. So this is the only place a finished
+    // round is ever reported; without it the stopwatch kept running forever
+    // and nothing was saved to history or mastery.
+    recordPictureSession(
+      lang,
+      queue.filter((_, i) => results[i]?.right).map(w => w.word),
+      queue.filter((_, i) => !results[i]?.right).map(w => w.word),
+      queue.length,
+    );
     container.innerHTML = '';
 
     const done = document.createElement('div');
@@ -1061,9 +1074,16 @@ export function renderPictureMode({
     function playAgain(): void {
       container.innerHTML = '';
       setProgress(0, 0);
-      renderClickMode(wordsWithVisuals, container, playAgain, decoys);
+      // Play Again recurses in place rather than going back through
+      // renderPictureMode, so it has to redo that function's own reset of
+      // these two — otherwise the replay's clock stayed frozen at the first
+      // round's finishing time, and recordPictureSession's guard against
+      // double-recording the same session silently ate the second round too.
+      pictureRecorded = false;
+      getPictureStopwatch().stopwatch.start();
+      renderClickMode(wordsWithVisuals, container, playAgain, lang, decoys);
     }
-    renderClickMode(wordsWithVisuals, container, playAgain, decoys);
+    renderClickMode(wordsWithVisuals, container, playAgain, lang, decoys);
   } else if (mode === 'flashcard') {
     renderFlashcardMode(wordsWithVisuals, container, lang);
   } else {

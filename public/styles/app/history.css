@@ -165,6 +165,16 @@
 .history-session-date { white-space: nowrap; color: var(--text-muted); }
 .history-session-mono { font-family: 'DM Mono', monospace; }
 
+.history-session-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.history-session-direction {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
 /* ── Responsive ── */
 @media (max-width: 767px) {
   .history-wrap { padding: 0.6rem 0.65rem 0.85rem; }

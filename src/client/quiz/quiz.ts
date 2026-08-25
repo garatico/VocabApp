@@ -1,6 +1,5 @@
 import type { Word } from '../types.ts';
 import { normalize, levenshtein } from '../utils/match.ts';
-import { shuffledIndices } from '../utils/shuffle.ts';
 import { readJson, writeJson, remove as removeKey, isRecord } from '../utils/storage.ts';
 
 interface SeenEntry {
@@ -38,7 +37,12 @@ export class Quiz {
       && this.state.order.every(i => i >= 0 && i < this.words.length);
 
     if (!orderValid) {
-      this.state.order = shuffledIndices(this.words.length);
+      // Sequential, not shuffled — `words` already arrives in whatever order
+      // the caller's Order setting picked (frequency, rarest, A-Z, trouble,
+      // or an actual shuffle). Randomizing here on top used to silently
+      // discard that: every setting except Shuffle looked identical on
+      // screen because this always reshuffled anyway.
+      this.state.order = [...this.words.keys()];
       this.state.pos   = 0;
       this.state.seen  = {};
       this.save();
@@ -123,7 +127,7 @@ export class Quiz {
 
   reset(): void {
     removeKey(this.storageKey);
-    this.state = { order: shuffledIndices(this.words.length), pos: 0, seen: {} };
+    this.state = { order: [...this.words.keys()], pos: 0, seen: {} };
     this.save();
   }
 }

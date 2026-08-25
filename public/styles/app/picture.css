@@ -66,6 +66,16 @@
   align-items: center;
   gap: 0.85rem;
   position: relative; /* containing block for the tooltip */
+  /* A bare 1fr grid track is really minmax(auto, 1fr) — the track won't
+     shrink past this item's min-content size. The photo inside is an <img>
+     with max-width: 100%, which can't resolve to a pixel value while the
+     track itself is still being sized, so the browser fell back to the
+     photo's natural pixel dimensions as the floor. Whichever card's photo
+     happened to be biggest set that column's width; the rest of the row
+     divided up whatever was left. min-width: 0 drops that floor so every
+     column actually gets its equal 1fr share, and every photo — regardless
+     of its source resolution — ends up the same size in its card. */
+  min-width: 0;
   transition: border-color var(--transition-fast),
               background   var(--transition-fast);
 }
@@ -100,11 +110,15 @@
   -webkit-user-select: none;
 }
 
+/* width/height: 100%, not auto capped by max-width/max-height — object-fit
+   only has something to resolve once the box has a definite size. Auto
+   sizing left every image at its own source resolution, so a small photo
+   sat tiny in the same square a big one filled edge to edge. Superseded in
+   practice by .vc-visual img below (every card goes through the visual
+   cycler), kept in sync so nothing regresses if that ever changes. */
 .picture-card-img img {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
+  width: 100%;
+  height: 100%;
   display: block;
   object-fit: contain;
 }
@@ -193,9 +207,13 @@
   height: 100%;
 }
 
+/* width/height: 100% — see .picture-card-img img above. This is the rule
+   that actually reaches the screen: every card goes through the visual
+   cycler, and .vc-visual img is the last matching declaration in the
+   cascade at equal specificity. */
 .vc-visual img {
-  max-width: 100%;
-  max-height: 100%;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 
@@ -374,9 +392,12 @@
   font-size: 6rem;
 }
 
+/* width/height: 100% — see .picture-card-img img above. Last in the cascade
+   at equal specificity, so this is the one that actually wins in Flashcard
+   mode over .vc-visual img. */
 .fc-card img {
-  max-width: 100%;
-  max-height: 100%;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 

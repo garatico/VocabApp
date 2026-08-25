@@ -26,9 +26,7 @@ import {
   describeSmart, DEFAULT_SMART_RULE,
 } from './smart-lists.ts';
 import { buildLangBadge } from '../../ui/lang-badge.ts';
-
-/** The languages the pane offers. Ordinary lists exist per language. */
-const SIDEBAR_LANGS = ['spanish', 'portuguese', 'italian', 'french'] as const;
+import { LANGUAGES } from '../../data/languages.ts';
 
 export interface SidebarUI {
   /** The whole left pane, ready to append. */
@@ -50,10 +48,10 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   langLabel.textContent = 'Language';
   const langSel = document.createElement('select');
   langSel.className = 'ml-lang-select';
-  SIDEBAR_LANGS.forEach(l => {
+  LANGUAGES.forEach(({ name, label }) => {
     const opt = document.createElement('option');
-    opt.value = l; opt.textContent = l.charAt(0).toUpperCase() + l.slice(1);
-    opt.selected = l === ctx.lang; langSel.appendChild(opt);
+    opt.value = name; opt.textContent = label;
+    opt.selected = name === ctx.lang; langSel.appendChild(opt);
   });
   langSel.addEventListener('change', () => {
     ctx.lang = langSel.value; migrateMastery(ctx.lang);

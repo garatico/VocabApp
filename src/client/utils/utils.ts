@@ -209,6 +209,21 @@ export function getGlosses(entry: Word): string[] {
 }
 
 /**
+ * The full, ordered gloss list buildGlossDisplay draws from before slicing to
+ * maxGlosses — verbs narrow to "to X" forms when any exist, everything else
+ * keeps every sense. Its own function so extraMatchedGloss can search the
+ * same list buildGlossDisplay would, and the two can never drift apart.
+ */
+function chosenGlosses(entry: Word): string[] {
+  const glosses = getGlosses(entry);
+  if (entry.pos === 'verb') {
+    const toForms = glosses.filter(g => g.toLowerCase().startsWith('to '));
+    if (toForms.length > 0) return toForms;
+  }
+  return glosses;
+}
+
+/**
  * Build the human-readable gloss string for a word entry.
  * - Verbs: filter to "to X" forms and join with " / "  (e.g. "to speak / to talk")
  * - Everything else: join all glosses with " / "        (e.g. "of / from")
@@ -219,12 +234,29 @@ export function getGlosses(entry: Word): string[] {
  * gloss-count settings) pass it; everyone else gets every sense, unchanged.
  */
 export function buildGlossDisplay(entry: Word, maxGlosses = Infinity): string {
-  const glosses = getGlosses(entry);
-  if (glosses.length === 0) return entry.translation ?? entry.word ?? '';
-  let chosen = glosses;
-  if (entry.pos === 'verb') {
-    const toForms = glosses.filter(g => g.toLowerCase().startsWith('to '));
-    if (toForms.length > 0) chosen = toForms;
-  }
+  const chosen = chosenGlosses(entry);
+  if (chosen.length === 0) return entry.translation ?? entry.word ?? '';
   return chosen.slice(0, maxGlosses).join(' / ');
+}
+
+/**
+ * If `input` matches a sense buildGlossDisplay(entry, maxGlosses) would have
+ * cut off — past the visible window, but still one of the word's accepted
+ * senses — that sense's text; otherwise null (no match at all, or the match
+ * was already within the shown set).
+ *
+ * table-mode.ts's "Show the sense you typed" setting uses this so an answer
+ * like "prove" for *probar* — correct, but its 3rd sense when only 2 show —
+ * gets added to the revealed answer instead of the learner having no idea
+ * why an answer that isn't on screen anywhere was accepted.
+ */
+export function extraMatchedGloss(
+  input: string, entry: Word, maxGlosses: number, mode: AnswerMatchMode = 'fuzzy',
+): string | null {
+  const norm    = mode === 'strict' ? normaliseStrict : normalise;
+  const attempt = norm(input);
+  if (!attempt) return null;
+  const chosen = chosenGlosses(entry);
+  const idx    = chosen.findIndex(g => glossToTokens(g, norm).includes(attempt));
+  return idx >= maxGlosses ? chosen[idx] : null;
 }

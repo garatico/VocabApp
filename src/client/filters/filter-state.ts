@@ -26,6 +26,7 @@
 
 import { currentScope, FILTER_SCOPES, type FilterScope } from './filter-scope.ts';
 import { readJson, writeJson, isRecord } from '../utils/storage.ts';
+import { Settings } from '../settings.ts';
 
 /** Filters that have shareable state. Conjugation's boxes are single-mode. */
 export type FilterId = 'list' | 'class' | 'domain';
@@ -54,8 +55,14 @@ function writeChainMap(id: FilterId, map: ChainMap): void {
  *
  * Defaults to true. Every mode shared one setting before this existed, so an
  * absent flag has to mean chained or upgrading would silently fork all five.
+ *
+ * Short-circuits to false — every mode on its own bucket — when the app-level
+ * Settings → Filters "Filter linking" toggle is off, regardless of any
+ * per-mode flag stored here. Those flags are left untouched, not cleared, so
+ * turning linking back on restores exactly what was linked before.
  */
 export function isChained(id: FilterId, scope: FilterScope = currentScope()): boolean {
+  if (!Settings.getFilterLinkingEnabled()) return false;
   return readChainMap(id)[scope] !== false;
 }
 

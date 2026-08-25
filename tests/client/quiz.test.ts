@@ -27,9 +27,12 @@ const WORDS: Word[] = [
 beforeEach(() => store.clear());
 
 describe('Quiz initialization', () => {
-  it('creates a shuffled order covering every word exactly once', () => {
+  it('creates a sequential order covering every word exactly once', () => {
+    // Sequential, not shuffled: the caller (start-handler.ts) already put
+    // `words` in whatever order its Order setting picked, shuffle included —
+    // reshuffling here would silently discard every other option.
     const q = new Quiz({ words: WORDS, storageKey: 'k' });
-    expect([...q.state.order].sort()).toEqual([0, 1, 2]);
+    expect(q.state.order).toEqual([0, 1, 2]);
     expect(q.state.pos).toBe(0);
     expect(q.state.seen).toEqual({});
   });

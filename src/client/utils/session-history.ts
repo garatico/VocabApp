@@ -17,8 +17,18 @@
 
 import { shuffleInPlace } from './shuffle.ts';
 import { readJson, writeJson, remove as removeKey, isNumberRecord } from './storage.ts';
+import { Settings } from '../settings.ts';
 
 export type QuizMode = 'recall' | 'table' | 'picture' | 'single' | 'conjugation';
+
+/**
+ * Table mode's own direction — see table-mode.ts's TableDirection. The other
+ * modes each have exactly one fixed direction (Recall and Picture always
+ * prompt in English and take the target-language answer; Single Word always
+ * shows the target word and takes the English translation), so it's implied
+ * by `mode` and not worth a field of its own here.
+ */
+export type SessionDirection = 'target-en' | 'en-target' | 'mixed';
 
 export interface SessionRecord {
   at:         string;    // ISO timestamp
@@ -30,6 +40,20 @@ export interface SessionRecord {
   hints:      number;
   revealed:   number;
   seconds:    number;    // elapsed, not remaining
+  /** The language this record is filed under — same as the bucket it's stored
+   *  in, kept alongside it so a record is self-describing on its own. */
+  lang:       string;
+  /**
+   * Every language actually touched. A Compare-mode session mixing two or
+   * more languages writes one record into each language's own bucket (so
+   * mastery/misses land in the right place), which otherwise leaves each of
+   * those records looking single-language — this is what says "this session
+   * also involved French" from the Spanish record alone. Omitted (same as
+   * [lang]) for an ordinary single-language session.
+   */
+  langs?:     string[];
+  /** Table mode only — see SessionDirection. */
+  direction?: SessionDirection;
 }
 
 const SESSION_PREFIX = 'vq_history_';
@@ -56,9 +80,14 @@ export function getSessions(lang: string, mode?: QuizMode): SessionRecord[] {
  */
 export function saveSession(lang: string, entry: SessionRecord): SessionRecord[] {
   const prior = getSessions(lang);
-  const next  = [...prior, entry].slice(-HISTORY_KEEP);
-  // A dropped write (quota) is fine — history is a nicety, never fail a session.
-  writeJson(SESSION_PREFIX + lang.toLowerCase(), next);
+  // Callers (recordMastery, endSession, etc.) still return/compare against
+  // `prior` regardless of whether this write happens, so a session started
+  // before the setting was flipped off still reports its own results.
+  if (Settings.getHistoryEnabled()) {
+    const next = [...prior, entry].slice(-HISTORY_KEEP);
+    // A dropped write (quota) is fine — history is a nicety, never fail a session.
+    writeJson(SESSION_PREFIX + lang.toLowerCase(), next);
+  }
   return prior.filter(s => s.mode === entry.mode);
 }
 
@@ -126,13 +155,14 @@ export function clearHistory(lang: string): void {
 
 // ── Word ordering ─────────────────────────────────────────────────────────────
 
-export type WordOrder = 'rank' | 'alpha' | 'shuffle' | 'trouble';
+export type WordOrder = 'rank' | 'rank-desc' | 'alpha' | 'shuffle' | 'trouble';
 
 export const WORD_ORDER_LABELS: [WordOrder, string][] = [
-  ['rank',    'Most Frequent First'],
-  ['alpha',   'A → Z'],
-  ['shuffle', 'Shuffle'],
-  ['trouble', 'Words I Keep Missing First'],
+  ['rank',      'Most Frequent First'],
+  ['rank-desc', 'Least Frequent First'],
+  ['alpha',     'A → Z'],
+  ['shuffle',   'Shuffle'],
+  ['trouble',   'Words I Keep Missing First'],
 ];
 
 /**
@@ -173,6 +203,11 @@ export function orderWords<T extends { word: string; rank?: number | null }>(
         return d !== 0 ? d : (a.rank ?? 9999) - (b.rank ?? 9999);
       });
     }
+    case 'rank-desc':
+      // Rarest first. An unranked word (null) still sorts last, same as
+      // plain 'rank' does — -1 is smaller than every real rank, so it's
+      // always the least "rare-first-worthy" entry in a descending sort.
+      return out.sort((a, b) => (b.rank ?? -1) - (a.rank ?? -1));
     case 'rank':
     default:
       return out.sort((a, b) => (a.rank ?? 9999) - (b.rank ?? 9999));

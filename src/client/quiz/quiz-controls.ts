@@ -1,9 +1,8 @@
 import type { Word } from '../types.ts';
 import { saveSession, recordOutcome } from '../utils/session-history.ts';
 import { speak }     from '../utils/tts.ts';
-import { matchesAnswer, getGlosses } from '../utils/utils.ts';
-import { shuffle }   from '../utils/shuffle.ts';
-import { Settings }  from '../settings.ts';
+import { matchesAnswer, getGlosses, getPosLabel } from '../utils/utils.ts';
+import { Settings, applyAutofillAttr } from '../settings.ts';
 import type { Quiz } from './quiz.ts';
 import { mustGet }   from '../utils/dom.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
@@ -14,9 +13,15 @@ let quizInstance: Quiz | null       = null;
 let getLangCode:  (() => string) | null = null;
 
 // Session state — rebuilt each time the user hits Start Quiz in single mode
-let deck:         Word[]      = [];   // shuffled word list for this session
+let deck:         Word[]      = [];   // in whatever order Quiz.words arrived in
 let mastered:     Set<string> = new Set();
-let currentIndex  = 0;
+/** Every word whose card is done — correct, or (Flashcard style only) graded
+ *  incorrect. mastered is a subset. Type Answer style never settles a card
+ *  wrong; it just sits there until typed correctly or skipped past. */
+let settled:      Set<string> = new Set();
+let pageIndex     = 0;
+let cardsPerScreen = 1;
+let cardStyle: 'type' | 'flashcard' = 'type';
 let sessionActive = false;
 // Lazy — avoids touching `document` at module scope, so this file stays safe
 // to import from a plain node test environment (see table-controls.ts's own
@@ -38,20 +43,25 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
   getLangCode = getLang;
 
   // DOM refs (mustGet throws immediately if the element is absent)
-  const wordEl      = mustGet<HTMLElement>('word');
-  const answerEl    = mustGet<HTMLInputElement>('answer');
-  const feedbackEl  = mustGet<HTMLElement>('feedback');
+  const quizWrap    = mustGet<HTMLElement>('quizWrap');
   const barEl       = mustGet<HTMLElement>('bar');
   const statsEl     = mustGet<HTMLElement>('stats');
   const statsTopEl  = document.getElementById('statsTop')     as HTMLElement | null;
-  const ttsBtn      = mustGet<HTMLButtonElement>('ttsBtn');
-  const btnCorrect  = mustGet<HTMLButtonElement>('btnCorrect');
-  const revealBtn   = document.getElementById('quizGiveUp')   as HTMLButtonElement | null;
   const endBtn      = mustGet<HTMLButtonElement>('resetBtn');
   const prevBtn     = mustGet<HTMLButtonElement>('quizPrev');
   const nextBtn     = mustGet<HTMLButtonElement>('quizNext');
   const counterEl   = mustGet<HTMLElement>('quizCounter');
-  const wordMetaEl  = document.getElementById('wordMeta')     as HTMLElement | null;
+
+  // ── Paging ───────────────────────────────────────────────────────────────────
+
+  function pageCount(): number {
+    return Math.max(1, Math.ceil(deck.length / cardsPerScreen));
+  }
+
+  function pageWords(): Word[] {
+    const start = pageIndex * cardsPerScreen;
+    return deck.slice(start, start + cardsPerScreen);
+  }
 
   // ── Stats ──────────────────────────────────────────────────────────────────
 
@@ -65,62 +75,259 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
     if (statsTopEl) statsTopEl.textContent = text;
   }
 
-  function updateCounter(): void {
+  function updateNav(): void {
     if (deck.length === 0) { counterEl.textContent = ''; return; }
-    const word      = deck[currentIndex];
-    const isMastered = mastered.has(word.word);
-    counterEl.textContent = `${currentIndex + 1} / ${deck.length}${isMastered ? ' ✓' : ''}`;
-    counterEl.style.color = isMastered ? 'var(--correct, green)' : '';
+    const start = pageIndex * cardsPerScreen + 1;
+    const end   = Math.min(start + cardsPerScreen - 1, deck.length);
+    const range = start === end ? `${start}` : `${start}–${end}`;
+    counterEl.textContent = `${range} / ${deck.length}`;
+    prevBtn.disabled = !sessionActive || pageIndex === 0;
+    nextBtn.disabled = !sessionActive || pageIndex >= pageCount() - 1;
   }
 
-  // ── Word display ────────────────────────────────────────────────────────────
+  // ── Card building ────────────────────────────────────────────────────────────
 
-  function showCurrentWord(): void {
-    if (deck.length === 0) return;
-    const word = deck[currentIndex];
-    wordEl.textContent     = word.word;
-    answerEl.value         = '';
-    answerEl.disabled      = false;
-    feedbackEl.innerHTML   = '';
-    feedbackEl.className   = 'feedback';
-
-    // Subtle metadata line: difficulty band + first domain
-    if (wordMetaEl) {
-      const parts: string[] = [];
-      if (word.frequency?.band) parts.push(word.frequency.band);
+  function metaText(word: Word): string {
+    const parts: string[] = [];
+    if (Settings.getSingleShowPos() && word.pos) parts.push(getPosLabel(word));
+    if (Settings.getSingleShowBand() && word.frequency?.band) parts.push(word.frequency.band);
+    if (Settings.getSingleShowDomain()) {
       const domain = word.domains?.[0];
       if (domain && domain !== 'general') parts.push(domain.replace(/_/g, ' '));
-      wordMetaEl.textContent = parts.join(' · ');
     }
+    return parts.join(' · ');
+  }
+
+  /** Word settled (mastered.add for correct; settled.add either way), then
+   *  check whether the page — and the whole deck — is done. */
+  function settleWord(word: Word, correct: boolean): void {
+    if (correct) mastered.add(word.word);
+    settled.add(word.word);
+    updateStats();
+    updateNav();
+
+    if (settled.size === deck.length) {
+      setTimeout(() => { if (sessionActive) endSession(); }, 500);
+      return;
+    }
+    if (pageWords().every(w => settled.has(w.word)) && pageIndex < pageCount() - 1) {
+      setTimeout(() => { if (sessionActive) goToPage(pageIndex + 1); }, 500);
+    }
+  }
+
+  function buildTypeCard(word: Word): HTMLElement {
+    const card = document.createElement('div');
+    card.className = 'quiz-card';
+    card.dataset.word = word.word;
+
+    const head = document.createElement('div');
+    head.className = 'quiz-card-head';
+    const wordEl = document.createElement('div');
+    wordEl.className = 'word';
+    wordEl.textContent = word.word;
+    const ttsBtn = document.createElement('button');
+    ttsBtn.type = 'button';
+    ttsBtn.className = 'quiz-card-tts';
+    ttsBtn.setAttribute('aria-label', 'Listen to pronunciation');
+    ttsBtn.textContent = '\u{1F50A}';
+    ttsBtn.addEventListener('click', () => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      void speak(word.word, getLangCode!());
+    });
+    head.append(wordEl, ttsBtn);
+
+    const metaEl = document.createElement('div');
+    metaEl.className = 'word-meta';
+    metaEl.textContent = metaText(word);
+
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.className = 'quiz-card-input';
+    inp.placeholder = 'Type the translation…';
+    applyAutofillAttr(inp);
+
+    const feedbackEl = document.createElement('div');
+    feedbackEl.className = 'quiz-card-feedback';
+
+    const actions = document.createElement('div');
+    actions.className = 'quiz-card-actions';
+    const correctBtn = document.createElement('button');
+    correctBtn.type = 'button';
+    correctBtn.textContent = 'Mark Correct';
+    const revealBtn = document.createElement('button');
+    revealBtn.type = 'button';
+    revealBtn.textContent = 'Reveal Answer';
+    actions.append(correctBtn, revealBtn);
+
+    function finish(): void {
+      inp.disabled = true;
+      correctBtn.disabled = true;
+      card.classList.add('correct');
+      settleWord(word, true);
+    }
+
+    // The target word is shown and the learner types the English, so this is
+    // the `target-en` direction — same matcher, same Flexible/Strict setting
+    // as Table and Picture mode.
+    inp.addEventListener('input', () => {
+      if (!sessionActive || settled.has(word.word)) return;
+      if (!matchesAnswer(inp.value, word, 'target-en', Settings.getMatchMode())) return;
+      feedbackEl.textContent = '✓ Correct!';
+      feedbackEl.className   = 'quiz-card-feedback ok';
+      finish();
+    });
+
+    inp.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (!sessionActive || inp.value !== '') return;
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); goToPage(pageIndex - 1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); goToPage(pageIndex + 1); }
+    });
+
+    correctBtn.addEventListener('click', () => {
+      if (!sessionActive || settled.has(word.word)) return;
+      feedbackEl.textContent = '';
+      finish();
+    });
+
+    revealBtn.addEventListener('click', () => {
+      if (!sessionActive) return;
+      const glosses = getGlosses(word);
+      feedbackEl.textContent = `Answer: ${glosses.length > 0 ? glosses.join(' / ') : '—'}`;
+      feedbackEl.className   = 'quiz-card-feedback bad';
+    });
+
+    // Paging back to an already-correct card rebuilds it from scratch, same
+    // as every other card — what the learner actually typed lived on the old
+    // input element and is gone, but showing the answer beats a blank,
+    // disabled box that looks like the card forgot it was ever answered.
+    if (mastered.has(word.word)) {
+      const glosses = getGlosses(word);
+      inp.value = glosses.length > 0 ? glosses.join(' / ') : word.translation ?? '';
+      inp.disabled = true;
+      correctBtn.disabled = true;
+      feedbackEl.textContent = '✓ Correct!';
+      feedbackEl.className   = 'quiz-card-feedback ok';
+    }
+
+    card.append(head, metaEl, inp, feedbackEl, actions);
+    return card;
+  }
+
+  function buildFlashcard(word: Word): HTMLElement {
+    const card = document.createElement('div');
+    card.className = 'quiz-card';
+    card.dataset.word = word.word;
+
+    const head = document.createElement('div');
+    head.className = 'quiz-card-head';
+    const wordEl = document.createElement('div');
+    wordEl.className = 'word';
+    wordEl.textContent = word.word;
+    const ttsBtn = document.createElement('button');
+    ttsBtn.type = 'button';
+    ttsBtn.className = 'quiz-card-tts';
+    ttsBtn.setAttribute('aria-label', 'Listen to pronunciation');
+    ttsBtn.textContent = '\u{1F50A}';
+    ttsBtn.addEventListener('click', () => {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      void speak(word.word, getLangCode!());
+    });
+    head.append(wordEl, ttsBtn);
+
+    const metaEl = document.createElement('div');
+    metaEl.className = 'word-meta';
+    metaEl.textContent = metaText(word);
+
+    const flipBtn = document.createElement('button');
+    flipBtn.type = 'button';
+    flipBtn.className = 'quiz-card-flip-btn';
+    flipBtn.textContent = 'Show Answer';
+
+    const answerEl = document.createElement('div');
+    answerEl.className = 'quiz-card-answer';
+    answerEl.hidden = true;
+    const glosses = getGlosses(word);
+    answerEl.textContent = glosses.length > 0 ? glosses.join(' / ') : '—';
+
+    const gradeRow = document.createElement('div');
+    gradeRow.className = 'quiz-card-grade-row';
+    gradeRow.hidden = true;
+    const correctBtn = document.createElement('button');
+    correctBtn.type = 'button';
+    correctBtn.className = 'quiz-card-grade-btn quiz-card-grade-btn--correct';
+    correctBtn.textContent = '✓ Correct';
+    const incorrectBtn = document.createElement('button');
+    incorrectBtn.type = 'button';
+    incorrectBtn.className = 'quiz-card-grade-btn quiz-card-grade-btn--incorrect';
+    incorrectBtn.textContent = '✗ Incorrect';
+    gradeRow.append(correctBtn, incorrectBtn);
+
+    flipBtn.addEventListener('click', () => {
+      if (!sessionActive) return;
+      flipBtn.hidden   = true;
+      answerEl.hidden  = false;
+      gradeRow.hidden  = false;
+    });
+
+    function grade(correct: boolean): void {
+      if (!sessionActive || settled.has(word.word)) return;
+      correctBtn.disabled   = true;
+      incorrectBtn.disabled = true;
+      card.classList.add(correct ? 'correct' : 'incorrect');
+      settleWord(word, correct);
+    }
+    correctBtn.addEventListener('click', () => grade(true));
+    incorrectBtn.addEventListener('click', () => grade(false));
+
+    // Paging back to an already-graded card rebuilds it from scratch, same as
+    // every other card — restore the flipped, graded state rather than
+    // showing the front again as if it had never been answered.
+    if (settled.has(word.word)) {
+      flipBtn.hidden = true;
+      answerEl.hidden = false;
+      gradeRow.hidden = false;
+      correctBtn.disabled   = true;
+      incorrectBtn.disabled = true;
+    }
+
+    card.append(head, metaEl, flipBtn, answerEl, gradeRow);
+    return card;
+  }
+
+  // ── Page rendering ───────────────────────────────────────────────────────────
+
+  function renderPage(): void {
+    quizWrap.innerHTML = '';
+    quizWrap.classList.toggle('quiz-cards-grid--multi', cardsPerScreen > 1);
     ['quizSummaryTop', 'quizSummaryBottom'].forEach(id => {
       const el = document.getElementById(id);
       if (el) { el.style.display = 'none'; el.innerHTML = ''; }
     });
-    updateCounter();
+
+    for (const word of pageWords()) {
+      const card = cardStyle === 'flashcard' ? buildFlashcard(word) : buildTypeCard(word);
+      if (mastered.has(word.word)) card.classList.add('correct');
+      else if (settled.has(word.word)) card.classList.add('incorrect');
+      quizWrap.appendChild(card);
+    }
+
+    updateNav();
     updateStats();
-    answerEl.focus();
+    quizWrap.querySelector<HTMLInputElement>('.quiz-card-input:not(:disabled)')?.focus();
   }
 
-  // ── Navigation ──────────────────────────────────────────────────────────────
-
-  function goTo(index: number): void {
-    currentIndex = (index + deck.length) % deck.length;
-    showCurrentWord();
+  function goToPage(index: number): void {
+    if (deck.length === 0) return;
+    pageIndex = Math.min(Math.max(0, index), pageCount() - 1);
+    renderPage();
   }
 
   // ── Session lifecycle ───────────────────────────────────────────────────────
 
-  function setControlsDisabled(disabled: boolean): void {
-    answerEl.disabled  = disabled;
-    btnCorrect.disabled = disabled;
-    if (revealBtn) revealBtn.disabled = disabled;
-    prevBtn.disabled   = disabled;
-    nextBtn.disabled   = disabled;
-  }
-
   function endSession(): void {
     sessionActive = false;
-    setControlsDisabled(true);
+    prevBtn.disabled = true;
+    nextBtn.disabled = true;
 
     const total  = deck.length;
     const done   = mastered.size;
@@ -146,18 +353,18 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
         hints: 0,
         revealed: 0,
         seconds: getStopwatch().elapsedSeconds(),
+        lang,
       });
     }
     const missed = total - done;
     const pct    = total ? Math.round((done / total) * 100) : 0;
 
-    wordEl.textContent     = done === total ? 'All mastered! 🎉' : 'Session ended';
-    if (wordMetaEl) wordMetaEl.textContent = '';
-    answerEl.value         = '';
-    counterEl.textContent  = '';
-
-    feedbackEl.textContent = '';
-    feedbackEl.className   = 'feedback';
+    quizWrap.innerHTML = '';
+    const endMsg = document.createElement('div');
+    endMsg.className = 'word';
+    endMsg.textContent = done === total ? 'All mastered! 🎉' : 'Session ended';
+    quizWrap.appendChild(endMsg);
+    counterEl.textContent = '';
 
     const summaryHTML =
       `<span class="summary-correct">✓ ${done} mastered</span>` +
@@ -173,11 +380,11 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
     statsEl.textContent = summary;
     if (statsTopEl) statsTopEl.textContent = summary;
 
-    // List of unmastered words shown in the feedback area
-    feedbackEl.innerHTML = '';
-    feedbackEl.className = 'feedback';
+    // List of unmastered words shown under the summary
     const unmastered = deck.filter(w => !mastered.has(w.word));
     if (unmastered.length > 0) {
+      const feedbackEl = document.createElement('div');
+      feedbackEl.className = 'quiz-card-feedback';
       const label = document.createElement('span');
       label.className   = 'recall-missed-label';
       label.textContent = 'Not yet mastered: ';
@@ -189,6 +396,7 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
         feedbackEl.appendChild(chip);
         if (i < unmastered.length - 1) feedbackEl.appendChild(document.createTextNode(' '));
       });
+      quizWrap.appendChild(feedbackEl);
     }
 
     endBtn.textContent = 'Play Again';
@@ -196,89 +404,28 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
   }
 
   function startSession(words: Word[]): void {
-    deck          = shuffle(words);
-    mastered      = new Set();
+    // Not reshuffled — start-handler.ts already put `words` in whatever order
+    // the Order setting picked (frequency, rarest, A-Z, trouble, or an actual
+    // shuffle). Reshuffling here used to silently override every option but
+    // Shuffle itself, which is why this always looked the same regardless.
+    deck           = [...words];
+    mastered       = new Set();
+    settled        = new Set();
+    cardsPerScreen = Settings.getSingleCardsPerScreen();
+    cardStyle      = Settings.getSingleCardStyle();
     getStopwatch().start();
-    sessionSaved  = false;
-    currentIndex  = 0;
-    sessionActive = true;
+    sessionSaved   = false;
+    pageIndex      = 0;
+    sessionActive  = true;
     endBtn.textContent = 'End Quiz';
     endBtn.disabled    = false;
-    setControlsDisabled(false);
-    showCurrentWord();
+    renderPage();
   }
 
-  // ── Input: auto-check on each keystroke ────────────────────────────────────
+  // ── Buttons: Prev / Next page ───────────────────────────────────────────────
 
-  answerEl.addEventListener('input', () => {
-    if (!sessionActive || deck.length === 0) return;
-    const word = deck[currentIndex];
-    // The target word is shown and the learner types the English, so this is
-    // the `target-en` direction — same matcher, same Flexible/Strict setting as
-    // Table and Picture mode.
-    if (!matchesAnswer(answerEl.value, word, 'target-en', Settings.getMatchMode())) return;
-
-    mastered.add(word.word);
-    feedbackEl.textContent = '✓ Correct!';
-    feedbackEl.className   = 'feedback ok';
-    answerEl.disabled      = true;
-    updateCounter();
-    updateStats();
-
-    // Auto-advance to next word after a short pause
-    setTimeout(() => {
-      if (!sessionActive) return;
-      if (mastered.size === deck.length) { endSession(); return; }
-      goTo(currentIndex + 1);
-    }, 500);
-  });
-
-  // ── Button: Mark Correct ────────────────────────────────────────────────────
-
-  btnCorrect.addEventListener('click', () => {
-    if (!sessionActive || deck.length === 0) return;
-    const word = deck[currentIndex];
-    mastered.add(word.word);
-    updateCounter();
-    updateStats();
-    if (mastered.size === deck.length) { endSession(); return; }
-    goTo(currentIndex + 1);
-  });
-
-  // ── Button: Reveal Answer ───────────────────────────────────────────────────
-
-  revealBtn?.addEventListener('click', () => {
-    if (!sessionActive || deck.length === 0) return;
-    const word    = deck[currentIndex];
-    const glosses = getGlosses(word);
-    const answer  = glosses.length > 0 ? glosses.join(' / ') : '—';
-    feedbackEl.textContent = `Answer: ${answer}`;
-    feedbackEl.className   = 'feedback bad';
-  });
-
-  // ── Buttons: Prev / Next ────────────────────────────────────────────────────
-
-  prevBtn.addEventListener('click', () => {
-    if (deck.length === 0) return;
-    goTo(currentIndex - 1);
-  });
-
-  nextBtn.addEventListener('click', () => {
-    if (deck.length === 0) return;
-    goTo(currentIndex + 1);
-  });
-
-  // Keyboard: left/right arrow keys for navigation when input is empty
-  answerEl.addEventListener('keydown', (e: KeyboardEvent) => {
-    if (!sessionActive || deck.length === 0) return;
-    if (e.key === 'ArrowLeft' && answerEl.value === '') {
-      e.preventDefault();
-      goTo(currentIndex - 1);
-    } else if (e.key === 'ArrowRight' && answerEl.value === '') {
-      e.preventDefault();
-      goTo(currentIndex + 1);
-    }
-  });
+  prevBtn.addEventListener('click', () => goToPage(pageIndex - 1));
+  nextBtn.addEventListener('click', () => goToPage(pageIndex + 1));
 
   // ── Button: End Quiz / Play Again ───────────────────────────────────────────
 
@@ -288,14 +435,6 @@ export function bindQuizControls({ getLang }: { getLang: () => string }): { show
     } else if (deck.length > 0) {
       startSession(deck);   // Play Again with same words
     }
-  });
-
-  // ── Button: TTS ─────────────────────────────────────────────────────────────
-
-  ttsBtn.addEventListener('click', () => {
-    if (deck.length === 0) return;
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    void speak(deck[currentIndex].word, getLangCode!()); // getLangCode is set by bindQuizControls before any click can fire
   });
 
   // ── Entry point (called by start-handler when single mode starts) ────────────

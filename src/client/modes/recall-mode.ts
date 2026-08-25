@@ -3,7 +3,7 @@ import { attachTooltips } from '../utils/word-tooltip.ts';
 import type { Word }     from '../types.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker }            from '../utils/list-picker.ts';
-import { getFontScaleForRecall, Settings } from '../settings.ts';
+import { getFontScaleForRecall, Settings, applyAutofillAttr } from '../settings.ts';
 import { languageInfo, flagUrl } from '../data/languages.ts';
 import {
   saveSession, getSessions, wordsPerMinute as wpm,
@@ -164,7 +164,7 @@ export function renderRecallMode({
   inp.type         = 'text';
   inp.placeholder  = 'Type a ' + languageInfo(primaryLang).label + ' word…';
   inp.className    = 'recall-input';
-  inp.autocomplete = 'off';
+  applyAutofillAttr(inp);
 
   const feedback = document.createElement('span');
   feedback.className = 'recall-feedback';
@@ -627,6 +627,7 @@ export function renderRecallMode({
       if (revealed.has(k)) bucketFor(wl).revealedWords.push(w.word);
     });
 
+    const langs = [...byLang.keys()];
     let prior:         SessionRecord[]      = [];
     let primaryRecord: SessionRecord | null = null;
     for (const [wl, b] of byLang) {
@@ -639,6 +640,8 @@ export function renderRecallMode({
         hints: hintsUsed,
         revealed: b.revealedWords.length,
         seconds,
+        lang: wl,
+        langs: langs.length > 1 ? langs : undefined,
       };
       const bucketPrior = saveSession(wl, record);
       recordOutcome(wl, b.missed, b.correct);

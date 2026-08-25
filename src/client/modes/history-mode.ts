@@ -27,6 +27,8 @@ import {
 import type { FilterScope } from '../filters/filter-scope.ts';
 import { readString } from '../utils/storage.ts';
 import { percent } from '../ui/quiz-summary.ts';
+import { buildLangBadge } from '../ui/lang-badge.ts';
+import type { SessionDirection } from '../utils/session-history.ts';
 
 const MODE_LABELS: Record<QuizMode, string> = {
   table:       'Table',
@@ -36,6 +38,13 @@ const MODE_LABELS: Record<QuizMode, string> = {
   conjugation: 'Conjugation',
 };
 const MODE_ORDER: QuizMode[] = ['table', 'recall', 'picture', 'single', 'conjugation'];
+
+// Table mode's own direction toggle labels — see #directionToggle in index.html.
+const DIRECTION_LABELS: Record<SessionDirection, string> = {
+  'target-en': 'Word → Meaning',
+  'en-target': 'Meaning → Word',
+  mixed:       'Mixed',
+};
 
 /** The list "Study these" collects trouble words into — see studyTroubleWords(). */
 const TROUBLE_LIST_NAME = 'Words I Keep Missing';
@@ -238,7 +247,7 @@ export function renderHistory(container: HTMLElement, lang: string): void {
     table.className = 'history-session-table';
     const thead = document.createElement('thead');
     thead.innerHTML = '<tr>'
-      + '<th>Date</th><th>Mode</th><th>Score</th><th>Accuracy</th>'
+      + '<th>Date</th><th>Mode</th><th>Language</th><th>Score</th><th>Accuracy</th>'
       + '<th>Time</th><th>Pace</th></tr>';
     table.appendChild(thead);
 
@@ -268,7 +277,25 @@ export function renderHistory(container: HTMLElement, lang: string): void {
     });
 
     const modeTd = document.createElement('td');
-    modeTd.textContent = MODE_LABELS[s.mode] ?? s.mode;
+    modeTd.className = 'history-session-mode';
+    const modeLabel = document.createElement('span');
+    modeLabel.textContent = MODE_LABELS[s.mode] ?? s.mode;
+    modeTd.appendChild(modeLabel);
+    // Only Table mode's direction is a per-session choice — see
+    // SessionDirection's own comment. Older records saved before this field
+    // existed just have nothing to show here.
+    if (s.direction) {
+      const dirEl = document.createElement('span');
+      dirEl.className = 'history-session-direction';
+      dirEl.textContent = DIRECTION_LABELS[s.direction] ?? s.direction;
+      modeTd.appendChild(dirEl);
+    }
+
+    const langTd = document.createElement('td');
+    // langs/lang are absent on sessions saved before this field existed;
+    // an empty array falls back to buildLangBadge's neutral placeholder
+    // rather than crashing on a record with no language info at all.
+    langTd.appendChild(buildLangBadge(s.langs ?? (s.lang ? [s.lang] : [])));
 
     const scoreTd = document.createElement('td');
     scoreTd.className = 'history-session-mono';
@@ -289,7 +316,7 @@ export function renderHistory(container: HTMLElement, lang: string): void {
     const rate = wordsPerMinute(s.correct, s.seconds);
     paceTd.textContent = rate > 0 ? `${rate}/min` : '—';
 
-    tr.append(dateTd, modeTd, scoreTd, pctTd, secTd, paceTd);
+    tr.append(dateTd, modeTd, langTd, scoreTd, pctTd, secTd, paceTd);
     return tr;
   }
 
