@@ -59,6 +59,13 @@ export const Settings = {
   getAnswerGlossCount:   (): number => Math.max(1, Math.min(5, Number(get('answer_gloss_count', '2')))),
 
   /**
+   * Whether a correct answer that lands past the Answer glosses cutoff gets
+   * added to the revealed answer rather than left out of it. On by default —
+   * it only ever adds to what's shown, never hides anything.
+   */
+  getExpandGlossOnMatch: (): boolean => get('expand_gloss_on_match', 'true') === 'true',
+
+  /**
    * Words shown per page in table mode. 'all' (or any unparseable value)
    * means no pagination, represented as Infinity so callers can slice with it
    * directly.
@@ -74,6 +81,52 @@ export const Settings = {
   getMatchMode: (): MatchMode => get('match_mode', 'fuzzy') as MatchMode,
   getTypoTolerance: (): TypoTolerance => get('typo_tolerance', 'normal') as TypoTolerance,
   getTypoToleranceRatio: (): number => TYPO_RATIOS[get('typo_tolerance', 'normal') as TypoTolerance] ?? 0.25,
+
+  /**
+   * Whether the browser may offer its own autofill/autocomplete suggestions
+   * in quiz answer boxes. Off by default: a dropdown of past answers sitting
+   * over the input is a bigger problem in a quiz than in most text fields,
+   * since the whole point is recalling the word yourself.
+   */
+  getAutofillEnabled: (): boolean => get('autofill_enabled', 'false') === 'true',
+
+  /**
+   * Whether finished quizzes get logged to the History tab's session list.
+   * On by default. Off stops new sessions from being recorded — it does not
+   * erase what's already there, and it doesn't touch the separate per-word
+   * miss tally (session-history.ts's recordOutcome), which drives "Words I
+   * Keep Missing First" ordering and trouble-word marking regardless.
+   */
+  getHistoryEnabled: (): boolean => get('history_enabled', 'true') === 'true',
+
+  /**
+   * Whether a filter (Lists, Class, Domain) can be shared across modes at
+   * all. On by default. Off forces every mode onto its own independent
+   * filter bucket — see filter-state.ts's isChained(), which this short-
+   * circuits — and hides the chain button, since there's nothing left for it
+   * to do.
+   */
+  getFilterLinkingEnabled: (): boolean => get('filter_linking_enabled', 'true') === 'true',
+
+  // ── Single Word ────────────────────────────────────────────────────────────
+  // Small hint line under the word — each independently toggleable rather
+  // than one on/off, since "show the band but not the domain" is a
+  // reasonable thing to want. Band and domain match what already showed
+  // unconditionally before this setting existed; POS is opt-in and new.
+  getSingleShowPos:    (): boolean => get('single_show_pos',    'false') === 'true',
+  getSingleShowBand:   (): boolean => get('single_show_band',   'true')  === 'true',
+  getSingleShowDomain: (): boolean => get('single_show_domain', 'true')  === 'true',
+
+  /** Type the translation (checked as you type) or flip the card and grade yourself. */
+  getSingleCardStyle: (): 'type' | 'flashcard' =>
+    get('single_card_style', 'type') === 'flashcard' ? 'flashcard' : 'type',
+
+  /** How many word cards render at once — a page size, same idea as table
+   *  mode's own page-size setting, just for a card grid instead of a table. */
+  getSingleCardsPerScreen: (): number => {
+    const n = Number(get('single_cards_per_screen', '1'));
+    return [1, 2, 4, 6].includes(n) ? n : 1;
+  },
 
   // ── Appearance ────────────────────────────────────────────────────────────
   getFontSize: (): FontSize => get('font_size', 'medium') as FontSize,
@@ -192,9 +245,22 @@ export function getFontScaleForRecall(): number {
 
 // ── Bind settings UI ─────────────────────────────────────────────────────────
 
+/** The three filters' chain buttons — shared between bindSettings() and
+ *  restoreSettingsUI(), which each need to show/hide all three together. */
+const CHAIN_BTN_IDS = ['listFilterChain', 'classFilterChain', 'domainFilterChain'];
+
 function activateToggle(groupId: string, btn: HTMLButtonElement): void {
   document.querySelectorAll(`#${groupId} .sort-order-btn`).forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+}
+
+/**
+ * Set (or clear) autocomplete="off" on a quiz input per the Autofill setting.
+ * Every mode's answer box is built through here rather than hardcoding the
+ * attribute itself, so flipping the setting changes all of them the same way.
+ */
+export function applyAutofillAttr(el: HTMLInputElement): void {
+  el.autocomplete = Settings.getAutofillEnabled() ? 'on' : 'off';
 }
 
 /**
@@ -282,6 +348,14 @@ export function bindSettings(): void {
     set('answer_gloss_count', btn.dataset.count ?? '2');
   });
 
+  // Show the sense you typed, even past the Answer glosses cutoff
+  document.getElementById('settingExpandGloss')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingExpandGloss', btn);
+    set('expand_gloss_on_match', btn.dataset.expand ?? 'true');
+  });
+
   // Match mode
   document.getElementById('settingMatch')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
@@ -296,6 +370,77 @@ export function bindSettings(): void {
     if (!btn) return;
     activateToggle('settingTypo', btn);
     set('typo_tolerance', btn.dataset.typo ?? 'normal');
+  });
+
+  // Browser autofill. Every mode's inputs are rebuilt fresh on Start Quiz —
+  // and now that single-word mode's are too (see settingSingleCards below),
+  // there's no longer a persistent input to apply this to live; the setting
+  // just takes effect the next time any mode's inputs are built.
+  document.getElementById('settingAutofill')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingAutofill', btn);
+    set('autofill_enabled', btn.dataset.autofill ?? 'false');
+  });
+
+  // Single Word: card style and grid size
+  document.getElementById('settingSingleStyle')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingSingleStyle', btn);
+    set('single_card_style', btn.dataset.style ?? 'type');
+  });
+  document.getElementById('settingSingleCards')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingSingleCards', btn);
+    set('single_cards_per_screen', btn.dataset.cards ?? '1');
+  });
+
+  // Single Word hints
+  document.getElementById('settingSinglePos')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingSinglePos', btn);
+    set('single_show_pos', btn.dataset.show ?? 'false');
+  });
+  document.getElementById('settingSingleBand')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingSingleBand', btn);
+    set('single_show_band', btn.dataset.show ?? 'true');
+  });
+  document.getElementById('settingSingleDomain')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingSingleDomain', btn);
+    set('single_show_domain', btn.dataset.show ?? 'true');
+  });
+
+  // Filter linking. Each filter's own syncFilterHeader() already hides its
+  // chain button once Settings.getFilterLinkingEnabled() is false, but that
+  // only runs on that filter's own redraws — set it directly here too so
+  // flipping the toggle hides all three immediately, on whichever mode
+  // happens to be on screen, without waiting for something else to trigger
+  // a redraw.
+  document.getElementById('settingFilterLinking')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingFilterLinking', btn);
+    const enabled = btn.dataset.linking !== 'false';
+    set('filter_linking_enabled', String(enabled));
+    CHAIN_BTN_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.hidden = !enabled;
+    });
+  });
+
+  // Session history
+  document.getElementById('settingHistory')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingHistory', btn);
+    set('history_enabled', btn.dataset.history ?? 'true');
   });
 
   // Recall timer + on-timeout now live in the controls bar next to Start Quiz,
@@ -462,6 +607,34 @@ function restoreSettingsUI(): void {
   document.querySelectorAll<HTMLElement>('#settingAnswerGlosses .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.count === savedAnswerGlosses);
   });
+  const savedExpandGloss = get('expand_gloss_on_match', 'true');
+  document.querySelectorAll<HTMLElement>('#settingExpandGloss .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.expand === savedExpandGloss);
+  });
+
+  // Single Word: card style and grid size
+  const savedSingleStyle = get('single_card_style', 'type');
+  document.querySelectorAll<HTMLElement>('#settingSingleStyle .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.style === savedSingleStyle);
+  });
+  const savedSingleCards = get('single_cards_per_screen', '1');
+  document.querySelectorAll<HTMLElement>('#settingSingleCards .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.cards === savedSingleCards);
+  });
+
+  // Single Word hints
+  const savedSinglePos = get('single_show_pos', 'false');
+  document.querySelectorAll<HTMLElement>('#settingSinglePos .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedSinglePos);
+  });
+  const savedSingleBand = get('single_show_band', 'true');
+  document.querySelectorAll<HTMLElement>('#settingSingleBand .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedSingleBand);
+  });
+  const savedSingleDomain = get('single_show_domain', 'true');
+  document.querySelectorAll<HTMLElement>('#settingSingleDomain .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedSingleDomain);
+  });
 
   // Match
   const savedMatch = get('match_mode', 'fuzzy');
@@ -473,6 +646,30 @@ function restoreSettingsUI(): void {
   const savedTypo = get('typo_tolerance', 'normal');
   document.querySelectorAll<HTMLElement>('#settingTypo .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.typo === savedTypo);
+  });
+
+  // Browser autofill
+  const savedAutofill = get('autofill_enabled', 'false');
+  document.querySelectorAll<HTMLElement>('#settingAutofill .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.autofill === savedAutofill);
+  });
+  const answerEl = document.getElementById('answer') as HTMLInputElement | null;
+  if (answerEl) applyAutofillAttr(answerEl);
+
+  // Filter linking
+  const savedLinking = get('filter_linking_enabled', 'true');
+  document.querySelectorAll<HTMLElement>('#settingFilterLinking .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.linking === savedLinking);
+  });
+  CHAIN_BTN_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.hidden = savedLinking === 'false';
+  });
+
+  // Session history
+  const savedHistory = get('history_enabled', 'true');
+  document.querySelectorAll<HTMLElement>('#settingHistory .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.history === savedHistory);
   });
 
   // Timer (now in the controls bar)

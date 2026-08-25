@@ -15,8 +15,8 @@ import {
   getMultiListNames, getMultiList, createMultiList, addToMultiList, type MultiListEntry,
 } from '../../utils/word-lists.ts';
 import { getMastered, saveMastered } from './mastery.ts';
+import { LANGUAGE_NAMES } from '../../data/languages.ts';
 
-const LANGS_FOR_BACKUP = ['spanish', 'portuguese', 'italian', 'french'] as const;
 const BACKUP_VERSION = 3;
 
 export interface ListsBackup {
@@ -36,7 +36,7 @@ export function buildBackup(): ListsBackup {
     exportedAt: new Date().toISOString(),
     lists: {}, mastery: {},
   };
-  for (const l of LANGS_FOR_BACKUP) {
+  for (const l of LANGUAGE_NAMES) {
     const names = getListNames(l);
     const mastered = [...getMastered(l)];
     if (names.length === 0 && mastered.length === 0) continue;

@@ -226,16 +226,35 @@ describe('chain flags are not per language', () => {
 });
 
 describe('conjugation mode', () => {
-  it('falls back to the Table bucket rather than inventing a sixth', async () => {
+  it('gets its own scope rather than falling back to Table', async () => {
     const { scope } = await load();
     switchTo('conjugation');
-    expect(scope.currentScope()).toBe('table');
+    expect(scope.currentScope()).toBe('conjugation');
   });
 
-  it('therefore shares Table\'s selection', async () => {
+  it('starts chained, so it shares Table\'s selection like any other new mode', async () => {
     const { cls } = await load();
     switchTo('table');
     await selectClasses(['verb']);
+
+    switchTo('conjugation');
+    expect(cls.getSelectedClasses()).toEqual(['verb']);
+  });
+
+  it('can be unlinked without touching Table', async () => {
+    const { state, cls } = await load();
+
+    switchTo('table');
+    await selectClasses(['noun']);
+
+    // Unlink Conjugation and give it its own selection.
+    switchTo('conjugation');
+    state.toggleChain('class', (from, to) => cls.copyStateForTest(from, to));
+    await selectClasses(['verb']);
+
+    // Table never moved.
+    switchTo('table');
+    expect(cls.getSelectedClasses()).toEqual(['noun']);
 
     switchTo('conjugation');
     expect(cls.getSelectedClasses()).toEqual(['verb']);

@@ -21,10 +21,13 @@
   display: flex;
   flex-direction: row;
   /* Fill the viewport down to a small gutter rather than a fixed 74vh, so the
-     word list gets every pixel that is going spare. */
-  height: calc(100vh - 190px);
-  min-height: 560px;
-  max-height: 1100px;
+     word list gets every pixel that is going spare. The gutter was 190px —
+     tuned generously enough that a typical viewport still had a blank strip
+     below the panel doing nothing, which is exactly the space a scrolling
+     word list wants back. */
+  height: calc(100vh - 140px);
+  min-height: 640px;
+  max-height: 1200px;
 }
 
 /* ── Left pane: lang selector + list nav ────────────────────── */
@@ -1135,6 +1138,13 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   #myListsWrap {
     flex-direction: column;
     height: auto;
+    /* The desktop rule's min-height/max-height aren't set here, so without
+       an explicit reset they cascade through unchanged — a long list on
+       mobile was silently clipped at the desktop max-height, and a short one
+       padded out to its min-height as empty space. Column layout already
+       lets the page scroll to fit whatever the list actually needs. */
+    min-height: 0;
+    max-height: none;
   }
   .ml-left-pane {
     width: 100%;

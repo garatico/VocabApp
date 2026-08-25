@@ -1,9 +1,9 @@
 import type { Word } from '../types.ts';
-import { matchesAnswer, buildGlossDisplay } from '../utils/utils.ts';
+import { matchesAnswer, buildGlossDisplay, extraMatchedGloss } from '../utils/utils.ts';
 import { attachTooltips }        from '../utils/word-tooltip.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker }        from '../utils/list-picker.ts';
-import { Settings }              from '../settings.ts';
+import { Settings, applyAutofillAttr } from '../settings.ts';
 import { missCount }             from '../utils/session-history.ts';
 import { flagUrl }               from '../data/languages.ts';
 
@@ -16,12 +16,10 @@ export interface CheckResult {
 }
 
 export interface InputSnapshot {
-  value:           string;
-  disabled:        boolean;
-  stateClass:      'correct' | 'incorrect' | 'peeked' | '';
-  dir:             'target-en' | 'en-target';
-  knownBtnVisible: boolean;
-  knownBtnActive:  boolean;
+  value:      string;
+  disabled:   boolean;
+  stateClass: 'correct' | 'incorrect' | 'peeked' | '';
+  dir:        'target-en' | 'en-target';
 }
 
 export interface TableController {
@@ -101,8 +99,18 @@ export function renderTableMode({
     return dir === 'en-target' ? buildGlossDisplay(entry, Settings.getQuestionGlossCount()) : entry.word;
   }
 
-  function revealText(entry: Word, dir: 'target-en' | 'en-target'): string {
-    return revealTextFor(entry, dir);
+  /**
+   * @param typedInput What the learner actually typed, only when this word was
+   * just answered correctly by typing — the reveal button and Give Up have no
+   * typed answer to check, and pass nothing. "Show the sense you typed"
+   * (getExpandGlossOnMatch) only ever adds to what's shown, so it only makes
+   * sense to apply where there's a specific typed answer to explain.
+   */
+  function revealText(entry: Word, dir: 'target-en' | 'en-target', typedInput?: string): string {
+    const base = revealTextFor(entry, dir);
+    if (dir !== 'target-en' || !typedInput || !Settings.getExpandGlossOnMatch()) return base;
+    const extra = extraMatchedGloss(typedInput, entry, Settings.getAnswerGlossCount(), matchMode);
+    return extra ? `${base} / ${extra}` : base;
   }
 
   function checkInput(input: string, entry: Word, dir: 'target-en' | 'en-target'): boolean {
@@ -151,7 +159,8 @@ export function renderTableMode({
     btn.className   = 'known-btn' + (lists.length > 0 ? ' known-btn--active' : '');
     btn.title       = lists.length > 0 ? 'In lists: ' + lists.join(', ') : 'Add to a list';
     btn.textContent = '★';
-    btn.hidden      = true;
+    // Always visible, independent of whether the word has been answered —
+    // adding a word to a list shouldn't require solving it first.
     // Keep Tab moving input → input; the star is still reachable by click.
     btn.tabIndex    = -1;
 
@@ -247,6 +256,7 @@ export function renderTableMode({
 
         const inp        = document.createElement('input');
         inp.type         = 'text';
+        applyAutofillAttr(inp);
         inp.dataset.word = w.word;
         // Read back alongside data-word to rebuild the composite rowKey — see
         // rowKey() above. Always set, even outside Compare mode, so callers
@@ -262,11 +272,9 @@ export function renderTableMode({
           if (snap.stateClass) inp.classList.add(snap.stateClass);
         }
 
+        // Its active/inactive class already reflects real list membership —
+        // read fresh inside buildKnownBtn, not from the snapshot.
         const knownBtn = buildKnownBtn(w, tdWord);
-        if (snap?.knownBtnVisible) {
-          knownBtn.hidden = false;
-          if (snap.knownBtnActive) knownBtn.classList.add('known-btn--active');
-        }
 
         // ── Reveal button — behaviour driven by hint mode setting ────────────
         const revealBtn = document.createElement('button');
@@ -278,11 +286,11 @@ export function renderTableMode({
         // ── Correct answer handler ───────────────────────────────────────────
         inp.addEventListener('input', () => {
           if (checkInput(inp.value, w, dir)) {
-            inp.value    = revealText(w, dir);
+            const typed  = inp.value;
+            inp.value    = revealText(w, dir, typed);
             inp.disabled = true;
             inp.classList.add('correct');
 
-            knownBtn.hidden = false;
             if (isInAnyList(wordLang, w.word)) {
               knownBtn.classList.add('known-btn--active');
               tdWord.classList.add('word-cell--known');
@@ -328,7 +336,6 @@ export function renderTableMode({
           inp.value    = revealText(w, dir);
           inp.disabled = true;
           inp.classList.add('peeked');
-          knownBtn.hidden = false;
           if (isInAnyList(wordLang, w.word)) {
             knownBtn.classList.add('known-btn--active');
             tdWord.classList.add('word-cell--known');

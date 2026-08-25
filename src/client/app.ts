@@ -310,9 +310,12 @@ const { updateModeUI } = bindModeSwitch({
   extraAreas: { mylists: myListsArea, settings: settingsArea, history: historyArea },
   onActivate: {
     conjugation: () => initConjControls(langSelect?.value || 'spanish', getExtraLanguages()),
-    // Re-rendered fresh on every visit (unlike My Lists' one-time eager
-    // render) so a session finished elsewhere always shows up.
+    // Re-rendered fresh on every visit so a session finished elsewhere always
+    // shows up, and so does a list created elsewhere — e.g. a cross-language
+    // list started from the star button on a word in Table or Recall mode,
+    // which My Lists' own state has no way to hear about otherwise.
     history: () => { if (historyWrap) renderHistory(historyWrap, langSelect?.value ?? 'spanish'); },
+    mylists: () => { if (myListsWrap) renderMyLists(myListsWrap as HTMLElement); },
   },
 });
 
@@ -529,7 +532,7 @@ void (async function init(): Promise<void> {
     writeString('s_onboarding_seen', '1');
   }
 
-  if (!readString('s_onboarding_seen')) showOnboarding();
+  // Off by default — reachable any time from Settings' "Show onboarding".
   onboardingDismiss?.addEventListener('click', dismissOnboarding);
   showOnboardingBtn?.addEventListener('click', () => {
     removeKey('s_onboarding_seen');
@@ -544,6 +547,14 @@ void (async function init(): Promise<void> {
   if (savedMode && savedMode !== 'mylists' && savedMode !== 'settings' && savedMode !== 'history') {
     const tab = document.querySelector<HTMLElement>(`.mode-tab[data-mode="${savedMode}"]`);
     tab?.click();
+  } else if (savedMode !== 'table') {
+    // We didn't click a tab, so the page is showing whatever ui-state.ts and
+    // index.html both default to — Table. vq_mode drives currentScope() for
+    // every filter's chain/bucket logic, so leaving it pointed at the mode we
+    // declined to restore desyncs "what's on screen" from "what the filters
+    // think is on screen": the chain button reads and writes the stale mode's
+    // bucket while the visible tab is Table.
+    S.set('vq_mode', 'table');
   }
 
   if (myListsWrap) renderMyLists(myListsWrap as HTMLElement);

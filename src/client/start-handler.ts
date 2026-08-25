@@ -7,6 +7,7 @@ import { setQuiz }                        from './quiz/quiz-controls.ts';
 import { filterWords }                    from './filters/word-filters.ts';
 import { hasVisual }                      from './data/visual-map.ts';
 import { shuffleInPlace }                from './utils/shuffle.ts';
+import { orderWords }                     from './utils/session-history.ts';
 import { Settings }                       from './settings.ts';
 
 import type { Word } from './types.ts';
@@ -179,6 +180,10 @@ export function bindStartHandler({
         shuffleInPlace(list);
       } else if (sortOrder === 'alpha') {
         list.sort((a, b) => (a.word || '').localeCompare(b.word || ''));
+      } else if (sortOrder === 'rarest') {
+        list = orderWords(list, 'rank-desc', fullLang);
+      } else if (sortOrder === 'trouble') {
+        list = orderWords(list, 'trouble', fullLang);
       }
       // 'frequency' keeps the existing rank-based order from loadAndBuildFilters
 

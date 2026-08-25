@@ -22,6 +22,7 @@ import { SCOPE_LABELS } from './filter-scope.ts';
 import {
   isChained, chainedCount, toggleChain, type Bucket, type FilterId,
 } from './filter-state.ts';
+import { Settings } from '../settings.ts';
 
 export interface FilterHeaderConfig {
   id: FilterId;
@@ -57,6 +58,10 @@ export function syncFilterHeader(cfg: FilterHeaderConfig): void {
 
   const chainBtn = document.getElementById(cfg.chainBtnId);
   if (chainBtn) {
+    // Nothing to toggle once linking is off app-wide — isChained() already
+    // reads as unchained everywhere, so hiding the button matches what it
+    // would say anyway rather than leaving a dead control on screen.
+    chainBtn.hidden = !Settings.getFilterLinkingEnabled();
     const chained = isChained(cfg.id);
     const others  = chainedCount(cfg.id) - 1;
     chainBtn.classList.toggle('filter-chain-btn--on', chained);

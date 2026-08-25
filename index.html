@@ -133,9 +133,11 @@
           <div class="control-group" id="sortOrderGroup">
             <label>Order</label>
             <div class="sort-order-toggle" id="sortOrderToggle">
-              <button class="sort-order-btn active" data-order="frequency" title="Order by word frequency">Freq</button>
+              <button class="sort-order-btn active" data-order="frequency" title="Order by word frequency, most common first">Freq</button>
+              <button class="sort-order-btn" data-order="rarest" title="Order by word frequency, rarest first">Rarest</button>
               <button class="sort-order-btn" data-order="alpha" title="Order alphabetically">A&#x2013;Z</button>
               <button class="sort-order-btn" data-order="random" title="Randomize order">Shuffle</button>
+              <button class="sort-order-btn" data-order="trouble" title="Words you've missed most in past sessions first">Trouble</button>
             </div>
           </div>
 
@@ -448,22 +450,19 @@
         </div>
         <div id="quizSummaryTop" class="quiz-summary" style="display:none"></div>
 
-        <div id="word" class="word"></div>
-        <div id="wordMeta" class="word-meta"></div>
-
         <div id="quizNav" class="quiz-nav">
           <button id="quizPrev">&#x2190; Prev</button>
           <span id="quizCounter" class="quiz-counter"></span>
           <button id="quizNext">Next &#x2192;</button>
         </div>
 
-        <input id="answer" type="text" aria-label="Type the translation" placeholder="Type the translation…" autocomplete="off"/>
-        <div id="feedback" class="feedback"></div>
+        <!-- One or more cards per page (Settings → Single Word Quiz → Cards
+             per screen), built by quiz-controls.ts. Each card carries its own
+             word/meta/TTS/input-or-flip — there's no longer a single static
+             #word/#answer pair, since that only ever fit one card. -->
+        <div id="quizWrap" class="quiz-cards-grid"></div>
 
         <div class="controls-row">
-          <button id="btnCorrect">Mark Correct</button>
-          <button id="quizGiveUp">Reveal Answer</button>
-          <button id="ttsBtn" aria-label="Listen to pronunciation">&#x1F50A;</button>
           <button id="resetBtn">End Quiz</button>
           <span id="quizStopwatch" class="quiz-stopwatch" title="Time spent on this quiz">0:00</span>
         </div>
@@ -587,6 +586,17 @@
                 <button type="button" class="sort-order-btn" data-count="5">5</button>
               </div>
             </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Show the sense you typed</span>
+                <span class="settings-desc">If your answer matches a sense past the Answer glosses cutoff (e.g. "prove" for probar, when only "try / taste" would normally show), add it to the answer instead of hiding it.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingExpandGloss">
+                <button type="button" class="sort-order-btn active" data-expand="true">On</button>
+                <button type="button" class="sort-order-btn" data-expand="false">Off</button>
+              </div>
+            </div>
           </div>
 
           <div class="settings-section">
@@ -639,6 +649,89 @@
                 <button type="button" class="sort-order-btn" data-typo="low">Low</button>
                 <button type="button" class="sort-order-btn active" data-typo="normal">Normal</button>
                 <button type="button" class="sort-order-btn" data-typo="high">High</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Browser autofill</span>
+                <span class="settings-desc">Off stops the browser from suggesting or auto-filling previously typed answers in quiz input boxes.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingAutofill">
+                <button type="button" class="sort-order-btn" data-autofill="true">On</button>
+                <button type="button" class="sort-order-btn active" data-autofill="false">Off</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Filter linking</span>
+                <span class="settings-desc">Off removes the 🔗 chain button from the Lists, Class and Domain filters and gives every mode its own independent filter — nothing is shared between them any more.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingFilterLinking">
+                <button type="button" class="sort-order-btn active" data-linking="true">On</button>
+                <button type="button" class="sort-order-btn" data-linking="false">Off</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Single Word Quiz</div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Card style</span>
+                <span class="settings-desc">Type Answer: type the translation, checked as you type. Flashcard: click the card to reveal the translation, then grade yourself.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingSingleStyle">
+                <button type="button" class="sort-order-btn active" data-style="type">Type Answer</button>
+                <button type="button" class="sort-order-btn" data-style="flashcard">Flashcard</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Cards per screen</span>
+                <span class="settings-desc">How many words show at once. More than one works with either card style.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingSingleCards">
+                <button type="button" class="sort-order-btn active" data-cards="1">1</button>
+                <button type="button" class="sort-order-btn" data-cards="2">2</button>
+                <button type="button" class="sort-order-btn" data-cards="4">4</button>
+                <button type="button" class="sort-order-btn" data-cards="6">6</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Show part of speech</span>
+                <span class="settings-desc">A small hint under the word — "verb", "noun", etc.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingSinglePos">
+                <button type="button" class="sort-order-btn" data-show="true">On</button>
+                <button type="button" class="sort-order-btn active" data-show="false">Off</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Show difficulty band</span>
+                <span class="settings-desc">A small hint under the word — its CEFR level (A1–C2)</span>
+              </div>
+              <div class="sort-order-toggle" id="settingSingleBand">
+                <button type="button" class="sort-order-btn active" data-show="true">On</button>
+                <button type="button" class="sort-order-btn" data-show="false">Off</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Show topic</span>
+                <span class="settings-desc">A small hint under the word — its domain, e.g. "food", "travel" (omitted for general-vocabulary words)</span>
+              </div>
+              <div class="sort-order-toggle" id="settingSingleDomain">
+                <button type="button" class="sort-order-btn active" data-show="true">On</button>
+                <button type="button" class="sort-order-btn" data-show="false">Off</button>
               </div>
             </div>
           </div>
@@ -716,6 +809,17 @@
                 <span class="settings-desc">Re-show the getting started hint at the top of the page</span>
               </div>
               <button type="button" id="settingShowOnboarding" class="settings-action-btn">Show again</button>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Session history</span>
+                <span class="settings-desc">Off stops new quiz sessions from being logged to the History tab. Sessions already there are untouched, and this doesn't affect mastery, lists, or the words you keep missing.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingHistory">
+                <button type="button" class="sort-order-btn active" data-history="true">On</button>
+                <button type="button" class="sort-order-btn" data-history="false">Off</button>
+              </div>
             </div>
           </div>
 

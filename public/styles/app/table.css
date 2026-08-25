@@ -225,14 +225,11 @@
 /* .table-word-rank is .ui-rank-badge — shared with conjugation mode so a
    word carries the same badge wherever you meet it. Nothing local. */
 
-/* ── Known-word button ── (box metrics shared with .reveal-btn above) */
+/* ── Known-word button ── (box metrics shared with .reveal-btn above)
+   Always visible, dimmed until hovered or already on a list — adding a word
+   to a list doesn't require answering it first. */
 .known-btn {
   opacity: 0.5;
-}
-/* The star is hidden until a word is answered — an author `display` rule beats
-   the UA [hidden] rule, so it has to be restated here. */
-.known-btn[hidden] {
-  display: none;
 }
 .known-btn:hover {
   opacity: 1;

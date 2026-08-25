@@ -1180,15 +1180,34 @@
   row-gap: 0.25rem;
 }
 
+/* .conj-head-side keeps flex-shrink: 0 in Grid mode so a long word in
+   .conj-head-main can't squeeze the badge column. In Full Conjugation,
+   titleRow is hidden and .conj-head-main carries nothing, so that same
+   flex-shrink: 0 just meant .conj-head-side always rendered at its full
+   natural width — never narrower than the card — which meant the wrap
+   above never actually had a reason to trigger: a native tense name like
+   "Preterito Indefinido" or "Subjuntivo Presente" sits on one line wider
+   than the card and Reveal all gets pushed past the clipped edge with it.
+   Letting the column shrink to the row's real width is what makes that
+   wrap fire. */
+.conj-cards-grid--full .conj-head-side {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 /* The input is the point of the card; it gets what is left. */
 .conj-cards-grid--full .conj-row {
   grid-template-columns: minmax(0, auto) minmax(4.5rem, 1fr) auto;
   padding-inline: 0.5rem;
 }
 
+/* A fixed width, not width: auto — .conj-row is its own grid on every row
+   (not one grid shared down the card), so an auto width sized each row's
+   pronoun column to that row's own text. "yo" and "ellos / ellas" ended up
+   with different-width columns, which shifted the input's start position
+   and width from row to row instead of lining them up. */
 .conj-cards-grid--full .conj-pronoun {
-  width: auto;
-  max-width: 5.5rem;
+  width: 5.5rem;
 }
 
 /* ================================================================

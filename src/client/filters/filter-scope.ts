@@ -11,23 +11,31 @@
  * So filter state is stored per mode, and the chain button copies one mode's
  * setting to the others when you do want them to agree.
  *
- * Conjugation is deliberately absent. It filters by tense, regularity and
- * pronoun in its own box, and does not use the shared word filters at all.
+ * Conjugation has its own tense/regularity/pronoun box that the other modes
+ * don't, but ui-state.ts's "The list filter applies in conjugation mode too"
+ * still wires up the shared Lists and Domains filters for it — it was just
+ * never given a scope of its own here. Every mode-aware read defaulted to
+ * currentScope(), which fell back to 'table' for any mode it didn't
+ * recognize, so Conjugation's list/domain filters silently read and wrote
+ * Table's bucket: linking or unlinking while conjugating actually linked or
+ * unlinked Table.
  */
 
 
 import { readString } from '../utils/storage.ts';
 
-export type FilterScope = 'table' | 'recall' | 'single' | 'picture' | 'mylists';
+export type FilterScope = 'table' | 'recall' | 'single' | 'picture' | 'conjugation' | 'mylists';
 
-export const FILTER_SCOPES: FilterScope[] = ['table', 'recall', 'single', 'picture', 'mylists'];
+export const FILTER_SCOPES: FilterScope[] =
+  ['table', 'recall', 'single', 'picture', 'conjugation', 'mylists'];
 
 export const SCOPE_LABELS: Record<FilterScope, string> = {
-  table:   'Table',
-  recall:  'Recall',
-  single:  'Single Word',
-  picture: 'Picture Quiz',
-  mylists: 'My Lists',
+  table:       'Table',
+  recall:      'Recall',
+  single:      'Single Word',
+  picture:     'Picture Quiz',
+  conjugation: 'Conjugation',
+  mylists:     'My Lists',
 };
 
 const SCOPE_SET = new Set<string>(FILTER_SCOPES);
@@ -35,9 +43,9 @@ const SCOPE_SET = new Set<string>(FILTER_SCOPES);
 /**
  * The mode whose filters are on screen.
  *
- * Reads the same `vq_mode` the tabs write. Conjugation and Settings are real
- * tab values but not filter scopes, so they fall back to Table rather than
- * inventing a sixth bucket no control can reach.
+ * Reads the same `vq_mode` the tabs write. Settings and History are real tab
+ * values but not filter scopes — neither shows a filter box — so they fall
+ * back to Table rather than inventing a bucket no control can reach.
  */
 export function currentScope(): FilterScope {
   const raw = readString('vq_mode') ?? '';

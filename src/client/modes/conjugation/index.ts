@@ -22,7 +22,7 @@ import { createFlagImg } from '../../ui/flag-icon.js';
 import { createStopwatch } from '../../ui/stopwatch.js';
 import { buildScorePills, scorePct } from '../../ui/score-pills.js';
 import {
-  Settings, applyConjDeselectedClass, setOnConjDeselectedChange,
+  Settings, applyConjDeselectedClass, setOnConjDeselectedChange, applyAutofillAttr,
 } from '../../settings.js';
 
 export interface ConjugationModeOptions {
@@ -479,7 +479,13 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     paint(formsBar, forms, `${forms.correct + forms.revealed + forms.missed}/${forms.total} Answered`);
     paint(verbsBar, verbs, `${verbs.correct}/${verbs.total} Fully Conjugated`);
 
-    if (forms.total > 0 && forms.correct === forms.total) {
+    // left, not correct === total: a session where every form has been
+    // answered — correctly, revealed, or missed — is done, the same rule
+    // table-controls.ts's isQuizComplete() uses. Requiring every form to be
+    // *correct* meant revealing even one form left the quiz open forever:
+    // recordConjSession() never ran, so the stopwatch kept ticking and the
+    // session was never saved.
+    if (forms.total > 0 && forms.left === 0) {
       recordConjSession();
       showConjSummary(verbs.correct, verbs.total, forms.correct, forms.total);
     }
@@ -858,6 +864,9 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
 
     stopwatch.stop();
     const seconds = stopwatch.elapsedSeconds();
+    const langs = [...byLang.entries()]
+      .filter(([, b]) => b.correct.length > 0 || b.missed.length > 0)
+      .map(([wl]) => wl);
     for (const [wl, bucket] of byLang) {
       if (bucket.correct.length === 0 && bucket.missed.length === 0) continue;
       recordOutcome(wl, bucket.missed, bucket.correct);
@@ -870,6 +879,8 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
         hints: 0,
         revealed: bucket.missed.length,
         seconds,
+        lang: wl,
+        langs: langs.length > 1 ? langs : undefined,
       });
     }
   }
@@ -1270,7 +1281,7 @@ function buildCard({
     const inp = document.createElement('input');
     inp.type           = 'text';
     inp.className      = 'conj-drill-input';
-    inp.autocomplete   = 'off';
+    applyAutofillAttr(inp);
     inp.setAttribute("autocorrect", "off");
     inp.setAttribute("autocapitalize", "off");
     inp.spellcheck     = false;
@@ -1299,7 +1310,7 @@ function buildCard({
   let singleInp = document.createElement('input');
   singleInp.type           = 'text';
   singleInp.className      = 'conj-drill-input';
-  singleInp.autocomplete   = 'off';
+  applyAutofillAttr(singleInp);
   singleInp.setAttribute("autocorrect", "off");
   singleInp.setAttribute("autocapitalize", "off");
   singleInp.spellcheck     = false;
