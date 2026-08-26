@@ -19,14 +19,18 @@ export interface TenseDef {
  * them, so one map avoids repeating it four times.
  */
 export const TENSE_EN: Record<string, string> = {
-  present:         'Present',
-  preterite:       'Preterite',
-  imperfect:       'Imperfect',
-  future:          'Future',
-  conditional:     'Conditional',
-  subjunctive:     'Present subjunctive',
-  past_participle: 'Past participle',
-  gerund:          'Gerund',
+  present:                'Present',
+  preterite:              'Preterite',
+  imperfect:              'Imperfect',
+  future:                 'Future',
+  conditional:            'Conditional',
+  subjunctive:            'Present subjunctive',
+  past_participle:        'Past participle',
+  gerund:                 'Gerund',
+  imperative_affirmative: 'Imperative (affirmative)',
+  imperative_negative:    'Imperative (negative)',
+  imperfect_subjunctive:  'Imperfect subjunctive',
+  future_subjunctive:     'Future subjunctive',
 };
 
 /**
@@ -62,6 +66,21 @@ export const TENSE_HELP: Record<string, string> = {
   gerund:
     'Gerund — the -ing form, used for an action in progress. '
     + '"hablando" = speaking.',
+  imperative_affirmative:
+    'Imperative (affirmative) — direct commands telling someone to do '
+    + 'something. "¡Habla!" = Speak! No "yo" form — you cannot command yourself.',
+  imperative_negative:
+    'Imperative (negative) — direct commands telling someone not to do '
+    + 'something. "¡No hables!" = Do not speak! Uses the present subjunctive '
+    + 'forms, not the affirmative imperative\'s. No "yo" form either.',
+  imperfect_subjunctive:
+    'Imperfect subjunctive — the subjunctive mood set in the past: wishes, '
+    + 'doubt or emotion about something that already happened, or a polite '
+    + '"if only". "que hablara" = that I spoke / if I spoke.',
+  future_subjunctive:
+    'Future subjunctive — a rarely-used, mostly archaic/legal form for a '
+    + 'hypothetical future condition. "si hablare" = if he/she should speak. '
+    + 'Modern Spanish almost always uses the present subjunctive instead.',
 };
 
 /**
@@ -108,6 +127,10 @@ export const TENSE_DEFS: Record<string, TenseDef[]> = {
     { key: 'future',          label: 'Futuro' },
     { key: 'conditional',     label: 'Condicional' },
     { key: 'subjunctive',     label: 'Subjuntivo Presente' },
+    { key: 'imperative_affirmative', label: 'Imperativo Afirmativo' },
+    { key: 'imperative_negative',    label: 'Imperativo Negativo' },
+    { key: 'imperfect_subjunctive',  label: 'Subjuntivo Imperfecto' },
+    { key: 'future_subjunctive',     label: 'Subjuntivo Futuro' },
     { key: 'past_participle', label: 'Participio Pasado' },
     { key: 'gerund',          label: 'Gerundio' },
   ],

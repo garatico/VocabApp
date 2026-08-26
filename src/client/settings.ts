@@ -77,6 +77,12 @@ export const Settings = {
     return Number.isFinite(n) && n > 0 ? n : Infinity;
   },
 
+  /** The frequency-rank corner badge, across every Table quiz style. */
+  getTableShowRank: (): boolean => get('table_show_rank', 'true') === 'true',
+
+  /** The list star and "missed before" count badge, across every Table quiz style. */
+  getTableShowWordMarkers: (): boolean => get('table_show_word_markers', 'true') === 'true',
+
   // ── All quizzes ────────────────────────────────────────────────────────────
   getMatchMode: (): MatchMode => get('match_mode', 'fuzzy') as MatchMode,
   getTypoTolerance: (): TypoTolerance => get('typo_tolerance', 'normal') as TypoTolerance,
@@ -89,6 +95,13 @@ export const Settings = {
    * since the whole point is recalling the word yourself.
    */
   getAutofillEnabled: (): boolean => get('autofill_enabled', 'false') === 'true',
+
+  /**
+   * Whether known vulgar/offensive words are removed from every quiz's word
+   * pool — see data/swear-words.ts. Off by default so turning it on is a
+   * deliberate choice, not a silent change to what a returning user sees.
+   */
+  getSwearFilterEnabled: (): boolean => get('swear_filter_enabled', 'false') === 'true',
 
   /**
    * Whether finished quizzes get logged to the History tab's session list.
@@ -108,47 +121,8 @@ export const Settings = {
    */
   getFilterLinkingEnabled: (): boolean => get('filter_linking_enabled', 'true') === 'true',
 
-  // ── Single Word ────────────────────────────────────────────────────────────
-  // Small hint line under the word — each independently toggleable rather
-  // than one on/off, since "show the band but not the domain" is a
-  // reasonable thing to want. Band and domain match what already showed
-  // unconditionally before this setting existed; POS is opt-in and new.
-  getSingleShowPos:    (): boolean => get('single_show_pos',    'false') === 'true',
-  getSingleShowBand:   (): boolean => get('single_show_band',   'true')  === 'true',
-  getSingleShowDomain: (): boolean => get('single_show_domain', 'true')  === 'true',
-
-  /** Type the translation (checked as you type) or flip the card and grade yourself. */
-  getSingleCardStyle: (): 'type' | 'flashcard' =>
-    get('single_card_style', 'type') === 'flashcard' ? 'flashcard' : 'type',
-
-  /** How many word cards render at once — a page size, same idea as table
-   *  mode's own page-size setting, just for a card grid instead of a table. */
-  getSingleCardsPerScreen: (): number => {
-    const n = Number(get('single_cards_per_screen', '1'));
-    return [1, 2, 4, 6].includes(n) ? n : 1;
-  },
-
   // ── Appearance ────────────────────────────────────────────────────────────
   getFontSize: (): FontSize => get('font_size', 'medium') as FontSize,
-
-  // ── Recall ─────────────────────────────────────────────────────────────────
-  getRecallSeconds: (): number => {
-    const v = get('recall_timer', '300');
-    if (v === 'custom') {
-      return (Number(get('recall_timer_custom', '5')) || 5) * 60;
-    }
-    return Number(v);
-  },
-  getHardStop: (): boolean => get('hard_stop', 'false') === 'true',
-
-  /**
-   * Recall: accept a word the moment it is typed, or wait for Enter.
-   *
-   * Auto-accept is faster but can only fire when the typed text cannot be
-   * extended into a longer word, since short words like 'e' and 'la' are also
-   * the openings of longer ones.
-   */
-  getRecallAutoEnter: (): boolean => get('recall_auto_enter', 'true') === 'true',
 
   // ── Conjugation ────────────────────────────────────────────────────────────
 
@@ -356,6 +330,22 @@ export function bindSettings(): void {
     set('expand_gloss_on_match', btn.dataset.expand ?? 'true');
   });
 
+  // Table: frequency rank badge
+  document.getElementById('settingTableShowRank')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingTableShowRank', btn);
+    set('table_show_rank', btn.dataset.show ?? 'true');
+  });
+
+  // Table: list star / missed-before count badge
+  document.getElementById('settingTableShowMarkers')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingTableShowMarkers', btn);
+    set('table_show_word_markers', btn.dataset.show ?? 'true');
+  });
+
   // Match mode
   document.getElementById('settingMatch')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
@@ -372,10 +362,9 @@ export function bindSettings(): void {
     set('typo_tolerance', btn.dataset.typo ?? 'normal');
   });
 
-  // Browser autofill. Every mode's inputs are rebuilt fresh on Start Quiz —
-  // and now that single-word mode's are too (see settingSingleCards below),
-  // there's no longer a persistent input to apply this to live; the setting
-  // just takes effect the next time any mode's inputs are built.
+  // Browser autofill. Every mode's inputs are rebuilt fresh on Start Quiz, so
+  // there's no persistent input to apply this to live; the setting just
+  // takes effect the next time any mode's inputs are built.
   document.getElementById('settingAutofill')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
     if (!btn) return;
@@ -383,38 +372,12 @@ export function bindSettings(): void {
     set('autofill_enabled', btn.dataset.autofill ?? 'false');
   });
 
-  // Single Word: card style and grid size
-  document.getElementById('settingSingleStyle')?.addEventListener('click', e => {
+  // Swear word filter
+  document.getElementById('settingSwearFilter')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
     if (!btn) return;
-    activateToggle('settingSingleStyle', btn);
-    set('single_card_style', btn.dataset.style ?? 'type');
-  });
-  document.getElementById('settingSingleCards')?.addEventListener('click', e => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
-    activateToggle('settingSingleCards', btn);
-    set('single_cards_per_screen', btn.dataset.cards ?? '1');
-  });
-
-  // Single Word hints
-  document.getElementById('settingSinglePos')?.addEventListener('click', e => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
-    activateToggle('settingSinglePos', btn);
-    set('single_show_pos', btn.dataset.show ?? 'false');
-  });
-  document.getElementById('settingSingleBand')?.addEventListener('click', e => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
-    activateToggle('settingSingleBand', btn);
-    set('single_show_band', btn.dataset.show ?? 'true');
-  });
-  document.getElementById('settingSingleDomain')?.addEventListener('click', e => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
-    activateToggle('settingSingleDomain', btn);
-    set('single_show_domain', btn.dataset.show ?? 'true');
+    activateToggle('settingSwearFilter', btn);
+    set('swear_filter_enabled', btn.dataset.swear ?? 'false');
   });
 
   // Filter linking. Each filter's own syncFilterHeader() already hides its
@@ -441,33 +404,6 @@ export function bindSettings(): void {
     if (!btn) return;
     activateToggle('settingHistory', btn);
     set('history_enabled', btn.dataset.history ?? 'true');
-  });
-
-  // Recall timer + on-timeout now live in the controls bar next to Start Quiz,
-  // not in this modal — they are per-session choices, so they belong where the
-  // session starts. Same storage keys, so nothing else had to change.
-  const timerSel    = document.getElementById('recallTimerSelect') as HTMLSelectElement | null;
-  const timerCustom = document.getElementById('recallTimerCustom') as HTMLInputElement  | null;
-  timerSel?.addEventListener('change', () => {
-    if (timerCustom) timerCustom.style.display = timerSel.value === 'custom' ? 'inline-block' : 'none';
-    if (timerSel.value === 'custom') timerCustom?.focus();
-    set('recall_timer', timerSel.value);
-  });
-  timerCustom?.addEventListener('input', () => set('recall_timer_custom', timerCustom.value));
-
-  document.getElementById('recallHardStop')?.addEventListener('click', e => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
-    activateToggle('recallHardStop', btn);
-    set('hard_stop', btn.dataset.stop ?? 'false');
-  });
-
-  // Recall: auto-accept vs Enter
-  document.getElementById('settingRecallAutoEnter')?.addEventListener('click', e => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
-    activateToggle('settingRecallAutoEnter', btn);
-    set('recall_auto_enter', btn.dataset.auto ?? 'true');
   });
 
   // Conjugation: what a deselected pronoun leaves behind
@@ -611,29 +547,13 @@ function restoreSettingsUI(): void {
   document.querySelectorAll<HTMLElement>('#settingExpandGloss .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.expand === savedExpandGloss);
   });
-
-  // Single Word: card style and grid size
-  const savedSingleStyle = get('single_card_style', 'type');
-  document.querySelectorAll<HTMLElement>('#settingSingleStyle .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.style === savedSingleStyle);
+  const savedShowRank = get('table_show_rank', 'true');
+  document.querySelectorAll<HTMLElement>('#settingTableShowRank .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedShowRank);
   });
-  const savedSingleCards = get('single_cards_per_screen', '1');
-  document.querySelectorAll<HTMLElement>('#settingSingleCards .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.cards === savedSingleCards);
-  });
-
-  // Single Word hints
-  const savedSinglePos = get('single_show_pos', 'false');
-  document.querySelectorAll<HTMLElement>('#settingSinglePos .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.show === savedSinglePos);
-  });
-  const savedSingleBand = get('single_show_band', 'true');
-  document.querySelectorAll<HTMLElement>('#settingSingleBand .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.show === savedSingleBand);
-  });
-  const savedSingleDomain = get('single_show_domain', 'true');
-  document.querySelectorAll<HTMLElement>('#settingSingleDomain .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.show === savedSingleDomain);
+  const savedShowMarkers = get('table_show_word_markers', 'true');
+  document.querySelectorAll<HTMLElement>('#settingTableShowMarkers .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedShowMarkers);
   });
 
   // Match
@@ -653,8 +573,12 @@ function restoreSettingsUI(): void {
   document.querySelectorAll<HTMLElement>('#settingAutofill .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.autofill === savedAutofill);
   });
-  const answerEl = document.getElementById('answer') as HTMLInputElement | null;
-  if (answerEl) applyAutofillAttr(answerEl);
+
+  // Swear word filter
+  const savedSwear = get('swear_filter_enabled', 'false');
+  document.querySelectorAll<HTMLElement>('#settingSwearFilter .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.swear === savedSwear);
+  });
 
   // Filter linking
   const savedLinking = get('filter_linking_enabled', 'true');
@@ -670,35 +594,6 @@ function restoreSettingsUI(): void {
   const savedHistory = get('history_enabled', 'true');
   document.querySelectorAll<HTMLElement>('#settingHistory .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.history === savedHistory);
-  });
-
-  // Timer (now in the controls bar)
-  const timerSel    = document.getElementById('recallTimerSelect') as HTMLSelectElement | null;
-  const timerCustom = document.getElementById('recallTimerCustom') as HTMLInputElement  | null;
-  const savedTimer  = get('recall_timer', '300');
-  if (timerSel) {
-    const knownOption = timerSel.querySelector<HTMLOptionElement>(`option[value="${savedTimer}"]`);
-    if (knownOption) {
-      timerSel.value = savedTimer;
-    } else {
-      timerSel.value = 'custom';
-      if (timerCustom) {
-        timerCustom.style.display = 'inline-block';
-        timerCustom.value = get('recall_timer_custom', '5');
-      }
-    }
-  }
-
-  // Hard stop
-  const savedStop = get('hard_stop', 'false');
-  document.querySelectorAll<HTMLElement>('#recallHardStop .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.stop === savedStop);
-  });
-
-  // Recall auto-enter
-  const savedAuto = get('recall_auto_enter', 'true');
-  document.querySelectorAll<HTMLElement>('#settingRecallAutoEnter .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.auto === savedAuto);
   });
 
   // Conjugation chart shape

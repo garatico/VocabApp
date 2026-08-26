@@ -529,14 +529,18 @@
    Defined as --tense-hue on the element, so the chip and the card
    derive their tint, border and badge from a single value.
    ═══════════════════════════════════════════════════════════════ */
-[data-tense="present"]         { --tense-hue: 145; }  /* green   */
-[data-tense="preterite"]       { --tense-hue: 210; }  /* blue    */
-[data-tense="imperfect"]       { --tense-hue: 265; }  /* violet  */
-[data-tense="future"]          { --tense-hue:  25; }  /* orange  */
-[data-tense="conditional"]     { --tense-hue: 330; }  /* pink    */
-[data-tense="subjunctive"]     { --tense-hue: 190; }  /* teal    */
-[data-tense="past_participle"] { --tense-hue:  45; }  /* amber   */
-[data-tense="gerund"]          { --tense-hue: 285; }  /* purple  */
+[data-tense="present"]                 { --tense-hue: 145; }  /* green       */
+[data-tense="preterite"]               { --tense-hue: 210; }  /* blue        */
+[data-tense="imperfect"]               { --tense-hue: 265; }  /* violet      */
+[data-tense="future"]                  { --tense-hue:  25; }  /* orange      */
+[data-tense="conditional"]             { --tense-hue: 330; }  /* pink        */
+[data-tense="subjunctive"]             { --tense-hue: 190; }  /* teal        */
+[data-tense="past_participle"]         { --tense-hue:  45; }  /* amber       */
+[data-tense="gerund"]                  { --tense-hue: 285; }  /* purple      */
+[data-tense="imperative_affirmative"]  { --tense-hue: 355; }  /* crimson     */
+[data-tense="imperative_negative"]     { --tense-hue: 100; }  /* olive       */
+[data-tense="imperfect_subjunctive"]   { --tense-hue: 235; }  /* indigo      */
+[data-tense="future_subjunctive"]      { --tense-hue:  65; }  /* gold        */
 
 /* ── Tense chips: two columns ─────────────────────────────────
    There was never a base rule here — only the 767px override — so the
@@ -1479,4 +1483,198 @@
     font-size: 0.66rem;
     line-height: 1.3;
   }
+}
+
+/* ================================================================
+   ONE AT A TIME — one-at-a-time-mode.ts. A single flashcard: verb,
+   tense, pronoun, one input. Reuses .conj-verb-spanish/.conj-drill-input/
+   .conj-pronoun/.conj-giveup-btn/.conj-reveal-btn — only the card shell
+   and larger prompt sizing below are new.
+================================================================ */
+
+.coat-wrap {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.coat-card {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-top: 0.75rem;
+}
+
+.coat-tense {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+}
+
+.coat-pronoun {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
+}
+
+.coat-input-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 1rem;
+}
+
+.coat-input {
+  flex: 0 1 260px;
+  font-size: 1.15rem;
+  text-align: center;
+  padding: 0.6rem 0.8rem;
+}
+
+/* ================================================================
+   CARD MATCH — card-match-mode.ts. Two columns of trivia.css's .tv-option
+   cards; a correct pair locks with .tv-option--correct, a wrong pick
+   flashes .tv-option--wrong before clearing.
+================================================================ */
+
+.cm-wrap {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.cm-round-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-right: auto;
+}
+
+.cm-feedback {
+  margin-top: 0.5rem;
+}
+
+.cm-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.cm-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.cm-card {
+  width: 100%;
+}
+
+@media (max-width: 599px) {
+  .coat-pronoun { font-size: 1.1rem; }
+  .coat-input   { flex: 1 1 auto; }
+  .cm-columns   { gap: 0.5rem; }
+  .cm-card      { font-size: 0.9rem; padding: 0.65rem 0.5rem; min-height: 44px; }
+}
+
+/* ================================================================
+   RANDOM TABLE — random-table-mode.ts. Every blank at once, table-mode.ts's
+   own bordered/tinted look applied to conjugation forms instead of words.
+================================================================ */
+
+.crt-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  overflow-x: auto;
+}
+
+/* .table-pager itself is generic (table.css) — just spacing it to sit
+   comfortably above/below this table instead of Standard style's. */
+.crt-pager { margin: 0.6rem 0; }
+
+.crt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.95rem;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-top: 0.75rem;
+}
+.crt-table th {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: left;
+  color: var(--text-muted);
+  background: var(--surface2);
+  padding: 0.5rem 0.75rem;
+  border-bottom: 2px solid var(--border-strong);
+}
+.crt-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.crt-table tr:last-child td { border-bottom: none; }
+.crt-table tr:nth-child(even) td { background: var(--surface2); }
+
+.crt-pronoun {
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.crt-verb {
+  font-weight: 700;
+  color: var(--accent);
+}
+.crt-tense {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.crt-answer-cell { width: 32%; }
+
+/* Same look and answer-state colours as .conj-drill-input. */
+.crt-input {
+  width: 100%;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.95rem;
+  padding: 0.4rem 0.6rem;
+  box-sizing: border-box;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  color: var(--text);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.crt-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+.crt-input.correct {
+  background-color: var(--correct-light);
+  border-color: var(--correct);
+  color: var(--correct);
+  font-weight: 600;
+}
+.crt-input.incorrect {
+  background-color: var(--incorrect-light);
+  border-color: var(--incorrect);
+  color: var(--incorrect);
+  font-weight: 600;
+}
+
+@media (max-width: 599px) {
+  .crt-table { font-size: 0.8rem; }
+  .crt-table th, .crt-table td { padding: 0.4rem 0.5rem; }
+  .crt-tense { white-space: normal; }
+  .crt-answer-cell { width: 40%; }
+  .crt-input { font-size: 0.9rem; min-height: 40px; }
 }

@@ -213,6 +213,12 @@
   color: var(--text-muted);
   pointer-events: none;
   user-select: none;
+  /* A small backing chip, so a per-word marker sharing this corner — the
+     known-list edge tint, a repeat-offender badge — never washes out the
+     number itself. Harmless where nothing else is there. */
+  background: var(--surface);
+  border-radius: 3px;
+  padding: 0.1em 0.3em;
 }
 
 

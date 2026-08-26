@@ -1,13 +1,11 @@
-type CoreMode = 'table' | 'recall' | 'single' | 'picture' | 'conjugation';
+type CoreMode = 'table' | 'picture' | 'conjugation';
 type Mode = CoreMode | string;
 
 /** Modes that know how to render/score a mixed-language word list — mirrors app.ts's own copy. */
-const MULTI_LANG_MODES = new Set(['table', 'recall', 'conjugation']);
+const MULTI_LANG_MODES = new Set(['table', 'conjugation']);
 
 interface BindModeSwitchOptions {
-  quizArea:         HTMLElement;
   tableArea:        HTMLElement;
-  recallArea:       HTMLElement;
   pictureArea:      HTMLElement;
   conjugationArea:  HTMLElement | null;
   extraAreas?:      Record<string, HTMLElement | null>;
@@ -25,7 +23,7 @@ export function bindUIState(): void {
 }
 
 export function bindModeSwitch({
-  quizArea, tableArea, recallArea, pictureArea, conjugationArea,
+  tableArea, pictureArea, conjugationArea,
   extraAreas = {},
   onActivate = {},
 }: BindModeSwitchOptions): { updateModeUI: () => void } {
@@ -34,9 +32,7 @@ export function bindModeSwitch({
   function updateModeUI(): void {
     const mode = currentMode;
 
-    quizArea.hidden    = mode !== 'single';
     tableArea.hidden   = mode !== 'table';
-    recallArea.hidden  = mode !== 'recall';
     pictureArea.hidden = mode !== 'picture';
     if (conjugationArea) conjugationArea.hidden = mode !== 'conjugation';
 
@@ -50,6 +46,8 @@ export function bindModeSwitch({
 
     const classFilter         = document.getElementById('classFilter');
     const listFilter          = document.getElementById('listFilter');
+    const domainFilterWrap    = document.getElementById('domainFilterWrap');
+    const wordsSizeGroup      = document.getElementById('wordsSizeGroup');
     const directionGroup      = document.getElementById('directionGroup');
     const recallTimerGroup    = document.getElementById('recallTimerGroup');
     const sortOrderGroup      = document.getElementById('sortOrderGroup');
@@ -57,29 +55,46 @@ export function bindModeSwitch({
     const conjViewGroup       = document.getElementById('conjViewGroup');
     const conjModeControls    = document.getElementById('conjModeControls');
     const pictureStyleGroup   = document.getElementById('pictureStyleGroup');
+    const triviaStyleGroup    = document.getElementById('triviaStyleGroup');
+    const tableStyleGroup     = document.getElementById('tableStyleGroup');
     const compareGroup        = document.getElementById('compareGroup');
 
-    if (classFilter)         classFilter.style.display         = mode === 'conjugation' ? 'none' : '';
+    // Trivia draws from its own general-knowledge question bank, not the
+    // vocabulary word list at all — see trivia-mode.ts — so every word-list
+    // filter (and the Words/size control itself) is meaningless there.
+    if (classFilter)         classFilter.style.display         = (mode === 'conjugation' || mode === 'trivia') ? 'none' : '';
     // The list filter applies in conjugation mode too — Hide/Focus narrows the
     // verbs you drill just as it narrows any other quiz.
-    if (listFilter)          listFilter.style.display          = '';
+    if (listFilter)          listFilter.style.display          = mode === 'trivia' ? 'none' : '';
+    if (domainFilterWrap)    domainFilterWrap.style.display    = mode === 'trivia' ? 'none' : '';
+    if (wordsSizeGroup)      wordsSizeGroup.style.display      = mode === 'trivia' ? 'none' : '';
     if (directionGroup)      directionGroup.style.display      = mode === 'table'       ? ''     : 'none';
     // Compare (two or more languages merged into one quiz) is supported by
-    // Table, Recall and Conjugation — the other modes don't know how to
-    // render or score a mixed-language word list.
+    // Table and Conjugation — the other modes don't know how to render or
+    // score a mixed-language word list.
     if (compareGroup)        compareGroup.style.display        = MULTI_LANG_MODES.has(mode) ? '' : 'none';
-    if (recallTimerGroup)    recallTimerGroup.style.display    = mode === 'recall'      ? ''     : 'none';
-    // Table, recall and conjugation each carry their own order control inside
-    // the quiz, so the global one would be a second, competing switch. Single
-    // and picture modes have no in-quiz equivalent, so they keep it.
+    // Table's own quiz-style toggle (Standard/Recall/Double Recall) has no
+    // timer concept — recallTimerGroup is orphaned along with the standalone
+    // Recall tab it belonged to, so it never shows any more.
+    if (recallTimerGroup)    recallTimerGroup.style.display    = 'none';
+    // Table and conjugation each carry their own order control inside the
+    // quiz, so the global one would be a second, competing switch. Picture
+    // mode has no in-quiz equivalent, so it keeps it. Trivia draws from a
+    // fixed question bank rather than `list` at all, so word order is
+    // meaningless there regardless.
     if (sortOrderGroup) {
-      const hasOwnOrder = mode === 'table' || mode === 'recall' || mode === 'conjugation';
+      const hasOwnOrder = mode === 'table' || mode === 'conjugation' || mode === 'trivia';
       sortOrderGroup.style.display = hasOwnOrder ? 'none' : '';
     }
     if (conjModeControls)    conjModeControls.style.display    = mode === 'conjugation' ? ''     : 'none';
     if (conjDisplayGroup)    conjDisplayGroup.style.display    = mode === 'conjugation' ? ''     : 'none';
     if (conjViewGroup)       conjViewGroup.style.display       = mode === 'conjugation' ? ''     : 'none';
     if (pictureStyleGroup)   pictureStyleGroup.style.display   = mode === 'picture'     ? ''     : 'none';
+    if (triviaStyleGroup)    triviaStyleGroup.style.display    = mode === 'trivia'      ? ''     : 'none';
+    // table-controls.ts's syncTableStyleUI (called from app.ts's onActivate.table)
+    // further hides Direction/#tableControls/the jump bars once this is visible
+    // and a non-Standard style is selected.
+    if (tableStyleGroup)     tableStyleGroup.style.display     = mode === 'table'       ? ''     : 'none';
 
     document.querySelectorAll<HTMLElement>('.mode-tab').forEach(btn => {
       const isActive = btn.dataset.mode === mode;

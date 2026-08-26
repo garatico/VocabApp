@@ -79,7 +79,7 @@ describe('a mode with no chain flag yet', () => {
 
   it('reads the shared bucket', async () => {
     const { state } = await load();
-    switchTo('recall');
+    switchTo('picture');
     expect(state.bucketFor('class')).toBe(state.SHARED_BUCKET);
   });
 });
@@ -92,14 +92,14 @@ describe('two linked modes', () => {
     await selectClasses(['noun']);
     expect(cls.getSelectedClasses()).toEqual(['noun']);
 
-    switchTo('recall');
+    switchTo('picture');
     expect(cls.getSelectedClasses()).toEqual(['noun']);
   });
 
   it('see a change made in either one', async () => {
     const { cls } = await load();
 
-    switchTo('recall');
+    switchTo('picture');
     await selectClasses(['verb']);
 
     switchTo('table');
@@ -114,12 +114,12 @@ describe('unlinking a mode', () => {
     switchTo('table');
     await selectClasses(['noun']);
 
-    // Unlink Recall.
-    switchTo('recall');
+    // Unlink Picture.
+    switchTo('picture');
     state.toggleChain('class', (from, to) => cls.copyStateForTest(from, to));
 
-    expect(state.isChained('class', 'recall')).toBe(false);
-    expect(state.bucketFor('class')).toBe('recall');
+    expect(state.isChained('class', 'picture')).toBe(false);
+    expect(state.bucketFor('class')).toBe('picture');
   });
 
   it('carries the shared setting across so nothing changes at the click', async () => {
@@ -128,7 +128,7 @@ describe('unlinking a mode', () => {
     switchTo('table');
     await selectClasses(['noun']);
 
-    switchTo('recall');
+    switchTo('picture');
     state.toggleChain('class', (from, to) => cls.copyStateForTest(from, to));
 
     expect(cls.getSelectedClasses()).toEqual(['noun']);
@@ -137,13 +137,13 @@ describe('unlinking a mode', () => {
   it('stops it following the other modes afterwards', async () => {
     const { state, cls } = await load();
 
-    switchTo('recall');
+    switchTo('picture');
     state.toggleChain('class', (from, to) => cls.copyStateForTest(from, to));
 
     switchTo('table');
     await selectClasses(['adjective']);
 
-    switchTo('recall');
+    switchTo('picture');
     expect(cls.getSelectedClasses()).not.toEqual(['adjective']);
   });
 });
@@ -152,8 +152,8 @@ describe('re-linking a mode', () => {
   it('pushes its setting to the modes that were already linked', async () => {
     const { state, cls } = await load();
 
-    // Recall goes its own way with 'verb'.
-    switchTo('recall');
+    // Picture goes its own way with 'verb'.
+    switchTo('picture');
     state.toggleChain('class', (from, to) => cls.copyStateForTest(from, to));
     await selectClasses(['verb']);
 
@@ -161,10 +161,10 @@ describe('re-linking a mode', () => {
     switchTo('table');
     await selectClasses(['noun']);
 
-    // Re-link Recall: its setting becomes everyone's.
-    switchTo('recall');
+    // Re-link Picture: its setting becomes everyone's.
+    switchTo('picture');
     state.toggleChain('class', (from, to) => cls.copyStateForTest(from, to));
-    expect(state.isChained('class', 'recall')).toBe(true);
+    expect(state.isChained('class', 'picture')).toBe(true);
     expect(cls.getSelectedClasses()).toEqual(['verb']);
 
     switchTo('table');
@@ -176,46 +176,46 @@ describe('chain flags are not per language', () => {
   it('unlinking a mode keeps it unlinked in every language', async () => {
     const { state, cls } = await load();
 
-    switchTo('recall');
+    switchTo('picture');
     state.toggleChain('class', (from, to) => cls.copyStateForTest(from, to));
 
     language = 'french';
-    expect(state.isChained('class', 'recall')).toBe(false);
+    expect(state.isChained('class', 'picture')).toBe(false);
   });
 
   it('falls back to shared in a language the unlinked mode was never used in', async () => {
     const { state, cls } = await load();
 
-    // Spanish: unlink Recall while the shared bucket holds nouns.
+    // Spanish: unlink Picture while the shared bucket holds nouns.
     switchTo('table');
     await selectClasses(['noun']);
-    switchTo('recall');
+    switchTo('picture');
     state.toggleChain('class', (from, to) => cls.copyStateForTest(from, to));
     expect(cls.getSelectedClasses()).toEqual(['noun']);
 
-    // French was never open when that happened, so it has no Recall bucket.
+    // French was never open when that happened, so it has no Picture bucket.
     // Reading it as empty would mean the French filter silently switched
     // itself off in that one mode; it reads the shared setting until French
-    // Recall is actually edited.
+    // Picture is actually edited.
     language = 'french';
     switchTo('table');
     await selectClasses(['verb']);
-    switchTo('recall');
+    switchTo('picture');
     expect(cls.getSelectedClasses()).toEqual(['verb']);
   });
 
   it('still diverges once the unlinked mode is edited in that language', async () => {
     const { state, cls } = await load();
 
-    switchTo('recall');
+    switchTo('picture');
     state.toggleChain('class', (from, to) => cls.copyStateForTest(from, to));
 
     language = 'french';
     switchTo('table');
     await selectClasses(['verb']);
 
-    // First edit in French Recall creates its own bucket…
-    switchTo('recall');
+    // First edit in French Picture creates its own bucket…
+    switchTo('picture');
     await selectClasses(['adverb']);
     expect(cls.getSelectedClasses()).toEqual(['adverb']);
 

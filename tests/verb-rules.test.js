@@ -18,6 +18,8 @@ import { conjugate, SUPPORTED_CLASSES } from '../src/server/lib/verb-rules.js';
 const TENSES = [
   'present','preterite','imperfect','future','conditional',
   'subjunctive','imperative','gerund','past_participle',
+  'imperative_affirmative','imperative_negative',
+  'imperfect_subjunctive','future_subjunctive',
 ];
 
 function assertShape(forms) {
@@ -33,6 +35,14 @@ function assertShape(forms) {
     expect(forms[t]).toHaveLength(6);
   }
   expect(Array.isArray(forms.imperative)).toBe(true);
+  // Derived tenses: always 6 slots. The two imperatives have no "yo" command,
+  // so index 0 is blank; the two subjunctives have a real form in every slot.
+  for (const t of ['imperative_affirmative', 'imperative_negative', 'imperfect_subjunctive', 'future_subjunctive']) {
+    expect(Array.isArray(forms[t]), `${t} should be array`).toBe(true);
+    expect(forms[t]).toHaveLength(6);
+  }
+  expect(forms.imperative_affirmative[0]).toBe('');
+  expect(forms.imperative_negative[0]).toBe('');
 }
 
 // ── Regular classes ──────────────────────────────────────────────────────────
@@ -445,12 +455,26 @@ describe('irregular- classes (fully irregular passthrough)', () => {
       past_participle: 'sido',
     };
     const f = conjugate('ser', 'irregular-ser', overrides);
-    expect(f).toEqual(overrides);
+    expect(f).toEqual({
+      ...overrides,
+      imperative_affirmative: ['', 'sé', 'sea', 'seamos', 'sed', 'sean'],
+      imperative_negative:    ['', 'seas', 'sea', 'seamos', 'seáis', 'sean'],
+      imperfect_subjunctive:  ['fuera', 'fueras', 'fuera', 'fuéramos', 'fuerais', 'fueran'],
+      future_subjunctive:     ['fuere', 'fueres', 'fuere', 'fuéremos', 'fuereis', 'fueren'],
+    });
+    // The caller's own object is never mutated — conjugate() copies before
+    // adding the derived tenses above.
+    expect(overrides).not.toHaveProperty('imperative_affirmative');
   });
 
-  it('returns empty object when no overrides supplied', () => {
+  it('only adds the derived tenses (as empty) when no overrides supplied', () => {
     const f = conjugate('ir', 'irregular-ir');
-    expect(f).toEqual({});
+    expect(f).toEqual({
+      imperative_affirmative: [],
+      imperative_negative:    [],
+      imperfect_subjunctive:  [],
+      future_subjunctive:     [],
+    });
   });
 });
 

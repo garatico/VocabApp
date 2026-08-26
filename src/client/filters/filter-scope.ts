@@ -24,18 +24,18 @@
 
 import { readString } from '../utils/storage.ts';
 
-export type FilterScope = 'table' | 'recall' | 'single' | 'picture' | 'conjugation' | 'mylists';
+export type FilterScope =
+  'table' | 'picture' | 'trivia' | 'conjugation' | 'mylists';
 
 export const FILTER_SCOPES: FilterScope[] =
-  ['table', 'recall', 'single', 'picture', 'conjugation', 'mylists'];
+  ['table', 'picture', 'trivia', 'conjugation', 'mylists'];
 
 export const SCOPE_LABELS: Record<FilterScope, string> = {
-  table:       'Table',
-  recall:      'Recall',
-  single:      'Single Word',
-  picture:     'Picture Quiz',
-  conjugation: 'Conjugation',
-  mylists:     'My Lists',
+  table:        'Table',
+  picture:      'Picture Quiz',
+  trivia:       'Trivia',
+  conjugation:  'Conjugation',
+  mylists:      'My Lists',
 };
 
 const SCOPE_SET = new Set<string>(FILTER_SCOPES);

@@ -40,7 +40,7 @@ export interface ConjugationModeOptions {
  * — would fold two different verbs' answers into one tally. Mirrors
  * table-mode.ts's rowKey() / recall-mode.ts's cellKey().
  */
-function verbKey(word: string, verbLang: string): string {
+export function verbKey(word: string, verbLang: string): string {
   return `${verbLang}:${word}`;
 }
 
@@ -67,6 +67,21 @@ let _cleanup: (() => void) | null = null;
 
 const SINGLE_FORM_TENSES = new Set(['past_participle', 'gerund']);
 
+// The two imperative moods have five persons, not six — there's no such
+// thing as commanding yourself, so "yo" doesn't exist here at all. Different
+// from SINGLE_FORM_TENSES (no pronoun row at all): these still have five of
+// the normal six, just missing one.
+const NO_YO_TENSES = new Set(['imperative_affirmative', 'imperative_negative']);
+const EMPTY_SLOTS: ReadonlySet<number> = new Set();
+
+/** Pronoun slot indices a tense simply has no form for — currently only "yo"
+ *  (index 0) for the imperative moods. Shared with one-at-a-time-mode.ts,
+ *  random-table-mode.ts and card-match-mode.ts, which have no grid rows to
+ *  hide and instead use this to skip the slot before ever building one. */
+export function hiddenPronounSlots(tenseKey: string): Set<number> {
+  return NO_YO_TENSES.has(tenseKey) ? new Set([0]) : new Set();
+}
+
 /**
  * Bucket a conjugation_class into something a learner recognises.
  *
@@ -75,7 +90,7 @@ const SINGLE_FORM_TENSES = new Set(['past_participle', 'gerund']);
  * way that matters to a learner, so it reads as Regular with a note rather
  * than as Irregular.
  */
-function regularityOf(cls: string | null): { key: string; label: string } {
+export function regularityOf(cls: string | null): { key: string; label: string } {
   if (!cls)                        return { key: 'unknown',   label: '' };
   if (cls.startsWith('regular'))   return { key: 'regular',   label: 'Regular' };
   if (cls.startsWith('ortho'))     return { key: 'ortho',     label: 'Spelling' };
@@ -83,7 +98,7 @@ function regularityOf(cls: string | null): { key: string; label: string } {
   return { key: 'irregular', label: 'Irregular' };
 }
 
-function isSingleForm(key: string): boolean {
+export function isSingleForm(key: string): boolean {
   return SINGLE_FORM_TENSES.has(key);
 }
 
@@ -131,7 +146,7 @@ const VISIBLE_ROW = '.conj-row:not(.conj-row-hidden):not(.conj-row-tense-hidden)
  * The `reflexive` column would be the honest way to ask this, but it is 0 on
  * every row in the database — nothing populates it.
  */
-function isOwnInfinitive(w: Word): boolean {
+export function isOwnInfinitive(w: Word): boolean {
   const inf = w.linguistic?.infinitive;
   if (!inf) return true;
   return normalize(w.word).startsWith(normalize(inf));
@@ -145,7 +160,7 @@ function isOwnInfinitive(w: Word): boolean {
  * without the content. So the test is for a form with characters in it, not for
  * the key being present.
  */
-function hasAnyForms(w: Word): boolean {
+export function hasAnyForms(w: Word): boolean {
   const conj = w.linguistic?.conjugations as Record<string, unknown> | null | undefined;
   if (!conj) return false;
   return Object.values(conj).some(v =>
@@ -176,8 +191,21 @@ function showConjSummary(completeVerbs: number, nVerbs: number, correctForms: nu
   );
 }
 
-export function renderConjugationMode({ words, container, lang = 'spanish', extraLangs = [] }: ConjugationModeOptions): void {
+/**
+ * Tears down the previous render's global listeners (document-level keydown,
+ * tense/regularity chip clicks). Grid/Full call this themselves on their own
+ * next render, but One at a Time / Random Table / Card Match bypass
+ * renderConjugationMode entirely — start-handler.ts calls this directly
+ * before routing to any of those three, so switching away from Grid/Full
+ * never leaves a stale document keydown handler (or stale chip listeners
+ * closing over a torn-down session) running underneath a different view.
+ */
+export function cleanupConjugationMode(): void {
   if (_cleanup) { _cleanup(); _cleanup = null; }
+}
+
+export function renderConjugationMode({ words, container, lang = 'spanish', extraLangs = [] }: ConjugationModeOptions): void {
+  cleanupConjugationMode();
   setProgressCallback(null);
   clearConjSummary();
 
@@ -508,18 +536,25 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     readString('vq_conj_view') === 'full' ? 'full' : 'grid';
 
   /**
-   * Full Conjugation is paged, not stepped.
+   * Both Grid and Full Conjugation are paged, not rendered all at once.
    *
-   * It used to show one verb with Prev/Next, which meant a click between every
-   * verb and no way to see how far through you were. Table mode had already
-   * answered this: a page of them, scrolled, with a pager. The only reason to
-   * page at all rather than render all 249 is that a verb here is one card per
-   * selected tense — eight tenses turns 249 verbs into 1,992 cards, each with
-   * six inputs.
+   * Full used to show one verb with Prev/Next, which meant a click between
+   * every verb and no way to see how far through you were. Table mode had
+   * already answered this: a page of them, scrolled, with a pager. The reason
+   * to page at all rather than render every verb is that a verb here is one
+   * card per selected tense — with twelve tenses available and no cap, a
+   * merged multi-language session's few hundred verbs turns into several
+   * thousand cards, each with up to six inputs, which is slow enough to build
+   * and lay out that "Start Quiz" visibly hangs. Grid used to render
+   * everything unpaged (its cards flow into columns rather than stacking per
+   * verb, so there was no per-page "block" to hide the rest behind) — same
+   * pager, same page size, shared below, now applies to both.
    */
   const CONJ_PAGE_SIZES = [5, 10, 25, 50] as const;
   const DEFAULT_PAGE_SIZE = 10;
 
+  // Named for Full Conjugation, which is where paging started — shared with
+  // Grid now, which has no per-verb "page" of its own.
   let fullPage = 0;
   let pageSize = (() => {
     const n = Number(readString('vq_conj_page_size'));
@@ -572,9 +607,9 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   fullHeader.append(fullPrev, fullCount, sizeLabel, fullNext);
 
   function syncFullHeader(): void {
-    fullHeader.hidden = viewMode !== 'full';
+    // Shown for both views now — only the layout (stacked blocks vs. cards
+    // flowing into columns) differs between them.
     cardsGrid.classList.toggle('conj-cards-grid--full', viewMode === 'full');
-    if (viewMode !== 'full') return;
     const from = verbs.length === 0 ? 0 : pageStart() + 1;
     const to   = Math.min(pageStart() + pageSize, verbs.length);
     countLong.textContent =
@@ -694,10 +729,11 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     const tenses = selectedTenses();
     builtTenses = [...tenses];
 
-    // The grid shows every verb, one card per verb per tense, flowing into
-    // columns. Full Conjugation shows a page of verbs, each as its own block
-    // with its tenses in a row. Same cards either way.
-    const shown = viewMode === 'full' ? pageVerbs() : verbs;
+    // Grid shows a page of verbs, one card per verb per tense, flowing into
+    // columns. Full Conjugation shows the same page, each verb as its own
+    // block with its tenses in a row instead. Same cards, same page, either
+    // way — see pageVerbs() above for why both are paged at all.
+    const shown = pageVerbs();
 
     shown.forEach(verb => {
       const verbLang = verb.language ?? lang;
@@ -770,8 +806,10 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
    * would poison the "words I keep missing" order.
    */
   function bankVisibleVerbs(): void {
-    if (viewMode !== 'full') return;
-
+    // Both views are paged now (see pageVerbs() above), so both need whatever
+    // page is about to be torn down scored and remembered before it goes —
+    // this used to be a no-op for Grid, back when Grid rendered every verb at
+    // once and had nothing left off-screen to lose.
     interface Acc { word: string; language: string; total: number; correct: number; answered: number; }
     const perVerb = new Map<string, Acc>();
 
@@ -987,27 +1025,33 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   const handleViewClick = (e: Event): void => {
     const btn = (e.target as Element).closest<HTMLElement>('.conj-toggle-btn');
     if (!btn?.dataset.view || !viewToggle?.contains(btn)) return;
-    const next = btn.dataset.view === 'full' ? 'full' : 'grid';
+    const clicked = btn.dataset.view;
+    // Grid and Full share this module's own live rebuild below. One at a
+    // Time / Random Table / Card Match are separate renderers only reached
+    // through Start Quiz (see start-handler.ts) — nothing here to rebuild,
+    // and treating an unrecognized value as "grid" used to yank the screen
+    // back to Grid the moment one of those was clicked while Full was up.
+    if (clicked !== 'grid' && clicked !== 'full') return;
+    const next = clicked;
     if (next === viewMode) return;
 
-    // Leaving Full Conjugation banks the verbs on screen; the cards are about
-    // to be rebuilt for every verb and their answers would go with them.
+    // Leaving the current view banks the verbs on screen; the cards are about
+    // to be rebuilt and their answers would go with them. Both views share
+    // the same page cursor now, so this matters switching either direction.
     bankVisibleVerbs();
 
     // The stored value and the active class belong to the handler in app.ts,
     // which is bound whether or not a quiz is running. This one only rebuilds.
     viewMode = next;
 
-    // Entering Full Conjugation opens on the page holding the first verb not
-    // already banked, so switching views mid-session picks up roughly where the
-    // grid left off rather than sending you back to the start.
-    if (viewMode === 'full') {
-      const at = verbs.findIndex(v => {
-        const key = verbKey(v.word, v.language ?? lang);
-        return !banked.correct.has(key) && !banked.missed.has(key);
-      });
-      fullPage = at === -1 ? 0 : Math.floor(at / pageSize);
-    }
+    // Land on the page holding the first verb not already banked, so
+    // switching views mid-session picks up roughly where the other one left
+    // off rather than sending you back to the start.
+    const at = verbs.findIndex(v => {
+      const key = verbKey(v.word, v.language ?? lang);
+      return !banked.correct.has(key) && !banked.missed.has(key);
+    });
+    fullPage = at === -1 ? 0 : Math.floor(at / pageSize);
 
     buildCards();
     applyAllPronounToggles(cardsGrid);
@@ -1397,7 +1441,8 @@ function buildCard({
   function setSingleMode(single: boolean): void {
     // conj-row-tense-hidden, not conj-row-hidden — see VISIBLE_ROW. The pronoun
     // toggles own the other class and would undo this on their next pass.
-    pronounRows.forEach(row => row.classList.toggle('conj-row-tense-hidden', single));
+    const hiddenSlots = single ? EMPTY_SLOTS : hiddenPronounSlots(getTenseKey());
+    pronounRows.forEach((row, i) => row.classList.toggle('conj-row-tense-hidden', single || hiddenSlots.has(i)));
     singleFormRow.classList.toggle('conj-row-tense-hidden', !single);
     if (single) {
       singleLabel.textContent = SINGLE_FORM_ROW_LABEL[getTenseKey()] ?? getTenseKey();
@@ -1406,13 +1451,17 @@ function buildCard({
 
   function updateInputs(): void {
     const single = isSingleForm(getTenseKey());
+    const hiddenSlots = single ? EMPTY_SLOTS : hiddenPronounSlots(getTenseKey());
 
     inputs.forEach((inp, i) => {
       inp.value    = '';
-      inp.disabled = false;
+      // A slot the tense has no form for (imperative's "yo") stays disabled —
+      // same as a pronoun the Forms toggle switched off — so Tab navigation
+      // (addNav, below) never lands on a row that's hidden via CSS.
+      inp.disabled = hiddenSlots.has(i);
       inp.classList.remove('correct', 'revealed', 'missed');
       const btn = revealBtns[i];
-      if (btn) { btn.hidden = hintMode === 'none'; btn.textContent = '?'; }
+      if (btn) { btn.hidden = hintMode === 'none' || hiddenSlots.has(i); btn.textContent = '?'; }
     });
 
     singleInp.value = '';

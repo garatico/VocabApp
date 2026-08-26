@@ -1,8 +1,7 @@
 // ── Imports ───────────────────────────────────────────────────────────────────
 
-import { bindTableControls, resolveDirection } from './modes/table-controls.ts';
+import { bindTableControls, resolveDirection, syncTableStyleUI } from './modes/table-controls.ts';
 import { initPWA } from './utils/pwa.ts';
-import { bindQuizControls }                    from './quiz/quiz-controls.ts';
 import { bindStartHandler }                    from './start-handler.ts';
 import { bindClassFilter, getSelectedClasses, syncUI as syncClassFilterUI } from './filters/class-filter.ts';
 import { initSectionCollapse }                from './filters/section-collapse.ts';
@@ -34,17 +33,16 @@ const langPickerBtn = document.getElementById('langPickerBtn') as HTMLButtonElem
 const startBtn        = mustGet<HTMLButtonElement>('startBtn');
 const output          = mustGet('output');
 const tableWrap       = mustGet('tableWrap');
-const recallWrap      = mustGet('recallWrap');
 const pictureWrap     = mustGet('pictureWrap');
+const triviaWrap      = mustGet('triviaWrap');
 const conjugationWrap = mustGet('conjugationWrap');
 const myListsWrap     = document.getElementById('myListsWrap');  // optional — page may omit it
 const historyWrap     = document.getElementById('historyWrap');  // optional — page may omit it
 
 // Sections (hidden/shown by mode switch — mustGet throws if HTML template drifts)
-const quizArea        = mustGet('quizArea');
 const tableArea       = mustGet('tableArea');
-const recallArea      = mustGet('recallArea');
 const pictureArea     = mustGet('pictureArea');
+const triviaArea      = mustGet('triviaArea');
 const conjugationArea = mustGet('conjugationArea');
 const myListsArea     = mustGet('myListsArea');
 const historyArea     = mustGet('historyArea');
@@ -113,7 +111,7 @@ function updateLangPickerButton(): void {
 }
 
 /** Modes that know how to render/score a mixed-language word list. */
-const MULTI_LANG_MODES = new Set(['table', 'recall', 'conjugation']);
+const MULTI_LANG_MODES = new Set(['table', 'conjugation']);
 
 /**
  * The extra languages currently in effect. Gated on the active tab rather
@@ -215,6 +213,22 @@ function restoreSettings(): void {
     });
   }
 
+  // Trivia answer style
+  const savedTriviaStyle = S.get('vq_trivia_style');
+  if (savedTriviaStyle) {
+    document.querySelectorAll<HTMLElement>('#triviaSubMode .conj-toggle-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.mode === savedTriviaStyle);
+    });
+  }
+
+  // Conjugation Card Match pairing style
+  const savedMatchPairing = S.get('vq_conj_match_pairing');
+  if (savedMatchPairing) {
+    document.querySelectorAll<HTMLElement>('#conjMatchStyleToggle .conj-toggle-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.pairing === savedMatchPairing);
+    });
+  }
+
   // Direction
   const savedDir = S.get('vq_dir');
   if (savedDir) {
@@ -294,33 +308,29 @@ async function loadAndBuildFilters(lang: string): Promise<void> {
   updateDomainFilter(sortedCounts);
 }
 
-function getRecallTimerValue() {
-  return {
-    seconds:    Settings.getRecallSeconds(),
-    isHardStop: Settings.getHardStop(),
-  };
-}
-
 // ── Core module bindings ──────────────────────────────────────────────────────
 
 initTheme();
 
 const { updateModeUI } = bindModeSwitch({
-  quizArea, tableArea, recallArea, pictureArea, conjugationArea,
-  extraAreas: { mylists: myListsArea, settings: settingsArea, history: historyArea },
+  tableArea, pictureArea, conjugationArea,
+  extraAreas: {
+    mylists: myListsArea, settings: settingsArea, history: historyArea,
+    trivia: triviaArea,
+  },
   onActivate: {
-    conjugation: () => initConjControls(langSelect?.value || 'spanish', getExtraLanguages()),
+    table: syncTableStyleUI,
+    conjugation: () => {
+      initConjControls(langSelect?.value || 'spanish', getExtraLanguages());
+      syncConjViewToggle();
+    },
     // Re-rendered fresh on every visit so a session finished elsewhere always
     // shows up, and so does a list created elsewhere — e.g. a cross-language
-    // list started from the star button on a word in Table or Recall mode,
-    // which My Lists' own state has no way to hear about otherwise.
+    // list started from the star button on a word in Table mode, which My
+    // Lists' own state has no way to hear about otherwise.
     history: () => { if (historyWrap) renderHistory(historyWrap, langSelect?.value ?? 'spanish'); },
     mylists: () => { if (myListsWrap) renderMyLists(myListsWrap as HTMLElement); },
   },
-});
-
-const { showCurrent } = bindQuizControls({
-  getLang: () => isoCode(langSelect?.value),
 });
 
 bindStartHandler({
@@ -353,9 +363,7 @@ bindStartHandler({
   getCols: ({ max, fallback }: { max: number; fallback: number }) =>
     Math.max(1, Math.min(max, Settings.getTableCols() || fallback)),
   getDirection:   resolveDirection,
-  getRecallTimer: getRecallTimerValue,
   onModeChange:   updateModeUI,
-  onSingleStart:  showCurrent,
   getBaseList:    () => currentBaseList,
   // The size-window top-up logic (start-handler.ts) pulls from here when a
   // narrowing filter — verbs-only, illustrated-only — leaves the sized list
@@ -371,7 +379,7 @@ bindStartHandler({
     if (extras.length === 0) return allWordsByLang[primary] || [];
     return [primary, ...extras].flatMap(l => (allWordsByLang[l] || []).map(w => ({ ...w, language: l })));
   },
-  elements:       { startBtn, tableWrap, recallWrap, pictureWrap, conjugationWrap, output },
+  elements:       { startBtn, tableWrap, pictureWrap, triviaWrap, conjugationWrap, output },
 });
 
 // ── Event listeners ───────────────────────────────────────────────────────────
@@ -465,7 +473,7 @@ document.querySelector('.mode-tabs')?.addEventListener('click', e => {
   void loadAndBuildFilters(lang);
 });
 
-// ── Conjugation view (Grid / Full Conjugation) ────────────────────────────────
+// ── Conjugation view (Grid / Full Conjugation / One at a Time / Card Match) ───
 //
 // Bound here as well as inside conjugation mode, because the toggle lives in
 // the controls bar and can be clicked before a quiz has started — at which
@@ -475,18 +483,59 @@ document.querySelector('.mode-tabs')?.addEventListener('click', e => {
 //
 // This handler owns the stored value and the active class. The one in
 // conjugation mode owns rebuilding the cards, and only runs while a quiz is on
-// screen.
+// screen. One at a Time and Card Match are rendered by their own modules
+// entirely (see start-handler.ts) — nothing in conjugation/index.ts ever sees
+// those two values.
+const CONJ_VIEWS = new Set(['grid', 'full', 'oneatatime', 'randomtable', 'cardmatch']);
+
 function syncConjViewToggle(): void {
-  const stored = readString('vq_conj_view') === 'full' ? 'full' : 'grid';
+  const raw = readString('vq_conj_view');
+  const stored = raw && CONJ_VIEWS.has(raw) ? raw : 'grid';
   document.querySelectorAll<HTMLElement>('#conjViewToggle .conj-toggle-btn')
     .forEach(b => b.classList.toggle('active', b.dataset.view === stored));
+  const onConjTab = document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === 'conjugation';
+
+  // Match's pairing-style picker only means anything in Card Match view.
+  const matchGroup = document.getElementById('conjMatchStyleGroup');
+  if (matchGroup) {
+    matchGroup.style.display = stored === 'cardmatch' && onConjTab ? '' : 'none';
+  }
+
+  // Target/Both/English only means anything in Grid/Full — one-at-a-time-
+  // mode.ts, random-table-mode.ts and card-match-mode.ts never show an
+  // English gloss to switch, so the control had no effect there.
+  const displayGroup = document.getElementById('conjDisplayGroup');
+  if (displayGroup) {
+    displayGroup.style.display = (stored === 'grid' || stored === 'full') && onConjTab ? '' : 'none';
+  }
 }
 
 document.getElementById('conjViewToggle')?.addEventListener('click', e => {
   const btn = (e.target as Element).closest<HTMLElement>('.conj-toggle-btn');
-  if (!btn?.dataset.view) return;
-  writeString('vq_conj_view', btn.dataset.view === 'full' ? 'full' : 'grid');
+  if (!btn?.dataset.view || !CONJ_VIEWS.has(btn.dataset.view)) return;
+  writeString('vq_conj_view', btn.dataset.view);
   syncConjViewToggle();
+});
+
+// Settings side nav — expand the target section if it's currently
+// collapsed, so jumping to it doesn't land on a header with nothing under
+// it. The actual scroll is the browser's own #anchor behaviour; this only
+// handles the part that isn't already true of a plain link.
+document.querySelector('.settings-nav')?.addEventListener('click', e => {
+  const link = (e.target as Element).closest<HTMLAnchorElement>('.settings-nav-link');
+  if (!link) return;
+  const targetId = link.getAttribute('href')?.slice(1);
+  const section = targetId ? document.getElementById(targetId) : null;
+  const collapseBtn = section?.querySelector<HTMLButtonElement>('.settings-collapse-btn');
+  if (collapseBtn?.getAttribute('aria-expanded') === 'false') collapseBtn.click();
+});
+
+document.getElementById('conjMatchStyleToggle')?.addEventListener('click', e => {
+  const btn = (e.target as Element).closest<HTMLElement>('.conj-toggle-btn');
+  if (!btn?.dataset.pairing) return;
+  document.querySelectorAll('#conjMatchStyleToggle .conj-toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  writeString('vq_conj_match_pairing', btn.dataset.pairing);
 });
 
 // Picture sub-mode toggle — now an always-visible control-group (see
@@ -498,6 +547,15 @@ document.getElementById('pictureSubMode')?.addEventListener('click', e => {
   document.querySelectorAll('#pictureSubMode .conj-toggle-btn')
     .forEach(b => b.classList.toggle('active', b === btn));
   if (btn.dataset.mode) S.set('vq_picture_style', btn.dataset.mode);
+});
+
+// Trivia answer-style toggle (Type the Answer / Multiple Choice).
+document.getElementById('triviaSubMode')?.addEventListener('click', e => {
+  const btn = (e.target as HTMLElement).closest<HTMLElement>('.conj-toggle-btn');
+  if (!btn) return;
+  document.querySelectorAll('#triviaSubMode .conj-toggle-btn')
+    .forEach(b => b.classList.toggle('active', b === btn));
+  if (btn.dataset.mode) S.set('vq_trivia_style', btn.dataset.mode);
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -544,10 +602,15 @@ void (async function init(): Promise<void> {
 
   // Restore active mode tab (must happen after bindModeSwitch set up click handlers)
   const savedMode = S.get('vq_mode');
-  if (savedMode && savedMode !== 'mylists' && savedMode !== 'settings' && savedMode !== 'history') {
-    const tab = document.querySelector<HTMLElement>(`.mode-tab[data-mode="${savedMode}"]`);
-    tab?.click();
+  const savedTab = savedMode
+    ? document.querySelector<HTMLElement>(`.mode-tab[data-mode="${savedMode}"]`)
+    : null;
+  if (savedTab && savedMode !== 'mylists' && savedMode !== 'settings' && savedMode !== 'history') {
+    savedTab.click();
   } else if (savedMode !== 'table') {
+    // Covers both "we intentionally skip restoring mylists/settings/history"
+    // and "the saved mode no longer has a tab at all" — e.g. 'recall' or
+    // 'doubleRecall' from before those tabs were folded into Table.
     // We didn't click a tab, so the page is showing whatever ui-state.ts and
     // index.html both default to — Table. vq_mode drives currentScope() for
     // every filter's chain/bucket logic, so leaving it pointed at the mode we

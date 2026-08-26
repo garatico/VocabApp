@@ -36,13 +36,6 @@ const SHORTCUTS: ShortcutGroup[] = [
     ],
   },
   {
-    group: 'Single Word Quiz',
-    items: [
-      { keys: ['Enter'],        desc: 'Submit answer' },
-      { keys: ['←', '→'],      desc: 'Previous / next word' },
-    ],
-  },
-  {
     group: 'General',
     items: [
       { keys: ['?'],            desc: 'Open this shortcuts reference' },

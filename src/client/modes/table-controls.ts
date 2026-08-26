@@ -28,6 +28,38 @@ let resolvedDirection: TableDirection         = 'target-en';
 let lastMissedWords:   Word[]                 = [];
 let lastMissedResults: CheckResult[]          = [];
 
+// ── Quiz style (Standard / Recall / Double Recall — see table-recall-mode.ts) ──
+
+export type TableQuizStyle = 'standard' | 'recall' | 'double';
+let tableStyle: TableQuizStyle =
+  (readString('vq_table_style') as TableQuizStyle | null) ?? 'standard';
+
+export function getTableStyle(): TableQuizStyle {
+  return tableStyle;
+}
+
+/**
+ * Standard style owns #tableControls/#tableJumpTop/#tableJumpBottom (the
+ * per-row-input pagination/CSV/jump bar) and #directionGroup (direction is
+ * meaningless once the prompt word itself is blind). Recall/Double Recall
+ * style render their own equivalent controls inside #tableWrap instead — see
+ * table-recall-mode.ts — so this bar would otherwise sit above/below them
+ * doing nothing.
+ *
+ * Only touches these elements while the Table tab is actually active —
+ * ui-state.ts's updateModeUI already decides their visibility for every other
+ * tab, and this must not fight that when called from onActivate.table.
+ */
+export function syncTableStyleUI(): void {
+  const isTableTab = document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === 'table';
+  if (!isTableTab) return;
+  const showStandardOnly = tableStyle === 'standard';
+  ['tableControls', 'tableJumpTop', 'tableJumpBottom', 'directionGroup'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = showStandardOnly ? '' : 'none';
+  });
+}
+
 // ── Pagination state ──────────────────────────────────────────────────────────
 //
 // The table renders one page at a time, but the quiz is the whole word list.
@@ -533,6 +565,25 @@ export function bindTableControls(): void {
   const tableExport  = document.getElementById('tableExport');
   const tableJumpBtn = document.getElementById('tableJumpBtn');
   const dirToggle    = document.getElementById('directionToggle');
+  const styleToggle  = document.getElementById('tableStyleToggle');
+
+  // Reflect whatever was persisted from a prior session — the HTML always
+  // marks "Standard" active by default.
+  styleToggle?.querySelectorAll<HTMLButtonElement>('.conj-toggle-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.style === tableStyle);
+  });
+
+  // Quiz Style — Standard / Recall / Double Recall. Only takes effect on the
+  // next Start Quiz, same as every other pre-quiz toggle in this bar.
+  styleToggle?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.conj-toggle-btn');
+    if (!btn?.dataset.style) return;
+    styleToggle.querySelectorAll('.conj-toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    tableStyle = btn.dataset.style as TableQuizStyle;
+    writeString('vq_table_style', tableStyle);
+    syncTableStyleUI();
+  });
 
   // Give Up — reveal the whole quiz, show summary with missed words
   tableReset?.addEventListener('click', () => {

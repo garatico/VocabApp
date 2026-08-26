@@ -28,6 +28,25 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* ── Recall / Double Recall quiz style ──
+   table-recall-mode.ts's own control row (Order, stopwatch, Give Up),
+   rendered inside #tableWrap rather than the static #tableControls bar —
+   same treatment, different owner, since that bar is hidden while this style
+   is active (see table-controls.ts's syncTableStyleUI). */
+.tr-top-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* .table-pager itself is generic — just spacing it to sit comfortably
+   above/below this style's grid instead of Standard style's paginated one. */
+.tr-pager { margin: 0.5rem 0; }
+
 #tableFeedback {
   margin-top: 0.4rem;
   font-size: 1.88rem;
@@ -95,6 +114,17 @@
 
 #tableWrap td:has(.spanish-word),
 #tableWrap td:nth-child(odd) { background: var(--surface2); }
+
+/* ── Blind-recall reveal states (Table's Recall/Double Recall style) ──
+   Standard style's word is always visible and never carries a state class —
+   only its input does. Recall/Double Recall blind the word itself, so once
+   revealed it needs to say *how*: typed correctly (green, same as
+   input.correct), individually peeked with its own reveal button (yellow,
+   same as input.peeked), or given up on via Show All / Give Up (red, same
+   as input.incorrect) — see table-recall-mode.ts. */
+#tableWrap .spanish-word.correct   { color: var(--correct); }
+#tableWrap .spanish-word.peeked    { color: color-mix(in srgb, var(--warning) 75%, var(--text)); }
+#tableWrap .spanish-word.incorrect { color: var(--incorrect); }
 
 /* ── Row hover highlight ── */
 #tableWrap tr:hover .word-cell {
@@ -500,21 +530,44 @@
    Left slot of the table nav bar, opposite the jump buttons. */
 
 /* ── Repeat offenders ──────────────────────────────────────────
-   Words missed twice or more in previous sessions, from the shared
-   miss tally. Advisory: scoring is unaffected. */
-.table-word--trouble {
-  box-shadow: inset 3px 0 0 var(--warning, #b7791f);
+   Words missed twice or more in previous sessions, from the shared miss
+   tally. Advisory: scoring is unaffected.
+
+   Used to be a left-edge inset bar, the same device the known-list marker
+   uses — on a word that was both, the two bars stacked and ran right behind
+   the rank badge in the same corner, reading as a smear rather than two
+   signals. A count badge in the opposite corner (data-missed, set by
+   table-mode.ts/table-recall-mode.ts) says the same thing more precisely —
+   "missed 3 times" beats a bar of unlabelled thickness — and never competes
+   with the rank badge or the known-list star for the same pixels. */
+.table-word--trouble::before {
+  content: '\D7' attr(data-missed);
+  position: absolute;
+  bottom: 3px;
+  right: 5px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.48em;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: var(--warning, #b7791f);
+  border-radius: 999px;
+  padding: 0.15em 0.4em;
+  pointer-events: none;
+  user-select: none;
 }
 
-@media (max-width: 599px) {
+/* ── Hide rank / word-history markers (Settings → Table Quiz) ──
+   Scoped to #tableWrap so conjugation's own rank badge (which shares
+   .ui-rank-badge's styling but not this class) is never touched. */
+#tableWrap.hide-rank .table-word-rank { display: none; }
+#tableWrap.hide-word-markers td.word-cell--known {
+  box-shadow: none;
+  background: var(--surface2);
 }
-
-/* A word can be both listed and a repeat offender. Show both markers as a
-   split bar rather than letting whichever rule loads last win. */
-#tableWrap td.word-cell--known.table-word--trouble {
-  box-shadow:
-    inset 3px 0 0 var(--accent),
-    inset 6px 0 0 var(--warning, #b7791f);
+#tableWrap.hide-word-markers .word-cell--known::after,
+#tableWrap.hide-word-markers .table-word--trouble::before {
+  display: none;
 }
 
 /* Label + dropdown as one unit in the table nav bar. */

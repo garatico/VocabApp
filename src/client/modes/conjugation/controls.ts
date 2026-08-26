@@ -29,11 +29,31 @@ export function setProgressCallback(fn: (() => void) | null): void {
 
 // ── Pronoun toggle helpers (also used by conjugation-mode after render) ────────
 
+/**
+ * Pronoun slot indices (into PRONOUNS[lang]) currently enabled in the Forms
+ * toggles — used by one-at-a-time/random-table/card-match, which have no
+ * grid rows to hide via applyPronounToggle and so need to exclude a
+ * deselected pronoun before building their own queue/rows/pairs instead.
+ */
+export function activePronounIndices(): Set<number> {
+  const enabled = new Set<number>();
+  document.querySelectorAll<HTMLButtonElement>('#conjPronounToggles .conj-pronoun-toggle')
+    .forEach(btn => {
+      if (btn.dataset.enabled !== 'false') enabled.add(parseInt(btn.dataset.pi ?? '0', 10));
+    });
+  return enabled;
+}
+
 export function applyPronounToggle(idx: number, enabled: boolean, grid: Element): void {
   grid.querySelectorAll<HTMLElement>(`.conj-row[data-pi="${idx}"]`).forEach(row => {
     row.classList.toggle('conj-row-hidden', !enabled);
     const inp = row.querySelector<HTMLInputElement>('.conj-drill-input');
     if (!inp) return;
+    // A tense with no form for this slot at all (imperative's "yo") stays
+    // disabled regardless of the Forms toggle — buildCard already marked the
+    // row conj-row-tense-hidden for exactly this reason, and the Forms
+    // toggle only concerns a pronoun the tense actually has.
+    if (row.classList.contains('conj-row-tense-hidden')) { inp.disabled = true; return; }
     inp.disabled = !enabled
       ? true
       : inp.classList.contains('correct') || inp.classList.contains('revealed');

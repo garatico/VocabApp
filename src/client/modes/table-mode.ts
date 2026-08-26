@@ -201,6 +201,8 @@ export function renderTableMode({
     // a word carrying `.language` either way, so this is a no-op there.
     const indicatorMode = Settings.getLangIndicator();
     container.classList.toggle('lang-indicator-flag', indicatorMode === 'flag');
+    container.classList.toggle('hide-rank', !Settings.getTableShowRank());
+    container.classList.toggle('hide-word-markers', !Settings.getTableShowWordMarkers());
 
     for (let i = 0; i < words.length; i += pairsPerRow) {
       const tr = document.createElement('tr');
@@ -240,6 +242,7 @@ export function renderTableMode({
         const misses = missCount(wordLang, w.word);
         if (misses >= 2) {
           tdWord.classList.add('table-word--trouble');
+          tdWord.dataset.missed = String(misses);
           tdWord.title = `Missed ${misses} time${misses === 1 ? '' : 's'} before`;
         }
 

@@ -19,7 +19,7 @@ import { shuffleInPlace } from './shuffle.ts';
 import { readJson, writeJson, remove as removeKey, isNumberRecord } from './storage.ts';
 import { Settings } from '../settings.ts';
 
-export type QuizMode = 'recall' | 'table' | 'picture' | 'single' | 'conjugation';
+export type QuizMode = 'recall' | 'doubleRecall' | 'table' | 'picture' | 'conjugation' | 'trivia' | 'wordChoice';
 
 /**
  * Table mode's own direction — see table-mode.ts's TableDirection. The other
