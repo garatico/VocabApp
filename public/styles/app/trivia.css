@@ -1,0 +1,277 @@
+/* ================================================================
+   TRIVIA MODE — one general-knowledge question at a time (history, pop
+   culture), asked in the target language — see data/trivia-questions.ts.
+   Styled to match #tableArea/#tableWrap: bordered card, DM Mono, the same
+   bold accent-colored treatment table.css gives .spanish-word.
+================================================================ */
+
+#triviaArea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 1rem;
+  box-shadow: var(--shadow);
+}
+
+.tv-wrap {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.tv-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tv-nav {
+  display: flex;
+  gap: 0.4rem;
+  margin-right: auto;
+}
+.tv-nav-btn {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.tv-nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.tv-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Colours and states from .ui-btn-danger, same as every other Give Up. */
+.tv-giveup-btn {
+  font-size: 0.82rem;
+  padding: 0.32rem 0.9rem;
+}
+
+.tv-counter {
+  text-align: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+}
+
+.tv-prompt {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Small category badge above the question — History vs Pop Culture. */
+.tv-category {
+  display: inline-block;
+  font-family: 'Sora', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  background: var(--surface2);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+  margin-bottom: 0.6rem;
+}
+
+/* Same accent-colour DM Mono treatment as #tableWrap .spanish-word, sized
+   down from a single vocabulary word to a full question sentence — bold and
+   on-brand rather than huge, since this wraps onto two or three lines. */
+.tv-prompt-word {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+}
+
+/* 'type' sub-mode's answer input — reuses recall.css's .recall-input-row/
+   .recall-input, just centred and capped to the prompt's own width. */
+.tv-type-row {
+  max-width: 420px;
+  margin: 0 auto 0.5rem;
+}
+
+.tv-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  width: 100%;
+}
+
+/* Each option reads as a boxed cell — same border weight, radius and hover
+   lift as #tableWrap and the picture-click cards, so an answer choice here
+   looks like it belongs to the same app as an input cell in Table mode. */
+.tv-option {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 0.9rem 1rem;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color var(--transition-fast), background var(--transition-fast),
+              color var(--transition-fast), transform var(--transition-fast);
+}
+.tv-option:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+.tv-option:disabled { cursor: default; }
+
+.tv-option--correct {
+  background: var(--correct-light);
+  border-color: var(--correct);
+  color: var(--correct);
+}
+.tv-option--wrong {
+  background: var(--incorrect-light);
+  border-color: var(--incorrect);
+  color: var(--incorrect);
+}
+/* The right answer, shown alongside a wrong pick — same yellow the Revealed
+   pill and table mode's .peeked input use, so it never reads as a second
+   "correct" pick. */
+.tv-option--reveal {
+  background: var(--warning-light);
+  border-color: color-mix(in srgb, var(--warning) 60%, transparent);
+  color: color-mix(in srgb, var(--warning) 75%, var(--text));
+}
+
+.tv-feedback {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  min-height: 1.4rem;
+  color: var(--text-muted);
+}
+.tv-feedback.ok  { color: var(--correct); }
+.tv-feedback.bad { color: var(--incorrect); }
+
+.tv-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--text-muted);
+}
+
+/* ── 'table' sub-mode — every question at once, its own input box ──
+   Same bordered, boxed-worksheet language as #tableWrap table, so switching
+   between quiz styles doesn't feel like a different app. */
+.tv-qa-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  overflow-x: auto;
+}
+.tv-qa-header {
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+.tv-qa-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.95rem;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.tv-qa-table th {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: left;
+  color: var(--text-muted);
+  background: var(--surface2);
+  padding: 0.5rem 0.75rem;
+  border-bottom: 2px solid var(--border-strong);
+}
+.tv-qa-table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.tv-qa-table tr:last-child td { border-bottom: none; }
+.tv-qa-table tr:nth-child(even) td { background: var(--surface2); }
+
+.tv-qa-category {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.tv-qa-question { color: var(--text); }
+
+.tv-qa-answer-cell { width: 40%; }
+
+/* Same look and answer-state colours as #tableWrap input[type="text"] —
+   correct/incorrect states from table.css's own formulas. */
+.tv-qa-input {
+  width: 100%;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.95rem;
+  padding: 0.4rem 0.6rem;
+  box-sizing: border-box;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  color: var(--text);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.tv-qa-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+.tv-qa-input.correct {
+  background-color: var(--correct-light);
+  border-color: var(--correct);
+  color: var(--correct);
+  font-weight: 600;
+}
+.tv-qa-input.incorrect {
+  background-color: var(--incorrect-light);
+  border-color: var(--incorrect);
+  color: var(--incorrect);
+  font-weight: 600;
+}
+
+@media (max-width: 599px) {
+  .tv-qa-table { font-size: 0.82rem; }
+  .tv-qa-table th, .tv-qa-table td { padding: 0.4rem 0.5rem; }
+  .tv-qa-category { white-space: normal; }
+  .tv-qa-answer-cell { width: 50%; }
+  .tv-qa-input { font-size: 0.9rem; min-height: 40px; }
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  #triviaArea { padding: 0.5rem 0.75rem; }
+  .tv-prompt-word { font-size: 1.25rem; }
+  .tv-option { font-size: 1rem; padding: 0.8rem 0.75rem; }
+}
+
+@media (max-width: 599px) {
+  #triviaArea { padding: 0.5rem 0.6rem; }
+  .tv-header { flex-wrap: wrap; gap: 0.4rem; }
+  .tv-prompt-word { font-size: 1.1rem; }
+  .tv-options { grid-template-columns: 1fr; gap: 0.5rem; }
+  .tv-option { font-size: 0.95rem; padding: 0.75rem; min-height: 44px; }
+  .tv-nav-btn { font-size: 0.72rem; padding: 0.3rem 0.55rem; }
+  .tv-type-row { max-width: none; }
+}

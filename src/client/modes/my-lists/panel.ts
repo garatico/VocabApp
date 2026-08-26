@@ -119,9 +119,14 @@ export function renderPanel(ctx: ListsCtx): void {
   quizBtn.addEventListener('click', () => {
     if (!ctx.selectedList) return;
     // Quizzing from here means leaving this tab, so pick the mode the user was
-    // last in — anything but this one, which has no quiz of its own.
+    // last in — but only if it's actually a mode this list filter can reach.
+    // Trivia has no vocabulary-list concept (its own question bank, not
+    // `list`) and My Lists/Settings/History have no quiz at all, so landing
+    // on any of those left Start Quiz doing nothing. Same allowlist as
+    // history-mode.ts's own "quiz these" action.
     const savedMode = readString('vq_mode');
-    const targetMode = (!savedMode || savedMode === 'mylists') ? 'table' : savedMode;
+    const usableModes = new Set(['table', 'picture']);
+    const targetMode = savedMode && usableModes.has(savedMode) ? savedMode : 'table';
     // The list filter is per mode, so this has to be written for the mode we
     // are about to switch to. Writing it for My Lists would set up a filter on
     // the tab we are leaving and land on an unfiltered quiz.

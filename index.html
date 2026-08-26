@@ -37,9 +37,11 @@
 <link rel="stylesheet" href="/styles/app/progress.css"/>
 <link rel="stylesheet" href="/styles/app/quiz.css"/>
 <link rel="stylesheet" href="/styles/app/recall.css"/>
+<link rel="stylesheet" href="/styles/app/double-recall.css"/>
 <link rel="stylesheet" href="/styles/app/summary.css"/>
 <link rel="stylesheet" href="/styles/app/table.css"/>
 <link rel="stylesheet" href="/styles/app/picture.css"/>
+<link rel="stylesheet" href="/styles/app/trivia.css"/>
 <link rel="stylesheet" href="/styles/app/conjugation.css"/>
 <link rel="stylesheet" href="/styles/app/tooltip.css"/>
 <link rel="stylesheet" href="/styles/app/responsive.css"/>
@@ -73,9 +75,8 @@
       <!-- Mode Tabs -->
       <div class="mode-tabs" role="tablist" aria-label="Quiz mode">
         <button class="mode-tab active" data-mode="table" role="tab" aria-selected="true">Table</button>
-        <button class="mode-tab" data-mode="recall" role="tab" aria-selected="false">Recall</button>
-        <button class="mode-tab" data-mode="single" role="tab" aria-selected="false">Single Word</button>
         <button class="mode-tab" data-mode="picture" role="tab" aria-selected="false">Picture Quiz</button>
+        <button class="mode-tab" data-mode="trivia" role="tab" aria-selected="false">Trivia</button>
         <button class="mode-tab" data-mode="conjugation" role="tab" aria-selected="false">Conjugation</button>
         <button class="mode-tab" data-mode="mylists" role="tab" aria-selected="false">My Lists</button>
         <button class="mode-tab" data-mode="history" role="tab" aria-selected="false">History</button>
@@ -109,7 +110,7 @@
             <button type="button" id="langPickerBtn" class="lang-picker-btn">+ Languages</button>
           </div>
 
-          <div class="control-group">
+          <div class="control-group" id="wordsSizeGroup">
             <label>Words</label>
             <div class="size-row">
               <select id="sizeSelect">
@@ -155,6 +156,28 @@
             </div>
           </div>
 
+          <!-- Trivia mode only — see trivia-mode.ts. -->
+          <div class="control-group" id="triviaStyleGroup" style="display:none">
+            <label>Answer Style</label>
+            <div class="conj-display-toggle" id="triviaSubMode">
+              <button class="conj-toggle-btn active" data-mode="type">Type the Answer</button>
+              <button class="conj-toggle-btn" data-mode="choice">Multiple Choice</button>
+              <button class="conj-toggle-btn" data-mode="table">Table</button>
+            </div>
+          </div>
+
+          <!-- Table mode only: folds Recall/Double Recall's blind-guess
+               mechanic into Table's own grid — see table-recall-mode.ts.
+               Standard is Table's existing per-row behaviour, unchanged. -->
+          <div class="control-group" id="tableStyleGroup" style="display:none">
+            <label>Quiz Style</label>
+            <div class="conj-display-toggle" id="tableStyleToggle">
+              <button class="conj-toggle-btn active" data-style="standard">Standard</button>
+              <button class="conj-toggle-btn" data-style="recall">Recall</button>
+              <button class="conj-toggle-btn" data-style="double">Double Recall</button>
+            </div>
+          </div>
+
           <div class="control-group" id="directionGroup">
             <label>Direction</label>
             <div class="conj-display-toggle" id="directionToggle">
@@ -164,31 +187,23 @@
             </div>
           </div>
 
-          <div class="control-group" id="recallTimerGroup">
-            <label>Time limit</label>
-            <div class="size-row">
-              <select id="recallTimerSelect">
-                <option value="0">No timer</option>
-                <option value="60">1 min</option>
-                <option value="180">3 min</option>
-                <option value="300" selected>5 min</option>
-                <option value="600">10 min</option>
-                <option value="900">15 min</option>
-                <option value="custom">Custom&#x2026;</option>
-              </select>
-              <input type="number" id="recallTimerCustom" min="1" max="999" placeholder="mins" style="display:none;"/>
-              <div class="sort-order-toggle" id="recallHardStop" title="What happens when the timer runs out">
-                <button type="button" class="sort-order-btn active" data-stop="false">Keep going</button>
-                <button type="button" class="sort-order-btn" data-stop="true">Hard stop</button>
-              </div>
-            </div>
-          </div>
-
           <div class="control-group" id="conjViewGroup" style="display:none">
             <label>View</label>
             <div class="conj-display-toggle" id="conjViewToggle">
               <button class="conj-toggle-btn active" data-view="grid" title="Every verb, one card per tense">Grid</button>
               <button class="conj-toggle-btn" data-view="full" title="One verb at a time, every tense side by side">Full Conjugation</button>
+              <button class="conj-toggle-btn" data-view="oneatatime" title="One blank at a time — a verb, tense and pronoun, then the next">One at a Time</button>
+              <button class="conj-toggle-btn" data-view="randomtable" title="Every blank at once, fully shuffled — a random tense of a random verb on every row">Random Table</button>
+              <button class="conj-toggle-btn" data-view="cardmatch" title="Match pronouns or infinitives to their conjugated forms">Card Match</button>
+            </div>
+          </div>
+
+          <!-- Card Match only — which two things get matched. -->
+          <div class="control-group" id="conjMatchStyleGroup" style="display:none">
+            <label>Match</label>
+            <div class="conj-display-toggle" id="conjMatchStyleToggle">
+              <button class="conj-toggle-btn active" data-pairing="pronoun" title="One verb and tense at a time — match each pronoun to its conjugated form">Pronoun &#x2194; Form</button>
+              <button class="conj-toggle-btn" data-pairing="infinitive" title="Several verbs at once — match each infinitive to its conjugated form">Infinitive &#x2194; Form</button>
             </div>
           </div>
 
@@ -358,7 +373,7 @@
       <!-- Onboarding tip — shown on first visit, dismissable, re-triggerable from Settings -->
       <div id="onboardingCard" hidden>
         <div class="onboarding-body">
-          <strong>Welcome to VocabApp!</strong> Pick a language and word count in the controls above, then hit <strong>Start Quiz</strong>. Use the tabs to switch between Table, Recall, Single Word, Picture Quiz, and Conjugation modes. Head to <strong>⚙ Settings</strong> to configure hints, text size, and more.
+          <strong>Welcome to VocabApp!</strong> Pick a language and word count in the controls above, then hit <strong>Start Quiz</strong>. Use the tabs to switch between Table, Picture Quiz, Trivia, and Conjugation modes. Head to <strong>⚙ Settings</strong> to configure hints, text size, and more.
         </div>
         <button type="button" class="onboarding-dismiss" id="onboardingDismiss" aria-label="Dismiss tip">✕</button>
       </div>
@@ -427,52 +442,6 @@
         <div id="tableScoreBottom" class="quiz-score"></div>
       </section>
 
-      <section id="recallArea" hidden>
-        <div class="progressWrap">
-          <div class="progress"><div id="recallBarTop" class="bar"></div></div>
-          <div id="recallStatsTop" class="small"></div>
-        </div>
-        <div id="recallSummaryTop" class="quiz-summary" style="display:none"></div>
-
-        <div id="recallWrap"></div>
-        <div id="recallSummaryBottom" class="quiz-summary" style="display:none"></div>
-
-        <div class="progressWrap">
-          <div class="progress"><div id="recallBarBottom" class="bar"></div></div>
-          <div id="recallStatsBottom" class="small"></div>
-        </div>
-      </section>
-
-      <section id="quizArea" hidden>
-        <div class="progressWrap">
-          <div class="progress"><div id="bar" class="bar"></div></div>
-          <div id="statsTop" class="small"></div>
-        </div>
-        <div id="quizSummaryTop" class="quiz-summary" style="display:none"></div>
-
-        <div id="quizNav" class="quiz-nav">
-          <button id="quizPrev">&#x2190; Prev</button>
-          <span id="quizCounter" class="quiz-counter"></span>
-          <button id="quizNext">Next &#x2192;</button>
-        </div>
-
-        <!-- One or more cards per page (Settings → Single Word Quiz → Cards
-             per screen), built by quiz-controls.ts. Each card carries its own
-             word/meta/TTS/input-or-flip — there's no longer a single static
-             #word/#answer pair, since that only ever fit one card. -->
-        <div id="quizWrap" class="quiz-cards-grid"></div>
-
-        <div class="controls-row">
-          <button id="resetBtn">End Quiz</button>
-          <span id="quizStopwatch" class="quiz-stopwatch" title="Time spent on this quiz">0:00</span>
-        </div>
-        <div id="quizSummaryBottom" class="quiz-summary" style="display:none"></div>
-
-        <div class="progressWrap">
-          <div id="stats" class="small"></div>
-        </div>
-      </section>
-
       <section id="pictureArea" hidden>
         <!-- Same anatomy as #tableArea: three-segment bar with an in-bar
              label, then a row of score pills. -->
@@ -501,6 +470,33 @@
         <div id="pictureScoreBottom" class="quiz-score quiz-score--boxed"></div>
       </section>
 
+      <section id="triviaArea" hidden>
+        <!-- Same anatomy as #pictureArea's click sub-mode: a two-segment bar
+             (no "revealed" — trivia has no hint/give-up-per-word concept)
+             plus a row of score pills. -->
+        <div class="progressWrap">
+          <div class="progress">
+            <div id="triviaBarTop" class="bar"></div>
+            <div id="triviaBarTopMissed" class="bar-missed"></div>
+            <span id="triviaStatsTop" class="progress-label"></span>
+          </div>
+        </div>
+        <div id="triviaScoreTop" class="quiz-score quiz-score--boxed"></div>
+        <div id="triviaSummaryTop" class="quiz-summary" style="display:none"></div>
+
+        <div id="triviaWrap"></div>
+        <div id="triviaSummaryBottom" class="quiz-summary" style="display:none"></div>
+
+        <div class="progressWrap">
+          <div class="progress">
+            <div id="triviaBarBottom" class="bar"></div>
+            <div id="triviaBarBottomMissed" class="bar-missed"></div>
+            <span id="triviaStatsBottom" class="progress-label"></span>
+          </div>
+        </div>
+        <div id="triviaScoreBottom" class="quiz-score quiz-score--boxed"></div>
+      </section>
+
       <section id="conjugationArea" hidden>
         <div id="conjSummaryTop" class="quiz-summary" style="display:none"></div>
         <div id="conjugationWrap"></div>
@@ -516,10 +512,24 @@
       </section>
 
       <section id="settingsArea" hidden>
+        <div class="settings-layout">
+          <nav class="settings-nav" aria-label="Settings sections">
+            <a class="settings-nav-link" href="#settings-sec-table"><span class="settings-nav-icon" aria-hidden="true">📋</span>Table Quiz</a>
+            <a class="settings-nav-link" href="#settings-sec-multilang"><span class="settings-nav-icon" aria-hidden="true">🌐</span>Multi-Language Table</a>
+            <a class="settings-nav-link" href="#settings-sec-allquiz"><span class="settings-nav-icon" aria-hidden="true">🧩</span>All Quizzes</a>
+            <a class="settings-nav-link" href="#settings-sec-conj"><span class="settings-nav-icon" aria-hidden="true">🔀</span>Conjugation Practice</a>
+            <a class="settings-nav-link" href="#settings-sec-appearance"><span class="settings-nav-icon" aria-hidden="true">🎨</span>Appearance</a>
+            <a class="settings-nav-link" href="#settings-sec-general"><span class="settings-nav-icon" aria-hidden="true">⚙</span>General</a>
+          </nav>
         <div class="settings-wrap">
 
-          <div class="settings-section">
-            <div class="settings-section-title">Table Quiz</div>
+          <div class="settings-section settings-section--table" id="settings-sec-table">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyTable" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyTable">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-section-icon" aria-hidden="true">📋</span>
+              <span class="filter-section-label settings-section-title">Table Quiz</span>
+            </button>
+            <div id="settingsBodyTable" class="filter-body settings-section-body">
 
             <div class="settings-row">
               <div class="settings-label">
@@ -597,10 +607,39 @@
                 <button type="button" class="sort-order-btn" data-expand="false">Off</button>
               </div>
             </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Frequency rank</span>
+                <span class="settings-desc">The small number in the corner of every word cell, across every Table quiz style</span>
+              </div>
+              <div class="sort-order-toggle" id="settingTableShowRank">
+                <button type="button" class="sort-order-btn active" data-show="true">On</button>
+                <button type="button" class="sort-order-btn" data-show="false">Off</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Word history markers</span>
+                <span class="settings-desc">The list star and the "missed before" count badge on a word cell, across every Table quiz style</span>
+              </div>
+              <div class="sort-order-toggle" id="settingTableShowMarkers">
+                <button type="button" class="sort-order-btn active" data-show="true">On</button>
+                <button type="button" class="sort-order-btn" data-show="false">Off</button>
+              </div>
+            </div>
+
+            </div>
           </div>
 
-          <div class="settings-section">
-            <div class="settings-section-title">Multi-Language Table</div>
+          <div class="settings-section settings-section--multilang" id="settings-sec-multilang">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyMultilang" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyMultilang">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-section-icon" aria-hidden="true">🌐</span>
+              <span class="filter-section-label settings-section-title">Multi-Language Table</span>
+            </button>
+            <div id="settingsBodyMultilang" class="filter-body settings-section-body">
 
             <div class="settings-row">
               <div class="settings-label">
@@ -623,10 +662,17 @@
                 <!-- One row per language, built from LANGUAGES — see settings.ts -->
               </div>
             </div>
+
+            </div>
           </div>
 
-          <div class="settings-section">
-            <div class="settings-section-title">All Quizzes</div>
+          <div class="settings-section settings-section--allquiz" id="settings-sec-allquiz">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyAllQuiz" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyAllQuiz">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-section-icon" aria-hidden="true">🧩</span>
+              <span class="filter-section-label settings-section-title">All Quizzes</span>
+            </button>
+            <div id="settingsBodyAllQuiz" class="filter-body settings-section-body">
 
             <div class="settings-row">
               <div class="settings-label">
@@ -665,6 +711,17 @@
 
             <div class="settings-row">
               <div class="settings-label">
+                <span>Filter swear words</span>
+                <span class="settings-desc">On removes words tagged vulgar in the database, plus a curated per-language list (see data/swear-words.ts) for whatever isn't tagged. Not an exhaustive filter.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingSwearFilter">
+                <button type="button" class="sort-order-btn" data-swear="true">On</button>
+                <button type="button" class="sort-order-btn active" data-swear="false">Off</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
                 <span>Filter linking</span>
                 <span class="settings-desc">Off removes the 🔗 chain button from the Lists, Class and Domain filters and gives every mode its own independent filter — nothing is shared between them any more.</span>
               </div>
@@ -673,87 +730,17 @@
                 <button type="button" class="sort-order-btn" data-linking="false">Off</button>
               </div>
             </div>
-          </div>
 
-          <div class="settings-section">
-            <div class="settings-section-title">Single Word Quiz</div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span>Card style</span>
-                <span class="settings-desc">Type Answer: type the translation, checked as you type. Flashcard: click the card to reveal the translation, then grade yourself.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingSingleStyle">
-                <button type="button" class="sort-order-btn active" data-style="type">Type Answer</button>
-                <button type="button" class="sort-order-btn" data-style="flashcard">Flashcard</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span>Cards per screen</span>
-                <span class="settings-desc">How many words show at once. More than one works with either card style.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingSingleCards">
-                <button type="button" class="sort-order-btn active" data-cards="1">1</button>
-                <button type="button" class="sort-order-btn" data-cards="2">2</button>
-                <button type="button" class="sort-order-btn" data-cards="4">4</button>
-                <button type="button" class="sort-order-btn" data-cards="6">6</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span>Show part of speech</span>
-                <span class="settings-desc">A small hint under the word — "verb", "noun", etc.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingSinglePos">
-                <button type="button" class="sort-order-btn" data-show="true">On</button>
-                <button type="button" class="sort-order-btn active" data-show="false">Off</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span>Show difficulty band</span>
-                <span class="settings-desc">A small hint under the word — its CEFR level (A1–C2)</span>
-              </div>
-              <div class="sort-order-toggle" id="settingSingleBand">
-                <button type="button" class="sort-order-btn active" data-show="true">On</button>
-                <button type="button" class="sort-order-btn" data-show="false">Off</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span>Show topic</span>
-                <span class="settings-desc">A small hint under the word — its domain, e.g. "food", "travel" (omitted for general-vocabulary words)</span>
-              </div>
-              <div class="sort-order-toggle" id="settingSingleDomain">
-                <button type="button" class="sort-order-btn active" data-show="true">On</button>
-                <button type="button" class="sort-order-btn" data-show="false">Off</button>
-              </div>
             </div>
           </div>
 
-          <div class="settings-section">
-            <div class="settings-section-title">Recall Quiz</div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span>Accepting a word</span>
-                <span class="settings-desc">Auto-accept as soon as you type it, or wait for Enter. Short words that start longer ones always wait for Enter.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingRecallAutoEnter">
-                <button type="button" class="sort-order-btn active" data-auto="true">Auto</button>
-                <button type="button" class="sort-order-btn" data-auto="false">Press Enter</button>
-              </div>
-            </div>
-
-          </div>
-
-          <div class="settings-section">
-            <div class="settings-section-title">Conjugation Practice</div>
+          <div class="settings-section settings-section--conj" id="settings-sec-conj">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyConj" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyConj">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-section-icon" aria-hidden="true">🔀</span>
+              <span class="filter-section-label settings-section-title">Conjugation Practice</span>
+            </button>
+            <div id="settingsBodyConj" class="filter-body settings-section-body">
 
             <div class="settings-row">
               <div class="settings-label">
@@ -768,10 +755,16 @@
               </div>
             </div>
 
+            </div>
           </div>
 
-          <div class="settings-section">
-            <div class="settings-section-title">Appearance</div>
+          <div class="settings-section settings-section--appearance" id="settings-sec-appearance">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyAppearance" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyAppearance">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-section-icon" aria-hidden="true">🎨</span>
+              <span class="filter-section-label settings-section-title">Appearance</span>
+            </button>
+            <div id="settingsBodyAppearance" class="filter-body settings-section-body">
 
             <div class="settings-row">
               <div class="settings-label">
@@ -798,10 +791,17 @@
                 <button type="button" class="sort-order-btn" data-size="xl">XL</button>
               </div>
             </div>
+
+            </div>
           </div>
 
-          <div class="settings-section">
-            <div class="settings-section-title">General</div>
+          <div class="settings-section settings-section--general" id="settings-sec-general">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyGeneral" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyGeneral">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-section-icon" aria-hidden="true">⚙</span>
+              <span class="filter-section-label settings-section-title">General</span>
+            </button>
+            <div id="settingsBodyGeneral" class="filter-body settings-section-body">
 
             <div class="settings-row">
               <div class="settings-label">
@@ -821,8 +821,11 @@
                 <button type="button" class="sort-order-btn" data-history="false">Off</button>
               </div>
             </div>
+
+            </div>
           </div>
 
+        </div>
         </div>
       </section>
 

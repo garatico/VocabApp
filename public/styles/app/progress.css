@@ -37,12 +37,6 @@
 /* Show a sliver once there's any progress at all */
 .bar[style*="width"]:not([style*="width: 0"]) { min-width: 6px; }
 
-#bar {
-  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 70%, var(--accent-hover)));
-  transition: width 0.5s ease-out;
-  border-radius: 99px;
-}
-
 /* ── In-bar label ──────────────────────────────────────────────
    The answered/total and percentage used to sit beside the bar,
    with a separate block appearing at the end just to say "100%".

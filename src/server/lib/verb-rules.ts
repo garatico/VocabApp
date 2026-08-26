@@ -26,6 +26,16 @@ export interface VerbForms {
   imperative:      string[];
   gerund:          string;
   past_participle: string;
+  /**
+   * These four are never set by a class rule function — unlike every tense
+   * above, none of them vary by conjugation class, even for fully irregular
+   * verbs (see deriveExtraTenses below). conjugate() fills them in once,
+   * uniformly, after a rule function or the irregular-* passthrough returns.
+   */
+  imperative_affirmative?: string[];
+  imperative_negative?:    string[];
+  imperfect_subjunctive?:  string[];
+  future_subjunctive?:     string[];
 }
 
 export type VerbOverrides = Partial<VerbForms>;
@@ -343,6 +353,100 @@ const CLASS_RULES: Record<string, RuleFn> = {
   'stem-e-i-gir':  stemEIGir,
 };
 
+// ── Derived moods ────────────────────────────────────────────────────────────
+//
+// Imperfect subjunctive, future subjunctive, negative imperative, and four of
+// affirmative imperative's five persons are mechanical transforms of forms
+// the verb already has — true for every Spanish verb without exception,
+// including fully irregular ones (fueron → fuera/fuere, sé/sean already
+// prove subjunctive-imperative works for "ser"). Nothing here varies by
+// conjugation class, so it runs once in conjugate() itself rather than being
+// duplicated into every rule function above. Only affirmative imperative's
+// "tú" form is a genuine exception, and only for a handful of verbs.
+
+const IMPF_SUBJ_ENDINGS = ['ra',  'ras',  'ra',  'ramos',  'rais',  'ran'];
+const FUT_SUBJ_ENDINGS  = ['re',  'res',  're',  'remos',  'reis',  'ren'];
+
+const VOWEL_ACCENT: Record<string, string> = { a: 'á', e: 'é', i: 'í', o: 'ó', u: 'ú' };
+
+/** Marks the last vowel of a stem with an acute accent — "habla" → "hablá". */
+function accentLastVowel(stem: string): string {
+  for (let i = stem.length - 1; i >= 0; i--) {
+    const accented = VOWEL_ACCENT[stem[i]];
+    if (accented) return stem.slice(0, i) + accented + stem.slice(i + 1);
+  }
+  return stem;
+}
+
+/**
+ * Imperfect/future subjunctive stress the syllable right before the ending in
+ * every person except nosotros, which needs a written accent to keep the
+ * stress there instead of sliding onto "-ramos"/"-remos" by Spanish's default
+ * stress rule — "habláramos", not "hablaramos". The other five persons never
+ * take this accent.
+ */
+function applyPastSubjEndings(stem: string, endings: string[]): string[] {
+  return endings.map((ending, i) => (i === 3 ? accentLastVowel(stem) : stem) + ending);
+}
+
+/**
+ * "tú" affirmative imperative for the handful of verbs where it isn't the
+ * regular 3rd-person-singular-present rule below — and their compounds
+ * already in the word list, which inherit the same irregularity. decir/hacer
+ * compounds are deliberately left out: several (bendecir, maldecir) are
+ * regular here even though they're irregular elsewhere, so a compound can't
+ * be assumed to inherit this specific form without checking it individually.
+ */
+const IRREGULAR_TU_IMPERATIVE: Record<string, string> = {
+  decir: 'di',  hacer: 'haz', ir: 've',   poner: 'pon',
+  salir: 'sal', ser: 'sé',    tener: 'ten', venir: 'ven',
+  componer: 'compón', disponer: 'dispón', imponer: 'impón', oponer: 'opón',
+  posponer: 'pospón', proponer: 'propón', suponer: 'supón',
+  contener: 'contén', detener: 'detén', entretener: 'entretén',
+  mantener: 'mantén', obtener: 'obtén',
+  intervenir: 'intervén', prevenir: 'prevén',
+};
+
+function deriveExtraTenses(forms: VerbForms, inf: string): VerbForms {
+  const subj = forms.subjunctive;
+  const pret = forms.preterite;
+
+  // Negative imperative — present subjunctive for every person, no "yo"
+  // slot (index 0 stays '' — there is no negative "yo" command).
+  forms.imperative_negative = subj && subj.length >= 6
+    ? ['', subj[1], subj[2], subj[3], subj[4], subj[5]]
+    : [];
+
+  // Affirmative imperative — usted/nosotros/ustedes reuse present subjunctive
+  // (true for every verb, ser/ir's own "sé"/"sean", "ve"/"vayan" included);
+  // vosotros is always the infinitive with its final -r swapped for -d, with
+  // no exception in the language. Only tú needs the table above.
+  forms.imperative_affirmative = subj && subj.length >= 6
+    ? [
+        '',
+        IRREGULAR_TU_IMPERATIVE[inf] ?? forms.present?.[2] ?? '',
+        subj[2],
+        subj[3],
+        inf.length > 1 ? inf.slice(0, -1) + 'd' : '',
+        subj[5],
+      ]
+    : [];
+
+  // Imperfect / future subjunctive — both built from the 3rd-plural
+  // preterite stem (strip the universal "-ron"), which is why these two
+  // tenses have no irregular verbs at all: whatever irregularity a verb has
+  // is already baked into that preterite stem (fueron → fuera/fuere).
+  forms.imperfect_subjunctive = [];
+  forms.future_subjunctive    = [];
+  if (pret && pret.length >= 6 && pret[5].endsWith('ron')) {
+    const stem = pret[5].slice(0, -3);
+    forms.imperfect_subjunctive = applyPastSubjEndings(stem, IMPF_SUBJ_ENDINGS);
+    forms.future_subjunctive    = applyPastSubjEndings(stem, FUT_SUBJ_ENDINGS);
+  }
+
+  return forms;
+}
+
 // ── Main entry point ───────────────────────────────────────────────────────────
 
 /**
@@ -367,10 +471,15 @@ export function conjugate(
   }
 
   const rule = CLASS_RULES[conjugationClass];
-  if (rule) return rule(inf, overrides);
+  if (rule) return deriveExtraTenses(rule(inf, overrides), inf);
 
-  // Fully irregular: caller supplies complete forms via overrides
-  if (conjugationClass?.startsWith('irregular-')) return overrides as VerbForms;
+  // Fully irregular: caller supplies complete forms via overrides. Copied
+  // rather than mutated in place — deriveExtraTenses adds properties, and
+  // `overrides` is the caller's own object, not one this function owns the
+  // way a rule function owns its freshly-built `f`.
+  if (conjugationClass?.startsWith('irregular-')) {
+    return deriveExtraTenses({ ...overrides } as VerbForms, inf);
+  }
 
   throw new Error(`Unknown conjugation_class: '${conjugationClass}'`);
 }

@@ -22,6 +22,10 @@ export const SUMMARY_SLOTS = {
   table:       { ids: ['tableSummary', 'tableSummaryTop'] },
   picture:     { ids: ['pictureSummaryTop', 'pictureSummaryBottom'] },
   conjugation: { ids: ['conjSummaryTop', 'conjSummaryBottom'] },
+  trivia:      { ids: ['triviaSummaryTop', 'triviaSummaryBottom'] },
+  // word-choice-mode.ts is parked (not wired to any tab) — these ids don't
+  // exist in index.html yet; showSummary/clearSummary tolerate that already.
+  wordChoice:  { ids: ['wordChoiceSummaryTop', 'wordChoiceSummaryBottom'] },
 } as const satisfies Record<string, SummarySlots>;
 
 export type SummaryMode = keyof typeof SUMMARY_SLOTS;

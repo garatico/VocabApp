@@ -26,7 +26,14 @@ function apply(btn: HTMLElement, body: HTMLElement, open: boolean): void {
   body.classList.toggle('filter-body--collapsed', !open);
 }
 
-/** The boxed section a collapse button belongs to. */
+/**
+ * The boxed section a collapse button belongs to — click-anywhere-to-toggle
+ * applies here. Deliberately excludes .settings-section: those sections are
+ * full of description text and whitespace between rows (not just a few
+ * checkboxes like the filter boxes below), so the same behavior there meant
+ * clicking near a setting could collapse the whole section out from under it.
+ * Settings sections still toggle via their own header button.
+ */
 const BLOCK_SELECTOR = '#classFilter, #listFilter, #domainFilterWrap, .filter-box';
 
 /** Controls inside a section that must keep their own click behaviour. */

@@ -31,13 +31,17 @@ import { buildLangBadge } from '../ui/lang-badge.ts';
 import type { SessionDirection } from '../utils/session-history.ts';
 
 const MODE_LABELS: Record<QuizMode, string> = {
-  table:       'Table',
-  recall:      'Recall',
-  picture:     'Picture Quiz',
-  single:      'Single Word',
-  conjugation: 'Conjugation',
+  table:        'Table',
+  recall:       'Recall',
+  doubleRecall: 'Double Recall',
+  picture:      'Picture Quiz',
+  trivia:       'Trivia',
+  // word-choice-mode.ts is parked (not wired to any tab) — this label only
+  // matters if a past dev build ever recorded a session under it.
+  wordChoice:   'Word Choice',
+  conjugation:  'Conjugation',
 };
-const MODE_ORDER: QuizMode[] = ['table', 'recall', 'picture', 'single', 'conjugation'];
+const MODE_ORDER: QuizMode[] = ['table', 'recall', 'doubleRecall', 'picture', 'trivia', 'conjugation'];
 
 // Table mode's own direction toggle labels — see #directionToggle in index.html.
 const DIRECTION_LABELS: Record<SessionDirection, string> = {
@@ -183,7 +187,7 @@ export function renderHistory(container: HTMLElement, lang: string): void {
     // last in (which could be Conjugation, mylists, settings or history
     // itself, none of which the list filter applies to the same way).
     const savedMode  = readString('vq_mode');
-    const usableModes = new Set(['table', 'recall', 'single', 'picture']);
+    const usableModes = new Set(['table', 'picture']);
     const targetMode = savedMode && usableModes.has(savedMode) ? savedMode : 'table';
 
     saveListFilterState(

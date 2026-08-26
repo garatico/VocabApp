@@ -19,6 +19,8 @@ import {
   LIST_FILTER_DESC,
   type ListFilterMode,
 } from '../utils/word-lists.ts';
+import { Settings } from '../settings.ts';
+import { isSwearWord } from '../data/swear-words.ts';
 import {
   bindFilterHeader, syncFilterHeader, type FilterHeaderConfig,
 } from './filter-header.ts';
@@ -56,27 +58,46 @@ export function getFilterState(): FilterState {
  * Hide mode  — remove words that appear in ANY selected list.
  * Focus mode — keep ONLY words that appear in at least one selected list.
  * No lists selected — return the list unchanged.
+ *
+ * Also applies the (independent, Settings-level) swear word filter — see
+ * data/swear-words.ts. Unlike the list filter, that one isn't per-mode/
+ * chainable state; it's a single on/off Settings toggle, so it always
+ * applies here rather than being gated on `state.active`.
  */
 export function filterWords(words: Word[]): Word[] {
   const lang  = (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? 'spanish';
   const state = getListFilterState(lang);
 
-  if (!state.active || state.selected.length === 0) return words;
+  let out = words;
 
-  // Build a union set of all words across the selected lists
-  const wordSet = new Set<string>();
-  for (const listName of state.selected) {
-    for (const w of getList(lang, listName)) {
-      wordSet.add(w);
+  if (state.active && state.selected.length > 0) {
+    // Build a union set of all words across the selected lists
+    const wordSet = new Set<string>();
+    for (const listName of state.selected) {
+      for (const w of getList(lang, listName)) {
+        wordSet.add(w);
+      }
     }
+    out = state.mode === 'hide'
+      ? out.filter(w => !wordSet.has(w.word))
+      // focus: only words that appear in at least one selected list
+      : out.filter(w => wordSet.has(w.word));
   }
 
-  if (state.mode === 'hide') {
-    return words.filter(w => !wordSet.has(w.word));
-  } else {
-    // focus: only words that appear in at least one selected list
-    return words.filter(w => wordSet.has(w.word));
+  if (Settings.getSwearFilterEnabled()) {
+    // Two signals, since neither covers everything on its own: the database
+    // does carry `register: "vulgar"` on some entries (confirmed on Spanish
+    // "mierda"), but that's the pipeline's own tagging and this app doesn't
+    // control its coverage — so the static list in swear-words.ts still
+    // catches whatever isn't (or never gets) tagged that way, and for
+    // languages with no list yet, the register alone still does something.
+    out = out.filter(w =>
+      w.linguistic?.register !== 'vulgar' &&
+      !isSwearWord(w.language ?? lang, w.word),
+    );
   }
+
+  return out;
 }
 
 function currentLang(fallback = 'spanish'): string {

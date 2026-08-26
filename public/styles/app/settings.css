@@ -10,22 +10,92 @@
   box-shadow: var(--shadow);
 }
 
+/* ── Side nav + section list, side by side ── */
+.settings-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+.settings-nav {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 0 0 190px;
+  align-self: flex-start;
+}
+.settings-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-family: 'Sora', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.settings-nav-link:hover {
+  background: var(--surface2);
+  color: var(--accent);
+}
+.settings-nav-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .settings-wrap {
   display: flex;
   flex-direction: column;
+  gap: 0.9rem;
+  min-width: 0;
+  flex: 1 1 auto;
   max-width: 620px;
 }
 
-/* ── Section ── */
+/* ── Section — a distinct card per group, each with its own faint accent
+   colour down the left edge so the seven groups read as separate things
+   rather than one long list broken up by rules. The colours themselves
+   don't mean anything (no group is more important than another) — they're
+   here purely so your eye can tell at a glance where one group ends and
+   the next begins while scrolling. */
 .settings-section {
-  padding: 1.1rem 0;
-  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  scroll-margin-top: 1rem;
 }
-.settings-section:first-child { padding-top: 0; }
-.settings-section:last-child  { border-bottom: none; padding-bottom: 0; }
+.settings-section-body {
+  padding: 0 1.1rem 0.9rem;
+}
+.settings-section-body > .settings-row:first-child { border-top: none; }
 
+.settings-section--table       { border-left: 3px solid var(--accent); }
+.settings-section--multilang   { border-left: 3px solid #6d9dc5; }
+.settings-section--allquiz     { border-left: 3px solid #b78a4a; }
+.settings-section--conj        { border-left: 3px solid #4aa88a; }
+.settings-section--appearance  { border-left: 3px solid #c56d8f; }
+.settings-section--general     { border-left: 3px solid var(--text-muted); }
+
+/* ── Collapsible header — filter-collapse-btn's own layout/arrow behaviour
+   (class-filter.css) is reused as-is; this only sizes it for a page-level
+   section heading rather than a compact filter-bar one. */
+.settings-collapse-btn {
+  width: 100%;
+  padding: 0.85rem 1.1rem;
+  justify-content: flex-start;
+}
+.settings-section-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
 /* Type from .ui-label. */
-.settings-section-title { margin-bottom: 0.75rem; }
+.settings-section-title { margin-bottom: 0; }
 
 /* ── Row ── */
 .settings-row {
@@ -178,6 +248,31 @@
 }
 
 /* ── Responsive ── */
+@media (max-width: 860px) {
+  /* The side nav doesn't have room to sit beside the content and stay
+     sticky — instead it becomes a horizontally-scrollable row of chips
+     above the sections, same idea as the mode tabs. */
+  .settings-layout { flex-direction: column; gap: 1rem; }
+  .settings-nav {
+    position: static;
+    flex-direction: row;
+    flex: 0 0 auto;
+    width: 100%;
+    overflow-x: auto;
+    gap: 0.3rem;
+    padding-bottom: 0.2rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    /* Same right-edge fade mode-tabs.css uses to hint this row scrolls. */
+    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+  }
+  .settings-nav::-webkit-scrollbar { display: none; }
+  .settings-nav-link { flex: 0 0 auto; white-space: nowrap; }
+  .settings-wrap { max-width: none; }
+}
+
 @media (max-width: 599px) {
   #settingsArea { padding: 1rem; }
 
@@ -190,4 +285,7 @@
   /* Segmented toggles: full width on mobile */
   .settings-row .sort-order-toggle { width: 100%; }
   .settings-row .sort-order-btn    { flex: 1; }
+
+  .settings-collapse-btn { padding: 0.7rem 0.85rem; }
+  .settings-section-body { padding: 0 0.85rem 0.7rem; }
 }

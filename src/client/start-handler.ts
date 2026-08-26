@@ -1,22 +1,23 @@
-import { Quiz }                          from './quiz/quiz.ts';
-import { renderRecallMode }               from './modes/recall-mode.ts';
 import { renderPictureMode }              from './modes/picture-mode.ts';
-import { renderConjugationMode }          from './modes/conjugation/index.ts';
-import { startTableQuiz }                 from './modes/table-controls.ts';
-import { setQuiz }                        from './quiz/quiz-controls.ts';
+import { renderTriviaMode }               from './modes/trivia-mode.ts';
+import { renderConjugationMode, cleanupConjugationMode } from './modes/conjugation/index.ts';
+import { renderConjOneAtATime }           from './modes/conjugation/one-at-a-time-mode.ts';
+import { renderConjRandomTable }          from './modes/conjugation/random-table-mode.ts';
+import { renderConjCardMatch }            from './modes/conjugation/card-match-mode.ts';
+import { startTableQuiz, getTableStyle }  from './modes/table-controls.ts';
+import { renderTableRecallMode }          from './modes/table-recall-mode.ts';
 import { filterWords }                    from './filters/word-filters.ts';
 import { hasVisual }                      from './data/visual-map.ts';
 import { shuffleInPlace }                from './utils/shuffle.ts';
 import { orderWords }                     from './utils/session-history.ts';
-import { Settings }                       from './settings.ts';
 
 import type { Word } from './types.ts';
 
 interface StartHandlerElements {
   startBtn:        HTMLButtonElement;
   tableWrap:       HTMLElement;
-  recallWrap:      HTMLElement;
   pictureWrap:     HTMLElement;
+  triviaWrap:      HTMLElement;
   conjugationWrap: HTMLElement | null;
   output:          HTMLElement;
 }
@@ -35,9 +36,7 @@ interface StartHandlerOptions {
   getSortOrder?:      () => string;
   getCols:            (opts: { max: number; fallback: number }) => number;
   getDirection?:      () => string;
-  getRecallTimer:     () => { seconds: number; isHardStop: boolean };
   onModeChange:       () => void;
-  onSingleStart:      () => void;
   getBaseList:        () => Word[];
   getAllWords?:        () => Word[];
   elements:           StartHandlerElements;
@@ -55,16 +54,14 @@ export function bindStartHandler({
   getSortOrder,
   getCols,
   getDirection,
-  getRecallTimer,
   onModeChange,
-  onSingleStart,
   getBaseList,
   getAllWords,      // full unsized word list — used by picture mode
   elements: {
     startBtn,
     tableWrap,
-    recallWrap,
     pictureWrap,
+    triviaWrap,
     conjugationWrap,
     output,
   }
@@ -187,12 +184,6 @@ export function bindStartHandler({
       }
       // 'frequency' keeps the existing rank-based order from loadAndBuildFilters
 
-      setQuiz(new Quiz({
-        words:      list,
-        storageKey: `quick_quiz_state_${fullLang}`,
-        tolerance:  Settings.getTypoToleranceRatio(),
-      }));
-
       const currentMode = modeAtStart;
 
       if (currentMode === 'table') {
@@ -202,30 +193,27 @@ export function bindStartHandler({
           if (el) { el.style.display = 'none'; el.innerHTML = ''; }
         });
 
-        startTableQuiz({
-          words:     list,
-          columns:   getCols({ max: 5, fallback: 2 }),
-          direction: (getDirection ? getDirection() : 'target-en') as import('./modes/table-mode.ts').TableDirection,
-          lang:      fullLang,
-          // Completion is shown by the progress bar itself now — it fills and
-          // its in-bar label reads 100%. A separate block that existed only to
-          // repeat "100%" was redundant.
-          onComplete: () => { /* nothing extra to show */ }
-        });
-      }
-
-      if (currentMode === 'recall') {
-        recallWrap.innerHTML = '';
-        const { seconds, isHardStop } = getRecallTimer();
-
-        const controller = renderRecallMode({
-          words: list,
-          container: recallWrap,
-          columns: getCols({ max: 3, fallback: 1 }),
-          lang: fullLang,
-        });
-
-        if (seconds > 0) controller.startTimer(seconds, isHardStop);
+        const tableStyle = getTableStyle();
+        if (tableStyle === 'standard') {
+          startTableQuiz({
+            words:     list,
+            columns:   getCols({ max: 5, fallback: 2 }),
+            direction: (getDirection ? getDirection() : 'target-en') as import('./modes/table-mode.ts').TableDirection,
+            lang:      fullLang,
+            // Completion is shown by the progress bar itself now — it fills and
+            // its in-bar label reads 100%. A separate block that existed only to
+            // repeat "100%" was redundant.
+            onComplete: () => { /* nothing extra to show */ }
+          });
+        } else {
+          renderTableRecallMode({
+            words:     list,
+            container: tableWrap,
+            columns:   getCols({ max: 5, fallback: 2 }),
+            style:     tableStyle,
+            lang:      fullLang,
+          });
+        }
       }
 
       if (currentMode === 'picture') {
@@ -252,18 +240,50 @@ export function bindStartHandler({
         });
       }
 
-      if (currentMode === 'conjugation' && conjugationWrap) {
-        conjugationWrap.innerHTML = '';
-        renderConjugationMode({
-          words: list,
-          container: conjugationWrap,
+      if (currentMode === 'trivia') {
+        triviaWrap.innerHTML = '';
+        const triviaSubModeEl = document.getElementById('triviaSubMode');
+        const triviaSubMode = (triviaSubModeEl?.querySelector('.conj-toggle-btn.active') as HTMLElement | null)?.dataset.mode ?? 'type';
+
+        // Trivia draws its own general-knowledge question bank rather than
+        // the vocabulary `list` built above — see data/trivia-questions.ts.
+        renderTriviaMode({
+          container: triviaWrap,
           lang: fullLang,
-          extraLangs: getExtraLanguages ? getExtraLanguages() : [],
+          subMode: (triviaSubMode ?? 'type') as 'type' | 'choice' | 'table',
         });
       }
 
+      if (currentMode === 'conjugation' && conjugationWrap) {
+        // Grid/Full clean up their own listeners on their next render, but
+        // the other three views bypass renderConjugationMode entirely — tear
+        // down here so a leftover document keydown handler from a previous
+        // Grid/Full session never survives underneath them.
+        cleanupConjugationMode();
+        conjugationWrap.innerHTML = '';
+        const conjView = (document.querySelector('#conjViewToggle .conj-toggle-btn.active') as HTMLElement | null)
+          ?.dataset.view ?? 'grid';
+        const extraLangs = getExtraLanguages ? getExtraLanguages() : [];
+
+        if (conjView === 'oneatatime') {
+          renderConjOneAtATime({ words: list, container: conjugationWrap, lang: fullLang, extraLangs });
+        } else if (conjView === 'randomtable') {
+          renderConjRandomTable({ words: list, container: conjugationWrap, lang: fullLang, extraLangs });
+        } else if (conjView === 'cardmatch') {
+          const pairing = (document.querySelector('#conjMatchStyleToggle .conj-toggle-btn.active') as HTMLElement | null)
+            ?.dataset.pairing === 'infinitive' ? 'infinitive' : 'pronoun';
+          renderConjCardMatch({ words: list, container: conjugationWrap, lang: fullLang, extraLangs, pairing });
+        } else {
+          renderConjugationMode({
+            words: list,
+            container: conjugationWrap,
+            lang: fullLang,
+            extraLangs,
+          });
+        }
+      }
+
       onModeChange();
-      if (currentMode === 'single') onSingleStart();
 
     } catch (err) {
       output.style.display = 'block';
