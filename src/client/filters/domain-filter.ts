@@ -371,3 +371,17 @@ export function bindDomainFilter(): void {
 export function getSelectedDomains(): string[] {
   return active ? [...selected] : [];
 }
+
+/**
+ * Set the selection directly and repaint — used by presets.ts to apply a
+ * saved bundle in one shot. Domains outside the current language's known
+ * set are silently kept; updateDomainFilter's own prune already handles
+ * that the next time counts load.
+ */
+export function applyDomainSelection(domains: string[], isActive = true): void {
+  active = isActive;
+  changeSelection(() => {
+    selected.clear();
+    domains.forEach(d => selected.add(d));
+  });
+}

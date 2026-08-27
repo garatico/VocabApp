@@ -23,6 +23,7 @@ export const SUMMARY_SLOTS = {
   picture:     { ids: ['pictureSummaryTop', 'pictureSummaryBottom'] },
   conjugation: { ids: ['conjSummaryTop', 'conjSummaryBottom'] },
   trivia:      { ids: ['triviaSummaryTop', 'triviaSummaryBottom'] },
+  guessBlank:  { ids: ['guessBlankSummaryTop', 'guessBlankSummaryBottom'] },
   // word-choice-mode.ts is parked (not wired to any tab) — these ids don't
   // exist in index.html yet; showSummary/clearSummary tolerate that already.
   wordChoice:  { ids: ['wordChoiceSummaryTop', 'wordChoiceSummaryBottom'] },

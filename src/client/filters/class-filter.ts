@@ -139,3 +139,14 @@ export function getSelectedClasses(): string[] {
   if (!state.active || state.selected.length === 0) return [];
   return [...state.selected];
 }
+
+/**
+ * Set the selection directly and repaint — used by presets.ts to apply a
+ * saved bundle in one shot, the way a chip click would but for every POS at
+ * once.
+ */
+export function applyClassSelection(selected: string[], active = true): void {
+  saveState({ active, selected: [...selected] });
+  syncUI();
+  notifyChange();
+}

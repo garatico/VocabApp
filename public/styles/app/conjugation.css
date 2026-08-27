@@ -345,13 +345,25 @@
 }
 
 .conj-pronoun-toggle:hover {
-  background: var(--surface2);
+  background: hsl(var(--pronoun-hue, 210) 45% 45% / 0.08);
   color: var(--text);
 }
 
+/* Tinted by --pronoun-hue (set via data-pi, above) rather than a flat
+   accent fill, so each person reads as its own color — the same formula
+   .conj-tense-chip.active uses for tenses, and the color Random Table's
+   .crt-pronoun cells carry for the same person. */
 .conj-pronoun-toggle.active {
-  background: var(--accent);
-  color: #fff;
+  background:   hsl(var(--pronoun-hue, 210) 45% 45% / 0.18);
+  color:        hsl(var(--pronoun-hue, 210) 55% 30%);
+  box-shadow: inset 0 -3px 0 hsl(var(--pronoun-hue, 210) 50% 42%);
+  font-weight: 700;
+}
+@media (prefers-color-scheme: dark) {
+  .conj-pronoun-toggle.active { color: hsl(var(--pronoun-hue, 210) 60% 72%); }
+}
+:root[data-theme="dark"] .conj-pronoun-toggle.active {
+  color: hsl(var(--pronoun-hue, 210) 60% 72%);
 }
 
 /* Hidden pronoun rows (toggled off) */
@@ -542,6 +554,22 @@
 [data-tense="imperfect_subjunctive"]   { --tense-hue: 235; }  /* indigo      */
 [data-tense="future_subjunctive"]      { --tense-hue:  65; }  /* gold        */
 
+/* ═══════════════════════════════════════════════════════════════
+   Grammatical person colour coding
+   ───────────────────────────────────────────────────────────────
+   Same idea as --tense-hue above, one step over: a fixed hue per
+   pronoun slot (0-5, PRONOUNS[lang]'s index — see controls.ts's
+   data-pi and random-table-mode.ts), shared by the Forms toggle
+   button and any table cell drilling that person, so a learner can
+   match a random table's rows back to the filter that produced them.
+   ═══════════════════════════════════════════════════════════════ */
+[data-pi="0"] { --pronoun-hue:   0; }  /* red    */
+[data-pi="1"] { --pronoun-hue:  60; }  /* yellow */
+[data-pi="2"] { --pronoun-hue: 120; }  /* green  */
+[data-pi="3"] { --pronoun-hue: 180; }  /* cyan   */
+[data-pi="4"] { --pronoun-hue: 240; }  /* blue   */
+[data-pi="5"] { --pronoun-hue: 300; }  /* magenta*/
+
 /* ── Tense chips: two columns ─────────────────────────────────
    There was never a base rule here — only the 767px override — so the
    container fell back to display:block and the width:100% chips stacked
@@ -630,6 +658,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Live pre-quiz card-count estimate (verbs × tenses) — app.ts's
+   refreshConjEstimate. Empty and takes no space until there's something to
+   say (a verb pool loaded and at least one tense ticked). */
+.conj-size-estimate {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.conj-size-estimate:empty { display: none; }
+.conj-size-estimate--warning { color: var(--danger); }
+
 /* Selection changed but the grid has not been rebuilt yet. */
 .conj-tf-summary--pending {
   color: var(--warning, #b7791f);
@@ -938,14 +978,16 @@
 
 /* One verb's tenses. Columns size to their content and scroll sideways rather
    than squeezing, since a conjugation squeezed to four characters is not
-   readable and not worth showing. */
+   readable and not worth showing.
+   Zero gap + each card's own border stripped (below) so the row reads as one
+   table with a divider between columns, framed by .conj-verb-block's own
+   border above it rather than a shelf of separately-boxed cards. */
 .conj-verb-row {
   display: flex;
   flex-direction: row;
-  align-items: start;
-  gap: 0.6rem;
+  align-items: stretch;
+  gap: 0;
   overflow-x: auto;
-  padding: 0.6rem;
   scroll-snap-type: x proximity;
 }
 
@@ -953,17 +995,92 @@
   flex: 0 0 auto;
   width: min(19rem, 82vw);
   scroll-snap-align: start;
+  /* .conj-verb-block already frames the whole verb (header + row) — a
+     card's own border/shadow here would double up on top of that. */
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+/* A clear vertical rule between tense columns, not just a hairline — this is
+   the line that actually denotes "a new tense starts here" at a glance. */
+.conj-verb-row .conj-card + .conj-card {
+  border-left: 2px solid var(--border-strong);
+}
+
+/* The tense's color (data-tense → --tense-hue, set by buildCards()) as a
+   header stripe — same hue Random Table's .crt-tense and the tense filter
+   chips use for this tense, so the column reads as belonging to it. */
+.conj-verb-row .conj-card {
+  border-top: 3px solid hsl(var(--tense-hue, 145) 45% 45%);
+}
+
+/* Every card after the first repeats the same six pronoun labels — hidden
+   here rather than not rendered, so the input column still lines up exactly
+   where the first card's label reserved the space for it. Width/padding are
+   collapsed too, not just visibility — the label's reserved 5.5rem column
+   (below) otherwise left a blank gap before each column's input started. */
+.conj-verb-row .conj-card:not(:first-child) .conj-pronoun {
+  visibility: hidden;
+  width: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* Imperative's missing "yo" (conj-row-tense-hidden + conj-row-no-form — see
+   setSingleMode() in index.ts) keeps its row-track space here, unlike a
+   true single-form tense's full collapse (conj-row-tense-hidden alone),
+   whose card is meant to be shorter. Without this, Imperative's tú still
+   slid up into "yo"'s slot, one row out of step with every other column. */
+.conj-verb-row .conj-row-tense-hidden.conj-row-no-form {
+  display: grid;
+  visibility: hidden;
+}
+
+/* Row color coding — data-pi on each .conj-row (buildCard()) sets
+   --pronoun-hue the same way data-pi on the Forms toggle buttons does (see
+   the shared block above), so "tú"'s row carries the same color as its
+   toggle everywhere a pronoun is drilled. The label text carries it directly
+   (only visible on the first column); every column's row also gets a
+   tinted underline in the same hue, so the color reads as a guide line
+   running the full width of the table, not just a label on the left edge. */
+.conj-verb-row .conj-pronoun {
+  color: hsl(var(--pronoun-hue, 210) 50% 42%);
+}
+/* Specificity has to clear the legacy 2-column-grid nth-child(3) border
+   rule further down this file (a leftover from Grid view's 2-column inner
+   layout, still active for row 3 in Full view) or that row alone would keep
+   the plain gray border instead of picking up its hue. */
+.conj-cards-grid--full .conj-verb-row .conj-card .conj-row[data-pi] {
+  border-bottom-color: hsl(var(--pronoun-hue, 210) 45% 45% / 0.5);
+}
+@media (prefers-color-scheme: dark) {
+  .conj-verb-row .conj-pronoun { color: hsl(var(--pronoun-hue, 210) 65% 70%); }
+}
+:root[data-theme="dark"] .conj-verb-row .conj-pronoun {
+  color: hsl(var(--pronoun-hue, 210) 65% 70%);
 }
 
 /* Falls back to stacking on narrow screens. A horizontal scroll containing
    text inputs is miserable on a phone: focusing a field scrolls the row and
-   you lose your place mid-answer. */
+   you lose your place mid-answer. Each card gets its own border back too —
+   stacked full-width, there is no shared row edge to borrow from, and the
+   hidden-label trick above only makes sense side by side. */
 @media (max-width: 640px) {
   .conj-verb-row {
     flex-direction: column;
     overflow-x: visible;
+    gap: 0.6rem;
+    padding: 0.6rem;
   }
-  .conj-verb-row .conj-card { width: 100%; }
+  .conj-verb-row .conj-card {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: var(--radius, 12px);
+    background: var(--surface2);
+  }
+  .conj-verb-row .conj-card:not(:first-child) .conj-pronoun { visibility: visible; }
 }
 
 /* ── Pager ── */
@@ -1022,33 +1139,35 @@
 }
 
 /* ── Add-to-list star ──
-   Outlined rather than a bare glyph. On a card header dense with badges
-   (rank, A1, IRREGULAR, the tense) an unenclosed ★ read as one more label
-   instead of as something to press. */
+   Matches Table mode's .known-btn (table.css) — square, em-sized, accent
+   when active — rather than its own circular/amber look. The two modes'
+   stars used to disagree for no reason other than having been built
+   separately; this is the one place that mattered enough to unify. */
 .conj-card-star,
 .conj-full-star {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
+  min-width: 1.7em;
+  min-height: 1.7em;
   padding: 0;
   font-size: 0.85rem;
   line-height: 1;
   color: var(--text-muted);
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   opacity: 1;
-  transition: color 0.15s, border-color 0.15s, background 0.15s, transform 0.15s;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 
 .conj-card-star:hover,
 .conj-full-star:hover {
   color: var(--accent);
   border-color: var(--accent);
+  background: var(--accent-light);
 }
 
 .conj-card-star:focus-visible,
@@ -1058,16 +1177,14 @@
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
-/* In a list — filled, so it reads as a state and not just a hover. */
+/* In a list — filled, so it reads as a state and not just a hover. Same
+   accent Table mode's .known-btn--active uses, not a separate color. */
 .conj-card-star.known-btn--active,
 .conj-full-star.known-btn--active {
-  color: var(--warning, #b7791f);
-  border-color: var(--warning, #b7791f);
-  background: var(--warning-light, transparent);
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-light);
 }
-
-.conj-card-star:active,
-.conj-full-star:active { transform: scale(1.12); }
 
 /* ================================================================
    TENSE & FORMS ON A PHONE
@@ -1197,6 +1314,15 @@
 .conj-cards-grid--full .conj-head-side {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+/* headMain carries the verb name/gloss (hidden here — the verb block header
+   above has them) and nothing else, so it would otherwise reserve an empty
+   flex column next to the tense name. Full width for headSide instead, which
+   is what makes the card read as a tense column header rather than half of
+   one. */
+.conj-cards-grid--full .conj-head-main {
+  display: none;
 }
 
 /* The input is the point of the card; it gets what is left. */
@@ -1504,11 +1630,15 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   margin-top: 0.75rem;
+  /* data-tense (set by one-at-a-time-mode.ts's renderItem) drives
+     --tense-hue via the shared block above — same color a card's tense
+     carries in Full Conjugation and Random Table. */
+  border-top: 3px solid hsl(var(--tense-hue, 145) 45% 45%);
 }
 
 .coat-tense {
   font-size: 0.8rem;
-  color: var(--text-muted);
+  color: hsl(var(--tense-hue, 145) 45% 42%);
   margin-top: 0.3rem;
 }
 
@@ -1516,7 +1646,15 @@
   font-size: 1.3rem;
   font-weight: 700;
   margin-top: 0.5rem;
+  color: hsl(var(--pronoun-hue, 210) 50% 42%);
 }
+
+@media (prefers-color-scheme: dark) {
+  .coat-tense   { color: hsl(var(--tense-hue, 145) 60% 68%); }
+  .coat-pronoun { color: hsl(var(--pronoun-hue, 210) 65% 70%); }
+}
+:root[data-theme="dark"] .coat-tense   { color: hsl(var(--tense-hue, 145) 60% 68%); }
+:root[data-theme="dark"] .coat-pronoun { color: hsl(var(--pronoun-hue, 210) 65% 70%); }
 
 .coat-input-row {
   display: flex;
@@ -1624,9 +1762,14 @@
 .crt-table tr:last-child td { border-bottom: none; }
 .crt-table tr:nth-child(even) td { background: var(--surface2); }
 
+/* Tense and person color coding — rows carry data-tense/data-pi (set by
+   random-table-mode.ts), which define --tense-hue/--pronoun-hue (see the
+   shared blocks above); the cells here just read them. Text color plus a
+   left-edge stripe, not a background tint, so the coding stays legible over
+   the alternating .crt-table row stripe rather than fighting it. */
 .crt-pronoun {
   font-weight: 600;
-  color: var(--text-muted);
+  color: hsl(var(--pronoun-hue, 210) 50% 38%);
   white-space: nowrap;
 }
 .crt-verb {
@@ -1634,10 +1777,18 @@
   color: var(--accent);
 }
 .crt-tense {
-  color: var(--text-muted);
+  color: hsl(var(--tense-hue, 145) 50% 38%);
   font-size: 0.85rem;
   white-space: nowrap;
+  border-left: 3px solid hsl(var(--tense-hue, 145) 45% 45%);
+  padding-left: 0.6rem;
 }
+@media (prefers-color-scheme: dark) {
+  .crt-pronoun { color: hsl(var(--pronoun-hue, 210) 65% 68%); }
+  .crt-tense   { color: hsl(var(--tense-hue, 145) 65% 68%); }
+}
+:root[data-theme="dark"] .crt-pronoun { color: hsl(var(--pronoun-hue, 210) 65% 68%); }
+:root[data-theme="dark"] .crt-tense   { color: hsl(var(--tense-hue, 145) 65% 68%); }
 .crt-answer-cell { width: 32%; }
 
 /* Same look and answer-state colours as .conj-drill-input. */

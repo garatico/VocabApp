@@ -1,0 +1,172 @@
+/* ================================================================
+   GUESS THE BLANK — clue-based guessing, one question at a time.
+   Proof of concept — see guess-blank-mode.ts. Styled to match #triviaArea
+   (trivia.css), which it's modeled on: same bordered card, DM Mono prompt.
+================================================================ */
+
+#guessBlankArea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 1rem;
+  box-shadow: var(--shadow);
+}
+
+.gb-wrap {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.gb-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.gb-nav {
+  display: flex;
+  gap: 0.4rem;
+  margin-right: auto;
+}
+.gb-nav-btn {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.gb-nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.gb-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Colours and states from .ui-btn-danger, same as every other Give Up. */
+.gb-giveup-btn {
+  font-size: 0.82rem;
+  padding: 0.32rem 0.9rem;
+}
+
+.gb-counter {
+  text-align: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+}
+
+.gb-prompt {
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.gb-badge-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-bottom: 0.9rem;
+}
+
+.gb-category {
+  display: inline-block;
+  font-family: 'Sora', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  background: var(--surface2);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+}
+
+/* .gb-difficulty is now a shared component — see shared/components.css —
+   used by Trivia's difficulty column too. */
+
+/* Clues read as a short list, weakest (first revealed) at the top — plain
+   list markers rather than numbers, since the count of what's left to
+   reveal is already on the button below. */
+.gb-clues {
+  list-style: none;
+  margin: 0 auto 0.9rem;
+  padding: 0;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.gb-clues li {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1.4;
+  padding: 0.6rem 0.9rem;
+  background: var(--accent-light);
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.gb-more-clue-btn {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.gb-more-clue-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.gb-more-clue-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Reuses recall.css's .recall-input-row/.recall-input, same as Trivia's
+   'type' sub-mode — centred and capped to the prompt's own width. */
+.gb-type-row {
+  max-width: 420px;
+  margin: 1rem auto 0.5rem;
+}
+
+.gb-feedback {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  min-height: 1.4rem;
+  color: var(--text-muted);
+}
+.gb-feedback.ok  { color: var(--correct); }
+.gb-feedback.bad { color: var(--incorrect); }
+
+/* A wrong guess with attempts left — the input shakes rather than locking,
+   since the question is still live (see guess-blank-mode.ts). */
+.gb-shake { animation: gb-shake 0.3s; }
+@keyframes gb-shake {
+  25%  { transform: translateX(-6px); }
+  75%  { transform: translateX(6px); }
+}
+
+.gb-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--text-muted);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  #guessBlankArea { padding: 0.5rem 0.75rem; }
+  .gb-clues li { font-size: 1rem; }
+}
+
+@media (max-width: 599px) {
+  #guessBlankArea { padding: 0.5rem 0.6rem; }
+  .gb-header { flex-wrap: wrap; gap: 0.4rem; }
+  .gb-clues li { font-size: 0.92rem; padding: 0.5rem 0.7rem; }
+  .gb-nav-btn { font-size: 0.72rem; padding: 0.3rem 0.55rem; }
+  .gb-type-row { max-width: none; }
+}

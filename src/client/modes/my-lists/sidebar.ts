@@ -27,6 +27,12 @@ import {
 } from './smart-lists.ts';
 import { buildLangBadge } from '../../ui/lang-badge.ts';
 import { LANGUAGES } from '../../data/languages.ts';
+import {
+  modesWithPresets, listPresets, getPreset, describePreset, deletePreset, renamePreset,
+  savePreset, type PresetBundle,
+} from '../../filters/presets.ts';
+import { SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
+import { POS_CHIPS } from './types.ts';
 
 export interface SidebarUI {
   /** The whole left pane, ready to append. */
@@ -130,6 +136,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       ctx.listNav.appendChild(empty); ctx.selectedList = '';
       renderSmartNav();
       renderMultiNav();
+      renderProfilesNav();
       if (rerenderPanel) ctx.renderPanel();
       return;
     }
@@ -200,6 +207,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
 
     renderSmartNav();
     renderMultiNav();
+    renderProfilesNav();
     if (rerenderPanel) ctx.renderPanel();
   }
 
@@ -279,7 +287,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     const names = getMultiListNames();
 
     const head = document.createElement('li');
-    head.className = 'ml-smart-head';
+    head.className = 'ml-multi-head';
     const headLabel = document.createElement('span');
     headLabel.textContent = 'Cross-Language Lists';
     const addMulti = document.createElement('button');
@@ -306,10 +314,10 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
 
     names.forEach(name => {
       const li = document.createElement('li');
-      li.className = 'ml-list-item' + (name === ctx.selectedMultiList ? ' active' : '');
+      li.className = 'ml-list-item ml-multi-item' + (name === ctx.selectedMultiList ? ' active' : '');
 
       const nameSpan = document.createElement('span');
-      nameSpan.className = 'ml-list-name'; nameSpan.textContent = name; nameSpan.title = name;
+      nameSpan.className = 'ml-list-name'; nameSpan.textContent = '🌐 ' + name; nameSpan.title = name;
 
       const countSpan = document.createElement('span');
       countSpan.className = 'ml-list-count';
@@ -334,6 +342,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
           alert(`A cross-language list named "${newName.trim()}" already exists.`);
         }
       });
+
 
       const deleteBtn = document.createElement('button');
       deleteBtn.type = 'button'; deleteBtn.className = 'ml-icon-btn ml-icon-btn--danger';
@@ -364,6 +373,268 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       });
       ctx.listNav.appendChild(li);
     });
+  }
+
+  // ── Testing Profiles ──────────────────────────────────────────────────────
+  //
+  // Not scoped to ctx.lang (a profile can apply to any language it was saved
+  // under — see presets.ts) and not tied to a word list at all, so this
+  // mirrors renderSmartNav()'s shape (head row, one li per item, delete +
+  // rename, no dedicated right-panel) rather than the ordinary-list one.
+  // Grouped by the mode the profile belongs to (Table/Picture/Conjugation),
+  // since a name is only unique within its own mode.
+
+  function renderProfilesNav(): void {
+    const head = document.createElement('li');
+    head.className = 'ml-profile-head';
+    const headLabel = document.createElement('span');
+    headLabel.textContent = 'Testing Profiles';
+    head.append(headLabel);
+    ctx.listNav.appendChild(head);
+
+    const modes = modesWithPresets();
+    if (modes.length === 0) {
+      const hint = document.createElement('li');
+      hint.className = 'ml-list-empty ml-smart-hint';
+      hint.textContent = 'Save one from the Profiles button on Table, Picture Quiz or Conjugation';
+      ctx.listNav.appendChild(hint);
+      return;
+    }
+
+    modes.forEach(mode => {
+      const modeHead = document.createElement('li');
+      modeHead.className = 'ml-profile-mode-head';
+      modeHead.textContent = SCOPE_LABELS[mode];
+      ctx.listNav.appendChild(modeHead);
+
+      listPresets(mode).forEach(name => {
+        const bundle = getPreset(mode, name);
+        const li = document.createElement('li');
+        li.className = 'ml-list-item ml-profile-item';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'ml-list-name';
+        nameSpan.textContent = name;
+        nameSpan.title = bundle ? describePreset(bundle) : name;
+
+        const descSpan = document.createElement('span');
+        descSpan.className = 'ml-profile-desc';
+        descSpan.textContent = bundle ? describePreset(bundle) : '';
+
+        const actions = document.createElement('span');
+        actions.className = 'ml-list-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button'; editBtn.className = 'ml-icon-btn';
+        editBtn.title = 'Edit contents'; editBtn.textContent = '⚙';
+        editBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          toggleProfileEditor(mode, name, li);
+        });
+
+        const renameBtn = document.createElement('button');
+        renameBtn.type = 'button'; renameBtn.className = 'ml-icon-btn';
+        renameBtn.title = 'Rename'; renameBtn.textContent = '✏';
+        renameBtn.addEventListener('click', e => {
+          e.stopPropagation(); startRenameProfile(mode, name, li, nameSpan);
+        });
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button'; deleteBtn.className = 'ml-icon-btn ml-icon-btn--danger';
+        deleteBtn.title = 'Delete profile'; deleteBtn.textContent = '🗑';
+        deleteBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          if (!window.confirm(`Delete profile "${name}"?`)) return;
+          deletePreset(mode, name);
+          render();
+        });
+
+        actions.append(editBtn, renameBtn, deleteBtn);
+        li.append(nameSpan, descSpan, actions);
+        ctx.listNav.appendChild(li);
+      });
+    });
+  }
+
+  /**
+   * Toggle an inline editor for a profile's bundled filter values, right
+   * below its row — the same "expand in place, no dedicated panel" shape
+   * Smart Lists' own rule editor uses, since Profiles have no right-panel
+   * of their own either.
+   *
+   * Lists are shown for ctx.lang (the sidebar's current language) — a
+   * profile isn't itself tied to one language (see presets.ts), so this is
+   * the best available reference rather than a stored fact about it.
+   */
+  function toggleProfileEditor(mode: FilterScope, name: string, afterLi: HTMLElement): void {
+    const existing = afterLi.nextElementSibling;
+    if (existing?.classList.contains('ml-profile-editor')) { existing.remove(); return; }
+    document.querySelectorAll('.ml-profile-editor').forEach(el => el.remove());
+
+    const bundle = getPreset(mode, name);
+    if (!bundle) return;
+
+    const editorLi = document.createElement('li');
+    editorLi.className = 'ml-profile-editor';
+
+    // Part of speech
+    const classSection = document.createElement('div');
+    classSection.className = 'ml-profile-editor-section';
+    const classLabel = document.createElement('div');
+    classLabel.className = 'ml-profile-editor-label';
+    classLabel.textContent = 'Part of Speech';
+    const classRow = document.createElement('div');
+    classRow.className = 'ml-profile-editor-chips';
+    const classChecks: { value: string; input: HTMLInputElement }[] = [];
+    POS_CHIPS.filter(c => c.value).forEach(({ value, label }) => {
+      const chipLabel = document.createElement('label');
+      chipLabel.className = 'ml-profile-editor-chip';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.checked = bundle.classes.includes(value);
+      chipLabel.append(input, document.createTextNode(label));
+      classChecks.push({ value, input });
+      classRow.appendChild(chipLabel);
+    });
+    classSection.append(classLabel, classRow);
+
+    // Domains — free-form, comma separated. Domains are per-language and
+    // dynamic, so unlike POS there's no fixed list to offer as checkboxes.
+    const domainSection = document.createElement('div');
+    domainSection.className = 'ml-profile-editor-section';
+    const domainLabel = document.createElement('div');
+    domainLabel.className = 'ml-profile-editor-label';
+    domainLabel.textContent = 'Domains (comma-separated)';
+    const domainInput = document.createElement('input');
+    domainInput.type = 'text';
+    domainInput.className = 'ml-profile-editor-text';
+    domainInput.value = bundle.domains.join(', ');
+    domainSection.append(domainLabel, domainInput);
+
+    // Lists — Hide/Focus + which of ctx.lang's lists
+    const listSection = document.createElement('div');
+    listSection.className = 'ml-profile-editor-section';
+    const listLabel = document.createElement('div');
+    listLabel.className = 'ml-profile-editor-label';
+    listLabel.textContent = `Lists (${ctx.lang})`;
+    const listModeRow = document.createElement('div');
+    listModeRow.className = 'ml-profile-editor-chips';
+    const hideLabel = document.createElement('label');
+    hideLabel.className = 'ml-profile-editor-chip';
+    const hideRadio = document.createElement('input');
+    hideRadio.type = 'radio'; hideRadio.name = `ml-profile-listmode-${mode}-${name}`;
+    hideRadio.checked = bundle.listFilter.mode !== 'focus';
+    hideLabel.append(hideRadio, document.createTextNode('Hide'));
+    const focusLabel = document.createElement('label');
+    focusLabel.className = 'ml-profile-editor-chip';
+    const focusRadio = document.createElement('input');
+    focusRadio.type = 'radio'; focusRadio.name = `ml-profile-listmode-${mode}-${name}`;
+    focusRadio.checked = bundle.listFilter.mode === 'focus';
+    focusLabel.append(focusRadio, document.createTextNode('Focus'));
+    listModeRow.append(hideLabel, focusLabel);
+
+    const listNamesRow = document.createElement('div');
+    listNamesRow.className = 'ml-profile-editor-chips';
+    const listChecks: { value: string; input: HTMLInputElement }[] = [];
+    const availableLists = getListNames(ctx.lang);
+    if (availableLists.length === 0) {
+      const none = document.createElement('span');
+      none.className = 'ml-profile-editor-hint';
+      none.textContent = `No lists yet in ${ctx.lang}`;
+      listNamesRow.appendChild(none);
+    }
+    availableLists.forEach(listName => {
+      const chipLabel = document.createElement('label');
+      chipLabel.className = 'ml-profile-editor-chip';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.checked = bundle.listFilter.selected.includes(listName);
+      chipLabel.append(input, document.createTextNode(listName));
+      listChecks.push({ value: listName, input });
+      listNamesRow.appendChild(chipLabel);
+    });
+    listSection.append(listLabel, listModeRow, listNamesRow);
+
+    // Direction
+    const dirSection = document.createElement('div');
+    dirSection.className = 'ml-profile-editor-section';
+    const dirLabel = document.createElement('div');
+    dirLabel.className = 'ml-profile-editor-label';
+    dirLabel.textContent = 'Direction';
+    const dirRow = document.createElement('div');
+    dirRow.className = 'ml-profile-editor-chips';
+    const dirOptions: { value: PresetBundle['direction']; label: string }[] = [
+      { value: 'target-en', label: 'Word → Meaning' },
+      { value: 'en-target', label: 'Meaning → Word' },
+      { value: 'mixed',     label: 'Mixed' },
+    ];
+    const dirInputs: { value: PresetBundle['direction']; input: HTMLInputElement }[] = [];
+    dirOptions.forEach(({ value, label }) => {
+      const chipLabel = document.createElement('label');
+      chipLabel.className = 'ml-profile-editor-chip';
+      const input = document.createElement('input');
+      input.type = 'radio'; input.name = `ml-profile-direction-${mode}-${name}`;
+      input.checked = bundle.direction === value;
+      chipLabel.append(input, document.createTextNode(label));
+      dirInputs.push({ value, input });
+      dirRow.appendChild(chipLabel);
+    });
+    dirSection.append(dirLabel, dirRow);
+
+    // Save / Cancel
+    const btnRow = document.createElement('div');
+    btnRow.className = 'ml-profile-editor-actions';
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button'; saveBtn.className = 'ml-icon-btn ml-text-btn';
+    saveBtn.textContent = 'Save changes';
+    saveBtn.addEventListener('click', () => {
+      const updated: PresetBundle = {
+        classes: classChecks.filter(c => c.input.checked).map(c => c.value),
+        domains: domainInput.value.split(',').map(d => d.trim()).filter(Boolean),
+        listFilter: {
+          active: bundle.listFilter.active,
+          mode: focusRadio.checked ? 'focus' : 'hide',
+          selected: listChecks.filter(c => c.input.checked).map(c => c.value),
+        },
+        direction: dirInputs.find(d => d.input.checked)?.value ?? 'target-en',
+      };
+      savePreset(mode, name, updated);
+      render();
+    });
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button'; cancelBtn.className = 'ml-icon-btn';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => editorLi.remove());
+    btnRow.append(saveBtn, cancelBtn);
+
+    editorLi.append(classSection, domainSection, listSection, dirSection, btnRow);
+    afterLi.insertAdjacentElement('afterend', editorLi);
+  }
+
+  function startRenameProfile(mode: FilterScope, oldName: string, li: HTMLElement, nameSpan: HTMLElement): void {
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.value = oldName; inp.className = 'ml-list-name-input';
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button'; okBtn.className = 'ml-icon-btn'; okBtn.textContent = '✓';
+    function confirmRename(): void {
+      const newName = inp.value.trim();
+      if (!newName || newName === oldName) { done(); return; }
+      if (renamePreset(mode, oldName, newName)) {
+        render();
+      } else {
+        alert(`A profile named "${newName}" already exists for this tab.`);
+        inp.focus();
+      }
+    }
+    function done(): void { inp.replaceWith(nameSpan); okBtn.remove(); }
+    okBtn.addEventListener('click', confirmRename);
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') confirmRename(); if (e.key === 'Escape') done();
+    });
+    nameSpan.replaceWith(inp);
+    const actionsEl = li.querySelector('.ml-list-actions');
+    if (actionsEl) li.insertBefore(okBtn, actionsEl);
+    inp.focus(); inp.select();
   }
 
   // ── Create / rename / duplicate ────────────────────────────────────────────

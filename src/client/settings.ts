@@ -2,6 +2,7 @@ import { readString, writeString, remove as removeKey } from './utils/storage.ts
 import { applyTheme, type ThemeValue } from './ui/theme-toggle.ts';
 import { LANGUAGES, languageInfo, flagUrl } from './data/languages.ts';
 import { createFlagImg } from './ui/flag-icon.ts';
+import { clearHistory } from './utils/session-history.ts';
 
 /**
  * settings.ts — persistent quiz preferences.
@@ -123,6 +124,20 @@ export const Settings = {
 
   // ── Appearance ────────────────────────────────────────────────────────────
   getFontSize: (): FontSize => get('font_size', 'medium') as FontSize,
+
+  // ── Guess the Blank ────────────────────────────────────────────────────────
+
+  /**
+   * Wrong guesses allowed on a question before it's scored as missed and the
+   * answer revealed. Infinity means never fail on wrong guesses alone — Give
+   * Up (or running out of clues) is still how a stuck question ends.
+   */
+  getGuessBlankMaxAttempts: (): number => {
+    const raw = get('guess_blank_max_attempts', '1');
+    if (raw === 'unlimited') return Infinity;
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : 1;
+  },
 
   // ── Conjugation ────────────────────────────────────────────────────────────
 
@@ -406,6 +421,14 @@ export function bindSettings(): void {
     set('history_enabled', btn.dataset.history ?? 'true');
   });
 
+  // Clear history — every language's saved sessions and miss tallies.
+  // Mastery and lists live in their own storage (word-lists.ts) and are
+  // untouched.
+  document.getElementById('settingClearHistory')?.addEventListener('click', () => {
+    if (!window.confirm('Clear all saved quiz history and "words I keep missing" tallies, in every language? This cannot be undone.')) return;
+    LANGUAGES.forEach(l => clearHistory(l.name));
+  });
+
   // Conjugation: what a deselected pronoun leaves behind
   document.getElementById('settingConjShape')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
@@ -425,6 +448,14 @@ export function bindSettings(): void {
     if (!btn) return;
     activateToggle('settingLangIndicator', btn);
     set('lang_indicator', (btn.dataset.indicator ?? 'color') as LangIndicator);
+  });
+
+  // Guess the Blank: guesses per question
+  document.getElementById('settingGuessBlankAttempts')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingGuessBlankAttempts', btn);
+    set('guess_blank_max_attempts', btn.dataset.attempts ?? '1');
   });
 
   buildLangAppearanceRows();
@@ -594,6 +625,12 @@ function restoreSettingsUI(): void {
   const savedHistory = get('history_enabled', 'true');
   document.querySelectorAll<HTMLElement>('#settingHistory .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.history === savedHistory);
+  });
+
+  // Guess the Blank: guesses per question
+  const savedGbAttempts = get('guess_blank_max_attempts', '1');
+  document.querySelectorAll<HTMLElement>('#settingGuessBlankAttempts .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.attempts === savedGbAttempts);
   });
 
   // Conjugation chart shape

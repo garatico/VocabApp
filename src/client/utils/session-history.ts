@@ -19,7 +19,7 @@ import { shuffleInPlace } from './shuffle.ts';
 import { readJson, writeJson, remove as removeKey, isNumberRecord } from './storage.ts';
 import { Settings } from '../settings.ts';
 
-export type QuizMode = 'recall' | 'doubleRecall' | 'table' | 'picture' | 'conjugation' | 'trivia' | 'wordChoice';
+export type QuizMode = 'recall' | 'doubleRecall' | 'table' | 'picture' | 'conjugation' | 'trivia' | 'wordChoice' | 'guessBlank';
 
 /**
  * Table mode's own direction — see table-mode.ts's TableDirection. The other
@@ -60,7 +60,7 @@ const SESSION_PREFIX = 'vq_history_';
 const MISS_PREFIX    = 'vq_misses_';
 
 /** Sessions retained per language. Enough for a trend, small enough for quota. */
-export const HISTORY_KEEP = 30;
+export const HISTORY_KEEP = 100;
 
 /** A word must be missed at least this often to count as a persistent problem. */
 export const TROUBLE_THRESHOLD = 2;

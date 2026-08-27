@@ -26,8 +26,6 @@
 
   #controls-top { flex-wrap: wrap; gap: 0.5rem; }
 
-  #startBtn { flex: 0 1 100%; width: 100%; padding: 0.4rem 1rem; }
-
   #tableWrap { font-size: 1.2rem; }
   #tableWrap input[type="text"] { font-size: 1.1rem; min-height: 42px; }
 }

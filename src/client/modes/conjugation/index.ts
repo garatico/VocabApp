@@ -14,6 +14,11 @@ import {
   setProgressCallback,
   applyAllPronounToggles,
 } from './controls.js';
+import { isOwnInfinitive, hasAnyForms, regularityOf } from './verb-filters.js';
+// Re-exported — one-at-a-time-mode.ts, random-table-mode.ts and
+// card-match-mode.ts import these three from here, not from verb-filters.ts
+// directly (they predate the split).
+export { isOwnInfinitive, hasAnyForms, regularityOf };
 import { buildGlossDisplay } from '../../utils/utils.js';
 import { getWordLists } from '../../utils/word-lists.ts';
 import { openListPicker } from '../../utils/list-picker.ts';
@@ -82,22 +87,6 @@ export function hiddenPronounSlots(tenseKey: string): Set<number> {
   return NO_YO_TENSES.has(tenseKey) ? new Set([0]) : new Set();
 }
 
-/**
- * Bucket a conjugation_class into something a learner recognises.
- *
- * The data has 26 classes across four prefixes; "ortho-car" is a spelling
- * adjustment that keeps the sound (buscar -> busqué) and is regular in every
- * way that matters to a learner, so it reads as Regular with a note rather
- * than as Irregular.
- */
-export function regularityOf(cls: string | null): { key: string; label: string } {
-  if (!cls)                        return { key: 'unknown',   label: '' };
-  if (cls.startsWith('regular'))   return { key: 'regular',   label: 'Regular' };
-  if (cls.startsWith('ortho'))     return { key: 'ortho',     label: 'Spelling' };
-  if (cls.startsWith('stem'))      return { key: 'stem',      label: 'Stem-change' };
-  return { key: 'irregular', label: 'Irregular' };
-}
-
 export function isSingleForm(key: string): boolean {
   return SINGLE_FORM_TENSES.has(key);
 }
@@ -122,52 +111,6 @@ export function isSingleForm(key: string): boolean {
  * Separate classes mean neither mechanism can clear the other's decision.
  */
 const VISIBLE_ROW = '.conj-row:not(.conj-row-hidden):not(.conj-row-tense-hidden)';
-
-/**
- * Is this entry a headword, or is it one form of some other verb?
- *
- * *hay* is a real vocabulary entry — rank 48, its own glosses and usage notes —
- * and belongs in Table, Recall and the lists. It is also the impersonal present
- * of *haber*, which it records in `linguistic.infinitive`, so offering it here
- * gave the learner a second card drilling one cell of a verb they already had.
- *
- * The test is the relationship, not the word, so anything else stored the same
- * way drops out too. Two things it must *not* drop:
- *
- *   - A verb with no recorded infinitive. That is the common case (3,364 of the
- *     3,373 verbs in the database) and it is its own headword.
- *   - A reflexive. *ducharse*, *quejarse* and six others record the bare stem
- *     in `infinitive` — `divertirse` → `divertir` — but they are headwords in
- *     their own right and conjugate differently from the bare verb. Romance
- *     languages attach the clitic to the end of the infinitive, so a form that
- *     *begins* with the whole infinitive is a derived headword; an inflected
- *     form of some other lemma is not (*hay* does not begin with *haber*).
- *
- * The `reflexive` column would be the honest way to ask this, but it is 0 on
- * every row in the database — nothing populates it.
- */
-export function isOwnInfinitive(w: Word): boolean {
-  const inf = w.linguistic?.infinitive;
-  if (!inf) return true;
-  return normalize(w.word).startsWith(normalize(inf));
-}
-
-/**
- * Do we have anything to drill for this verb?
- *
- * A present-tense array of six empty strings is as useless as a null, and both
- * occur: an import that found the headword but no table leaves the shape behind
- * without the content. So the test is for a form with characters in it, not for
- * the key being present.
- */
-export function hasAnyForms(w: Word): boolean {
-  const conj = w.linguistic?.conjugations as Record<string, unknown> | null | undefined;
-  if (!conj) return false;
-  return Object.values(conj).some(v =>
-    typeof v === 'string'
-      ? v.trim() !== ''
-      : Array.isArray(v) && v.some(f => typeof f === 'string' && f.trim() !== ''));
-}
 
 const SINGLE_FORM_ROW_LABEL: Record<string, string> = {
   past_participle: 'participio',
@@ -700,7 +643,20 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     if (verb.rank != null) rank.textContent = '#' + verb.rank;
     else rank.hidden = true;
 
-    head.append(word, star, gloss, rank);
+    // Regularity (Regular/Irregular/Stem-change/Spelling) is a per-verb
+    // classification, not per-tense — verb-rules.ts generates every tense
+    // from one conjugation_class — so it belongs here, once, rather than
+    // repeated identically on every tense card below (buildCard hides its
+    // own copy when hideVerbName is set).
+    const reg = document.createElement('span');
+    const cls = verb.linguistic?.conjugation_class ?? null;
+    const kind = regularityOf(cls);
+    reg.className = `conj-card-reg conj-card-reg--${kind.key}`;
+    reg.textContent = kind.label;
+    reg.title = (REGULARITY_HELP[kind.key] ?? '') + (cls ? `\n\nconjugation class: ${cls}` : '');
+    if (!cls) reg.hidden = true;
+
+    head.append(word, star, gloss, reg, rank);
     // Only present in a merged multi-language session — a single-language
     // one never has `.language` set, so this never appears there.
     if (verb.language) head.appendChild(createFlagImg(Settings.getLangFlag(verb.language), languageInfo(verb.language).label));
@@ -1170,6 +1126,9 @@ function buildCard({
   rankEl.className = 'conj-card-rank';
   if (verb.rank != null) rankEl.textContent = String(verb.rank);
   else rankEl.hidden = true;
+  // In Full Conjugation the verb block header already carries the rank —
+  // same reasoning as targetEl/englishEl above.
+  if (hideVerbName) rankEl.hidden = true;
   card.appendChild(rankEl);
 
   const targetEl  = document.createElement('div');
@@ -1241,7 +1200,10 @@ function buildCard({
   // you already know what the bucket means.
   regEl.title       = (REGULARITY_HELP[kind.key] ?? '')
                     + (cls ? `\n\nconjugation class: ${cls}` : '');
-  if (!cls) regEl.hidden = true;
+  // In Full Conjugation the verb block header already carries this pill,
+  // computed once per verb rather than repeated identically on every one
+  // of its tense cards.
+  if (!cls || hideVerbName) regEl.hidden = true;
   metaRow.appendChild(regEl);
 
   // Tense name, always shown — it is the one thing that distinguishes two
@@ -1442,7 +1404,17 @@ function buildCard({
     // conj-row-tense-hidden, not conj-row-hidden — see VISIBLE_ROW. The pronoun
     // toggles own the other class and would undo this on their next pass.
     const hiddenSlots = single ? EMPTY_SLOTS : hiddenPronounSlots(getTenseKey());
-    pronounRows.forEach((row, i) => row.classList.toggle('conj-row-tense-hidden', single || hiddenSlots.has(i)));
+    pronounRows.forEach((row, i) => {
+      row.classList.toggle('conj-row-tense-hidden', single || hiddenSlots.has(i));
+      // Distinguishes "imperative has no yo" (row still takes its normal
+      // place in the paradigm, just empty) from "this whole card is a
+      // single-form tense" (there is no paradigm here at all) — both carry
+      // conj-row-tense-hidden for VISIBLE_ROW/scoring purposes, but only the
+      // former also gets this marker, which Full view uses to keep the row's
+      // vertical space reserved so tú-through-ellos still lines up with the
+      // neighboring tense columns instead of sliding up to fill yo's slot.
+      row.classList.toggle('conj-row-no-form', !single && hiddenSlots.has(i));
+    });
     singleFormRow.classList.toggle('conj-row-tense-hidden', !single);
     if (single) {
       singleLabel.textContent = SINGLE_FORM_ROW_LABEL[getTenseKey()] ?? getTenseKey();

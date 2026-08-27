@@ -65,6 +65,13 @@
 }
 
 /* Small category badge above the question — History vs Pop Culture. */
+.tv-badge-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
 .tv-category {
   display: inline-block;
   font-family: 'Sora', sans-serif;
@@ -77,7 +84,6 @@
   border: 1px solid var(--border-strong);
   border-radius: 999px;
   padding: 0.15rem 0.65rem;
-  margin-bottom: 0.6rem;
 }
 
 /* Same accent-colour DM Mono treatment as #tableWrap .spanish-word, sized

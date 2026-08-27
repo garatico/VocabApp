@@ -34,7 +34,7 @@ export type SortMode =
 export type ExportFormat = 'with-translation' | 'words-only';
 
 /** CEFR levels, easiest first. Order matters for the chip row. */
-export const BANDS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
+export { BANDS } from '../../data/bands.ts';
 
 /** How many word rows to append per chunk while scrolling. */
 export const WORD_CHUNK = 120;

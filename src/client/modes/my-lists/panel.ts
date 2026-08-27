@@ -154,10 +154,17 @@ export function renderPanel(ctx: ListsCtx): void {
 
   const controlsGroup = document.createElement('div');
   controlsGroup.className = 'ml-panel-controls';
+
+  const filterLabel = document.createElement('span');
+  filterLabel.className = 'ui-label ml-toolbar-label'; filterLabel.textContent = 'Filter';
+
   const filterInp = document.createElement('input');
   filterInp.type = 'text'; filterInp.placeholder = 'Filter by word, translation or gloss…';
   filterInp.className = 'ml-search';
   filterInp.title = 'Accent-insensitive — searches word, translation and glosses';
+
+  const sortLabel = document.createElement('span');
+  sortLabel.className = 'ui-label ml-toolbar-label'; sortLabel.textContent = 'Sort';
 
   const sortSel = document.createElement('select');
   sortSel.className = 'ml-sort-select'; sortSel.title = 'Sort order';
@@ -180,7 +187,8 @@ export function renderPanel(ctx: ListsCtx): void {
     hideMasteredBtn.classList.toggle('ml-hide-mastered-btn--active', ctx.hideMastered);
     wordList.render();
   });
-  controlsGroup.appendChild(filterInp); controlsGroup.appendChild(sortSel);
+  controlsGroup.appendChild(filterLabel); controlsGroup.appendChild(filterInp);
+  controlsGroup.appendChild(sortLabel); controlsGroup.appendChild(sortSel);
   controlsGroup.appendChild(hideMasteredBtn);
 
   // ── POS chips ──────────────────────────────────────────────────────────────
@@ -273,6 +281,11 @@ export function renderPanel(ctx: ListsCtx): void {
 
   const addSection = document.createElement('div');
   addSection.className = 'ml-add-section';
+
+  const addHeading = document.createElement('div');
+  addHeading.className = 'ml-add-heading';
+  addHeading.textContent = '+ Add Vocabulary';
+  addSection.appendChild(addHeading);
 
   const add = createAddSearch(ctx, getVocab, (fullSidebar = false) => {
     refreshCount();

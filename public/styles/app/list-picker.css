@@ -18,6 +18,58 @@
   z-index: 9999;
 }
 
+/* ── Testing Profiles popover — preset-picker.ts ──
+   Same .list-picker-popover shell; these are its own row/save-row shapes. */
+.preset-picker-popover { min-width: 220px; }
+
+.preset-picker-row { padding: 0; gap: 0; }
+.preset-picker-apply {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0.42rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preset-picker-apply:hover { background: var(--accent-light); color: var(--accent); }
+
+.preset-picker-delete {
+  flex: none;
+  background: none;
+  border: none;
+  padding: 0.42rem 0.65rem;
+  font-size: 0.9rem;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.preset-picker-delete:hover { color: var(--danger); }
+
+.preset-picker-save-row {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem 0.1rem;
+  margin-top: 0.15rem;
+  border-top: 1px solid var(--border);
+}
+.preset-picker-save-row input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+}
+
 /* Select all/none header — language-picker.ts only (list-picker.ts's "add to
    list" popover never renders one, so this rule has no effect there). */
 .list-picker-actions {

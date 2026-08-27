@@ -327,15 +327,32 @@
 }
 
 /* ── Add-words search ────────────────────────────────────────── */
+/* Tinted background + its own border/radius so this reads as its own card,
+   distinct from the plain-background existing-list area (header, toolbar,
+   word list) below it — the two used to run together with only a thin
+   border between them. */
 .ml-add-section {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 0;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.5rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.6rem 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.ml-add-heading {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
   margin-bottom: 0.35rem;
 }
+
+.ml-toolbar-label { margin-right: -0.15rem; }
 
 /* ── Search box + bulk-import toggle, side by side ── */
 .ml-add-top-row {
@@ -1478,7 +1495,30 @@ html.dark .ml-word-pos[data-pos="adverb"] {
 /* ═══════════════════════════════════════════════════════════════
    Smart lists — saved queries, not stored word sets
    ═══════════════════════════════════════════════════════════════ */
-.ml-smart-head {
+.ml-profile-mode-head {
+  padding: 0.4rem 0.85rem 0.15rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ml-accent-profile);
+}
+
+.ml-profile-desc {
+  flex-basis: 100%;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  padding-left: 0;
+}
+
+.ml-profile-item {
+  flex-wrap: wrap;
+  border-left-color: color-mix(in srgb, var(--ml-accent-profile) 35%, transparent);
+}
+
+.ml-smart-head,
+.ml-multi-head,
+.ml-profile-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1490,7 +1530,6 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--text-muted);
 }
 .ml-smart-hint {
   font-size: 0.7rem;
@@ -1506,6 +1545,55 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   color: var(--text-muted);
 }
 
+/* ── Per-section accent: each list kind gets its own recognizable color, so
+   the sidebar reads as three distinct sections rather than one undifferentiated
+   list. Ordinary lists keep the baseline --accent (no change there). ── */
+.ml-smart-head   { color: var(--ml-accent-smart); }
+.ml-multi-head   { color: var(--ml-accent-multi); }
+.ml-profile-head { color: var(--ml-accent-profile); }
+
+.ml-smart-head .ml-new-list-btn {
+  border-color: var(--ml-accent-smart);
+  color: var(--ml-accent-smart);
+}
+.ml-smart-head .ml-new-list-btn:hover { background: var(--ml-accent-smart); }
+
+.ml-multi-head .ml-new-list-btn {
+  border-color: var(--ml-accent-multi);
+  color: var(--ml-accent-multi);
+}
+.ml-multi-head .ml-new-list-btn:hover { background: var(--ml-accent-multi); }
+
+/* Idle border tint, so each kind is identifiable at rest — not only once
+   hovered or selected. */
+.ml-smart-item { border-left-color: color-mix(in srgb, var(--ml-accent-smart) 35%, transparent); }
+.ml-multi-item { border-left-color: color-mix(in srgb, var(--ml-accent-multi) 35%, transparent); }
+
+.ml-smart-item.active {
+  background: var(--ml-accent-smart-light);
+  color: var(--ml-accent-smart);
+  border-left-color: var(--ml-accent-smart);
+}
+.ml-multi-item.active {
+  background: var(--ml-accent-multi-light);
+  color: var(--ml-accent-multi);
+  border-left-color: var(--ml-accent-multi);
+}
+
+.ml-smart-item.active .ml-list-actions,
+.ml-smart-item.active .ml-list-count {
+  background: var(--ml-accent-smart-light);
+  box-shadow: 0 0 0 4px var(--ml-accent-smart-light);
+}
+.ml-smart-item.active .ml-list-count { border-color: var(--ml-accent-smart); color: var(--ml-accent-smart); }
+
+.ml-multi-item.active .ml-list-actions,
+.ml-multi-item.active .ml-list-count {
+  background: var(--ml-accent-multi-light);
+  box-shadow: 0 0 0 4px var(--ml-accent-multi-light);
+}
+.ml-multi-item.active .ml-list-count { border-color: var(--ml-accent-multi); color: var(--ml-accent-multi); }
+
 .ml-smart-editor {
   display: flex;
   flex-direction: column;
@@ -1515,6 +1603,71 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
+
+/* ── Testing Profiles' inline editor — same "expand in place" idea as
+   .ml-smart-editor above, its own section/chip shapes since a profile
+   bundles several unrelated filters rather than one rule. ── */
+.ml-profile-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.6rem 0.85rem;
+  background: var(--surface2);
+  border-top: 1px solid var(--ml-accent-profile);
+  border-bottom: 1px solid var(--border);
+}
+.ml-profile-editor-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.ml-profile-editor-label {
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+.ml-profile-editor-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.65rem;
+}
+.ml-profile-editor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--text);
+  cursor: pointer;
+}
+.ml-profile-editor-chip input {
+  accent-color: var(--ml-accent-profile);
+  cursor: pointer;
+}
+.ml-profile-editor-text {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+}
+.ml-profile-editor-hint {
+  font-size: 0.74rem;
+  font-style: italic;
+  color: var(--text-muted);
+}
+.ml-profile-editor-actions {
+  display: flex;
+  gap: 0.4rem;
+  padding-top: 0.2rem;
+}
+.ml-profile-editor-actions .ml-text-btn {
+  border-color: var(--ml-accent-profile);
+  color: var(--ml-accent-profile);
+}
+.ml-profile-editor-actions .ml-text-btn:hover { background: var(--ml-accent-profile); color: #fff; }
 .ml-smart-row {
   display: flex;
   align-items: center;
