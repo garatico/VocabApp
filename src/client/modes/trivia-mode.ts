@@ -27,7 +27,9 @@
  * general knowledge — that code moved to word-choice-mode.ts, parked but
  * not wired to a tab, since the mechanic may be useful again later.)
  */
-import { getTriviaQuestions, type TriviaQuestion } from '../data/trivia-questions.ts';
+import {
+  getTriviaQuestions, type TriviaQuestion, type TriviaDifficulty,
+} from '../data/trivia-questions.ts';
 import { normalize } from '../utils/match.ts';
 import { shuffle } from '../utils/shuffle.ts';
 import { applyAutofillAttr } from '../settings.ts';
@@ -40,14 +42,20 @@ import { languageInfo } from '../data/languages.ts';
 export type TriviaSubMode = 'type' | 'choice' | 'table';
 
 interface RenderTriviaModeOptions {
-  container: HTMLElement;
-  lang?:     string;
-  subMode?:  TriviaSubMode;
+  container:   HTMLElement;
+  lang?:       string;
+  subMode?:    TriviaSubMode;
+  /** 'all' (default) drills every difficulty in one shuffled run. */
+  difficulty?: TriviaDifficulty | 'all';
 }
 
 const CATEGORY_LABELS: Record<TriviaQuestion['category'], string> = {
   history:      'History',
   'pop-culture': 'Pop Culture',
+};
+
+const DIFFICULTY_LABELS: Record<TriviaDifficulty, string> = {
+  easy: 'Easy', medium: 'Medium', hard: 'Hard',
 };
 
 function acceptedAnswers(q: TriviaQuestion): string[] {
@@ -114,7 +122,7 @@ function renderFillInTable(bank: TriviaQuestion[], container: HTMLElement, lang:
 
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
-  ['Category', 'Question', 'Your Answer'].forEach(label => {
+  ['Category', 'Difficulty', 'Question', 'Your Answer'].forEach(label => {
     const th = document.createElement('th');
     th.textContent = label;
     headRow.appendChild(th);
@@ -132,6 +140,10 @@ function renderFillInTable(bank: TriviaQuestion[], container: HTMLElement, lang:
     const catTd = document.createElement('td');
     catTd.className = 'tv-qa-category';
     catTd.textContent = CATEGORY_LABELS[q.category];
+
+    const diffTd = document.createElement('td');
+    diffTd.className = `tv-qa-difficulty gb-difficulty gb-difficulty--${q.difficulty}`;
+    diffTd.textContent = DIFFICULTY_LABELS[q.difficulty];
 
     const qTd = document.createElement('td');
     qTd.className = 'tv-qa-question';
@@ -156,7 +168,7 @@ function renderFillInTable(bank: TriviaQuestion[], container: HTMLElement, lang:
     aTd.appendChild(inp);
     inputs.push(inp);
 
-    tr.append(catTd, qTd, aTd);
+    tr.append(catTd, diffTd, qTd, aTd);
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
@@ -219,19 +231,22 @@ export function renderTriviaMode({
   container,
   lang = 'spanish',
   subMode = 'type',
+  difficulty = 'all',
 }: RenderTriviaModeOptions): void {
   container.innerHTML = '';
   clearSummary('trivia');
   setProgress(0, 0);
 
-  const bank = getTriviaQuestions(lang);
+  const allQuestions = getTriviaQuestions(lang);
+  const bank = difficulty === 'all' ? allQuestions : allQuestions.filter(q => q.difficulty === difficulty);
 
   if (bank.length === 0) {
-    container.innerHTML = `
-      <div class="tv-empty">
-        <p>❓ No trivia questions yet for ${languageInfo(lang.split('+')[0]).label}.</p>
-        <p>Spanish has a starter set — try that language, or check back once more are written.</p>
-      </div>`;
+    const why = allQuestions.length > 0
+      ? `<p>No ${DIFFICULTY_LABELS[difficulty as TriviaDifficulty]} questions yet for ${languageInfo(lang.split('+')[0]).label}.</p>
+         <p>Try "All" difficulties, or check back once more are written.</p>`
+      : `<p>❓ No trivia questions yet for ${languageInfo(lang.split('+')[0]).label}.</p>
+         <p>Spanish has a starter set — try that language, or check back once more are written.</p>`;
+    container.innerHTML = `<div class="tv-empty">${why}</div>`;
     return;
   }
 
@@ -290,11 +305,15 @@ export function renderTriviaMode({
 
   const prompt = document.createElement('div');
   prompt.className = 'tv-prompt';
-  const categoryEl = document.createElement('div');
+  const badgeRow = document.createElement('div');
+  badgeRow.className = 'tv-badge-row';
+  const categoryEl = document.createElement('span');
   categoryEl.className = 'tv-category';
+  const difficultyEl = document.createElement('span');
+  badgeRow.append(categoryEl, difficultyEl);
   const promptWord = document.createElement('div');
   promptWord.className = 'tv-prompt-word';
-  prompt.append(categoryEl, promptWord);
+  prompt.append(badgeRow, promptWord);
 
   // 'choice' sub-mode's answer grid
   const optionsGrid = document.createElement('div');
@@ -331,6 +350,8 @@ export function renderTriviaMode({
     feedback.className = 'tv-feedback';
 
     categoryEl.textContent = CATEGORY_LABELS[q.category];
+    difficultyEl.textContent = DIFFICULTY_LABELS[q.difficulty];
+    difficultyEl.className = `gb-difficulty gb-difficulty--${q.difficulty}`;
     promptWord.textContent = q.questionTarget;
 
     if (subMode === 'choice') {

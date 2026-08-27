@@ -113,27 +113,46 @@ function buildAllVisuals(word: WordWithVisual): VisualBuilder[] {
   return builders;
 }
 
-// Mounts a visual cycler into imgWrap.
-// If only one visual: renders it directly with no arrows.
-// If multiple: renders left/right arrows to cycle through them.
-// Images that fail to load auto-advance to the next visual.
-function mountVisualCycler(imgWrap: HTMLElement, builders: VisualBuilder[]): void {
-  if (builders.length === 0) return;
+/**
+ * Builds the visual for a card: just the bordered `.picture-card-img` box
+ * when there's one visual, or that same box plus prev/next arrows and dot
+ * indicators around it when there's more than one — returns whichever
+ * element the caller should append to the card.
+ *
+ * The arrows/dots used to be mounted *inside* `.picture-card-img`, so once
+ * that box got a border (for the "frame the picture" ask) the cycling
+ * controls ended up sitting inside the frame, partly over the photo. They
+ * live outside it now: `.picture-card-img` holds only the current visual,
+ * and a `.vc-frame` wrapper puts the arrows either side of it and the dots
+ * below.
+ *
+ * Images that fail to load auto-advance to the next visual.
+ */
+function buildVisualFrame(builders: VisualBuilder[]): HTMLElement {
+  const imgWrap = document.createElement('div');
+  imgWrap.className = 'picture-card-img';
+
+  if (builders.length === 0) return imgWrap;
 
   if (builders.length === 1) {
     const el = builders[0]();
     if (el instanceof HTMLImageElement) {
-      el.onerror = () => { el.style.display = 'none'; };
+      imgWrap.classList.add('pm-img-loading');
+      el.onload  = () => imgWrap.classList.remove('pm-img-loading');
+      el.onerror = () => { imgWrap.classList.remove('pm-img-loading'); el.style.display = 'none'; };
     }
     imgWrap.appendChild(el);
-    return;
+    return imgWrap;
   }
 
   let idx = 0;
   let errorCount = 0;  // guard against infinite loop if all images fail
 
-  const inner = document.createElement('div');
-  inner.className = 'vc-inner';
+  const frame = document.createElement('div');
+  frame.className = 'vc-frame';
+
+  const row = document.createElement('div');
+  row.className = 'vc-row';
 
   const prevBtn = document.createElement('button');
   prevBtn.className = 'vc-arrow vc-prev';
@@ -147,9 +166,6 @@ function mountVisualCycler(imgWrap: HTMLElement, builders: VisualBuilder[]): voi
   nextBtn.setAttribute('aria-label', 'Next image');
   nextBtn.type = 'button';
 
-  const visualEl = document.createElement('div');
-  visualEl.className = 'vc-visual';
-
   const dotsEl = document.createElement('div');
   dotsEl.className = 'vc-dots';
   for (let i = 0; i < builders.length; i++) {
@@ -159,20 +175,24 @@ function mountVisualCycler(imgWrap: HTMLElement, builders: VisualBuilder[]): voi
   }
 
   function render(): void {
-    visualEl.innerHTML = '';
+    imgWrap.innerHTML = '';
     const el = builders[idx]();
     // If an image fails to load, skip to the next visual automatically
     if (el instanceof HTMLImageElement) {
+      imgWrap.classList.add('pm-img-loading');
+      el.onload = () => imgWrap.classList.remove('pm-img-loading');
       el.onerror = () => {
+        imgWrap.classList.remove('pm-img-loading');
         if (errorCount++ < builders.length) {
           idx = (idx + 1) % builders.length;
           render();
         }
       };
     } else {
+      imgWrap.classList.remove('pm-img-loading');
       errorCount = 0; // reset once we hit a non-image (emoji) that can't fail
     }
-    visualEl.appendChild(el);
+    imgWrap.appendChild(el);
     dotsEl.querySelectorAll<HTMLSpanElement>('.vc-dot').forEach((d, i) => {
       d.classList.toggle('vc-dot-active', i === idx);
     });
@@ -191,9 +211,10 @@ function mountVisualCycler(imgWrap: HTMLElement, builders: VisualBuilder[]): voi
     render();
   });
 
-  inner.append(prevBtn, visualEl, nextBtn);
-  imgWrap.append(inner, dotsEl);
+  row.append(prevBtn, imgWrap, nextBtn);
+  frame.append(row, dotsEl);
   render();
+  return frame;
 }
 
 // ── Style injection (runs once) ────────────────────────────────────────────────
@@ -317,6 +338,15 @@ function injectStyles(): void {
     .pm-click-card .picture-card-img {
       width: 100%;
       height: 100%;
+    }
+    /* Sized for the single-visual case, where .picture-card-img is
+       .pm-click-card's only child. Inside a cycler's row (multiple visuals)
+       it shares the width with two arrows instead — this has to
+       out-specificity the rule above so aspect-ratio can square the box
+       against the width the row actually leaves it. */
+    .pm-click-card .vc-row .picture-card-img {
+      width: auto;
+      height: auto;
     }
     .pm-click-card img {
       /* Was capped at 72px, sized for the old 110px card. That cap, not the
@@ -510,6 +540,42 @@ function setProgress(correct: number, total: number, revealed = 0, missed = 0): 
 
 // ── Type-the-word mode (original) ─────────────────────────────────────────────
 
+/** Cards per page. A grid of everything at once got unwieldy for large word
+ *  counts — this keeps a page to a manageable scroll, same idea as Table
+ *  mode's pager. */
+const PICTURE_PAGE_SIZE = 24;
+
+/**
+ * A prev/next pager matching Table mode's (table.css's .table-pager/
+ * .pager-btn/.pager-status — generic, reusable classes, not table-specific
+ * despite the name), so paging reads the same across quiz modes.
+ */
+function buildPicturePager(onPrev: () => void, onNext: () => void):
+  { el: HTMLElement; status: HTMLElement; prevBtn: HTMLButtonElement; nextBtn: HTMLButtonElement } {
+  const el = document.createElement('div');
+  el.className = 'table-pager';
+
+  const prevBtn = document.createElement('button');
+  prevBtn.type = 'button';
+  prevBtn.className = 'pager-btn';
+  prevBtn.innerHTML = '&#8592;';
+  prevBtn.setAttribute('aria-label', 'Previous page');
+  prevBtn.addEventListener('click', onPrev);
+
+  const status = document.createElement('span');
+  status.className = 'pager-status';
+
+  const nextBtn = document.createElement('button');
+  nextBtn.type = 'button';
+  nextBtn.className = 'pager-btn';
+  nextBtn.innerHTML = '&#8594;';
+  nextBtn.setAttribute('aria-label', 'Next page');
+  nextBtn.addEventListener('click', onNext);
+
+  el.append(prevBtn, status, nextBtn);
+  return { el, status, prevBtn, nextBtn };
+}
+
 function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLElement,
                         lang: string): void {
   container.innerHTML = '';
@@ -533,9 +599,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
     card.className = 'picture-card';
     card.dataset.wordJson = JSON.stringify(word);
 
-    const imgWrap = document.createElement('div');
-    imgWrap.className = 'picture-card-img';
-    mountVisualCycler(imgWrap, buildAllVisuals(word));
+    const visual = buildVisualFrame(buildAllVisuals(word));
 
     const inp = document.createElement('input');
     inp.type        = 'text';
@@ -552,17 +616,18 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
         card.classList.add('correct');
         inp.classList.add('correct');
 
-        const allInputs = Array.from(container.querySelectorAll<HTMLInputElement>('input[data-word]'));
-        const next = allInputs.slice(allInputs.indexOf(inp) + 1).find(i => !i.disabled);
+        // Scoped to the page currently in the DOM — the grid only ever holds
+        // one page's cards, so this naturally advances within the page.
+        const pageInputs = Array.from(grid.querySelectorAll<HTMLInputElement>('input[data-word]'));
+        const next = pageInputs.slice(pageInputs.indexOf(inp) + 1).find(i => !i.disabled);
         if (next) next.focus();
 
         updateTypeProgress();
       }
     });
 
-    card.appendChild(imgWrap);
+    card.appendChild(visual);
     card.appendChild(inp);
-    grid.appendChild(card);
     cards.push({ card, inp, word });
   });
 
@@ -595,15 +660,45 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
 
   bar.appendChild(giveUpBtn);
   mountPictureStopwatch(bar);
-  container.appendChild(bar);
-  container.appendChild(grid);
-  attachTooltips(grid, { hideWordWhenUnrevealed: true });
 
+  // ── Pagination ────────────────────────────────────────────────────────────
+  const pageCount = Math.max(1, Math.ceil(cards.length / PICTURE_PAGE_SIZE));
+  let pageIndex = 0;
+
+  function goToPage(i: number): void {
+    pageIndex = Math.max(0, Math.min(pageCount - 1, i));
+    renderPage();
+  }
+  const pagerTop    = buildPicturePager(() => goToPage(pageIndex - 1), () => goToPage(pageIndex + 1));
+  const pagerBottom = buildPicturePager(() => goToPage(pageIndex - 1), () => goToPage(pageIndex + 1));
+  pagerTop.el.hidden = pagerBottom.el.hidden = pageCount <= 1;
+
+  function renderPage(): void {
+    grid.innerHTML = '';
+    const start = pageIndex * PICTURE_PAGE_SIZE;
+    cards.slice(start, start + PICTURE_PAGE_SIZE).forEach(c => grid.appendChild(c.card));
+    attachTooltips(grid, { hideWordWhenUnrevealed: true });
+
+    const last = Math.min(start + PICTURE_PAGE_SIZE, cards.length);
+    const statusText = `Words ${start + 1}–${last} of ${cards.length}`;
+    [pagerTop, pagerBottom].forEach(({ status, prevBtn, nextBtn }) => {
+      status.textContent  = statusText;
+      prevBtn.disabled = pageIndex === 0;
+      nextBtn.disabled = pageIndex >= pageCount - 1;
+    });
+
+    const first = grid.querySelector<HTMLInputElement>('input[data-word]:not(:disabled)');
+    if (first) first.focus();
+  }
+
+  container.append(bar, pagerTop.el, grid, pagerBottom.el);
+  renderPage();
   updateTypeProgress();
-  const first = container.querySelector<HTMLInputElement>('input[data-word]');
-  if (first) first.focus();
 
   function updateTypeProgress(): void {
+    // Read from `cards`, not the DOM — only the current page's cards are
+    // ever in the grid, but progress and the "all correct" check cover
+    // every page.
     const correct  = cards.filter(({ inp }) => inp.classList.contains('correct')).length;
     // Give Up fills the rest in; those are revealed, not missed, and are the
     // yellow segment of the bar.
@@ -709,10 +804,7 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
     if (state.correct)  card.classList.add('correct');
     if (state.revealed) card.classList.add('revealed');
 
-    const imgWrap = document.createElement('div');
-    imgWrap.className = 'picture-card-img';
-    mountVisualCycler(imgWrap, buildAllVisuals(word));
-    card.appendChild(imgWrap);
+    card.appendChild(buildVisualFrame(buildAllVisuals(word)));
     cardWrap.appendChild(card);
 
     // Input state
@@ -925,10 +1017,7 @@ function renderClickMode(
       const card = document.createElement('div');
       card.className    = 'pm-click-card';
       card.dataset.word = opt.word;
-      const clickImgWrap = document.createElement('div');
-      clickImgWrap.className = 'picture-card-img';
-      mountVisualCycler(clickImgWrap, buildAllVisuals(opt));
-      card.appendChild(clickImgWrap);
+      card.appendChild(buildVisualFrame(buildAllVisuals(opt)));
 
       card.addEventListener('click', () => {
         if (answeredAt(idx)) return;

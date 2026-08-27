@@ -220,6 +220,11 @@ export function renderConjRandomTable({
 
   function buildRow(item: RowItem, globalIdx: number): HTMLTableRowElement {
     const tr = document.createElement('tr');
+    // Drives --tense-hue/--pronoun-hue (conjugation.css) so this row's Tense
+    // and Pronoun cells pick up the same color as the filter chip that
+    // selected them — data-pi matches controls.ts's pronoun toggle buttons.
+    tr.dataset.tense = item.tenseKey;
+    if (item.slot !== 'single') tr.dataset.pi = String(item.slot);
 
     const pronounTd = document.createElement('td');
     pronounTd.className = 'crt-pronoun';

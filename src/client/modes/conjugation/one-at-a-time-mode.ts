@@ -243,6 +243,13 @@ export function renderConjOneAtATime({
     pronounEl.textContent = item.slot === 'single' ? '' : item.pronoun;
     pronounEl.style.visibility = item.slot === 'single' ? 'hidden' : 'visible';
 
+    // Drives --tense-hue/--pronoun-hue (conjugation.css) — same hues the
+    // Tense/Forms filter chips, Random Table and Full Conjugation use, so a
+    // card here reads as the same tense/person everywhere else it appears.
+    card.dataset.tense = item.tenseKey;
+    if (item.slot === 'single') delete card.dataset.pi;
+    else card.dataset.pi = String(item.slot);
+
     inp.classList.remove('correct', 'revealed', 'missed');
     if (prior) {
       inp.value = answerFor(item) ?? '';

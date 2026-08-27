@@ -4,6 +4,13 @@ type Mode = CoreMode | string;
 /** Modes that know how to render/score a mixed-language word list — mirrors app.ts's own copy. */
 const MULTI_LANG_MODES = new Set(['table', 'conjugation']);
 
+/** The active mode tab's id, read straight from the DOM — the one source of
+ *  truth every module (app.ts, start-handler.ts) used to keep its own small
+ *  copy of. */
+export function getCurrentMode(): string {
+  return document.querySelector('.mode-tab.active')?.getAttribute('data-mode') ?? 'table';
+}
+
 interface BindModeSwitchOptions {
   tableArea:        HTMLElement;
   pictureArea:      HTMLElement;
@@ -48,6 +55,7 @@ export function bindModeSwitch({
     const listFilter          = document.getElementById('listFilter');
     const domainFilterWrap    = document.getElementById('domainFilterWrap');
     const wordsSizeGroup      = document.getElementById('wordsSizeGroup');
+    const conjSizeSelectGroup = document.getElementById('conjSizeSelectGroup');
     const directionGroup      = document.getElementById('directionGroup');
     const recallTimerGroup    = document.getElementById('recallTimerGroup');
     const sortOrderGroup      = document.getElementById('sortOrderGroup');
@@ -56,18 +64,30 @@ export function bindModeSwitch({
     const conjModeControls    = document.getElementById('conjModeControls');
     const pictureStyleGroup   = document.getElementById('pictureStyleGroup');
     const triviaStyleGroup    = document.getElementById('triviaStyleGroup');
+    const guessBlankDiffGroup = document.getElementById('guessBlankDifficultyGroup');
+    const triviaDiffGroup     = document.getElementById('triviaDifficultyGroup');
     const tableStyleGroup     = document.getElementById('tableStyleGroup');
     const compareGroup        = document.getElementById('compareGroup');
+    const presetsBtn          = document.getElementById('presetsBtn');
 
-    // Trivia draws from its own general-knowledge question bank, not the
-    // vocabulary word list at all — see trivia-mode.ts — so every word-list
-    // filter (and the Words/size control itself) is meaningless there.
-    if (classFilter)         classFilter.style.display         = (mode === 'conjugation' || mode === 'trivia') ? 'none' : '';
+    // Trivia and Guess the Blank each draw from their own hand-written
+    // question bank, not the vocabulary word list at all — see trivia-mode.ts
+    // /guess-blank-mode.ts — so every word-list filter (and the Words/size
+    // control itself) is meaningless on either tab.
+    const noWordList = mode === 'trivia' || mode === 'guessBlank';
+    if (classFilter)         classFilter.style.display         = (mode === 'conjugation' || noWordList) ? 'none' : '';
     // The list filter applies in conjugation mode too — Hide/Focus narrows the
     // verbs you drill just as it narrows any other quiz.
-    if (listFilter)          listFilter.style.display          = mode === 'trivia' ? 'none' : '';
-    if (domainFilterWrap)    domainFilterWrap.style.display    = mode === 'trivia' ? 'none' : '';
-    if (wordsSizeGroup)      wordsSizeGroup.style.display      = mode === 'trivia' ? 'none' : '';
+    if (listFilter)          listFilter.style.display          = noWordList ? 'none' : '';
+    if (domainFilterWrap)    domainFilterWrap.style.display    = noWordList ? 'none' : '';
+    // Conjugation gets its own verb-scaled word-count control (conjSizeSelectGroup)
+    // instead of the vocabulary-wide one — see index.html's #conjSizeSelect.
+    if (wordsSizeGroup)      wordsSizeGroup.style.display      = (noWordList || mode === 'conjugation') ? 'none' : '';
+    // Same reasoning as the filters above: a saved Profile bundles exactly
+    // those filters plus Direction, so it has nothing to apply on a tab that
+    // doesn't show them (and currentScope() has no bucket for either mode).
+    if (presetsBtn)           presetsBtn.style.display          = noWordList ? 'none' : '';
+    if (conjSizeSelectGroup) conjSizeSelectGroup.style.display = mode === 'conjugation' ? '' : 'none';
     if (directionGroup)      directionGroup.style.display      = mode === 'table'       ? ''     : 'none';
     // Compare (two or more languages merged into one quiz) is supported by
     // Table and Conjugation — the other modes don't know how to render or
@@ -83,7 +103,7 @@ export function bindModeSwitch({
     // fixed question bank rather than `list` at all, so word order is
     // meaningless there regardless.
     if (sortOrderGroup) {
-      const hasOwnOrder = mode === 'table' || mode === 'conjugation' || mode === 'trivia';
+      const hasOwnOrder = mode === 'table' || mode === 'conjugation' || noWordList;
       sortOrderGroup.style.display = hasOwnOrder ? 'none' : '';
     }
     if (conjModeControls)    conjModeControls.style.display    = mode === 'conjugation' ? ''     : 'none';
@@ -91,6 +111,8 @@ export function bindModeSwitch({
     if (conjViewGroup)       conjViewGroup.style.display       = mode === 'conjugation' ? ''     : 'none';
     if (pictureStyleGroup)   pictureStyleGroup.style.display   = mode === 'picture'     ? ''     : 'none';
     if (triviaStyleGroup)    triviaStyleGroup.style.display    = mode === 'trivia'      ? ''     : 'none';
+    if (guessBlankDiffGroup) guessBlankDiffGroup.style.display = mode === 'guessBlank'  ? ''     : 'none';
+    if (triviaDiffGroup)     triviaDiffGroup.style.display     = mode === 'trivia'      ? ''     : 'none';
     // table-controls.ts's syncTableStyleUI (called from app.ts's onActivate.table)
     // further hides Direction/#tableControls/the jump bars once this is visible
     // and a non-Standard style is selected.

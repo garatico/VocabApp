@@ -43,20 +43,22 @@ button:disabled               { opacity: 0.5; cursor: not-allowed; }
 button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ── Primary (Start) — the dominant CTA ── */
+/* Lives in its own row (#controlsActions, index.html) below #controls-top,
+   not inline with the wrapping filter controls, so it's free to run full
+   width at every breakpoint rather than being sized to its own content —
+   the widest, tallest thing in the bar reads as the one action left to
+   take once every filter above it is set. */
 #startBtn {
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
-  /* Kept deliberately narrow. #controls-top is flex-wrap:wrap, so every extra
-     pixel here is a pixel closer to the button dropping onto its own line when
-     the "Custom..." size input appears. */
-  padding: 0.6rem 1.25rem;
-  font-size: 0.88rem;
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   white-space: nowrap;
-  flex-shrink: 0;
-  align-self: stretch;           /* fills the full height of the controls row */
+  min-height: 48px;
   box-shadow: 0 3px 12px rgba(61, 107, 79, 0.35);
 }
 #startBtn::after {
@@ -103,7 +105,6 @@ input[type="checkbox"]:hover { transform: scale(1.1); }
   input[type="text"],
   input[type="number"],
   select,
-  #startBtn,
   .controls-row button,
   #tableControls button,
   .recall-input,

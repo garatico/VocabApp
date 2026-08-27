@@ -20,11 +20,22 @@ let _lastConjLang:          string | null   = null;
 let _pronTogListenerAttached                = false;
 let _formsAllNoneAttached                   = false;
 let _progressCallback: (() => void) | null  = null;
+let _selectionChangeCallback: (() => void) | null = null;
 
 // ── Progress callback (wired up by conjugation-mode) ──────────────────────────
 
 export function setProgressCallback(fn: (() => void) | null): void {
   _progressCallback = fn;
+}
+
+/**
+ * Fires whenever the Tense or Regularity selection changes — the two things
+ * that decide how many verbs and cards a quiz would build. Set once by
+ * app.ts to drive the pre-quiz card-count estimate; unrelated to
+ * setProgressCallback, which is only wired up while a quiz is on screen.
+ */
+export function setSelectionChangeCallback(fn: (() => void) | null): void {
+  _selectionChangeCallback = fn;
 }
 
 // ── Pronoun toggle helpers (also used by conjugation-mode after render) ────────
@@ -106,11 +117,13 @@ function ensureTenseChipListeners(lang: string): void {
     // Never allow an empty selection — the quiz would have nothing to drill.
     if (activeTenses().length === 0) btn.classList.add('active');
     saveSelectedTenses(lang, activeTenses());
+    _selectionChangeCallback?.();
   });
 
   document.getElementById('conjTensesAll')?.addEventListener('click', () => {
     chips.querySelectorAll('.conj-tense-chip').forEach(c => c.classList.add('active'));
     saveSelectedTenses(lang, activeTenses());
+    _selectionChangeCallback?.();
   });
   document.getElementById('conjTensesNone')?.addEventListener('click', () => {
     // "None" leaves the first tense on, for the same reason.
@@ -118,6 +131,7 @@ function ensureTenseChipListeners(lang: string): void {
       c.classList.toggle('active', i === 0);
     });
     saveSelectedTenses(lang, activeTenses());
+    _selectionChangeCallback?.();
   });
 }
 
@@ -171,11 +185,13 @@ function initRegularityChips(): void {
     // Same rule as the tense chips: never allow an empty selection.
     if (box.querySelectorAll('.conj-reg-chip.active').length === 0) btn.classList.add('active');
     saveRegularities();
+    _selectionChangeCallback?.();
   });
 
   document.getElementById('conjRegAll')?.addEventListener('click', () => {
     box.querySelectorAll('.conj-reg-chip').forEach(c => c.classList.add('active'));
     saveRegularities();
+    _selectionChangeCallback?.();
   });
 }
 

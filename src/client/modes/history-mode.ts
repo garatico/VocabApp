@@ -36,12 +36,13 @@ const MODE_LABELS: Record<QuizMode, string> = {
   doubleRecall: 'Double Recall',
   picture:      'Picture Quiz',
   trivia:       'Trivia',
+  guessBlank:   'Guess the Blank',
   // word-choice-mode.ts is parked (not wired to any tab) — this label only
   // matters if a past dev build ever recorded a session under it.
   wordChoice:   'Word Choice',
   conjugation:  'Conjugation',
 };
-const MODE_ORDER: QuizMode[] = ['table', 'recall', 'doubleRecall', 'picture', 'trivia', 'conjugation'];
+const MODE_ORDER: QuizMode[] = ['table', 'recall', 'doubleRecall', 'picture', 'trivia', 'guessBlank', 'conjugation'];
 
 // Table mode's own direction toggle labels — see #directionToggle in index.html.
 const DIRECTION_LABELS: Record<SessionDirection, string> = {

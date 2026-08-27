@@ -406,6 +406,31 @@
    (.recall-timer) is the thing meant to grab attention; this is a
    secondary stat next to it.
    ──────────────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────
+   Difficulty badge (Guess the Blank, Trivia)
+   Same shape as a category pill, color-coded green/amber/red —
+   the same palette Conjugation's Regularity pills use — so
+   "easy/medium/hard" reads the same way in every mode that has it.
+   .gb-difficulty is the name guess-blank-mode.ts already used;
+   .tv-qa-difficulty is Trivia's table sub-mode's own cell.
+   ──────────────────────────────────────────────────────────────── */
+.gb-difficulty,
+.tv-qa-difficulty {
+  display: inline-block;
+  font-family: 'Sora', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+.gb-difficulty--easy,   .tv-qa-difficulty.gb-difficulty--easy   { color: var(--correct); background: var(--correct-light); }
+.gb-difficulty--medium, .tv-qa-difficulty.gb-difficulty--medium { color: var(--warning, #b7791f); background: var(--warning-light); }
+.gb-difficulty--hard,   .tv-qa-difficulty.gb-difficulty--hard   { color: var(--danger); background: var(--danger-light); }
+
 .quiz-stopwatch {
   font-family: 'DM Mono', monospace;
   font-size: 0.78rem;

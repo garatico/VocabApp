@@ -42,6 +42,7 @@
 <link rel="stylesheet" href="/styles/app/table.css"/>
 <link rel="stylesheet" href="/styles/app/picture.css"/>
 <link rel="stylesheet" href="/styles/app/trivia.css"/>
+<link rel="stylesheet" href="/styles/app/guess-blank.css"/>
 <link rel="stylesheet" href="/styles/app/conjugation.css"/>
 <link rel="stylesheet" href="/styles/app/tooltip.css"/>
 <link rel="stylesheet" href="/styles/app/responsive.css"/>
@@ -77,6 +78,7 @@
         <button class="mode-tab active" data-mode="table" role="tab" aria-selected="true">Table</button>
         <button class="mode-tab" data-mode="picture" role="tab" aria-selected="false">Picture Quiz</button>
         <button class="mode-tab" data-mode="trivia" role="tab" aria-selected="false">Trivia</button>
+        <button class="mode-tab" data-mode="guessBlank" role="tab" aria-selected="false">Guess the Blank</button>
         <button class="mode-tab" data-mode="conjugation" role="tab" aria-selected="false">Conjugation</button>
         <button class="mode-tab" data-mode="mylists" role="tab" aria-selected="false">My Lists</button>
         <button class="mode-tab" data-mode="history" role="tab" aria-selected="false">History</button>
@@ -86,6 +88,14 @@
 
       <div id="controls">
         <button id="shortcutsBtn" aria-label="Keyboard shortcuts (?)">?</button>
+        <!-- Testing Profiles: save/apply a bundle of Part of Speech, Lists,
+             Domains and Direction at once — see filters/presets.ts. Sits in
+             the same top corner as the ? button rather than inline with the
+             filter controls, since it acts *on* them rather than being one
+             of them. Hidden on tabs with no filter box to apply — see
+             ui-state.ts. Full CRUD (rename/delete beyond save-here) lives in
+             My Lists — see my-lists/profiles-panel.ts. -->
+        <button type="button" id="presetsBtn" aria-label="Testing Profiles" title="Testing Profiles">Profiles</button>
         <div id="controls-top">
           <div class="control-group">
             <label for="langSelect">Language</label>
@@ -112,7 +122,12 @@
 
           <div class="control-group" id="wordsSizeGroup">
             <label>Words</label>
-            <div class="size-row">
+            <div class="sort-order-toggle" id="poolModeToggle" title="Top N: the most frequent N words. Rank Range: a specific slice of the frequency list. Level: every word at the CEFR level(s) you pick.">
+              <button type="button" class="sort-order-btn active" data-pool="topn">Top N</button>
+              <button type="button" class="sort-order-btn" data-pool="range">Rank Range</button>
+              <button type="button" class="sort-order-btn" data-pool="band">Level</button>
+            </div>
+            <div class="size-row" id="topNRow">
               <select id="sizeSelect">
                 <option value="100">Top 100</option>
                 <option value="250">Top 250</option>
@@ -127,6 +142,39 @@
                 <button type="button" class="sort-order-btn" data-mode="fill" title="Always return N words you haven't listed yet, pulling deeper if needed">Skip Known</button>
               </div>
             </div>
+            <div class="size-row rank-range-row" id="rankRangeRow" style="display:none">
+              <input type="number" id="rankFrom" min="1" step="1" placeholder="From" value="1" title="First rank in the slice (inclusive)"/>
+              <span class="rank-range-sep" aria-hidden="true">&#x2013;</span>
+              <input type="number" id="rankTo" min="1" step="1" placeholder="To" value="1000" title="Last rank in the slice (inclusive)"/>
+            </div>
+            <div class="band-row" id="bandRow" style="display:none">
+              <div class="band-chip-row" id="bandChips">
+                <button type="button" class="pos-chip" data-band="A1">A1</button>
+                <button type="button" class="pos-chip" data-band="A2">A2</button>
+                <button type="button" class="pos-chip" data-band="B1">B1</button>
+                <button type="button" class="pos-chip" data-band="B2">B2</button>
+                <button type="button" class="pos-chip" data-band="C1">C1</button>
+                <button type="button" class="pos-chip" data-band="C2">C2</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Conjugation only: its own verb-scaled word-count control, shown
+               in place of #wordsSizeGroup — see ui-state.ts. Conjugation
+               already narrows to verbs, so "Max" there means every verb in
+               the language; a smaller ceiling than the vocabulary-wide Words
+               control keeps that from defaulting to tens of thousands of
+               cards once tenses are multiplied in. -->
+          <div class="control-group" id="conjSizeSelectGroup" style="display:none">
+            <label>Verbs</label>
+            <select id="conjSizeSelect">
+              <option value="25">Top 25</option>
+              <option value="50">Top 50</option>
+              <option value="100" selected>Top 100</option>
+              <option value="250">Top 250</option>
+              <option value="500">Top 500</option>
+              <option value="max">All Verbs</option>
+            </select>
           </div>
 
           <div class="controls-sep" aria-hidden="true"></div>
@@ -163,6 +211,29 @@
               <button class="conj-toggle-btn active" data-mode="type">Type the Answer</button>
               <button class="conj-toggle-btn" data-mode="choice">Multiple Choice</button>
               <button class="conj-toggle-btn" data-mode="table">Table</button>
+            </div>
+          </div>
+
+          <!-- Trivia only — see data/trivia-questions.ts's difficulty field. -->
+          <div class="control-group" id="triviaDifficultyGroup" style="display:none">
+            <label>Difficulty</label>
+            <div class="conj-display-toggle" id="triviaDifficulty">
+              <button class="conj-toggle-btn active" data-difficulty="all">All</button>
+              <button class="conj-toggle-btn" data-difficulty="easy">Easy</button>
+              <button class="conj-toggle-btn" data-difficulty="medium">Medium</button>
+              <button class="conj-toggle-btn" data-difficulty="hard">Hard</button>
+            </div>
+          </div>
+
+          <!-- Guess the Blank only — see guess-blank-mode.ts /
+               guess-blank-questions.ts's difficulty field. -->
+          <div class="control-group" id="guessBlankDifficultyGroup" style="display:none">
+            <label>Difficulty</label>
+            <div class="conj-display-toggle" id="guessBlankDifficulty">
+              <button class="conj-toggle-btn active" data-difficulty="all">All</button>
+              <button class="conj-toggle-btn" data-difficulty="easy">Easy</button>
+              <button class="conj-toggle-btn" data-difficulty="medium">Medium</button>
+              <button class="conj-toggle-btn" data-difficulty="hard">Hard</button>
             </div>
           </div>
 
@@ -216,8 +287,12 @@
             </div>
           </div>
 
-          <div class="controls-sep" aria-hidden="true"></div>
+        </div>
 
+        <!-- Start Quiz lives in its own row, outside controls-top's wrapping
+             flex flow, so it never moves when a mode-conditional control
+             group (Direction, Quiz Style, etc.) appears or disappears. -->
+        <div id="controlsActions">
           <button id="startBtn">Start Quiz</button>
         </div>
 
@@ -241,6 +316,7 @@
                 <span class="filter-section-label">Tense &amp; Forms</span>
               </button>
               <span id="conjTenseSummary" class="conj-tf-summary"></span>
+              <span id="conjSizeEstimate" class="conj-size-estimate"></span>
             </div>
 
             <div id="conjTenseFormsBody" class="filter-body conj-tf-body">
@@ -495,6 +571,32 @@
           </div>
         </div>
         <div id="triviaScoreBottom" class="quiz-score quiz-score--boxed"></div>
+      </section>
+
+      <section id="guessBlankArea" hidden>
+        <!-- Same anatomy as #triviaArea — proof of concept built on the same
+             pattern, see guess-blank-mode.ts. -->
+        <div class="progressWrap">
+          <div class="progress">
+            <div id="guessBlankBarTop" class="bar"></div>
+            <div id="guessBlankBarTopMissed" class="bar-missed"></div>
+            <span id="guessBlankStatsTop" class="progress-label"></span>
+          </div>
+        </div>
+        <div id="guessBlankScoreTop" class="quiz-score quiz-score--boxed"></div>
+        <div id="guessBlankSummaryTop" class="quiz-summary" style="display:none"></div>
+
+        <div id="guessBlankWrap"></div>
+        <div id="guessBlankSummaryBottom" class="quiz-summary" style="display:none"></div>
+
+        <div class="progressWrap">
+          <div class="progress">
+            <div id="guessBlankBarBottom" class="bar"></div>
+            <div id="guessBlankBarBottomMissed" class="bar-missed"></div>
+            <span id="guessBlankStatsBottom" class="progress-label"></span>
+          </div>
+        </div>
+        <div id="guessBlankScoreBottom" class="quiz-score quiz-score--boxed"></div>
       </section>
 
       <section id="conjugationArea" hidden>
@@ -758,6 +860,30 @@
             </div>
           </div>
 
+          <div class="settings-section settings-section--guessblank" id="settings-sec-guessblank">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyGuessBlank" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyGuessBlank">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-section-icon" aria-hidden="true">🔍</span>
+              <span class="filter-section-label settings-section-title">Guess the Blank</span>
+            </button>
+            <div id="settingsBodyGuessBlank" class="filter-body settings-section-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Guesses per question</span>
+                <span class="settings-desc">How many wrong guesses are allowed before a question is scored as missed and the answer shown</span>
+              </div>
+              <div class="sort-order-toggle" id="settingGuessBlankAttempts">
+                <button type="button" class="sort-order-btn active" data-attempts="1">1</button>
+                <button type="button" class="sort-order-btn" data-attempts="2">2</button>
+                <button type="button" class="sort-order-btn" data-attempts="3">3</button>
+                <button type="button" class="sort-order-btn" data-attempts="unlimited">Unlimited</button>
+              </div>
+            </div>
+
+            </div>
+          </div>
+
           <div class="settings-section settings-section--appearance" id="settings-sec-appearance">
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyAppearance" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyAppearance">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
@@ -820,6 +946,14 @@
                 <button type="button" class="sort-order-btn active" data-history="true">On</button>
                 <button type="button" class="sort-order-btn" data-history="false">Off</button>
               </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Clear history</span>
+                <span class="settings-desc">Permanently deletes every saved quiz session and "words I keep missing" tally, in every language. Mastery and your lists are not affected.</span>
+              </div>
+              <button type="button" id="settingClearHistory" class="settings-action-btn settings-action-btn--danger">Clear History</button>
             </div>
 
             </div>

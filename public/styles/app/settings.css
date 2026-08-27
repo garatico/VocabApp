@@ -247,6 +247,14 @@
   color: var(--accent);
 }
 
+/* Destructive variant — Clear History and anything else that deletes data
+   outright, rather than just re-showing a hint or resetting a preference. */
+.settings-action-btn--danger:hover {
+  background: var(--danger-light);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 /* ── Responsive ── */
 @media (max-width: 860px) {
   /* The side nav doesn't have room to sit beside the content and stay

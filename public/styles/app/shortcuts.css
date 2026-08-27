@@ -28,6 +28,34 @@
   border-color: var(--accent);
 }
 
+/* ── Testing Profiles trigger — same corner as the ? button, its own shape
+   so the two read as separate things: a pill, not a circle, with a label
+   rather than a glyph, sitting just to its left. ── */
+#presetsBtn {
+  position: absolute;
+  top: 0.5rem;
+  right: 2.75rem;
+  height: 30px;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: 'Sora', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast),
+              border-color var(--transition-fast);
+  z-index: 2;
+}
+#presetsBtn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
 /* ── Backdrop ── */
 #shortcutsOverlay {
   display: none;
@@ -138,5 +166,26 @@ kbd {
     height: 36px;
     top: 0.45rem;
     right: 0.5rem;
+  }
+  #presetsBtn {
+    top: 0.45rem;
+    right: 3.05rem;
+    height: 36px;
+    font-size: 0.66rem;
+    padding: 0 0.55rem;
+  }
+}
+
+@media (max-width: 480px) {
+  /* No room for a label beside the ? button at this width — shrink to an
+     icon-only pill rather than wrapping or overlapping. */
+  #presetsBtn {
+    width: 36px;
+    padding: 0;
+    font-size: 0;
+  }
+  #presetsBtn::before {
+    content: '\1F4CB';  /* clipboard */
+    font-size: 1.05rem;
   }
 }

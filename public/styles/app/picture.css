@@ -40,8 +40,11 @@
   /* Was minmax(200px, ...) which packed 6-7 narrow cards across a wide
      window and left the photos small. 5 per row on a desktop viewport gives
      each image noticeably more space; auto-fill still collapses the count
-     gracefully as the window narrows. */
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+     gracefully as the window narrows. Bumped from 240px to 260px so a card
+     with cycler arrows still leaves the picture itself roughly as large as
+     a single-visual card's — the arrows take space from the row now
+     instead of overlaying the image. */
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1.25rem;
   padding: 1rem 0;
 }
@@ -100,6 +103,30 @@
   align-items: center;
   justify-content: center;
   position: relative;
+  /* The outer .picture-card already has a border, but it wraps the word
+     input too — this frames the image area on its own, so a slow or broken
+     image still reads as "a picture belongs here" rather than a bare gap. */
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+/* Shown on .picture-card-img while its <img> hasn't fired load/error yet —
+   see buildVisualFrame() in picture-mode.ts. Removed once the image
+   resolves either way, so a slow network never leaves a bare empty box. */
+.picture-card-img.pm-img-loading::after {
+  content: '';
+  position: absolute;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 3px solid var(--border-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: pm-spin 0.7s linear infinite;
+}
+@keyframes pm-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Emoji fallback — centred, large, no text-shadow clutter */
@@ -113,9 +140,10 @@
 /* width/height: 100%, not auto capped by max-width/max-height — object-fit
    only has something to resolve once the box has a definite size. Auto
    sizing left every image at its own source resolution, so a small photo
-   sat tiny in the same square a big one filled edge to edge. Superseded in
-   practice by .vc-visual img below (every card goes through the visual
-   cycler), kept in sync so nothing regresses if that ever changes. */
+   sat tiny in the same square a big one filled edge to edge. Overridden by
+   .vc-row .picture-card-img img below for a multi-visual card (every card
+   goes through buildVisualFrame(), so that's the common case in practice),
+   kept in sync so nothing regresses if a single-visual card ever changes. */
 .picture-card-img img {
   width: 100%;
   height: 100%;
@@ -185,55 +213,77 @@
 
 /* ================================================================
    Visual cycler — per-card prev/next arrows (all modes)
+   buildVisualFrame() in picture-mode.ts builds:
+     .vc-frame            column: the row below, then the dots
+       .vc-row             row: prev arrow · .picture-card-img · next arrow
+         .picture-card-img  the bordered box — holds only the current visual
+       .vc-dots
+   The arrows and dots used to be mounted *inside* .picture-card-img, so once
+   that box got its own border they ended up sitting inside the frame, partly
+   over the photo. Now they sit outside it — beside and below the border,
+   never over it.
 ================================================================ */
 
-/* Fills the picture-card-img container */
-.vc-inner {
-  position: relative;
+/* Neither this nor .vc-row constrains height — .picture-card never had an
+   explicit height of its own; it was always the aspect-ratio:1 square
+   (resolved from *width*) that gave the card its height, bottom-up. Adding
+   height:100% anywhere in this chain asks a box with no definite height of
+   its own to hand one down, which resolves to nothing and collapsed the
+   square into whatever the image's intrinsic size happened to be. */
+.vc-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.3rem;           /* arrow · picture · arrow, none of them overlapping */
 }
 
-.vc-visual {
+.vc-row {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 1 1 auto;
+  gap: 0.4rem;           /* arrow · picture · arrow, none of them overlapping */
+}
+
+/* Inside a cycler's row, .picture-card-img shares the row with two arrows
+   instead of taking the full card width — shrinks to fit rather than
+   forcing the row wider than the card. Still square (aspect-ratio:1, set on
+   the base rule above) — width alone still resolves it, same as the
+   single-visual case, just against the row's narrower available width. */
+.vc-row .picture-card-img {
+  width: auto;
+  /* flex-basis: 0, not auto — an auto basis on a box whose only sizing
+     hint is aspect-ratio (no intrinsic content size yet) left the browser
+     resolving height first from cross-axis stretch and deriving width from
+     that, backwards from what's wanted here. A zero basis forces width to
+     come purely from the flex distribution, so aspect-ratio then derives
+     height from *that* — a reliable square instead of a stretched one. */
+  flex: 1 1 0;
   min-width: 0;
-  height: 100%;
 }
 
-/* width/height: 100% — see .picture-card-img img above. This is the rule
-   that actually reaches the screen: every card goes through the visual
-   cycler, and .vc-visual img is the last matching declaration in the
-   cascade at equal specificity. */
-.vc-visual img {
+/* width/height: 100% — matches .picture-card-img img above, which .vc-row
+   .picture-card-img overrides the width of; object-fit still needs both
+   set to resolve against the box's own (now auto) size. */
+.vc-row .picture-card-img img {
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
 
-.vc-visual .picture-card-emoji {
-  /* inherits font-size from outer context */
-}
-
-/* Arrows sit *beside* the image, in the flow, not floated over its edges.
-   Overlaid they covered the left and right of the picture — which on a photo
-   of an animal is often the part that identifies it. They keep their space
-   when faded out, so showing them on hover doesn't shift the layout. */
+/* Arrows sit *beside* the framed picture, in normal flow — not floated over
+   it, which is what put them back inside the border they're meant to sit
+   outside of. They keep their space when faded out, so showing them on
+   hover doesn't shift the layout. */
 .vc-arrow {
   position: static;
   flex: 0 0 auto;
   width: 1.6rem;
   height: 1.6rem;
   border-radius: 50%;
-  border: 1px solid var(--border, #d1d5db);
-  background: rgba(255, 255, 255, 0.88);
-  color: var(--text-muted, #6b7280);
+  border: 1px solid var(--border-strong);
+  background: var(--surface2);
+  color: var(--text-muted);
   font-size: 0.75rem;
   cursor: pointer;
   display: flex;
@@ -241,12 +291,12 @@
   justify-content: center;
   padding: 0;
   opacity: 0;
-  transition: opacity 0.15s, background 0.12s, color 0.12s;
+  transition: opacity 0.15s, background 0.12s, color 0.12s, border-color 0.12s;
   user-select: none;
 }
 
-/* .vc-prev / .vc-next need no positioning now — the flex order in .vc-inner
-   (prev, visual, next) already puts them on the right sides. */
+/* .vc-prev / .vc-next need no positioning now — the flex order in .vc-row
+   (prev, picture, next) already puts them on the right sides. */
 
 /* Show arrows on card hover */
 .picture-card:hover .vc-arrow,
@@ -386,6 +436,17 @@
 .fc-card .picture-card-img {
   width: 160px;
   height: 160px;
+}
+
+/* The fixed 160x160 above is sized for a single-visual card, where
+   .picture-card-img is .fc-card's only child. Inside a cycler's row it
+   shares the width with two arrows instead — this has to out-specificity
+   the rule above (both are 2 classes) so aspect-ratio can square the box
+   against whatever width the row actually leaves it, not a fixed size
+   arrows have to be laid out around. */
+.fc-card .vc-row .picture-card-img {
+  width: auto;
+  height: auto;
 }
 
 .fc-card .picture-card-emoji {

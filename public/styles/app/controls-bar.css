@@ -11,19 +11,48 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* Top row: selects + start button inline */
+/* Top row: selects + start button inline.
+   nowrap + horizontal scroll, not wrap — a mode-conditional group (Direction,
+   Quiz Style, Difficulty, ...) dropping to a second line moved every time a
+   different group toggled visibility, and at typical desktop widths the
+   full row of groups plus Direction never fit on one line anyway, so
+   Direction in particular almost always ended up alone on its own row.
+   Scrolling keeps every control on the one row it belongs on; nothing is
+   ever clipped, just off to the right until scrolled to. Column-stacking
+   below 599px (further down) makes this moot on a phone, where a row
+   doesn't make sense in the first place. */
 #controls-top {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
   gap: 0.6rem;
   align-items: flex-end;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--border-strong);
   margin-bottom: 0.5rem;
 }
+/* A group that's currently display:none (most modes' controls, hidden by
+   ui-state.ts) must not hold its flex basis open in a nowrap row the way it
+   could get away with in a wrapping one — already true for display:none,
+   noted here since nowrap is what makes it load-bearing. */
+#controls-top > .control-group,
+#controls-top > .controls-sep {
+  flex-shrink: 0;
+}
 
-/* Reserve space on the right for the shortcuts button */
-#controls { position: relative; padding-right: 3rem; }
+/* Reserve space on the right for the shortcuts button and the Profiles
+   pill beside it (see shortcuts.css — both live in this corner). */
+#controls { position: relative; padding-right: 8rem; }
+
+/* Start Quiz's own row — deliberately outside #controls-top's wrapping flex
+   flow. #controls-top holds every mode-conditional control group (Direction,
+   Quiz Style, Compare, ...), and their display:none/'' toggling changes the
+   row's width and where it wraps, which used to carry Start Quiz along with
+   it. A dedicated row below is immune to whatever those groups are doing. */
+#controlsActions {
+  display: flex;
+}
 
 .control-group {
   display: flex;
@@ -38,16 +67,24 @@
 /* ── Shared control sizing across the whole controls bar ──
    Language, Words, Order and Direction all use the same height and type scale
    so the row reads as one set of controls. */
-#controls :is(#langSelect, #sizeSelect) {
+#controls :is(#langSelect, #sizeSelect, #conjSizeSelect) {
   min-height: 40px;
   font-size: 0.92rem;
   padding: 0.3rem 2rem 0.3rem 0.7rem;   /* room for the dropdown chevron */
 }
 /* The select must fit its longest option ("Custom…") without clipping */
 #sizeSelect { min-width: 8.5rem; }
+#conjSizeSelect { min-width: 8.5rem; }
 #langSelect { min-width: 9rem; }
 
-#controls :is(#sortOrderToggle, #directionToggle, #sizeModeToggle) :is(.sort-order-btn, .conj-toggle-btn) {
+/* Every segmented toggle group that can appear in #controls-top, so no
+   mode's row of buttons is shorter than another's. New mode-conditional
+   groups belong in this list, not a one-off rule. */
+#controls :is(
+  #sortOrderToggle, #directionToggle, #sizeModeToggle, #poolModeToggle,
+  #pictureSubMode, #triviaSubMode, #tableStyleToggle, #conjViewToggle,
+  #conjMatchStyleToggle, #conjDisplayToggle
+) :is(.sort-order-btn, .conj-toggle-btn) {
   min-height: 40px;
   font-size: 0.85rem;
   padding: 0.3rem 0.85rem;
@@ -74,6 +111,40 @@
 }
 
 .size-row { display: flex; gap: 0.4rem; align-items: stretch; }
+
+/* ── Rank Range pool mode ── */
+.rank-range-row input[type="number"] {
+  min-height: 40px;
+  width: 6rem;
+  font-size: 0.92rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+}
+.rank-range-sep {
+  align-self: center;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* ── Level (CEFR band) pool mode — reuses .pos-chip, independently toggled ── */
+.band-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+/* Level pool mode's band chips sit in the same row as the other Words
+   controls (Top N / Rank Range / Level), so they should match that row's
+   40px height on desktop. Below 767px they fall back to the smaller
+   .pos-chip mobile height set in class-filter.css, matching how the
+   sibling toggle buttons also shrink at that width. */
+@media (min-width: 768px) {
+  #bandChips .pos-chip { min-height: 40px; }
+}
 
 /* Vertical divider between control groups */
 .controls-sep {
@@ -177,10 +248,12 @@
    * on the right, which read as the whole panel being pushed off-centre, and
    * the top row lost 80px it needed for the Language and Words controls.
    *
-   * 2.5rem is the button's 30px plus its 0.6rem offset, rounded up.
+   * 2.5rem is the button's 30px plus its 0.6rem offset, rounded up. Now
+   * shares the corner with the Profiles pill beside it (shortcuts.css),
+   * which needs the extra room in #controls-top's own padding.
    */
   #controls     { padding-right: 1rem; }
-  #controls-top { padding-right: 2.5rem; }
+  #controls-top { padding-right: 7.5rem; }
 
   /* Nothing in the card may be wider than the card. Without this a single
      stubborn row (Direction, or the Words size-row) makes the whole page
@@ -213,11 +286,12 @@
 
   #controls-top > .control-group { width: 100%; min-width: 0; }
 
-  /* The ? button is absolutely positioned in the card's top corner, so only
-     the row that sits under it needs to keep clear. Reserving the width down
-     the whole column is what made the filter boxes look off-centre. */
+  /* The ? and Profiles buttons are absolutely positioned in the card's top
+     corner, so only the row that sits under them needs to keep clear.
+     Reserving the width down the whole column is what made the filter boxes
+     look off-centre. 7.5rem clears both — see shortcuts.css. */
   #controls-top { padding-right: 0; }
-  #controls-top > .control-group:first-child { padding-right: 2.5rem; }
+  #controls-top > .control-group:first-child { padding-right: 7.5rem; }
 
   /* Words: select, custom number and the By Rank / Skip Known toggle. Wraps
      onto as many rows as it needs instead of forcing the card wider. */
@@ -229,13 +303,8 @@
   .size-row > input[type="number"] { flex: 1 1 5rem; min-width: 0; }
   .size-row > .sort-order-toggle { flex: 1 1 100%; }
 
-  /* Start button: full width */
-  #startBtn {
-    width: 100%;
-    padding: 0.5rem 0.8rem;
-    font-size: 0.82rem;
-    min-height: 44px;
-  }
+  /* Start button is full width and this size at every breakpoint now —
+     see buttons.css. Nothing to override here below 599px. */
 
   .control-group > label { font-size: 0.63rem; }
   .size-row { gap: 0.3rem; width: 100%; }
@@ -270,7 +339,9 @@
 @media (max-width: 480px) {
   #controls     { padding: 0.5rem 0.6rem 0.55rem; }
   #controls-top { padding-right: 0; }
-  #controls-top > .control-group:first-child { padding-right: 2.5rem; }
+  /* Profiles drops to an icon-only 36px pill at this width (shortcuts.css) —
+     less to clear than the labeled version above 480px. */
+  #controls-top > .control-group:first-child { padding-right: 5.5rem; }
   .size-row { width: 100%; }
 }
 

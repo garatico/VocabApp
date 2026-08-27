@@ -6,12 +6,13 @@ import { bindStartHandler }                    from './start-handler.ts';
 import { bindClassFilter, getSelectedClasses, syncUI as syncClassFilterUI } from './filters/class-filter.ts';
 import { initSectionCollapse }                from './filters/section-collapse.ts';
 import { bindDomainFilter, getSelectedDomains, updateDomainFilter, reloadDomainFilter } from './filters/domain-filter.ts';
-import { bindUIState, bindModeSwitch }          from './ui/ui-state.ts';
-import { buildFilterUI, initListFilter, syncListFilterUI } from './filters/word-filters.ts';
+import { bindUIState, bindModeSwitch, getCurrentMode } from './ui/ui-state.ts';
+import { buildFilterUI, initListFilter, syncListFilterUI, filterWords } from './filters/word-filters.ts';
+import { estimateConjugationSize } from './modes/conjugation/verb-filters.ts';
 import { loadWords }                            from './data/data-loader.ts';
 import { initTheme }                            from './ui/theme-toggle.ts';
 import { mountUI }                              from './ui/ui.ts';
-import { initConjControls }                     from './modes/conjugation/controls.ts';
+import { initConjControls, setSelectionChangeCallback } from './modes/conjugation/controls.ts';
 import type { Word }                            from './types.ts';
 import { readString, writeString, remove as removeKey } from './utils/storage.ts';
 import { mustGet }                              from './utils/dom.ts';
@@ -24,17 +25,21 @@ import { refreshFilterSelect }                  from './utils/word-lists.ts';
 import { Settings, bindSettings, applyFontSize } from './settings.ts';
 import { initShortcuts }                         from './ui/shortcuts-overlay.ts';
 import { openLanguagePicker, languagePickerLabel } from './ui/language-picker.ts';
+import { openPresetPicker }                      from './ui/preset-picker.ts';
+import { currentScope }                          from './filters/filter-scope.ts';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
 const langSelect   = document.getElementById('langSelect')   as HTMLSelectElement | null;
 const sizeSelect   = document.getElementById('sizeSelect')   as HTMLSelectElement | null;
 const langPickerBtn = document.getElementById('langPickerBtn') as HTMLButtonElement | null;
+const presetsBtn    = document.getElementById('presetsBtn')    as HTMLButtonElement | null;
 const startBtn        = mustGet<HTMLButtonElement>('startBtn');
 const output          = mustGet('output');
 const tableWrap       = mustGet('tableWrap');
 const pictureWrap     = mustGet('pictureWrap');
 const triviaWrap      = mustGet('triviaWrap');
+const guessBlankWrap  = mustGet('guessBlankWrap');
 const conjugationWrap = mustGet('conjugationWrap');
 const myListsWrap     = document.getElementById('myListsWrap');  // optional — page may omit it
 const historyWrap     = document.getElementById('historyWrap');  // optional — page may omit it
@@ -43,6 +48,7 @@ const historyWrap     = document.getElementById('historyWrap');  // optional —
 const tableArea       = mustGet('tableArea');
 const pictureArea     = mustGet('pictureArea');
 const triviaArea      = mustGet('triviaArea');
+const guessBlankArea  = mustGet('guessBlankArea');
 const conjugationArea = mustGet('conjugationArea');
 const myListsArea     = mustGet('myListsArea');
 const historyArea     = mustGet('historyArea');
@@ -129,6 +135,96 @@ function getExtraLanguages(): string[] {
     .filter(name => name !== primary && extraLanguages.has(name));
 }
 
+// ── Word pool mode: Top N / Rank Range / Level ──────────────────────────────
+//
+// Three ways to pick which words are in play, selected via #poolModeToggle.
+// Top N (the original behaviour) stays the default; Rank Range and Level are
+// each just another way to narrow the same rank-sorted pool before the
+// Part-of-Speech filter and every downstream filter (List/Domain/Class) run.
+
+export type PoolMode = 'topn' | 'range' | 'band';
+
+function getPoolMode(): PoolMode {
+  const active = document.querySelector<HTMLElement>('#poolModeToggle .sort-order-btn.active');
+  const v = active?.dataset.pool;
+  return v === 'range' || v === 'band' ? v : 'topn';
+}
+
+function getRankRange(): { from: number; to: number } {
+  const fromEl = document.getElementById('rankFrom') as HTMLInputElement | null;
+  const toEl   = document.getElementById('rankTo')   as HTMLInputElement | null;
+  const from = Math.max(1, Number(fromEl?.value) || 1);
+  const to   = Math.max(1, Number(toEl?.value) || from);
+  return from <= to ? { from, to } : { from: to, to: from };
+}
+
+function getSelectedBands(): string[] {
+  return Array.from(document.querySelectorAll<HTMLElement>('#bandChips .pos-chip.active'))
+    .map(b => b.dataset.band)
+    .filter((b): b is string => !!b);
+}
+
+/** Apply the "Rank Range" pool mode and the Part-of-Speech filter to one sorted pool. */
+function rangeSlice(sorted: Word[], from: number, to: number, selected: string[]): Word[] {
+  const inRange = sorted.filter(w => w.rank != null && w.rank >= from && w.rank <= to);
+  return selected.length === 0 ? inRange : inRange.filter(w => w.pos == null || selected.includes(w.pos));
+}
+
+/** Apply the "Level" (CEFR band) pool mode and the Part-of-Speech filter to one sorted pool. */
+function bandSlice(sorted: Word[], bands: string[], selected: string[]): Word[] {
+  if (bands.length === 0) return [];
+  const inBand = sorted.filter(w => w.frequency?.band && bands.includes(w.frequency.band));
+  return selected.length === 0 ? inBand : inBand.filter(w => w.pos == null || selected.includes(w.pos));
+}
+
+function syncPoolModeUI(): void {
+  const mode = getPoolMode();
+  const topNRow      = document.getElementById('topNRow');
+  const rankRangeRow = document.getElementById('rankRangeRow');
+  const bandRow       = document.getElementById('bandRow');
+  if (topNRow)      topNRow.style.display      = mode === 'topn'  ? '' : 'none';
+  if (rankRangeRow) rankRangeRow.style.display = mode === 'range' ? '' : 'none';
+  if (bandRow)       bandRow.style.display       = mode === 'band'  ? '' : 'none';
+}
+
+// ── Conjugation: live pre-quiz card-count estimate ──────────────────────────
+//
+// Conjugation multiplies verbs × tenses into cards, and with every tense
+// selected that can run into the tens of thousands (~56k for "Max" Spanish
+// verbs × every tense) before the grid ever renders. This mirrors the verb
+// pool start-handler.ts is about to build (verb-only, isOwnInfinitive,
+// hasAnyForms, Regularity, then capped/topped-up to #conjSizeSelect's
+// target) so the number shown here matches what Start Quiz would actually
+// build, not just an approximation of it.
+
+const CONJ_CARD_WARNING_THRESHOLD = 2000;
+
+function refreshConjEstimate(): void {
+  const el = document.getElementById('conjSizeEstimate');
+  if (!el) return;
+
+  const lang = langSelect?.value ?? 'spanish';
+  if (getCurrentMode() !== 'conjugation' || !supportsConjugation(lang)) {
+    el.textContent = '';
+    return;
+  }
+
+  const conjSizeSelect = document.getElementById('conjSizeSelect') as HTMLSelectElement | null;
+  const requested = conjSizeSelect?.value === 'max' ? Infinity : Number(conjSizeSelect?.value) || 100;
+
+  const extras   = getExtraLanguages();
+  const fullLang = extras.length > 0 ? [lang, ...extras].join('+') : lang;
+  const pool     = filterWords(getAllWordsForCurrentLang());
+  const estimate = estimateConjugationSize(pool, fullLang, extras);
+
+  const verbs = Math.min(requested, estimate.verbs);
+  const cards = verbs * estimate.tenses;
+
+  el.textContent = `≈ ${verbs.toLocaleString()} verb${verbs === 1 ? '' : 's'} × `
+    + `${estimate.tenses} tense${estimate.tenses === 1 ? '' : 's'} = ${cards.toLocaleString()} cards`;
+  el.classList.toggle('conj-size-estimate--warning', cards > CONJ_CARD_WARNING_THRESHOLD);
+}
+
 /**
  * Ask the server (or the bundled manifest) which languages have data and mark
  * the rest. Runs after the first render so the dropdown isn't waiting on it.
@@ -172,6 +268,8 @@ function syncConjugationAvailability(): void {
 function restoreSettings(): void {
   if (langSelect) langSelect.value = S.get('vq_lang') ?? 'spanish';
   if (sizeSelect) { const v = S.get('vq_size'); if (v) sizeSelect.value = v; }
+  const conjSizeSelect = document.getElementById('conjSizeSelect') as HTMLSelectElement | null;
+  if (conjSizeSelect) { const v = S.get('vq_conj_size'); if (v) conjSizeSelect.value = v; }
 
   // Extra languages (Table mode's "+ Languages" picker). A saved choice that
   // matches the restored primary language is dropped — comparing a language
@@ -197,6 +295,25 @@ function restoreSettings(): void {
     });
   }
 
+  // Word pool mode (Top N / Rank Range / Level) and its own inputs
+  const savedPoolMode = S.get('vq_pool_mode');
+  if (savedPoolMode) {
+    document.querySelectorAll<HTMLElement>('#poolModeToggle .sort-order-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.pool === savedPoolMode);
+    });
+  }
+  const rankFrom = document.getElementById('rankFrom') as HTMLInputElement | null;
+  const rankTo   = document.getElementById('rankTo')   as HTMLInputElement | null;
+  const savedFrom = S.get('vq_rank_from');
+  const savedTo   = S.get('vq_rank_to');
+  if (rankFrom && savedFrom) rankFrom.value = savedFrom;
+  if (rankTo && savedTo)     rankTo.value   = savedTo;
+  const savedBands = new Set((S.get('vq_bands') ?? '').split(',').filter(Boolean));
+  document.querySelectorAll<HTMLElement>('#bandChips .pos-chip').forEach(b => {
+    b.classList.toggle('active', !!b.dataset.band && savedBands.has(b.dataset.band));
+  });
+  syncPoolModeUI();
+
   // Sort order — scoped to avoid touching settings panel buttons
   const savedSort = S.get('vq_sort');
   if (savedSort) {
@@ -218,6 +335,22 @@ function restoreSettings(): void {
   if (savedTriviaStyle) {
     document.querySelectorAll<HTMLElement>('#triviaSubMode .conj-toggle-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.mode === savedTriviaStyle);
+    });
+  }
+
+  // Trivia difficulty
+  const savedTriviaDifficulty = S.get('vq_trivia_difficulty');
+  if (savedTriviaDifficulty) {
+    document.querySelectorAll<HTMLElement>('#triviaDifficulty .conj-toggle-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.difficulty === savedTriviaDifficulty);
+    });
+  }
+
+  // Guess the Blank difficulty
+  const savedGbDifficulty = S.get('vq_guess_blank_difficulty');
+  if (savedGbDifficulty) {
+    document.querySelectorAll<HTMLElement>('#guessBlankDifficulty .conj-toggle-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.difficulty === savedGbDifficulty);
     });
   }
 
@@ -251,6 +384,14 @@ async function ensureLoaded(lang: string): Promise<Word[]> {
   return allWordsByLang[lang];
 }
 
+/** Every word already loaded for the active language(s) — unsized, unfiltered. */
+function getAllWordsForCurrentLang(): Word[] {
+  const primary = langSelect?.value ?? 'spanish';
+  const extras  = getExtraLanguages();
+  if (extras.length === 0) return allWordsByLang[primary] || [];
+  return [primary, ...extras].flatMap(l => (allWordsByLang[l] || []).map(w => ({ ...w, language: l })));
+}
+
 /** Apply the "Words" size control and the Part-of-Speech filter to one sorted pool. */
 function sizedSlice(sorted: Word[], size: number, isMax: boolean, selected: string[]): Word[] {
   return selected.length === 0
@@ -268,6 +409,19 @@ async function loadAndBuildFilters(lang: string): Promise<void> {
       ? Number((document.getElementById('sizeCustom') as HTMLInputElement)?.value) || 100
       : Number(sizeSelect?.value) || 100;
   const selected = getSelectedClasses();
+  const poolMode = getPoolMode();
+
+  /** One pool (already rank-sorted) → the base list, per the active pool mode. */
+  function poolSlice(pool: Word[], share: number): Word[] {
+    if (poolMode === 'range') {
+      const { from, to } = getRankRange();
+      return rangeSlice(pool, from, to, selected);
+    }
+    if (poolMode === 'band') {
+      return bandSlice(pool, getSelectedBands(), selected);
+    }
+    return sizedSlice(pool, share, isMax, selected);
+  }
 
   const extras = getExtraLanguages();
   let sorted: Word[];
@@ -284,12 +438,14 @@ async function loadAndBuildFilters(lang: string): Promise<void> {
 
     // Split the configured size evenly across however many languages are
     // active rather than concatenating full lists — "Top 1000" merged should
-    // still read like "Top 1000", not "Top 1000 per language".
+    // still read like "Top 1000", not "Top 1000 per language". Rank Range and
+    // Level aren't a count to split — each language's pool is filtered by the
+    // same range/band independently instead.
     const share = isMax ? Infinity : Math.max(1, Math.floor(size / allLangs.length));
-    currentBaseList = tagged.flatMap(pool => sizedSlice(pool, share, isMax, selected));
+    currentBaseList = tagged.flatMap(pool => poolSlice(pool, share));
   } else {
     sorted = primarySorted;
-    currentBaseList = sizedSlice(sorted, size, isMax, selected);
+    currentBaseList = poolSlice(sorted, size);
   }
 
   buildFilterUI(sorted, currentBaseList);
@@ -306,23 +462,27 @@ async function loadAndBuildFilters(lang: string): Promise<void> {
     .filter(x => x.count > 0)
     .sort((a, b) => b.count - a.count);
   updateDomainFilter(sortedCounts);
+
+  refreshConjEstimate();
 }
 
 // ── Core module bindings ──────────────────────────────────────────────────────
 
 initTheme();
+setSelectionChangeCallback(refreshConjEstimate);
 
 const { updateModeUI } = bindModeSwitch({
   tableArea, pictureArea, conjugationArea,
   extraAreas: {
     mylists: myListsArea, settings: settingsArea, history: historyArea,
-    trivia: triviaArea,
+    trivia: triviaArea, guessBlank: guessBlankArea,
   },
   onActivate: {
     table: syncTableStyleUI,
     conjugation: () => {
       initConjControls(langSelect?.value || 'spanish', getExtraLanguages());
       syncConjViewToggle();
+      refreshConjEstimate();
     },
     // Re-rendered fresh on every visit so a session finished elsewhere always
     // shows up, and so does a list created elsewhere — e.g. a cross-language
@@ -345,11 +505,25 @@ bindStartHandler({
     return extras.length > 0 ? [primary, ...extras].join('+') : primary;
   },
   getExtraLanguages,
-  getSize: () => sizeSelect?.value === 'max'
-    ? Infinity
-    : sizeSelect?.value === 'custom'
-      ? Number((document.getElementById('sizeCustom') as HTMLInputElement)?.value) || 100
-      : Number(sizeSelect?.value) || 100,
+  // Conjugation reads its own verb-scaled control (#conjSizeSelect) instead
+  // of the vocabulary-wide Words control — see ui-state.ts, which swaps the
+  // two controls' visibility. Rank Range and Level pool modes already produce
+  // the exact final pool in currentBaseList (see loadAndBuildFilters's
+  // poolSlice) — Infinity/'window' tells start-handler.ts's top-up/hard-cap
+  // logic (written for Top N's "count" semantics) to leave that pool alone
+  // rather than reslicing it.
+  getSize: () => {
+    if (getCurrentMode() === 'conjugation') {
+      const conjSizeSelect = document.getElementById('conjSizeSelect') as HTMLSelectElement | null;
+      return conjSizeSelect?.value === 'max' ? Infinity : Number(conjSizeSelect?.value) || 100;
+    }
+    if (getPoolMode() !== 'topn') return Infinity;
+    return sizeSelect?.value === 'max'
+      ? Infinity
+      : sizeSelect?.value === 'custom'
+        ? Number((document.getElementById('sizeCustom') as HTMLInputElement)?.value) || 100
+        : Number(sizeSelect?.value) || 100;
+  },
   getSelectedClasses,
   getSelectedDomains,
   getSortOrder: () => {
@@ -357,6 +531,8 @@ bindStartHandler({
     return active?.dataset.order ?? 'frequency';
   },
   getSizeMode: () => {
+    if (getCurrentMode() === 'conjugation') return 'window';
+    if (getPoolMode() !== 'topn') return 'window';
     const active = document.querySelector<HTMLElement>('#sizeModeToggle .sort-order-btn.active');
     return (active?.dataset.mode ?? 'window') as 'window' | 'fill';
   },
@@ -373,13 +549,8 @@ bindStartHandler({
   // of its real language — table-controls.ts and conjugation/index.ts both
   // read `w.language ?? lang` for mastery/history and per-verb tense
   // filtering, and a bogus combined fallback breaks both silently.
-  getAllWords: () => {
-    const primary = langSelect?.value ?? 'spanish';
-    const extras  = getExtraLanguages();
-    if (extras.length === 0) return allWordsByLang[primary] || [];
-    return [primary, ...extras].flatMap(l => (allWordsByLang[l] || []).map(w => ({ ...w, language: l })));
-  },
-  elements:       { startBtn, tableWrap, pictureWrap, triviaWrap, conjugationWrap, output },
+  getAllWords: getAllWordsForCurrentLang,
+  elements:       { startBtn, tableWrap, pictureWrap, triviaWrap, guessBlankWrap, conjugationWrap, output },
 });
 
 // ── Event listeners ───────────────────────────────────────────────────────────
@@ -393,6 +564,17 @@ langSelect?.addEventListener('change', () => {
   if (document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === 'conjugation') {
     initConjControls(langSelect.value, getExtraLanguages());
   }
+});
+
+presetsBtn?.addEventListener('click', () => {
+  openPresetPicker({
+    anchorEl: presetsBtn,
+    mode:     currentScope(),
+    // applyPreset() already repaints the filter panels it touched
+    // (refreshFilterSelect/syncListFilterUI); this just refreshes the one
+    // thing outside them that also depends on the filter selection.
+    onApply:  refreshConjEstimate,
+  });
 });
 
 langPickerBtn?.addEventListener('click', () => {
@@ -421,6 +603,12 @@ sizeSelect?.addEventListener('change', () => {
   void loadAndBuildFilters(langSelect?.value ?? 'spanish');
 });
 
+const conjSizeSelectEl = document.getElementById('conjSizeSelect') as HTMLSelectElement | null;
+conjSizeSelectEl?.addEventListener('change', () => {
+  S.set('vq_conj_size', conjSizeSelectEl.value);
+  refreshConjEstimate();
+});
+
 const sizeCustomInput = document.getElementById('sizeCustom') as HTMLInputElement | null;
 sizeCustomInput?.addEventListener('input', () => {
   S.set('vq_size_custom', sizeCustomInput.value);
@@ -437,6 +625,36 @@ document.getElementById('sizeModeToggle')?.addEventListener('click', e => {
   document.querySelectorAll('#sizeModeToggle .sort-order-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   if (btn.dataset.mode) S.set('vq_size_mode', btn.dataset.mode);
+});
+
+// Pool mode toggle (Top N / Rank Range / Level)
+document.getElementById('poolModeToggle')?.addEventListener('click', e => {
+  const btn = (e.target as HTMLElement).closest<HTMLElement>('.sort-order-btn');
+  if (!btn?.dataset.pool) return;
+  document.querySelectorAll('#poolModeToggle .sort-order-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  S.set('vq_pool_mode', btn.dataset.pool);
+  syncPoolModeUI();
+  void loadAndBuildFilters(langSelect?.value ?? 'spanish');
+});
+
+// Rank Range inputs
+['rankFrom', 'rankTo'].forEach(id => {
+  document.getElementById(id)?.addEventListener('change', () => {
+    const { from, to } = getRankRange();
+    S.set('vq_rank_from', String(from));
+    S.set('vq_rank_to', String(to));
+    if (getPoolMode() === 'range') void loadAndBuildFilters(langSelect?.value ?? 'spanish');
+  });
+});
+
+// Level (CEFR band) chips — independent multi-select, unlike the segmented toggles above
+document.getElementById('bandChips')?.addEventListener('click', e => {
+  const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.pos-chip');
+  if (!btn?.dataset.band) return;
+  btn.classList.toggle('active');
+  S.set('vq_bands', getSelectedBands().join(','));
+  if (getPoolMode() === 'band') void loadAndBuildFilters(langSelect?.value ?? 'spanish');
 });
 
 // Sort order — scoped to #sortOrderToggle to avoid clearing settings buttons
@@ -556,6 +774,24 @@ document.getElementById('triviaSubMode')?.addEventListener('click', e => {
   document.querySelectorAll('#triviaSubMode .conj-toggle-btn')
     .forEach(b => b.classList.toggle('active', b === btn));
   if (btn.dataset.mode) S.set('vq_trivia_style', btn.dataset.mode);
+});
+
+// Trivia difficulty toggle (All / Easy / Medium / Hard).
+document.getElementById('triviaDifficulty')?.addEventListener('click', e => {
+  const btn = (e.target as HTMLElement).closest<HTMLElement>('.conj-toggle-btn');
+  if (!btn) return;
+  document.querySelectorAll('#triviaDifficulty .conj-toggle-btn')
+    .forEach(b => b.classList.toggle('active', b === btn));
+  if (btn.dataset.difficulty) S.set('vq_trivia_difficulty', btn.dataset.difficulty);
+});
+
+// Guess the Blank difficulty toggle (All / Easy / Medium / Hard).
+document.getElementById('guessBlankDifficulty')?.addEventListener('click', e => {
+  const btn = (e.target as HTMLElement).closest<HTMLElement>('.conj-toggle-btn');
+  if (!btn) return;
+  document.querySelectorAll('#guessBlankDifficulty .conj-toggle-btn')
+    .forEach(b => b.classList.toggle('active', b === btn));
+  if (btn.dataset.difficulty) S.set('vq_guess_blank_difficulty', btn.dataset.difficulty);
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────

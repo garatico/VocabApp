@@ -1,5 +1,6 @@
 import { renderPictureMode }              from './modes/picture-mode.ts';
 import { renderTriviaMode }               from './modes/trivia-mode.ts';
+import { renderGuessBlankMode }           from './modes/guess-blank-mode.ts';
 import { renderConjugationMode, cleanupConjugationMode } from './modes/conjugation/index.ts';
 import { renderConjOneAtATime }           from './modes/conjugation/one-at-a-time-mode.ts';
 import { renderConjRandomTable }          from './modes/conjugation/random-table-mode.ts';
@@ -10,14 +11,20 @@ import { filterWords }                    from './filters/word-filters.ts';
 import { hasVisual }                      from './data/visual-map.ts';
 import { shuffleInPlace }                from './utils/shuffle.ts';
 import { orderWords }                     from './utils/session-history.ts';
+import { estimateConjugationSize, isOwnInfinitive, hasAnyForms } from './modes/conjugation/verb-filters.ts';
 
 import type { Word } from './types.ts';
+
+/** Above this many cards, Start Quiz confirms before building the grid — a
+ *  safety net alongside app.ts's live pre-quiz estimate (same threshold). */
+const CONJ_CARD_CONFIRM_THRESHOLD = 2000;
 
 interface StartHandlerElements {
   startBtn:        HTMLButtonElement;
   tableWrap:       HTMLElement;
   pictureWrap:     HTMLElement;
   triviaWrap:      HTMLElement;
+  guessBlankWrap:  HTMLElement;
   conjugationWrap: HTMLElement | null;
   output:          HTMLElement;
 }
@@ -62,6 +69,7 @@ export function bindStartHandler({
     tableWrap,
     pictureWrap,
     triviaWrap,
+    guessBlankWrap,
     conjugationWrap,
     output,
   }
@@ -86,9 +94,16 @@ export function bindStartHandler({
       // applied to words of every part of speech first — so "Top 100" handed
       // conjugation 100 mixed words, of which ~13 were verbs. Narrow the pool
       // up front so the requested size means what it says.
+      //
+      // isOwnInfinitive/hasAnyForms match the exclusion renderConjugationMode
+      // and random-table-mode.ts apply themselves (e.g. "hay" is an inflected
+      // form of "haber", not its own headword) — applying it here too, before
+      // the hard cap below, means "Top 100" actually renders 100 verbs
+      // instead of silently shrinking to 99 once the renderer drops one.
       const modeAtStart = getCurrentMode();
       const verbsOnly   = modeAtStart === 'conjugation';
-      if (verbsOnly) list = list.filter(w => w.pos === 'verb');
+      const isDrillableVerb = (w: Word) => w.pos === 'verb' && isOwnInfinitive(w) && hasAnyForms(w);
+      if (verbsOnly) list = list.filter(isDrillableVerb);
 
       // Same problem, same fix: picture mode discards every word without a
       // photo, SVG or emoji, so "Top 100" was producing however many of the
@@ -121,7 +136,7 @@ export function bindStartHandler({
 
         // Candidates: words ranked beyond the current window
         let extras: Word[] = allWords.filter(w => !baseWordSet.has(w.word));
-        if (verbsOnly)   extras = extras.filter(w => w.pos === 'verb');
+        if (verbsOnly)   extras = extras.filter(isDrillableVerb);
         if (visualsOnly) extras = extras.filter(w => hasVisual(fullLang, w.word));
 
         // Apply list filter (same as applied to the base list above)
@@ -152,7 +167,7 @@ export function bindStartHandler({
         const allWords = getAllWords ? getAllWords() : [];
         const have     = new Set(list.map(w => w.word));
         let extras     = allWords.filter(w => !have.has(w.word)
-                          && (verbsOnly  ? w.pos === 'verb'        : true)
+                          && (verbsOnly  ? isDrillableVerb(w)        : true)
                           && (visualsOnly ? hasVisual(fullLang, w.word) : true));
         extras = filterWords(extras);
         if (selectedDomains.length > 0) {
@@ -244,6 +259,9 @@ export function bindStartHandler({
         triviaWrap.innerHTML = '';
         const triviaSubModeEl = document.getElementById('triviaSubMode');
         const triviaSubMode = (triviaSubModeEl?.querySelector('.conj-toggle-btn.active') as HTMLElement | null)?.dataset.mode ?? 'type';
+        const triviaDifficultyEl = document.getElementById('triviaDifficulty');
+        const triviaDifficulty = (triviaDifficultyEl?.querySelector('.conj-toggle-btn.active') as HTMLElement | null)
+          ?.dataset.difficulty ?? 'all';
 
         // Trivia draws its own general-knowledge question bank rather than
         // the vocabulary `list` built above — see data/trivia-questions.ts.
@@ -251,10 +269,41 @@ export function bindStartHandler({
           container: triviaWrap,
           lang: fullLang,
           subMode: (triviaSubMode ?? 'type') as 'type' | 'choice' | 'table',
+          difficulty: triviaDifficulty as 'all' | 'easy' | 'medium' | 'hard',
+        });
+      }
+
+      if (currentMode === 'guessBlank') {
+        guessBlankWrap.innerHTML = '';
+        const difficultyEl = document.getElementById('guessBlankDifficulty');
+        const difficulty = (difficultyEl?.querySelector('.conj-toggle-btn.active') as HTMLElement | null)
+          ?.dataset.difficulty ?? 'all';
+
+        // Draws its own hand-written clue bank rather than the vocabulary
+        // `list` built above — see data/guess-blank-questions.ts.
+        renderGuessBlankMode({
+          container: guessBlankWrap,
+          lang: fullLang,
+          difficulty: difficulty as 'all' | 'easy' | 'medium' | 'hard',
         });
       }
 
       if (currentMode === 'conjugation' && conjugationWrap) {
+        const extraLangs = getExtraLanguages ? getExtraLanguages() : [];
+
+        // Safety net for anyone who reaches a huge combination without ever
+        // looking at the live estimate line above Start Quiz (keyboard-only
+        // flow, or a tense/verb-count change made right before clicking) —
+        // `list` here is the exact verb pool about to be built into cards.
+        const estimate = estimateConjugationSize(list, fullLang, extraLangs);
+        if (estimate.cards > CONJ_CARD_CONFIRM_THRESHOLD) {
+          const proceed = window.confirm(
+            `This will build ~${estimate.cards.toLocaleString()} cards `
+            + `(${estimate.verbs.toLocaleString()} verbs × ${estimate.tenses} tenses) and may be slow. Continue?`,
+          );
+          if (!proceed) return;   // finally below still resets the Start Quiz button
+        }
+
         // Grid/Full clean up their own listeners on their next render, but
         // the other three views bypass renderConjugationMode entirely — tear
         // down here so a leftover document keydown handler from a previous
@@ -263,7 +312,6 @@ export function bindStartHandler({
         conjugationWrap.innerHTML = '';
         const conjView = (document.querySelector('#conjViewToggle .conj-toggle-btn.active') as HTMLElement | null)
           ?.dataset.view ?? 'grid';
-        const extraLangs = getExtraLanguages ? getExtraLanguages() : [];
 
         if (conjView === 'oneatatime') {
           renderConjOneAtATime({ words: list, container: conjugationWrap, lang: fullLang, extraLangs });

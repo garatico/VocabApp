@@ -68,6 +68,16 @@
   /* Extra surface step between --surface2 and --border */
   --surface3: #e6e5df;
 
+  /* My Lists — one accent per list kind (ordinary lists keep --accent),
+     so Smart Lists and Cross-Language Lists read as their own section in the
+     sidebar rather than three identically-colored groups. */
+  --ml-accent-smart:       #7c5cbf;
+  --ml-accent-smart-light: #efe9fa;
+  --ml-accent-multi:       #0f7d94;
+  --ml-accent-multi-light: #e0f4f7;
+  --ml-accent-profile:       #b4650f;
+  --ml-accent-profile-light: #faf0e0;
+
   /* Table mode's Compare/Multi-language indicator — one tinted cell
      background per language. Distinct hues from each other and from the
      semantic colors above (a reddish Spanish row must not read as an error).
@@ -116,6 +126,13 @@ html.dark {
   --info-light:    #0f1c3d;
   --success:       #34d399;
   --success-light: #0d2a1e;
+
+  --ml-accent-smart:       #a58ce0;
+  --ml-accent-smart-light: #2a2140;
+  --ml-accent-multi:       #4fc3d9;
+  --ml-accent-multi-light: #122e33;
+  --ml-accent-profile:       #e0a855;
+  --ml-accent-profile-light: #3a2c14;
 
   --shadow:    0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);

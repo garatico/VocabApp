@@ -53,6 +53,13 @@ export function getTableStyle(): TableQuizStyle {
 export function syncTableStyleUI(): void {
   const isTableTab = document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === 'table';
   if (!isTableTab) return;
+  // These controls are pre-quiz setup only — clicking Standard/Recall/Double
+  // Recall previews what the *next* Start Quiz click will use. If a quiz
+  // (any style) is already rendered into #tableWrap, leave it alone: hiding
+  // tableJumpTop/tableJumpBottom here would yank the live pager out from
+  // under whatever's on screen, which reads as the quiz being ended.
+  const tableWrap = document.getElementById('tableWrap');
+  if (tableWrap && tableWrap.children.length > 0) return;
   const showStandardOnly = tableStyle === 'standard';
   ['tableControls', 'tableJumpTop', 'tableJumpBottom', 'directionGroup'].forEach(id => {
     const el = document.getElementById(id);

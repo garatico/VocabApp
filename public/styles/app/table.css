@@ -549,8 +549,12 @@
   font-size: 0.48em;
   font-weight: 700;
   line-height: 1;
+  /* Was white-on-amber (~2:1 contrast, fails WCAG AA). Red also reads more
+     correctly as "wrong" than amber, which this file already uses for the
+     unrelated revealed/peeked state above — the two signals need distinct
+     colors, not just distinct positions. */
   color: #fff;
-  background: var(--warning, #b7791f);
+  background: var(--danger);
   border-radius: 999px;
   padding: 0.15em 0.4em;
   pointer-events: none;
