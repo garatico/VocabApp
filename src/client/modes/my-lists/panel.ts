@@ -22,6 +22,7 @@ import { createBulkImport } from './bulk-import.ts';
 import { createWordList } from './word-list.ts';
 import { renderSmartPanel } from './smart-panel.ts';
 import { renderMultiPanel } from './multi-panel.ts';
+import { renderProfilePanel } from './profile-panel.ts';
 import { exportList } from './export-list.ts';
 import { closePopover, clickedOutsidePopover } from './move-popover.ts';
 import { BANDS, POS_CHIPS, type ExportFormat, type SortMode, type VocabEntry } from './types.ts';
@@ -53,6 +54,11 @@ export function renderPanel(ctx: ListsCtx): void {
 
   if (ctx.selectedSmart) { renderSmartPanel(ctx, ctx.selectedSmart); return; }
 
+  if (ctx.selectedProfile) {
+    renderProfilePanel(ctx, ctx.selectedProfile.mode, ctx.selectedProfile.name);
+    return;
+  }
+
   if (!ctx.selectedList) {
     const empty = document.createElement('p');
     empty.className = 'ml-panel-empty'; empty.textContent = 'Create a list to get started.';
@@ -68,20 +74,21 @@ export function renderPanel(ctx: ListsCtx): void {
   titleGroup.className = 'ml-panel-title-group';
 
   const listLabel = document.createElement('span');
-  listLabel.className = 'ml-panel-list-label'; listLabel.textContent = 'List:';
+  listLabel.className = 'ml-panel-list-label';
+  listLabel.innerHTML = '<span class="ml-panel-selected-dot" aria-hidden="true"></span>Selected List:';
 
   const flagBadge = buildLangBadge([ctx.lang]);
   flagBadge.classList.add('ml-panel-flag');
 
   const title = document.createElement('h2');
   title.className = 'ml-panel-title'; title.textContent = ctx.selectedList;
-  const countBadge = document.createElement('span');
-  countBadge.className = 'ml-panel-count';
 
-  function refreshCount(): void {
-    countBadge.textContent = String(getList(ctx.lang, ctx.selectedList).length) + ' words';
-  }
-  refreshCount();
+  // The word count now lives in the stats row as its own chip, next to Ranks
+  // and Mastered (see word-list.ts's renderStats) — it redraws itself on
+  // every wordList.render(), which every mutating action below already
+  // triggers, so there is nothing left for this callback to actually do.
+  // Kept as a no-op rather than threaded out of every call site below.
+  function refreshCount(): void {}
 
   const exportBtn = document.createElement('button');
   exportBtn.type = 'button'; exportBtn.className = 'ml-export-btn';
@@ -94,8 +101,8 @@ export function renderPanel(ctx: ListsCtx): void {
   exportFmtSel.className = 'ml-export-format-sel';
   exportFmtSel.title = 'Export format';
   ([
-    ['with-translation', 'Word + translation'],
-    ['words-only',       'Words only'],
+    ['with-translation', 'Word + Translation'],
+    ['words-only',       'Words Only'],
   ] as const).forEach(([value, label]) => {
     const opt = document.createElement('option');
     opt.value = value; opt.textContent = label;
@@ -141,10 +148,17 @@ export function renderPanel(ctx: ListsCtx): void {
   });
 
   titleGroup.appendChild(listLabel); titleGroup.appendChild(flagBadge);
-  titleGroup.appendChild(title); titleGroup.appendChild(countBadge);
+  titleGroup.appendChild(title);
   titleGroup.appendChild(exportBtn);
   titleGroup.appendChild(exportFmtLabel); titleGroup.appendChild(exportFmtSel);
-  titleGroup.appendChild(quizBtn);
+
+  // Its own full-width row below the title, rather than squeezed in alongside
+  // Export — the same "own row, runs the full width of the container" shape
+  // #startBtn uses everywhere else, so this is the one obvious action left to
+  // take once a list is open, not one more inline button.
+  const quizRow = document.createElement('div');
+  quizRow.className = 'ml-quiz-row';
+  quizRow.appendChild(quizBtn);
 
   // Stats row — filled in by the word list on every render.
   const statsRow = document.createElement('div');
@@ -265,6 +279,7 @@ export function renderPanel(ctx: ListsCtx): void {
   }
 
   panelHeader.appendChild(titleGroup);
+  panelHeader.appendChild(quizRow);
   panelHeader.appendChild(statsRow);
   panelHeader.appendChild(posRow);
   panelHeader.appendChild(bandRow);

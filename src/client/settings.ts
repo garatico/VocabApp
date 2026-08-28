@@ -3,6 +3,7 @@ import { applyTheme, type ThemeValue } from './ui/theme-toggle.ts';
 import { LANGUAGES, languageInfo, flagUrl } from './data/languages.ts';
 import { createFlagImg } from './ui/flag-icon.ts';
 import { clearHistory } from './utils/session-history.ts';
+import type { ChineseScript, ChineseDisplay } from './utils/utils.ts';
 
 /**
  * settings.ts — persistent quiz preferences.
@@ -88,6 +89,42 @@ export const Settings = {
   getMatchMode: (): MatchMode => get('match_mode', 'fuzzy') as MatchMode,
   getTypoTolerance: (): TypoTolerance => get('typo_tolerance', 'normal') as TypoTolerance,
   getTypoToleranceRatio: (): number => TYPO_RATIOS[get('typo_tolerance', 'normal') as TypoTolerance] ?? 0.25,
+
+  /**
+   * For a `romanizedScript` language (Chinese): which script is the word
+   * slot's primary form — shown by default, and required by default when
+   * typed. 'characters' is the default: it's what a learner typically wants
+   * to end up reading, and typing pinyin is still available as a fallback
+   * (see getShowBothScripts) without switching this.
+   */
+  getChineseScript: (): ChineseScript => get('chinese_script', 'characters') as ChineseScript,
+
+  /**
+   * For a `romanizedScript` language (Chinese): annotate the word slot's
+   * primary script with the other one in parentheses (e.g. "的 (de)"), and
+   * accept either script as a typed answer rather than only the primary. On
+   * by default — typing hanzi needs an IME most learners won't have set up,
+   * so refusing pinyin out of the box would make typing the word unusable
+   * for most people, and showing it is what makes accepting it fair.
+   */
+  getShowBothScripts: (): boolean => get('show_pinyin', 'true') === 'true',
+
+  /**
+   * For a `romanizedScript` language (Chinese): annotate the English gloss
+   * with the pinyin reading too, e.g. "already (le)" — independent of
+   * getShowBothScripts, which only annotates the word slot. On by default,
+   * same reasoning as getShowBothScripts.
+   */
+  getShowPinyinGloss: (): boolean => get('show_pinyin_gloss', 'true') === 'true',
+
+  /** Bundles the three Chinese-display settings above for `slotText`/`slotMatches`. */
+  getChineseDisplay(): ChineseDisplay {
+    return {
+      chineseScript:   this.getChineseScript(),
+      showBothScripts: this.getShowBothScripts(),
+      showPinyinGloss: this.getShowPinyinGloss(),
+    };
+  },
 
   /**
    * Whether the browser may offer its own autofill/autocomplete suggestions
@@ -377,6 +414,30 @@ export function bindSettings(): void {
     set('typo_tolerance', btn.dataset.typo ?? 'normal');
   });
 
+  // Chinese word slot's primary script (characters / pinyin)
+  document.getElementById('settingChineseScript')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingChineseScript', btn);
+    set('chinese_script', btn.dataset.chineseScript ?? 'characters');
+  });
+
+  // Show both scripts next to a displayed Chinese word, and accept either as an answer
+  document.getElementById('settingShowPinyin')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingShowPinyin', btn);
+    set('show_pinyin', btn.dataset.showPinyin ?? 'true');
+  });
+
+  // Show pinyin next to the English gloss
+  document.getElementById('settingShowPinyinGloss')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingShowPinyinGloss', btn);
+    set('show_pinyin_gloss', btn.dataset.showPinyinGloss ?? 'true');
+  });
+
   // Browser autofill. Every mode's inputs are rebuilt fresh on Start Quiz, so
   // there's no persistent input to apply this to live; the setting just
   // takes effect the next time any mode's inputs are built.
@@ -597,6 +658,24 @@ function restoreSettingsUI(): void {
   const savedTypo = get('typo_tolerance', 'normal');
   document.querySelectorAll<HTMLElement>('#settingTypo .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.typo === savedTypo);
+  });
+
+  // Chinese word slot's primary script
+  const savedChineseScript = get('chinese_script', 'characters');
+  document.querySelectorAll<HTMLElement>('#settingChineseScript .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.chineseScript === savedChineseScript);
+  });
+
+  // Show both scripts (word)
+  const savedShowPinyin = get('show_pinyin', 'true');
+  document.querySelectorAll<HTMLElement>('#settingShowPinyin .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.showPinyin === savedShowPinyin);
+  });
+
+  // Show pinyin (gloss)
+  const savedShowPinyinGloss = get('show_pinyin_gloss', 'true');
+  document.querySelectorAll<HTMLElement>('#settingShowPinyinGloss .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.showPinyinGloss === savedShowPinyinGloss);
   });
 
   // Browser autofill

@@ -4,6 +4,7 @@ import {
   rowKey,
   type TableController,
   type TableDirection,
+  type DirectionPair,
   type InputSnapshot,
   type CheckResult,
 } from './table-mode.ts';
@@ -476,7 +477,7 @@ export function setTableController(controller: TableController): void {
 
 // ── Scoring across every page ─────────────────────────────────────────────────
 
-function directionFor(word: Word): 'target-en' | 'en-target' {
+function directionFor(word: Word): DirectionPair {
   const saved = sessionState.get(rowKey(word, quizLang))?.dir;
   if (saved) return saved;
   return resolvedDirection === 'en-target' ? 'en-target' : 'target-en';
@@ -503,7 +504,7 @@ function giveUpAll(): CheckResult[] {
 
     const expected = snap?.disabled && snap.value
       ? snap.value
-      : revealTextFor(w, directionFor(w));
+      : revealTextFor(w, directionFor(w), w.language ?? quizLang, Settings.getChineseDisplay());
 
     if (!snap?.disabled) {
       // Never answered (and possibly never rendered) — record it as revealed.

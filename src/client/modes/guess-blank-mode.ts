@@ -25,6 +25,7 @@ import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summ
 import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
 import { languageInfo } from '../data/languages.ts';
+import { hintReveal, hintableLength } from '../utils/hint-reveal.ts';
 
 interface RenderGuessBlankModeOptions {
   container:   HTMLElement;
@@ -132,6 +133,13 @@ export function renderGuessBlankMode({
   // runs out (or Give Up/Next skips past it unanswered).
   const wrongGuesses: number[] = queue.map(() => 0);
   const maxAttempts = Settings.getGuessBlankMaxAttempts();
+  // Letters revealed so far via "Show a letter", per question — separate
+  // from the clues above, which describe the concept; this helps with the
+  // word itself once the concept is known but the exact spelling isn't.
+  // Capped short of the full word (see hintBtn below) so a hint alone can
+  // never fully answer the question.
+  const hintsShown: number[] = queue.map(() => 0);
+  let totalHintsUsed = 0;
   let idx = 0;
   let correctCount = 0;
 
@@ -185,7 +193,20 @@ export function renderGuessBlankMode({
   moreClueBtn.type = 'button';
   moreClueBtn.className = 'gb-more-clue-btn';
 
-  prompt.append(badgeRow, cluesList, moreClueBtn);
+  // Letter hint — a second, independent kind of help from the clues above:
+  // those describe the concept, this helps with spelling the word once the
+  // concept is already known. Its own row so it doesn't read as "one more
+  // clue" among the others.
+  const hintRow = document.createElement('div');
+  hintRow.className = 'gb-hint-row';
+  const hintBtn = document.createElement('button');
+  hintBtn.type = 'button';
+  hintBtn.className = 'gb-hint-btn';
+  const hintDisplay = document.createElement('span');
+  hintDisplay.className = 'gb-hint-display';
+  hintRow.append(hintBtn, hintDisplay);
+
+  prompt.append(badgeRow, cluesList, moreClueBtn, hintRow);
 
   const typeRow = document.createElement('div');
   typeRow.className = 'recall-input-row gb-type-row';
@@ -203,6 +224,29 @@ export function renderGuessBlankMode({
   container.appendChild(wrap);
 
   // ── Question rendering ──────────────────────────────────────────────────
+
+  /** The bare word a letter hint reveals — the article-stripped form, since
+   *  that's what a learner is actually spelling out. */
+  function hintTarget(q: GuessBlankQuestion): string {
+    return stripArticle(q.answerTarget) ?? q.answerTarget;
+  }
+
+  function renderHint(i: number): void {
+    const q      = queue[i];
+    const target = hintTarget(q);
+    const shown  = hintsShown[i];
+    // Never reveals the last letter — a hint narrows it down, it doesn't
+    // finish the job.
+    const cap = Math.max(0, hintableLength(target) - 1);
+
+    hintDisplay.textContent = shown > 0 ? hintReveal(target, shown) : '';
+    hintDisplay.hidden = shown === 0;
+
+    const answered = results[i] !== null;
+    const atMax = shown >= cap;
+    hintBtn.disabled = answered || finished || atMax;
+    hintBtn.textContent = atMax ? 'No more letters' : (shown === 0 ? 'Show a letter' : 'Show another letter');
+  }
 
   function renderClues(i: number): void {
     const q = queue[i];
@@ -238,6 +282,7 @@ export function renderGuessBlankMode({
     difficultyEl.textContent = DIFFICULTY_LABELS[q.difficulty];
     difficultyEl.className = `gb-difficulty gb-difficulty--${q.difficulty}`;
     renderClues(i);
+    renderHint(i);
 
     typeInput.value = '';
     typeInput.disabled = prior !== null || finished;
@@ -250,6 +295,15 @@ export function renderGuessBlankMode({
     if (cluesShown[idx] < q.cluesTarget.length) {
       cluesShown[idx]++;
       renderClues(idx);
+    }
+  });
+
+  hintBtn.addEventListener('click', () => {
+    const cap = Math.max(0, hintableLength(hintTarget(queue[idx])) - 1);
+    if (hintsShown[idx] === 0) totalHintsUsed++;
+    if (hintsShown[idx] < cap) {
+      hintsShown[idx]++;
+      renderHint(idx);
     }
   });
 
@@ -299,6 +353,7 @@ export function renderGuessBlankMode({
     syncProgress();
     showFeedback(right, queue[i].answerTarget);
     moreClueBtn.disabled = true;
+    hintBtn.disabled = true;
 
     const delay = right ? 650 : 1800;
     setTimeout(() => advance(), delay);
@@ -335,9 +390,13 @@ export function renderGuessBlankMode({
     nextBtn.disabled = true;
     typeInput.disabled = true;
     moreClueBtn.disabled = true;
+    hintBtn.disabled = true;
 
     const correctWords = queue.filter((_, i) => results[i]).map(q => q.answerTarget);
     const missedWords  = queue.filter((_, i) => results[i] === false).map(q => q.answerTarget);
+    // Correct without ever opening the letter hint on that question — the
+    // clues themselves don't count as assistance (they're the question).
+    const unassistedCount = results.filter((r, i) => r === true && hintsShown[i] === 0).length;
 
     recordOutcome(lang, missedWords, correctWords);
     saveSession(lang, {
@@ -345,8 +404,8 @@ export function renderGuessBlankMode({
       mode: 'guessBlank',
       total: queue.length,
       correct: correctCount,
-      unassisted: correctCount,
-      hints: 0,
+      unassisted: unassistedCount,
+      hints: totalHintsUsed,
       revealed: 0,
       seconds: stopwatch.elapsedSeconds(),
       lang,

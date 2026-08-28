@@ -3,7 +3,9 @@
  * person, place or animal; the learner guesses the target-language word.
  *
  * Proof of concept, modeled directly on trivia-questions.ts: hand-written per
- * language, Spanish-only for now. Clues are ordered weakest-first — vaguest
+ * language. Spanish has the full set; Portuguese has a smaller starter batch
+ * proving the same question shape carries over to another language; the
+ * rest are still empty. Clues are ordered weakest-first — vaguest
  * clue shown alone, more specific ones revealed on request (see
  * guess-blank-mode.ts) — rather than all shown at once, so the guess is
  * worth something even before every clue is out.
@@ -409,11 +411,362 @@ const spanish: GuessBlankQuestion[] = [
     answerTarget: 'el pan',
     answerEn: 'the bread',
   },
+
+  // ── Second batch — more mid-difficulty everyday nouns ──
+  {
+    id: 'es-b13',
+    category: 'object',
+    difficulty: 'medium',
+    cluesTarget: [
+      'Soy pequeña y de metal.',
+      'Te ayudo a abrir y cerrar puertas.',
+      'A veces te pierdes buscándome en el bolso.',
+    ],
+    cluesEn: [
+      "I'm small and made of metal.",
+      'I help you open and close doors.',
+      'Sometimes you lose me searching through your bag.',
+    ],
+    answerTarget: 'la llave',
+    answerEn: 'the key',
+  },
+  {
+    id: 'es-b14',
+    category: 'animal',
+    difficulty: 'medium',
+    cluesTarget: [
+      'Soy el animal terrestre más grande.',
+      'Tengo una trompa muy larga.',
+      'Mis orejas son enormes y grises.',
+    ],
+    cluesEn: [
+      "I'm the largest land animal.",
+      'I have a very long trunk.',
+      'My ears are huge and grey.',
+    ],
+    answerTarget: 'el elefante',
+    answerEn: 'the elephant',
+  },
+  {
+    id: 'es-b15',
+    category: 'place',
+    difficulty: 'medium',
+    cluesTarget: [
+      'Soy un lugar con arena y agua.',
+      'La gente viene a nadar y tomar el sol.',
+      'Las olas del mar llegan hasta mí.',
+    ],
+    cluesEn: [
+      "I'm a place with sand and water.",
+      'People come to swim and sunbathe.',
+      'The sea waves reach me.',
+    ],
+    answerTarget: 'la playa',
+    answerEn: 'the beach',
+  },
+  {
+    id: 'es-b16',
+    category: 'person',
+    difficulty: 'medium',
+    cluesTarget: [
+      'Trabajo para apagar incendios.',
+      'Uso un camión rojo con una escalera.',
+      'Rescato a personas y animales en peligro.',
+    ],
+    cluesEn: [
+      'I work to put out fires.',
+      'I use a red truck with a ladder.',
+      'I rescue people and animals in danger.',
+    ],
+    answerTarget: 'el bombero',
+    answerEn: 'the firefighter',
+  },
+  {
+    id: 'es-b17',
+    category: 'food',
+    difficulty: 'medium',
+    cluesTarget: [
+      'Soy dulce y normalmente de color marrón.',
+      'Vengo de una planta llamada cacao.',
+      'A muchos niños les encanto en forma de barra.',
+    ],
+    cluesEn: [
+      "I'm sweet and usually brown.",
+      'I come from a plant called cacao.',
+      'Many children love me in the shape of a bar.',
+    ],
+    answerTarget: 'el chocolate',
+    answerEn: 'chocolate',
+  },
+  {
+    id: 'es-b18',
+    category: 'object',
+    difficulty: 'medium',
+    cluesTarget: [
+      'Me pones en la cara para ver mejor.',
+      'Tengo dos cristales y dos patillas.',
+      'Algunas personas también me usan para protegerse del sol.',
+    ],
+    cluesEn: [
+      'You put me on your face to see better.',
+      'I have two lenses and two arms.',
+      'Some people also use me to protect their eyes from the sun.',
+    ],
+    answerTarget: 'las gafas',
+    answerEn: 'the glasses',
+  },
+  {
+    id: 'es-b19',
+    category: 'animal',
+    difficulty: 'easy',
+    cluesTarget: [
+      'Vuelo por el cielo.',
+      'Tengo plumas y un pico.',
+      'Pongo huevos en un nido.',
+    ],
+    cluesEn: [
+      'I fly through the sky.',
+      'I have feathers and a beak.',
+      'I lay eggs in a nest.',
+    ],
+    answerTarget: 'el pájaro',
+    answerEn: 'the bird',
+  },
+  {
+    id: 'es-b20',
+    category: 'object',
+    difficulty: 'easy',
+    cluesTarget: [
+      'Estoy en la entrada de una casa.',
+      'Me abres y me cierras para entrar y salir.',
+      'A veces tengo una cerradura y una llave.',
+    ],
+    cluesEn: [
+      "I'm at the entrance of a house.",
+      'You open and close me to go in and out.',
+      'Sometimes I have a lock and a key.',
+    ],
+    answerTarget: 'la puerta',
+    answerEn: 'the door',
+  },
+  {
+    id: 'es-b21',
+    category: 'place',
+    difficulty: 'medium',
+    cluesTarget: [
+      'Soy un lugar tranquilo y silencioso.',
+      'Tengo miles de libros en mis estantes.',
+      'Puedes llevarte libros prestados si tienes una tarjeta.',
+    ],
+    cluesEn: [
+      "I'm a quiet, silent place.",
+      'I have thousands of books on my shelves.',
+      'You can borrow books from me if you have a card.',
+    ],
+    answerTarget: 'la biblioteca',
+    answerEn: 'the library',
+  },
+  {
+    id: 'es-b22',
+    category: 'food',
+    difficulty: 'easy',
+    cluesTarget: [
+      'Vengo de una gallina.',
+      'Soy blanco o marrón por fuera.',
+      'Me comes frito, cocido o revuelto.',
+    ],
+    cluesEn: [
+      'I come from a hen.',
+      "I'm white or brown on the outside.",
+      'You eat me fried, boiled or scrambled.',
+    ],
+    answerTarget: 'el huevo',
+    answerEn: 'the egg',
+  },
+];
+
+// Portuguese starter set — a smaller batch than Spanish's, proving the same
+// question shape reads fine in another language rather than trying to match
+// Spanish's count. Kept to vocabulary that reads the same way in European
+// and Brazilian Portuguese (no "autocarro/ônibus"-style splits), since
+// answerTarget is a single string with no per-dialect variant list the way
+// trivia-questions.ts's answersTarget array allows.
+const portuguese: GuessBlankQuestion[] = [
+  {
+    id: 'pt-b1',
+    category: 'animal',
+    difficulty: 'easy',
+    cluesTarget: [
+      'Sou um animal pequeno.',
+      'Eu digo "miau".',
+      'Vivo na tua casa.',
+    ],
+    cluesEn: [
+      "I'm a small animal.",
+      'I say "meow".',
+      'I live in your house.',
+    ],
+    answerTarget: 'o gato',
+    answerEn: 'the cat',
+  },
+  {
+    id: 'pt-b2',
+    category: 'object',
+    difficulty: 'easy',
+    cluesTarget: [
+      'Sou amarelo.',
+      'Dou luz durante o dia.',
+      'Estou no céu.',
+    ],
+    cluesEn: [
+      "I'm yellow.",
+      'I give light during the day.',
+      "I'm in the sky.",
+    ],
+    answerTarget: 'o sol',
+    answerEn: 'the sun',
+  },
+  {
+    id: 'pt-b3',
+    category: 'food',
+    difficulty: 'easy',
+    cluesTarget: [
+      'Sou branco.',
+      'Venho de uma vaca.',
+      'As pessoas bebem-me todos os dias.',
+    ],
+    cluesEn: [
+      "I'm white.",
+      'I come from a cow.',
+      'People drink me every day.',
+    ],
+    answerTarget: 'o leite',
+    answerEn: 'the milk',
+  },
+  {
+    id: 'pt-b4',
+    category: 'object',
+    difficulty: 'medium',
+    cluesTarget: [
+      'Abres-me para ler.',
+      'Sou feito de muitas páginas de papel.',
+      'Posso contar uma história longa.',
+    ],
+    cluesEn: [
+      'You open me to read.',
+      "I'm made of many sheets of paper.",
+      'I can tell a long story.',
+    ],
+    answerTarget: 'o livro',
+    answerEn: 'the book',
+  },
+  {
+    id: 'pt-b5',
+    category: 'place',
+    difficulty: 'easy',
+    cluesTarget: [
+      'Sou um lugar.',
+      'As crianças estudam aqui.',
+      'Há um quadro e muitos livros.',
+    ],
+    cluesEn: [
+      "I'm a place.",
+      'Children study here.',
+      'There is a board and many books.',
+    ],
+    answerTarget: 'a escola',
+    answerEn: 'the school',
+  },
+  {
+    id: 'pt-b6',
+    category: 'person',
+    difficulty: 'medium',
+    cluesTarget: [
+      'Trabalho numa escola.',
+      'Explico as lições e corrijo os trabalhos.',
+      'Tenho muitos alunos na minha turma.',
+    ],
+    cluesEn: [
+      'I work in a school.',
+      'I explain lessons and grade homework.',
+      'I have many students in my class.',
+    ],
+    answerTarget: 'o professor',
+    answerEn: 'the teacher',
+  },
+  {
+    id: 'pt-b7',
+    category: 'food',
+    difficulty: 'medium',
+    cluesTarget: [
+      'Sou redonda e normalmente vermelha ou verde.',
+      'Cresço numa árvore.',
+      'Um ditado diz que uma por dia afasta o médico.',
+    ],
+    cluesEn: [
+      "I'm round and usually red or green.",
+      'I grow on a tree.',
+      'A saying claims one a day keeps the doctor away.',
+    ],
+    answerTarget: 'a maçã',
+    answerEn: 'the apple',
+  },
+  {
+    id: 'pt-b8',
+    category: 'animal',
+    difficulty: 'medium',
+    cluesTarget: [
+      'Sou o rei da selva.',
+      'Tenho uma grande juba à volta da cara.',
+      'Rujo alto para assustar outros animais.',
+    ],
+    cluesEn: [
+      "I'm the king of the jungle.",
+      'I have a big mane around my face.',
+      'I roar loudly to scare other animals.',
+    ],
+    answerTarget: 'o leão',
+    answerEn: 'the lion',
+  },
+  {
+    id: 'pt-b9',
+    category: 'object',
+    difficulty: 'easy',
+    cluesTarget: [
+      'Sou redonda.',
+      'As crianças brincam comigo.',
+      'Salto quando me atiras ao chão.',
+    ],
+    cluesEn: [
+      "I'm round.",
+      'Children play with me.',
+      'I bounce when you throw me on the ground.',
+    ],
+    answerTarget: 'a bola',
+    answerEn: 'the ball',
+  },
+  {
+    id: 'pt-b10',
+    category: 'place',
+    difficulty: 'medium',
+    cluesTarget: [
+      'Sou um lugar onde compras comida fresca.',
+      'Tenho muitas bancas com frutas, legumes e carne.',
+      'Costumo estar ao ar livre ou debaixo de um telhado grande.',
+    ],
+    cluesEn: [
+      'I am a place where you buy fresh food.',
+      'I have many stalls with fruit, vegetables and meat.',
+      "I'm usually outdoors or under one big roof.",
+    ],
+    answerTarget: 'o mercado',
+    answerEn: 'the market',
+  },
 ];
 
 const GUESS_BLANK_QUESTIONS: Record<string, GuessBlankQuestion[]> = {
   spanish,
-  portuguese: [],
+  portuguese,
   italian:    [],
   french:     [],
   german:     [],

@@ -12,21 +12,20 @@
 }
 
 /* Top row: selects + start button inline.
-   nowrap + horizontal scroll, not wrap — a mode-conditional group (Direction,
-   Quiz Style, Difficulty, ...) dropping to a second line moved every time a
-   different group toggled visibility, and at typical desktop widths the
-   full row of groups plus Direction never fit on one line anyway, so
-   Direction in particular almost always ended up alone on its own row.
-   Scrolling keeps every control on the one row it belongs on; nothing is
-   ever clipped, just off to the right until scrolled to. Column-stacking
-   below 599px (further down) makes this moot on a phone, where a row
-   doesn't make sense in the first place. */
+   Used to be nowrap + horizontal scroll — every control stayed on the one
+   row it belonged to, but that meant a hidden scrollbar (or worse, no visual
+   hint of one at all) was the only way to reach Direction on a typical
+   desktop width, where the full row of mode-conditional groups plus
+   Direction never fit on one line. Wrapping instead means nothing is ever
+   off-screen: a control group that doesn't fit drops to the next line,
+   full stop. The shared control sizing just below (min-height/font-size on
+   selects and toggle buttons) was trimmed at the same time specifically to
+   cut down how often that happens. Column-stacking below 599px (further
+   down) still applies on top of this for phone widths. */
 #controls-top {
   display: flex;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  overflow-y: hidden;
-  gap: 0.6rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.6rem;
   align-items: flex-end;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--border-strong);
@@ -68,14 +67,14 @@
    Language, Words, Order and Direction all use the same height and type scale
    so the row reads as one set of controls. */
 #controls :is(#langSelect, #sizeSelect, #conjSizeSelect) {
-  min-height: 40px;
-  font-size: 0.92rem;
-  padding: 0.3rem 2rem 0.3rem 0.7rem;   /* room for the dropdown chevron */
+  min-height: 36px;
+  font-size: 0.85rem;
+  padding: 0.25rem 1.8rem 0.25rem 0.6rem;   /* room for the dropdown chevron */
 }
 /* The select must fit its longest option ("Custom…") without clipping */
-#sizeSelect { min-width: 8.5rem; }
-#conjSizeSelect { min-width: 8.5rem; }
-#langSelect { min-width: 9rem; }
+#sizeSelect { min-width: 7.5rem; }
+#conjSizeSelect { min-width: 7.5rem; }
+#langSelect { min-width: 8rem; }
 
 /* Every segmented toggle group that can appear in #controls-top, so no
    mode's row of buttons is shorter than another's. New mode-conditional
@@ -85,16 +84,16 @@
   #pictureSubMode, #triviaSubMode, #tableStyleToggle, #conjViewToggle,
   #conjMatchStyleToggle, #conjDisplayToggle
 ) :is(.sort-order-btn, .conj-toggle-btn) {
-  min-height: 40px;
-  font-size: 0.85rem;
-  padding: 0.3rem 0.85rem;
+  min-height: 36px;
+  font-size: 0.78rem;
+  padding: 0.25rem 0.65rem;
 }
 
 /* "+ Languages" trigger — sized to match the selects either side of it. */
 .lang-picker-btn {
-  min-height: 40px;
-  font-size: 0.85rem;
-  padding: 0.3rem 0.85rem;
+  min-height: 36px;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.65rem;
   background: var(--surface2);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
@@ -114,10 +113,10 @@
 
 /* ── Rank Range pool mode ── */
 .rank-range-row input[type="number"] {
-  min-height: 40px;
-  width: 6rem;
-  font-size: 0.92rem;
-  padding: 0.3rem 0.5rem;
+  min-height: 36px;
+  width: 5rem;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.45rem;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   background: var(--surface);
@@ -143,7 +142,7 @@
    .pos-chip mobile height set in class-filter.css, matching how the
    sibling toggle buttons also shrink at that width. */
 @media (min-width: 768px) {
-  #bandChips .pos-chip { min-height: 40px; }
+  #bandChips .pos-chip { min-height: 36px; }
 }
 
 /* Vertical divider between control groups */

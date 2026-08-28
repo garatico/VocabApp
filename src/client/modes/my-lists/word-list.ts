@@ -24,12 +24,13 @@ import {
 } from '../../utils/word-lists.ts';
 import type { ListsCtx } from './context.ts';
 import { cachedVocabMap } from './vocab-cache.ts';
-import { getMastered, saveMastered } from './mastery.ts';
+import { getMastered, setMasteryLevel, MASTERY_LEVELS } from './mastery.ts';
 import { closePopover, openMovePopover } from './move-popover.ts';
 import { showUndo } from './undo-toast.ts';
 import {
   POS_ABBREV, POS_CHIPS, WORD_CHUNK, type VocabEntry,
 } from './types.ts';
+import { buildMasteryControls, appendCountChip, appendMasteredChip } from './row-shared.ts';
 
 export interface WordListDeps {
   /** Read at render time so the toolbar owns the text and this module doesn't. */
@@ -129,15 +130,13 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
   bulkClear.addEventListener('click', () => { selectedWords.clear(); syncBulkBar(); });
 
   bulkMaster.addEventListener('click', () => {
-    const m = getMastered(ctx.lang);
-    selectedWords.forEach(w => m.add(w));
-    saveMastered(ctx.lang, m);
+    // Drives the user-set scale too (setMasteryLevel keeps the legacy Set in
+    // sync), so a word bulk-marked here doesn't disagree with its own row.
+    selectedWords.forEach(w => setMasteryLevel(ctx.lang, w, MASTERY_LEVELS.length - 1));
     selectedWords.clear(); render();
   });
   bulkUnmaster.addEventListener('click', () => {
-    const m = getMastered(ctx.lang);
-    selectedWords.forEach(w => m.delete(w));
-    saveMastered(ctx.lang, m);
+    selectedWords.forEach(w => setMasteryLevel(ctx.lang, w, 0));
     selectedWords.clear(); render();
   });
 
@@ -194,35 +193,40 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
 
   function renderStats(words: string[]): void {
     statsRow.innerHTML = '';
-    if (words.length === 0) return;
-    let minRank = Infinity; let maxRank = -Infinity; let rankedCount = 0;
-    const vm = cachedVocabMap(ctx.lang);
-    for (const w of words) {
-      const rank = vm?.get(w)?.rank;
-      if (rank != null) {
-        if (rank < minRank) minRank = rank;
-        if (rank > maxRank) maxRank = rank;
-        rankedCount++;
+
+    // The list's total membership — independent of the current filter/search,
+    // unlike Ranks and Mastered below (both computed over `words`, the
+    // currently visible subset).
+    const total = getList(ctx.lang, ctx.selectedList).length;
+    appendCountChip(statsRow, total);
+    if (total === 0) return;
+
+    if (words.length > 0) {
+      let minRank = Infinity; let maxRank = -Infinity; let rankedCount = 0;
+      const vm = cachedVocabMap(ctx.lang);
+      for (const w of words) {
+        const rank = vm?.get(w)?.rank;
+        if (rank != null) {
+          if (rank < minRank) minRank = rank;
+          if (rank > maxRank) maxRank = rank;
+          rankedCount++;
+        }
+      }
+      if (rankedCount > 1) {
+        const chip = document.createElement('span');
+        chip.className = 'ml-stat-chip ml-stat-chip--ranks';
+        chip.textContent = `Ranks #${minRank}–#${maxRank}`;
+        statsRow.appendChild(chip);
+      } else if (rankedCount === 1) {
+        const chip = document.createElement('span');
+        chip.className = 'ml-stat-chip ml-stat-chip--ranks';
+        chip.textContent = `Rank #${minRank}`;
+        statsRow.appendChild(chip);
       }
     }
-    if (rankedCount > 1) {
-      const chip = document.createElement('span');
-      chip.className = 'ml-stat-chip ml-stat-chip--ranks';
-      chip.textContent = `Ranks #${minRank}–#${maxRank}`;
-      statsRow.appendChild(chip);
-    } else if (rankedCount === 1) {
-      const chip = document.createElement('span');
-      chip.className = 'ml-stat-chip ml-stat-chip--ranks';
-      chip.textContent = `Rank #${minRank}`;
-      statsRow.appendChild(chip);
-    }
+
     const masteredCount = words.filter(w => getMastered(ctx.lang).has(w)).length;
-    if (masteredCount > 0) {
-      const chip = document.createElement('span');
-      chip.className = 'ml-stat-chip ml-stat-chip--mastered';
-      chip.textContent = `${masteredCount} Mastered`;
-      statsRow.appendChild(chip);
-    }
+    appendMasteredChip(statsRow, masteredCount);
   }
 
   // ── Chip counts ────────────────────────────────────────────────────────────
@@ -355,18 +359,10 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'ml-word-actions';
 
-    const masteryBtn = document.createElement('button');
-    masteryBtn.type = 'button';
-    masteryBtn.className = 'ml-mastery-btn' + (isMastered ? ' ml-mastery-btn--active' : '');
-    masteryBtn.title = isMastered ? 'Unmark as mastered' : 'Mark as mastered';
-    masteryBtn.textContent = '✓';
-    masteryBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      const m = getMastered(ctx.lang);
-      if (m.has(word)) m.delete(word); else m.add(word);
-      saveMastered(ctx.lang, m);
-      render();
-    });
+    // Your own rating (mastery scale) and what quizzes have actually shown
+    // (quiz badge) — shared with the cross-language list's rows, see
+    // row-shared.ts.
+    const { masteryBtn, quizBadge } = buildMasteryControls(ctx.lang, word, render);
 
     const moveBtn = document.createElement('button');
     moveBtn.type = 'button'; moveBtn.className = 'ml-move-btn';
@@ -402,6 +398,7 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
       });
     });
 
+    actionsDiv.appendChild(quizBadge);
     actionsDiv.appendChild(masteryBtn); actionsDiv.appendChild(moveBtn); actionsDiv.appendChild(removeBtn);
     li.appendChild(check); li.appendChild(wordSpan); li.appendChild(posSpan);
     li.appendChild(rankBadge); li.appendChild(transSpan); li.appendChild(actionsDiv);

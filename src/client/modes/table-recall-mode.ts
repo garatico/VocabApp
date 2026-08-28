@@ -57,7 +57,7 @@
  * different skin, not a third thing worth its own history bucket.
  */
 import type { Word } from '../types.ts';
-import { matchesAnswer, buildGlossDisplay } from '../utils/utils.ts';
+import { matchesAnswer, buildGlossDisplay, chineseWordText } from '../utils/utils.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker } from '../utils/list-picker.ts';
 import { Settings, applyAutofillAttr } from '../settings.ts';
@@ -109,6 +109,7 @@ export function renderTableRecallMode({
 
   const cols        = Math.max(1, Math.min(5, Number(columns) || 3));
   const matchMode   = Settings.getMatchMode();
+  const chineseDisplay = Settings.getChineseDisplay();
   const primaryLang = lang.split('+')[0];
 
   const indicatorMode = Settings.getLangIndicator();
@@ -277,7 +278,7 @@ export function renderTableRecallMode({
   function paintWordCell(w: Word, state: AnswerState): void {
     const ref = cellRefs.get(cellKey(w));
     if (!ref) return;
-    ref.wordDiv.textContent = w.word;
+    ref.wordDiv.textContent = chineseWordText(w, w.language ?? lang, chineseDisplay);
     ref.wordDiv.classList.remove('correct', 'peeked', 'incorrect');
     ref.wordDiv.classList.add(state);
     if (isInAnyList(w.language ?? lang, w.word)) ref.tdWord.classList.add('word-cell--known');
@@ -482,7 +483,7 @@ export function renderTableRecallMode({
     const val = inp.value.trim();
     if (!val) return;
 
-    const wordMatch = sorted.find(w => !wordState.has(cellKey(w)) && matchesAnswer(val, w, 'en-target', matchMode));
+    const wordMatch = sorted.find(w => !wordState.has(cellKey(w)) && matchesAnswer(val, w, 'en-target', matchMode, w.language ?? lang, chineseDisplay));
     const transMatch = style === 'double'
       ? sorted.find(w => !transState.has(cellKey(w)) && matchesAnswer(val, w, 'target-en', matchMode))
       : undefined;

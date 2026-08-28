@@ -38,6 +38,7 @@ import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summ
 import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
 import { languageInfo } from '../data/languages.ts';
+import { hintReveal, hintableLength } from '../utils/hint-reveal.ts';
 
 export type TriviaSubMode = 'type' | 'choice' | 'table';
 
@@ -266,6 +267,11 @@ export function renderTriviaMode({
 
   const queue = shuffle(bank);
   const results: (boolean | null)[] = queue.map(() => null);
+  // Letters revealed via 'type' sub-mode's "Show a letter" hint, per
+  // question — 'choice' doesn't need one (the options are the assistance)
+  // and never touches this.
+  const hintsShown: number[] = queue.map(() => 0);
+  let totalHintsUsed = 0;
   let idx = 0;
   let correctCount = 0;
 
@@ -329,10 +335,22 @@ export function renderTriviaMode({
   applyAutofillAttr(typeInput);
   typeRow.appendChild(typeInput);
 
+  // 'type' sub-mode's letter hint — only sub-mode with no other kind of
+  // help available (choice has its options, table shows the answer key
+  // live). Its own row below the input, muted, not the default path.
+  const hintRow = document.createElement('div');
+  hintRow.className = 'gb-hint-row';
+  const hintBtn = document.createElement('button');
+  hintBtn.type = 'button';
+  hintBtn.className = 'gb-hint-btn';
+  const hintDisplay = document.createElement('span');
+  hintDisplay.className = 'gb-hint-display';
+  hintRow.append(hintBtn, hintDisplay);
+
   const feedback = document.createElement('div');
   feedback.className = 'tv-feedback';
 
-  wrap.append(header, counter, prompt, optionsGrid, typeRow, feedback);
+  wrap.append(header, counter, prompt, optionsGrid, typeRow, hintRow, feedback);
   container.appendChild(wrap);
 
   // ── Question rendering ──────────────────────────────────────────────────
@@ -381,6 +399,7 @@ export function renderTriviaMode({
   function renderChoiceOptions(i: number, q: TriviaQuestion, prior: boolean | null): void {
     optionsGrid.style.display = '';
     typeRow.style.display = 'none';
+    hintRow.style.display = 'none';
     optionsGrid.innerHTML = '';
 
     const options = buildChoiceOptions(q);
@@ -419,14 +438,40 @@ export function renderTriviaMode({
 
   // ── 'type' sub-mode ──────────────────────────────────────────────────────
 
+  function renderHint(i: number): void {
+    const target = canonicalAnswer(queue[i]);
+    const shown  = hintsShown[i];
+    // Never reveals the last letter — narrows it down, doesn't finish the job.
+    const cap = Math.max(0, hintableLength(target) - 1);
+
+    hintDisplay.textContent = shown > 0 ? hintReveal(target, shown) : '';
+    hintDisplay.hidden = shown === 0;
+
+    const answered = results[i] !== null;
+    const atMax = shown >= cap;
+    hintBtn.disabled = answered || finished || atMax;
+    hintBtn.textContent = atMax ? 'No more letters' : (shown === 0 ? 'Show a letter' : 'Show another letter');
+  }
+
   function renderTypeInput(i: number, q: TriviaQuestion, prior: boolean | null): void {
     optionsGrid.style.display = 'none';
     typeRow.style.display = '';
+    hintRow.style.display = '';
     typeInput.value = '';
     typeInput.disabled = prior !== null || finished;
     if (!typeInput.disabled) typeInput.focus();
+    renderHint(i);
     if (prior !== null) showFeedback(prior, canonicalAnswer(q));
   }
+
+  hintBtn.addEventListener('click', () => {
+    const cap = Math.max(0, hintableLength(canonicalAnswer(queue[idx])) - 1);
+    if (hintsShown[idx] === 0) totalHintsUsed++;
+    if (hintsShown[idx] < cap) {
+      hintsShown[idx]++;
+      renderHint(idx);
+    }
+  });
 
   typeInput.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key !== 'Enter' || finished) return;
@@ -451,6 +496,7 @@ export function renderTriviaMode({
     if (right) correctCount++;
     syncProgress();
     showFeedback(right, canonicalAnswer(queue[i]));
+    hintBtn.disabled = true;
 
     const delay = right ? 650 : 1600;
     setTimeout(() => advance(), delay);
@@ -483,9 +529,14 @@ export function renderTriviaMode({
     prevBtn.disabled = true;
     nextBtn.disabled = true;
     typeInput.disabled = true;
+    hintBtn.disabled = true;
 
     const correctWords = queue.filter((_, i) => results[i]).map(q => canonicalAnswer(q));
     const missedWords  = queue.filter((_, i) => !results[i]).map(q => canonicalAnswer(q));
+    // Correct without ever opening the letter hint on that question — only
+    // meaningful for 'type' sub-mode; hintsShown stays all-zero for 'choice'
+    // and 'table', so this is just correctCount there.
+    const unassistedCount = results.filter((r, i) => r === true && hintsShown[i] === 0).length;
 
     recordOutcome(lang, missedWords, correctWords);
     saveSession(lang, {
@@ -493,8 +544,8 @@ export function renderTriviaMode({
       mode: 'trivia',
       total: queue.length,
       correct: correctCount,
-      unassisted: correctCount,
-      hints: 0,
+      unassisted: unassistedCount,
+      hints: totalHintsUsed,
       revealed: 0,
       seconds: stopwatch.elapsedSeconds(),
       lang,

@@ -167,6 +167,7 @@
 .recall-cell.lang-tag-french:not(.recalled):not(.missed)     { background: var(--lang-french-bg); }
 .recall-cell.lang-tag-german:not(.recalled):not(.missed)     { background: var(--lang-german-bg); }
 .recall-cell.lang-tag-dutch:not(.recalled):not(.missed)      { background: var(--lang-dutch-bg); }
+.recall-cell.lang-tag-chinese:not(.recalled):not(.missed)    { background: var(--lang-chinese-bg); }
 
 .recall-grid-wrap.lang-indicator-flag .recall-cell[class*="lang-tag-"] {
   /* Unconditional — ::before needs a positioning context regardless of

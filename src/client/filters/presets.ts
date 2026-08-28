@@ -104,6 +104,23 @@ export function renamePreset(mode: FilterScope, oldName: string, newName: string
   return true;
 }
 
+/** Copy a bundle under a new name. False if the source is missing or the new name collides. */
+export function duplicatePreset(mode: FilterScope, sourceName: string, newName: string): boolean {
+  const trimmed = newName.trim();
+  const store = readStore(mode);
+  if (!trimmed || !(sourceName in store) || trimmed in store) return false;
+  store[trimmed] = structuredClone(store[sourceName]);
+  writeStore(mode, store);
+  return true;
+}
+
+/** The bundle a brand-new, unsaved profile starts from. */
+export const BLANK_BUNDLE: PresetBundle = {
+  classes: [], domains: [],
+  listFilter: { active: false, mode: 'hide', selected: [] },
+  direction: 'target-en',
+};
+
 /** Every mode that currently has at least one saved profile, for a
  *  cross-mode management view (My Lists' Testing Profiles section). */
 export function modesWithPresets(): FilterScope[] {

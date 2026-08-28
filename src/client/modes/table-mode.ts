@@ -1,5 +1,8 @@
 import type { Word } from '../types.ts';
-import { matchesAnswer, buildGlossDisplay, extraMatchedGloss } from '../utils/utils.ts';
+import {
+  slotText, slotMatches, extraMatchedGloss, DEFAULT_CHINESE_DISPLAY,
+  type QuizSlot, type ChineseDisplay,
+} from '../utils/utils.ts';
 import { attachTooltips }        from '../utils/word-tooltip.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker }        from '../utils/list-picker.ts';
@@ -7,7 +10,19 @@ import { Settings, applyAutofillAttr } from '../settings.ts';
 import { missCount }             from '../utils/session-history.ts';
 import { flagUrl }               from '../data/languages.ts';
 
-export type TableDirection = 'target-en' | 'en-target' | 'mixed';
+export type DirectionPair = 'target-en' | 'en-target';
+export type TableDirection = DirectionPair | 'mixed';
+
+/** Input placeholder, keyed by which slot the learner is being asked to type. */
+const PLACEHOLDER_FOR: Record<QuizSlot, string> = {
+  word:    'Type in target language…',
+  english: 'Type translation…',
+};
+
+/** (promptSlot, answerSlot) for a resolved (non-'mixed') direction. */
+function slotsFor(dir: DirectionPair): [QuizSlot, QuizSlot] {
+  return dir === 'en-target' ? ['english', 'word'] : ['word', 'english'];
+}
 
 export interface CheckResult {
   word?:     string;
@@ -19,7 +34,7 @@ export interface InputSnapshot {
   value:      string;
   disabled:   boolean;
   stateClass: 'correct' | 'incorrect' | 'peeked' | '';
-  dir:        'target-en' | 'en-target';
+  dir:        DirectionPair;
 }
 
 export interface TableController {
@@ -48,10 +63,19 @@ interface RenderTableModeOptions {
 
 /**
  * The text a word reveals to, given a direction. Exported so paginated callers
- * can score words on pages that were never rendered.
+ * can score words on pages that were never rendered. `lang` is the word's own
+ * effective language (`w.language ?? quizLang`) and `display` mirrors
+ * `Settings.getChineseDisplay()` — both only change anything for a
+ * `romanizedScript` language (Chinese).
  */
-export function revealTextFor(entry: Word, dir: 'target-en' | 'en-target'): string {
-  return dir === 'en-target' ? entry.word : buildGlossDisplay(entry, Settings.getAnswerGlossCount());
+export function revealTextFor(
+  entry: Word,
+  dir: DirectionPair,
+  lang?: string | null,
+  display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
+): string {
+  const [, answerSlot] = slotsFor(dir);
+  return slotText(entry, answerSlot, lang, display, Settings.getAnswerGlossCount());
 }
 
 /**
@@ -81,6 +105,7 @@ export function renderTableMode({
   const cols      = Math.max(1, Math.min(5, Number(columns) || 3));
   const hintMode  = Settings.getHintMode();
   const matchMode = Settings.getMatchMode();
+  const chineseDisplay = Settings.getChineseDisplay();
 
   // O(1) word lookup — avoids O(n²) words.find() inside forEach loops.
   // Keyed by rowKey rather than bare word text so a Compare-mode table mixing
@@ -90,13 +115,14 @@ export function renderTableMode({
   // Only shake inputs when a manageable number are affected
   const SHAKE_THRESHOLD = 30;
 
-  function entryDir(_entry: Word): 'target-en' | 'en-target' {
+  function entryDir(_entry: Word): DirectionPair {
     if (direction === 'mixed') return Math.random() < 0.5 ? 'target-en' : 'en-target';
     return direction;
   }
 
-  function labelText(entry: Word, dir: 'target-en' | 'en-target'): string {
-    return dir === 'en-target' ? buildGlossDisplay(entry, Settings.getQuestionGlossCount()) : entry.word;
+  function labelText(entry: Word, dir: DirectionPair): string {
+    const [promptSlot] = slotsFor(dir);
+    return slotText(entry, promptSlot, entry.language ?? lang, chineseDisplay, Settings.getQuestionGlossCount());
   }
 
   /**
@@ -104,17 +130,20 @@ export function renderTableMode({
    * just answered correctly by typing — the reveal button and Give Up have no
    * typed answer to check, and pass nothing. "Show the sense you typed"
    * (getExpandGlossOnMatch) only ever adds to what's shown, so it only makes
-   * sense to apply where there's a specific typed answer to explain.
+   * sense to apply where the answer slot is 'english' and there's a specific
+   * typed answer to explain.
    */
-  function revealText(entry: Word, dir: 'target-en' | 'en-target', typedInput?: string): string {
-    const base = revealTextFor(entry, dir);
-    if (dir !== 'target-en' || !typedInput || !Settings.getExpandGlossOnMatch()) return base;
+  function revealText(entry: Word, dir: DirectionPair, typedInput?: string): string {
+    const base = revealTextFor(entry, dir, entry.language ?? lang, chineseDisplay);
+    const [, answerSlot] = slotsFor(dir);
+    if (answerSlot !== 'english' || !typedInput || !Settings.getExpandGlossOnMatch()) return base;
     const extra = extraMatchedGloss(typedInput, entry, Settings.getAnswerGlossCount(), matchMode);
     return extra ? `${base} / ${extra}` : base;
   }
 
-  function checkInput(input: string, entry: Word, dir: 'target-en' | 'en-target'): boolean {
-    return matchesAnswer(input, entry, dir, matchMode);
+  function checkInput(input: string, entry: Word, dir: DirectionPair): boolean {
+    const [, answerSlot] = slotsFor(dir);
+    return slotMatches(input, entry, answerSlot, matchMode, entry.language ?? lang, chineseDisplay);
   }
 
   function checkAllComplete(): boolean {
@@ -266,7 +295,7 @@ export function renderTableMode({
         // never have to special-case "no language tag on this row".
         inp.dataset.lang = wordLang;
         inp.dataset.dir  = dir;
-        inp.placeholder  = dir === 'en-target' ? 'Type in target language…' : 'Type translation…';
+        inp.placeholder  = PLACEHOLDER_FOR[slotsFor(dir)[1]];
 
         // ── Restore saved state (column change preserves progress) ────────────
         if (snap) {
@@ -416,7 +445,7 @@ export function renderTableMode({
       if (inp.classList.contains('peeked'))  { results.push({ ok: false }); return; }
       const entry = wordMap.get(inputRowKey(inp));
       if (!entry) return;
-      const dir      = (inp.dataset.dir ?? 'target-en') as 'target-en' | 'en-target';
+      const dir      = (inp.dataset.dir ?? 'target-en') as DirectionPair;
       const revealed = revealText(entry, dir);
       const ok       = checkInput(inp.value, entry, dir);
       inp.classList.remove('correct', 'incorrect');
@@ -461,7 +490,7 @@ export function renderTableMode({
       }
       const entry = wordMap.get(inputRowKey(inp));
       if (!entry) return;
-      const dir      = (inp.dataset.dir ?? 'target-en') as 'target-en' | 'en-target';
+      const dir      = (inp.dataset.dir ?? 'target-en') as DirectionPair;
       const revealed = revealText(entry, dir);
       inp.value    = revealed;
       inp.disabled = true;

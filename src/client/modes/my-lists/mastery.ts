@@ -13,7 +13,7 @@
  * no DOM and no panel state.
  */
 
-import { readJson, writeJson, remove as removeKey, keys as storageKeys, isStringArray }
+import { readJson, writeJson, remove as removeKey, keys as storageKeys, isStringArray, isNumberRecord }
   from '../../utils/storage.ts';
 import { logger } from '../../utils/logger.ts';
 
@@ -73,4 +73,53 @@ export function markMastered(lang: string, words: Iterable<string>): number {
 export function isMastered(lang: string, word: string): boolean {
   migrateMastery(lang);
   return getMastered(lang).has(word);
+}
+
+// ── User mastery scale ───────────────────────────────────────────────────────
+//
+// A single Set (above) only ever answers "known or not". This is the same
+// idea widened to a scale the learner sets themselves — how well *they*
+// think they know a word, as opposed to quizStrength() in session-history.ts,
+// which is what quizzes have actually shown.
+//
+// Kept as a second, additive key rather than replacing the Set: every
+// existing reader of getMastered() (Hide Mastered, Smart Lists, backup/
+// restore) only needs "is this word done", so setMasteryLevel() keeps that
+// Set in sync rather than teaching all of them about a 0–4 scale too.
+
+export const MASTERY_LEVELS = ['New', 'Learning', 'Familiar', 'Confident', 'Mastered'] as const;
+export const MAX_MASTERY_LEVEL = MASTERY_LEVELS.length - 1;
+
+function masteryLevelKey(lang: string): string {
+  return `vq_mastery_scale_${lang}`;
+}
+
+export function getMasteryLevels(lang: string): Record<string, number> {
+  return readJson<Record<string, number>>(masteryLevelKey(lang), {}, isNumberRecord);
+}
+
+function saveMasteryLevels(lang: string, levels: Record<string, number>): void {
+  writeJson(masteryLevelKey(lang), levels);
+}
+
+/**
+ * A word's level, 0–MAX_MASTERY_LEVEL. Falls back to the legacy boolean set
+ * for a word that has never been given an explicit level, so turning this on
+ * doesn't reset everyone's prior "mastered" marks back to New.
+ */
+export function getMasteryLevel(lang: string, word: string): number {
+  const levels = getMasteryLevels(lang);
+  if (word in levels) return levels[word];
+  return getMastered(lang).has(word) ? MAX_MASTERY_LEVEL : 0;
+}
+
+export function setMasteryLevel(lang: string, word: string, level: number): void {
+  const clamped = Math.max(0, Math.min(MAX_MASTERY_LEVEL, level));
+  const levels = getMasteryLevels(lang);
+  levels[word] = clamped;
+  saveMasteryLevels(lang, levels);
+
+  const m = getMastered(lang);
+  if (clamped >= MAX_MASTERY_LEVEL) m.add(word); else m.delete(word);
+  saveMastered(lang, m);
 }
