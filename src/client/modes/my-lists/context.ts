@@ -17,6 +17,7 @@
  */
 
 import type { SortMode } from './types.ts';
+import type { FilterScope } from '../../filters/filter-scope.ts';
 
 export interface ListsCtx {
   // ── Selection state ────────────────────────────────────────────────────────
@@ -33,6 +34,10 @@ export interface ListsCtx {
    * than reusing panel.ts's single-language assumptions.
    */
   selectedMultiList: string | null;
+  /** The open Testing Profile, or null. Never set alongside the selections
+   *  above — a profile isn't a word list at all, so it gets its own render
+   *  path (profile-panel.ts) rather than reusing panel.ts's assumptions. */
+  selectedProfile: { mode: FilterScope; name: string } | null;
   sortMode: SortMode;
   /** The one word whose detail row is open, or null. */
   expandedWord: string | null;
@@ -70,6 +75,7 @@ export function createContext(
     selectedList:  '',
     selectedSmart: null,
     selectedMultiList: null,
+    selectedProfile: null,
     sortMode:      'alpha-asc',
     expandedWord:  null,
     hideMastered:  false,

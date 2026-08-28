@@ -9,3 +9,33 @@
 export function currentLangValue(fallback = 'spanish'): string {
   return (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? fallback;
 }
+
+/** Modes that know how to render/score a mixed-language word list. */
+export const MULTI_LANG_MODES = new Set(['table', 'conjugation']);
+
+/**
+ * The "+ Languages" picker's current selection — app.ts owns the UI and is
+ * the sole writer (via setExtraLanguages()), but word-lists.ts and
+ * word-filters.ts need to read it too, when building and applying the Lists
+ * filter, and app.ts already imports both of those — the reverse import
+ * would cycle. Kept here instead, the same reasoning as currentLangValue()
+ * above.
+ */
+let extraLanguages = new Set<string>();
+
+export function setExtraLanguages(langs: Set<string>): void {
+  extraLanguages = langs;
+}
+
+/**
+ * The extra languages currently in effect. Gated on the active tab rather
+ * than just the picker's own state, since a selection made on one of the
+ * multi-language modes stays selected (just visually hidden) if the user
+ * switches to a mode that doesn't support a merge without clearing it.
+ */
+export function currentExtraLanguages(): string[] {
+  const activeMode = document.querySelector('.mode-tab.active')?.getAttribute('data-mode');
+  if (!activeMode || !MULTI_LANG_MODES.has(activeMode)) return [];
+  const primary = currentLangValue();
+  return [...extraLanguages].filter(name => name !== primary);
+}

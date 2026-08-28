@@ -55,6 +55,16 @@ export function deleteSmartList(lang: string, name: string): void {
   const all = getSmartLists(lang); delete all[name]; saveSmartLists(lang, all);
 }
 
+/** Rename in place, keeping the same rule. False if the new name collides. */
+export function renameSmartList(lang: string, oldName: string, newName: string): boolean {
+  const all = getSmartLists(lang);
+  if (!(oldName in all) || newName in all) return false;
+  all[newName] = all[oldName];
+  delete all[oldName];
+  saveSmartLists(lang, all);
+  return true;
+}
+
 /** Evaluate a rule against the loaded vocabulary for a language. */
 export function evaluateSmart(lang: string, rule: SmartRule, vocab: VocabEntry[]): string[] {
   const mastered = getMastered(lang);
@@ -75,16 +85,4 @@ export function evaluateSmart(lang: string, rule: SmartRule, vocab: VocabEntry[]
 
   const words = out.map(e => e.word);
   return rule.limit > 0 ? words.slice(0, rule.limit) : words;
-}
-
-/** One-line summary of a rule, for the sidebar tooltip and the panel header. */
-export function describeSmart(rule: SmartRule): string {
-  const parts: string[] = [];
-  if (rule.bands.length) parts.push(rule.bands.join('/'));
-  if (rule.pos.length)   parts.push(rule.pos.join('/'));
-  if (rule.mastered === 'no')  parts.push('not mastered');
-  if (rule.mastered === 'yes') parts.push('mastered');
-  if (rule.listed === 'no')    parts.push('not in a list');
-  if (rule.limit > 0)          parts.push(`top ${rule.limit}`);
-  return parts.length ? parts.join(' · ') : 'everything';
 }

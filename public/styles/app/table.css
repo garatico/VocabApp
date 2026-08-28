@@ -309,6 +309,7 @@
 #tableWrap td.lang-tag-french     { background: var(--lang-french-bg); }
 #tableWrap td.lang-tag-german     { background: var(--lang-german-bg); }
 #tableWrap td.lang-tag-dutch      { background: var(--lang-dutch-bg); }
+#tableWrap td.lang-tag-chinese    { background: var(--lang-chinese-bg); }
 
 /* Flag style: same tagging, but a flag image watermarked behind the word
    instead of a tinted background — read from the --flag-img custom property

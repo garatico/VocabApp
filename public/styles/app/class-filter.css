@@ -134,6 +134,53 @@
   border-color: var(--accent-hover, var(--accent));
 }
 
+/* ── Colour-coded by part of speech / CEFR level ──
+   Idle state only — a selected chip stays solid accent (above), so "this is
+   chosen" is never ambiguous with "this is what kind of chip it is". Shared
+   by every .pos-chip in the app: My Lists' own POS/Level rows, the main
+   controls bar's Part of Speech and Level chips, and the quiz sidebars that
+   reuse the same markup — one set of hues instead of each place inventing
+   its own. My Lists' word-row POS badges (.ml-word-pos) mirror the same
+   hues in my-lists.css. */
+.pos-chip[data-pos="verb"]        { --pos-hue: 217; }  /* blue    */
+.pos-chip[data-pos="noun"]        { --pos-hue: 142; }  /* green   */
+.pos-chip[data-pos="adjective"]   { --pos-hue:  32; }  /* amber   */
+.pos-chip[data-pos="adverb"]      { --pos-hue: 280; }  /* violet  */
+.pos-chip[data-pos="pronoun"]     { --pos-hue: 340; }  /* pink    */
+.pos-chip[data-pos="preposition"] { --pos-hue: 195; }  /* cyan    */
+.pos-chip[data-pos="conjunction"] { --pos-hue:  20; }  /* orange  */
+.pos-chip[data-pos="article"]     { --pos-hue: 260; }  /* indigo  */
+
+/* CEFR bands: green (easiest) through red (hardest) — a familiar traffic-
+   light reading of difficulty rather than an arbitrary per-level colour. */
+.pos-chip[data-band="A1"] { --pos-hue: 142; }
+.pos-chip[data-band="A2"] { --pos-hue: 100; }
+.pos-chip[data-band="B1"] { --pos-hue:  60; }
+.pos-chip[data-band="B2"] { --pos-hue:  35; }
+.pos-chip[data-band="C1"] { --pos-hue:  15; }
+.pos-chip[data-band="C2"] { --pos-hue:   0; }
+
+.pos-chip[data-pos]:not(.active),
+.pos-chip[data-band]:not(.active) {
+  color:        hsl(var(--pos-hue) 55% 32%);
+  border-color: hsl(var(--pos-hue) 50% 45% / 0.45);
+  background:   hsl(var(--pos-hue) 60% 50% / 0.10);
+}
+html.dark .pos-chip[data-pos]:not(.active),
+html.dark .pos-chip[data-band]:not(.active) {
+  color: hsl(var(--pos-hue) 62% 72%);
+}
+.pos-chip[data-pos]:not(.active):hover,
+.pos-chip[data-band]:not(.active):hover {
+  background:   hsl(var(--pos-hue) 60% 50% / 0.2);
+  border-color: hsl(var(--pos-hue) 55% 45% / 0.75);
+  color:        hsl(var(--pos-hue) 55% 28%);
+}
+html.dark .pos-chip[data-pos]:not(.active):hover,
+html.dark .pos-chip[data-band]:not(.active):hover {
+  color: hsl(var(--pos-hue) 65% 78%);
+}
+
 /* ── List filter container — sits below #classFilter ── */
 #listFilter {
   padding: 0.35rem 0.5rem 0.4rem;
@@ -350,6 +397,30 @@
   font-size: 0.72rem;
   color: var(--text-muted);
   font-style: italic;
+}
+
+/* Marks where Cross-Language lists start, once any exist — see
+   refreshFilterSelect() in word-lists.ts. Single-language lists (whichever
+   language they belong to — each pill already carries its own flag badge)
+   need no divider of their own; this is the one split that actually matters,
+   since Cross-Language lists behave differently as a filter. A thin rule
+   rather than a full label row keeps it to one compact line instead of
+   costing a language's worth of vertical space for every language active. */
+.list-filter-group-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-basis: 100%;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.list-filter-group-label--multi {
+  color: var(--ml-accent-multi, var(--text-muted));
+  border-top: 1px dashed color-mix(in srgb, var(--ml-accent-multi, var(--border-strong)) 45%, transparent);
 }
 
 /* Each list item: pill-shaped checkbox label */

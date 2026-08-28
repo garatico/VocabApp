@@ -16,6 +16,7 @@ import { readString, readJson, writeJson, remove as removeKey, isRecord, isStrin
   from './storage.ts';
 import { currentScope, type FilterScope } from '../filters/filter-scope.ts';
 import { bucketFor, bucketForRead, SHARED_BUCKET, type Bucket } from '../filters/filter-state.ts';
+import { currentExtraLanguages } from '../filters/filter-lang.ts';
 import { buildLangBadge } from '../ui/lang-badge.ts';
 
 const LISTS_PREFIX         = 'vq_lists_';
@@ -145,6 +146,36 @@ export const LIST_FILTER_DESC: Record<ListFilterMode, string> = {
   hide:  'Checked lists are removed from the quiz',
   focus: 'Quiz shows only words from checked lists',
 };
+
+// ── Qualified entries: a `selected` name may belong to a language other than
+//    the state's own bucket, or to no language at all (a cross-language
+//    list) — see the Lists filter picking up "+ Languages" extras and
+//    Cross-Language Lists, below. A bare entry (no separator — every entry
+//    written before this existed) still means "this bucket's own language's
+//    list, by that plain name", so nothing already stored needs migrating. ──
+
+/** Not a character anyone types into a list name through this app's UI. */
+const QUAL_SEP = '␟';
+
+export function qualifyListName(lang: string, name: string): string {
+  return `${lang}${QUAL_SEP}${name}`;
+}
+export function qualifyMultiListName(name: string): string {
+  return `multi${QUAL_SEP}${name}`;
+}
+
+export type QualifiedSelection =
+  | { kind: 'single'; lang: string; name: string }
+  | { kind: 'multi'; name: string };
+
+/** `defaultLang` is what a legacy, unqualified entry is assumed to mean. */
+export function parseSelected(entry: string, defaultLang: string): QualifiedSelection {
+  const i = entry.indexOf(QUAL_SEP);
+  if (i === -1) return { kind: 'single', lang: defaultLang, name: entry };
+  const lang = entry.slice(0, i);
+  const name = entry.slice(i + 1);
+  return lang === 'multi' ? { kind: 'multi', name } : { kind: 'single', lang, name };
+}
 
 function filterKey(lang: string, bucket: Bucket): string {
   return `${FILTER_STATE_PREFIX}${lang.toLowerCase()}__${bucket}`;
@@ -345,16 +376,35 @@ export function refreshCountBadge(lang: string): void {
   refreshFilterSelect(lang);
 }
 
+/**
+ * The Lists filter used to only ever show `lang`'s own lists — right for a
+ * single-language session, wrong the moment "+ Languages" merges another
+ * language's words in (Table/Conjugation's Compare mode): a Portuguese word
+ * sitting right next to a Spanish one had no way to be hidden or focused by
+ * its own lists, and a Cross-Language list couldn't be used as a filter at
+ * all. `currentExtraLanguages()` (filter-lang.ts) is empty outside those two
+ * modes, so a plain single-language session sees exactly what it always did.
+ */
 export function refreshFilterSelect(lang: string): void {
-  const container = document.getElementById('listFilterCheckboxes');
-  if (!container) return;
+  const containerEl = document.getElementById('listFilterCheckboxes');
+  if (!containerEl) return;
+  const container = containerEl;   // narrowed, so addRow() below can close over it
 
-  const names = getListNames(lang);
+  const extras = currentExtraLanguages().filter(l => l !== lang);
+  const activeLangs = [lang, ...extras];
+  const multiNames = getMultiListNames();
 
-  // Load persisted state and prune any selections for lists that no longer exist
-  const state    = getListFilterState(lang);
-  const validSet = new Set(names);
-  const pruned   = state.selected.filter(n => validSet.has(n));
+  // Load persisted state and prune any selections for lists that no longer
+  // exist — a single-language entry whose language isn't active right now
+  // (e.g. "+ Languages" was cleared) is left alone rather than dropped, so
+  // re-adding that language brings the selection straight back.
+  const state = getListFilterState(lang);
+  const pruned = state.selected.filter(entry => {
+    const parsed = parseSelected(entry, lang);
+    return parsed.kind === 'multi'
+      ? multiNames.includes(parsed.name)
+      : getListNames(parsed.lang).includes(parsed.name);
+  });
   if (pruned.length !== state.selected.length) {
     state.selected = pruned;
     saveListFilterState(lang, state);
@@ -362,48 +412,65 @@ export function refreshFilterSelect(lang: string): void {
 
   // Rebuild checkbox list
   container.innerHTML = '';
+  const selectedSet = new Set(state.selected);
 
-  if (names.length === 0) {
+  function addRow(qualified: string, displayName: string, badgeLangs: string[], count: number): void {
+    const label = document.createElement('label');
+    label.className = 'list-filter-item';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = qualified;
+    cb.checked = selectedSet.has(qualified);
+    cb.addEventListener('change', () => {
+      const s = getListFilterState(lang);
+      if (cb.checked) {
+        if (!s.selected.includes(qualified)) s.selected.push(qualified);
+      } else {
+        s.selected = s.selected.filter(n => n !== qualified);
+      }
+      saveListFilterState(lang, s);
+    });
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'list-filter-name';
+    nameSpan.textContent = displayName;
+
+    const countSpan = document.createElement('span');
+    countSpan.className = 'list-filter-item-count';
+    countSpan.textContent = String(count);
+
+    label.append(cb, nameSpan, buildLangBadge(badgeLangs), countSpan);
+    container.appendChild(label);
+  }
+
+  const anyLists = activeLangs.some(l => getListNames(l).length > 0) || multiNames.length > 0;
+  if (!anyLists) {
     const empty       = document.createElement('span');
     empty.className   = 'list-filter-empty';
     empty.textContent = 'No lists yet — create one in My Lists';
     container.appendChild(empty);
   } else {
-    for (const name of names) {
-      const label       = document.createElement('label');
-      label.className   = 'list-filter-item';
+    // Single-language lists flow together as one group, whatever language
+    // each belongs to — every pill already carries its own flag badge, so a
+    // full-width header row repeating just that flag for each language (as
+    // this used to do) said nothing the pill itself didn't, at the cost of a
+    // blank-looking row per language. The one split worth calling out is
+    // single-language vs Cross-Language, since those behave differently.
+    activeLangs.forEach(l => {
+      for (const name of getListNames(l)) {
+        addRow(qualifyListName(l, name), name, [l], getListCount(l, name));
+      }
+    });
 
-      const cb          = document.createElement('input');
-      cb.type           = 'checkbox';
-      cb.value          = name;
-      cb.checked        = state.selected.includes(name);
-      cb.addEventListener('change', () => {
-        const s = getListFilterState(lang);
-        if (cb.checked) {
-          if (!s.selected.includes(name)) s.selected.push(name);
-        } else {
-          s.selected = s.selected.filter(n => n !== name);
-        }
-        saveListFilterState(lang, s);
-      });
-
-      const nameSpan       = document.createElement('span');
-      nameSpan.className   = 'list-filter-name';
-      nameSpan.textContent = name;
-
-      const countSpan       = document.createElement('span');
-      countSpan.className   = 'list-filter-item-count';
-      countSpan.textContent = String(getListCount(lang, name));
-
-      // Every list here is single-language by construction (this store is
-      // keyed per language) — the badge is still worth showing for the same
-      // reason table mode shows one on every cell: consistent visual
-      // language identity everywhere a list/word appears in the app.
-      label.appendChild(cb);
-      label.appendChild(nameSpan);
-      label.appendChild(buildLangBadge([lang]));
-      label.appendChild(countSpan);
-      container.appendChild(label);
+    if (multiNames.length > 0) {
+      const groupLabel = document.createElement('span');
+      groupLabel.className = 'list-filter-group-label list-filter-group-label--multi';
+      groupLabel.textContent = 'Cross-Language';
+      container.appendChild(groupLabel);
+      for (const name of multiNames) {
+        addRow(qualifyMultiListName(name), name, getMultiListLanguages(name), getMultiListCount(name));
+      }
     }
   }
 

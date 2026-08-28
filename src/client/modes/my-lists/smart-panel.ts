@@ -22,7 +22,7 @@ import type { ListsCtx } from './context.ts';
 import { cachedVocab, cachedVocabMap } from './vocab-cache.ts';
 import { getMastered } from './mastery.ts';
 import {
-  getSmartLists, saveSmartRule, evaluateSmart, describeSmart, type SmartRule,
+  getSmartLists, saveSmartRule, evaluateSmart, type SmartRule,
 } from './smart-lists.ts';
 import { showUndo } from './undo-toast.ts';
 import { BANDS, POS_ABBREV } from './types.ts';
@@ -40,7 +40,7 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
   titleGroup.className = 'ml-panel-title-group';
   const title = document.createElement('h2');
   title.className = 'ml-panel-title';
-  title.textContent = '⚡ ' + name;
+  title.textContent = name;
   const count = document.createElement('span');
   count.className = 'ml-panel-count';
   titleGroup.append(title, count);
@@ -54,9 +54,17 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
 
   header.appendChild(titleGroup);
 
-  const desc = document.createElement('p');
-  desc.className = 'ml-smart-desc';
-  header.appendChild(desc);
+  // What the rule currently selects, as badges rather than one run-on
+  // sentence — each criterion reads on its own, and Level/Type reuse the
+  // exact same coloured-pill styling as the editor's own chips right below
+  // (and My Lists' POS/Level filters everywhere else — see class-filter.css).
+  const badgeRow = document.createElement('div');
+  badgeRow.className = 'ml-rule-badges';
+  header.appendChild(badgeRow);
+
+  const matchedNote = document.createElement('p');
+  matchedNote.className = 'ml-smart-desc';
+  header.appendChild(matchedNote);
 
   // ── Rule editor ────────────────────────────────────────────────────────────
 
@@ -78,6 +86,7 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
   function chipGroup(
     label: string, values: readonly string[], selected: string[],
     onToggle: (v: string) => void,
+    datasetAttr?: 'pos' | 'band',
   ): HTMLElement {
     const row = document.createElement('div');
     row.className = 'ml-smart-row';
@@ -88,11 +97,35 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'pos-chip' + (selected.includes(v) ? ' active' : '');
-      chip.textContent = v;
+      if (datasetAttr) chip.dataset[datasetAttr] = v;
+      // The chip's value (`v`) stays lowercase for `pos` — it has to match
+      // vocab entries' `pos` field exactly — the capitalized label (bands are
+      // already uppercase, e.g. "A1") is display-only.
+      chip.textContent = datasetAttr === 'pos' ? v[0].toUpperCase() + v.slice(1) : v;
       chip.addEventListener('click', () => { onToggle(v); persist(); });
       row.appendChild(chip);
     });
     return row;
+  }
+
+  /** One pill per criterion the rule is currently filtering on. */
+  function renderRuleBadges(container: HTMLElement, r: SmartRule): void {
+    container.innerHTML = '';
+    const addBadge = (text: string, dataset?: { pos?: string; band?: string }) => {
+      const el = document.createElement('span');
+      el.className = 'pos-chip ml-rule-badge';
+      if (dataset?.pos)  el.dataset.pos  = dataset.pos;
+      if (dataset?.band) el.dataset.band = dataset.band;
+      el.textContent = text;
+      container.appendChild(el);
+    };
+    r.bands.forEach(b => addBadge(b, { band: b }));
+    r.pos.forEach(p => addBadge(p[0].toUpperCase() + p.slice(1), { pos: p }));
+    if (r.mastered === 'no')  addBadge('Not Mastered');
+    if (r.mastered === 'yes') addBadge('Mastered');
+    if (r.listed === 'no')    addBadge('Not In A List');
+    if (r.limit > 0)          addBadge(`Top ${r.limit}`);
+    if (container.children.length === 0) addBadge('Everything');
   }
 
   function selectRow(
@@ -118,24 +151,24 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
   editor.appendChild(chipGroup('Level', BANDS, rule.bands, v => {
     const i = rule.bands.indexOf(v);
     if (i >= 0) rule.bands.splice(i, 1); else rule.bands.push(v);
-  }));
+  }, 'band'));
   editor.appendChild(chipGroup(
     'Type', ['noun', 'verb', 'adjective', 'adverb'], rule.pos, v => {
       const i = rule.pos.indexOf(v);
       if (i >= 0) rule.pos.splice(i, 1); else rule.pos.push(v);
-    }));
+    }, 'pos'));
   editor.appendChild(selectRow('Mastered', [
-    ['no', 'Not yet mastered'], ['yes', 'Mastered'], ['any', 'Either'],
+    ['no', 'Not Yet Mastered'], ['yes', 'Mastered'], ['any', 'Either'],
   ], rule.mastered, v => { rule.mastered = v as SmartRule['mastered']; }));
-  editor.appendChild(selectRow('In a list', [
-    ['no', 'Not in any list'], ['any', 'Either'],
+  editor.appendChild(selectRow('In a List', [
+    ['no', 'Not In Any List'], ['any', 'Either'],
   ], rule.listed, v => { rule.listed = v as SmartRule['listed']; }));
   editor.appendChild(selectRow('Limit', [
     ['25', 'Top 25'], ['50', 'Top 50'], ['100', 'Top 100'],
-    ['250', 'Top 250'], ['0', 'No limit'],
+    ['250', 'Top 250'], ['0', 'No Limit'],
   ], String(rule.limit), v => { rule.limit = Number(v); }));
   editor.appendChild(selectRow('Order', [
-    ['rank', 'Most frequent first'], ['alpha', 'A → Z'],
+    ['rank', 'Most Frequent First'], ['alpha', 'A → Z'],
   ], rule.sort, v => { rule.sort = v as SmartRule['sort']; }));
 
   header.appendChild(editor);
@@ -152,8 +185,10 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
   const vm    = cachedVocabMap(ctx.lang);
 
   count.textContent = `${words.length} words`;
-  desc.textContent  = describeSmart(rule)
-    + (vocab.length ? ` — matched against ${vocab.length.toLocaleString()} words` : '');
+  renderRuleBadges(badgeRow, rule);
+  matchedNote.textContent = vocab.length
+    ? `Matched Against ${vocab.length.toLocaleString()} Words`
+    : '';
 
   freezeBtn.addEventListener('click', () => {
     if (words.length === 0) return;

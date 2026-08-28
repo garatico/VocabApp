@@ -124,6 +124,7 @@ function buildMetaRow(word: Word): HTMLElement {
   if (word.pos) {
     const posEl = document.createElement('span');
     posEl.className   = 'tt-badge tt-pos';
+    posEl.dataset.pos = word.pos;
     posEl.textContent = word.pos;
     row.appendChild(posEl);
   }
@@ -143,8 +144,9 @@ function buildMetaRow(word: Word): HTMLElement {
 
   if (word.frequency?.band) {
     const bandEl = document.createElement('span');
-    bandEl.className   = 'tt-badge tt-band';
-    bandEl.textContent = word.frequency.band;
+    bandEl.className    = 'tt-badge tt-band';
+    bandEl.dataset.band = word.frequency.band;
+    bandEl.textContent  = word.frequency.band;
     row.appendChild(bandEl);
   }
 

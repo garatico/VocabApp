@@ -125,6 +125,40 @@
 .gb-more-clue-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .gb-more-clue-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Letter hint — a second, independent kind of help from the clues above:
+   spelling help once the concept is already known, not more context. Its
+   own (muted, secondary-looking) row so it doesn't compete with the clues
+   for attention — it's there for whoever wants it, not the default path. */
+.gb-hint-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+.gb-hint-btn {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.gb-hint-btn:hover:not(:disabled) { border-color: var(--warning); color: var(--warning); border-style: solid; }
+.gb-hint-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.gb-hint-display {
+  font-family: 'DM Mono', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--warning);
+}
+.gb-hint-display[hidden] { display: none; }
+
 /* Reuses recall.css's .recall-input-row/.recall-input, same as Trivia's
    'type' sub-mode — centred and capped to the prompt's own width. */
 .gb-type-row {

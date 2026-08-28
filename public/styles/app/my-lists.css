@@ -34,7 +34,7 @@
 .ml-left-pane {
   display: flex;
   flex-direction: column;
-  width: 290px;
+  width: 336px;
   flex-shrink: 0;
   border-right: 1px solid var(--border);
   overflow: hidden;
@@ -80,16 +80,28 @@
 }
 
 /* Backup/restore used to be bare icons (⭳/⭱) — hard to tell apart at a
-   glance. Text label needs a bit more room than the plain icon buttons. */
-.ml-text-btn {
+   glance. Text label needs a bit more room than the plain icon buttons, and
+   a pill shape (rather than the same small-radius rect every other icon
+   button uses) makes the pair read as its own distinct control at a glance.
+   Both buttons also carry .ml-icon-btn (for the shared hover behaviour), so
+   this has to out-specificity .ml-icon-btn's own border:none/background:none
+   — a bare .ml-text-btn rule here previously lost that fight since
+   .ml-icon-btn is declared later in this file at the same specificity, which
+   is why Backup/Restore never actually showed a border or fill before. */
+.ml-icon-btn.ml-text-btn {
   font-size: 0.68rem;
   font-weight: 600;
-  padding: 0.15rem 0.4rem;
+  padding: 0.22rem 0.6rem;
   white-space: nowrap;
+  background: var(--surface2);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
 }
-.ml-text-btn:hover { border-color: var(--accent); }
+.ml-icon-btn.ml-text-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-light);
+}
 
 /* Type from .ui-label, which also gives it the primary text colour. */
 .ml-sidebar-title { --ui-label-size: 0.7rem; }
@@ -181,6 +193,15 @@
 }
 .ml-list-item:focus-within .ml-list-actions { opacity: 1; }
 
+/* Keyboard focus on the card itself (Tab, or the sidebar's arrow-key nav —
+   see sidebar.ts) — outline rather than a background change, so it reads as
+   "this is where the keyboard is" distinctly from .active ("this is what's
+   open"), which can be true of two different cards at once. */
+.ml-list-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 .ml-list-count {
   font-size: 0.66rem;
   font-family: 'DM Mono', monospace;
@@ -195,6 +216,27 @@
   background: var(--accent-light);
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* Idle-state count pills, tinted per section — the plain grey pill read as
+   the same "just a number" no matter which kind of list it was on. Lighter
+   than the .active state above (which stays solid/saturated for "this is
+   selected"), but still clearly that section's own colour rather than a
+   colourless default. */
+.ml-single-item  .ml-list-count {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface2));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+.ml-smart-item   .ml-list-count {
+  color: var(--ml-accent-smart);
+  background: color-mix(in srgb, var(--ml-accent-smart) 16%, var(--surface2));
+  border-color: color-mix(in srgb, var(--ml-accent-smart) 40%, var(--border));
+}
+.ml-multi-item   .ml-list-count {
+  color: var(--ml-accent-multi);
+  background: color-mix(in srgb, var(--ml-accent-multi) 16%, var(--surface2));
+  border-color: color-mix(in srgb, var(--ml-accent-multi) 40%, var(--border));
 }
 
 .ml-list-actions {
@@ -218,6 +260,86 @@
 }
 .ml-icon-btn:hover { background: var(--border); color: var(--text); }
 .ml-icon-btn--danger:hover { color: var(--danger); background: var(--danger-light); }
+
+/* ── Ordinary-list rows: name on top, labeled actions below ─────
+   Copy/Rename/Delete carry text now (not just glyphs), so they get their own
+   row instead of floating over the name — a labeled button set is too wide
+   to float without spilling past the pane's edge. */
+.ml-list-item--full {
+  flex-direction: column;
+  align-items: stretch;
+  /* The one gap that governs spacing between every row a card has — name,
+     optional meta row, actions — so a 2-row card (Single-Language) and a
+     3-row one (Cross-Language's extra flags+count row) read with the same
+     rhythm instead of the extra row making things look more cramped.
+     Row-specific margins used to fight this: a 3-row card was getting this
+     gap *plus* a margin on top, so its rows sat closer together than a
+     2-row card's despite having more content to fit. */
+  gap: 0.65rem;
+}
+/* .ml-list-item (below, "sidebar rows" section) sets its own gap for the
+   inline editing rows (rename/create) that share this base class without
+   --full — same class count as this rule, so without the extra specificity
+   here its later position in the file let that generic 0.45rem silently
+   cap this card gap back down below what was actually set above. */
+.ml-list-item.ml-list-item--full {
+  gap: 0.65rem;
+}
+.ml-list-row-top {
+  display: flex;
+  /* flex-start rather than center: a wrapped two-line name used to pull the
+     count pill down to vertically center against it. This pins the count to
+     the card's top-right corner regardless of how many lines the name takes. */
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+/* Second row for a Cross-Language list's flags + count — see sidebar.ts.
+   Its own row rather than crowding onto the name line, which could already
+   be running two lines long on its own (.ml-list-name below). Spacing above
+   and below it comes entirely from .ml-list-item--full's own gap. */
+.ml-list-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.ml-list-actions--full {
+  position: static;
+  opacity: 1;
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  /* More room between Copy/Rename/Delete themselves too — tight enough
+     before that they read as one run-on control rather than three. */
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.ml-list-item.active .ml-list-actions--full {
+  background: none;
+  box-shadow: none;
+}
+
+.ml-icon-btn--labeled {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.22rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  background: var(--surface);
+}
+.ml-icon-btn--labeled:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-light);
+}
+.ml-icon-btn--labeled.ml-icon-btn--danger:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-light);
+}
 
 .ml-list-name-input {
   flex: 1;
@@ -263,6 +385,16 @@
   flex-wrap: wrap;
 }
 
+/* Cross-Language list header's second line: flags + word count, below the
+   title rather than sharing its line — mirrors the same split on its
+   sidebar card (.ml-list-row-meta). */
+.ml-panel-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.15rem;
+}
+
 .ml-panel-count {
   font-size: 0.68rem;
   color: var(--text-muted);
@@ -270,11 +402,25 @@
 }
 
 .ml-panel-list-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
+}
+/* Small filled dot ahead of "Selected List:" — a quick visual anchor for
+   which list this panel belongs to, echoing the active-row accent used in
+   the sidebar rather than introducing a second color language. */
+.ml-panel-selected-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
 }
 
 .ml-panel-flag {
@@ -323,7 +469,12 @@
 .ml-pos-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.25rem;
+  /* Matches .ml-band-row's padding below it — the two used to start their
+     chips at different x positions (this row had none) so "Part of Speech"
+     and "Level" looked staggered rather than stacked. */
+  padding: 0.35rem 0.85rem 0.1rem;
 }
 
 /* ── Add-words search ────────────────────────────────────────── */
@@ -672,32 +823,23 @@
    chips derive theirs — see the --tense-hue block in conjugation.css. These
    were four sets of fixed light-mode hexes, so in dark mode the badges stayed
    pale blue and green on a dark row. */
-.ml-word-pos[data-pos="verb"]      { --pos-hue: 217; }  /* blue   */
-.ml-word-pos[data-pos="noun"]      { --pos-hue: 142; }  /* green  */
-.ml-word-pos[data-pos="adjective"] { --pos-hue:  32; }  /* amber  */
-.ml-word-pos[data-pos="adverb"]    { --pos-hue: 280; }  /* violet */
+.ml-word-pos[data-pos="verb"]        { --pos-hue: 217; }  /* blue    */
+.ml-word-pos[data-pos="noun"]        { --pos-hue: 142; }  /* green   */
+.ml-word-pos[data-pos="adjective"]   { --pos-hue:  32; }  /* amber   */
+.ml-word-pos[data-pos="adverb"]      { --pos-hue: 280; }  /* violet  */
+.ml-word-pos[data-pos="pronoun"]     { --pos-hue: 340; }  /* pink    */
+.ml-word-pos[data-pos="preposition"] { --pos-hue: 195; }  /* cyan    */
+.ml-word-pos[data-pos="conjunction"] { --pos-hue:  20; }  /* orange  */
+.ml-word-pos[data-pos="article"]     { --pos-hue: 260; }  /* indigo  */
 
-.ml-word-pos[data-pos="verb"],
-.ml-word-pos[data-pos="noun"],
-.ml-word-pos[data-pos="adjective"],
-.ml-word-pos[data-pos="adverb"] {
+.ml-word-pos[data-pos] {
   color:        hsl(var(--pos-hue) 60% 34%);
   border-color: hsl(var(--pos-hue) 55% 45% / 0.45);
   background:   hsl(var(--pos-hue) 60% 50% / 0.10);
 }
-html.dark .ml-word-pos[data-pos="verb"],
-html.dark .ml-word-pos[data-pos="noun"],
-html.dark .ml-word-pos[data-pos="adjective"],
-html.dark .ml-word-pos[data-pos="adverb"] {
+html.dark .ml-word-pos[data-pos] {
   color: hsl(var(--pos-hue) 62% 70%);
 }
-
-/* The closed-class words share the muted default — colouring eight more
-   hues would make the list read as decoration rather than information. */
-.ml-word-pos[data-pos="pronoun"],
-.ml-word-pos[data-pos="preposition"],
-.ml-word-pos[data-pos="conjunction"],
-.ml-word-pos[data-pos="article"] { color: var(--text-muted); }
 
 /* Smaller variant used inside add-search results */
 .ml-word-pos--result {
@@ -707,22 +849,32 @@ html.dark .ml-word-pos[data-pos="adverb"] {
 
 /* ── Export button ───────────────────────────────────────────── */
 
+/* Own full-width row below the title — same "widest, tallest thing in the
+   bar" shape as #startBtn (buttons.css), rather than a small button squeezed
+   in next to Export. */
+.ml-quiz-row { flex-shrink: 0; }
+
 .ml-quiz-btn {
-  font-size: 0.72rem;
+  width: 100%;
+  font-size: 0.85rem;
   font-weight: 700;
-  padding: 0.2rem 0.6rem;
+  letter-spacing: 0.02em;
+  padding: 0.55rem 1rem;
+  min-height: 42px;
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
   background: var(--accent);
   color: #fff;
   cursor: pointer;
   white-space: nowrap;
-  flex-shrink: 0;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  box-shadow: 0 3px 12px rgba(61, 107, 79, 0.3);
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+              box-shadow var(--transition-fast);
 }
 .ml-quiz-btn:hover {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
+  box-shadow: 0 5px 18px rgba(61, 107, 79, 0.4);
 }
 
 .ml-export-btn {
@@ -957,15 +1109,31 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   white-space: nowrap;
   line-height: 1.5;
 }
+/* Neutral pill — sits ahead of Ranks/Mastered as the plain fact ("this many
+   words total"), so it deliberately doesn't compete with their accent/green
+   for attention, while still reading as the same kind of chip. */
+.ml-stat-chip--count {
+  color: var(--text);
+  background: var(--surface2);
+  border: 1px solid var(--border-strong);
+}
 .ml-stat-chip--ranks {
   color: var(--accent);
   background: var(--accent-light);
   border: 1px solid var(--accent);
 }
 .ml-stat-chip--mastered {
-  color: #16a34a;
-  background: #f0fdf4;
-  border: 1px solid #16a34a;
+  color: var(--correct);
+  background: var(--correct-light);
+  border: 1px solid var(--correct);
+}
+/* "None Mastered" — still shown (see row-shared.ts), but dimmed rather than
+   the same celebratory green as an actual count, so an empty list doesn't
+   look like it has achieved something. */
+.ml-stat-chip--mastered-empty {
+  color: var(--text-muted);
+  background: var(--surface2);
+  border-color: var(--border-strong);
 }
 
 /* ── Export format selector ──────────────────────────────────── */
@@ -1088,14 +1256,53 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   color: var(--correct);
   background: var(--correct-light);
 }
-.ml-mastery-btn--active {
-  background: #16a34a;
-  border-color: #16a34a;
-  color: #fff;
+
+/* Leveled fill — New (grey) through Mastered (green), so the glyph and the
+   colour both read as "how far along the scale". */
+.ml-mastery-btn[data-level="1"] { --mh: 0;   }  /* red    */
+.ml-mastery-btn[data-level="2"] { --mh: 35;  }  /* amber  */
+.ml-mastery-btn[data-level="3"] { --mh: 80;  }  /* yellow-green */
+.ml-mastery-btn[data-level="4"] { --mh: 142; }  /* green  */
+.ml-mastery-btn[data-level]:not([data-level="0"]) {
+  color:        hsl(var(--mh) 60% 30%);
+  border-color: hsl(var(--mh) 55% 42%);
+  background:   hsl(var(--mh) 60% 88%);
 }
-.ml-mastery-btn--active:hover {
-  background: #15803d;
-  border-color: #15803d;
+html.dark .ml-mastery-btn[data-level]:not([data-level="0"]) {
+  color:      hsl(var(--mh) 65% 75%);
+  background: hsl(var(--mh) 45% 20%);
+}
+
+/* ── Quiz-history badge ──────────────────────────────────────────
+   Read-only companion to the mastery button: what quizzes have actually
+   shown for this word (session-history.ts's quizStrength), as opposed to the
+   learner's own rating next to it. Same red→green ramp as the mastery button
+   so the two read as the same kind of scale at a glance. */
+.ml-quiz-badge {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-family: 'DM Mono', monospace;
+  font-weight: 700;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: var(--surface2);
+  min-width: 2.1rem;
+  text-align: center;
+  line-height: 1.5;
+}
+.ml-quiz-badge[data-strength="1"] { --qh: 0;   }
+.ml-quiz-badge[data-strength="2"] { --qh: 35;  }
+.ml-quiz-badge[data-strength="3"] { --qh: 80;  }
+.ml-quiz-badge[data-strength="4"] { --qh: 142; }
+.ml-quiz-badge[data-strength]:not([data-strength="0"]) {
+  color:        hsl(var(--qh) 60% 32%);
+  border-color: hsl(var(--qh) 55% 45% / 0.55);
+  background:   hsl(var(--qh) 60% 50% / 0.12);
+}
+html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
+  color: hsl(var(--qh) 65% 72%);
 }
 
 /* ── Mastered word row ───────────────────────────────────────── */
@@ -1130,9 +1337,9 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   color: var(--text);
 }
 .ml-hide-mastered-btn--active {
-  background: #f0fdf4;
-  border-color: #16a34a;
-  color: #16a34a;
+  background: var(--correct-light);
+  border-color: var(--correct);
+  color: var(--correct);
 }
 
 /* ── Bulk paste feedback toast ───────────────────────────────── */
@@ -1167,7 +1374,10 @@ html.dark .ml-word-pos[data-pos="adverb"] {
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    max-height: 220px;
+    /* Was 220px — barely enough to see one or two lists before its own
+       inner scroll kicked in, on top of Smart lists, Cross-Language lists
+       and Testing Profiles all sharing the same box below it. */
+    max-height: 340px;
   }
   .ml-list-actions { opacity: 1; }
 
@@ -1190,6 +1400,25 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   /* Slightly taller word rows for touch */
   .ml-word-item { padding: 0.5rem 0.6rem; }
 
+  /* The word list used to just grow with its content, so on a phone you
+     scrolled past the sidebar, header, filters and add-section every time
+     before reaching more than a couple of words. Giving it its own bounded,
+     scrollable viewport — the same idea desktop already uses via
+     calc(100vh - 140px) — means most of the screen is actual words. */
+  .ml-word-list {
+    min-height: 58vh;
+    max-height: 68vh;
+  }
+
+  /* A slow drag across word/translation text was being read as a text
+     selection instead of a scroll gesture, which is what made the list feel
+     like it wasn't responding to touch. */
+  .ml-word-item {
+    touch-action: pan-y;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
   /* Add-words input */
   .ml-add-input { font-size: 0.9rem; min-height: 40px; }
 
@@ -1197,20 +1426,30 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   .ml-add-top-row { flex-wrap: wrap; }
   .ml-add-top-row .ml-add-row { flex: 1 1 100%; }
 
-  /* POS chip row: allow wrap, ensure chips are tappable */
-  .ml-pos-row { gap: 0.3rem; }
+  /* POS and Level chip rows: the global .pos-chip mobile rule (class-filter.css)
+     bumps chips up to 36px tall for tap targets, which is right for a single
+     filter row but was too much when POS *and* Level stack on top of it here
+     — full labels like "Prepositions" and "Conjunctions" wrapped across several
+     lines and ate the vertical space item 1 above is trying to reclaim. Kept
+     compact but still comfortably tappable. */
+  .ml-pos-row, .ml-band-row { gap: 0.28rem; }
+  .ml-pos-row .pos-chip, .ml-band-row .pos-chip {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.55rem;
+    min-height: 30px;
+  }
 
   /* Panel padding */
   .ml-panel { padding: 0.5rem 0.75rem; }
 }
 
 @media (max-width: 599px) {
-  /* Collapse left pane even shorter */
-  .ml-left-pane { max-height: 180px; }
+  /* Collapse left pane, but not as tight as before */
+  .ml-left-pane { max-height: 280px; }
 
-  /* Title group: quiz and export buttons drop to their own line */
+  /* Title group: export button drops to its own line — Quiz now lives in its
+     own full-width row below (.ml-quiz-row) and no longer competes for space. */
   .ml-panel-title-group { row-gap: 0.35rem; }
-  .ml-quiz-btn   { min-height: 36px; padding: 0.25rem 0.7rem; font-size: 0.75rem; }
   .ml-export-btn { min-height: 36px; padding: 0.2rem 0.5rem; font-size: 0.68rem; }
 
   /* Hide rank badge on narrow screens */
@@ -1264,6 +1503,18 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   gap: 0.5rem;
 }
 
+/* The bulk-select bar used to sit beside the filter/sort controls in the same
+   row, competing for width with them — it declared width:100% while being a
+   flex sibling of another flex:1 item, so it got squeezed down to whatever
+   space was left and its own buttons wrapped raggedly (the last one or two
+   stranded alone on a second line). Giving it the wrap point instead means it
+   always gets the toolbar's full width to lay its buttons out in. */
+.ml-list-toolbar { flex-wrap: wrap; }
+.ml-list-toolbar .ml-bulk-bar {
+  flex: 1 1 100%;
+  margin-top: 0.35rem;
+}
+
 /* The filter is the primary control here, so give it real presence. */
 .ml-list-toolbar .ml-search {
   font-size: 0.84rem;
@@ -1293,7 +1544,19 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+  /* Marks out "the words live here" as its own bordered region, distinct
+     from the sticky toolbar sitting above it. */
+  margin: 0.4rem 0.85rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
 }
+
+/* Cross-Language Lists' own Add Vocabulary box: a language picker ahead of
+   the search box, sized to its own content rather than sharing the search
+   box's flex:1 (the base .ml-lang-select rule is meant for the sidebar's
+   full-width language row, not a compact inline picker). */
+.ml-multi-add-lang { flex: 0 0 auto; width: 150px; }
 
 .ml-panel-header {
   padding-bottom: 0.5rem;
@@ -1377,6 +1640,13 @@ html.dark .ml-word-pos[data-pos="adverb"] {
 .ml-band-label {
   --ui-label-size: 0.62rem;
   margin-right: 0.2rem;
+}
+/* "Part of Speech" and "Level" are different lengths, which pushed their chip
+   rows out of alignment with each other — a fixed width makes both rows'
+   chips start at the same x regardless of the label text. */
+.ml-panel-header .ml-band-label {
+  display: inline-block;
+  min-width: 108px;
 }
 .ml-band-chip { font-family: 'DM Mono', monospace; letter-spacing: 0.02em; }
 
@@ -1504,18 +1774,19 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   color: var(--ml-accent-profile);
 }
 
-.ml-profile-desc {
-  flex-basis: 100%;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  padding-left: 0;
+.ml-profile-mode-tag {
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ml-accent-profile);
+  background: var(--ml-accent-profile-light);
+  border: 1px solid var(--ml-accent-profile);
+  border-radius: 999px;
+  padding: 0.12rem 0.55rem;
 }
 
-.ml-profile-item {
-  flex-wrap: wrap;
-  border-left-color: color-mix(in srgb, var(--ml-accent-profile) 35%, transparent);
-}
-
+.ml-single-head,
 .ml-smart-head,
 .ml-multi-head,
 .ml-profile-head {
@@ -1531,6 +1802,8 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   text-transform: uppercase;
   letter-spacing: 0.07em;
 }
+/* The very first section head has nothing above it to separate from. */
+.ml-single-head { margin-top: 0; border-top: none; }
 .ml-smart-hint {
   font-size: 0.7rem;
   font-style: italic;
@@ -1545,29 +1818,80 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   color: var(--text-muted);
 }
 
+/* Rule criteria as badges — one pill per Level/Type/Mastered/etc, rather than
+   one run-on sentence. Reuses .pos-chip (class-filter.css) rather than
+   inventing a second pill style: Level/Type badges pick up the exact same
+   colour-coding as the editor's own chips just below and every POS/Level
+   chip elsewhere in the app. */
+.ml-rule-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding: 0.15rem 0.85rem 0.4rem;
+}
+.ml-rule-badge {
+  cursor: default;
+  font-size: 0.72rem;
+}
+/* Read-only — no lift-on-hover, unlike an actual clickable .pos-chip. */
+.ml-rule-badge:hover { transform: none; box-shadow: none; }
+
 /* ── Per-section accent: each list kind gets its own recognizable color, so
-   the sidebar reads as three distinct sections rather than one undifferentiated
-   list. Ordinary lists keep the baseline --accent (no change there). ── */
+   the sidebar reads as four distinct sections rather than one undifferentiated
+   list. Single-Language Lists use the app's baseline --accent, the other
+   three each have their own hue (variables.css). ── */
+.ml-single-head  { color: var(--accent); }
 .ml-smart-head   { color: var(--ml-accent-smart); }
 .ml-multi-head   { color: var(--ml-accent-multi); }
 .ml-profile-head { color: var(--ml-accent-profile); }
+
+.ml-single-head .ml-new-list-btn { border-color: var(--accent); color: var(--accent); }
+.ml-single-head .ml-new-list-btn:hover { background: var(--accent); color: #fff; }
 
 .ml-smart-head .ml-new-list-btn {
   border-color: var(--ml-accent-smart);
   color: var(--ml-accent-smart);
 }
-.ml-smart-head .ml-new-list-btn:hover { background: var(--ml-accent-smart); }
+.ml-smart-head .ml-new-list-btn:hover { background: var(--ml-accent-smart); color: #fff; }
 
 .ml-multi-head .ml-new-list-btn {
   border-color: var(--ml-accent-multi);
   color: var(--ml-accent-multi);
 }
-.ml-multi-head .ml-new-list-btn:hover { background: var(--ml-accent-multi); }
+.ml-multi-head .ml-new-list-btn:hover { background: var(--ml-accent-multi); color: #fff; }
 
-/* Idle border tint, so each kind is identifiable at rest — not only once
-   hovered or selected. */
-.ml-smart-item { border-left-color: color-mix(in srgb, var(--ml-accent-smart) 35%, transparent); }
-.ml-multi-item { border-left-color: color-mix(in srgb, var(--ml-accent-multi) 35%, transparent); }
+.ml-profile-head .ml-new-list-btn {
+  border-color: var(--ml-accent-profile);
+  color: var(--ml-accent-profile);
+}
+.ml-profile-head .ml-new-list-btn:hover { background: var(--ml-accent-profile); color: #fff; }
+
+/* ── List cards ──────────────────────────────────────────────────────────
+   Every kind of list — Single-Language, Smart, Cross-Language, Testing
+   Profile — renders as the same card shape: a bordered, rounded box with the
+   name/meta on top and Copy/Rename/Delete below, spaced apart from its
+   neighbors rather than running together as bare rows. */
+.ml-list-item--full {
+  margin: 0.22rem 0.55rem;
+  padding: 0.38rem 0.6rem 0.35rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+}
+.ml-list-item--full:hover { background: var(--surface2); }
+.ml-list-item--full.active { box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); }
+
+/* A slight shade of each section's own color, at rest — not only once a
+   card is hovered or selected — so the four sections read as distinct
+   zones at a glance. */
+.ml-single-item  { background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+.ml-smart-item   { background: color-mix(in srgb, var(--ml-accent-smart) 6%, var(--surface));
+                    border-left-color: color-mix(in srgb, var(--ml-accent-smart) 45%, transparent); }
+.ml-multi-item   { background: color-mix(in srgb, var(--ml-accent-multi) 6%, var(--surface));
+                    border-left-color: color-mix(in srgb, var(--ml-accent-multi) 45%, transparent); }
+.ml-profile-item { background: color-mix(in srgb, var(--ml-accent-profile) 6%, var(--surface));
+                    border-left-color: color-mix(in srgb, var(--ml-accent-profile) 45%, transparent); }
 
 .ml-smart-item.active {
   background: var(--ml-accent-smart-light);
@@ -1578,6 +1902,11 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   background: var(--ml-accent-multi-light);
   color: var(--ml-accent-multi);
   border-left-color: var(--ml-accent-multi);
+}
+.ml-profile-item.active {
+  background: var(--ml-accent-profile-light);
+  color: var(--ml-accent-profile);
+  border-left-color: var(--ml-accent-profile);
 }
 
 .ml-smart-item.active .ml-list-actions,
@@ -1593,6 +1922,15 @@ html.dark .ml-word-pos[data-pos="adverb"] {
   box-shadow: 0 0 0 4px var(--ml-accent-multi-light);
 }
 .ml-multi-item.active .ml-list-count { border-color: var(--ml-accent-multi); color: var(--ml-accent-multi); }
+
+.ml-profile-item.active .ml-list-actions {
+  background: var(--ml-accent-profile-light);
+  box-shadow: 0 0 0 4px var(--ml-accent-profile-light);
+}
+
+/* A profile row has no dedicated right-panel of its own before it's opened,
+   so its card is clickable the same way every other kind's is. */
+.ml-profile-item { cursor: pointer; }
 
 .ml-smart-editor {
   display: flex;

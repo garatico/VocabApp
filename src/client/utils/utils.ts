@@ -1,4 +1,38 @@
 import type { Word } from '../types.js';
+import { languageInfo } from '../data/languages.js';
+
+/**
+ * For a `romanizedScript` language (Chinese): which script is the word slot's
+ * primary form — the one shown by default and required by default when
+ * typed. 'characters' is the literal spelling (hanzi); 'pinyin' is the
+ * romanized reading (`linguistic.ipa`). Meaningless, and never consulted, for
+ * any other language.
+ */
+export type ChineseScript = 'characters' | 'pinyin';
+
+/**
+ * Display/leniency options for a `romanizedScript` language, threaded through
+ * rather than read from `Settings` directly so this stays pure and testable
+ * — callers pass `Settings.getChineseDisplay()`.
+ */
+export interface ChineseDisplay {
+  /** Which script is primary — see `ChineseScript`. */
+  chineseScript:   ChineseScript;
+  /**
+   * Annotate the word slot's primary script with the other one in
+   * parentheses (e.g. "的 (de)", or "de (的)" when pinyin is primary), and
+   * accept either script as a typed answer rather than only the primary.
+   */
+  showBothScripts: boolean;
+  /** Annotate the English gloss with the pinyin reading, e.g. "already (le)". */
+  showPinyinGloss: boolean;
+}
+
+export const DEFAULT_CHINESE_DISPLAY: ChineseDisplay = {
+  chineseScript:   'characters',
+  showBothScripts: true,
+  showPinyinGloss: true,
+};
 
 /** "spanish" -> "Spanish". Language codes and other plain-ASCII labels only. */
 export function capitalize(s: string): string {
@@ -102,18 +136,52 @@ export function isCorrect(input: string, entry: Word): boolean {
 }
 
 /**
+ * The accepted forms of the target-language word itself, for the reverse
+ * direction (English shown, user types the foreign word): the canonical word
+ * form and the infinitive (if it differs, e.g. "hablar" for "habla").
+ *
+ * For a `romanizedScript` language (Chinese), the accepted set instead comes
+ * from `display.chineseScript` — characters (+ infinitive) or the pinyin
+ * reading — widened to include the other one too when `showBothScripts` is
+ * on. `lang` is the word's own effective language (`w.language ??
+ * quizLang`), since a merged multi-language table can mix a `romanizedScript`
+ * language with others in the same quiz.
+ */
+function reverseTargets(
+  entry: Word,
+  norm: (s?: string) => string,
+  lang?: string | null,
+  display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
+): string[] {
+  const wordForms = ([entry.word, entry.linguistic?.infinitive] as (string | null | undefined)[])
+    .filter((w): w is string => typeof w === 'string' && w.length > 0)
+    .map(w => norm(w));
+
+  if (!lang || !languageInfo(lang).romanizedScript) return wordForms;
+
+  const pinyin = entry.linguistic?.ipa ? norm(entry.linguistic.ipa) : null;
+  if (display.chineseScript === 'pinyin') {
+    if (!display.showBothScripts) return pinyin ? [pinyin] : [];
+    return pinyin ? [pinyin, ...wordForms] : wordForms;
+  }
+  if (!display.showBothScripts) return wordForms;
+  return pinyin ? [...wordForms, pinyin] : wordForms;
+}
+
+/**
  * Check whether the user's input matches the target-language word.
  * Used in reverse direction (English shown, user types the foreign word).
  * Accent-insensitive by default (same leniency as forward direction).
  */
-export function isReverseCorrect(input: string, entry: Word): boolean {
+export function isReverseCorrect(
+  input: string,
+  entry: Word,
+  lang?: string | null,
+  display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
+): boolean {
   const attempt = normalise(input);
   if (!attempt) return false;
-  // Accept the canonical word form and the infinitive (if it differs, e.g. "hablar" for "habla")
-  const targets = ([entry.word, entry.linguistic?.infinitive] as (string | null | undefined)[])
-    .filter((w): w is string => typeof w === 'string' && w.length > 0)
-    .map(w => normalise(w));
-  return targets.includes(attempt);
+  return reverseTargets(entry, normalise, lang, display).includes(attempt);
 }
 
 /**
@@ -131,13 +199,15 @@ export function isCorrectStrict(input: string, entry: Word): boolean {
   return false;
 }
 
-export function isReverseCorrectStrict(input: string, entry: Word): boolean {
+export function isReverseCorrectStrict(
+  input: string,
+  entry: Word,
+  lang?: string | null,
+  display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
+): boolean {
   const attempt = normaliseStrict(input);
   if (!attempt) return false;
-  const targets = ([entry.word, entry.linguistic?.infinitive] as (string | null | undefined)[])
-    .filter((w): w is string => typeof w === 'string' && w.length > 0)
-    .map(w => normaliseStrict(w));
-  return targets.includes(attempt);
+  return reverseTargets(entry, normaliseStrict, lang, display).includes(attempt);
 }
 
 /** Which way round the question is asked. */
@@ -156,22 +226,92 @@ export type AnswerMatchMode = 'fuzzy' | 'strict';
  * entirely: the same typo was accepted in one tab and rejected in the next.
  *
  * `mode` is a parameter rather than a `Settings` read so this stays pure and
- * testable; callers pass `Settings.getMatchMode()`.
+ * testable; callers pass `Settings.getMatchMode()`. Same for `display`
+ * (`Settings.getChineseDisplay()`) and `lang`, the word's effective language
+ * (`w.language ?? quizLang`) — only consulted for `en-target`, and only
+ * changes anything for a `romanizedScript` language (Chinese).
  */
 export function matchesAnswer(
   input: string,
   entry: Word,
   dir:   AnswerDirection,
   mode:  AnswerMatchMode = 'fuzzy',
+  lang?: string | null,
+  display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
 ): boolean {
   if (mode === 'strict') {
     return dir === 'en-target'
-      ? isReverseCorrectStrict(input, entry)
+      ? isReverseCorrectStrict(input, entry, lang, display)
       : isCorrectStrict(input, entry);
   }
   return dir === 'en-target'
-    ? isReverseCorrect(input, entry)
+    ? isReverseCorrect(input, entry, lang, display)
     : isCorrect(input, entry);
+}
+
+/**
+ * A quiz row shows or asks for one of two "sides" of an entry: the word
+ * itself, or the English meaning. Table mode's Direction setting is a choice
+ * of which one is shown and which is typed. For a `romanizedScript` language
+ * (Chinese), the word slot's own text and matching are further governed by
+ * `ChineseDisplay` — see `slotText`/`slotMatches`.
+ */
+export type QuizSlot = 'word' | 'english';
+
+/**
+ * The word slot's own text: for a `romanizedScript` language, the primary
+ * script named by `display.chineseScript`, annotated with the other one in
+ * parentheses when `display.showBothScripts` is on (e.g. "的 (de)", or
+ * "de (的)" when pinyin is primary) — falling back to the other script, or
+ * to `entry.word`, if the primary one is missing rather than showing blank
+ * text. Every other language just returns `entry.word` untouched.
+ */
+export function chineseWordText(entry: Word, lang: string | null | undefined, display: ChineseDisplay): string {
+  if (!lang || !languageInfo(lang).romanizedScript) return entry.word;
+  const pinyin = entry.linguistic?.ipa || null;
+  const primary   = display.chineseScript === 'pinyin' ? (pinyin ?? entry.word) : entry.word;
+  const secondary = display.chineseScript === 'pinyin' ? entry.word : pinyin;
+  if (!display.showBothScripts || !secondary || secondary === primary) return primary;
+  return `${primary} (${secondary})`;
+}
+
+/**
+ * The prompt or revealed-answer text for one slot of a quiz row. `glossCount`
+ * only matters for the 'english' slot — see buildGlossDisplay. For a
+ * `romanizedScript` language, an 'english' slot also gets the pinyin reading
+ * appended when `display.showPinyinGloss` is on, e.g. "already (le)".
+ */
+export function slotText(
+  entry: Word,
+  slot: QuizSlot,
+  lang: string | null | undefined,
+  display: ChineseDisplay,
+  glossCount = Infinity,
+): string {
+  if (slot === 'word') return chineseWordText(entry, lang, display);
+  const base = buildGlossDisplay(entry, glossCount);
+  if (!display.showPinyinGloss || !lang || !languageInfo(lang).romanizedScript) return base;
+  const pinyin = entry.linguistic?.ipa;
+  return pinyin ? `${base} (${pinyin})` : base;
+}
+
+/**
+ * Whether `input` is an accepted answer for one slot of a quiz row. 'english'
+ * reuses forward-direction gloss matching unchanged; 'word' reuses the same
+ * matching (and script leniency) as the reverse-direction case above.
+ */
+export function slotMatches(
+  input: string,
+  entry: Word,
+  slot: QuizSlot,
+  mode: AnswerMatchMode = 'fuzzy',
+  lang?: string | null,
+  display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
+): boolean {
+  if (slot === 'english') return mode === 'strict' ? isCorrectStrict(input, entry) : isCorrect(input, entry);
+  return mode === 'strict'
+    ? isReverseCorrectStrict(input, entry, lang, display)
+    : isReverseCorrect(input, entry, lang, display);
 }
 
 /** Return prompt + hint for display. */

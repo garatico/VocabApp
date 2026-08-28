@@ -16,7 +16,7 @@
  */
 
 import { shuffleInPlace } from './shuffle.ts';
-import { readJson, writeJson, remove as removeKey, isNumberRecord } from './storage.ts';
+import { readJson, writeJson, remove as removeKey, isNumberRecord, isRecord } from './storage.ts';
 import { Settings } from '../settings.ts';
 
 export type QuizMode = 'recall' | 'doubleRecall' | 'table' | 'picture' | 'conjugation' | 'trivia' | 'wordChoice' | 'guessBlank';
@@ -121,19 +121,73 @@ export function recordOutcome(
   missed: Iterable<string>,
   correct: Iterable<string> = [],
 ): void {
-  const counts = getMisses(lang);
-  for (const w of missed)  counts[w] = (counts[w] ?? 0) + 1;
+  const counts   = getMisses(lang);
+  const tallies  = getWordTallies(lang);
+  for (const w of missed) {
+    counts[w] = (counts[w] ?? 0) + 1;
+    (tallies[w] ??= { correct: 0, wrong: 0 }).wrong += 1;
+  }
   for (const w of correct) {
-    if (counts[w] === undefined) continue;
-    counts[w] -= 1;
-    if (counts[w] <= 0) delete counts[w];
+    if (counts[w] !== undefined) {
+      counts[w] -= 1;
+      if (counts[w] <= 0) delete counts[w];
+    }
+    (tallies[w] ??= { correct: 0, wrong: 0 }).correct += 1;
   }
   saveMisses(lang, counts);
+  saveWordTallies(lang, tallies);
 }
 
 /** How many times this word has been missed, net of later successes. */
 export function missCount(lang: string, word: string): number {
   return getMisses(lang)[word] ?? 0;
+}
+
+// ── Per-word quiz tallies ────────────────────────────────────────────────────
+//
+// Unlike `misses` (a net "still struggling" counter that decays on success),
+// this keeps the raw correct/wrong counts recordOutcome already sees on every
+// quiz completion — the record a "how have I actually done on this word"
+// scale needs, which a decaying net counter can't answer on its own (it can't
+// tell "never quizzed" from "always right", both read as zero).
+
+export interface WordTally { correct: number; wrong: number }
+export type TallyRecord = Record<string, WordTally>;
+
+const TALLY_PREFIX = 'vq_tally_';
+
+export function getWordTallies(lang: string): TallyRecord {
+  return readJson<TallyRecord>(TALLY_PREFIX + lang.toLowerCase(), {}, isRecord);
+}
+
+function saveWordTallies(lang: string, tallies: TallyRecord): void {
+  writeJson(TALLY_PREFIX + lang.toLowerCase(), tallies);
+}
+
+export function wordTally(lang: string, word: string): WordTally {
+  return getWordTallies(lang)[word] ?? { correct: 0, wrong: 0 };
+}
+
+/** Labels for quizStrength()'s 0–4 scale. Index 0 doubles as "no data yet". */
+export const QUIZ_STRENGTH_LABELS = ['No data', 'Struggling', 'Shaky', 'Solid', 'Strong'] as const;
+
+/**
+ * A word's quiz performance, 0–4, derived from how often recordOutcome has
+ * seen it answered right vs wrong. Distinct from the learner's own mastery
+ * rating: this reflects what actually happened in quizzes, not what they
+ * believe about themselves.
+ */
+export function quizStrength(lang: string, word: string): number {
+  const t     = wordTally(lang, word);
+  const total = t.correct + t.wrong;
+  if (total === 0) return 0;
+  const ratio = t.correct / total;
+  // A single data point isn't enough to call "Solid"/"Strong" yet.
+  if (total === 1) return ratio === 1 ? 2 : 1;
+  if (ratio >= 0.85) return 4;
+  if (ratio >= 0.6)  return 3;
+  if (ratio >= 0.35) return 2;
+  return 1;
 }
 
 /**
@@ -151,6 +205,7 @@ export function troubleWords(lang: string, min = TROUBLE_THRESHOLD): string[] {
 export function clearHistory(lang: string): void {
   removeKey(SESSION_PREFIX + lang.toLowerCase());
   removeKey(MISS_PREFIX + lang.toLowerCase());
+  removeKey(TALLY_PREFIX + lang.toLowerCase());
 }
 
 // ── Word ordering ─────────────────────────────────────────────────────────────

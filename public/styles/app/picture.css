@@ -305,9 +305,11 @@
   opacity: 1;
 }
 
-/* Always visible on touch devices */
+/* Always visible on touch devices, and larger — 1.6rem (25.6px) is fine for
+   a mouse pointer but under the ~32px a fingertip can reliably hit, and
+   there's no hover state on touch to help a near-miss. */
 @media (hover: none) {
-  .vc-arrow { opacity: 1; }
+  .vc-arrow { opacity: 1; width: 2.1rem; height: 2.1rem; font-size: 0.85rem; }
 }
 
 .vc-arrow:hover {

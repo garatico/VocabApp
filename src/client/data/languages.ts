@@ -49,6 +49,14 @@ export interface LanguageInfo {
   /** Are nouns written with a capital letter? Affects answer matching. */
   capitalisesNouns: boolean;
   /**
+   * Is the word itself written in a non-Latin script, with `linguistic.ipa`
+   * carrying a romanized reading (e.g. Chinese hanzi + pinyin) rather than a
+   * phonetic transcription nobody would type? Affects answer matching:
+   * Settings.getRomanizedAnswerMode() decides whether the "type the target
+   * word" direction accepts that romanization, the literal script, or either.
+   */
+  romanizedScript: boolean;
+  /**
    * Table mode's Compare/Multi-language indicator: a flag image and the CSS
    * custom property carrying its tinted cell-background color. See table.css
    * and variables.css for the `--lang-<name>-bg` definitions this points at.
@@ -109,15 +117,23 @@ const FLAG_OPTIONS: Record<string, { country: string; label: string }[]> = {
     { country: 'sr', label: 'Suriname' },
     { country: 'aw', label: 'Aruba' },
   ],
+  chinese: [
+    { country: 'cn', label: 'China' },
+    { country: 'tw', label: 'Taiwan' },
+    { country: 'sg', label: 'Singapore' },
+    { country: 'hk', label: 'Hong Kong' },
+    { country: 'mo', label: 'Macau' },
+  ],
 };
 
 export const LANGUAGES: LanguageInfo[] = [
-  { name: 'spanish',    label: 'Spanish',    iso: 'es', hasConjugations: true,  capitalisesNouns: false, colorVar: '--lang-spanish-bg',    flagOptions: FLAG_OPTIONS['spanish'],    flagCountry: FLAG_OPTIONS['spanish'][0].country },
-  { name: 'portuguese', label: 'Portuguese', iso: 'pt', hasConjugations: true,  capitalisesNouns: false, colorVar: '--lang-portuguese-bg', flagOptions: FLAG_OPTIONS['portuguese'], flagCountry: FLAG_OPTIONS['portuguese'][0].country },
-  { name: 'italian',    label: 'Italian',    iso: 'it', hasConjugations: true,  capitalisesNouns: false, colorVar: '--lang-italian-bg',    flagOptions: FLAG_OPTIONS['italian'],    flagCountry: FLAG_OPTIONS['italian'][0].country },
-  { name: 'french',     label: 'French',     iso: 'fr', hasConjugations: true,  capitalisesNouns: false, colorVar: '--lang-french-bg',     flagOptions: FLAG_OPTIONS['french'],     flagCountry: FLAG_OPTIONS['french'][0].country },
-  { name: 'german',     label: 'German',     iso: 'de', hasConjugations: true,  capitalisesNouns: true,  colorVar: '--lang-german-bg',     flagOptions: FLAG_OPTIONS['german'],     flagCountry: FLAG_OPTIONS['german'][0].country },
-  { name: 'dutch',      label: 'Dutch',      iso: 'nl', hasConjugations: true,  capitalisesNouns: false, colorVar: '--lang-dutch-bg',      flagOptions: FLAG_OPTIONS['dutch'],      flagCountry: FLAG_OPTIONS['dutch'][0].country },
+  { name: 'spanish',    label: 'Spanish',    iso: 'es', hasConjugations: true,  capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-spanish-bg',    flagOptions: FLAG_OPTIONS['spanish'],    flagCountry: FLAG_OPTIONS['spanish'][0].country },
+  { name: 'portuguese', label: 'Portuguese', iso: 'pt', hasConjugations: true,  capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-portuguese-bg', flagOptions: FLAG_OPTIONS['portuguese'], flagCountry: FLAG_OPTIONS['portuguese'][0].country },
+  { name: 'italian',    label: 'Italian',    iso: 'it', hasConjugations: true,  capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-italian-bg',    flagOptions: FLAG_OPTIONS['italian'],    flagCountry: FLAG_OPTIONS['italian'][0].country },
+  { name: 'french',     label: 'French',     iso: 'fr', hasConjugations: true,  capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-french-bg',     flagOptions: FLAG_OPTIONS['french'],     flagCountry: FLAG_OPTIONS['french'][0].country },
+  { name: 'german',     label: 'German',     iso: 'de', hasConjugations: true,  capitalisesNouns: true,  romanizedScript: false, colorVar: '--lang-german-bg',     flagOptions: FLAG_OPTIONS['german'],     flagCountry: FLAG_OPTIONS['german'][0].country },
+  { name: 'dutch',      label: 'Dutch',      iso: 'nl', hasConjugations: true,  capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-dutch-bg',      flagOptions: FLAG_OPTIONS['dutch'],      flagCountry: FLAG_OPTIONS['dutch'][0].country },
+  { name: 'chinese',    label: 'Chinese',    iso: 'zh', hasConjugations: false, capitalisesNouns: false, romanizedScript: true,  colorVar: '--lang-chinese-bg',    flagOptions: FLAG_OPTIONS['chinese'],    flagCountry: FLAG_OPTIONS['chinese'][0].country },
 ];
 
 /** Language names in display order — the order of the dropdown. */
