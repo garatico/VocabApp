@@ -84,8 +84,23 @@ a.admin-tab:hover {
   color: var(--accent);
 }
 
+/* ── AI Chat tab — dev-only, like Admin above, dashed for the same reason:
+   a visual flag that this isn't part of the shipped surface. Unhidden by
+   app.ts only under import.meta.env.DEV; the media query below additionally
+   keeps it off narrow viewports even in a dev build, since a local model is
+   desktop-hardware territory. */
+.mode-tab.chat-tab {
+  font-size: 0.72rem;
+  border-style: dashed;
+}
+.mode-tab.chat-tab:not(.active) {
+  color: var(--text-muted);
+}
+
 /* ── Responsive ── */
 @media (max-width: 767px) {
+  .mode-tab.chat-tab { display: none !important; }
+
   /* Scroll tabs horizontally instead of wrapping/overflowing */
   .mode-tabs {
     overflow-x: auto;

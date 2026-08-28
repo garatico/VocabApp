@@ -53,6 +53,7 @@
 <link rel="stylesheet" href="/styles/app/font-size.css"/>
 <link rel="stylesheet" href="/styles/app/shortcuts.css"/>
 <link rel="stylesheet" href="/styles/app/onboarding.css"/>
+<link rel="stylesheet" href="/styles/app/chat.css"/>
 
 </head>
 
@@ -83,6 +84,7 @@
         <button class="mode-tab" data-mode="mylists" role="tab" aria-selected="false">My Lists</button>
         <button class="mode-tab" data-mode="history" role="tab" aria-selected="false">History</button>
         <button class="mode-tab" data-mode="settings" role="tab" aria-selected="false">⚙ Settings</button>
+        <button class="mode-tab chat-tab" data-mode="chat" role="tab" aria-selected="false" title="Local AI chat — dev builds on desktop only" hidden>🤖 AI Chat</button>
         <a href="/admin" class="mode-tab admin-tab" title="Open Admin Panel" hidden>Admin ↗</a>
       </div>
 
@@ -613,6 +615,10 @@
         <div id="historyWrap"></div>
       </section>
 
+      <section id="chatArea" hidden>
+        <div id="chatWrap"></div>
+      </section>
+
       <section id="settingsArea" hidden>
         <div class="settings-layout">
           <nav class="settings-nav" aria-label="Settings sections">
@@ -797,6 +803,39 @@
                 <button type="button" class="sort-order-btn" data-typo="low">Low</button>
                 <button type="button" class="sort-order-btn active" data-typo="normal">Normal</button>
                 <button type="button" class="sort-order-btn" data-typo="high">High</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Chinese word shown as</span>
+                <span class="settings-desc">Which script is primary for the Chinese word — shown by default, and required by default when a direction asks you to type it. Pinyin sidesteps needing an IME to type hanzi</span>
+              </div>
+              <div class="sort-order-toggle" id="settingChineseScript">
+                <button type="button" class="sort-order-btn active" data-chinese-script="characters">Characters</button>
+                <button type="button" class="sort-order-btn" data-chinese-script="pinyin">Pinyin</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Show both scripts (word)</span>
+                <span class="settings-desc">Annotate the Chinese word with its other script in parentheses, e.g. 的 (de), and accept either script as a typed answer</span>
+              </div>
+              <div class="sort-order-toggle" id="settingShowPinyin">
+                <button type="button" class="sort-order-btn" data-show-pinyin="false">Off</button>
+                <button type="button" class="sort-order-btn active" data-show-pinyin="true">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Show pinyin (meaning)</span>
+                <span class="settings-desc">Also show the pinyin reading in parentheses next to the English meaning, e.g. already (le)</span>
+              </div>
+              <div class="sort-order-toggle" id="settingShowPinyinGloss">
+                <button type="button" class="sort-order-btn" data-show-pinyin-gloss="false">Off</button>
+                <button type="button" class="sort-order-btn active" data-show-pinyin-gloss="true">On</button>
               </div>
             </div>
 

@@ -49,7 +49,7 @@ export function bindModeSwitch({
 
     // Hide the entire controls card for modes that don't use it
     const controlsEl = document.getElementById('controls');
-    if (controlsEl) controlsEl.hidden = mode === 'mylists' || mode === 'settings' || mode === 'history';
+    if (controlsEl) controlsEl.hidden = mode === 'mylists' || mode === 'settings' || mode === 'history' || mode === 'chat';
 
     const classFilter         = document.getElementById('classFilter');
     const listFilter          = document.getElementById('listFilter');

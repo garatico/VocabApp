@@ -18,6 +18,7 @@ import { readString, writeString, remove as removeKey } from './utils/storage.ts
 import { mustGet }                              from './utils/dom.ts';
 import { renderMyLists }                        from './modes/my-lists-mode.ts';
 import { renderHistory }                        from './modes/history-mode.ts';
+import { renderAiChat }                          from './modes/ai-chat-mode.ts';
 import { LANGUAGES, isoCode, supportsConjugation,
          conjugationUnavailableReason }          from './data/languages.ts';
 import { availableLanguages }                    from './data/vocab-source.ts';
@@ -27,6 +28,7 @@ import { initShortcuts }                         from './ui/shortcuts-overlay.ts
 import { openLanguagePicker, languagePickerLabel } from './ui/language-picker.ts';
 import { openPresetPicker }                      from './ui/preset-picker.ts';
 import { currentScope }                          from './filters/filter-scope.ts';
+import { MULTI_LANG_MODES, setExtraLanguages }   from './filters/filter-lang.ts';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
@@ -43,6 +45,7 @@ const guessBlankWrap  = mustGet('guessBlankWrap');
 const conjugationWrap = mustGet('conjugationWrap');
 const myListsWrap     = document.getElementById('myListsWrap');  // optional — page may omit it
 const historyWrap     = document.getElementById('historyWrap');  // optional — page may omit it
+const chatWrap        = document.getElementById('chatWrap');     // optional — page may omit it
 
 // Sections (hidden/shown by mode switch — mustGet throws if HTML template drifts)
 const tableArea       = mustGet('tableArea');
@@ -53,6 +56,7 @@ const conjugationArea = mustGet('conjugationArea');
 const myListsArea     = mustGet('myListsArea');
 const historyArea     = mustGet('historyArea');
 const settingsArea    = mustGet('settingsArea');
+const chatArea        = mustGet('chatArea');
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 // The language list and its per-language capabilities live in
@@ -115,9 +119,6 @@ function updateLangPickerButton(): void {
   langPickerBtn.textContent = languagePickerLabel(active);
   langPickerBtn.classList.toggle('lang-picker-btn--active', active.size > 0);
 }
-
-/** Modes that know how to render/score a mixed-language word list. */
-const MULTI_LANG_MODES = new Set(['table', 'conjugation']);
 
 /**
  * The extra languages currently in effect. Gated on the active tab rather
@@ -278,6 +279,7 @@ function restoreSettings(): void {
   extraLanguages = new Set(
     (savedExtras ? savedExtras.split(',') : []).filter(name => name && name !== langSelect?.value),
   );
+  setExtraLanguages(extraLanguages);
   updateLangPickerButton();
 
   // Custom word count — the select restores itself above, but the number input
@@ -475,7 +477,7 @@ const { updateModeUI } = bindModeSwitch({
   tableArea, pictureArea, conjugationArea,
   extraAreas: {
     mylists: myListsArea, settings: settingsArea, history: historyArea,
-    trivia: triviaArea, guessBlank: guessBlankArea,
+    trivia: triviaArea, guessBlank: guessBlankArea, chat: chatArea,
   },
   onActivate: {
     table: syncTableStyleUI,
@@ -490,6 +492,9 @@ const { updateModeUI } = bindModeSwitch({
     // Lists' own state has no way to hear about otherwise.
     history: () => { if (historyWrap) renderHistory(historyWrap, langSelect?.value ?? 'spanish'); },
     mylists: () => { if (myListsWrap) renderMyLists(myListsWrap as HTMLElement); },
+    // Built fresh per visit like History — cheap, and avoids keeping a stale
+    // chat session's DOM alive underneath a tab that's dev/desktop-only anyway.
+    chat: () => { if (chatWrap) renderAiChat(chatWrap, langSelect?.value ?? 'spanish'); },
   },
 });
 
@@ -585,6 +590,7 @@ langPickerBtn?.addEventListener('click', () => {
     available: dataAvailableLanguages ? new Set(dataAvailableLanguages) : null,
     onChange: updated => {
       extraLanguages = updated;
+      setExtraLanguages(extraLanguages);
       S.set('vq_extra_langs', [...extraLanguages].join(','));
       updateLangPickerButton();
       void loadAndBuildFilters(langSelect?.value ?? 'spanish');
@@ -841,10 +847,10 @@ void (async function init(): Promise<void> {
   const savedTab = savedMode
     ? document.querySelector<HTMLElement>(`.mode-tab[data-mode="${savedMode}"]`)
     : null;
-  if (savedTab && savedMode !== 'mylists' && savedMode !== 'settings' && savedMode !== 'history') {
+  if (savedTab && savedMode !== 'mylists' && savedMode !== 'settings' && savedMode !== 'history' && savedMode !== 'chat') {
     savedTab.click();
   } else if (savedMode !== 'table') {
-    // Covers both "we intentionally skip restoring mylists/settings/history"
+    // Covers both "we intentionally skip restoring mylists/settings/history/chat"
     // and "the saved mode no longer has a tab at all" — e.g. 'recall' or
     // 'doubleRecall' from before those tabs were folded into Table.
     // We didn't click a tab, so the page is showing whatever ui-state.ts and
@@ -858,9 +864,13 @@ void (async function init(): Promise<void> {
 
   if (myListsWrap) renderMyLists(myListsWrap as HTMLElement);
 
-  // Admin tab is hidden by default — only shown in dev builds
+  // Admin and AI Chat tabs are hidden by default — only shown in dev builds.
+  // AI Chat additionally stays hidden on narrow/mobile viewports regardless
+  // of dev mode — see mode-tabs.css's `.chat-tab` media query — since a
+  // local model is desktop-hardware territory.
   if (import.meta.env.DEV) {
     document.querySelector<HTMLElement>('a.admin-tab')?.removeAttribute('hidden');
+    document.querySelector<HTMLElement>('.chat-tab')?.removeAttribute('hidden');
   }
 
   updateModeUI();
