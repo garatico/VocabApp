@@ -114,7 +114,21 @@ export function renderConjRandomTable({
     return items;
   }
 
-  const rows = shuffle(allVerbs.flatMap(flattenVerb));
+  const allRows = shuffle(allVerbs.flatMap(flattenVerb));
+
+  // "Blanks to Practice" (#conjRandomTableSize) samples the shuffled full
+  // cross product down to a fixed count — Top 100 verbs stays Top 100 verbs
+  // (the verb pool feeding Regularity's estimate is untouched), but the
+  // number of blanks actually asked can be far smaller than
+  // verbs × tenses × forms.
+  const sizeSel = document.getElementById('conjRandomTableSize') as HTMLSelectElement | null;
+  const sizeCustom = document.getElementById('conjRandomTableSizeCustom') as HTMLInputElement | null;
+  const sampleSize = !sizeSel || sizeSel.value === 'all'
+    ? Infinity
+    : sizeSel.value === 'custom'
+      ? Number(sizeCustom?.value) || Infinity
+      : Number(sizeSel.value);
+  const rows = Number.isFinite(sampleSize) ? allRows.slice(0, sampleSize) : allRows;
   if (rows.length === 0) {
     container.innerHTML = `<div class="conj-empty">
       <p>No forms to drill for the current Tense &amp; Forms selection.</p>
@@ -265,7 +279,14 @@ export function renderConjRandomTable({
       inp.classList.add('correct');
       results[globalIdx] = 'correct';
       updateProgress();
-      if (results.every(r => r !== null)) finish();
+      if (results.every(r => r !== null)) { finish(); return; }
+      // Auto-advance to the next open blank on this page — every other row
+      // is already right there in the same table, so making the learner
+      // reach for the mouse (or Tab, past the row's other read-only cells)
+      // between forms is friction Table mode's own grid doesn't have either.
+      const inputs = [...tbody.querySelectorAll<HTMLInputElement>('.crt-input')];
+      const next = inputs.slice(inputs.indexOf(inp) + 1).find(i => !i.disabled);
+      next?.focus();
     });
     answerTd.appendChild(inp);
 

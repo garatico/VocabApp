@@ -48,6 +48,7 @@
 <link rel="stylesheet" href="/styles/app/responsive.css"/>
 <link rel="stylesheet" href="/styles/app/list-picker.css"/>
 <link rel="stylesheet" href="/styles/app/my-lists.css"/>
+<link rel="stylesheet" href="/styles/app/my-content.css"/>
 <link rel="stylesheet" href="/styles/app/history.css"/>
 <link rel="stylesheet" href="/styles/app/settings.css"/>
 <link rel="stylesheet" href="/styles/app/font-size.css"/>
@@ -62,30 +63,31 @@
   <!-- Loading Spinner -->
   <div id="loadingSpinner">
     <div class="spinner"></div>
-    <p>Loading vocabulary...</p>
+    <p data-i18n="common.loadingVocab">Loading vocabulary...</p>
   </div>
 
   <!-- Error Message -->
   <div id="errorMessage" style="display:none" role="alert" aria-live="polite">
     <span class="error-icon">&#x26A0;&#xFE0F;</span>
     <span class="error-text"></span>
-    <button type="button" id="closeErrorBtn" aria-label="Close error">&#xD7;</button>
+    <button type="button" id="closeErrorBtn" aria-label="Close error" data-i18n-aria-label="common.closeError">&#xD7;</button>
   </div>
 
   <main>
 
       <!-- Mode Tabs -->
       <div class="mode-tabs" role="tablist" aria-label="Quiz mode">
-        <button class="mode-tab active" data-mode="table" role="tab" aria-selected="true">Table</button>
-        <button class="mode-tab" data-mode="picture" role="tab" aria-selected="false">Picture Quiz</button>
-        <button class="mode-tab" data-mode="trivia" role="tab" aria-selected="false">Trivia</button>
-        <button class="mode-tab" data-mode="guessBlank" role="tab" aria-selected="false">Guess the Blank</button>
-        <button class="mode-tab" data-mode="conjugation" role="tab" aria-selected="false">Conjugation</button>
-        <button class="mode-tab" data-mode="mylists" role="tab" aria-selected="false">My Lists</button>
-        <button class="mode-tab" data-mode="history" role="tab" aria-selected="false">History</button>
-        <button class="mode-tab" data-mode="settings" role="tab" aria-selected="false">⚙ Settings</button>
-        <button class="mode-tab chat-tab" data-mode="chat" role="tab" aria-selected="false" title="Local AI chat — dev builds on desktop only" hidden>🤖 AI Chat</button>
-        <a href="/admin" class="mode-tab admin-tab" title="Open Admin Panel" hidden>Admin ↗</a>
+        <button class="mode-tab active" data-mode="table" role="tab" aria-selected="true" data-i18n="nav.table">Table</button>
+        <button class="mode-tab" data-mode="picture" role="tab" aria-selected="false" data-i18n="nav.pictureQuiz">Picture Quiz</button>
+        <button class="mode-tab" data-mode="trivia" role="tab" aria-selected="false" data-i18n="nav.trivia">Trivia</button>
+        <button class="mode-tab" data-mode="guessBlank" role="tab" aria-selected="false" data-i18n="nav.guessBlank">Guess the Blank</button>
+        <button class="mode-tab" data-mode="conjugation" role="tab" aria-selected="false" data-i18n="nav.conjugation">Conjugation</button>
+        <button class="mode-tab" data-mode="mylists" role="tab" aria-selected="false" data-i18n="nav.myLists">My Lists</button>
+        <button class="mode-tab" data-mode="myContent" role="tab" aria-selected="false" title="Add your own words, trivia questions and pictures — stored in this browser only, never uploaded" data-i18n="nav.myContent">My Content</button>
+        <button class="mode-tab" data-mode="history" role="tab" aria-selected="false" data-i18n="nav.history">History</button>
+        <button class="mode-tab" data-mode="settings" role="tab" aria-selected="false">⚙ <span data-i18n="nav.settings">Settings</span></button>
+        <button class="mode-tab chat-tab" data-mode="chat" role="tab" aria-selected="false" title="Local AI chat — dev builds on desktop only" hidden>🤖 <span data-i18n="nav.aiChat">AI Chat</span></button>
+        <a href="/admin" class="mode-tab admin-tab" title="Open Admin Panel" hidden><span data-i18n="nav.admin">Admin</span> ↗</a>
       </div>
 
       <div id="controls">
@@ -97,10 +99,10 @@
              of them. Hidden on tabs with no filter box to apply — see
              ui-state.ts. Full CRUD (rename/delete beyond save-here) lives in
              My Lists — see my-lists/profiles-panel.ts. -->
-        <button type="button" id="presetsBtn" aria-label="Testing Profiles" title="Testing Profiles">Profiles</button>
+        <button type="button" id="presetsBtn" aria-label="Testing Profiles" title="Testing Profiles" data-i18n-aria-label="controls.profiles" data-i18n-title="controls.profiles" data-i18n="controls.profiles">Profiles</button>
         <div id="controls-top">
           <div class="control-group">
-            <label for="langSelect">Language</label>
+            <label for="langSelect" data-i18n="controls.language">Language</label>
             <!-- Options are rebuilt from LANGUAGES in data/languages.ts on
                  load; these are the no-JS fallback and must match it. -->
             <select id="langSelect">
@@ -118,16 +120,16 @@
                still land in the right language. Hidden on every other tab —
                see ui-state.ts. Opens a checkbox popover — language-picker.ts. -->
           <div class="control-group" id="compareGroup">
-            <label>Languages</label>
-            <button type="button" id="langPickerBtn" class="lang-picker-btn">+ Languages</button>
+            <label data-i18n="controls.languages">Languages</label>
+            <button type="button" id="langPickerBtn" class="lang-picker-btn" data-i18n="controls.addLanguages">+ Languages</button>
           </div>
 
           <div class="control-group" id="wordsSizeGroup">
-            <label>Words</label>
-            <div class="sort-order-toggle" id="poolModeToggle" title="Top N: the most frequent N words. Rank Range: a specific slice of the frequency list. Level: every word at the CEFR level(s) you pick.">
-              <button type="button" class="sort-order-btn active" data-pool="topn">Top N</button>
-              <button type="button" class="sort-order-btn" data-pool="range">Rank Range</button>
-              <button type="button" class="sort-order-btn" data-pool="band">Level</button>
+            <label data-i18n="controls.words">Words</label>
+            <div class="sort-order-toggle" id="poolModeToggle" title="Most Common: the N most frequent words. Rank Range: a specific slice of the frequency list. Level: every word at the CEFR level(s) you pick." data-i18n-title="controls.poolModeTip">
+              <button type="button" class="sort-order-btn active" data-pool="topn" data-i18n="controls.topN">Most Common</button>
+              <button type="button" class="sort-order-btn" data-pool="range" data-i18n="controls.rankRange">Rank Range</button>
+              <button type="button" class="sort-order-btn" data-pool="band" data-i18n="controls.level">Level</button>
             </div>
             <div class="size-row" id="topNRow">
               <select id="sizeSelect">
@@ -138,16 +140,16 @@
                 <option value="max">Max</option>
                 <option value="custom">Custom...</option>
               </select>
-              <input type="number" id="sizeCustom" min="1" max="9999" step="1" placeholder="e.g. 750" style="display:none;"/>
-              <div class="sort-order-toggle" id="sizeModeToggle" title="By rank: the words ranked 1–N, whatever their status. Skip known: N words that aren't on any of your lists, digging further down the frequency list as needed.">
-                <button type="button" class="sort-order-btn active" data-mode="window" title="Take the words ranked 1–N in frequency order">By Rank</button>
-                <button type="button" class="sort-order-btn" data-mode="fill" title="Always return N words you haven't listed yet, pulling deeper if needed">Skip Known</button>
+              <input type="number" id="sizeCustom" min="1" max="9999" step="1" placeholder="e.g. 750" data-i18n-placeholder="controls.egCustom" style="display:none;"/>
+              <div class="sort-order-toggle" id="sizeModeToggle" title="By rank: the words ranked 1–N, whatever their status. Skip known: N words that aren't on any of your lists, digging further down the frequency list as needed." data-i18n-title="controls.sizeModeTip">
+                <button type="button" class="sort-order-btn active" data-mode="window" title="Take the words ranked 1–N in frequency order" data-i18n-title="controls.byRankTip" data-i18n="controls.byRank">By Rank</button>
+                <button type="button" class="sort-order-btn" data-mode="fill" title="Always return N words you haven't listed yet, pulling deeper if needed" data-i18n-title="controls.skipKnownTip" data-i18n="controls.skipKnown">Skip Known</button>
               </div>
             </div>
             <div class="size-row rank-range-row" id="rankRangeRow" style="display:none">
-              <input type="number" id="rankFrom" min="1" step="1" placeholder="From" value="1" title="First rank in the slice (inclusive)"/>
+              <input type="number" id="rankFrom" min="1" step="1" placeholder="From" data-i18n-placeholder="controls.from" value="1" title="First rank in the slice (inclusive)" data-i18n-title="controls.fromTip"/>
               <span class="rank-range-sep" aria-hidden="true">&#x2013;</span>
-              <input type="number" id="rankTo" min="1" step="1" placeholder="To" value="1000" title="Last rank in the slice (inclusive)"/>
+              <input type="number" id="rankTo" min="1" step="1" placeholder="To" data-i18n-placeholder="controls.to" value="1000" title="Last rank in the slice (inclusive)" data-i18n-title="controls.toTip"/>
             </div>
             <div class="band-row" id="bandRow" style="display:none">
               <div class="band-chip-row" id="bandChips">
@@ -168,27 +170,27 @@
                control keeps that from defaulting to tens of thousands of
                cards once tenses are multiplied in. -->
           <div class="control-group" id="conjSizeSelectGroup" style="display:none">
-            <label>Verbs</label>
+            <label data-i18n="controls.verbs">Verbs</label>
             <select id="conjSizeSelect">
               <option value="25">Top 25</option>
               <option value="50">Top 50</option>
               <option value="100" selected>Top 100</option>
               <option value="250">Top 250</option>
               <option value="500">Top 500</option>
-              <option value="max">All Verbs</option>
+              <option value="max" data-i18n="controls.allVerbs">All Verbs</option>
             </select>
           </div>
 
           <div class="controls-sep" aria-hidden="true"></div>
 
           <div class="control-group" id="sortOrderGroup">
-            <label>Order</label>
+            <label data-i18n="controls.order">Order</label>
             <div class="sort-order-toggle" id="sortOrderToggle">
-              <button class="sort-order-btn active" data-order="frequency" title="Order by word frequency, most common first">Freq</button>
-              <button class="sort-order-btn" data-order="rarest" title="Order by word frequency, rarest first">Rarest</button>
-              <button class="sort-order-btn" data-order="alpha" title="Order alphabetically">A&#x2013;Z</button>
-              <button class="sort-order-btn" data-order="random" title="Randomize order">Shuffle</button>
-              <button class="sort-order-btn" data-order="trouble" title="Words you've missed most in past sessions first">Trouble</button>
+              <button class="sort-order-btn active" data-order="frequency" title="Order by word frequency, most common first" data-i18n-title="controls.freqTip" data-i18n="controls.freq">Freq</button>
+              <button class="sort-order-btn" data-order="rarest" title="Order by word frequency, rarest first" data-i18n-title="controls.rarestTip" data-i18n="controls.rarest">Rarest</button>
+              <button class="sort-order-btn" data-order="alpha" title="Order alphabetically" data-i18n-title="controls.alphaTip">A&#x2013;Z</button>
+              <button class="sort-order-btn" data-order="random" title="Randomize order" data-i18n-title="controls.shuffleTip" data-i18n="controls.shuffle">Shuffle</button>
+              <button class="sort-order-btn" data-order="trouble" title="Words you've missed most in past sessions first" data-i18n-title="controls.troubleTip" data-i18n="controls.trouble">Trouble</button>
             </div>
           </div>
 
@@ -198,44 +200,68 @@
                rather than a collapsible filter box, since it's a core setup
                choice for this mode, not an incidental narrowing filter. -->
           <div class="control-group" id="pictureStyleGroup" style="display:none">
-            <label>Quiz Style</label>
+            <label data-i18n="controls.quizStyle">Quiz Style</label>
             <div class="conj-display-toggle" id="pictureSubMode">
-              <button class="conj-toggle-btn active" data-mode="type">Type the Word</button>
-              <button class="conj-toggle-btn" data-mode="flashcard">Flashcard</button>
-              <button class="conj-toggle-btn" data-mode="click">Click the Picture</button>
+              <button class="conj-toggle-btn active" data-mode="type" data-i18n="controls.typeWord">Type the Word</button>
+              <button class="conj-toggle-btn" data-mode="flashcard" data-i18n="controls.flashcard">Flashcard</button>
+              <button class="conj-toggle-btn" data-mode="click" data-i18n="controls.clickPicture">Click the Picture</button>
             </div>
           </div>
 
           <!-- Trivia mode only — see trivia-mode.ts. -->
           <div class="control-group" id="triviaStyleGroup" style="display:none">
-            <label>Answer Style</label>
+            <label data-i18n="controls.answerStyle">Answer Style</label>
             <div class="conj-display-toggle" id="triviaSubMode">
-              <button class="conj-toggle-btn active" data-mode="type">Type the Answer</button>
-              <button class="conj-toggle-btn" data-mode="choice">Multiple Choice</button>
-              <button class="conj-toggle-btn" data-mode="table">Table</button>
+              <button class="conj-toggle-btn active" data-mode="type" data-i18n="controls.typeAnswer">Type the Answer</button>
+              <button class="conj-toggle-btn" data-mode="choice" data-i18n="controls.multipleChoice">Multiple Choice</button>
+              <button class="conj-toggle-btn" data-mode="table" data-i18n="nav.table">Table</button>
             </div>
           </div>
 
           <!-- Trivia only — see data/trivia-questions.ts's difficulty field. -->
           <div class="control-group" id="triviaDifficultyGroup" style="display:none">
-            <label>Difficulty</label>
+            <label data-i18n="controls.difficulty">Trivia Difficulty</label>
             <div class="conj-display-toggle" id="triviaDifficulty">
-              <button class="conj-toggle-btn active" data-difficulty="all">All</button>
-              <button class="conj-toggle-btn" data-difficulty="easy">Easy</button>
-              <button class="conj-toggle-btn" data-difficulty="medium">Medium</button>
-              <button class="conj-toggle-btn" data-difficulty="hard">Hard</button>
+              <button class="conj-toggle-btn active" data-difficulty="all" data-i18n="controls.all">All</button>
+              <button class="conj-toggle-btn" data-difficulty="easy" data-i18n="controls.easy">Easy</button>
+              <button class="conj-toggle-btn" data-difficulty="medium" data-i18n="controls.medium">Medium</button>
+              <button class="conj-toggle-btn" data-difficulty="hard" data-i18n="controls.hard">Hard</button>
+            </div>
+          </div>
+
+          <!-- Trivia only — how hard the question's own wording is, independent
+               of how obscure the fact is (see data/trivia-questions.ts's
+               readingDifficulty field). -->
+          <div class="control-group" id="triviaReadingDifficultyGroup" style="display:none">
+            <label>Reading Difficulty</label>
+            <div class="conj-display-toggle" id="triviaReadingDifficulty">
+              <button class="conj-toggle-btn active" data-reading-difficulty="all" data-i18n="controls.all">All</button>
+              <button class="conj-toggle-btn" data-reading-difficulty="easy" data-i18n="controls.easy">Easy</button>
+              <button class="conj-toggle-btn" data-reading-difficulty="medium" data-i18n="controls.medium">Medium</button>
+              <button class="conj-toggle-btn" data-reading-difficulty="hard" data-i18n="controls.hard">Hard</button>
+            </div>
+          </div>
+
+          <!-- Trivia only — one short clause vs. a multi-sentence prompt (see
+               data/trivia-questions.ts's readingLength field). -->
+          <div class="control-group" id="triviaReadingLengthGroup" style="display:none">
+            <label>Reading Length</label>
+            <div class="conj-display-toggle" id="triviaReadingLength">
+              <button class="conj-toggle-btn active" data-reading-length="all" data-i18n="controls.all">All</button>
+              <button class="conj-toggle-btn" data-reading-length="short">Short</button>
+              <button class="conj-toggle-btn" data-reading-length="long">Long</button>
             </div>
           </div>
 
           <!-- Guess the Blank only — see guess-blank-mode.ts /
                guess-blank-questions.ts's difficulty field. -->
           <div class="control-group" id="guessBlankDifficultyGroup" style="display:none">
-            <label>Difficulty</label>
+            <label data-i18n="controls.difficulty">Difficulty</label>
             <div class="conj-display-toggle" id="guessBlankDifficulty">
-              <button class="conj-toggle-btn active" data-difficulty="all">All</button>
-              <button class="conj-toggle-btn" data-difficulty="easy">Easy</button>
-              <button class="conj-toggle-btn" data-difficulty="medium">Medium</button>
-              <button class="conj-toggle-btn" data-difficulty="hard">Hard</button>
+              <button class="conj-toggle-btn active" data-difficulty="all" data-i18n="controls.all">All</button>
+              <button class="conj-toggle-btn" data-difficulty="easy" data-i18n="controls.easy">Easy</button>
+              <button class="conj-toggle-btn" data-difficulty="medium" data-i18n="controls.medium">Medium</button>
+              <button class="conj-toggle-btn" data-difficulty="hard" data-i18n="controls.hard">Hard</button>
             </div>
           </div>
 
@@ -243,50 +269,69 @@
                mechanic into Table's own grid — see table-recall-mode.ts.
                Standard is Table's existing per-row behaviour, unchanged. -->
           <div class="control-group" id="tableStyleGroup" style="display:none">
-            <label>Quiz Style</label>
+            <label data-i18n="controls.quizStyle">Quiz Style</label>
             <div class="conj-display-toggle" id="tableStyleToggle">
-              <button class="conj-toggle-btn active" data-style="standard">Standard</button>
-              <button class="conj-toggle-btn" data-style="recall">Recall</button>
-              <button class="conj-toggle-btn" data-style="double">Double Recall</button>
+              <button class="conj-toggle-btn active" data-style="standard" data-i18n="controls.standard">Standard</button>
+              <button class="conj-toggle-btn" data-style="recall" data-i18n="controls.recall">Recall</button>
+              <button class="conj-toggle-btn" data-style="double" data-i18n="controls.doubleRecall">Double Recall</button>
             </div>
           </div>
 
           <div class="control-group" id="directionGroup">
-            <label>Direction</label>
+            <label data-i18n="controls.direction">Direction</label>
             <div class="conj-display-toggle" id="directionToggle">
-              <button class="conj-toggle-btn active" data-direction="target-en">Word &#x2192; Meaning</button>
-              <button class="conj-toggle-btn"        data-direction="en-target">Meaning &#x2192; Word</button>
-              <button class="conj-toggle-btn"        data-direction="mixed">Mixed</button>
+              <button class="conj-toggle-btn active" data-direction="target-en" data-i18n="controls.wordToMeaning">Word &#x2192; Meaning</button>
+              <button class="conj-toggle-btn"        data-direction="en-target" data-i18n="controls.meaningToWord">Meaning &#x2192; Word</button>
+              <button class="conj-toggle-btn"        data-direction="mixed" data-i18n="controls.mixed">Mixed</button>
             </div>
           </div>
 
           <div class="control-group" id="conjViewGroup" style="display:none">
-            <label>View</label>
+            <label data-i18n="controls.view">View</label>
             <div class="conj-display-toggle" id="conjViewToggle">
-              <button class="conj-toggle-btn active" data-view="grid" title="Every verb, one card per tense">Grid</button>
-              <button class="conj-toggle-btn" data-view="full" title="One verb at a time, every tense side by side">Full Conjugation</button>
-              <button class="conj-toggle-btn" data-view="oneatatime" title="One blank at a time — a verb, tense and pronoun, then the next">One at a Time</button>
-              <button class="conj-toggle-btn" data-view="randomtable" title="Every blank at once, fully shuffled — a random tense of a random verb on every row">Random Table</button>
-              <button class="conj-toggle-btn" data-view="cardmatch" title="Match pronouns or infinitives to their conjugated forms">Card Match</button>
+              <button class="conj-toggle-btn active" data-view="grid" title="Every verb, one card per tense" data-i18n-title="controls.gridTip" data-i18n="controls.grid">Grid</button>
+              <button class="conj-toggle-btn" data-view="full" title="One verb at a time, every tense side by side" data-i18n-title="controls.fullConjugationTip" data-i18n="controls.fullConjugation">Full Conjugation</button>
+              <button class="conj-toggle-btn" data-view="oneatatime" title="One blank at a time — a verb, tense and pronoun, then the next" data-i18n-title="controls.oneAtATimeTip" data-i18n="controls.oneAtATime">One at a Time</button>
+              <button class="conj-toggle-btn" data-view="randomtable" title="Every blank at once, fully shuffled — a random tense of a random verb on every row" data-i18n-title="controls.randomTableTip" data-i18n="controls.randomTable">Random Table</button>
+              <button class="conj-toggle-btn" data-view="cardmatch" title="Match pronouns or infinitives to their conjugated forms" data-i18n-title="controls.cardMatchTip" data-i18n="controls.cardMatch">Card Match</button>
             </div>
           </div>
 
           <!-- Card Match only — which two things get matched. -->
           <div class="control-group" id="conjMatchStyleGroup" style="display:none">
-            <label>Match</label>
+            <label data-i18n="controls.match">Match</label>
             <div class="conj-display-toggle" id="conjMatchStyleToggle">
-              <button class="conj-toggle-btn active" data-pairing="pronoun" title="One verb and tense at a time — match each pronoun to its conjugated form">Pronoun &#x2194; Form</button>
-              <button class="conj-toggle-btn" data-pairing="infinitive" title="Several verbs at once — match each infinitive to its conjugated form">Infinitive &#x2194; Form</button>
+              <button class="conj-toggle-btn active" data-pairing="pronoun" title="One verb and tense at a time — match each pronoun to its conjugated form" data-i18n-title="controls.pronounFormTip" data-i18n="controls.pronounForm">Pronoun &#x2194; Form</button>
+              <button class="conj-toggle-btn" data-pairing="infinitive" title="Several verbs at once — match each infinitive to its conjugated form" data-i18n-title="controls.infinitiveFormTip" data-i18n="controls.infinitiveForm">Infinitive &#x2194; Form</button>
             </div>
           </div>
 
           <div class="control-group" id="conjDisplayGroup" style="display:none">
-            <label>Display</label>
+            <label data-i18n="controls.display">Display</label>
             <div class="conj-display-toggle" id="conjDisplayToggle">
-              <button class="conj-toggle-btn" data-mode="target">Target</button>
-              <button class="conj-toggle-btn active" data-mode="both">Both</button>
-              <button class="conj-toggle-btn" data-mode="english">English</button>
+              <button class="conj-toggle-btn" data-mode="target" data-i18n="controls.target">Target</button>
+              <button class="conj-toggle-btn active" data-mode="both" data-i18n="controls.both">Both</button>
+              <button class="conj-toggle-btn" data-mode="english" data-i18n="controls.english">English</button>
             </div>
+          </div>
+
+          <!-- Random Table only — how many of the full verb×tense×form
+               cross product to actually drill, sampled at random after
+               shuffling. Without this, Top 100 verbs × 6 forms of one tense
+               is already 600 required answers; this lets that stay Top 100
+               verbs while asking for only e.g. 10 of them. -->
+          <div class="control-group" id="conjRandomTableSizeGroup" style="display:none">
+            <label data-i18n="controls.blanksToPractice" title="How many random verb/tense/form blanks to drill — sampled from the full cross product of your Verbs, Tense &amp; Forms and Regularity selections" data-i18n-title="controls.blanksToPracticeTip">Blanks to Practice</label>
+            <select id="conjRandomTableSize">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="250">250</option>
+              <option value="all" selected data-i18n="controls.all">All</option>
+              <option value="custom">Custom...</option>
+            </select>
+            <input type="number" id="conjRandomTableSizeCustom" min="1" max="9999" step="1" placeholder="e.g. 40" data-i18n-placeholder="controls.egCustom" style="display:none;"/>
           </div>
 
         </div>
@@ -295,7 +340,7 @@
              flex flow, so it never moves when a mode-conditional control
              group (Direction, Quiz Style, etc.) appears or disappears. -->
         <div id="controlsActions">
-          <button id="startBtn">Start Quiz</button>
+          <button id="startBtn" data-i18n="controls.startQuiz">Start Quiz</button>
         </div>
 
         <!-- Conjugation-mode controls: shown only when Conjugation tab is
@@ -315,7 +360,7 @@
             <div class="conj-tf-bar">
               <button type="button" class="filter-collapse-btn" data-collapse="conjTenseFormsBody" data-default-open="true" aria-expanded="true" aria-controls="conjTenseFormsBody">
                 <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
-                <span class="filter-section-label">Tense &amp; Forms</span>
+                <span class="filter-section-label" data-i18n="conj.tenseAndForms">Tense &amp; Forms</span>
               </button>
               <span id="conjTenseSummary" class="conj-tf-summary"></span>
               <span id="conjSizeEstimate" class="conj-size-estimate"></span>
@@ -324,9 +369,9 @@
             <div id="conjTenseFormsBody" class="filter-body conj-tf-body">
               <div class="conj-tf-side conj-tf-side--wide">
                 <div class="conj-tf-header">
-                  <span class="filter-section-label">Tense</span>
-                  <button type="button" id="conjTensesAll">All</button>
-                  <button type="button" id="conjTensesNone">None</button>
+                  <span class="filter-section-label" data-i18n="conj.tense">Tense</span>
+                  <button type="button" id="conjTensesAll" data-i18n="controls.all">All</button>
+                  <button type="button" id="conjTensesNone" data-i18n="common.none">None</button>
                 </div>
                 <div id="conjTenseChips" class="conj-tense-chips"><!-- built by JS per language --></div>
               </div>
@@ -335,9 +380,9 @@
 
               <div class="conj-tf-side conj-tf-side--narrow" id="conjPronounRow">
                 <div class="conj-tf-header">
-                  <span class="filter-section-label">Forms</span>
-                  <button type="button" id="conjFormsAll">All</button>
-                  <button type="button" id="conjFormsNone">None</button>
+                  <span class="filter-section-label" data-i18n="conj.forms">Forms</span>
+                  <button type="button" id="conjFormsAll" data-i18n="controls.all">All</button>
+                  <button type="button" id="conjFormsNone" data-i18n="common.none">None</button>
                 </div>
                 <div id="conjPronounToggles" class="conj-pronoun-toggles"></div>
               </div>
@@ -349,14 +394,28 @@
                    conjugation classes. -->
               <div class="conj-tf-side conj-tf-side--narrow" id="conjRegularityRow">
                 <div class="conj-tf-header">
-                  <span class="filter-section-label">Regularity</span>
-                  <button type="button" id="conjRegAll">All</button>
+                  <span class="filter-section-label" data-i18n="conj.regularity">Regularity</span>
+                  <button type="button" id="conjRegAll" data-i18n="controls.all">All</button>
+                  <button type="button" id="conjRegNone" data-i18n="common.none">None</button>
                 </div>
                 <div id="conjRegChips" class="conj-reg-chips">
-                  <button type="button" class="conj-reg-chip active" data-reg="regular">Regular</button>
-                  <button type="button" class="conj-reg-chip active" data-reg="ortho">Spelling</button>
-                  <button type="button" class="conj-reg-chip active" data-reg="stem">Stem-change</button>
-                  <button type="button" class="conj-reg-chip active" data-reg="irregular">Irregular</button>
+                  <button type="button" class="conj-reg-chip active" data-reg="regular" data-i18n="conj.regular">Regular</button>
+                  <button type="button" class="conj-reg-chip active" data-reg="ortho" data-i18n="conj.spelling">Spelling</button>
+                  <button type="button" class="conj-reg-chip active" data-reg="stem" data-i18n="conj.stemChange">Stem-change</button>
+                  <button type="button" class="conj-reg-chip active" data-reg="irregular" data-i18n="conj.irregular">Irregular</button>
+                </div>
+                <!-- Whether Regularity narrows the whole language pool before
+                     the Verbs size cap is applied, or only what's left of the
+                     already-capped Top N — these disagree (see
+                     conj-reg-scope-tip below), so this makes the choice
+                     explicit instead of leaving it as an undocumented side
+                     effect of load order. -->
+                <div class="conj-reg-scope-row">
+                  <span class="conj-reg-scope-label" data-i18n="conj.regScopeLabel" title="Whether unchecking a Regularity bucket narrows the verb pool before or after the Verbs size limit is applied" data-i18n-title="conj.regScopeTip">Apply regularity:</span>
+                  <div class="sort-order-toggle conj-reg-scope-toggle" id="conjRegScopeToggle">
+                    <button type="button" class="sort-order-btn active" data-scope="afterTopN" title="Take the Top N verbs by rank first, then narrow by Regularity — unchecking a bucket can shrink the final verb count below N" data-i18n-title="conj.regScopeAfterTip" data-i18n="conj.regScopeAfter">After Top N</button>
+                    <button type="button" class="sort-order-btn" data-scope="beforeTopN" title="Narrow the whole language to the checked Regularity buckets first, then take the Top N verbs by rank from what's left — the final count always matches N" data-i18n-title="conj.regScopeBeforeTip" data-i18n="conj.regScopeBefore">Before Top N</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -366,26 +425,26 @@
         <div id="classFilter" class="class-filter-wrap">
           <button type="button" class="filter-collapse-btn" data-collapse="classFilterBody" aria-expanded="false" aria-controls="classFilterBody">
             <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
-            <span class="filter-section-label">Part of Speech</span>
+            <span class="filter-section-label" data-i18n="filter.partOfSpeech">Part of Speech</span>
           </button>
           <span class="filter-header-controls">
             <button type="button" class="filter-active-btn filter-active-btn--on" id="classFilterActive" aria-pressed="true">
               <span class="filter-active-dot" aria-hidden="true"></span>
-              <span class="filter-active-label">On</span>
+              <span class="filter-active-label" data-i18n="common.on">On</span>
             </button>
             <button type="button" class="filter-chain-btn filter-chain-btn--on" id="classFilterChain" aria-pressed="true">&#128279;</button>
           </span>
           <div id="classFilterBody" class="filter-body">
             <p class="filter-chain-note" id="classFilterChainNote" role="status" hidden></p>
-            <button type="button" class="pos-chip pos-chip-all active">All</button>
-            <button type="button" class="pos-chip" data-pos="verb">Verbs</button>
-            <button type="button" class="pos-chip" data-pos="noun">Nouns</button>
-            <button type="button" class="pos-chip" data-pos="adjective">Adjectives</button>
-            <button type="button" class="pos-chip" data-pos="adverb">Adverbs</button>
-            <button type="button" class="pos-chip" data-pos="pronoun">Pronouns</button>
-            <button type="button" class="pos-chip" data-pos="preposition">Prepositions</button>
-            <button type="button" class="pos-chip" data-pos="conjunction">Conjunctions</button>
-            <button type="button" class="pos-chip" data-pos="article">Articles</button>
+            <button type="button" class="pos-chip pos-chip-all active" data-i18n="controls.all">All</button>
+            <button type="button" class="pos-chip" data-pos="verb" data-i18n="filter.verbs">Verbs</button>
+            <button type="button" class="pos-chip" data-pos="noun" data-i18n="filter.nouns">Nouns</button>
+            <button type="button" class="pos-chip" data-pos="adjective" data-i18n="filter.adjectives">Adjectives</button>
+            <button type="button" class="pos-chip" data-pos="adverb" data-i18n="filter.adverbs">Adverbs</button>
+            <button type="button" class="pos-chip" data-pos="pronoun" data-i18n="filter.pronouns">Pronouns</button>
+            <button type="button" class="pos-chip" data-pos="preposition" data-i18n="filter.prepositions">Prepositions</button>
+            <button type="button" class="pos-chip" data-pos="conjunction" data-i18n="filter.conjunctions">Conjunctions</button>
+            <button type="button" class="pos-chip" data-pos="article" data-i18n="filter.articles">Articles</button>
           </div>
         </div>
 
@@ -394,7 +453,7 @@
             <div class="list-filter-header">
               <button type="button" class="filter-collapse-btn" data-collapse="listFilterBody" aria-expanded="false" aria-controls="listFilterBody">
                 <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
-                <span class="filter-section-label">Lists</span>
+                <span class="filter-section-label" data-i18n="filter.lists">Lists</span>
               </button>
               <!-- On/Off and the chain sit in the header, outside the
                    collapsible body, so a collapsed filter still says whether it
@@ -403,23 +462,23 @@
               <span class="filter-header-controls">
                 <button type="button" class="filter-active-btn filter-active-btn--on" id="listFilterActive" aria-pressed="true">
                   <span class="filter-active-dot" aria-hidden="true"></span>
-                  <span class="filter-active-label">On</span>
+                  <span class="filter-active-label" data-i18n="common.on">On</span>
                 </button>
               </span>
               <div class="list-filter-toggle" id="listFilterMode">
-                <button type="button" class="list-filter-btn active" data-mode="hide" title="Remove words on the checked lists from the quiz">Hide</button>
-                <button type="button" class="list-filter-btn" data-mode="focus" title="Quiz only words on the checked lists">Focus</button>
+                <button type="button" class="list-filter-btn active" data-mode="hide" title="Remove words on the checked lists from the quiz" data-i18n-title="filter.hideTip" data-i18n="filter.hide">Hide</button>
+                <button type="button" class="list-filter-btn" data-mode="focus" title="Quiz only words on the checked lists" data-i18n-title="filter.focusTip" data-i18n="filter.focus">Focus</button>
               </div>
               <span class="filter-header-controls">
                 <button type="button" class="filter-chain-btn filter-chain-btn--on" id="listFilterChain" aria-pressed="true">&#128279;</button>
               </span>
-              <span class="list-filter-count">(<span id="knownWordCount">0</span> listed)</span>
+              <span class="list-filter-count">(<span id="knownWordCount">0</span> <span data-i18n="filter.listed">listed</span>)</span>
             </div>
             <div id="listFilterBody" class="filter-body">
               <p class="filter-chain-note" id="listFilterChainNote" role="status" hidden></p>
               <p class="list-filter-desc" id="listFilterDesc"></p>
               <div class="list-filter-checkboxes" id="listFilterCheckboxes">
-                <span class="list-filter-empty">No lists yet — create one in My Lists</span>
+                <span class="list-filter-empty" data-i18n="filter.noListsYet">No lists yet — create one in My Lists</span>
               </div>
             </div>
           </div>
@@ -429,16 +488,16 @@
           <div id="domainFilterHeader">
             <button type="button" class="filter-collapse-btn" data-collapse="domainFilterBody" aria-expanded="false" aria-controls="domainFilterBody">
               <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
-              <span id="domainFilterLabel" class="filter-section-label">Domains <span id="domainFilterCount"></span></span>
+              <span id="domainFilterLabel" class="filter-section-label"><span data-i18n="filter.domains">Domains</span> <span id="domainFilterCount"></span></span>
             </button>
             <span class="filter-header-controls">
               <button type="button" class="filter-active-btn filter-active-btn--on" id="domainFilterActive" aria-pressed="true">
                 <span class="filter-active-dot" aria-hidden="true"></span>
-                <span class="filter-active-label">On</span>
+                <span class="filter-active-label" data-i18n="common.on">On</span>
               </button>
               <button type="button" class="filter-chain-btn filter-chain-btn--on" id="domainFilterChain" aria-pressed="true">&#128279;</button>
             </span>
-            <button type="button" id="clearAllDomains" style="display:none">Clear all</button>
+            <button type="button" id="clearAllDomains" style="display:none" data-i18n="filter.clearAll">Clear all</button>
           </div>
           <div id="domainFilterBody" class="filter-body">
             <p class="filter-chain-note" id="domainFilterChainNote" role="status" hidden></p>
@@ -450,10 +509,10 @@
 
       <!-- Onboarding tip — shown on first visit, dismissable, re-triggerable from Settings -->
       <div id="onboardingCard" hidden>
-        <div class="onboarding-body">
+        <div class="onboarding-body" data-i18n-html="onboarding.body">
           <strong>Welcome to VocabApp!</strong> Pick a language and word count in the controls above, then hit <strong>Start Quiz</strong>. Use the tabs to switch between Table, Picture Quiz, Trivia, and Conjugation modes. Head to <strong>⚙ Settings</strong> to configure hints, text size, and more.
         </div>
-        <button type="button" class="onboarding-dismiss" id="onboardingDismiss" aria-label="Dismiss tip">✕</button>
+        <button type="button" class="onboarding-dismiss" id="onboardingDismiss" aria-label="Dismiss tip" data-i18n-aria-label="onboarding.dismiss">✕</button>
       </div>
 
       <section id="tableArea">
@@ -469,25 +528,25 @@
         <div id="tableSummaryTop" class="quiz-summary" style="display:none"></div>
 
         <div id="tableControls" class="controls-row">
-          <button id="tableJumpBtn" title="Jump to the first word you haven't answered (Ctrl+/)">↓ Next gap</button>
-          <button id="tableExport">Export CSV</button>
-          <button id="tableReset">Give Up</button>
-          <span id="tableStopwatch" class="quiz-stopwatch" title="Time spent on this quiz">0:00</span>
+          <button id="tableJumpBtn" title="Jump to the first word you haven't answered (Ctrl+/)" data-i18n-title="table.jumpNextGapTip" data-i18n="table.jumpNextGap">↓ Next gap</button>
+          <button id="tableExport" data-i18n="table.exportCsv">Export CSV</button>
+          <button id="tableReset" data-i18n="table.giveUp">Give Up</button>
+          <span id="tableStopwatch" class="quiz-stopwatch" title="Time spent on this quiz" data-i18n-title="table.stopwatchTip">0:00</span>
         </div>
 
         <div class="table-nav" id="tableJumpTop">
           <div class="table-nav-side">
-            <span class="inline-order-label">Order</span>
-            <select class="table-order-select" id="tableOrderSelect" aria-label="Word order" title="Order of the words in this quiz"></select>
+            <span class="inline-order-label" data-i18n="controls.order">Order</span>
+            <select class="table-order-select" id="tableOrderSelect" aria-label="Word order" title="Order of the words in this quiz" data-i18n-aria-label="table.wordOrder" data-i18n-title="table.wordOrder"></select>
           </div>
           <div class="table-pager" id="tablePagerTop" hidden>
-            <button type="button" class="pager-btn" data-page="prev" aria-label="Previous page">&#x2190;</button>
-            <select class="pager-select" id="tablePagerSelectTop" aria-label="Jump to page"></select>
+            <button type="button" class="pager-btn" data-page="prev" aria-label="Previous page" data-i18n-aria-label="table.prevPage">&#x2190;</button>
+            <select class="pager-select" id="tablePagerSelectTop" aria-label="Jump to page" data-i18n-aria-label="table.jumpToPage"></select>
             <span class="pager-status" id="tablePagerStatusTop"></span>
-            <button type="button" class="pager-btn" data-page="next" aria-label="Next page">&#x2192;</button>
+            <button type="button" class="pager-btn" data-page="next" aria-label="Next page" data-i18n-aria-label="table.nextPage">&#x2192;</button>
           </div>
           <div class="table-nav-side table-nav-side--end">
-            <button type="button" class="jump-btn" data-jump="bottom">&#x2193; Jump to Bottom</button>
+            <button type="button" class="jump-btn" data-jump="bottom" data-i18n="table.jumpToBottom">&#x2193; Jump to Bottom</button>
           </div>
         </div>
 
@@ -496,13 +555,13 @@
         <div class="table-nav" id="tableJumpBottom">
           <div class="table-nav-side"></div>
           <div class="table-pager" id="tablePagerBottom" hidden>
-            <button type="button" class="pager-btn" data-page="prev" aria-label="Previous page">&#x2190;</button>
-            <select class="pager-select" id="tablePagerSelectBottom" aria-label="Jump to page"></select>
+            <button type="button" class="pager-btn" data-page="prev" aria-label="Previous page" data-i18n-aria-label="table.prevPage">&#x2190;</button>
+            <select class="pager-select" id="tablePagerSelectBottom" aria-label="Jump to page" data-i18n-aria-label="table.jumpToPage"></select>
             <span class="pager-status" id="tablePagerStatusBottom"></span>
-            <button type="button" class="pager-btn" data-page="next" aria-label="Next page">&#x2192;</button>
+            <button type="button" class="pager-btn" data-page="next" aria-label="Next page" data-i18n-aria-label="table.nextPage">&#x2192;</button>
           </div>
           <div class="table-nav-side table-nav-side--end">
-            <button type="button" class="jump-btn" data-jump="top">&#x2191; Jump to Top</button>
+            <button type="button" class="jump-btn" data-jump="top" data-i18n="table.jumpToTop">&#x2191; Jump to Top</button>
           </div>
         </div>
 
@@ -611,6 +670,10 @@
         <div id="myListsWrap"></div>
       </section>
 
+      <section id="myContentArea" hidden>
+        <div id="myContentWrap"></div>
+      </section>
+
       <section id="historyArea" hidden>
         <div id="historyWrap"></div>
       </section>
@@ -620,14 +683,48 @@
       </section>
 
       <section id="settingsArea" hidden>
+        <!-- Always visible regardless of Advanced Mode (it's the switch for
+             everything else here), and grouped with Theme/App language since
+             all three are "how this page/app looks and behaves for me right
+             now" rather than any one quiz mode's own settings. -->
+        <div class="settings-toolbar">
+          <div class="settings-toolbar-item">
+            <span class="settings-toolbar-label" data-i18n="settings.general.advancedMode" title="On shows every setting, including ones most people never need to touch. Off keeps this panel to the settings people actually change." data-i18n-title="settings.general.advancedModeDesc">Advanced mode</span>
+            <div class="sort-order-toggle" id="settingAdvancedMode">
+              <button type="button" class="sort-order-btn" data-advanced-mode="true" data-i18n="common.on">On</button>
+              <button type="button" class="sort-order-btn active" data-advanced-mode="false" data-i18n="common.off">Off</button>
+            </div>
+          </div>
+          <div class="settings-toolbar-item">
+            <span class="settings-toolbar-label" data-i18n="settings.appearance.theme" title="System follows your OS dark/light preference" data-i18n-title="settings.appearance.themeDesc">Theme</span>
+            <div class="sort-order-toggle" id="settingTheme">
+              <button type="button" class="sort-order-btn active" data-theme="system" data-i18n="settings.appearance.system">System</button>
+              <button type="button" class="sort-order-btn" data-theme="light" data-i18n="settings.appearance.light">Light</button>
+              <button type="button" class="sort-order-btn" data-theme="dark" data-i18n="settings.appearance.dark">Dark</button>
+            </div>
+          </div>
+          <div class="settings-toolbar-item">
+            <span class="settings-toolbar-label" data-i18n="settings.appearance.uiLanguage" title="The language of the app's own interface — menus, labels and buttons — separate from the language you're studying" data-i18n-title="settings.appearance.uiLanguageDesc">App language</span>
+            <div class="sort-order-toggle" id="settingUILanguage">
+              <button type="button" class="sort-order-btn active" data-ui-lang="english">English</button>
+              <button type="button" class="sort-order-btn" data-ui-lang="spanish">Español</button>
+              <button type="button" class="sort-order-btn" data-ui-lang="french" disabled title="Coming soon" data-i18n-title="settings.appearance.comingSoon">Français</button>
+              <button type="button" class="sort-order-btn" data-ui-lang="portuguese" disabled title="Coming soon" data-i18n-title="settings.appearance.comingSoon">Português</button>
+            </div>
+          </div>
+        </div>
         <div class="settings-layout">
           <nav class="settings-nav" aria-label="Settings sections">
-            <a class="settings-nav-link" href="#settings-sec-table"><span class="settings-nav-icon" aria-hidden="true">📋</span>Table Quiz</a>
-            <a class="settings-nav-link" href="#settings-sec-multilang"><span class="settings-nav-icon" aria-hidden="true">🌐</span>Multi-Language Table</a>
-            <a class="settings-nav-link" href="#settings-sec-allquiz"><span class="settings-nav-icon" aria-hidden="true">🧩</span>All Quizzes</a>
-            <a class="settings-nav-link" href="#settings-sec-conj"><span class="settings-nav-icon" aria-hidden="true">🔀</span>Conjugation Practice</a>
-            <a class="settings-nav-link" href="#settings-sec-appearance"><span class="settings-nav-icon" aria-hidden="true">🎨</span>Appearance</a>
-            <a class="settings-nav-link" href="#settings-sec-general"><span class="settings-nav-icon" aria-hidden="true">⚙</span>General</a>
+            <a class="settings-nav-link" href="#settings-sec-table"><span class="settings-nav-icon" aria-hidden="true">📋</span><span data-i18n="settings.nav.table">Table Quiz</span></a>
+            <a class="settings-nav-link" href="#settings-sec-multilang"><span class="settings-nav-icon" aria-hidden="true">🌐</span><span data-i18n="settings.nav.multilang">Multi-Language Table</span></a>
+            <a class="settings-nav-link" href="#settings-sec-picture" data-advanced="true"><span class="settings-nav-icon" aria-hidden="true">🖼</span><span data-i18n="nav.pictureQuiz">Picture Quiz</span></a>
+            <a class="settings-nav-link" href="#settings-sec-conj" data-advanced="true"><span class="settings-nav-icon" aria-hidden="true">🔀</span><span data-i18n="settings.nav.conj">Conjugation Practice</span></a>
+            <a class="settings-nav-link" href="#settings-sec-guessblank"><span class="settings-nav-icon" aria-hidden="true">🔍</span><span data-i18n="nav.guessBlank">Guess the Blank</span></a>
+            <a class="settings-nav-link" href="#settings-sec-answers"><span class="settings-nav-icon" aria-hidden="true">✅</span><span data-i18n="settings.nav.answers">Answer Checking</span></a>
+            <a class="settings-nav-link" href="#settings-sec-filters"><span class="settings-nav-icon" aria-hidden="true">🔎</span><span data-i18n="filter.filtersTitle">Filters</span></a>
+            <a class="settings-nav-link" href="#settings-sec-chinese"><span class="settings-nav-icon" aria-hidden="true">文</span><span data-i18n="settings.nav.chinese">Chinese</span></a>
+            <a class="settings-nav-link" href="#settings-sec-appearance"><span class="settings-nav-icon" aria-hidden="true">🎨</span><span data-i18n="settings.nav.appearance">Appearance</span></a>
+            <a class="settings-nav-link" href="#settings-sec-general"><span class="settings-nav-icon" aria-hidden="true">⚙</span><span data-i18n="settings.nav.general">General</span></a>
           </nav>
         <div class="settings-wrap">
 
@@ -635,14 +732,17 @@
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyTable" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyTable">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">📋</span>
-              <span class="filter-section-label settings-section-title">Table Quiz</span>
+              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.table">Table Quiz</span>
             </button>
             <div id="settingsBodyTable" class="filter-body settings-section-body">
 
+            <div class="settings-group">
+            <div class="settings-group-heading" data-i18n="settings.table.groupLayout">Layout</div>
+
             <div class="settings-row">
               <div class="settings-label">
-                <span>Default columns</span>
-                <span class="settings-desc">Word pairs per row when starting a table quiz</span>
+                <span data-i18n="settings.table.cols">Default columns</span>
+                <span class="settings-desc" data-i18n="settings.table.colsDesc">Word pairs per row when starting a table quiz</span>
               </div>
               <div class="sort-order-toggle" id="settingCols">
                 <button type="button" class="sort-order-btn" data-cols="1">1</button>
@@ -653,34 +753,39 @@
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Words per page</span>
-                <span class="settings-desc">How many words a table page shows before it splits into pages you step through with the arrows — All puts everything on one page</span>
+                <span data-i18n="settings.table.pageSize">Words per page</span>
+                <span class="settings-desc" data-i18n="settings.table.pageSizeDesc">How many words a table page shows before it splits into pages you step through with the arrows — All puts everything on one page</span>
               </div>
               <div class="sort-order-toggle" id="settingPageSize">
                 <button type="button" class="sort-order-btn" data-pagesize="25">25</button>
                 <button type="button" class="sort-order-btn" data-pagesize="50">50</button>
                 <button type="button" class="sort-order-btn active" data-pagesize="100">100</button>
                 <button type="button" class="sort-order-btn" data-pagesize="200">200</button>
-                <button type="button" class="sort-order-btn" data-pagesize="all">All</button>
+                <button type="button" class="sort-order-btn" data-pagesize="all" data-i18n="controls.all">All</button>
               </div>
             </div>
 
+            </div>
+
+            <div class="settings-group">
+            <div class="settings-group-heading" data-i18n="settings.table.groupHints">Hints &amp; Glosses</div>
+
             <div class="settings-row">
               <div class="settings-label">
-                <span>Hints</span>
-                <span class="settings-desc">What the ? button does — None hides it, First letter shows one character, Full reveal shows the answer immediately</span>
+                <span data-i18n="settings.table.hints">Hints</span>
+                <span class="settings-desc" data-i18n="settings.table.hintsDesc">What the ? button does — None hides it, First letter shows one character, Full reveal shows the answer immediately</span>
               </div>
               <div class="sort-order-toggle" id="settingHint">
-                <button type="button" class="sort-order-btn" data-hint="none">None</button>
-                <button type="button" class="sort-order-btn" data-hint="first-letter">First letter</button>
-                <button type="button" class="sort-order-btn active" data-hint="full">Full reveal</button>
+                <button type="button" class="sort-order-btn" data-hint="none" data-i18n="common.none">None</button>
+                <button type="button" class="sort-order-btn" data-hint="first-letter" data-i18n="settings.table.firstLetter">First letter</button>
+                <button type="button" class="sort-order-btn active" data-hint="full" data-i18n="settings.table.fullReveal">Full reveal</button>
               </div>
             </div>
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Question glosses</span>
-                <span class="settings-desc">How many English senses show in the question box when a word has several (e.g. "to speak / to talk")</span>
+                <span data-i18n="settings.table.questionGlosses">Question glosses</span>
+                <span class="settings-desc" data-i18n="settings.table.questionGlossesDesc">How many English senses show in the question box when a word has several (e.g. "to speak / to talk")</span>
               </div>
               <div class="sort-order-toggle" id="settingQuestionGlosses">
                 <button type="button" class="sort-order-btn active" data-count="1">1</button>
@@ -693,8 +798,8 @@
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Answer glosses</span>
-                <span class="settings-desc">How many English senses show in the answer box when a word has several</span>
+                <span data-i18n="settings.table.answerGlosses">Answer glosses</span>
+                <span class="settings-desc" data-i18n="settings.table.answerGlossesDesc">How many English senses show in the answer box when a word has several</span>
               </div>
               <div class="sort-order-toggle" id="settingAnswerGlosses">
                 <button type="button" class="sort-order-btn" data-count="1">1</button>
@@ -707,35 +812,42 @@
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Show the sense you typed</span>
-                <span class="settings-desc">If your answer matches a sense past the Answer glosses cutoff (e.g. "prove" for probar, when only "try / taste" would normally show), add it to the answer instead of hiding it.</span>
+                <span data-i18n="settings.table.expandGloss">Show the sense you typed</span>
+                <span class="settings-desc" data-i18n="settings.table.expandGlossDesc">If your answer matches a sense past the Answer glosses cutoff (e.g. "prove" for probar, when only "try / taste" would normally show), add it to the answer instead of hiding it.</span>
               </div>
               <div class="sort-order-toggle" id="settingExpandGloss">
-                <button type="button" class="sort-order-btn active" data-expand="true">On</button>
-                <button type="button" class="sort-order-btn" data-expand="false">Off</button>
+                <button type="button" class="sort-order-btn active" data-expand="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn" data-expand="false" data-i18n="common.off">Off</button>
               </div>
             </div>
 
-            <div class="settings-row">
+            </div>
+
+            <div class="settings-group">
+            <div class="settings-group-heading" data-i18n="settings.table.groupCellInfo">Cell Info</div>
+
+            <div class="settings-row" data-advanced="true">
               <div class="settings-label">
-                <span>Frequency rank</span>
-                <span class="settings-desc">The small number in the corner of every word cell, across every Table quiz style</span>
+                <span data-i18n="settings.table.freqRank">Frequency rank</span>
+                <span class="settings-desc" data-i18n="settings.table.freqRankDesc">The small number in the corner of every word cell, across every Table quiz style</span>
               </div>
               <div class="sort-order-toggle" id="settingTableShowRank">
-                <button type="button" class="sort-order-btn active" data-show="true">On</button>
-                <button type="button" class="sort-order-btn" data-show="false">Off</button>
+                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
               </div>
             </div>
 
-            <div class="settings-row">
+            <div class="settings-row" data-advanced="true">
               <div class="settings-label">
-                <span>Word history markers</span>
-                <span class="settings-desc">The list star and the "missed before" count badge on a word cell, across every Table quiz style</span>
+                <span data-i18n="settings.table.historyMarkers">Word history markers</span>
+                <span class="settings-desc" data-i18n="settings.table.historyMarkersDesc">The list star and the "missed before" count badge on a word cell, across every Table quiz style</span>
               </div>
               <div class="sort-order-toggle" id="settingTableShowMarkers">
-                <button type="button" class="sort-order-btn active" data-show="true">On</button>
-                <button type="button" class="sort-order-btn" data-show="false">Off</button>
+                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
               </div>
+            </div>
+
             </div>
 
             </div>
@@ -745,26 +857,26 @@
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyMultilang" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyMultilang">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">🌐</span>
-              <span class="filter-section-label settings-section-title">Multi-Language Table</span>
+              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.multilang">Multi-Language Table</span>
             </button>
             <div id="settingsBodyMultilang" class="filter-body settings-section-body">
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Language indicator</span>
-                <span class="settings-desc">When 2+ languages are merged into one table (the "+ Languages" picker), how each word's language is shown — Off leaves cells plain, Color tints the cell, Flag shows a faint flag behind the word</span>
+                <span data-i18n="settings.multilang.indicator">Language indicator</span>
+                <span class="settings-desc" data-i18n="settings.multilang.indicatorDesc">When 2+ languages are merged into one table (the "+ Languages" picker), how each word's language is shown — Off leaves cells plain, Color tints the cell, Flag shows a faint flag behind the word</span>
               </div>
               <div class="sort-order-toggle" id="settingLangIndicator">
-                <button type="button" class="sort-order-btn" data-indicator="off">Off</button>
-                <button type="button" class="sort-order-btn active" data-indicator="color">Color</button>
-                <button type="button" class="sort-order-btn" data-indicator="flag">Flag</button>
+                <button type="button" class="sort-order-btn" data-indicator="off" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-indicator="color" data-i18n="settings.multilang.color">Color</button>
+                <button type="button" class="sort-order-btn" data-indicator="flag" data-i18n="settings.multilang.flag">Flag</button>
               </div>
             </div>
 
-            <div class="settings-subsection">
+            <div class="settings-subsection" data-advanced="true">
               <div class="settings-label">
-                <span>Language appearance</span>
-                <span class="settings-desc">Override each language's flag (Flag mode) and cell color (Color mode) above</span>
+                <span data-i18n="settings.multilang.appearance">Language appearance</span>
+                <span class="settings-desc" data-i18n="settings.multilang.appearanceDesc">Override each language's flag (Flag mode) and cell color (Color mode) above</span>
               </div>
               <div class="lang-appearance-list" id="settingLangColors">
                 <!-- One row per language, built from LANGUAGES — see settings.ts -->
@@ -774,125 +886,83 @@
             </div>
           </div>
 
-          <div class="settings-section settings-section--allquiz" id="settings-sec-allquiz">
-            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyAllQuiz" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyAllQuiz">
+          <div class="settings-section settings-section--picture" id="settings-sec-picture" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyPicture" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyPicture">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-section-icon" aria-hidden="true">🧩</span>
-              <span class="filter-section-label settings-section-title">All Quizzes</span>
+              <span class="settings-section-icon" aria-hidden="true">🖼</span>
+              <span class="filter-section-label settings-section-title" data-i18n="nav.pictureQuiz">Picture Quiz</span>
             </button>
-            <div id="settingsBodyAllQuiz" class="filter-body settings-section-body">
+            <div id="settingsBodyPicture" class="filter-body settings-section-body">
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Answer matching</span>
-                <span class="settings-desc">Flexible accepts answers regardless of accents and capitalisation — Strict requires exact accents (e.g. está ≠ esta)</span>
+                <span data-i18n="settings.picture.photos">Wikipedia photos</span>
+                <span class="settings-desc" data-i18n="settings.picture.photosDesc">Real photographs, where one exists for the word — the highest-quality visual when it's available.</span>
               </div>
-              <div class="sort-order-toggle" id="settingMatch">
-                <button type="button" class="sort-order-btn" data-match="strict">Strict</button>
-                <button type="button" class="sort-order-btn active" data-match="fuzzy">Flexible</button>
+              <div class="sort-order-toggle" id="settingPictureSourcePhotos">
+                <button type="button" class="sort-order-btn" data-photos="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-photos="true" data-i18n="common.on">On</button>
               </div>
             </div>
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Typo tolerance</span>
-                <span class="settings-desc">How many typos quiz answers forgive — Off requires the exact spelling, Low forgives ~1 letter in 7, Normal ~1 in 4, High ~1 in 3</span>
+                <span data-i18n="settings.picture.svgs">SVGs</span>
+                <span class="settings-desc" data-i18n="settings.picture.svgsDesc">Custom and OpenMoji illustrations — a clean, consistent alternative to a real photo.</span>
               </div>
-              <div class="sort-order-toggle" id="settingTypo">
-                <button type="button" class="sort-order-btn" data-typo="off">Off</button>
-                <button type="button" class="sort-order-btn" data-typo="low">Low</button>
-                <button type="button" class="sort-order-btn active" data-typo="normal">Normal</button>
-                <button type="button" class="sort-order-btn" data-typo="high">High</button>
+              <div class="sort-order-toggle" id="settingPictureSourceSvgs">
+                <button type="button" class="sort-order-btn" data-svgs="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-svgs="true" data-i18n="common.on">On</button>
               </div>
             </div>
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Chinese word shown as</span>
-                <span class="settings-desc">Which script is primary for the Chinese word — shown by default, and required by default when a direction asks you to type it. Pinyin sidesteps needing an IME to type hanzi</span>
+                <span data-i18n="settings.picture.emoji">Emoji</span>
+                <span class="settings-desc" data-i18n="settings.picture.emojiDesc">The plainest fallback — a Unicode emoji, when nothing more detailed exists for the word.</span>
               </div>
-              <div class="sort-order-toggle" id="settingChineseScript">
-                <button type="button" class="sort-order-btn active" data-chinese-script="characters">Characters</button>
-                <button type="button" class="sort-order-btn" data-chinese-script="pinyin">Pinyin</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span>Show both scripts (word)</span>
-                <span class="settings-desc">Annotate the Chinese word with its other script in parentheses, e.g. 的 (de), and accept either script as a typed answer</span>
-              </div>
-              <div class="sort-order-toggle" id="settingShowPinyin">
-                <button type="button" class="sort-order-btn" data-show-pinyin="false">Off</button>
-                <button type="button" class="sort-order-btn active" data-show-pinyin="true">On</button>
+              <div class="sort-order-toggle" id="settingPictureSourceEmoji">
+                <button type="button" class="sort-order-btn" data-emoji="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-emoji="true" data-i18n="common.on">On</button>
               </div>
             </div>
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Show pinyin (meaning)</span>
-                <span class="settings-desc">Also show the pinyin reading in parentheses next to the English meaning, e.g. already (le)</span>
+                <span data-i18n="settings.picture.stock">Stock photo library</span>
+                <span class="settings-desc" data-i18n="settings.picture.stockDesc">Not connected yet — no stock photo source is wired up for any word. Reserved for a future image source.</span>
               </div>
-              <div class="sort-order-toggle" id="settingShowPinyinGloss">
-                <button type="button" class="sort-order-btn" data-show-pinyin-gloss="false">Off</button>
-                <button type="button" class="sort-order-btn active" data-show-pinyin-gloss="true">On</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span>Browser autofill</span>
-                <span class="settings-desc">Off stops the browser from suggesting or auto-filling previously typed answers in quiz input boxes.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingAutofill">
-                <button type="button" class="sort-order-btn" data-autofill="true">On</button>
-                <button type="button" class="sort-order-btn active" data-autofill="false">Off</button>
+              <div class="sort-order-toggle" id="settingPictureSourceStock" aria-disabled="true">
+                <button type="button" class="sort-order-btn" data-stock="false" disabled data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-stock="true" disabled title="No stock photo source is configured yet" data-i18n-title="settings.picture.stockTip" data-i18n="common.on">On</button>
               </div>
             </div>
 
             <div class="settings-row">
-              <div class="settings-label">
-                <span>Filter swear words</span>
-                <span class="settings-desc">On removes words tagged vulgar in the database, plus a curated per-language list (see data/swear-words.ts) for whatever isn't tagged. Not an exhaustive filter.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingSwearFilter">
-                <button type="button" class="sort-order-btn" data-swear="true">On</button>
-                <button type="button" class="sort-order-btn active" data-swear="false">Off</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span>Filter linking</span>
-                <span class="settings-desc">Off removes the 🔗 chain button from the Lists, Class and Domain filters and gives every mode its own independent filter — nothing is shared between them any more.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingFilterLinking">
-                <button type="button" class="sort-order-btn active" data-linking="true">On</button>
-                <button type="button" class="sort-order-btn" data-linking="false">Off</button>
-              </div>
+              <div class="settings-desc" data-i18n="settings.picture.allOffNote">Turning off every category above leaves a word with no visual at all skipped, the same as it always has been.</div>
             </div>
 
             </div>
           </div>
 
-          <div class="settings-section settings-section--conj" id="settings-sec-conj">
+          <div class="settings-section settings-section--conj" id="settings-sec-conj" data-advanced="true">
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyConj" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyConj">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">🔀</span>
-              <span class="filter-section-label settings-section-title">Conjugation Practice</span>
+              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.conj">Conjugation Practice</span>
             </button>
             <div id="settingsBodyConj" class="filter-body settings-section-body">
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Deselected pronouns</span>
-                <span class="settings-desc">The first three keep the cell and its grid lines, so the card still reads as a full chart. Close up removes the cell and lets the rest move up into it.</span>
+                <span data-i18n="settings.conj.shape">Deselected pronouns</span>
+                <span class="settings-desc" data-i18n="settings.conj.shapeDesc">The first three keep the cell and its grid lines, so the card still reads as a full chart. Close up removes the cell and lets the rest move up into it.</span>
               </div>
               <div class="sort-order-toggle" id="settingConjShape">
-                <button type="button" class="sort-order-btn" data-shape="blank" title="Keep the cell and its grid lines, hide what is in it">Blank</button>
-                <button type="button" class="sort-order-btn active" data-shape="grey" title="Show the pronoun and an empty box, dimmed">Greyed out</button>
-                <button type="button" class="sort-order-btn" data-shape="answer" title="Dimmed, with the conjugation filled in">Show answer</button>
-                <button type="button" class="sort-order-btn" data-shape="close" title="Remove the cell; the rest close up">Close up</button>
+                <button type="button" class="sort-order-btn" data-shape="blank" title="Keep the cell and its grid lines, hide what is in it" data-i18n-title="settings.conj.blankTip" data-i18n="settings.conj.blank">Blank</button>
+                <button type="button" class="sort-order-btn active" data-shape="grey" title="Show the pronoun and an empty box, dimmed" data-i18n-title="settings.conj.greyTip" data-i18n="settings.conj.grey">Greyed out</button>
+                <button type="button" class="sort-order-btn" data-shape="answer" title="Dimmed, with the conjugation filled in" data-i18n-title="settings.conj.answerTip" data-i18n="settings.conj.answer">Show answer</button>
+                <button type="button" class="sort-order-btn" data-shape="close" title="Remove the cell; the rest close up" data-i18n-title="settings.conj.closeTip" data-i18n="settings.conj.close">Close up</button>
               </div>
             </div>
 
@@ -903,20 +973,194 @@
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyGuessBlank" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyGuessBlank">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">🔍</span>
-              <span class="filter-section-label settings-section-title">Guess the Blank</span>
+              <span class="filter-section-label settings-section-title" data-i18n="nav.guessBlank">Guess the Blank</span>
             </button>
             <div id="settingsBodyGuessBlank" class="filter-body settings-section-body">
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Guesses per question</span>
-                <span class="settings-desc">How many wrong guesses are allowed before a question is scored as missed and the answer shown</span>
+                <span data-i18n="settings.guessBlank.attempts">Guesses per question</span>
+                <span class="settings-desc" data-i18n="settings.guessBlank.attemptsDesc">How many wrong guesses are allowed before a question is scored as missed and the answer shown</span>
               </div>
               <div class="sort-order-toggle" id="settingGuessBlankAttempts">
                 <button type="button" class="sort-order-btn active" data-attempts="1">1</button>
                 <button type="button" class="sort-order-btn" data-attempts="2">2</button>
                 <button type="button" class="sort-order-btn" data-attempts="3">3</button>
-                <button type="button" class="sort-order-btn" data-attempts="unlimited">Unlimited</button>
+                <button type="button" class="sort-order-btn" data-attempts="unlimited" data-i18n="settings.guessBlank.unlimited">Unlimited</button>
+              </div>
+            </div>
+
+            </div>
+          </div>
+
+          <div class="settings-section settings-section--answers" id="settings-sec-answers">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyAnswers" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyAnswers">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-section-icon" aria-hidden="true">✅</span>
+              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.answers">Answer Checking</span>
+            </button>
+            <div id="settingsBodyAnswers" class="filter-body settings-section-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.answers.match">Answer matching</span>
+                <span class="settings-desc" data-i18n="settings.answers.matchDesc">Flexible accepts answers regardless of accents and capitalisation — Strict requires exact accents (e.g. está ≠ esta)</span>
+              </div>
+              <div class="sort-order-toggle" id="settingMatch">
+                <button type="button" class="sort-order-btn" data-match="strict" data-i18n="settings.answers.strict">Strict</button>
+                <button type="button" class="sort-order-btn active" data-match="fuzzy" data-i18n="settings.answers.flexible">Flexible</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.answers.typo">Typo tolerance</span>
+                <span class="settings-desc" data-i18n="settings.answers.typoDesc">How many typos quiz answers forgive — Off requires the exact spelling, Low forgives ~1 letter in 7, Normal ~1 in 4, High ~1 in 3</span>
+              </div>
+              <div class="sort-order-toggle" id="settingTypo">
+                <button type="button" class="sort-order-btn" data-typo="off" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-typo="low" data-i18n="settings.answers.low">Low</button>
+                <button type="button" class="sort-order-btn active" data-typo="normal" data-i18n="settings.answers.normal">Normal</button>
+                <button type="button" class="sort-order-btn" data-typo="high" data-i18n="settings.answers.high">High</button>
+              </div>
+            </div>
+
+            <div class="settings-row" data-advanced="true">
+              <div class="settings-label">
+                <span data-i18n="settings.answers.autofill">Browser autofill</span>
+                <span class="settings-desc" data-i18n="settings.answers.autofillDesc">Off stops the browser from suggesting or auto-filling previously typed answers in quiz input boxes.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingAutofill">
+                <button type="button" class="sort-order-btn" data-autofill="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn active" data-autofill="false" data-i18n="common.off">Off</button>
+              </div>
+            </div>
+
+            </div>
+          </div>
+
+          <div class="settings-section settings-section--filters" id="settings-sec-filters">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyFilters" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyFilters">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-section-icon" aria-hidden="true">🔎</span>
+              <span class="filter-section-label settings-section-title" data-i18n="filter.filtersTitle">Filters</span>
+            </button>
+            <div id="settingsBodyFilters" class="filter-body settings-section-body">
+
+            <div class="settings-group">
+            <div class="settings-group-heading" data-i18n="settings.filters.groupContent">Content</div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.filters.swear">Filter swear words</span>
+                <span class="settings-desc" data-i18n="settings.filters.swearDesc">On removes words tagged vulgar in the database, plus a curated per-language list (see data/swear-words.ts) for whatever isn't tagged. Not an exhaustive filter.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingSwearFilter">
+                <button type="button" class="sort-order-btn" data-swear="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn active" data-swear="false" data-i18n="common.off">Off</button>
+              </div>
+            </div>
+
+            </div>
+
+            <div class="settings-group">
+            <div class="settings-group-heading" data-i18n="settings.filters.groupBehavior">Behavior</div>
+
+            <div class="settings-row" data-advanced="true">
+              <div class="settings-label">
+                <span data-i18n="settings.filters.linking">Filter linking</span>
+                <span class="settings-desc" data-i18n="settings.filters.linkingDesc">Off removes the 🔗 chain button from the Lists, Class and Domain filters and gives every mode its own independent filter — nothing is shared between them any more.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingFilterLinking">
+                <button type="button" class="sort-order-btn active" data-linking="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn" data-linking="false" data-i18n="common.off">Off</button>
+              </div>
+            </div>
+
+            </div>
+
+            <div class="settings-group" data-advanced="true">
+            <div class="settings-group-heading" data-i18n="settings.filters.groupVisibility">Visibility per Mode</div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.filters.posLabel">Part of Speech filter</span>
+                <span class="settings-desc" data-i18n="settings.filters.hidePOSDesc">Check a mode to remove the Part of Speech box there and stop it narrowing anything in that mode — stronger than that filter's own On/Off, which keeps the box (dimmed) with your picks remembered. Only Table and Picture Quiz ever show this box.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingHidePOSModes">
+                <button type="button" class="sort-order-btn" data-hide-mode="table" data-i18n="nav.table">Table</button>
+                <button type="button" class="sort-order-btn" data-hide-mode="picture" data-i18n="nav.pictureQuiz">Picture Quiz</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.filters.listsLabel">Lists filter</span>
+                <span class="settings-desc" data-i18n="settings.filters.hideListsDesc">Check a mode to remove the Lists box there and stop Hide/Focus narrowing anything in that mode.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingHideListsModes">
+                <button type="button" class="sort-order-btn" data-hide-mode="table" data-i18n="nav.table">Table</button>
+                <button type="button" class="sort-order-btn" data-hide-mode="picture" data-i18n="nav.pictureQuiz">Picture Quiz</button>
+                <button type="button" class="sort-order-btn" data-hide-mode="conjugation" data-i18n="nav.conjugation">Conjugation</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.filters.domainsLabel">Domains filter</span>
+                <span class="settings-desc" data-i18n="settings.filters.hideDomainsDesc">Check a mode to remove the Domains box there and stop it narrowing anything in that mode.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingHideDomainsModes">
+                <button type="button" class="sort-order-btn" data-hide-mode="table" data-i18n="nav.table">Table</button>
+                <button type="button" class="sort-order-btn" data-hide-mode="picture" data-i18n="nav.pictureQuiz">Picture Quiz</button>
+                <button type="button" class="sort-order-btn" data-hide-mode="conjugation" data-i18n="nav.conjugation">Conjugation</button>
+                <button type="button" class="sort-order-btn" data-hide-mode="trivia" data-i18n="nav.trivia">Trivia</button>
+              </div>
+            </div>
+
+            </div>
+
+            </div>
+          </div>
+
+          <div class="settings-section settings-section--chinese" id="settings-sec-chinese">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyChinese" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyChinese">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-section-icon" aria-hidden="true">文</span>
+              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.chinese">Chinese</span>
+            </button>
+            <div id="settingsBodyChinese" class="filter-body settings-section-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.chinese.script">Chinese word shown as</span>
+                <span class="settings-desc" data-i18n="settings.chinese.scriptDesc">Which script is primary for the Chinese word — shown by default, and required by default when a direction asks you to type it. Pinyin sidesteps needing an IME to type hanzi</span>
+              </div>
+              <div class="sort-order-toggle" id="settingChineseScript">
+                <button type="button" class="sort-order-btn active" data-chinese-script="characters" data-i18n="settings.chinese.characters">Characters</button>
+                <button type="button" class="sort-order-btn" data-chinese-script="pinyin" data-i18n="settings.chinese.pinyin">Pinyin</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.chinese.showBoth">Show both scripts (word)</span>
+                <span class="settings-desc" data-i18n="settings.chinese.showBothDesc">Annotate the Chinese word with its other script in parentheses, e.g. 的 (de), and accept either script as a typed answer</span>
+              </div>
+              <div class="sort-order-toggle" id="settingShowPinyin">
+                <button type="button" class="sort-order-btn" data-show-pinyin="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-show-pinyin="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.chinese.showPinyinGloss">Show pinyin (meaning)</span>
+                <span class="settings-desc" data-i18n="settings.chinese.showPinyinGlossDesc">Also show the pinyin reading in parentheses next to the English meaning, e.g. already (le)</span>
+              </div>
+              <div class="sort-order-toggle" id="settingShowPinyinGloss">
+                <button type="button" class="sort-order-btn" data-show-pinyin-gloss="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-show-pinyin-gloss="true" data-i18n="common.on">On</button>
               </div>
             </div>
 
@@ -927,26 +1171,14 @@
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyAppearance" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyAppearance">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">🎨</span>
-              <span class="filter-section-label settings-section-title">Appearance</span>
+              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.appearance">Appearance</span>
             </button>
             <div id="settingsBodyAppearance" class="filter-body settings-section-body">
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Theme</span>
-                <span class="settings-desc">System follows your OS dark/light preference</span>
-              </div>
-              <div class="sort-order-toggle" id="settingTheme">
-                <button type="button" class="sort-order-btn active" data-theme="system">System</button>
-                <button type="button" class="sort-order-btn" data-theme="light">Light</button>
-                <button type="button" class="sort-order-btn" data-theme="dark">Dark</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span>Text size</span>
-                <span class="settings-desc">Scales quiz text — Small fits more words on screen, Large is easier to read</span>
+                <span data-i18n="settings.appearance.textSize">Text size</span>
+                <span class="settings-desc" data-i18n="settings.appearance.textSizeDesc">Scales quiz text — Small fits more words on screen, Large is easier to read</span>
               </div>
               <div class="sort-order-toggle" id="settingFontSize">
                 <button type="button" class="sort-order-btn" data-size="xs">XS</button>
@@ -964,35 +1196,35 @@
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyGeneral" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyGeneral">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">⚙</span>
-              <span class="filter-section-label settings-section-title">General</span>
+              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.general">General</span>
             </button>
             <div id="settingsBodyGeneral" class="filter-body settings-section-body">
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Welcome tip</span>
-                <span class="settings-desc">Re-show the getting started hint at the top of the page</span>
+                <span data-i18n="settings.general.welcomeTip">Welcome tip</span>
+                <span class="settings-desc" data-i18n="settings.general.welcomeTipDesc">Re-show the getting started hint at the top of the page</span>
               </div>
-              <button type="button" id="settingShowOnboarding" class="settings-action-btn">Show again</button>
+              <button type="button" id="settingShowOnboarding" class="settings-action-btn" data-i18n="settings.general.showAgain">Show again</button>
             </div>
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Session history</span>
-                <span class="settings-desc">Off stops new quiz sessions from being logged to the History tab. Sessions already there are untouched, and this doesn't affect mastery, lists, or the words you keep missing.</span>
+                <span data-i18n="settings.general.sessionHistory">Session history</span>
+                <span class="settings-desc" data-i18n="settings.general.sessionHistoryDesc">Off stops new quiz sessions from being logged to the History tab. Sessions already there are untouched, and this doesn't affect mastery, lists, or the words you keep missing.</span>
               </div>
               <div class="sort-order-toggle" id="settingHistory">
-                <button type="button" class="sort-order-btn active" data-history="true">On</button>
-                <button type="button" class="sort-order-btn" data-history="false">Off</button>
+                <button type="button" class="sort-order-btn active" data-history="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn" data-history="false" data-i18n="common.off">Off</button>
               </div>
             </div>
 
-            <div class="settings-row">
+            <div class="settings-row" data-advanced="true">
               <div class="settings-label">
-                <span>Clear history</span>
-                <span class="settings-desc">Permanently deletes every saved quiz session and "words I keep missing" tally, in every language. Mastery and your lists are not affected.</span>
+                <span data-i18n="settings.general.clearHistory">Clear history</span>
+                <span class="settings-desc" data-i18n="settings.general.clearHistoryDesc">Permanently deletes every saved quiz session and "words I keep missing" tally, in every language. Mastery and your lists are not affected.</span>
               </div>
-              <button type="button" id="settingClearHistory" class="settings-action-btn settings-action-btn--danger">Clear History</button>
+              <button type="button" id="settingClearHistory" class="settings-action-btn settings-action-btn--danger" data-i18n="settings.general.clearHistoryBtn">Clear History</button>
             </div>
 
             </div>

@@ -59,6 +59,7 @@ export function openPresetPicker({ anchorEl, mode, onApply }: PresetPickerOption
       delBtn.title       = `Delete "${name}"`;
       delBtn.addEventListener('click', e => {
         e.stopPropagation();
+        if (!window.confirm(`Delete profile "${name}"?`)) return;
         deletePreset(mode, name);
         render();
       });

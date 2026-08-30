@@ -29,6 +29,7 @@
     "build:native": "tsx scripts/build-native.ts native"
   },
   "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.84",
     "better-sqlite3": "^9.2.2",
     "compression": "^1.8.1",
     "dotenv": "^16.3.1",

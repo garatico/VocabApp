@@ -26,7 +26,7 @@ import {
 } from './index.js';
 import { shuffle } from '../../utils/shuffle.js';
 import {
-  orderWords, WORD_ORDER_LABELS, saveSession, recordOutcome, type WordOrder,
+  orderWords, getWordOrderLabels, saveSession, recordOutcome, type WordOrder,
 } from '../../utils/session-history.js';
 import { readString, writeString } from '../../utils/storage.js';
 import { createStopwatch } from '../../ui/stopwatch.js';
@@ -223,7 +223,7 @@ export function renderConjCardMatch({
   orderLabel.textContent = 'Order';
   const orderSel = document.createElement('select');
   orderSel.className = 'conj-order-select';
-  WORD_ORDER_LABELS.forEach(([value, label]) => {
+  getWordOrderLabels().forEach(([value, label]) => {
     const o = document.createElement('option');
     o.value = value; o.textContent = label; o.selected = value === verbOrder;
     if (value === 'shuffle') {

@@ -17,11 +17,12 @@
  *
  * The literals are unchanged, deliberately. They are already on real machines
  * holding real word lists, and renaming a key is silent data loss. `KEYS`
- * below is a census of the four prefixes in use rather than a scheme anyone
+ * below is a census of the five prefixes in use rather than a scheme anyone
  * would choose:
  *
  *   `s_`   settings          `vq_`  session/mode state
- *   `ml_`  my-lists data     (none) theme, filterExpanded, s_onboarding_seen
+ *   `ml_`  my-lists data     `uc_`  My Content tab additions (user-content.ts)
+ *   (none) theme, filterExpanded, s_onboarding_seen
  *
  * Unifying them needs a migration that reads the old key, writes the new one
  * and deletes the old — worth doing, but as its own change with its own test.

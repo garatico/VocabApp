@@ -5,13 +5,16 @@ import { renderConjugationMode, cleanupConjugationMode } from './modes/conjugati
 import { renderConjOneAtATime }           from './modes/conjugation/one-at-a-time-mode.ts';
 import { renderConjRandomTable }          from './modes/conjugation/random-table-mode.ts';
 import { renderConjCardMatch }            from './modes/conjugation/card-match-mode.ts';
-import { startTableQuiz, getTableStyle }  from './modes/table-controls.ts';
+import { startTableQuiz, getTableStyle, syncTableStyleUI } from './modes/table-controls.ts';
 import { renderTableRecallMode }          from './modes/table-recall-mode.ts';
 import { filterWords }                    from './filters/word-filters.ts';
+import { applyDomainFilter }              from './filters/domain-filter.ts';
 import { hasVisual }                      from './data/visual-map.ts';
 import { shuffleInPlace }                from './utils/shuffle.ts';
 import { orderWords }                     from './utils/session-history.ts';
-import { estimateConjugationSize, isOwnInfinitive, hasAnyForms } from './modes/conjugation/verb-filters.ts';
+import { estimateConjugationSize, isOwnInfinitive, hasAnyForms, dropRedundantReflexives, regularityOf } from './modes/conjugation/verb-filters.ts';
+import { activeRegularities } from './modes/conjugation/controls.ts';
+import { Settings } from './settings.ts';
 
 import type { Word } from './types.ts';
 
@@ -102,7 +105,24 @@ export function bindStartHandler({
       // instead of silently shrinking to 99 once the renderer drops one.
       const modeAtStart = getCurrentMode();
       const verbsOnly   = modeAtStart === 'conjugation';
-      const isDrillableVerb = (w: Word) => w.pos === 'verb' && isOwnInfinitive(w) && hasAnyForms(w);
+
+      // ConjRegularityScope's 'beforeTopN': narrow to the checked Regularity
+      // buckets before anything below decides how many verbs are "enough" —
+      // baked into isDrillableVerb itself (rather than filtered on afterward)
+      // so the fill-mode/Top-N top-up blocks below, which all gate on this
+      // same predicate, naturally reach past a thin bucket for more verbs
+      // instead of settling for fewer than requested. The default
+      // 'afterTopN' leaves this a no-op here; each conjugation renderer
+      // applies Regularity itself to the already-capped N verbs instead.
+      const regBeforeTopN = verbsOnly && Settings.getConjRegularityScope() === 'beforeTopN';
+      const activeRegs    = regBeforeTopN ? activeRegularities() : [];
+      const matchesRegularity = (w: Word): boolean => {
+        if (!regBeforeTopN || activeRegs.length >= 4) return true;
+        const cls = w.linguistic?.conjugation_class ?? null;
+        return cls == null || activeRegs.includes(regularityOf(cls).key);
+      };
+      const isDrillableVerb = (w: Word) =>
+        w.pos === 'verb' && isOwnInfinitive(w) && hasAnyForms(w) && matchesRegularity(w);
       if (verbsOnly) list = list.filter(isDrillableVerb);
 
       // Same problem, same fix: picture mode discards every word without a
@@ -116,12 +136,7 @@ export function bindStartHandler({
       // assignments only exist for Spanish, so filtering on them must not
       // eliminate words from other languages.
       const selectedDomains = getSelectedDomains ? getSelectedDomains() : [];
-      if (selectedDomains.length > 0) {
-        list = list.filter(w => {
-          const domains = w.domains || [];
-          return domains.length === 0 || domains.some(d => selectedDomains.includes(d));
-        });
-      }
+      list = applyDomainFilter(list, selectedDomains);
 
       // ── "N New" fill mode: compensate for words hidden by list filter ─────────
       // When fill mode is active, pull additional words from beyond the current
@@ -143,12 +158,7 @@ export function bindStartHandler({
         extras = filterWords(extras);
 
         // Apply domain filter
-        if (selectedDomains.length > 0) {
-          extras = extras.filter(w => {
-            const doms = w.domains || [];
-            return doms.length === 0 || doms.some((d: string) => selectedDomains.includes(d));
-          });
-        }
+        extras = applyDomainFilter(extras, selectedDomains);
 
         // Apply POS class filter
         const selectedClasses = getSelectedClasses ? getSelectedClasses() : [];
@@ -170,14 +180,19 @@ export function bindStartHandler({
                           && (verbsOnly  ? isDrillableVerb(w)        : true)
                           && (visualsOnly ? hasVisual(fullLang, w.word) : true));
         extras = filterWords(extras);
-        if (selectedDomains.length > 0) {
-          extras = extras.filter(w => {
-            const doms = w.domains || [];
-            return doms.length === 0 || doms.some((d: string) => selectedDomains.includes(d));
-          });
-        }
+        extras = applyDomainFilter(extras, selectedDomains);
         list = [...list, ...extras.slice(0, requestedSize - list.length)];
       }
+
+      // Redundant-reflexive dedup runs after both top-up blocks above, not
+      // right after the initial isDrillableVerb filter — a top-up can pull a
+      // "divertirse"-shaped entry back in from beyond the window even when
+      // the main list's own copy was already dropped, so this has to see the
+      // fully-assembled pool to catch every case. Not gated on verbsOnly —
+      // Table mode quizzes every part of speech and can hit the same
+      // divertir/divertirse redundancy, and the function is a no-op on any
+      // word whose shape doesn't match a bare-infinitive/reflexive pair.
+      list = dropRedundantReflexives(list);
 
       // Hard cap. Everything above only ever *adds* words — the top-up blocks
       // exist to compensate for narrowing filters. Without this the requested
@@ -207,6 +222,15 @@ export function bindStartHandler({
           const el = document.getElementById(id);
           if (el) { el.style.display = 'none'; el.innerHTML = ''; }
         });
+        // syncTableStyleUI() refuses to touch #tableControls/#directionGroup
+        // while tableWrap still holds a previous render (so switching styles
+        // mid-quiz can't yank the live pager out from under it) — but that
+        // guard also meant a stale Standard-style render left over from
+        // before a style switch never got hidden once Recall/Double Recall
+        // built its own copy of the same Order control on top of it. The
+        // wrap is empty right above this line, so the guard no longer
+        // applies — this is exactly the moment to resolve it.
+        syncTableStyleUI();
 
         const tableStyle = getTableStyle();
         if (tableStyle === 'standard') {
@@ -262,14 +286,25 @@ export function bindStartHandler({
         const triviaDifficultyEl = document.getElementById('triviaDifficulty');
         const triviaDifficulty = (triviaDifficultyEl?.querySelector('.conj-toggle-btn.active') as HTMLElement | null)
           ?.dataset.difficulty ?? 'all';
+        const triviaReadingDifficultyEl = document.getElementById('triviaReadingDifficulty');
+        const triviaReadingDifficulty = (triviaReadingDifficultyEl?.querySelector('.conj-toggle-btn.active') as HTMLElement | null)
+          ?.dataset.readingDifficulty ?? 'all';
+        const triviaReadingLengthEl = document.getElementById('triviaReadingLength');
+        const triviaReadingLength = (triviaReadingLengthEl?.querySelector('.conj-toggle-btn.active') as HTMLElement | null)
+          ?.dataset.readingLength ?? 'all';
 
         // Trivia draws its own general-knowledge question bank rather than
         // the vocabulary `list` built above — see data/trivia-questions.ts.
+        // Domain filtering (also real for trivia — see the same file's
+        // `domains` field) is applied inside renderTriviaMode itself, since
+        // there's no vocabulary `list` here for applyDomainFilter to narrow.
         renderTriviaMode({
           container: triviaWrap,
           lang: fullLang,
           subMode: (triviaSubMode ?? 'type') as 'type' | 'choice' | 'table',
           difficulty: triviaDifficulty as 'all' | 'easy' | 'medium' | 'hard',
+          readingDifficulty: triviaReadingDifficulty as 'all' | 'easy' | 'medium' | 'hard',
+          readingLength: triviaReadingLength as 'all' | 'short' | 'long',
         });
       }
 

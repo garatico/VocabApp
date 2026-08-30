@@ -63,8 +63,8 @@ import { openListPicker } from '../utils/list-picker.ts';
 import { Settings, applyAutofillAttr } from '../settings.ts';
 import { languageInfo, flagUrl } from '../data/languages.ts';
 import {
-  saveSession, recordOutcome, missCount, orderWords, WORD_ORDER_LABELS,
-  type WordOrder,
+  saveSession, recordOutcome, missCount, orderWords, getWordOrderLabels,
+  type WordOrder, type WordOrderSortBy,
 } from '../utils/session-history.ts';
 import { readString, writeString } from '../utils/storage.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
@@ -72,6 +72,7 @@ import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summ
 import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import { rowKey } from './table-mode.ts';
 import { pageSlice, pageCountFor } from './table-controls.ts';
+import { t } from '../i18n/index.ts';
 
 export type TableRecallStyle = 'recall' | 'double';
 
@@ -119,7 +120,12 @@ export function renderTableRecallMode({
 
   let wordOrder: WordOrder =
     (readString('vq_table_order') as WordOrder | null) ?? 'rank';
-  let sorted = orderWords(words, wordOrder, w => w.language ?? lang);
+  // Only 'alpha' order reads this — it's the axis a plain word/rank sort
+  // has no use for — but it's stored and restored regardless, same as
+  // wordOrder itself, so picking it once sticks across sessions.
+  let sortBy: WordOrderSortBy =
+    (readString('vq_table_order_sortby') as WordOrderSortBy | null) ?? 'word';
+  let sorted = orderWords(words, wordOrder, w => w.language ?? lang, sortBy);
   let pageIndex = 0;
 
   function pageSize(): number { return Settings.getTablePageSize(); }
@@ -170,14 +176,32 @@ export function renderTableRecallMode({
 
   const orderLabel = document.createElement('span');
   orderLabel.className = 'inline-order-label';
-  orderLabel.textContent = 'Order';
+  orderLabel.textContent = t('controls.order', 'Order');
   const orderSel = document.createElement('select');
   orderSel.className = 'table-order-select';
-  WORD_ORDER_LABELS.forEach(([value, label]) => {
+  getWordOrderLabels().forEach(([value, label]) => {
     const o = document.createElement('option');
     o.value = value; o.textContent = label; o.selected = value === wordOrder;
     orderSel.appendChild(o);
   });
+
+  // Which side's spelling "A → Z" alphabetizes by — meaningless for the
+  // other four orders, so it only visibly does anything once Order is set
+  // to A → Z, but stays present rather than popping in/out to avoid the
+  // layout shift that caused the old duplicate-control bug.
+  const sortByToggle = document.createElement('div');
+  sortByToggle.className = 'sort-order-toggle tr-sortby-toggle';
+  const sortByWordBtn = document.createElement('button');
+  sortByWordBtn.type = 'button';
+  sortByWordBtn.className = 'sort-order-btn' + (sortBy === 'word' ? ' active' : '');
+  sortByWordBtn.dataset.sortby = 'word';
+  sortByWordBtn.textContent = t('table.sortByWord', 'Word');
+  const sortByMeaningBtn = document.createElement('button');
+  sortByMeaningBtn.type = 'button';
+  sortByMeaningBtn.className = 'sort-order-btn' + (sortBy === 'meaning' ? ' active' : '');
+  sortByMeaningBtn.dataset.sortby = 'meaning';
+  sortByMeaningBtn.textContent = t('table.sortByMeaning', 'Meaning');
+  sortByToggle.append(sortByWordBtn, sortByMeaningBtn);
 
   const showWordsBtn = document.createElement('button');
   showWordsBtn.type = 'button';
@@ -200,7 +224,7 @@ export function renderTableRecallMode({
   giveUpBtn.className = 'recall-giveup-btn';
   giveUpBtn.textContent = 'Give Up';
 
-  topRow.append(orderLabel, orderSel);
+  topRow.append(orderLabel, orderSel, sortByToggle);
   if (style === 'double') topRow.append(showWordsBtn, showTransBtn);
   topRow.append(stopwatchEl, giveUpBtn);
 
@@ -523,7 +547,20 @@ export function renderTableRecallMode({
   orderSel.addEventListener('change', () => {
     wordOrder = orderSel.value as WordOrder;
     writeString('vq_table_order', wordOrder);
-    sorted = orderWords(words, wordOrder, w => w.language ?? lang);
+    sorted = orderWords(words, wordOrder, w => w.language ?? lang, sortBy);
+    pageIndex = 0;
+    buildGrid();
+    inp.focus();
+  });
+
+  sortByToggle.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn?.dataset.sortby || btn.dataset.sortby === sortBy) return;
+    sortBy = btn.dataset.sortby as WordOrderSortBy;
+    writeString('vq_table_order_sortby', sortBy);
+    sortByWordBtn.classList.toggle('active', sortBy === 'word');
+    sortByMeaningBtn.classList.toggle('active', sortBy === 'meaning');
+    sorted = orderWords(words, wordOrder, w => w.language ?? lang, sortBy);
     pageIndex = 0;
     buildGrid();
     inp.focus();

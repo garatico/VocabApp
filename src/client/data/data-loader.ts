@@ -10,6 +10,7 @@ import { loadVocab } from './vocab-source.ts';
 import { showLoading, hideLoading, showErrorMessage } from '../ui/ui.js';
 import { logger } from '../utils/logger.js';
 import { capitalize } from '../utils/utils.js';
+import { getUserWords, toWord } from './user-content.ts';
 
 
 const cache: Record<string, Word[]> = {};
@@ -21,7 +22,20 @@ function formatBytes(bytes: number): string {
     : `${Math.round(bytes / 1024)} KB`;
 }
 
+/**
+ * Merges in words added on the My Content tab (see data/user-content.ts) —
+ * done here rather than folded into `cache`, so a word added after this
+ * language was first loaded shows up on the next call instead of needing a
+ * full reload. The vocabulary fetch itself is still cached below; only this
+ * cheap merge re-runs every call.
+ */
 export async function loadWords(lang: string): Promise<Word[]> {
+  const words = await loadCachedVocab(lang);
+  const userWords = getUserWords(lang).map(toWord);
+  return userWords.length ? [...userWords, ...words] : words;
+}
+
+async function loadCachedVocab(lang: string): Promise<Word[]> {
   if (cache[lang]) return cache[lang];
 
   const label = capitalize(lang);

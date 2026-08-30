@@ -1944,15 +1944,57 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
 
 /* ── Testing Profiles' inline editor — same "expand in place" idea as
    .ml-smart-editor above, its own section/chip shapes since a profile
-   bundles several unrelated filters rather than one rule. ── */
+   bundles several unrelated filters rather than one rule.
+   Sections are grouped into three labelled cards (Word Pool / Filters /
+   Quiz Behavior) rather than one flat stack — a profile changes several
+   unrelated decisions at once, and the groups say which decision each
+   section belongs to before you read a single control inside it. ── */
 .ml-profile-editor {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.6rem 0.85rem;
+  gap: 0.7rem;
+  padding: 0.7rem 0.85rem 0.9rem;
   background: var(--surface2);
   border-top: 1px solid var(--ml-accent-profile);
   border-bottom: 1px solid var(--border);
+}
+.ml-profile-editor-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--ml-accent-profile);
+  border-radius: var(--radius-sm);
+}
+/* The group title is a collapse button (.filter-collapse-btn, shared with the
+   live filter boxes — see profile-panel.ts's group()) — these rules ride
+   alongside it for color/weight/layout. Selector specificity (element +
+   class) rather than load order is what makes the accent color win over
+   filter-collapse-btn's own `color: inherit`. */
+button.ml-profile-editor-group-title {
+  width: 100%;
+  justify-content: flex-start;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ml-accent-profile);
+}
+/* :not(.filter-body--collapsed) rather than a bare .ml-profile-editor-group-body
+   rule — both this and .filter-body--collapsed{display:none} are single-class
+   selectors, so which wins when both apply came down to stylesheet load
+   order. Scoping the flex display to "not collapsed" means there is no
+   conflict to have: this rule simply does not apply once collapsed. */
+.ml-profile-editor-group-body:not(.filter-body--collapsed) {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.ml-profile-editor-group .ml-profile-editor-section + .ml-profile-editor-section {
+  padding-top: 0.55rem;
+  border-top: 1px dashed var(--border);
 }
 .ml-profile-editor-section {
   display: flex;
@@ -1969,7 +2011,11 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
 .ml-profile-editor-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.15rem 0.65rem;
+  align-items: center;
+  gap: 0.3rem 0.65rem;
+}
+.ml-profile-editor-words-sub {
+  margin-top: 0.15rem;
 }
 .ml-profile-editor-chip {
   display: inline-flex;
@@ -1983,13 +2029,22 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
   accent-color: var(--ml-accent-profile);
   cursor: pointer;
 }
-.ml-profile-editor-text {
+.ml-profile-editor-active {
+  font-weight: 600;
+}
+.ml-profile-editor-text,
+.ml-profile-editor-select,
+.ml-profile-editor-number {
+  font: inherit;
   font-size: 0.8rem;
   padding: 0.3rem 0.5rem;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
+}
+.ml-profile-editor-number {
+  width: 5.5rem;
 }
 .ml-profile-editor-hint {
   font-size: 0.74rem;

@@ -637,6 +637,80 @@
   color: hsl(var(--tense-hue, 145) 60% 72%);
 }
 
+/* Light mode only (html.dark is the app's real light/dark switch — the
+   data-theme/media rules above target a selector the theme toggle never
+   actually sets, so they're left as-is rather than folded in here): the
+   Tense & Forms backgrounds read too pale at 45% saturation / 0.08-0.18
+   alpha against --surface/--surface2, especially the unselected hover
+   state. Saturation and alpha both go up; only the active state's text
+   also darkens a touch further for contrast, since the tinted background
+   now sits closer to the text color. */
+html:not(.dark) .conj-tense-chip:hover {
+  border-color: hsl(var(--tense-hue, 145) 70% 38%);
+  background: hsl(var(--tense-hue, 145) 70% 38% / 0.16);
+}
+html:not(.dark) .conj-tense-chip.active {
+  background:   hsl(var(--tense-hue, 145) 70% 38% / 0.30);
+  border-color: hsl(var(--tense-hue, 145) 70% 34%);
+  color:        hsl(var(--tense-hue, 145) 75% 24%);
+  box-shadow: inset 3px 0 0 hsl(var(--tense-hue, 145) 70% 34%);
+}
+html:not(.dark) .conj-card-tense {
+  color:      hsl(var(--tense-hue, 145) 75% 24%);
+  background: hsl(var(--tense-hue, 145) 70% 38% / 0.22);
+  border-color: hsl(var(--tense-hue, 145) 70% 38% / 0.6);
+}
+/* Forms (the yo/tú/él.../nosotros... pronoun toggles): brighter, more
+   saturated backgrounds than the fix above — a request on top of it, since
+   every pronoun is active by default and six simultaneously-tinted boxes
+   read best as a bright, clearly-colored set rather than a subtle one. Text
+   stays a fixed dark color rather than one derived from --pronoun-hue —
+   some hues (blue, magenta) go muddy at a hue-matched dark shade, where the
+   app's own --text reads cleanly against every one of the six. */
+html:not(.dark) .conj-pronoun-toggle:hover {
+  background: hsl(var(--pronoun-hue, 210) 85% 60% / 0.22);
+}
+html:not(.dark) .conj-pronoun-toggle.active {
+  background: hsl(var(--pronoun-hue, 210) 85% 60% / 0.45);
+  color:      var(--text);
+  box-shadow: inset 0 -3px 0 hsl(var(--pronoun-hue, 210) 75% 42%);
+}
+html:not(.dark) .conj-reg-chip.active {
+  background: color-mix(in srgb, currentColor 22%, transparent);
+}
+
+/* Light mode only, same reasoning as above: .conj-drill-input's (and Random
+   Table's equivalent, .crt-input's) correct/revealed/missed backgrounds use
+   the shared --correct-light/--warning-light/--incorrect-light tokens, which
+   read too pale here too — a filled-in form should look clearly "done", not
+   like an empty one with a faint tint. Backgrounds are mixed at a much
+   higher share of the semantic color than the shared *-light tokens carry,
+   with the text darkened to match so contrast holds against the stronger
+   fill. */
+html:not(.dark) .conj-drill-input.correct,
+html:not(.dark) .conj-drill-input.correct:disabled,
+html:not(.dark) .crt-input.correct {
+  background-color: color-mix(in srgb, var(--correct) 28%, var(--surface));
+  border-color: var(--correct);
+  color: color-mix(in srgb, var(--correct) 80%, black);
+  -webkit-text-fill-color: color-mix(in srgb, var(--correct) 80%, black);
+}
+html:not(.dark) .conj-drill-input.revealed,
+html:not(.dark) .conj-drill-input.revealed:disabled {
+  background-color: color-mix(in srgb, var(--warning) 32%, var(--surface));
+  border-color: var(--warning);
+  color: var(--warning);
+  -webkit-text-fill-color: var(--warning);
+}
+html:not(.dark) .conj-drill-input.missed,
+html:not(.dark) .conj-drill-input.missed:disabled,
+html:not(.dark) .crt-input.incorrect {
+  background-color: color-mix(in srgb, var(--incorrect) 26%, var(--surface));
+  border-color: var(--incorrect);
+  color: color-mix(in srgb, var(--incorrect) 78%, black);
+  -webkit-text-fill-color: color-mix(in srgb, var(--incorrect) 78%, black);
+}
+
 @media (max-width: 767px) {
   .conj-tense-chip    { font-size: 0.78rem; padding: 0.4rem 0.7rem; min-height: 38px; }
 }
@@ -923,28 +997,42 @@
   white-space: nowrap;
 }
 
+/* Matches table.css's .pager-status — same "N of M" role, styled the same
+   way so Conjugation's pager reads as the same control as Table's rather
+   than a different-looking one that happens to do the same thing. */
 .conj-full-count {
   flex: none;
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 
+/* Matches table.css's .pager-btn. Also reused for the unrelated "Collapse
+   all" button (conj-collapse-all-btn), which keeps this same look on
+   purpose — it sits in the same header row as Prev/Next. */
 .conj-full-nav {
   flex: none;
-  padding: 0.25rem 0.6rem;
+  min-width: 2.4rem;
+  padding: 0.35rem 0.75rem;
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
-.conj-full-nav:hover:not(:disabled) { border-color: var(--text-muted); }
-.conj-full-nav:disabled { opacity: 0.4; cursor: default; }
+.conj-full-nav:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.conj-full-nav:disabled { opacity: 0.35; cursor: default; }
 
 /* The grid stacks verb blocks; the horizontal row is inside each one. */
 .conj-cards-grid--full {
@@ -974,6 +1062,30 @@
   font-family: 'DM Mono', monospace;
   font-size: 0.7rem;
   color: var(--text-muted);
+}
+
+.conj-verb-collapse-btn {
+  flex: 0 0 auto;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.conj-verb-block-head--clickable {
+  cursor: pointer;
+}
+/* The star and rank stay their own click targets (add-to-list, no action) —
+   only the header background itself hints "click to collapse". */
+.conj-verb-block-head--clickable:hover {
+  background: var(--surface3, var(--surface2));
+}
+
+/* Collapsed: the header stays (so the verb is still identifiable and its
+   star/rank/regularity still readable), only the tense row folds away. */
+.conj-verb-block--collapsed .conj-verb-block-head {
+  border-bottom: none;
+}
+.conj-verb-block--collapsed .conj-verb-row {
+  display: none;
 }
 
 /* One verb's tenses. Columns size to their content and scroll sideways rather
@@ -1761,6 +1873,16 @@
 }
 .crt-table tr:last-child td { border-bottom: none; }
 .crt-table tr:nth-child(even) td { background: var(--surface2); }
+
+/* Column dividers — Pronoun/Verb/Tense/Your Answer read as one run-on row
+   without them, especially once the zebra stripe and the Tense stripe
+   (below) are the only other separators. Both header and body cells split
+   the same way; the last column needs none since the table's own outer
+   border already closes it off. */
+.crt-table th:not(:last-child),
+.crt-table td:not(:last-child) {
+  border-right: 1px solid var(--border-strong);
+}
 
 /* Tense and person color coding — rows carry data-tense/data-pi (set by
    random-table-mode.ts), which define --tense-hue/--pronoun-hue (see the

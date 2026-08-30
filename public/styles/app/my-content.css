@@ -1,0 +1,247 @@
+/* ================================================================
+   MY CONTENT — client-only word/trivia/picture additions (see
+   data/user-content.ts). Everything here lives in localStorage only.
+================================================================ */
+
+#myContentArea {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 0.6rem;
+  overflow: hidden;
+}
+
+.mc-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 0.9rem 1rem 1.2rem;
+}
+
+.mc-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.mc-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.mc-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  max-width: 60ch;
+}
+
+.mc-backup-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.mc-import-status {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.mc-import-status--error {
+  color: var(--danger);
+}
+
+/* ── Section shell — one per content type ── */
+.mc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface2);
+}
+.mc-section-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.mc-section-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* ── Add form ── */
+.mc-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+.mc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  flex: 1 1 180px;
+  min-width: 140px;
+}
+.mc-field-label {
+  font-weight: 600;
+}
+.mc-input {
+  font-size: 0.85rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+}
+.mc-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+/* ── Per-language rows — one per app language, in every add form, so which
+   language an input belongs to is never ambiguous and several can be
+   filled in at once. ── */
+.mc-lang-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.mc-lang-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.mc-lang-row--current {
+  background: var(--accent-light);
+  border-radius: var(--radius-sm);
+  margin: -0.05rem -0.3rem;
+  padding: 0.05rem 0.3rem;
+}
+.mc-lang-row-label {
+  flex: 0 0 90px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.mc-lang-row-current .mc-lang-row-label,
+.mc-lang-row--current .mc-lang-row-label {
+  color: var(--accent);
+}
+.mc-lang-row .mc-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.mc-lang-row-inputs {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.mc-lang-row-inputs .mc-input {
+  flex: 1 1 50%;
+  min-width: 0;
+}
+/* Row titles use the shared .lang-badge (ui/lang-badge.ts) for the
+   language flag, styled by that component's own CSS — nothing to add here. */
+
+/* ── Buttons ── */
+.mc-btn {
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.mc-btn:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.mc-btn--secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.mc-btn--secondary:hover { background: var(--surface2); }
+.mc-btn--danger {
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--danger-border);
+}
+.mc-btn--danger:hover { background: var(--danger-hover); }
+.mc-btn--sm {
+  font-size: 0.74rem;
+  padding: 0.28rem 0.6rem;
+}
+
+/* ── List of existing entries ── */
+.mc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.mc-empty {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.mc-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.mc-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 0;
+}
+.mc-row-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.mc-row-meta {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+.mc-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--surface2);
+}
+
+@media (max-width: 599px) {
+  .mc-form { flex-direction: column; align-items: stretch; }
+  .mc-field { min-width: 0; }
+  .mc-lang-row { flex-wrap: wrap; }
+  .mc-lang-row-label { flex: 1 1 100%; }
+  .mc-lang-row-inputs { flex-direction: column; }
+}

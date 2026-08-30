@@ -24,10 +24,48 @@ export type TypoTolerance = 'off' | 'low' | 'normal' | 'high';
 const TYPO_RATIOS: Record<TypoTolerance, number> = { off: 0, low: 0.15, normal: 0.25, high: 0.35 };
 export type FontSize  = 'xs' | 'small' | 'medium' | 'large' | 'xl';
 
+/**
+ * Whether the Regularity filter narrows the whole language pool before the
+ * Verbs size cap is applied, or only what's left of the already-capped Top
+ * N. 'afterTopN' (the default) matches how the app already behaved before
+ * this setting existed: Start Quiz takes the N most frequent verbs, then
+ * narrows by Regularity from that fixed set — so unchecking a bucket can
+ * shrink the final verb count below N. 'beforeTopN' narrows the whole
+ * language by Regularity first, so the final count always matches N.
+ */
+export type ConjRegularityScope = 'afterTopN' | 'beforeTopN';
+
 export type ConjDeselected = 'close' | 'blank' | 'grey' | 'answer';
 const CONJ_DESELECTED: ConjDeselected[] = ['close', 'blank', 'grey', 'answer'];
 
 export type LangIndicator = 'off' | 'color' | 'flag';
+
+// POS only ever renders on Table and Picture (ui-state.ts always hides it on
+// Conjugation regardless); Lists/Domains also render on Conjugation.
+const POS_HIDEABLE_MODES = ['table', 'picture'] as const;
+// Lists doesn't apply to trivia (no vocabulary pool to hide/focus within),
+// but Domains does — trivia questions carry their own `domains` field (see
+// data/trivia-questions.ts) — so 'trivia' is here even though it isn't in
+// POS_HIDEABLE_MODES, and getHideListsFilter('trivia') is simply never
+// checked (ui-state.ts always force-hides the Lists box there regardless).
+const LISTS_DOMAINS_HIDEABLE_MODES = ['table', 'picture', 'conjugation', 'trivia'] as const;
+
+function getHiddenFilterModes(legacyKey: string, applicable: readonly string[]): Set<string> {
+  const modesKey = legacyKey + '_modes';
+  const raw = readString(P + modesKey);
+  if (raw !== null) return new Set(raw.split(',').filter(Boolean));
+  return get(legacyKey, 'false') === 'true' ? new Set(applicable) : new Set();
+}
+
+function setHiddenFilterModes(legacyKey: string, modes: Set<string>): void {
+  set(legacyKey + '_modes', Array.from(modes).join(','));
+}
+
+/** The app's own interface language — separate from the vocabulary language
+ *  picked in `#langSelect`. Only 'english' (the hardcoded default, no lookup
+ *  needed) and 'spanish' (translated) are wired up; the rest are Settings UI
+ *  placeholders disabled until translated. */
+export type UILanguage = 'english' | 'spanish';
 
 /** Grid class for each mode. 'close' needs none — it is the base behaviour. */
 export const CONJ_DESELECTED_CLASS: Record<ConjDeselected, string> = {
@@ -142,6 +180,45 @@ export const Settings = {
   getSwearFilterEnabled: (): boolean => get('swear_filter_enabled', 'false') === 'true',
 
   /**
+   * Which visual categories Picture Quiz is allowed to draw from — Wikipedia
+   * photos, SVGs (custom + OpenMoji) and emoji. All on by default, since
+   * that's what every session already saw before this setting existed.
+   * picture-mode.ts checks these when building each card's visual and when
+   * deciding whether a word has one at all; a word left with nothing enabled
+   * drops out of the quiz the same way a word with no visual at all always
+   * has.
+   */
+  getPictureSourcePhotos: (): boolean => get('picture_source_photos', 'true') === 'true',
+  getPictureSourceSvgs:   (): boolean => get('picture_source_svgs',   'true') === 'true',
+  getPictureSourceEmoji:  (): boolean => get('picture_source_emoji',  'true') === 'true',
+
+  /**
+   * Hide a whole filter box — Part of Speech, Lists, Domains — in specific
+   * quiz modes, rather than only all-or-nothing app-wide. This is stronger
+   * than that filter's own On/Off toggle: Off still shows the box (dimmed)
+   * with your selections remembered for later; this removes it from view
+   * entirely in the modes checked and makes it stop narrowing anything
+   * there, until unchecked again. class-filter.ts/domain-filter.ts/
+   * word-filters.ts check these at the same point they check their own
+   * `active` flag, so a hidden filter can't keep silently doing something
+   * you can no longer see or reach.
+   *
+   * Stored as a comma-joined list of mode ids under `*_modes` — checking
+   * every applicable mode is equivalent to the old single global toggle,
+   * which this replaces. A one-time migration reads the old boolean key
+   * (`hide_pos_filter` etc, 'true'/'false') if the new key was never
+   * written, so an existing "Hide everywhere" choice carries forward as
+   * every applicable mode checked rather than silently reverting to Show.
+   */
+  getHidePOSFilter:     (mode: string): boolean => getHiddenFilterModes('hide_pos_filter',     POS_HIDEABLE_MODES).has(mode),
+  getHideListsFilter:   (mode: string): boolean => getHiddenFilterModes('hide_lists_filter',   LISTS_DOMAINS_HIDEABLE_MODES).has(mode),
+  getHideDomainsFilter: (mode: string): boolean => getHiddenFilterModes('hide_domains_filter', LISTS_DOMAINS_HIDEABLE_MODES).has(mode),
+
+  /** Every mode a given filter can be hidden in — for building the Settings checkboxes. */
+  getHideablePOSModes:          (): readonly string[] => POS_HIDEABLE_MODES,
+  getHideableListsDomainsModes: (): readonly string[] => LISTS_DOMAINS_HIDEABLE_MODES,
+
+  /**
    * Whether finished quizzes get logged to the History tab's session list.
    * On by default. Off stops new sessions from being recorded — it does not
    * erase what's already there, and it doesn't touch the separate per-word
@@ -159,8 +236,19 @@ export const Settings = {
    */
   getFilterLinkingEnabled: (): boolean => get('filter_linking_enabled', 'true') === 'true',
 
+  /**
+   * Whether the Settings panel shows every setting or just the ones most
+   * people actually change. Off by default — rows/sections marked
+   * `data-advanced="true"` in index.html are hidden by settings.css's
+   * `body:not(.advanced-mode) [data-advanced]` rule until this is on.
+   */
+  getAdvancedMode: (): boolean => get('advanced_mode', 'false') === 'true',
+
   // ── Appearance ────────────────────────────────────────────────────────────
   getFontSize: (): FontSize => get('font_size', 'medium') as FontSize,
+
+  /** See UILanguage — defaults to 'english', which needs no translation lookup. */
+  getUILanguage: (): UILanguage => get('ui_language', 'english') as UILanguage,
 
   // ── Guess the Blank ────────────────────────────────────────────────────────
 
@@ -202,6 +290,10 @@ export const Settings = {
     if (legacy === 'false') return 'close';
     return 'grey';
   },
+
+  /** See ConjRegularityScope. */
+  getConjRegularityScope: (): ConjRegularityScope => get('conj_regularity_scope', 'afterTopN') as ConjRegularityScope,
+  setConjRegularityScope: (scope: ConjRegularityScope): void => set('conj_regularity_scope', scope),
 
   // ── Multi-Language Table ──────────────────────────────────────────────────
 
@@ -310,6 +402,30 @@ export function setOnConjDeselectedChange(fn: (() => void) | null): void {
   onConjDeselectedChange = fn;
 }
 
+/**
+ * Notified when a "hide this filter app-wide" toggle changes, so whichever
+ * mode is currently on screen re-syncs its filter boxes' visibility right
+ * away instead of waiting for the next mode switch. app.ts wires this to
+ * bindModeSwitch's own updateModeUI — the same function a tab click already
+ * calls, just triggered from here too.
+ */
+let onFilterVisibilityChange: (() => void) | null = null;
+
+export function setOnFilterVisibilityChange(fn: () => void): void {
+  onFilterVisibilityChange = fn;
+}
+
+/** Notified when the app's own interface language changes — app.ts wires
+ *  this to i18n.ts's applyTranslations() so the switch takes effect without
+ *  a reload. Same hook-registration pattern as onFilterVisibilityChange,
+ *  for the same reason: settings.ts can't import app.ts/i18n.ts directly
+ *  without a circular import. */
+let onUILanguageChange: (() => void) | null = null;
+
+export function setOnUILanguageChange(fn: () => void): void {
+  onUILanguageChange = fn;
+}
+
 export function bindSettings(): void {
   // Theme
   document.getElementById('settingTheme')?.addEventListener('click', e => {
@@ -333,6 +449,15 @@ export function bindSettings(): void {
     const size = (btn.dataset.size ?? 'medium') as FontSize;
     set('font_size', size);
     applyFontSize(size);
+  });
+
+  // App interface language
+  document.getElementById('settingUILanguage')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn || btn.disabled) return;
+    activateToggle('settingUILanguage', btn);
+    set('ui_language', (btn.dataset.uiLang ?? 'english') as UILanguage);
+    onUILanguageChange?.();
   });
 
   // Column count
@@ -456,6 +581,45 @@ export function bindSettings(): void {
     set('swear_filter_enabled', btn.dataset.swear ?? 'false');
   });
 
+  // Picture Quiz — which visual categories are allowed. "Stock Photos" has
+  // no data source wired up yet (see picture-mode.ts), so its toggle is
+  // disabled in the markup rather than bound here.
+  ([
+    ['settingPictureSourcePhotos', 'picture_source_photos', 'photos'],
+    ['settingPictureSourceSvgs',   'picture_source_svgs',   'svgs'],
+    ['settingPictureSourceEmoji',  'picture_source_emoji',  'emoji'],
+  ] as const).forEach(([elId, key, dataAttr]) => {
+    document.getElementById(elId)?.addEventListener('click', e => {
+      const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+      if (!btn) return;
+      activateToggle(elId, btn);
+      set(key, btn.dataset[dataAttr] ?? 'true');
+    });
+  });
+
+  // Hide a filter box in specific quiz modes — Part of Speech, Lists,
+  // Domains. Reuses .sort-order-btn's look, but each mode is its own
+  // independently-toggled chip rather than activateToggle's usual
+  // exclusive group, so a click just flips that one chip's `.active`
+  // class and rewrites the stored mode set from whichever chips end up on.
+  ([
+    ['settingHidePOSModes',     'hide_pos_filter'],
+    ['settingHideListsModes',   'hide_lists_filter'],
+    ['settingHideDomainsModes', 'hide_domains_filter'],
+  ] as const).forEach(([elId, legacyKey]) => {
+    document.getElementById(elId)?.addEventListener('click', e => {
+      const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+      if (!btn) return;
+      btn.classList.toggle('active');
+      const modes = new Set(
+        Array.from(document.querySelectorAll<HTMLElement>(`#${elId} .sort-order-btn.active`))
+          .map(b => b.dataset.hideMode!),
+      );
+      setHiddenFilterModes(legacyKey, modes);
+      onFilterVisibilityChange?.();
+    });
+  });
+
   // Filter linking. Each filter's own syncFilterHeader() already hides its
   // chain button once Settings.getFilterLinkingEnabled() is false, but that
   // only runs on that filter's own redraws — set it directly here too so
@@ -472,6 +636,16 @@ export function bindSettings(): void {
       const el = document.getElementById(id);
       if (el) el.hidden = !enabled;
     });
+  });
+
+  // Advanced mode — shows/hides every [data-advanced] row and section
+  document.getElementById('settingAdvancedMode')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingAdvancedMode', btn);
+    const on = btn.dataset.advancedMode === 'true';
+    set('advanced_mode', String(on));
+    document.body.classList.toggle('advanced-mode', on);
   });
 
   // Session history
@@ -608,6 +782,12 @@ function restoreSettingsUI(): void {
     b.classList.toggle('active', b.dataset.size === savedFont);
   });
 
+  // App interface language
+  const savedUILang = get('ui_language', 'english');
+  document.querySelectorAll<HTMLElement>('#settingUILanguage .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.uiLang === savedUILang);
+  });
+
   // Cols
   const savedCols = get('table_cols', '2');
   document.querySelectorAll<HTMLElement>('#settingCols .sort-order-btn').forEach(b => {
@@ -690,6 +870,30 @@ function restoreSettingsUI(): void {
     b.classList.toggle('active', b.dataset.swear === savedSwear);
   });
 
+  // Picture Quiz source categories
+  ([
+    ['settingPictureSourcePhotos', 'picture_source_photos', 'photos'],
+    ['settingPictureSourceSvgs',   'picture_source_svgs',   'svgs'],
+    ['settingPictureSourceEmoji',  'picture_source_emoji',  'emoji'],
+  ] as const).forEach(([elId, key, dataAttr]) => {
+    const saved = get(key, 'true');
+    document.querySelectorAll<HTMLElement>(`#${elId} .sort-order-btn`).forEach(b => {
+      b.classList.toggle('active', b.dataset[dataAttr] === saved);
+    });
+  });
+
+  // Hide-filter-per-mode chips
+  ([
+    ['settingHidePOSModes',     'hide_pos_filter',     POS_HIDEABLE_MODES],
+    ['settingHideListsModes',   'hide_lists_filter',   LISTS_DOMAINS_HIDEABLE_MODES],
+    ['settingHideDomainsModes', 'hide_domains_filter', LISTS_DOMAINS_HIDEABLE_MODES],
+  ] as const).forEach(([elId, legacyKey, applicable]) => {
+    const hidden = getHiddenFilterModes(legacyKey, applicable);
+    document.querySelectorAll<HTMLElement>(`#${elId} .sort-order-btn`).forEach(b => {
+      b.classList.toggle('active', hidden.has(b.dataset.hideMode!));
+    });
+  });
+
   // Filter linking
   const savedLinking = get('filter_linking_enabled', 'true');
   document.querySelectorAll<HTMLElement>('#settingFilterLinking .sort-order-btn').forEach(b => {
@@ -699,6 +903,13 @@ function restoreSettingsUI(): void {
     const el = document.getElementById(id);
     if (el) el.hidden = savedLinking === 'false';
   });
+
+  // Advanced mode
+  const savedAdvanced = get('advanced_mode', 'false');
+  document.querySelectorAll<HTMLElement>('#settingAdvancedMode .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.advancedMode === savedAdvanced);
+  });
+  document.body.classList.toggle('advanced-mode', savedAdvanced === 'true');
 
   // Session history
   const savedHistory = get('history_enabled', 'true');

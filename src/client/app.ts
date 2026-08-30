@@ -19,14 +19,19 @@ import { mustGet }                              from './utils/dom.ts';
 import { renderMyLists }                        from './modes/my-lists-mode.ts';
 import { renderHistory }                        from './modes/history-mode.ts';
 import { renderAiChat }                          from './modes/ai-chat-mode.ts';
+import { getTriviaQuestions }                    from './data/trivia-questions.ts';
+import { getUserTriviaQuestions }                from './data/user-content.ts';
+import { renderMyContent }                       from './modes/my-content-mode.ts';
 import { LANGUAGES, isoCode, supportsConjugation,
          conjugationUnavailableReason }          from './data/languages.ts';
 import { availableLanguages }                    from './data/vocab-source.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
-import { Settings, bindSettings, applyFontSize } from './settings.ts';
+import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange } from './settings.ts';
+import { applyTranslations } from './i18n/index.ts';
 import { initShortcuts }                         from './ui/shortcuts-overlay.ts';
 import { openLanguagePicker, languagePickerLabel } from './ui/language-picker.ts';
 import { openPresetPicker }                      from './ui/preset-picker.ts';
+import { setExtraLanguagesApplyHook }            from './filters/presets.ts';
 import { currentScope }                          from './filters/filter-scope.ts';
 import { MULTI_LANG_MODES, setExtraLanguages }   from './filters/filter-lang.ts';
 
@@ -46,6 +51,7 @@ const conjugationWrap = mustGet('conjugationWrap');
 const myListsWrap     = document.getElementById('myListsWrap');  // optional — page may omit it
 const historyWrap     = document.getElementById('historyWrap');  // optional — page may omit it
 const chatWrap        = document.getElementById('chatWrap');     // optional — page may omit it
+const myContentWrap   = document.getElementById('myContentWrap'); // optional — page may omit it
 
 // Sections (hidden/shown by mode switch — mustGet throws if HTML template drifts)
 const tableArea       = mustGet('tableArea');
@@ -57,6 +63,7 @@ const myListsArea     = mustGet('myListsArea');
 const historyArea     = mustGet('historyArea');
 const settingsArea    = mustGet('settingsArea');
 const chatArea        = mustGet('chatArea');
+const myContentArea   = mustGet('myContentArea');
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 // The language list and its per-language capabilities live in
@@ -166,15 +173,24 @@ function getSelectedBands(): string[] {
 }
 
 /** Apply the "Rank Range" pool mode and the Part-of-Speech filter to one sorted pool. */
+// My Content words (data/user-content.ts's toWord()) are given rank 0 — no
+// real vocabulary word has a rank below 1 — specifically so they can be
+// recognized here and let through regardless of which pool mode is active.
+// Without this, a user-added word satisfied Top N (rank 0 sorts first) but
+// silently failed both Rank Range (0 is below every "from") and Level (no
+// frequency.band at all), which are just as much the "put my word in the
+// pool" a learner asked for as Top N is.
+function isUserAdded(w: Word): boolean { return w.rank === 0; }
+
 function rangeSlice(sorted: Word[], from: number, to: number, selected: string[]): Word[] {
-  const inRange = sorted.filter(w => w.rank != null && w.rank >= from && w.rank <= to);
+  const inRange = sorted.filter(w => isUserAdded(w) || (w.rank != null && w.rank >= from && w.rank <= to));
   return selected.length === 0 ? inRange : inRange.filter(w => w.pos == null || selected.includes(w.pos));
 }
 
 /** Apply the "Level" (CEFR band) pool mode and the Part-of-Speech filter to one sorted pool. */
 function bandSlice(sorted: Word[], bands: string[], selected: string[]): Word[] {
   if (bands.length === 0) return [];
-  const inBand = sorted.filter(w => w.frequency?.band && bands.includes(w.frequency.band));
+  const inBand = sorted.filter(w => isUserAdded(w) || (w.frequency?.band && bands.includes(w.frequency.band)));
   return selected.length === 0 ? inBand : inBand.filter(w => w.pos == null || selected.includes(w.pos));
 }
 
@@ -216,10 +232,10 @@ function refreshConjEstimate(): void {
   const extras   = getExtraLanguages();
   const fullLang = extras.length > 0 ? [lang, ...extras].join('+') : lang;
   const pool     = filterWords(getAllWordsForCurrentLang());
-  const estimate = estimateConjugationSize(pool, fullLang, extras);
+  const estimate = estimateConjugationSize(pool, fullLang, extras, requested, Settings.getConjRegularityScope());
 
-  const verbs = Math.min(requested, estimate.verbs);
-  const cards = verbs * estimate.tenses;
+  const verbs = estimate.verbs;
+  const cards = estimate.cards;
 
   el.textContent = `≈ ${verbs.toLocaleString()} verb${verbs === 1 ? '' : 's'} × `
     + `${estimate.tenses} tense${estimate.tenses === 1 ? '' : 's'} = ${cards.toLocaleString()} cards`;
@@ -271,6 +287,13 @@ function restoreSettings(): void {
   if (sizeSelect) { const v = S.get('vq_size'); if (v) sizeSelect.value = v; }
   const conjSizeSelect = document.getElementById('conjSizeSelect') as HTMLSelectElement | null;
   if (conjSizeSelect) { const v = S.get('vq_conj_size'); if (v) conjSizeSelect.value = v; }
+  const conjRandomTableSize = document.getElementById('conjRandomTableSize') as HTMLSelectElement | null;
+  if (conjRandomTableSize) { const v = S.get('vq_conj_random_table_size'); if (v) conjRandomTableSize.value = v; }
+  const conjRandomTableSizeCustom = document.getElementById('conjRandomTableSizeCustom') as HTMLInputElement | null;
+  if (conjRandomTableSizeCustom && conjRandomTableSize?.value === 'custom') {
+    conjRandomTableSizeCustom.value         = S.get('vq_conj_random_table_size_custom') ?? '';
+    conjRandomTableSizeCustom.style.display = 'inline-block';
+  }
 
   // Extra languages (Table mode's "+ Languages" picker). A saved choice that
   // matches the restored primary language is dropped — comparing a language
@@ -348,6 +371,20 @@ function restoreSettings(): void {
     });
   }
 
+  // Trivia reading difficulty / reading length
+  const savedTriviaReadingDifficulty = S.get('vq_trivia_reading_difficulty');
+  if (savedTriviaReadingDifficulty) {
+    document.querySelectorAll<HTMLElement>('#triviaReadingDifficulty .conj-toggle-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.readingDifficulty === savedTriviaReadingDifficulty);
+    });
+  }
+  const savedTriviaReadingLength = S.get('vq_trivia_reading_length');
+  if (savedTriviaReadingLength) {
+    document.querySelectorAll<HTMLElement>('#triviaReadingLength .conj-toggle-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.readingLength === savedTriviaReadingLength);
+    });
+  }
+
   // Guess the Blank difficulty
   const savedGbDifficulty = S.get('vq_guess_blank_difficulty');
   if (savedGbDifficulty) {
@@ -381,7 +418,10 @@ let currentBaseList: Word[] = [];
 async function ensureLoaded(lang: string): Promise<Word[]> {
   if (!allWordsByLang[lang]) {
     const raw = await loadWords(lang);
-    allWordsByLang[lang] = raw.slice().sort((a, b) => (a.rank || 9999) - (b.rank || 9999));
+    // `??`, not `||`: a My Content word's rank is 0 (see data/user-content.ts's
+    // toWord()) specifically so it sorts first — `||` treats 0 as falsy and
+    // sent it to the very back instead, alongside genuinely unranked words.
+    allWordsByLang[lang] = raw.slice().sort((a, b) => (a.rank ?? 9999) - (b.rank ?? 9999));
   }
   return allWordsByLang[lang];
 }
@@ -465,7 +505,40 @@ async function loadAndBuildFilters(lang: string): Promise<void> {
     .sort((a, b) => b.count - a.count);
   updateDomainFilter(sortedCounts);
 
+  // Trivia doesn't draw from `sorted`/`list` at all — its Domains pills come
+  // from the trivia question bank instead (updateTriviaDomainFilter), so the
+  // vocabulary-count repaint above would be wrong there. Checked once, here,
+  // at the end of the one function every filter-rebuild path already funnels
+  // through, rather than after each of that function's call sites — a
+  // caller that forgets to ask for it is no longer possible, whereas asking
+  // each caller to remember already left more than one that didn't.
+  if (getCurrentMode() === 'trivia') updateTriviaDomainFilter();
+
   refreshConjEstimate();
+}
+
+/**
+ * Trivia's own domain-count computation, mirroring loadAndBuildFilters'
+ * word-domain counting above — but counting the trivia question bank
+ * (data/trivia-questions.ts's `domains` field) instead of vocabulary words,
+ * since Trivia doesn't draw from `list` at all. Called from the end of
+ * loadAndBuildFilters() itself (see above) whenever Trivia is the active
+ * mode, and from onActivate.trivia below for the one path that doesn't go
+ * through loadAndBuildFilters — activating the tab without a language change.
+ */
+function updateTriviaDomainFilter(): void {
+  const lang = langSelect?.value ?? 'spanish';
+  const domainCounts = new Map<string, number>();
+  for (const q of [...getTriviaQuestions(lang), ...getUserTriviaQuestions(lang)]) {
+    for (const d of q.domains ?? []) {
+      domainCounts.set(d, (domainCounts.get(d) ?? 0) + 1);
+    }
+  }
+  const sortedCounts = [...domainCounts.entries()]
+    .map(([domain, count]) => ({ domain, count }))
+    .filter(x => x.count > 0)
+    .sort((a, b) => b.count - a.count);
+  updateDomainFilter(sortedCounts);
 }
 
 // ── Core module bindings ──────────────────────────────────────────────────────
@@ -473,11 +546,29 @@ async function loadAndBuildFilters(lang: string): Promise<void> {
 initTheme();
 setSelectionChangeCallback(refreshConjEstimate);
 
+// A saved Testing Profile's "+ Languages" selection has to reach this
+// module's own `extraLanguages` (the merged-pool copy — distinct from
+// filter-lang.ts's, which only drives the Lists filter's display) and the
+// picker button's label, the same three things langPickerBtn's own onChange
+// below updates. presets.ts can't call any of this directly without an
+// app.ts → presets.ts → app.ts cycle, so it exposes a hook instead.
+setExtraLanguagesApplyHook(langs => {
+  extraLanguages = new Set(langs.filter(name => name !== (langSelect?.value ?? 'spanish')));
+  setExtraLanguages(extraLanguages);
+  S.set('vq_extra_langs', [...extraLanguages].join(','));
+  updateLangPickerButton();
+  void loadAndBuildFilters(langSelect?.value ?? 'spanish');
+  if (document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === 'conjugation') {
+    initConjControls(langSelect?.value ?? 'spanish', getExtraLanguages());
+  }
+});
+
 const { updateModeUI } = bindModeSwitch({
   tableArea, pictureArea, conjugationArea,
   extraAreas: {
     mylists: myListsArea, settings: settingsArea, history: historyArea,
     trivia: triviaArea, guessBlank: guessBlankArea, chat: chatArea,
+    myContent: myContentArea,
   },
   onActivate: {
     table: syncTableStyleUI,
@@ -495,8 +586,26 @@ const { updateModeUI } = bindModeSwitch({
     // Built fresh per visit like History — cheap, and avoids keeping a stale
     // chat session's DOM alive underneath a tab that's dev/desktop-only anyway.
     chat: () => { if (chatWrap) renderAiChat(chatWrap, langSelect?.value ?? 'spanish'); },
+    trivia: updateTriviaDomainFilter,
+    // Built fresh per visit like History/My Lists — cheap, and a word/trivia
+    // question/picture added elsewhere in this same session (there isn't
+    // one yet, but a future entry point would be) always shows up.
+    myContent: () => { if (myContentWrap) renderMyContent(myContentWrap, langSelect?.value ?? 'spanish'); },
   },
 });
+
+// A "hide this filter app-wide" Settings toggle needs the currently-visible
+// mode's filter boxes re-synced immediately, not just on the next tab
+// switch — same updateModeUI() a tab click already runs. `false` skips the
+// active-tab scrollIntoView() that a real tab click wants — the active tab
+// isn't changing here, it's the Settings tab itself, sitting in the top nav,
+// and scrolling it into view mid-click is what yanked the page back up.
+setOnFilterVisibilityChange(() => updateModeUI(false));
+
+// Apply the saved UI language to the static chrome on load, and again live
+// whenever the App language setting changes — see i18n/index.ts.
+applyTranslations();
+setOnUILanguageChange(() => applyTranslations());
 
 bindStartHandler({
   getLang:     () => isoCode(langSelect?.value),
@@ -615,6 +724,19 @@ conjSizeSelectEl?.addEventListener('change', () => {
   refreshConjEstimate();
 });
 
+const conjRandomTableSizeEl       = document.getElementById('conjRandomTableSize') as HTMLSelectElement | null;
+const conjRandomTableSizeCustomEl = document.getElementById('conjRandomTableSizeCustom') as HTMLInputElement | null;
+conjRandomTableSizeEl?.addEventListener('change', () => {
+  S.set('vq_conj_random_table_size', conjRandomTableSizeEl.value);
+  if (conjRandomTableSizeCustomEl) {
+    conjRandomTableSizeCustomEl.style.display = conjRandomTableSizeEl.value === 'custom' ? 'inline-block' : 'none';
+    if (conjRandomTableSizeEl.value === 'custom') conjRandomTableSizeCustomEl.focus();
+  }
+});
+conjRandomTableSizeCustomEl?.addEventListener('input', () => {
+  S.set('vq_conj_random_table_size_custom', conjRandomTableSizeCustomEl.value);
+});
+
 const sizeCustomInput = document.getElementById('sizeCustom') as HTMLInputElement | null;
 sizeCustomInput?.addEventListener('input', () => {
   S.set('vq_size_custom', sizeCustomInput.value);
@@ -694,6 +816,8 @@ document.querySelector('.mode-tabs')?.addEventListener('click', e => {
   // getExtraLanguages() is gated on the active tab, so the base word pool
   // needs rebuilding on every switch into or out of Table mode — the picker's
   // own selection doesn't change, only whether it currently applies.
+  // (loadAndBuildFilters() itself repaints Trivia's Domains pills correctly
+  // once this resolves — see its own trailing getCurrentMode() check.)
   void loadAndBuildFilters(lang);
 });
 
@@ -731,6 +855,14 @@ function syncConjViewToggle(): void {
   const displayGroup = document.getElementById('conjDisplayGroup');
   if (displayGroup) {
     displayGroup.style.display = (stored === 'grid' || stored === 'full') && onConjTab ? '' : 'none';
+  }
+
+  // The "how many blanks" sample-size control only means anything in Random
+  // Table — every other view drills the full verb×tense×form cross product,
+  // no sampling involved.
+  const randomTableSizeGroup = document.getElementById('conjRandomTableSizeGroup');
+  if (randomTableSizeGroup) {
+    randomTableSizeGroup.style.display = stored === 'randomtable' && onConjTab ? '' : 'none';
   }
 }
 
@@ -791,6 +923,24 @@ document.getElementById('triviaDifficulty')?.addEventListener('click', e => {
   if (btn.dataset.difficulty) S.set('vq_trivia_difficulty', btn.dataset.difficulty);
 });
 
+// Trivia reading-difficulty toggle (All / Easy / Medium / Hard).
+document.getElementById('triviaReadingDifficulty')?.addEventListener('click', e => {
+  const btn = (e.target as HTMLElement).closest<HTMLElement>('.conj-toggle-btn');
+  if (!btn) return;
+  document.querySelectorAll('#triviaReadingDifficulty .conj-toggle-btn')
+    .forEach(b => b.classList.toggle('active', b === btn));
+  if (btn.dataset.readingDifficulty) S.set('vq_trivia_reading_difficulty', btn.dataset.readingDifficulty);
+});
+
+// Trivia reading-length toggle (All / Short / Long).
+document.getElementById('triviaReadingLength')?.addEventListener('click', e => {
+  const btn = (e.target as HTMLElement).closest<HTMLElement>('.conj-toggle-btn');
+  if (!btn) return;
+  document.querySelectorAll('#triviaReadingLength .conj-toggle-btn')
+    .forEach(b => b.classList.toggle('active', b === btn));
+  if (btn.dataset.readingLength) S.set('vq_trivia_reading_length', btn.dataset.readingLength);
+});
+
 // Guess the Blank difficulty toggle (All / Easy / Medium / Hard).
 document.getElementById('guessBlankDifficulty')?.addEventListener('click', e => {
   const btn = (e.target as HTMLElement).closest<HTMLElement>('.conj-toggle-btn');
@@ -847,7 +997,7 @@ void (async function init(): Promise<void> {
   const savedTab = savedMode
     ? document.querySelector<HTMLElement>(`.mode-tab[data-mode="${savedMode}"]`)
     : null;
-  if (savedTab && savedMode !== 'mylists' && savedMode !== 'settings' && savedMode !== 'history' && savedMode !== 'chat') {
+  if (savedTab && savedMode !== 'mylists' && savedMode !== 'settings' && savedMode !== 'history' && savedMode !== 'chat' && savedMode !== 'myContent') {
     savedTab.click();
   } else if (savedMode !== 'table') {
     // Covers both "we intentionally skip restoring mylists/settings/history/chat"

@@ -17,7 +17,7 @@ import { logger } from '../utils/logger.ts';
 import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summary.ts';
 import { readString, writeString } from '../utils/storage.ts';
 import {
-  saveSession, recordOutcome, orderWords, WORD_ORDER_LABELS,
+  saveSession, recordOutcome, orderWords, getWordOrderLabels,
   type WordOrder,
 } from '../utils/session-history.ts';
 import { buildScorePills, scorePct }     from '../ui/score-pills.ts';
@@ -663,7 +663,7 @@ export function bindTableControls(): void {
   // kept, since sessionState is keyed by word rather than position.
   const orderSel = document.getElementById('tableOrderSelect') as HTMLSelectElement | null;
   if (orderSel) {
-    WORD_ORDER_LABELS.forEach(([value, label]) => {
+    getWordOrderLabels().forEach(([value, label]) => {
       const o = document.createElement('option');
       o.value = value; o.textContent = label; o.selected = value === wordOrder;
       orderSel.appendChild(o);

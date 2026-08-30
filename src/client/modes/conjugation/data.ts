@@ -4,6 +4,7 @@
  * Static pronoun and tense data per language.
  * Imported by controls.ts and index.ts.
  */
+import { t } from '../../i18n/index.ts';
 
 export interface TenseDef {
   key:   string;
@@ -32,6 +33,18 @@ export const TENSE_EN: Record<string, string> = {
   imperfect_subjunctive:  'Imperfect subjunctive',
   future_subjunctive:     'Future subjunctive',
 };
+
+/**
+ * TENSE_EN's English name for a tense, translated for the app's current
+ * interface language. A function rather than a second static map so it
+ * always reflects whichever language is active right now, not whichever
+ * was active when this module first loaded.
+ */
+export function tenseEnLabel(tenseKey: string): string {
+  const fallback = TENSE_EN[tenseKey];
+  if (fallback === undefined) return '';
+  return t('conj.tenseEn.' + tenseKey, fallback);
+}
 
 /**
  * What each tense is for, in one sentence with an example.

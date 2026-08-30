@@ -13,6 +13,7 @@
  */
 
 import { getFallbackEmoji, getFallbackSvgUrl, getFallbackImageUrl } from '../data/visual-map.ts';
+import { getPictureOverride } from '../data/user-content.ts';
 import { saveSession, recordOutcome } from '../utils/session-history.ts';
 import { attachTooltips    } from '../utils/word-tooltip.ts';
 import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summary.ts';
@@ -71,6 +72,13 @@ function wordIsCorrect(input: string, word: WordWithVisual): boolean {
 // local photo → SVG → DB emoji → visual-map emoji (deduped)
 type VisualBuilder = () => HTMLElement;
 
+// Settings' Photos/SVGs/Emoji source toggles are applied once, in
+// withVisuals() below — it already nulls out each field the corresponding
+// toggle turns off, so this only ever sees what's actually allowed through.
+// A second check here on word._imageUrl used to also re-gate on
+// getPictureSourcePhotos(), which silently dropped a My Content picture
+// override (kept in the pool by withVisuals() specifically to win over that
+// setting) the moment Photos was off — one gate, not two.
 function buildAllVisuals(word: WordWithVisual): VisualBuilder[] {
   const builders: VisualBuilder[] = [];
 
@@ -1139,19 +1147,34 @@ export function renderPictureMode({
   // above the cards, which is where table mode puts its bar.
   document.getElementById('pictureArea')?.classList.toggle('pm-mode-click', mode === 'click');
 
-  /** Attach every visual we can find, then drop anything left with none. */
+  /**
+   * Attach every visual we can find, then drop anything left with none.
+   *
+   * Each category is gated by its own Settings toggle (Settings → Picture
+   * Quiz) right here, not just in buildAllVisuals() — a word whose only
+   * visual is a disabled category needs to actually leave the pool, not
+   * just render a card with nothing on it.
+   */
   function withVisuals(list: Word[]): WordWithVisual[] {
+    const photosOn = Settings.getPictureSourcePhotos();
+    const svgsOn   = Settings.getPictureSourceSvgs();
+    const emojiOn  = Settings.getPictureSourceEmoji();
     return list
       .map(w => ({
         ...w,
         // 1. Local Wikipedia photo (highest quality)
-        _imageUrl: getFallbackImageUrl(lang, w.word),
+        // A My Content picture override (data/user-content.ts) wins over the
+        // Photos setting, same as it wins over every other visual source
+        // below — it's an explicit choice for this exact word, not one more
+        // candidate in the Wikipedia-photo bucket that toggle governs.
+        _imageUrl: getPictureOverride(lang, w.word) ?? (photosOn ? getFallbackImageUrl(lang, w.word) : null),
         // 2. SVG: server concept map → openmoji local/CDN fallback
-        svg_url: w.svg_url || getFallbackSvgUrl(lang, w.word) || null,
-        // 3. Emoji fallback (visual-map curated only — not DB emojis)
-        _emoji: getFallbackEmoji(lang, w.word),
+        svg_url: svgsOn ? (w.svg_url || getFallbackSvgUrl(lang, w.word) || null) : null,
+        // 3. Emoji — DB value and visual-map fallback, both gated the same way
+        emoji:  emojiOn ? w.emoji : null,
+        _emoji: emojiOn ? getFallbackEmoji(lang, w.word) : null,
       }))
-      .filter((w): w is WordWithVisual => !!(w._imageUrl || w.svg_url || w._emoji));
+      .filter((w): w is WordWithVisual => !!(w._imageUrl || w.svg_url || w.emoji || w._emoji));
   }
 
   const wordsWithVisuals = withVisuals(words);

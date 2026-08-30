@@ -6,9 +6,9 @@ import type { Word } from '../../types.js';
 import { showSummary, clearSummary, summaryChip, percent } from '../../ui/quiz-summary.ts';
 import { readString, writeString } from '../../utils/storage.ts';
 import { foldKey as normalize } from '../../utils/match.ts';
-import { orderWords, WORD_ORDER_LABELS, saveSession, recordOutcome,
+import { orderWords, getWordOrderLabels, saveSession, recordOutcome,
          type WordOrder } from '../../utils/session-history.ts';
-import { PRONOUNS, TENSE_DEFS, TENSE_EN, TENSE_HELP, REGULARITY_HELP } from './data.js';
+import { PRONOUNS, TENSE_DEFS, tenseEnLabel, TENSE_HELP, REGULARITY_HELP } from './data.js';
 import { activeTenses, activeRegularities, unionTenseDefs } from './controls.js';
 import {
   setProgressCallback,
@@ -265,7 +265,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   const orderSel = document.createElement('select');
   orderSel.className = 'conj-order-select';
   orderSel.title = 'Order of the verbs in this quiz';
-  WORD_ORDER_LABELS.forEach(([value, label]) => {
+  getWordOrderLabels().forEach(([value, label]) => {
     const o = document.createElement('option');
     o.value = value; o.textContent = label; o.selected = value === verbOrder;
     orderSel.appendChild(o);
@@ -547,7 +547,24 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   });
   sizeLabel.appendChild(sizeSel);
 
-  fullHeader.append(fullPrev, fullCount, sizeLabel, fullNext);
+  // Collapse/expand every verb block on the current page at once — only
+  // meaningful in Full Conjugation, which is the only view with per-verb
+  // blocks to fold. Toggling never touches the cards themselves (just their
+  // container's visibility), so it cannot lose an answer in progress the way
+  // a rebuild would.
+  const collapseAllBtn = document.createElement('button');
+  collapseAllBtn.type      = 'button';
+  collapseAllBtn.className = 'conj-full-nav conj-collapse-all-btn';
+  collapseAllBtn.textContent = 'Collapse all';
+  collapseAllBtn.addEventListener('click', () => {
+    const blocks = Array.from(cardsGrid.querySelectorAll<HTMLElement>('.conj-verb-block'));
+    if (blocks.length === 0) return;
+    const collapse = blocks.some(b => !b.classList.contains('conj-verb-block--collapsed'));
+    blocks.forEach(b => setBlockCollapsed(b, collapse));
+    collapseAllBtn.textContent = collapse ? 'Expand all' : 'Collapse all';
+  });
+
+  fullHeader.append(fullPrev, fullCount, sizeLabel, collapseAllBtn, fullNext);
 
   function syncFullHeader(): void {
     // Shown for both views now — only the layout (stacked blocks vs. cards
@@ -560,6 +577,9 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     countShort.textContent = `${from}–${to} / ${verbs.length}`;
     fullPrev.disabled = fullPage === 0;
     fullNext.disabled = fullPage >= pageCount() - 1;
+    // Grid has no verb blocks to fold.
+    collapseAllBtn.hidden = viewMode !== 'full';
+    collapseAllBtn.textContent = 'Collapse all';
   }
 
   /**
@@ -597,6 +617,29 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     updateProgress();
   });
 
+  // Which verbs are folded shut in Full Conjugation, keyed by verbKey() so a
+  // collapse choice survives paging back and forth (a page rebuild loses the
+  // DOM node, not the decision to keep it closed).
+  const collapsedVerbs = new Set<string>();
+
+  /** Apply (or clear) the collapsed look on one verb block, keeping its
+   *  toggle button's glyph/label/aria state in sync — shared by the per-verb
+   *  button and "Collapse/Expand all". */
+  function setBlockCollapsed(block: HTMLElement, collapsed: boolean): void {
+    block.classList.toggle('conj-verb-block--collapsed', collapsed);
+    const row = block.querySelector<HTMLElement>('.conj-verb-row');
+    if (row) row.hidden = collapsed;
+    const btn = block.querySelector<HTMLButtonElement>('.conj-verb-collapse-btn');
+    if (btn) {
+      btn.textContent = collapsed ? '▸' : '▾';
+      btn.title       = collapsed ? 'Expand this verb' : 'Collapse this verb';
+      btn.setAttribute('aria-expanded', String(!collapsed));
+    }
+    const key = block.dataset.verbKey;
+    if (!key) return;
+    if (collapsed) collapsedVerbs.add(key); else collapsedVerbs.delete(key);
+  }
+
   /**
    * One verb's block in the paged view: a header, then its tense cards.
    *
@@ -609,9 +652,19 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     const el = document.createElement('section');
     el.className = 'conj-verb-block';
     el.dataset.verbBlock = verb.word;
+    el.dataset.verbKey   = verbKey(verb.word, verbLang);
 
     const head = document.createElement('div');
     head.className = 'conj-verb-block-head';
+
+    const collapseBtn = document.createElement('button');
+    collapseBtn.type      = 'button';
+    collapseBtn.className = 'known-btn conj-verb-collapse-btn';
+    collapseBtn.tabIndex   = -1;
+    collapseBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      setBlockCollapsed(el, !el.classList.contains('conj-verb-block--collapsed'));
+    });
 
     const word = document.createElement('span');
     word.className = 'conj-full-word';
@@ -656,15 +709,26 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     reg.title = (REGULARITY_HELP[kind.key] ?? '') + (cls ? `\n\nconjugation class: ${cls}` : '');
     if (!cls) reg.hidden = true;
 
-    head.append(word, star, gloss, reg, rank);
+    head.append(collapseBtn, word, star, gloss, reg, rank);
     // Only present in a merged multi-language session — a single-language
     // one never has `.language` set, so this never appears there.
     if (verb.language) head.appendChild(createFlagImg(Settings.getLangFlag(verb.language), languageInfo(verb.language).label));
+
+    // The whole bar toggles collapse, not just the arrow — word/gloss/
+    // regularity/rank are all plain text with nothing else to click there.
+    // The star already stops propagation (it opens the list picker instead),
+    // and collapseBtn's own handler stops it too so this doesn't double-fire
+    // and cancel itself out on the button's own click.
+    head.classList.add('conj-verb-block-head--clickable');
+    head.addEventListener('click', () => {
+      setBlockCollapsed(el, !el.classList.contains('conj-verb-block--collapsed'));
+    });
 
     const row = document.createElement('div');
     row.className = 'conj-verb-row';
 
     el.append(head, row);
+    setBlockCollapsed(el, collapsedVerbs.has(el.dataset.verbKey ?? ''));
     return { el, row };
   }
 
@@ -1056,6 +1120,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   document.getElementById('conjTensesAll')?.addEventListener('click', handleTenseChange);
   document.getElementById('conjTensesNone')?.addEventListener('click', handleTenseChange);
   document.getElementById('conjRegAll')?.addEventListener('click', handleTenseChange);
+  document.getElementById('conjRegNone')?.addEventListener('click', handleTenseChange);
   displayToggle?.addEventListener('click', handleDisplayClick);
   viewToggle?.addEventListener('click', handleViewClick);
   document.addEventListener('keydown', handleCardNav);
@@ -1066,6 +1131,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     document.getElementById('conjTensesAll')?.removeEventListener('click', handleTenseChange);
     document.getElementById('conjTensesNone')?.removeEventListener('click', handleTenseChange);
     document.getElementById('conjRegAll')?.removeEventListener('click', handleTenseChange);
+    document.getElementById('conjRegNone')?.removeEventListener('click', handleTenseChange);
     displayToggle?.removeEventListener('click', handleDisplayClick);
     viewToggle?.removeEventListener('click', handleViewClick);
     document.removeEventListener('keydown', handleCardNav);
@@ -1221,7 +1287,7 @@ function buildCard({
 
   const tenseEnEl = document.createElement('span');
   tenseEnEl.className = 'conj-card-tense-en';
-  tenseEnEl.textContent = TENSE_EN[tenseKey] ?? '';
+  tenseEnEl.textContent = tenseEnLabel(tenseKey);
   if (!tenseEnEl.textContent) tenseEnEl.hidden = true;
   footRow.appendChild(tenseEnEl);
 
