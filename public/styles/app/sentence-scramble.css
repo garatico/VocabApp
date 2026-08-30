@@ -1,0 +1,175 @@
+/* ================================================================
+   SENTENCE SCRAMBLE — reconstruct a shuffled example sentence.
+   Styled to match #guessBlankArea/#triviaArea, which it's modeled on: same
+   bordered card, same nav/header/feedback anatomy — see sentence-scramble-
+   mode.ts.
+================================================================ */
+
+#sentenceScrambleArea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 1rem;
+  box-shadow: var(--shadow);
+}
+
+.ss-wrap {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.ss-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.ss-nav {
+  display: flex;
+  gap: 0.4rem;
+  margin-right: auto;
+}
+.ss-nav-btn {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.ss-nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.ss-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.ss-giveup-btn {
+  font-size: 0.82rem;
+  padding: 0.32rem 0.9rem;
+}
+
+.ss-counter {
+  text-align: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+}
+
+.ss-hint {
+  text-align: center;
+  font-family: 'Sora', sans-serif;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+/* The answer row is where chips land — a lined slot area even when empty,
+   so it doesn't collapse to nothing and jump the layout as chips fill it. */
+.ss-answer-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: flex-start;
+  gap: 0.5rem;
+  min-height: 3.2rem;
+  padding: 0.6rem;
+  margin: 0 auto 1rem;
+  max-width: 560px;
+  background: var(--surface2);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.ss-bank-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0 auto 1rem;
+  max-width: 560px;
+}
+
+.ss-chip {
+  font-family: 'DM Mono', monospace;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.ss-chip:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.ss-chip--bank {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+}
+.ss-chip--bank:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+
+.ss-chip--answer {
+  background: var(--accent-light);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent);
+}
+.ss-chip--answer:hover:not(:disabled) { border-color: var(--accent); }
+
+.ss-action-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+.ss-clear-btn, .ss-check-btn {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.4rem 1rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.ss-clear-btn {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+}
+.ss-clear-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.ss-check-btn {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast, #fff);
+}
+.ss-check-btn:hover:not(:disabled) { filter: brightness(1.08); }
+.ss-clear-btn:disabled, .ss-check-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.ss-feedback {
+  text-align: center;
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  min-height: 1.4rem;
+  color: var(--text-muted);
+}
+.ss-feedback.ok  { color: var(--correct); }
+.ss-feedback.bad { color: var(--incorrect); }
+
+.ss-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--text-muted);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  #sentenceScrambleArea { padding: 0.5rem 0.75rem; }
+  .ss-chip { font-size: 0.92rem; padding: 0.4rem 0.7rem; }
+}
+
+@media (max-width: 599px) {
+  #sentenceScrambleArea { padding: 0.5rem 0.6rem; }
+  .ss-header { flex-wrap: wrap; gap: 0.4rem; }
+  .ss-nav-btn { font-size: 0.72rem; padding: 0.3rem 0.55rem; }
+  .ss-answer-row, .ss-bank-row { max-width: none; }
+}

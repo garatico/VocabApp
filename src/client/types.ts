@@ -54,6 +54,10 @@ export interface Word {
   examples:   string[];
   svg_url:    string | null;
   emoji:      string | null;
+  /** Optional (not `string | null` like the others) so existing test
+   *  fixtures that build a Word literal without it still typecheck — the
+   *  real API always sets it (see server's vocab-loader.ts). */
+  audio_url?: string | null;
   linguistic: WordLinguistic | null;
   frequency:  WordFrequency | null;
   domains:    string[];

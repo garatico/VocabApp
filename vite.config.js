@@ -29,6 +29,7 @@ export default defineConfig({
       '/svgs':   { target: 'http://localhost:3000', changeOrigin: true },
       '/images': { target: 'http://localhost:3000', changeOrigin: true },
       '/emoji':  { target: 'http://localhost:3000', changeOrigin: true },
+      '/audio':  { target: 'http://localhost:3000', changeOrigin: true },
       // Note: /admin removed — Vite now serves admin.html directly
     },
     // Cross-origin isolation lets WebLLM's WASM runtime (ai-chat/webllm-engine.ts)

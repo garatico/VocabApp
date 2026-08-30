@@ -57,7 +57,7 @@
 .chat-status-pill--ready   { background: var(--success-light); color: var(--success); }
 .chat-status-pill--error   { background: var(--danger-light);  color: var(--danger); }
 
-.chat-history-btn, .chat-clear-btn {
+.chat-history-btn, .chat-clear-btn, .chat-export-btn {
   background: var(--surface2);
   color: var(--text-muted);
   border: 1px solid var(--border-strong);
@@ -65,10 +65,29 @@
   padding: 0.32rem 0.7rem;
   font-size: 0.78rem;
 }
-.chat-history-btn:hover:not(:disabled), .chat-clear-btn:hover:not(:disabled) {
+.chat-history-btn:hover:not(:disabled), .chat-clear-btn:hover:not(:disabled), .chat-export-btn:hover:not(:disabled) {
   color: var(--text);
   background: var(--border);
 }
+
+/* ── Reply rating (👍/👎) — see eval-contract.ts ────────────────── */
+.chat-rate-row {
+  align-self: flex-start;
+  display: flex;
+  gap: 0.3rem;
+  margin-top: -0.15rem;
+}
+.chat-rate-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0.1rem 0.4rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  opacity: 0.55;
+}
+.chat-rate-btn:hover { opacity: 1; border-color: var(--border-strong); }
+.chat-rate-btn.active { opacity: 1; background: var(--surface2); border-color: var(--border-strong); }
 
 /* ── Task presets ────────────────────────────────────────────── */
 .chat-preset-row {

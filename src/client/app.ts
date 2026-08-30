@@ -26,7 +26,9 @@ import { LANGUAGES, isoCode, supportsConjugation,
          conjugationUnavailableReason }          from './data/languages.ts';
 import { availableLanguages }                    from './data/vocab-source.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
-import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange } from './settings.ts';
+import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, refreshStreakReadouts } from './settings.ts';
+import { onActivity } from './utils/streak.ts';
+import { showToast } from './ui/toast.ts';
 import { applyTranslations } from './i18n/index.ts';
 import { initShortcuts }                         from './ui/shortcuts-overlay.ts';
 import { openLanguagePicker, languagePickerLabel } from './ui/language-picker.ts';
@@ -47,6 +49,7 @@ const tableWrap       = mustGet('tableWrap');
 const pictureWrap     = mustGet('pictureWrap');
 const triviaWrap      = mustGet('triviaWrap');
 const guessBlankWrap  = mustGet('guessBlankWrap');
+const sentenceScrambleWrap = mustGet('sentenceScrambleWrap');
 const conjugationWrap = mustGet('conjugationWrap');
 const myListsWrap     = document.getElementById('myListsWrap');  // optional — page may omit it
 const historyWrap     = document.getElementById('historyWrap');  // optional — page may omit it
@@ -58,6 +61,7 @@ const tableArea       = mustGet('tableArea');
 const pictureArea     = mustGet('pictureArea');
 const triviaArea      = mustGet('triviaArea');
 const guessBlankArea  = mustGet('guessBlankArea');
+const sentenceScrambleArea = mustGet('sentenceScrambleArea');
 const conjugationArea = mustGet('conjugationArea');
 const myListsArea     = mustGet('myListsArea');
 const historyArea     = mustGet('historyArea');
@@ -576,7 +580,7 @@ const { updateModeUI } = bindModeSwitch({
   extraAreas: {
     mylists: myListsArea, settings: settingsArea, history: historyArea,
     trivia: triviaArea, guessBlank: guessBlankArea, chat: chatArea,
-    myContent: myContentArea,
+    myContent: myContentArea, sentenceScramble: sentenceScrambleArea,
   },
   onActivate: {
     table: syncTableStyleUI,
@@ -599,7 +603,18 @@ const { updateModeUI } = bindModeSwitch({
     // question/picture added elsewhere in this same session (there isn't
     // one yet, but a future entry point would be) always shows up.
     myContent: () => { if (myContentWrap) renderMyContent(myContentWrap, langSelect?.value ?? 'spanish'); },
+    settings: refreshStreakReadouts,
   },
+});
+
+// Fired from inside session-history.ts's saveSession(), for any mode, any
+// language — a celebration toast belongs here rather than in every mode's
+// own "session ended" handler. Also refreshes the Settings tab's readouts
+// in case it's already open when a session elsewhere finishes.
+onActivity(({ streak, streakIncrementedJustNow, goalHitJustNow }) => {
+  if (streakIncrementedJustNow) showToast(`🔥 ${streak}-day streak!`, 'success');
+  if (goalHitJustNow) showToast('🎯 Daily goal reached!', 'success');
+  refreshStreakReadouts();
 });
 
 // A "hide this filter app-wide" Settings toggle needs the currently-visible
@@ -672,7 +687,7 @@ bindStartHandler({
   // read `w.language ?? lang` for mastery/history and per-verb tense
   // filtering, and a bogus combined fallback breaks both silently.
   getAllWords: getAllWordsForCurrentLang,
-  elements:       { startBtn, tableWrap, pictureWrap, triviaWrap, guessBlankWrap, conjugationWrap, output },
+  elements:       { startBtn, tableWrap, pictureWrap, triviaWrap, guessBlankWrap, sentenceScrambleWrap, conjugationWrap, output },
 });
 
 // ── Event listeners ───────────────────────────────────────────────────────────

@@ -24,6 +24,7 @@ export interface VocabEntry {
   glosses:     string[];
   examples:    string[];
   ipa:         string | null;
+  audioUrl:    string | null;
 }
 
 export type SortMode =

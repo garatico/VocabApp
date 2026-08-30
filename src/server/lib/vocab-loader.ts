@@ -17,6 +17,7 @@ import {
   MINIMUM_SCHEMA_VERSION, type DatabaseReport,
 } from './data-requirements.js';
 import { getSvgUrl } from './svg-loader.js';
+import { getAudioUrl } from './audio-loader.js';
 import { conjugate, type VerbForms } from './verb-rules.js';
 import { logger } from './logger.js';
 
@@ -61,6 +62,7 @@ export interface Word {
   examples:    string[];
   svg_url:     string | null;
   emoji:       string | null;
+  audio_url:   string | null;
   linguistic: {
     infinitive:        string | null;
     reflexive:         boolean;
@@ -315,6 +317,7 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
         examples:  row.examples ? (parseJsonField<string[]>(row.examples, row.word, 'examples', []) ?? []).filter(Boolean) : [],
         svg_url:   getSvgUrl(lang, row.word),
         emoji:     row.emoji || null,
+        audio_url: getAudioUrl(lang, row.word),
         linguistic: {
           infinitive:        row.infinitive      || null,
           reflexive:         Boolean(row.reflexive),

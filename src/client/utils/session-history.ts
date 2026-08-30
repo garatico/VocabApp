@@ -19,8 +19,10 @@ import { shuffleInPlace } from './shuffle.ts';
 import { readJson, writeJson, remove as removeKey, isNumberRecord, isRecord } from './storage.ts';
 import { Settings } from '../settings.ts';
 import { t } from '../i18n/index.ts';
+import { bumpSrs, clearSrs } from './srs.ts';
+import { recordActivity } from './streak.ts';
 
-export type QuizMode = 'recall' | 'doubleRecall' | 'table' | 'picture' | 'conjugation' | 'trivia' | 'wordChoice' | 'guessBlank';
+export type QuizMode = 'recall' | 'doubleRecall' | 'table' | 'picture' | 'conjugation' | 'trivia' | 'wordChoice' | 'guessBlank' | 'sentenceScramble';
 
 /**
  * Table mode's own direction — see table-mode.ts's TableDirection. The other
@@ -88,6 +90,10 @@ export function saveSession(lang: string, entry: SessionRecord): SessionRecord[]
     const next = [...prior, entry].slice(-HISTORY_KEEP);
     // A dropped write (quota) is fine — history is a nicety, never fail a session.
     writeJson(SESSION_PREFIX + lang.toLowerCase(), next);
+    // entry.correct, not entry.total — the settings copy promises a
+    // celebration for words *answered*, and total is the size of the batch
+    // requested, which still counts every word left undone by a Give Up.
+    recordActivity(entry.correct);
   }
   return prior.filter(s => s.mode === entry.mode);
 }
@@ -137,6 +143,7 @@ export function recordOutcome(
   }
   saveMisses(lang, counts);
   saveWordTallies(lang, tallies);
+  bumpSrs(lang, missed, correct);
 }
 
 /** How many times this word has been missed, net of later successes. */
@@ -207,6 +214,7 @@ export function clearHistory(lang: string): void {
   removeKey(SESSION_PREFIX + lang.toLowerCase());
   removeKey(MISS_PREFIX + lang.toLowerCase());
   removeKey(TALLY_PREFIX + lang.toLowerCase());
+  clearSrs(lang);
 }
 
 // ── Word ordering ─────────────────────────────────────────────────────────────

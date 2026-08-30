@@ -1,6 +1,7 @@
 import { renderPictureMode }              from './modes/picture-mode.ts';
 import { renderTriviaMode }               from './modes/trivia-mode.ts';
 import { renderGuessBlankMode }           from './modes/guess-blank-mode.ts';
+import { renderSentenceScrambleMode }     from './modes/sentence-scramble-mode.ts';
 import { renderConjugationMode, cleanupConjugationMode } from './modes/conjugation/index.ts';
 import { renderConjOneAtATime }           from './modes/conjugation/one-at-a-time-mode.ts';
 import { renderConjRandomTable }          from './modes/conjugation/random-table-mode.ts';
@@ -28,6 +29,7 @@ interface StartHandlerElements {
   pictureWrap:     HTMLElement;
   triviaWrap:      HTMLElement;
   guessBlankWrap:  HTMLElement;
+  sentenceScrambleWrap: HTMLElement;
   conjugationWrap: HTMLElement | null;
   output:          HTMLElement;
 }
@@ -73,6 +75,7 @@ export function bindStartHandler({
     pictureWrap,
     triviaWrap,
     guessBlankWrap,
+    sentenceScrambleWrap,
     conjugationWrap,
     output,
   }
@@ -131,6 +134,12 @@ export function bindStartHandler({
       const visualsOnly = modeAtStart === 'picture';
       if (visualsOnly) list = list.filter(w => hasVisual(fullLang, w.word));
 
+      // Same problem again: Sentence Scramble needs a word with at least one
+      // example sentence to scramble, so "Top 100" would otherwise silently
+      // shrink to however many of the top 100 happen to have one.
+      const examplesOnly = modeAtStart === 'sentenceScramble';
+      if (examplesOnly) list = list.filter(w => w.examples.length > 0);
+
       // Apply domain filter from the HTML #domainFilter checkboxes.
       // Words with no domain data pass through unconditionally — domain
       // assignments only exist for Spanish, so filtering on them must not
@@ -151,8 +160,9 @@ export function bindStartHandler({
 
         // Candidates: words ranked beyond the current window
         let extras: Word[] = allWords.filter(w => !baseWordSet.has(w.word));
-        if (verbsOnly)   extras = extras.filter(isDrillableVerb);
-        if (visualsOnly) extras = extras.filter(w => hasVisual(fullLang, w.word));
+        if (verbsOnly)     extras = extras.filter(isDrillableVerb);
+        if (visualsOnly)   extras = extras.filter(w => hasVisual(fullLang, w.word));
+        if (examplesOnly)  extras = extras.filter(w => w.examples.length > 0);
 
         // Apply list filter (same as applied to the base list above)
         extras = filterWords(extras);
@@ -173,12 +183,13 @@ export function bindStartHandler({
       // Same top-up for plain "Top N": narrowing to verbs or to illustrated
       // words always leaves the list short, since both are a minority of any
       // frequency window.
-      if ((verbsOnly || visualsOnly) && isFinite(requestedSize) && list.length < requestedSize) {
+      if ((verbsOnly || visualsOnly || examplesOnly) && isFinite(requestedSize) && list.length < requestedSize) {
         const allWords = getAllWords ? getAllWords() : [];
         const have     = new Set(list.map(w => w.word));
         let extras     = allWords.filter(w => !have.has(w.word)
                           && (verbsOnly  ? isDrillableVerb(w)        : true)
-                          && (visualsOnly ? hasVisual(fullLang, w.word) : true));
+                          && (visualsOnly ? hasVisual(fullLang, w.word) : true)
+                          && (examplesOnly ? (w.examples.length > 0) : true));
         extras = filterWords(extras);
         extras = applyDomainFilter(extras, selectedDomains);
         list = [...list, ...extras.slice(0, requestedSize - list.length)];
@@ -324,6 +335,18 @@ export function bindStartHandler({
           container: guessBlankWrap,
           lang: fullLang,
           difficulty: difficulty as 'all' | 'easy' | 'medium' | 'hard',
+        });
+      }
+
+      if (currentMode === 'sentenceScramble') {
+        sentenceScrambleWrap.innerHTML = '';
+        // Unlike Trivia/Guess the Blank, this uses `list` — already narrowed
+        // above to words with at least one example sentence and topped up to
+        // the requested size.
+        renderSentenceScrambleMode({
+          words: list,
+          container: sentenceScrambleWrap,
+          lang: fullLang,
         });
       }
 

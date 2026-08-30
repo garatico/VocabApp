@@ -19,6 +19,7 @@ import {
   getSessions, troubleWords, missCount, wordsPerMinute,
   type QuizMode, type SessionRecord,
 } from '../utils/session-history.ts';
+import { srsDueWords } from '../utils/srs.ts';
 import { cachedVocabMap, fetchVocab } from './my-lists/vocab-cache.ts';
 import {
   createList, addToList, removeFromList, getList,
@@ -37,12 +38,13 @@ const MODE_LABELS: Record<QuizMode, string> = {
   picture:      'Picture Quiz',
   trivia:       'Trivia',
   guessBlank:   'Guess the Blank',
+  sentenceScramble: 'Sentence Scramble',
   // word-choice-mode.ts is parked (not wired to any tab) — this label only
   // matters if a past dev build ever recorded a session under it.
   wordChoice:   'Word Choice',
   conjugation:  'Conjugation',
 };
-const MODE_ORDER: QuizMode[] = ['table', 'recall', 'doubleRecall', 'picture', 'trivia', 'guessBlank', 'conjugation'];
+const MODE_ORDER: QuizMode[] = ['table', 'recall', 'doubleRecall', 'picture', 'trivia', 'guessBlank', 'sentenceScramble', 'conjugation'];
 
 // Table mode's own direction toggle labels — see #directionToggle in index.html.
 const DIRECTION_LABELS: Record<SessionDirection, string> = {
@@ -53,6 +55,9 @@ const DIRECTION_LABELS: Record<SessionDirection, string> = {
 
 /** The list "Study these" collects trouble words into — see studyTroubleWords(). */
 const TROUBLE_LIST_NAME = 'Words I Keep Missing';
+
+/** The list "Study these" collects due-for-review words into — see studyDueWords(). */
+const REVIEW_LIST_NAME = 'Due for Review';
 
 export function renderHistory(container: HTMLElement, lang: string): void {
   container.innerHTML = '';
@@ -82,17 +87,107 @@ export function renderHistory(container: HTMLElement, lang: string): void {
   });
   langRow.append(langLabel, langSel);
 
+  const reviewPanel = document.createElement('div');
+  reviewPanel.className = 'history-panel history-review';
   const troublePanel = document.createElement('div');
   troublePanel.className = 'history-panel history-trouble';
   const sessionsPanel = document.createElement('div');
   sessionsPanel.className = 'history-panel history-sessions';
 
-  wrap.append(langRow, troublePanel, sessionsPanel);
+  wrap.append(langRow, reviewPanel, troublePanel, sessionsPanel);
   container.appendChild(wrap);
 
   function render(): void {
+    renderDueWords();
     renderTroubleWords();
     renderSessionList();
+  }
+
+  // ── Due for review (spaced repetition) ───────────────────────────────────
+
+  function renderDueWords(): void {
+    reviewPanel.innerHTML = '';
+
+    const head = document.createElement('div');
+    head.className = 'history-panel-head';
+    const title = document.createElement('h3');
+    title.className = 'history-panel-title';
+    title.textContent = 'Due for Review';
+    head.appendChild(title);
+
+    const words = srsDueWords(currentLang);
+
+    if (words.length === 0) {
+      reviewPanel.appendChild(head);
+      const empty = document.createElement('p');
+      empty.className = 'history-empty';
+      empty.textContent = 'Nothing due right now — words land here on their own '
+        + 'review schedule as you quiz them.';
+      reviewPanel.appendChild(empty);
+      return;
+    }
+
+    const studyBtn = document.createElement('button');
+    studyBtn.type = 'button';
+    studyBtn.className = 'history-study-btn';
+    studyBtn.textContent = `▶ Study these ${words.length}`;
+    studyBtn.title = `Add ${words.length} word${words.length === 1 ? '' : 's'} to a `
+      + `"${REVIEW_LIST_NAME}" list and start a focused Table quiz on them`;
+    studyBtn.addEventListener('click', () => studyDueWords(currentLang, words));
+    head.appendChild(studyBtn);
+    reviewPanel.appendChild(head);
+
+    const list = document.createElement('ul');
+    list.className = 'history-trouble-list';
+    const vocabMap = cachedVocabMap(currentLang);
+
+    words.forEach(word => {
+      const entry = vocabMap?.get(word);
+      const li = document.createElement('li');
+      li.className = 'history-trouble-item';
+
+      const wordSpan = document.createElement('span');
+      wordSpan.className = 'history-trouble-word';
+      wordSpan.textContent = word;
+
+      const transSpan = document.createElement('span');
+      transSpan.className = 'history-trouble-trans';
+      transSpan.textContent = entry?.translation ?? '';
+
+      li.append(wordSpan, transSpan);
+      list.appendChild(li);
+    });
+    reviewPanel.appendChild(list);
+
+    if (!vocabMap) {
+      const fetchedFor = currentLang;
+      fetchVocab(fetchedFor).then(() => {
+        if (currentLang === fetchedFor) renderDueWords();
+      }).catch(() => {});
+    }
+  }
+
+  /** Same mechanism as studyTroubleWords() — see its comment. */
+  function studyDueWords(forLang: string, words: string[]): void {
+    createList(forLang, REVIEW_LIST_NAME);
+
+    const current = new Set(getList(forLang, REVIEW_LIST_NAME));
+    const wanted  = new Set(words);
+    current.forEach(w => { if (!wanted.has(w)) removeFromList(forLang, REVIEW_LIST_NAME, w); });
+    words.forEach(w => { if (!current.has(w)) addToList(forLang, REVIEW_LIST_NAME, w); });
+
+    const savedMode  = readString('vq_mode');
+    const usableModes = new Set(['table', 'picture']);
+    const targetMode = savedMode && usableModes.has(savedMode) ? savedMode : 'table';
+
+    saveListFilterState(
+      forLang,
+      { active: true, mode: 'focus', selected: [REVIEW_LIST_NAME] },
+      targetMode as FilterScope,
+    );
+    refreshFilterSelect(forLang);
+    document.querySelector<HTMLElement>(`.mode-tab[data-mode="${targetMode}"]`)?.click();
+    (document.getElementById('startBtn') as HTMLButtonElement | null)?.click();
   }
 
   // ── Words to review ───────────────────────────────────────────────────────
