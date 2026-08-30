@@ -20,13 +20,17 @@ body:not(.advanced-mode) [data-advanced="true"] {
 /* ── Toolbar — Advanced mode, Theme, App language: page-level "how this
    looks/behaves for me" toggles, not any one section's own settings, so
    they sit above everything else rather than buried in a collapsible
-   section (Advanced mode doubly can't be gated by itself). ── */
+   section (Advanced mode doubly can't be gated by itself). Stacked
+   vertically in the top-right corner rather than a horizontal row: #controls
+   (the quiz options bar) and #settingsArea are mutually-exclusive siblings
+   right after .mode-tabs, so keeping this as the first thing in
+   #settingsArea already lines its top edge up with #controls' — e.g. the
+   Table quiz's By Rank/Skip Known toggle — on every other tab. ── */
 .settings-toolbar {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 1.1rem;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
   margin-bottom: 1rem;
   padding-bottom: 0.9rem;
   border-bottom: 1px solid var(--border);

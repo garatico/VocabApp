@@ -77,6 +77,7 @@ export function bindModeSwitch({
     const conjMatchStyleGroup      = document.getElementById('conjMatchStyleGroup');
     const pictureStyleGroup   = document.getElementById('pictureStyleGroup');
     const triviaStyleGroup    = document.getElementById('triviaStyleGroup');
+    const triviaCategoryGroup = document.getElementById('triviaCategoryGroup');
     const guessBlankDiffGroup = document.getElementById('guessBlankDifficultyGroup');
     const triviaDiffGroup     = document.getElementById('triviaDifficultyGroup');
     const triviaReadingDiffGroup   = document.getElementById('triviaReadingDifficultyGroup');
@@ -145,6 +146,7 @@ export function bindModeSwitch({
     }
     if (pictureStyleGroup)   pictureStyleGroup.style.display   = mode === 'picture'     ? ''     : 'none';
     if (triviaStyleGroup)    triviaStyleGroup.style.display    = mode === 'trivia'      ? ''     : 'none';
+    if (triviaCategoryGroup) triviaCategoryGroup.style.display = mode === 'trivia'      ? ''     : 'none';
     if (guessBlankDiffGroup) guessBlankDiffGroup.style.display = mode === 'guessBlank'  ? ''     : 'none';
     if (triviaDiffGroup)     triviaDiffGroup.style.display     = mode === 'trivia'      ? ''     : 'none';
     if (triviaReadingDiffGroup)   triviaReadingDiffGroup.style.display   = mode === 'trivia' ? '' : 'none';

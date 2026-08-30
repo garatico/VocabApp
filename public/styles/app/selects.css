@@ -23,8 +23,10 @@ select:focus {
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
-/* ── Custom number input (quiz size) ── */
-#sizeCustom {
+/* ── Custom number input — quiz size (#sizeCustom) and Conjugation's
+   Random Table "Blanks to Practice" (#conjRandomTableSizeCustom) share this
+   shape rather than each having their own copy of it. ── */
+.custom-count-input {
   font-family: 'Sora', sans-serif;
   font-size: 0.95rem;
   color: var(--text);
@@ -41,8 +43,8 @@ select:focus {
 }
 /* Native spin buttons, enlarged — always visible (not just on hover) and given
    a wider, full-height hit area so they're easy to click. */
-#sizeCustom::-webkit-outer-spin-button,
-#sizeCustom::-webkit-inner-spin-button {
+.custom-count-input::-webkit-outer-spin-button,
+.custom-count-input::-webkit-inner-spin-button {
   -webkit-appearance: inner-spin-button;
   appearance: auto;
   opacity: 1;
@@ -52,12 +54,12 @@ select:focus {
   margin-left: 0.3rem;
   cursor: pointer;
 }
-#sizeCustom:focus {
+.custom-count-input:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
-#sizeCustom::placeholder { color: var(--text-muted); font-size: 0.74rem; }
+.custom-count-input::placeholder { color: var(--text-muted); font-size: 0.74rem; }
 
 /* ── Text/number/email/password inputs & textarea ── */
 input[type="text"],
@@ -75,10 +77,10 @@ input:focus, select:focus, textarea:focus {
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
-  select, #sizeCustom { min-height: 44px; }
+  select, .custom-count-input { min-height: 44px; }
 }
 
 @media (max-width: 480px) {
   select { width: 100%; font-size: 0.75rem; padding: 0.35rem 1.8rem 0.35rem 0.5rem; }
-  #sizeCustom { width: 100%; font-size: 0.75rem; }
+  .custom-count-input { width: 100%; font-size: 0.75rem; }
 }
