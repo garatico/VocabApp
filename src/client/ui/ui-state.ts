@@ -111,6 +111,14 @@ export function bindModeSwitch({
     // those filters plus Direction, so it has nothing to apply on a tab that
     // doesn't show them (and currentScope() has no bucket for either mode).
     if (presetsBtn)           presetsBtn.style.display          = noWordList ? 'none' : '';
+    // #controls reserves 8rem on the right for the ? button and the Profiles
+    // pill beside it (controls-bar.css). Profiles is hidden on exactly these
+    // same modes (line above) and has nothing to reserve room for there, so
+    // give that space back to controls-top — Trivia's own row of filter
+    // groups (Answer Style/Category/Difficulty/Reading Difficulty/Reading
+    // Length) is wide enough that the wasted 8rem was enough on its own to
+    // wrap it onto a second line.
+    if (controlsEl) controlsEl.classList.toggle('controls--no-profiles', noWordList);
     if (conjSizeSelectGroup) conjSizeSelectGroup.style.display = mode === 'conjugation' ? '' : 'none';
     if (directionGroup)      directionGroup.style.display      = mode === 'table'       ? ''     : 'none';
     // Compare (two or more languages merged into one quiz) is supported by

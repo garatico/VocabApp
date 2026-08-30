@@ -693,36 +693,6 @@
       </section>
 
       <section id="settingsArea" hidden>
-        <!-- Always visible regardless of Advanced Mode (it's the switch for
-             everything else here), and grouped with Theme/App language since
-             all three are "how this page/app looks and behaves for me right
-             now" rather than any one quiz mode's own settings. -->
-        <div class="settings-toolbar">
-          <div class="settings-toolbar-item">
-            <span class="settings-toolbar-label" data-i18n="settings.general.advancedMode" title="On shows every setting, including ones most people never need to touch. Off keeps this panel to the settings people actually change." data-i18n-title="settings.general.advancedModeDesc">Advanced mode</span>
-            <div class="sort-order-toggle" id="settingAdvancedMode">
-              <button type="button" class="sort-order-btn" data-advanced-mode="true" data-i18n="common.on">On</button>
-              <button type="button" class="sort-order-btn active" data-advanced-mode="false" data-i18n="common.off">Off</button>
-            </div>
-          </div>
-          <div class="settings-toolbar-item">
-            <span class="settings-toolbar-label" data-i18n="settings.appearance.theme" title="System follows your OS dark/light preference" data-i18n-title="settings.appearance.themeDesc">Theme</span>
-            <div class="sort-order-toggle" id="settingTheme">
-              <button type="button" class="sort-order-btn active" data-theme="system" data-i18n="settings.appearance.system">System</button>
-              <button type="button" class="sort-order-btn" data-theme="light" data-i18n="settings.appearance.light">Light</button>
-              <button type="button" class="sort-order-btn" data-theme="dark" data-i18n="settings.appearance.dark">Dark</button>
-            </div>
-          </div>
-          <div class="settings-toolbar-item">
-            <span class="settings-toolbar-label" data-i18n="settings.appearance.uiLanguage" title="The language of the app's own interface — menus, labels and buttons — separate from the language you're studying" data-i18n-title="settings.appearance.uiLanguageDesc">App language</span>
-            <div class="sort-order-toggle" id="settingUILanguage">
-              <button type="button" class="sort-order-btn active" data-ui-lang="english">English</button>
-              <button type="button" class="sort-order-btn" data-ui-lang="spanish">Español</button>
-              <button type="button" class="sort-order-btn" data-ui-lang="french" disabled title="Coming soon" data-i18n-title="settings.appearance.comingSoon">Français</button>
-              <button type="button" class="sort-order-btn" data-ui-lang="portuguese" disabled title="Coming soon" data-i18n-title="settings.appearance.comingSoon">Português</button>
-            </div>
-          </div>
-        </div>
         <div class="settings-layout">
           <nav class="settings-nav" aria-label="Settings sections">
             <a class="settings-nav-link" href="#settings-sec-table"><span class="settings-nav-icon" aria-hidden="true">📋</span><span data-i18n="settings.nav.table">Table Quiz</span></a>
@@ -1240,6 +1210,41 @@
             </div>
           </div>
 
+        </div>
+
+        <!-- Advanced mode / Theme / App language: page-level "how this looks
+             /behaves for me" toggles, not any one section's own settings.
+             Always visible regardless of Advanced Mode (it's the switch for
+             everything else here). A third column alongside the nav and the
+             section list rather than a bar above them, so it starts level
+             with "Table Quiz" instead of sitting above the whole layout —
+             settings-layout.css puts it in the empty gutter to the right of
+             settings-wrap's capped width on a wide viewport. -->
+        <div class="settings-toolbar">
+          <div class="settings-toolbar-item">
+            <span class="settings-toolbar-label" data-i18n="settings.general.advancedMode" title="On shows every setting, including ones most people never need to touch. Off keeps this panel to the settings people actually change." data-i18n-title="settings.general.advancedModeDesc">Advanced mode</span>
+            <div class="sort-order-toggle" id="settingAdvancedMode">
+              <button type="button" class="sort-order-btn" data-advanced-mode="true" data-i18n="common.on">On</button>
+              <button type="button" class="sort-order-btn active" data-advanced-mode="false" data-i18n="common.off">Off</button>
+            </div>
+          </div>
+          <div class="settings-toolbar-item">
+            <span class="settings-toolbar-label" data-i18n="settings.appearance.theme" title="System follows your OS dark/light preference" data-i18n-title="settings.appearance.themeDesc">Theme</span>
+            <div class="sort-order-toggle" id="settingTheme">
+              <button type="button" class="sort-order-btn active" data-theme="system" data-i18n="settings.appearance.system">System</button>
+              <button type="button" class="sort-order-btn" data-theme="light" data-i18n="settings.appearance.light">Light</button>
+              <button type="button" class="sort-order-btn" data-theme="dark" data-i18n="settings.appearance.dark">Dark</button>
+            </div>
+          </div>
+          <div class="settings-toolbar-item">
+            <span class="settings-toolbar-label" data-i18n="settings.appearance.uiLanguage" title="The language of the app's own interface — menus, labels and buttons — separate from the language you're studying" data-i18n-title="settings.appearance.uiLanguageDesc">App language</span>
+            <div class="sort-order-toggle" id="settingUILanguage">
+              <button type="button" class="sort-order-btn active" data-ui-lang="english">English</button>
+              <button type="button" class="sort-order-btn" data-ui-lang="spanish">Español</button>
+              <button type="button" class="sort-order-btn" data-ui-lang="french" disabled title="Coming soon" data-i18n-title="settings.appearance.comingSoon">Français</button>
+              <button type="button" class="sort-order-btn" data-ui-lang="portuguese" disabled title="Coming soon" data-i18n-title="settings.appearance.comingSoon">Português</button>
+            </div>
+          </div>
         </div>
         </div>
       </section>
