@@ -31,6 +31,22 @@ export default defineConfig({
       '/emoji':  { target: 'http://localhost:3000', changeOrigin: true },
       // Note: /admin removed — Vite now serves admin.html directly
     },
+    // Cross-origin isolation lets WebLLM's WASM runtime (ai-chat/webllm-engine.ts)
+    // use SharedArrayBuffer for multi-threaded inference. Not required — it
+    // falls back to a slower single-threaded path without these — but free
+    // to enable since CSP is off and nothing else on this dev server needs
+    // to embed cross-origin content without CORP.
+    headers: {
+      'Cross-Origin-Opener-Policy':   'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
+
+  // The AI Chat tab's model runs off the UI thread in webllm-worker.ts — the
+  // first Worker in this codebase. Built as ESM to match what WebLLM's own
+  // worker helper (CreateWebWorkerMLCEngine) expects.
+  worker: {
+    format: 'es',
   },
 
   // `vite build` output

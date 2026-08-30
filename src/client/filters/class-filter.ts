@@ -16,10 +16,12 @@ import { bucketFor, bucketForRead, type Bucket } from './filter-state.ts';
 import {
   bindFilterHeader, syncFilterHeader, type FilterHeaderConfig,
 } from './filter-header.ts';
+import { Settings } from '../settings.ts';
+import { getCurrentMode } from '../ui/ui-state.ts';
 
 const KEY_PREFIX = 'vq_classfilter_';
 
-interface ClassFilterState {
+export interface ClassFilterState {
   active:   boolean;
   selected: string[];
 }
@@ -135,9 +137,22 @@ export const copyStateForTest = copyState;
  * meaning in one place: empty has always meant "do not narrow".
  */
 export function getSelectedClasses(): string[] {
+  if (Settings.getHidePOSFilter(getCurrentMode())) return [];
   const state = getState();
   if (!state.active || state.selected.length === 0) return [];
   return [...state.selected];
+}
+
+/**
+ * The raw active/selected state, unlike getSelectedClasses() which collapses
+ * "off" and "on with nothing picked" into the same empty array. presets.ts
+ * needs the distinction — a Testing Profile has to be able to say "this
+ * filter is off" and have that survive being saved and reapplied, not just
+ * "this filter currently narrows nothing".
+ */
+export function getClassFilterState(): ClassFilterState {
+  const state = getState();
+  return { active: state.active, selected: [...state.selected] };
 }
 
 /**

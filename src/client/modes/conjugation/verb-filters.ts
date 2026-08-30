@@ -11,6 +11,8 @@
 import type { Word } from '../../types.js';
 import { foldKey as normalize } from '../../utils/match.js';
 import { activeTenses, activeRegularities, unionTenseDefs } from './controls.js';
+import type { ConjRegularityScope } from '../../settings.ts';
+import { t } from '../../i18n/index.ts';
 
 /**
  * Is this entry a headword, or is it one form of some other verb?
@@ -42,6 +44,33 @@ export function isOwnInfinitive(w: Word): boolean {
 }
 
 /**
+ * Drop a reflexive headword when its own bare-infinitive twin is also in the
+ * pool — "divertirse" alongside "divertir", specifically. isOwnInfinitive()
+ * above deliberately keeps every reflexive as its own headword, because most
+ * of them (ducharse, quejarse, six others) have no non-reflexive counterpart
+ * in the database at all — dropping those would lose a real, independent
+ * verb. "divertir"/"divertirse" is the one pair where both happen to exist
+ * as separate rows, which is redundant specifically *for drilling*: the two
+ * conjugate identically apart from the clitic, so offering both as separate
+ * cards teaches nothing "divertir" alone doesn't.
+ *
+ * Scoped to this exact shape (word === infinitive + "se", and the bare
+ * infinitive itself present) rather than a general "reflexive" filter, so it
+ * can never touch a reflexive-only verb that has nothing to be redundant
+ * with.
+ */
+export function dropRedundantReflexives(verbs: Word[]): Word[] {
+  const bareInfinitives = new Set(
+    verbs.filter(w => w.word === w.linguistic?.infinitive).map(w => w.word),
+  );
+  return verbs.filter(w => {
+    const inf = w.linguistic?.infinitive;
+    if (!inf || w.word !== inf + 'se') return true;
+    return !bareInfinitives.has(inf);
+  });
+}
+
+/**
  * Do we have anything to drill for this verb?
  *
  * A present-tense array of six empty strings is as useless as a null, and both
@@ -68,10 +97,10 @@ export function hasAnyForms(w: Word): boolean {
  */
 export function regularityOf(cls: string | null): { key: string; label: string } {
   if (!cls)                        return { key: 'unknown',   label: '' };
-  if (cls.startsWith('regular'))   return { key: 'regular',   label: 'Regular' };
-  if (cls.startsWith('ortho'))     return { key: 'ortho',     label: 'Spelling' };
-  if (cls.startsWith('stem'))      return { key: 'stem',      label: 'Stem-change' };
-  return { key: 'irregular', label: 'Irregular' };
+  if (cls.startsWith('regular'))   return { key: 'regular',   label: t('conj.regular',     'Regular') };
+  if (cls.startsWith('ortho'))     return { key: 'ortho',     label: t('conj.spelling',    'Spelling') };
+  if (cls.startsWith('stem'))      return { key: 'stem',      label: t('conj.stemChange',  'Stem-change') };
+  return { key: 'irregular', label: t('conj.irregular', 'Irregular') };
 }
 
 export interface ConjugationEstimate {
@@ -86,20 +115,41 @@ export interface ConjugationEstimate {
  * isOwnInfinitive, hasAnyForms, the Regularity chips), read *before* Start
  * Quiz so a runaway combination (every tense × every verb) can be flagged
  * up front instead of only discovered once the cards are already built.
+ *
+ * `requestedVerbs` and `scope` mirror the order of operations Start Quiz
+ * actually uses (see ConjRegularityScope): 'afterTopN' takes the first
+ * `requestedVerbs` by rank *then* narrows by Regularity — so the result can
+ * come in under `requestedVerbs` — while 'beforeTopN' narrows by Regularity
+ * first, so the result always hits `requestedVerbs` (pool permitting).
+ * Passing `words` already capped at N — as start-handler.ts's own
+ * safety-net call does — and leaving `requestedVerbs` at its Infinity
+ * default reproduces the old always-filter-then-count behaviour, since a
+ * slice(0, Infinity) is a no-op either way.
  */
-export function estimateConjugationSize(words: Word[], lang: string, extraLangs: string[] = []): ConjugationEstimate {
+export function estimateConjugationSize(
+  words: Word[],
+  lang: string,
+  extraLangs: string[] = [],
+  requestedVerbs: number = Infinity,
+  scope: ConjRegularityScope = 'afterTopN',
+): ConjugationEstimate {
   const primaryLang = lang.split('+')[0];
 
   const regs     = activeRegularities();
   const everyReg = regs.length >= 4;
-  const verbEntries = words.filter(w => w.pos === 'verb' && isOwnInfinitive(w));
+  const verbEntries = dropRedundantReflexives(words.filter(w => w.pos === 'verb' && isOwnInfinitive(w)));
   const rawVerbs = verbEntries.filter(hasAnyForms);
-  const allVerbs = everyReg
-    ? rawVerbs
-    : rawVerbs.filter(w => {
+
+  const byRegularity = (arr: Word[]): Word[] => everyReg
+    ? arr
+    : arr.filter(w => {
         const cls = w.linguistic?.conjugation_class ?? null;
         return cls == null || regs.includes(regularityOf(cls).key);
       });
+
+  const allVerbs = scope === 'beforeTopN'
+    ? byRegularity(rawVerbs).slice(0, requestedVerbs)
+    : byRegularity(rawVerbs.slice(0, requestedVerbs));
 
   const tenseDefs = unionTenseDefs(primaryLang, extraLangs);
   const picked    = activeTenses().filter(k => tenseDefs.some(d => d.key === k));

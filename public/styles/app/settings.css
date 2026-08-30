@@ -10,6 +10,42 @@
   box-shadow: var(--shadow);
 }
 
+/* ── Advanced mode — off by default (settings.ts). Rows, subsections, whole
+   sections and their nav links marked data-advanced="true" only show once
+   the General section's Advanced mode toggle is on. */
+body:not(.advanced-mode) [data-advanced="true"] {
+  display: none;
+}
+
+/* ── Toolbar — Advanced mode, Theme, App language: page-level "how this
+   looks/behaves for me" toggles, not any one section's own settings, so
+   they sit above everything else rather than buried in a collapsible
+   section (Advanced mode doubly can't be gated by itself). ── */
+.settings-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 1.1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+.settings-toolbar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.settings-toolbar-label {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 /* ── Side nav + section list, side by side ── */
 .settings-layout {
   display: flex;
@@ -126,6 +162,41 @@
   color: var(--text-muted);
   line-height: 1.5;
 }
+
+/* ── Group — wraps a heading + its rows in a shaded band, so a subsection
+   (e.g. Table Quiz's "Layout" vs "Hints & Glosses") reads as a distinct
+   visual block, not just a text label between two rows that otherwise look
+   identical to every other row in the section. Sits one shade lighter than
+   the section's own --surface2 background so it reads as a card inside a
+   card. Groups get a visible gap between them, on top of the shading, so
+   e.g. "Words per page" (end of Layout) and "Hints & Glosses" don't just
+   touch. ── */
+.settings-group {
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 0.15rem 0.8rem 0.65rem;
+}
+.settings-group + .settings-group {
+  margin-top: 1.15rem;
+}
+.settings-section-body > .settings-group:first-child {
+  margin-top: 0;
+}
+
+/* ── Group heading — a small sub-label at the top of a .settings-group,
+   lighter-weight than a whole new collapsible section for categories that
+   don't warrant their own top-level nav entry but have grown past one flat
+   list. ── */
+.settings-group-heading {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0.9rem 0 0.3rem;
+}
+.settings-group > .settings-group-heading:first-child { padding-top: 0.7rem; }
 
 /* ── Subsection — a full-width block under a .settings-row, for content that
    doesn't fit the label-left/control-right layout (a per-language list). ── */

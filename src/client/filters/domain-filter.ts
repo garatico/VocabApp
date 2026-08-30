@@ -17,6 +17,8 @@ import { bucketFor, bucketForRead, type Bucket } from './filter-state.ts';
 import {
   bindFilterHeader, syncFilterHeader, type FilterHeaderConfig,
 } from './filter-header.ts';
+import { Settings } from '../settings.ts';
+import { getCurrentMode } from '../ui/ui-state.ts';
 
 const TOP_N = 10;
 
@@ -27,7 +29,7 @@ let active = true;
 import { readJson, readString, writeJson, isRecord } from '../utils/storage.ts';
 const KEY_PREFIX = 'vq_domainfilter_';
 
-interface DomainFilterState { active: boolean; selected: string[] }
+export interface DomainFilterState { active: boolean; selected: string[] }
 
 function key(lang: string, bucket: Bucket): string {
   return `${KEY_PREFIX}${lang.toLowerCase()}__${bucket}`;
@@ -367,9 +369,64 @@ export function bindDomainFilter(): void {
   renderAll();
 }
 
+/**
+ * Read the persisted state for whichever mode/language is current right now,
+ * rather than trusting the in-memory `selected`/`active` — those only reflect
+ * reality once `loadFromBucket()` has run for the bucket a caller actually
+ * cares about, and Start Quiz (start-handler.ts) has no reason to have
+ * triggered that first. class-filter.ts's getSelectedClasses() already reads
+ * fresh from storage on every call for the same reason; this matches it.
+ */
+function currentPersistedState(): DomainFilterState {
+  const lang = currentLangValue();
+  return readBucket(lang, bucketForRead('domain', b => readString(key(lang, b)) !== null));
+}
+
 /** Selected domains, or [] when the filter is switched off. */
 export function getSelectedDomains(): string[] {
-  return active ? [...selected] : [];
+  if (Settings.getHideDomainsFilter(getCurrentMode())) return [];
+  const state = currentPersistedState();
+  return state.active ? state.selected : [];
+}
+
+/**
+ * The raw active/selected state, unlike getSelectedDomains() which collapses
+ * "off" and "on with nothing picked" into the same empty array. presets.ts
+ * needs the distinction so a saved Testing Profile can restore "off" as
+ * "off", not silently turn the filter back on.
+ */
+export function getDomainFilterState(): DomainFilterState {
+  return currentPersistedState();
+}
+
+/**
+ * Whether a word survives the domain filter: it needs at least one domain in
+ * common with the selection (OR, not AND — see the "OR" badge in the Domains
+ * box). A word with no domain data at all does NOT get a free pass — every
+ * language currently has domain coverage (15%–100%, not just Spanish, and
+ * nowhere near total for any of them), so "this word has none" is a real,
+ * meaningful "not tagged as Health" rather than "this language has no domain
+ * data to filter on." The free pass used to let every untagged word in a
+ * language through regardless of selection — selecting Health (386 Spanish
+ * words) surfaced the ~3,200 untagged ones too, which reads as the filter
+ * doing nothing.
+ *
+ * Pulled out of start-handler.ts, which had this same predicate inlined
+ * three times (the main list, the "N New" fill top-up, and the
+ * verbs/illustrated-only top-up) — one definition that's actually testable
+ * beats three copies that can quietly drift apart.
+ */
+export function matchesDomainFilter(word: { domains?: string[] | null }, selectedDomains: string[]): boolean {
+  if (selectedDomains.length === 0) return true;
+  const domains = word.domains || [];
+  return domains.some(d => selectedDomains.includes(d));
+}
+
+/** Apply matchesDomainFilter() across a list — the common case at every call site. */
+export function applyDomainFilter<T extends { domains?: string[] | null }>(
+  words: T[], selectedDomains: string[],
+): T[] {
+  return selectedDomains.length === 0 ? words : words.filter(w => matchesDomainFilter(w, selectedDomains));
 }
 
 /**

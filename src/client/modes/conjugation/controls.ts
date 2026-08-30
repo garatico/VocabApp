@@ -11,8 +11,9 @@
  * know anything about the grid rendering.
  */
 
-import { PRONOUNS, TENSE_DEFS, TENSE_EN, TENSE_HELP, REGULARITY_HELP } from './data.js';
+import { PRONOUNS, TENSE_DEFS, tenseEnLabel, TENSE_HELP, REGULARITY_HELP } from './data.js';
 import { capitalize } from '../../utils/utils.js';
+import { Settings, type ConjRegularityScope } from '../../settings.ts';
 
 // ── Module state ───────────────────────────────────────────────────────────────
 
@@ -175,6 +176,8 @@ function initRegularityChips(): void {
     });
   }
 
+  initRegularityScopeToggle();
+
   if (_regListenerAttached) return;
   _regListenerAttached = true;
 
@@ -191,6 +194,43 @@ function initRegularityChips(): void {
   document.getElementById('conjRegAll')?.addEventListener('click', () => {
     box.querySelectorAll('.conj-reg-chip').forEach(c => c.classList.add('active'));
     saveRegularities();
+    _selectionChangeCallback?.();
+  });
+  document.getElementById('conjRegNone')?.addEventListener('click', () => {
+    // Same rule as the tense chips' None: leaves the first bucket on rather
+    // than allowing an empty selection.
+    box.querySelectorAll('.conj-reg-chip').forEach((c, i) => {
+      c.classList.toggle('active', i === 0);
+    });
+    saveRegularities();
+    _selectionChangeCallback?.();
+  });
+}
+
+/** Whether Regularity narrows before or after the Verbs size cap — see
+ *  ConjRegularityScope. Lives next to the Regularity chips in the controls
+ *  bar rather than in Settings, since it's a live quiz-setup choice like the
+ *  chips themselves, not a standing preference. */
+let _regScopeListenerAttached = false;
+
+function initRegularityScopeToggle(): void {
+  const toggle = document.getElementById('conjRegScopeToggle');
+  if (!toggle) return;
+
+  const saved = Settings.getConjRegularityScope();
+  toggle.querySelectorAll<HTMLElement>('.sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.scope === saved);
+  });
+
+  if (_regScopeListenerAttached) return;
+  _regScopeListenerAttached = true;
+
+  toggle.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn?.dataset.scope) return;
+    toggle.querySelectorAll('.sort-order-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    Settings.setConjRegularityScope(btn.dataset.scope as ConjRegularityScope);
     _selectionChangeCallback?.();
   });
 }
@@ -219,7 +259,7 @@ export function unionTenseDefs(lang: string, extraLangs: string[]): { key: strin
       seen.add(def.key);
       defs.push(l === lang
         ? { ...def, native: true }
-        : { key: def.key, label: TENSE_EN[def.key] ?? def.key, native: false });
+        : { key: def.key, label: tenseEnLabel(def.key) || def.key, native: false });
     }
   }
   return defs;
@@ -258,7 +298,7 @@ export function initConjControls(lang: string, extraLangs: string[] = []): void 
       if (def.native) {
         const en = document.createElement('span');
         en.className = 'conj-chip-en';
-        en.textContent = TENSE_EN[def.key] ?? '';
+        en.textContent = tenseEnLabel(def.key);
         btn.append(en);
       }
       chips.appendChild(btn);

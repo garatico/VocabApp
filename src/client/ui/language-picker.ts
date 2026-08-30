@@ -16,6 +16,7 @@
 
 import { positionPopover } from '../utils/popover-position.ts';
 import { LANGUAGES } from '../data/languages.ts';
+import { t } from '../i18n/index.ts';
 
 export interface LanguagePickerOptions {
   anchorEl: HTMLElement;
@@ -48,7 +49,7 @@ export function openLanguagePicker({ anchorEl, exclude, selected, onChange, avai
   const actions = document.createElement('div');
   actions.className = 'list-picker-actions';
   const allBtn = document.createElement('button');
-  allBtn.type = 'button'; allBtn.className = 'ui-btn-mini'; allBtn.textContent = 'All';
+  allBtn.type = 'button'; allBtn.className = 'ui-btn-mini'; allBtn.textContent = t('controls.all', 'All');
   allBtn.addEventListener('click', () => {
     checkboxes.forEach(({ lang, cb, missing }) => {
       if (missing) return;
@@ -58,7 +59,7 @@ export function openLanguagePicker({ anchorEl, exclude, selected, onChange, avai
     onChange(new Set(selected));
   });
   const noneBtn = document.createElement('button');
-  noneBtn.type = 'button'; noneBtn.className = 'ui-btn-mini'; noneBtn.textContent = 'None';
+  noneBtn.type = 'button'; noneBtn.className = 'ui-btn-mini'; noneBtn.textContent = t('common.none', 'None');
   noneBtn.addEventListener('click', () => {
     checkboxes.forEach(({ cb }) => { cb.checked = false; });
     selected.clear();
@@ -87,7 +88,7 @@ export function openLanguagePicker({ anchorEl, exclude, selected, onChange, avai
     checkboxes.push({ lang: lang.name, cb, missing });
 
     const label       = document.createElement('span');
-    label.textContent = missing ? `${lang.label} — no data yet` : lang.label;
+    label.textContent = missing ? t('controls.noDataYet', '{lang} — no data yet').replace('{lang}', lang.label) : lang.label;
 
     row.appendChild(cb);
     row.appendChild(label);
@@ -140,5 +141,5 @@ export function languagePickerLabel(selected: Set<string>): string {
   const labels = [...selected]
     .map(name => LANGUAGES.find(l => l.name === name)?.label ?? name);
   if (labels.length <= 3) return `+ ${labels.join(', ')}`;
-  return `+ ${labels.length} languages`;
+  return t('controls.plusNLanguages', '+ {n} languages').replace('{n}', String(labels.length));
 }

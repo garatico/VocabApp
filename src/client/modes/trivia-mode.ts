@@ -29,7 +29,10 @@
  */
 import {
   getTriviaQuestions, type TriviaQuestion, type TriviaDifficulty,
+  type ReadingDifficulty, type ReadingLength,
 } from '../data/trivia-questions.ts';
+import { getSelectedDomains, matchesDomainFilter } from '../filters/domain-filter.ts';
+import { getUserTriviaQuestions } from '../data/user-content.ts';
 import { normalize } from '../utils/match.ts';
 import { shuffle } from '../utils/shuffle.ts';
 import { applyAutofillAttr } from '../settings.ts';
@@ -43,11 +46,15 @@ import { hintReveal, hintableLength } from '../utils/hint-reveal.ts';
 export type TriviaSubMode = 'type' | 'choice' | 'table';
 
 interface RenderTriviaModeOptions {
-  container:   HTMLElement;
-  lang?:       string;
-  subMode?:    TriviaSubMode;
+  container:          HTMLElement;
+  lang?:              string;
+  subMode?:           TriviaSubMode;
   /** 'all' (default) drills every difficulty in one shuffled run. */
-  difficulty?: TriviaDifficulty | 'all';
+  difficulty?:        TriviaDifficulty | 'all';
+  /** 'all' (default) drills every reading difficulty. Independent of `difficulty` — see trivia-questions.ts's header comment. */
+  readingDifficulty?: ReadingDifficulty | 'all';
+  /** 'all' (default) drills every reading length. */
+  readingLength?:     ReadingLength | 'all';
 }
 
 const CATEGORY_LABELS: Record<TriviaQuestion['category'], string> = {
@@ -65,6 +72,35 @@ function acceptedAnswers(q: TriviaQuestion): string[] {
 
 function canonicalAnswer(q: TriviaQuestion): string {
   return q.answersTarget[0];
+}
+
+/**
+ * Pick up to `count` multiple-choice distractors for `target` from `pool`,
+ * same-type-first — see buildChoiceOptions' call site for why. Pure and
+ * exported so its same-type preference is unit-testable without going
+ * through the DOM-rendering half of this module (see
+ * tests/client/trivia-distractors.test.ts).
+ */
+export function selectDistractors(target: TriviaQuestion, pool: TriviaQuestion[], count = 3): string[] {
+  const used = new Set<string>([normalize(canonicalAnswer(target))]);
+  const distractors: string[] = [];
+
+  function fill(candidates: TriviaQuestion[]): void {
+    for (const other of candidates) {
+      if (distractors.length >= count) break;
+      const text = canonicalAnswer(other);
+      const key  = normalize(text);
+      if (used.has(key)) continue;
+      used.add(key);
+      distractors.push(text);
+    }
+  }
+
+  const others = pool.filter(o => o.id !== target.id);
+  fill(others.filter(o => o.answerType === target.answerType));
+  if (distractors.length < count) fill(others);
+
+  return distractors;
 }
 
 function isAnswerCorrect(input: string, q: TriviaQuestion): boolean {
@@ -233,13 +269,24 @@ export function renderTriviaMode({
   lang = 'spanish',
   subMode = 'type',
   difficulty = 'all',
+  readingDifficulty = 'all',
+  readingLength = 'all',
 }: RenderTriviaModeOptions): void {
   container.innerHTML = '';
   clearSummary('trivia');
   setProgress(0, 0);
 
-  const allQuestions = getTriviaQuestions(lang);
-  const bank = difficulty === 'all' ? allQuestions : allQuestions.filter(q => q.difficulty === difficulty);
+  // My Content tab additions (data/user-content.ts) — client-only, layered
+  // on top of the hand-written bank the same way loadWords() layers in
+  // user-added vocabulary words.
+  const allQuestions = [...getTriviaQuestions(lang), ...getUserTriviaQuestions(lang)];
+  const selectedDomains = getSelectedDomains();
+  const bank = allQuestions.filter(q =>
+    (difficulty === 'all' || q.difficulty === difficulty)
+    && (readingDifficulty === 'all' || q.readingDifficulty === readingDifficulty)
+    && (readingLength === 'all' || q.readingLength === readingLength)
+    && matchesDomainFilter(q, selectedDomains),
+  );
 
   if (bank.length === 0) {
     const why = allQuestions.length > 0
@@ -381,18 +428,11 @@ export function renderTriviaMode({
 
   // ── 'choice' sub-mode ────────────────────────────────────────────────────
 
+  // Distractors are drawn same-type-first — see selectDistractors — from the
+  // shuffled queue, so which 3 wrong options come up still varies run to run.
   function buildChoiceOptions(q: TriviaQuestion): string[] {
     const correct = canonicalAnswer(q);
-    const used = new Set<string>([normalize(correct)]);
-    const distractors: string[] = [];
-    for (const other of shuffle(queue.filter(o => o.id !== q.id))) {
-      if (distractors.length >= 3) break;
-      const text = canonicalAnswer(other);
-      const key  = normalize(text);
-      if (used.has(key)) continue;
-      used.add(key);
-      distractors.push(text);
-    }
+    const distractors = selectDistractors(q, shuffle(queue));
     return shuffle([correct, ...distractors]);
   }
 

@@ -32,6 +32,7 @@
 .filter-section-label,
 .progress-group-label,
 .conj-order-label,
+.conj-reg-scope-label,
 .inline-order-label,
 .control-group > label,
 .ml-lang-label,
@@ -50,7 +51,8 @@
 }
 
 /* The three that are genuinely a different size, and why. */
-.filter-section-label   { --ui-label-size: 0.74rem; }  /* top-level section heading */
+.filter-section-label,
+.conj-reg-scope-label   { --ui-label-size: 0.74rem; }  /* top-level section heading, and "Apply regularity:" pairing with it */
 .progress-group-label   { --ui-label-size: 0.74rem; }  /* pairs with the above */
 .control-group > label  { --ui-label-size: 0.74rem; }
 .settings-section-title { --ui-label-size: 0.62rem; letter-spacing: 0.1em; }

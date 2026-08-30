@@ -18,6 +18,7 @@
 import { shuffleInPlace } from './shuffle.ts';
 import { readJson, writeJson, remove as removeKey, isNumberRecord, isRecord } from './storage.ts';
 import { Settings } from '../settings.ts';
+import { t } from '../i18n/index.ts';
 
 export type QuizMode = 'recall' | 'doubleRecall' | 'table' | 'picture' | 'conjugation' | 'trivia' | 'wordChoice' | 'guessBlank';
 
@@ -212,13 +213,23 @@ export function clearHistory(lang: string): void {
 
 export type WordOrder = 'rank' | 'rank-desc' | 'alpha' | 'shuffle' | 'trouble';
 
-export const WORD_ORDER_LABELS: [WordOrder, string][] = [
+const WORD_ORDER_LABELS_EN: [WordOrder, string][] = [
   ['rank',      'Most Frequent First'],
   ['rank-desc', 'Least Frequent First'],
   ['alpha',     'A → Z'],
   ['shuffle',   'Shuffle'],
   ['trouble',   'Words I Keep Missing First'],
 ];
+
+/**
+ * Translated fresh on every call rather than a static export, so an Order
+ * dropdown built after switching the app's interface language shows the
+ * new language immediately rather than whatever was active when this
+ * module first loaded.
+ */
+export function getWordOrderLabels(): [WordOrder, string][] {
+  return WORD_ORDER_LABELS_EN.map(([value, label]) => [value, t('order.' + value, label)]);
+}
 
 /**
  * Order a word set for display.
@@ -230,15 +241,23 @@ export const WORD_ORDER_LABELS: [WordOrder, string][] = [
  * (Compare mode) mixes words from different languages' miss tallies into one
  * list, so `lang` also accepts a per-word resolver for that case.
  */
-export function orderWords<T extends { word: string; rank?: number | null }>(
+export type WordOrderSortBy = 'word' | 'meaning';
+
+export function orderWords<T extends { word: string; rank?: number | null; translation?: string }>(
   words: readonly T[],
   order: WordOrder,
   lang: string | ((w: T) => string),
+  sortBy: WordOrderSortBy = 'word',
 ): T[] {
   const out = [...words];
   switch (order) {
-    case 'alpha':
-      return out.sort((a, b) => a.word.localeCompare(b.word));
+    case 'alpha': {
+      // 'meaning' falls back to the word itself for anything with no
+      // translation recorded, rather than sorting it as an empty string to
+      // the very top.
+      const key = (w: T): string => (sortBy === 'meaning' && w.translation) ? w.translation : w.word;
+      return out.sort((a, b) => key(a).localeCompare(key(b)));
+    }
     case 'shuffle':
       // Deliberately not seeded: a fresh order every session is the point,
       // otherwise you memorise positions instead of words.

@@ -225,12 +225,33 @@ function migrateListFilter(lang: string): void {
   removeKey(legacyFilterKey(lang));
 }
 
+/**
+ * Every `selected` entry in its canonical qualified form.
+ *
+ * A bare, unqualified entry (predates qualifyListName existing, or written by
+ * a bug that skipped it — see profile-panel.ts's history) is semantically
+ * "this bucket's own language's list by that plain name", per parseSelected's
+ * own fallback. But the checkbox UI (refreshFilterSelect) and its add/remove
+ * handlers compare against the *qualified* string only, so an unqualified
+ * entry that slips in can never render as checked and can never be
+ * unchecked — it sits there permanently, invisibly still narrowing/hiding
+ * words, while the box looks empty. Normalizing on every read means a
+ * legacy entry becomes indistinguishable from one the checkbox UI wrote
+ * itself, the moment it's next loaded — no separate migration needed.
+ */
+function normalizeSelected(selected: string[], lang: string): string[] {
+  return selected.map(entry => {
+    const parsed = parseSelected(entry, lang);
+    return parsed.kind === 'multi' ? qualifyMultiListName(parsed.name) : qualifyListName(parsed.lang, parsed.name);
+  });
+}
+
 function readBucket(lang: string, bucket: Bucket): ListFilterState {
   const parsed = readJson<ListFilterState | null>(filterKey(lang, bucket), null, isRecord);
   if (parsed && LIST_FILTER_MODES.includes(parsed.mode) && Array.isArray(parsed.selected)) {
     // active was added after the key existed, so absent means the old
     // behaviour: a stored hide/focus was always doing something.
-    return { ...parsed, active: parsed.active !== false };
+    return { ...parsed, active: parsed.active !== false, selected: normalizeSelected(parsed.selected, lang) };
   }
   return { active: true, mode: 'hide', selected: [] };
 }
