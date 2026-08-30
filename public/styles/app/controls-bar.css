@@ -43,6 +43,10 @@
 /* Reserve space on the right for the shortcuts button and the Profiles
    pill beside it (see shortcuts.css — both live in this corner). */
 #controls { position: relative; padding-right: 8rem; }
+/* Trivia and Guess the Blank hide the Profiles pill (ui-state.ts) — nothing
+   there to reserve room for beyond the ? button, so give that space back
+   to controls-top instead of leaving it wasted down the whole card. */
+#controls.controls--no-profiles { padding-right: 3rem; }
 
 /* Start Quiz's own row — deliberately outside #controls-top's wrapping flex
    flow. #controls-top holds every mode-conditional control group (Direction,

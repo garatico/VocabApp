@@ -17,23 +17,28 @@ body:not(.advanced-mode) [data-advanced="true"] {
   display: none;
 }
 
+/* ── Side nav + section list + toolbar, side by side ── */
+.settings-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
 /* ── Toolbar — Advanced mode, Theme, App language: page-level "how this
-   looks/behaves for me" toggles, not any one section's own settings, so
-   they sit above everything else rather than buried in a collapsible
-   section (Advanced mode doubly can't be gated by itself). Stacked
-   vertically in the top-right corner rather than a horizontal row: #controls
-   (the quiz options bar) and #settingsArea are mutually-exclusive siblings
-   right after .mode-tabs, so keeping this as the first thing in
-   #settingsArea already lines its top edge up with #controls' — e.g. the
-   Table quiz's By Rank/Skip Known toggle — on every other tab. ── */
+   looks/behaves for me" toggles, not any one section's own settings. A
+   third column in .settings-layout, after settings-nav and settings-wrap,
+   rather than a bar above the whole layout — settings-wrap caps out at
+   620px, so `margin-left: auto` pushes this into the empty gutter that
+   leaves on a wide viewport, and .settings-layout's own `align-items:
+   flex-start` lines its top up with settings-nav/settings-wrap's — i.e.
+   level with "Table Quiz", the first section — for free. ── */
 .settings-toolbar {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 0.6rem;
-  margin-bottom: 1rem;
-  padding-bottom: 0.9rem;
-  border-bottom: 1px solid var(--border);
+  margin-left: auto;
+  flex: 0 0 auto;
 }
 .settings-toolbar-item {
   display: flex;
@@ -48,13 +53,6 @@ body:not(.advanced-mode) [data-advanced="true"] {
   text-transform: uppercase;
   color: var(--text-muted);
   white-space: nowrap;
-}
-
-/* ── Side nav + section list, side by side ── */
-.settings-layout {
-  display: flex;
-  align-items: flex-start;
-  gap: 2rem;
 }
 
 .settings-nav {
@@ -354,6 +352,22 @@ body:not(.advanced-mode) [data-advanced="true"] {
   .settings-nav::-webkit-scrollbar { display: none; }
   .settings-nav-link { flex: 0 0 auto; white-space: nowrap; }
   .settings-wrap { max-width: none; }
+
+  /* Back to a horizontal bar above the nav, same as before this became a
+     side column — there's no leftover gutter to sit in once the layout
+     stacks, and `order` puts it back above the nav the way it read when it
+     was a separate element ahead of .settings-layout in the markup. */
+  .settings-toolbar {
+    order: -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1.1rem;
+    margin-left: 0;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid var(--border);
+  }
 }
 
 @media (max-width: 599px) {
