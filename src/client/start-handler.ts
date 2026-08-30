@@ -283,6 +283,9 @@ export function bindStartHandler({
         triviaWrap.innerHTML = '';
         const triviaSubModeEl = document.getElementById('triviaSubMode');
         const triviaSubMode = (triviaSubModeEl?.querySelector('.conj-toggle-btn.active') as HTMLElement | null)?.dataset.mode ?? 'type';
+        const triviaCategoryEl = document.getElementById('triviaCategory');
+        const triviaCategory = (triviaCategoryEl?.querySelector('.conj-toggle-btn.active') as HTMLElement | null)
+          ?.dataset.category ?? 'all';
         const triviaDifficultyEl = document.getElementById('triviaDifficulty');
         const triviaDifficulty = (triviaDifficultyEl?.querySelector('.conj-toggle-btn.active') as HTMLElement | null)
           ?.dataset.difficulty ?? 'all';
@@ -302,6 +305,7 @@ export function bindStartHandler({
           container: triviaWrap,
           lang: fullLang,
           subMode: (triviaSubMode ?? 'type') as 'type' | 'choice' | 'table',
+          category: triviaCategory as 'all' | 'history' | 'pop-culture',
           difficulty: triviaDifficulty as 'all' | 'easy' | 'medium' | 'hard',
           readingDifficulty: triviaReadingDifficulty as 'all' | 'easy' | 'medium' | 'hard',
           readingLength: triviaReadingLength as 'all' | 'short' | 'long',

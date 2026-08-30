@@ -49,6 +49,8 @@ interface RenderTriviaModeOptions {
   container:          HTMLElement;
   lang?:              string;
   subMode?:           TriviaSubMode;
+  /** 'all' (default) drills both History and Pop Culture questions together. */
+  category?:          TriviaQuestion['category'] | 'all';
   /** 'all' (default) drills every difficulty in one shuffled run. */
   difficulty?:        TriviaDifficulty | 'all';
   /** 'all' (default) drills every reading difficulty. Independent of `difficulty` — see trivia-questions.ts's header comment. */
@@ -268,6 +270,7 @@ export function renderTriviaMode({
   container,
   lang = 'spanish',
   subMode = 'type',
+  category = 'all',
   difficulty = 'all',
   readingDifficulty = 'all',
   readingLength = 'all',
@@ -282,7 +285,8 @@ export function renderTriviaMode({
   const allQuestions = [...getTriviaQuestions(lang), ...getUserTriviaQuestions(lang)];
   const selectedDomains = getSelectedDomains();
   const bank = allQuestions.filter(q =>
-    (difficulty === 'all' || q.difficulty === difficulty)
+    (category === 'all' || q.category === category)
+    && (difficulty === 'all' || q.difficulty === difficulty)
     && (readingDifficulty === 'all' || q.readingDifficulty === readingDifficulty)
     && (readingLength === 'all' || q.readingLength === readingLength)
     && matchesDomainFilter(q, selectedDomains),

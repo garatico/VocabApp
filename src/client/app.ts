@@ -363,6 +363,14 @@ function restoreSettings(): void {
     });
   }
 
+  // Trivia category
+  const savedTriviaCategory = S.get('vq_trivia_category');
+  if (savedTriviaCategory) {
+    document.querySelectorAll<HTMLElement>('#triviaCategory .conj-toggle-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.category === savedTriviaCategory);
+    });
+  }
+
   // Trivia difficulty
   const savedTriviaDifficulty = S.get('vq_trivia_difficulty');
   if (savedTriviaDifficulty) {
@@ -912,6 +920,15 @@ document.getElementById('triviaSubMode')?.addEventListener('click', e => {
   document.querySelectorAll('#triviaSubMode .conj-toggle-btn')
     .forEach(b => b.classList.toggle('active', b === btn));
   if (btn.dataset.mode) S.set('vq_trivia_style', btn.dataset.mode);
+});
+
+// Trivia category toggle (All / History / Pop Culture).
+document.getElementById('triviaCategory')?.addEventListener('click', e => {
+  const btn = (e.target as HTMLElement).closest<HTMLElement>('.conj-toggle-btn');
+  if (!btn) return;
+  document.querySelectorAll('#triviaCategory .conj-toggle-btn')
+    .forEach(b => b.classList.toggle('active', b === btn));
+  if (btn.dataset.category) S.set('vq_trivia_category', btn.dataset.category);
 });
 
 // Trivia difficulty toggle (All / Easy / Medium / Hard).

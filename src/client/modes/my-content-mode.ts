@@ -30,6 +30,7 @@ import {
 import type { TriviaQuestion, TriviaCategory, TriviaDifficulty, ReadingDifficulty, ReadingLength, AnswerType } from '../data/trivia-questions.ts';
 import { LANGUAGES, type LanguageInfo } from '../data/languages.ts';
 import { buildLangBadge } from '../ui/lang-badge.ts';
+import { readString, readJson, writeJson, isStringArray } from '../utils/storage.ts';
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K, className?: string, text?: string,
@@ -70,23 +71,81 @@ function csv(s: string): string[] {
   return s.split(',').map(x => x.trim()).filter(Boolean);
 }
 
+// ── Language selection ──────────────────────────────────────────────────────
+//
+// Which languages the add forms show a row for. Shared across all three
+// sections (Words/Trivia/Pictures) — it's "which languages am I working in
+// right now" for the whole tab, not a per-section choice — and persisted so
+// it doesn't need re-picking on every visit. Defaults to just the language
+// currently selected in the main controls bar, rather than all seven, since
+// most learners only study one or two at a time.
+
+const LANG_SELECTION_KEY = 'vq_mycontent_langs';
+
+function getSelectedLangs(currentLang: string): Set<string> {
+  // No key at all means "never chosen yet" — default to the current study
+  // language. A key holding `[]` means the learner deliberately deselected
+  // every chip, which has to stay empty rather than snapping back to the
+  // default on the next render (languageRows' own empty-state placeholder
+  // covers that case).
+  if (readString(LANG_SELECTION_KEY) === null) return new Set([currentLang]);
+  const stored = readJson<string[]>(LANG_SELECTION_KEY, [], isStringArray)
+    .filter(name => LANGUAGES.some(info => info.name === name));
+  return new Set(stored);
+}
+
+function setSelectedLangs(langs: Set<string>): void {
+  writeJson(LANG_SELECTION_KEY, [...langs]);
+}
 
 /**
- * One row per app language, each labeled and holding whatever per-language
- * input(s) `makeRow` builds — the shared shape every "add" form's language
- * section uses. `currentLang` gets a highlighted row, since that's the
- * language the learner is most likely filling in first. `makeRow` returns
- * both the element to place in the row (a single input, or a wrapper `<div>`
- * around several) and whatever value the caller needs back to read the
- * row's input(s) on submit.
+ * The chip row that picks which languages the forms below show a row for.
+ * Toggling a chip persists the change and re-renders the whole tab — the
+ * same cheap-rebuild pattern every other action in this file uses.
+ */
+function buildLanguagePicker(currentLang: string, selected: Set<string>, onChange: () => void): HTMLElement {
+  const wrap = el('div', 'mc-lang-picker');
+  wrap.appendChild(el('span', 'mc-lang-picker-label', 'Add content in'));
+  const chips = el('div', 'mc-lang-picker-chips');
+  for (const info of LANGUAGES) {
+    const chip = el('button', 'mc-lang-chip', info.label);
+    chip.type = 'button';
+    if (selected.has(info.name)) chip.classList.add('active');
+    if (info.name === currentLang) chip.classList.add('mc-lang-chip--current');
+    chip.addEventListener('click', () => {
+      if (selected.has(info.name)) selected.delete(info.name);
+      else selected.add(info.name);
+      setSelectedLangs(selected);
+      onChange();
+    });
+    chips.appendChild(chip);
+  }
+  wrap.appendChild(chips);
+  return wrap;
+}
+
+/**
+ * One row per selected language, each labeled and holding whatever
+ * per-language input(s) `makeRow` builds — the shared shape every "add"
+ * form's language section uses. `currentLang` gets a highlighted row, since
+ * that's the language the learner is most likely filling in first. `makeRow`
+ * returns both the element to place in the row (a single input, or a
+ * wrapper `<div>` around several) and whatever value the caller needs back
+ * to read the row's input(s) on submit.
  */
 function languageRows<T>(
   currentLang: string,
+  selectedLangs: Set<string>,
   makeRow: (info: LanguageInfo) => { el: HTMLElement; value: T },
 ): { rows: HTMLElement; values: Map<string, T> } {
   const rows = el('div', 'mc-lang-rows');
   const values = new Map<string, T>();
-  for (const info of LANGUAGES) {
+  const langs = LANGUAGES.filter(info => selectedLangs.has(info.name));
+  if (langs.length === 0) {
+    rows.appendChild(el('p', 'mc-empty', 'Choose at least one language above to add content.'));
+    return { rows, values };
+  }
+  for (const info of langs) {
     const row = el('div', 'mc-lang-row');
     if (info.name === currentLang) row.classList.add('mc-lang-row--current');
     row.appendChild(el('span', 'mc-lang-row-label', info.label));
@@ -140,16 +199,19 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
   header.appendChild(backupRow);
   wrap.appendChild(header);
 
-  wrap.appendChild(buildWordsSection(lang, () => renderMyContent(container, lang)));
-  wrap.appendChild(buildTriviaSection(lang, () => renderMyContent(container, lang)));
-  wrap.appendChild(buildPicturesSection(lang, () => renderMyContent(container, lang)));
+  const selectedLangs = getSelectedLangs(lang);
+  wrap.appendChild(buildLanguagePicker(lang, selectedLangs, () => renderMyContent(container, lang)));
+
+  wrap.appendChild(buildWordsSection(lang, selectedLangs, () => renderMyContent(container, lang)));
+  wrap.appendChild(buildTriviaSection(lang, selectedLangs, () => renderMyContent(container, lang)));
+  wrap.appendChild(buildPicturesSection(lang, selectedLangs, () => renderMyContent(container, lang)));
 
   container.appendChild(wrap);
 }
 
 // ── Words ────────────────────────────────────────────────────────────────────
 
-function buildWordsSection(currentLang: string, refresh: () => void): HTMLElement {
+function buildWordsSection(currentLang: string, selectedLangs: Set<string>, refresh: () => void): HTMLElement {
   const section = el('section', 'mc-section');
   section.appendChild(el('h3', 'mc-section-title', 'Words'));
   section.appendChild(el('p', 'mc-section-desc',
@@ -166,7 +228,7 @@ function buildWordsSection(currentLang: string, refresh: () => void): HTMLElemen
   );
   section.appendChild(form);
 
-  const { rows, values: wordInputs } = languageRows(currentLang, info => {
+  const { rows, values: wordInputs } = languageRows(currentLang, selectedLangs, info => {
     const input = textInput(`Word in ${info.label}`);
     return { el: input, value: input };
   });
@@ -231,7 +293,7 @@ const ANSWER_TYPES: readonly AnswerType[] = ['year', 'number', 'person', 'place'
 
 interface TriviaLangInputs { question: HTMLInputElement; answers: HTMLInputElement }
 
-function buildTriviaSection(currentLang: string, refresh: () => void): HTMLElement {
+function buildTriviaSection(currentLang: string, selectedLangs: Set<string>, refresh: () => void): HTMLElement {
   const section = el('section', 'mc-section');
   section.appendChild(el('h3', 'mc-section-title', 'Trivia Questions'));
   section.appendChild(el('p', 'mc-section-desc',
@@ -254,7 +316,7 @@ function buildTriviaSection(currentLang: string, refresh: () => void): HTMLEleme
   );
   section.appendChild(form);
 
-  const { rows, values: triviaInputs } = languageRows<TriviaLangInputs>(currentLang, info => {
+  const { rows, values: triviaInputs } = languageRows<TriviaLangInputs>(currentLang, selectedLangs, info => {
     const question = textInput(`Question in ${info.label}`);
     const answers = textInput('Accepted answers, comma-separated');
     const wrap = el('div', 'mc-lang-row-inputs');
@@ -321,7 +383,7 @@ function buildTriviaRow(info: LanguageInfo, q: TriviaQuestion, refresh: () => vo
 
 // ── Pictures ─────────────────────────────────────────────────────────────────
 
-function buildPicturesSection(currentLang: string, refresh: () => void): HTMLElement {
+function buildPicturesSection(currentLang: string, selectedLangs: Set<string>, refresh: () => void): HTMLElement {
   const section = el('section', 'mc-section');
   section.appendChild(el('h3', 'mc-section-title', 'Pictures'));
   section.appendChild(el('p', 'mc-section-desc',
@@ -342,7 +404,7 @@ function buildPicturesSection(currentLang: string, refresh: () => void): HTMLEle
   form.append(field('Image URL', urlI), field('...or upload a file', fileI));
   section.appendChild(form);
 
-  const { rows, values: wordInputs } = languageRows(currentLang, info => {
+  const { rows, values: wordInputs } = languageRows(currentLang, selectedLangs, info => {
     const input = textInput(`Word in ${info.label}`);
     return { el: input, value: input };
   });

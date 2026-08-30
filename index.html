@@ -140,7 +140,7 @@
                 <option value="max">Max</option>
                 <option value="custom">Custom...</option>
               </select>
-              <input type="number" id="sizeCustom" min="1" max="9999" step="1" placeholder="e.g. 750" data-i18n-placeholder="controls.egCustom" style="display:none;"/>
+              <input type="number" id="sizeCustom" class="custom-count-input" min="1" max="9999" step="1" placeholder="e.g. 750" data-i18n-placeholder="controls.egCustom" style="display:none;"/>
               <div class="sort-order-toggle" id="sizeModeToggle" title="By rank: the words ranked 1–N, whatever their status. Skip known: N words that aren't on any of your lists, digging further down the frequency list as needed." data-i18n-title="controls.sizeModeTip">
                 <button type="button" class="sort-order-btn active" data-mode="window" title="Take the words ranked 1–N in frequency order" data-i18n-title="controls.byRankTip" data-i18n="controls.byRank">By Rank</button>
                 <button type="button" class="sort-order-btn" data-mode="fill" title="Always return N words you haven't listed yet, pulling deeper if needed" data-i18n-title="controls.skipKnownTip" data-i18n="controls.skipKnown">Skip Known</button>
@@ -215,6 +215,16 @@
               <button class="conj-toggle-btn active" data-mode="type" data-i18n="controls.typeAnswer">Type the Answer</button>
               <button class="conj-toggle-btn" data-mode="choice" data-i18n="controls.multipleChoice">Multiple Choice</button>
               <button class="conj-toggle-btn" data-mode="table" data-i18n="nav.table">Table</button>
+            </div>
+          </div>
+
+          <!-- Trivia only — see data/trivia-questions.ts's category field. -->
+          <div class="control-group" id="triviaCategoryGroup" style="display:none">
+            <label data-i18n="controls.category">Category</label>
+            <div class="conj-display-toggle" id="triviaCategory">
+              <button class="conj-toggle-btn active" data-category="all" data-i18n="controls.all">All</button>
+              <button class="conj-toggle-btn" data-category="history" data-i18n="controls.history">History</button>
+              <button class="conj-toggle-btn" data-category="pop-culture" data-i18n="controls.popCulture">Pop Culture</button>
             </div>
           </div>
 
@@ -331,7 +341,7 @@
               <option value="all" selected data-i18n="controls.all">All</option>
               <option value="custom">Custom...</option>
             </select>
-            <input type="number" id="conjRandomTableSizeCustom" min="1" max="9999" step="1" placeholder="e.g. 40" data-i18n-placeholder="controls.egCustom" style="display:none;"/>
+            <input type="number" id="conjRandomTableSizeCustom" class="custom-count-input" min="1" max="9999" step="1" placeholder="e.g. 40" data-i18n-placeholder="controls.egCustom" style="display:none;"/>
           </div>
 
         </div>

@@ -52,6 +52,57 @@
   color: var(--danger);
 }
 
+/* ── Language picker — which languages the forms below show a row for.
+   Shared across all three sections, persisted (see LANG_SELECTION_KEY in
+   my-content-mode.ts), and rendered once at the top of the tab rather than
+   inside each section. ── */
+.mc-lang-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface2);
+}
+.mc-lang-picker-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.mc-lang-picker-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.mc-lang-chip {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+.mc-lang-chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.mc-lang-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+/* The chip for whichever language is active in the main controls bar gets a
+   subtler ring so it's easy to spot even when not selected. */
+.mc-lang-chip--current:not(.active) {
+  border-color: var(--accent);
+}
+
 /* ── Section shell — one per content type ── */
 .mc-section {
   display: flex;
