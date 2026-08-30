@@ -15,6 +15,7 @@
 import { foldKey as norm } from '../../utils/match.ts';
 import { getAllListedWords } from '../../utils/word-lists.ts';
 import { getMastered } from './mastery.ts';
+import { srsDueWords } from '../../utils/srs.ts';
 import type { VocabEntry } from './types.ts';
 
 export interface SmartRule {
@@ -22,12 +23,18 @@ export interface SmartRule {
   pos:      string[];               // empty = any part of speech
   mastered: 'any' | 'yes' | 'no';
   listed:   'any' | 'no';           // 'no' = not in any of your lists yet
+  /**
+   * 'yes' = due on the spaced-repetition schedule right now — a different
+   * question from `mastered`: a word can be unmastered but not due yet
+   * (just seen), or mastered long ago and now overdue for a refresher.
+   */
+  due:      'any' | 'yes';
   limit:    number;                 // 0 = no cap
   sort:     'rank' | 'alpha';
 }
 
 export const DEFAULT_SMART_RULE: SmartRule = {
-  bands: [], pos: [], mastered: 'no', listed: 'no', limit: 100, sort: 'rank',
+  bands: [], pos: [], mastered: 'no', listed: 'no', due: 'any', limit: 100, sort: 'rank',
 };
 
 import { readJson, writeJson, isRecord } from '../../utils/storage.ts';
@@ -69,6 +76,7 @@ export function renameSmartList(lang: string, oldName: string, newName: string):
 export function evaluateSmart(lang: string, rule: SmartRule, vocab: VocabEntry[]): string[] {
   const mastered = getMastered(lang);
   const listed   = getAllListedWords(lang);
+  const due      = rule.due === 'yes' ? new Set(srsDueWords(lang)) : null;
 
   let out = vocab.filter(e => {
     if (rule.bands.length && !rule.bands.includes(e.band ?? '')) return false;
@@ -76,6 +84,7 @@ export function evaluateSmart(lang: string, rule: SmartRule, vocab: VocabEntry[]
     if (rule.mastered === 'yes' && !mastered.has(e.word)) return false;
     if (rule.mastered === 'no'  &&  mastered.has(e.word)) return false;
     if (rule.listed   === 'no'  &&  listed.has(e.word))   return false;
+    if (due && !due.has(e.word)) return false;
     return true;
   });
 

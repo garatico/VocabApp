@@ -124,6 +124,7 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
     if (r.mastered === 'no')  addBadge('Not Mastered');
     if (r.mastered === 'yes') addBadge('Mastered');
     if (r.listed === 'no')    addBadge('Not In A List');
+    if (r.due === 'yes')      addBadge('Due for Review');
     if (r.limit > 0)          addBadge(`Top ${r.limit}`);
     if (container.children.length === 0) addBadge('Everything');
   }
@@ -163,6 +164,9 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
   editor.appendChild(selectRow('In a List', [
     ['no', 'Not In Any List'], ['any', 'Either'],
   ], rule.listed, v => { rule.listed = v as SmartRule['listed']; }));
+  editor.appendChild(selectRow('Review', [
+    ['yes', 'Due Now'], ['any', 'Either'],
+  ], rule.due ?? 'any', v => { rule.due = v as SmartRule['due']; }));
   editor.appendChild(selectRow('Limit', [
     ['25', 'Top 25'], ['50', 'Top 50'], ['100', 'Top 100'],
     ['250', 'Top 250'], ['0', 'No Limit'],

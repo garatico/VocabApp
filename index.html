@@ -43,6 +43,7 @@
 <link rel="stylesheet" href="/styles/app/picture.css"/>
 <link rel="stylesheet" href="/styles/app/trivia.css"/>
 <link rel="stylesheet" href="/styles/app/guess-blank.css"/>
+<link rel="stylesheet" href="/styles/app/sentence-scramble.css"/>
 <link rel="stylesheet" href="/styles/app/conjugation.css"/>
 <link rel="stylesheet" href="/styles/app/tooltip.css"/>
 <link rel="stylesheet" href="/styles/app/responsive.css"/>
@@ -81,6 +82,7 @@
         <button class="mode-tab" data-mode="picture" role="tab" aria-selected="false" data-i18n="nav.pictureQuiz">Picture Quiz</button>
         <button class="mode-tab" data-mode="trivia" role="tab" aria-selected="false" data-i18n="nav.trivia">Trivia</button>
         <button class="mode-tab" data-mode="guessBlank" role="tab" aria-selected="false" data-i18n="nav.guessBlank">Guess the Blank</button>
+        <button class="mode-tab" data-mode="sentenceScramble" role="tab" aria-selected="false" data-i18n="nav.sentenceScramble">Sentence Scramble</button>
         <button class="mode-tab" data-mode="conjugation" role="tab" aria-selected="false" data-i18n="nav.conjugation">Conjugation</button>
         <button class="mode-tab" data-mode="mylists" role="tab" aria-selected="false" data-i18n="nav.myLists">My Lists</button>
         <button class="mode-tab" data-mode="myContent" role="tab" aria-selected="false" title="Add your own words, trivia questions and pictures — stored in this browser only, never uploaded" data-i18n="nav.myContent">My Content</button>
@@ -670,6 +672,32 @@
         <div id="guessBlankScoreBottom" class="quiz-score quiz-score--boxed"></div>
       </section>
 
+      <section id="sentenceScrambleArea" hidden>
+        <!-- Same anatomy as #guessBlankArea/#triviaArea, but this one uses
+             the real vocabulary `list` — see sentence-scramble-mode.ts. -->
+        <div class="progressWrap">
+          <div class="progress">
+            <div id="sentenceScrambleBarTop" class="bar"></div>
+            <div id="sentenceScrambleBarTopMissed" class="bar-missed"></div>
+            <span id="sentenceScrambleStatsTop" class="progress-label"></span>
+          </div>
+        </div>
+        <div id="sentenceScrambleScoreTop" class="quiz-score quiz-score--boxed"></div>
+        <div id="sentenceScrambleSummaryTop" class="quiz-summary" style="display:none"></div>
+
+        <div id="sentenceScrambleWrap"></div>
+        <div id="sentenceScrambleSummaryBottom" class="quiz-summary" style="display:none"></div>
+
+        <div class="progressWrap">
+          <div class="progress">
+            <div id="sentenceScrambleBarBottom" class="bar"></div>
+            <div id="sentenceScrambleBarBottomMissed" class="bar-missed"></div>
+            <span id="sentenceScrambleStatsBottom" class="progress-label"></span>
+          </div>
+        </div>
+        <div id="sentenceScrambleScoreBottom" class="quiz-score quiz-score--boxed"></div>
+      </section>
+
       <section id="conjugationArea" hidden>
         <div id="conjSummaryTop" class="quiz-summary" style="display:none"></div>
         <div id="conjugationWrap"></div>
@@ -699,6 +727,7 @@
             <a class="settings-nav-link" href="#settings-sec-multilang"><span class="settings-nav-icon" aria-hidden="true">🌐</span><span data-i18n="settings.nav.multilang">Multi-Language Table</span></a>
             <a class="settings-nav-link" href="#settings-sec-picture" data-advanced="true"><span class="settings-nav-icon" aria-hidden="true">🖼</span><span data-i18n="nav.pictureQuiz">Picture Quiz</span></a>
             <a class="settings-nav-link" href="#settings-sec-conj" data-advanced="true"><span class="settings-nav-icon" aria-hidden="true">🔀</span><span data-i18n="settings.nav.conj">Conjugation Practice</span></a>
+            <a class="settings-nav-link" href="#settings-sec-streak"><span class="settings-nav-icon" aria-hidden="true">🔥</span><span data-i18n="settings.nav.streak">Streak &amp; Daily Goal</span></a>
             <a class="settings-nav-link" href="#settings-sec-guessblank"><span class="settings-nav-icon" aria-hidden="true">🔍</span><span data-i18n="nav.guessBlank">Guess the Blank</span></a>
             <a class="settings-nav-link" href="#settings-sec-answers"><span class="settings-nav-icon" aria-hidden="true">✅</span><span data-i18n="settings.nav.answers">Answer Checking</span></a>
             <a class="settings-nav-link" href="#settings-sec-filters"><span class="settings-nav-icon" aria-hidden="true">🔎</span><span data-i18n="filter.filtersTitle">Filters</span></a>
@@ -943,6 +972,52 @@
                 <button type="button" class="sort-order-btn active" data-shape="grey" title="Show the pronoun and an empty box, dimmed" data-i18n-title="settings.conj.greyTip" data-i18n="settings.conj.grey">Greyed out</button>
                 <button type="button" class="sort-order-btn" data-shape="answer" title="Dimmed, with the conjugation filled in" data-i18n-title="settings.conj.answerTip" data-i18n="settings.conj.answer">Show answer</button>
                 <button type="button" class="sort-order-btn" data-shape="close" title="Remove the cell; the rest close up" data-i18n-title="settings.conj.closeTip" data-i18n="settings.conj.close">Close up</button>
+              </div>
+            </div>
+
+            </div>
+          </div>
+
+          <div class="settings-section settings-section--streak" id="settings-sec-streak">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyStreak" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyStreak">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-section-icon" aria-hidden="true">🔥</span>
+              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.streak">Streak &amp; Daily Goal</span>
+            </button>
+            <div id="settingsBodyStreak" class="filter-body settings-section-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.current">Current streak</span>
+              </div>
+              <div class="settings-readout" id="streakCurrentReadout">0 days</div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.best">Best streak</span>
+              </div>
+              <div class="settings-readout" id="streakBestReadout">0 days</div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.today">Today's progress</span>
+              </div>
+              <div class="settings-readout" id="streakTodayReadout">0 words</div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.goal">Daily word goal</span>
+                <span class="settings-desc" data-i18n="settings.streak.goalDesc">Get a small celebration once you've answered this many words correctly today. "Off" just tracks the streak with no goal.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingDailyGoal">
+                <button type="button" class="sort-order-btn" data-goal="0" data-i18n="settings.streak.goalOff">Off</button>
+                <button type="button" class="sort-order-btn" data-goal="10">10</button>
+                <button type="button" class="sort-order-btn active" data-goal="25">25</button>
+                <button type="button" class="sort-order-btn" data-goal="50">50</button>
+                <button type="button" class="sort-order-btn" data-goal="100">100</button>
               </div>
             </div>
 

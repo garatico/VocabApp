@@ -31,6 +31,7 @@ import {
   POS_ABBREV, POS_CHIPS, WORD_CHUNK, type VocabEntry,
 } from './types.ts';
 import { buildMasteryControls, appendCountChip, appendMasteredChip } from './row-shared.ts';
+import { buildAudioButton } from '../../ui/audio-play-button.ts';
 
 export interface WordListDeps {
   /** Read at render time so the toolbar owns the text and this module doesn't. */
@@ -343,6 +344,8 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     const wordSpan = document.createElement('span');
     wordSpan.className = 'ml-word-text'; wordSpan.textContent = word;
 
+    const audioBtn = buildAudioButton(entry?.audioUrl);
+
     const posSpan = document.createElement('span');
     posSpan.className = 'ml-word-pos'; posSpan.textContent = posLabel;
     if (posLabel && entry?.pos) posSpan.dataset.pos = entry.pos;
@@ -400,7 +403,9 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
 
     actionsDiv.appendChild(quizBadge);
     actionsDiv.appendChild(masteryBtn); actionsDiv.appendChild(moveBtn); actionsDiv.appendChild(removeBtn);
-    li.appendChild(check); li.appendChild(wordSpan); li.appendChild(posSpan);
+    li.appendChild(check); li.appendChild(wordSpan);
+    if (audioBtn) li.appendChild(audioBtn);
+    li.appendChild(posSpan);
     li.appendChild(rankBadge); li.appendChild(transSpan); li.appendChild(actionsDiv);
 
     // ── Preview row (collapsed unless expanded) ──────────────────────────────

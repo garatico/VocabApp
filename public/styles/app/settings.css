@@ -119,6 +119,7 @@ body:not(.advanced-mode) [data-advanced="true"] {
 .settings-section--conj        { border-left: 3px solid #4aa88a; }
 .settings-section--appearance  { border-left: 3px solid #c56d8f; }
 .settings-section--general     { border-left: 3px solid var(--text-muted); }
+.settings-section--streak      { border-left: 3px solid #d9822b; }
 
 /* ── Collapsible header — filter-collapse-btn's own layout/arrow behaviour
    (class-filter.css) is reused as-is; this only sizes it for a page-level
@@ -163,6 +164,16 @@ body:not(.advanced-mode) [data-advanced="true"] {
   font-size: 0.88rem;
   color: var(--text-muted);
   line-height: 1.5;
+}
+
+/* ── Readout — a plain value shown for information, not a control (current
+   streak, today's progress). Right-aligned like every other row's control,
+   without looking clickable. ── */
+.settings-readout {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+  white-space: nowrap;
 }
 
 /* ── Group — wraps a heading + its rows in a shaded band, so a subsection

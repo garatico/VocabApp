@@ -15,7 +15,8 @@
 import { LANGUAGES } from '../data/languages.ts';
 import { MockEngine } from './ai-chat/mock-engine.ts';
 import { WebLLMEngine, hasWebGPU } from './ai-chat/webllm-engine.ts';
-import { getSavedChats, saveChat, deleteChat, type SavedChat } from './ai-chat/chat-history.ts';
+import { getSavedChats, saveChat, deleteChat, type SavedChat, type Rating } from './ai-chat/chat-history.ts';
+import { exportEvalData } from './ai-chat/eval-contract.ts';
 import { cachedVocabMap, fetchVocab } from './my-lists/vocab-cache.ts';
 import type { VocabEntry } from './my-lists/types.ts';
 
@@ -145,6 +146,20 @@ export function renderAiChat(container: HTMLElement, lang = 'spanish'): void {
   let currentLang = lang;
   let currentPreset = 'explain';
   let messages: ChatMessage[] = [];
+  /** Keyed the same way SavedChat.ratings is: by index into the
+   *  system-excluded message list, i.e. `messages.length - 1` fewer than
+   *  this array's own index once a system message exists at index 0 — see
+   *  toStoredIndex() below, used everywhere a rating is read or written. */
+  let ratings: Record<number, Rating> = {};
+
+  /** `messages`' own index -> the index it will have in storage, where the
+   *  system message (present once the conversation has actually started, at
+   *  index 0) doesn't count. Ratings are only ever set on assistant turns,
+   *  which never appear before a system message exists, so this is exact,
+   *  not an approximation. */
+  function toStoredIndex(liveIndex: number): number {
+    return liveIndex - (messages[0]?.role === 'system' ? 1 : 0);
+  }
 
   const wrap = document.createElement('div');
   wrap.className = 'chat-wrap';
@@ -186,7 +201,13 @@ export function renderAiChat(container: HTMLElement, lang = 'spanish'): void {
   clearBtn.className = 'chat-clear-btn';
   clearBtn.textContent = 'Clear';
 
-  header.append(title, langSel, statusPill, loadBtn, historyBtn, clearBtn);
+  const exportBtn = document.createElement('button');
+  exportBtn.type = 'button';
+  exportBtn.className = 'chat-export-btn';
+  exportBtn.textContent = 'Export eval data';
+  exportBtn.title = 'Download every 👍/👎-rated reply as JSON — see eval-contract.ts';
+
+  header.append(title, langSel, statusPill, loadBtn, historyBtn, exportBtn, clearBtn);
 
   // ── Task presets ──────────────────────────────────────────────────────
   const presetRow = document.createElement('div');
@@ -280,6 +301,7 @@ export function renderAiChat(container: HTMLElement, lang = 'spanish'): void {
       { role: 'system', content: TASK_PRESETS[currentPreset].systemPrompt(currentLang) },
       ...chat.messages,
     ];
+    ratings = { ...(chat.ratings ?? {}) };
     renderMessages();
     historyPanel.hidden = true;
   }
@@ -313,6 +335,33 @@ export function renderAiChat(container: HTMLElement, lang = 'spanish'): void {
         bubble.textContent = m.content;
       }
       messageList.appendChild(bubble);
+
+      // Rating — only a finished assistant reply, never the user's own turn
+      // or a still-streaming draft, since there's nothing to judge yet.
+      if (m.role === 'assistant' && !isLiveDraft) {
+        const storedIdx = toStoredIndex(i);
+        const current = ratings[storedIdx];
+
+        const rateRow = document.createElement('div');
+        rateRow.className = 'chat-rate-row';
+        (['good', 'bad'] as const).forEach(kind => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'chat-rate-btn' + (current === kind ? ' active' : '');
+          btn.setAttribute('aria-label', kind === 'good' ? 'Good reply' : 'Bad reply');
+          btn.textContent = kind === 'good' ? '👍' : '👎';
+          btn.addEventListener('click', () => {
+            // Click the active one again to clear it — a rating is a
+            // judgment call, not a fact, so it should be as easy to retract
+            // as to make.
+            if (ratings[storedIdx] === kind) delete ratings[storedIdx];
+            else ratings[storedIdx] = kind;
+            renderMessages();
+          });
+          rateRow.appendChild(btn);
+        });
+        messageList.appendChild(rateRow);
+      }
     });
     messageList.scrollTop = messageList.scrollHeight;
   }
@@ -329,15 +378,35 @@ export function renderAiChat(container: HTMLElement, lang = 'spanish'): void {
         presetKey:   currentPreset,
         presetLabel: TASK_PRESETS[currentPreset].label,
         messages:    messages.filter(m => m.role !== 'system'),
+        ratings:     ratings,
       });
     }
     messages = [];
+    ratings = {};
   }
 
   clearBtn.addEventListener('click', () => {
     archiveCurrentChat();
     renderMessages();
     if (!historyPanel.hidden) renderHistoryPanel();
+  });
+
+  // Reads only what's already saved — Clear/switching a task archives the
+  // in-progress conversation first, so exporting mid-conversation without
+  // clearing just misses whatever hasn't been archived yet. Same download
+  // mechanics as admin-db.ts's exportCsv, minus its server round-trip —
+  // this data already lives in localStorage.
+  exportBtn.addEventListener('click', () => {
+    const data = exportEvalData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href     = url;
+    link.download = `ai-chat-eval-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   });
 
   // ── Input row ─────────────────────────────────────────────────────────

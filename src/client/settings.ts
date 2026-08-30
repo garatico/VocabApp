@@ -3,6 +3,7 @@ import { applyTheme, type ThemeValue } from './ui/theme-toggle.ts';
 import { LANGUAGES, languageInfo, flagUrl } from './data/languages.ts';
 import { createFlagImg } from './ui/flag-icon.ts';
 import { clearHistory } from './utils/session-history.ts';
+import { getDailyGoal, setDailyGoal, getStreak, getBestStreak, getTodayProgress } from './utils/streak.ts';
 import type { ChineseScript, ChineseDisplay } from './utils/utils.ts';
 
 /**
@@ -693,6 +694,14 @@ export function bindSettings(): void {
     set('guess_blank_max_attempts', btn.dataset.attempts ?? '1');
   });
 
+  // Daily word goal
+  document.getElementById('settingDailyGoal')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingDailyGoal', btn);
+    setDailyGoal(Number(btn.dataset.goal ?? '0'));
+  });
+
   buildLangAppearanceRows();
   applyLangColors();
   restoreSettingsUI();
@@ -934,4 +943,25 @@ function restoreSettingsUI(): void {
   document.querySelectorAll<HTMLElement>('#settingLangIndicator .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.indicator === savedIndicator);
   });
+
+  // Daily word goal
+  const savedGoal = String(getDailyGoal());
+  document.querySelectorAll<HTMLElement>('#settingDailyGoal .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.goal === savedGoal);
+  });
+  refreshStreakReadouts();
+}
+
+/**
+ * Fill in the streak/progress numbers — live values, not a setting, so this
+ * runs on every Settings tab visit (see app.ts's onActivate.settings) rather
+ * than only once at load like the toggle-restore logic above.
+ */
+export function refreshStreakReadouts(): void {
+  const streakEl  = document.getElementById('streakCurrentReadout');
+  const bestEl    = document.getElementById('streakBestReadout');
+  const todayEl   = document.getElementById('streakTodayReadout');
+  if (streakEl) streakEl.textContent = `${getStreak()} day${getStreak() === 1 ? '' : 's'}`;
+  if (bestEl)   bestEl.textContent   = `${getBestStreak()} day${getBestStreak() === 1 ? '' : 's'}`;
+  if (todayEl)  todayEl.textContent  = `${getTodayProgress()} word${getTodayProgress() === 1 ? '' : 's'}`;
 }

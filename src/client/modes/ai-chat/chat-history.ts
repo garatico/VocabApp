@@ -10,6 +10,8 @@
 import { readJson, writeJson, remove as removeKey } from '../../utils/storage.ts';
 import type { ChatMessage } from '../ai-chat-mode.ts';
 
+export type Rating = 'good' | 'bad';
+
 export interface SavedChat {
   id:          string;
   at:          number; // epoch ms
@@ -20,6 +22,14 @@ export interface SavedChat {
    *  presetKey/lang when a saved chat is reopened, not stored verbatim, so
    *  an older save still picks up any later wording change to that preset. */
   messages:    ChatMessage[];
+  /** Keyed by index into *this* `messages` array (system-excluded, same as
+   *  stored) — not the live editor's array, which has a system message
+   *  prepended at index 0 while a chat is in progress. ai-chat-mode.ts
+   *  converts between the two. Optional and additive: a chat saved before
+   *  ratings existed simply has none, same as every other "add a field"
+   *  change in this app (see storage.ts's header comment on tolerating
+   *  older shapes). */
+  ratings?:    Record<number, Rating>;
 }
 
 const CHAT_HISTORY_KEY = 'vq_chat_history';

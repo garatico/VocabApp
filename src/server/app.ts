@@ -77,6 +77,11 @@ export function createApp({
 
   app.use('/svgs', express.static(path.join(dataDir, 'svgs')));
 
+  // Plain, not flatStatic — a word's pronunciation is language-specific
+  // (data/audio/<language>/<slug>.wav), unlike images/emoji where the
+  // on-disk grouping is an arbitrary filing choice. See audio-loader.ts.
+  app.use('/audio', express.static(path.join(dataDir, 'audio')));
+
   // Domain-partitioned on disk, flat in the URL space — see flat-static.ts for
   // why this is not a stack of express.static mounts.
   app.use('/emoji',  flatStatic(path.join(dataDir, 'emoji')));

@@ -433,6 +433,27 @@
 .gb-difficulty--medium, .tv-qa-difficulty.gb-difficulty--medium { color: var(--warning, #b7791f); background: var(--warning-light); }
 .gb-difficulty--hard,   .tv-qa-difficulty.gb-difficulty--hard   { color: var(--danger); background: var(--danger-light); }
 
+/* ────────────────────────────────────────────────────────────────
+   Pronunciation play button — see ui/audio-play-button.ts. Only ever
+   appended where a word has an audio file (most don't yet — this starts as
+   a small pilot), so there's no disabled state to style.
+   ──────────────────────────────────────────────────────────────── */
+.audio-play-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.2;
+  padding: 0.1rem 0.35rem;
+  cursor: pointer;
+}
+.audio-play-btn:hover {
+  color: var(--accent);
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+
 .quiz-stopwatch {
   font-family: 'DM Mono', monospace;
   font-size: 0.78rem;
