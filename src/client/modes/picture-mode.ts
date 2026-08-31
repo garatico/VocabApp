@@ -1160,20 +1160,27 @@ export function renderPictureMode({
     const svgsOn   = Settings.getPictureSourceSvgs();
     const emojiOn  = Settings.getPictureSourceEmoji();
     return list
-      .map(w => ({
-        ...w,
-        // 1. Local Wikipedia photo (highest quality)
-        // A My Content picture override (data/user-content.ts) wins over the
-        // Photos setting, same as it wins over every other visual source
-        // below — it's an explicit choice for this exact word, not one more
-        // candidate in the Wikipedia-photo bucket that toggle governs.
-        _imageUrl: getPictureOverride(lang, w.word) ?? (photosOn ? getFallbackImageUrl(lang, w.word) : null),
-        // 2. SVG: server concept map → openmoji local/CDN fallback
-        svg_url: svgsOn ? (w.svg_url || getFallbackSvgUrl(lang, w.word) || null) : null,
-        // 3. Emoji — DB value and visual-map fallback, both gated the same way
-        emoji:  emojiOn ? w.emoji : null,
-        _emoji: emojiOn ? getFallbackEmoji(lang, w.word) : null,
-      }))
+      .map(w => {
+        // A My Content picture override (data/user-content.ts) is an explicit
+        // choice for this exact word — it wins outright, not just over the
+        // Photos setting but over SVG/emoji too, so the card shows only the
+        // chosen image rather than mixing it into the carousel alongside
+        // fallbacks the override was meant to replace.
+        const override = getPictureOverride(lang, w.word);
+        if (override) {
+          return { ...w, _imageUrl: override, svg_url: null, emoji: null, _emoji: null };
+        }
+        return {
+          ...w,
+          // 1. Local Wikipedia photo (highest quality)
+          _imageUrl: photosOn ? getFallbackImageUrl(lang, w.word) : null,
+          // 2. SVG: server concept map → openmoji local/CDN fallback
+          svg_url: svgsOn ? (w.svg_url || getFallbackSvgUrl(lang, w.word) || null) : null,
+          // 3. Emoji — DB value and visual-map fallback, both gated the same way
+          emoji:  emojiOn ? w.emoji : null,
+          _emoji: emojiOn ? getFallbackEmoji(lang, w.word) : null,
+        };
+      })
       .filter((w): w is WordWithVisual => !!(w._imageUrl || w.svg_url || w.emoji || w._emoji));
   }
 

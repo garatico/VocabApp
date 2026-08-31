@@ -13,7 +13,8 @@
  */
 
 import type { ListsCtx } from './context.ts';
-import { getListNames, qualifyListName } from '../../utils/word-lists.ts';
+import { enumerateFilterableLists, type FilterableListRow } from '../../utils/word-lists.ts';
+import { buildLangBadge } from '../../ui/lang-badge.ts';
 import {
   getPreset, savePreset, describePreset,
   type PresetBundle, type WordsBundle, type ConjugationBundle,
@@ -197,13 +198,22 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
     return g;
   }
 
-  function section(labelText: string, ...children: (HTMLElement | null)[]): HTMLElement {
+  /**
+   * `activeToggleEl`, when given, sits inline with the label on the same
+   * header row — "Apply this filter" reads as answering the label right next
+   * to it rather than as one more stacked control underneath.
+   */
+  function section(labelText: string, activeToggleEl: HTMLElement | null, ...children: (HTMLElement | null)[]): HTMLElement {
     const el = document.createElement('div');
     el.className = 'ml-profile-editor-section';
+    const headerRow = document.createElement('div');
+    headerRow.className = 'ml-profile-editor-header';
     const label = document.createElement('div');
     label.className = 'ml-profile-editor-label';
     label.textContent = labelText;
-    el.append(label, ...children.filter((c): c is HTMLElement => c !== null));
+    headerRow.appendChild(label);
+    if (activeToggleEl) headerRow.appendChild(activeToggleEl);
+    el.append(headerRow, ...children.filter((c): c is HTMLElement => c !== null));
     return el;
   }
 
@@ -220,7 +230,7 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
   });
   langSelectEl.addEventListener('change', () => persist({ ...bundle, language: langSelectEl.value }));
   langRow.appendChild(langSelectEl);
-  const langSection = section('Language', langRow);
+  const langSection = section('Language', null, langRow);
 
   // ── Extra languages ("+ Languages" merge, Table/Conjugation only) ──────────
   const extraRow = document.createElement('div');
@@ -243,7 +253,7 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
   const extraHint = document.createElement('span');
   extraHint.className = 'ml-profile-editor-hint';
   extraHint.textContent = 'Merges into the pool on Table and Conjugation only';
-  const extraSection = section('Languages (+)', extraRow, extraHint);
+  const extraSection = section('Languages (+)', null, extraRow, extraHint);
 
   // ── Words: pool mode + whichever sub-control that mode uses ────────────────
   const words = bundle.words ?? DEFAULT_WORDS;
@@ -320,7 +330,7 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
     });
     wordsSubRow.appendChild(sizeModeRow);
   }
-  const wordsSection = section('Words', poolRow, wordsSubRow);
+  const wordsSection = section('Words', null, poolRow, wordsSubRow);
 
   // Part of speech
   const classActive = activeToggle(bundle.classes.active, active => {
@@ -394,31 +404,56 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
   focusLabel.append(focusRadio, document.createTextNode('Focus'));
   listModeRow.append(hideLabel, focusLabel);
 
+  // Every list a Testing Profile can filter by — this language's own plain
+  // lists, every Cross-Language list, and this language's smart lists —
+  // shared with the live Lists filter box via enumerateFilterableLists()
+  // rather than only ever offering plain lists, which is what left Cross-
+  // Language and smart lists unreachable from here before.
   const listNamesRow = document.createElement('div');
   listNamesRow.className = 'ml-profile-editor-chips';
-  const availableLists = getListNames(primaryLang);
+  const availableLists = enumerateFilterableLists(primaryLang, bundle.extraLanguages ?? []);
   if (availableLists.length === 0) {
     const none = document.createElement('span');
     none.className = 'ml-profile-editor-hint';
     none.textContent = `No lists yet in ${primaryLang}`;
     listNamesRow.appendChild(none);
   }
-  availableLists.forEach(listName => {
-    const qualified = qualifyListName(primaryLang, listName);
+
+  const addListChip = (row: FilterableListRow): void => {
     const chipLabel = document.createElement('label');
     chipLabel.className = 'ml-profile-editor-chip';
     const input = document.createElement('input');
     input.type = 'checkbox';
-    input.checked = bundle.listFilter.selected.includes(qualified);
+    input.checked = bundle.listFilter.selected.includes(row.qualified);
     input.addEventListener('change', () => {
       const selected = input.checked
-        ? [...bundle.listFilter.selected, qualified]
-        : bundle.listFilter.selected.filter(n => n !== qualified);
+        ? [...bundle.listFilter.selected, row.qualified]
+        : bundle.listFilter.selected.filter(n => n !== row.qualified);
       persist({ ...bundle, listFilter: { ...bundle.listFilter, selected } });
     });
-    chipLabel.append(input, document.createTextNode(listName));
+    chipLabel.append(input, document.createTextNode(row.displayName), buildLangBadge(row.badgeLangs));
     listNamesRow.appendChild(chipLabel);
-  });
+  };
+
+  const addListGroupLabel = (text: string, cssModifier: string): void => {
+    const groupLabel = document.createElement('span');
+    groupLabel.className = `list-filter-group-label list-filter-group-label--${cssModifier}`;
+    groupLabel.textContent = text;
+    listNamesRow.appendChild(groupLabel);
+  };
+
+  availableLists.filter(r => r.group === 'single').forEach(addListChip);
+  const multiRows = availableLists.filter(r => r.group === 'multi');
+  if (multiRows.length > 0) {
+    addListGroupLabel('Cross-Language', 'multi');
+    multiRows.forEach(addListChip);
+  }
+  const smartRows = availableLists.filter(r => r.group === 'smart');
+  if (smartRows.length > 0) {
+    addListGroupLabel('Smart Lists', 'smart');
+    smartRows.forEach(addListChip);
+  }
+
   const listSection = section(`Lists (${primaryLang})`, listActive, listModeRow, listNamesRow);
 
   // Direction
@@ -439,7 +474,7 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
     chipLabel.append(input, document.createTextNode(label));
     dirRow.appendChild(chipLabel);
   });
-  const dirSection = section('Direction', dirRow);
+  const dirSection = section('Direction', null, dirRow);
 
   // Quiz Style — Table only, mirrors #tableStyleToggle. Picture/Conjugation
   // have no such control, so this section simply doesn't exist for them.
@@ -457,7 +492,7 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
       chipLabel.append(input, document.createTextNode(label));
       styleRow.appendChild(chipLabel);
     });
-    styleSection = section('Quiz Style', styleRow);
+    styleSection = section('Quiz Style', null, styleRow);
   }
 
   // Conjugation's own Tense & Forms / View / Verbs — mirrors #conjTenseChips,
@@ -481,7 +516,7 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
       persist({ ...bundle, conjugation: { ...conj, verbsSize: verbsSelectEl.value } });
     });
     verbsRow.appendChild(verbsSelectEl);
-    const verbsSection = section('Verbs', verbsRow);
+    const verbsSection = section('Verbs', null, verbsRow);
 
     // Same classes + data-tense the live #conjTenseChips row uses (see
     // conjugation.css's `[data-tense="…"] { --tense-hue: … }` block) — reused
@@ -521,7 +556,7 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
       });
       regRow.appendChild(chip);
     });
-    const tenseFormsSection = section('Tense & Forms', tenseRow, regRow);
+    const tenseFormsSection = section('Tense & Forms', null, tenseRow, regRow);
 
     const viewRow = document.createElement('div');
     viewRow.className = 'ml-profile-editor-chips';
@@ -535,7 +570,7 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
       chipLabel.append(input, document.createTextNode(label));
       viewRow.appendChild(chipLabel);
     });
-    const viewSection = section('View', viewRow);
+    const viewSection = section('View', null, viewRow);
 
     conjugationSection = group('conjugation', 'Conjugation', verbsSection, tenseFormsSection, viewSection);
   }

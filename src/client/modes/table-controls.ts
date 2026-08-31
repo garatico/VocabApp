@@ -8,7 +8,7 @@ import {
   type InputSnapshot,
   type CheckResult,
 } from './table-mode.ts';
-import { Settings, setOnPageSizeChange } from '../settings.ts';
+import { Settings, setOnPageSizeChange, setOnShowTimerChange } from '../settings.ts';
 // Mastery lives with the lists UI. Importing across modes is not lovely, but
 // the alternative is a second copy of the storage rules, which is how the two
 // disagreeing progress models got here in the first place.
@@ -66,6 +66,10 @@ export function syncTableStyleUI(): void {
     const el = document.getElementById(id);
     if (el) el.style.display = showStandardOnly ? '' : 'none';
   });
+  // #tableScoreTop stays visible for every style (Recall/Double Recall share
+  // it too) — only the divider that splits it from Standard's own button row
+  // needs to hide alongside that row.
+  document.querySelector('.controls-divider')?.classList.toggle('controls-divider--hidden', !showStandardOnly);
 }
 
 // ── Pagination state ──────────────────────────────────────────────────────────
@@ -88,6 +92,23 @@ let stopwatch: ReturnType<typeof createStopwatch> | null = null;
 function getStopwatch(): ReturnType<typeof createStopwatch> {
   if (!stopwatch) stopwatch = createStopwatch(document.getElementById('tableStopwatch'));
   return stopwatch;
+}
+
+/** Show/hide the clock and its controls per the "Show timer" setting. Time
+ *  is still tracked underneath either way — this only affects the display. */
+function syncTimerVisibility(): void {
+  const group = document.getElementById('tableTimerGroup');
+  if (group) group.hidden = !Settings.getShowTimer();
+}
+
+/** Repaint the Start/Pause button to match whether the clock is ticking. */
+function syncTimerToggleIcon(): void {
+  const btn = document.getElementById('tableTimerToggle');
+  if (!btn) return;
+  const running = getStopwatch().isRunning();
+  btn.textContent = running ? '⏸' : '▶';
+  btn.title = running ? 'Pause timer' : 'Resume timer';
+  btn.setAttribute('aria-label', running ? 'Pause timer' : 'Resume timer');
 }
 let sessionRecorded                        = false;
 let wordOrder: WordOrder =
@@ -340,6 +361,7 @@ function recordMastery(): void {
   // only the first pass should be written.
   if (sessionRecorded) return;
   sessionRecorded = true;
+  stopTimedQuizWatch();
 
   syncSessionState();
 
@@ -455,6 +477,9 @@ export function startTableQuiz({
   sessionState     = new Map();
   pageIndex        = 0;
   getStopwatch().start();
+  syncTimerToggleIcon();
+  syncTimerVisibility();
+  startTimedQuizWatch();
   sessionRecorded  = false;
   lastMissedWords   = [];
   lastMissedResults = [];
@@ -523,6 +548,53 @@ function giveUpAll(): CheckResult[] {
   return results;
 }
 
+/** Reveal the whole quiz and show the end-of-quiz summary — the Give Up
+ *  button's action, also reused by the timed-quiz countdown running out
+ *  (see startTimedQuizWatch) so both paths end a quiz exactly the same way. */
+function performGiveUp(): void {
+  if (allWords.length === 0) return;
+  stopTimedQuizWatch();
+  const results = giveUpAll();
+
+  // giveUpAll() pushes exactly one result per word, in allWords order — zip
+  // by index rather than matching on word text, which could pick the wrong
+  // word in a Compare-mode table where two languages share a spelling.
+  lastMissedResults = [];
+  lastMissedWords    = [];
+  results.forEach((r, i) => {
+    if (r.ok) return;
+    lastMissedResults.push(r);
+    lastMissedWords.push(allWords[i]);
+  });
+
+  const allCorrect = results.every(r => r.ok);
+  showSummary('table', buildSummaryHtml(results), allCorrect);
+  wireSummaryButtons();
+}
+
+// ── Timed quiz ──────────────────────────────────────────────────────────────
+//
+// Piggybacks on the stopwatch's own elapsed time rather than keeping a
+// second clock — a paused stopwatch (see the timer's Pause button) correctly
+// pauses the countdown too, since both read the same elapsedSeconds().
+
+let timedQuizWatch: ReturnType<typeof setInterval> | null = null;
+
+function stopTimedQuizWatch(): void {
+  if (timedQuizWatch) { clearInterval(timedQuizWatch); timedQuizWatch = null; }
+}
+
+function startTimedQuizWatch(): void {
+  stopTimedQuizWatch();
+  if (!Settings.getTimedQuizEnabled()) return;
+  const limitSeconds = Settings.getTimedQuizMinutes() * 60;
+  timedQuizWatch = setInterval(() => {
+    if (getStopwatch().elapsedSeconds() < limitSeconds) return;
+    stopTimedQuizWatch();
+    if (allWords.length > 0 && !isQuizComplete()) performGiveUp();
+  }, 1000);
+}
+
 // ── Jump to first unanswered ──────────────────────────────────────────────────
 
 function jumpToFirstUnanswered(): void {
@@ -570,6 +642,7 @@ function wireSummaryButtons(): void {
 
 export function bindTableControls(): void {
   const tableReset   = document.getElementById('tableReset');
+  const tableRetry   = document.getElementById('tableRetry');
   const tableExport  = document.getElementById('tableExport');
   const tableJumpBtn = document.getElementById('tableJumpBtn');
   const dirToggle    = document.getElementById('directionToggle');
@@ -594,24 +667,35 @@ export function bindTableControls(): void {
   });
 
   // Give Up — reveal the whole quiz, show summary with missed words
-  tableReset?.addEventListener('click', () => {
+  tableReset?.addEventListener('click', () => performGiveUp());
+
+  // Timer — Start/Pause toggle and Reset, alongside the running clock.
+  syncTimerVisibility();
+  setOnShowTimerChange(syncTimerVisibility);
+  const timerToggle = document.getElementById('tableTimerToggle');
+  const timerReset  = document.getElementById('tableTimerReset');
+
+  timerToggle?.addEventListener('click', () => {
+    if (getStopwatch().isRunning()) getStopwatch().stop();
+    else getStopwatch().resume();
+    syncTimerToggleIcon();
+  });
+
+  timerReset?.addEventListener('click', () => {
+    getStopwatch().reset();
+  });
+
+  // Retry — restart the same word set from scratch. Reuses startTableQuiz()
+  // directly (not restartWith(), which is used for "practice missed words"
+  // and deliberately leaves sessionRecorded/the stopwatch alone) so a full
+  // retry resets pagination, answers, the timer and mastery recording, the
+  // same as if Start Quiz had been clicked again with this exact word set.
+  tableRetry?.addEventListener('click', () => {
     if (allWords.length === 0) return;
-    const results = giveUpAll();
-
-    // giveUpAll() pushes exactly one result per word, in allWords order — zip
-    // by index rather than matching on word text, which could pick the wrong
-    // word in a Compare-mode table where two languages share a spelling.
-    lastMissedResults = [];
-    lastMissedWords    = [];
-    results.forEach((r, i) => {
-      if (r.ok) return;
-      lastMissedResults.push(r);
-      lastMissedWords.push(allWords[i]);
+    startTableQuiz({
+      words: allWords, columns: quizColumns, direction: resolvedDirection,
+      lang: quizLang, onComplete: onQuizComplete,
     });
-
-    const allCorrect = results.every(r => r.ok);
-    showSummary('table', buildSummaryHtml(results), allCorrect);
-    wireSummaryButtons();
   });
 
   // Export all words

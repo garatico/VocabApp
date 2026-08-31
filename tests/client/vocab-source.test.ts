@@ -125,4 +125,37 @@ describe('loadVocab', () => {
     await vi.runAllTimersAsync();
     await assertion;
   });
+
+  it('skips the Render-cold-start retry in a packaged Tauri build and falls straight to static', async () => {
+    vi.stubGlobal('__TAURI_INTERNALS__', {});
+    const fetchMock = vi.fn((url: string) =>
+      Promise.resolve(
+        url.includes('/api/') ? jsonResponse({}, 503) : jsonResponse({ data: [word], count: 1 }),
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const onRetry = vi.fn();
+    const result = await loadVocab('spanish', { onRetry });
+
+    expect(result.origin).toBe('static');
+    // 1 failed API call, then straight to static — no retry delays at all.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(onRetry).not.toHaveBeenCalled();
+  });
+
+  it('skips the retry in a packaged Capacitor build too', async () => {
+    vi.stubGlobal('Capacitor', { isNativePlatform: () => true });
+    const fetchMock = vi.fn((url: string) =>
+      Promise.resolve(
+        url.includes('/api/') ? jsonResponse({}, 503) : jsonResponse({ data: [word], count: 1 }),
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await loadVocab('spanish');
+
+    expect(result.origin).toBe('static');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

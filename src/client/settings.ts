@@ -3,7 +3,12 @@ import { applyTheme, type ThemeValue } from './ui/theme-toggle.ts';
 import { LANGUAGES, languageInfo, flagUrl } from './data/languages.ts';
 import { createFlagImg } from './ui/flag-icon.ts';
 import { clearHistory } from './utils/session-history.ts';
-import { getDailyGoal, setDailyGoal, getStreak, getBestStreak, getTodayProgress } from './utils/streak.ts';
+import {
+  getGoals, setGoalTarget, hasLanguageGoal, clearLanguageGoal,
+  getStreak, getBestStreak, getTodayProgress, getTodayMinutes, getStreakHistory,
+  getGoalHitsForDate, parseHitKey,
+  type GoalType,
+} from './utils/streak.ts';
 import type { ChineseScript, ChineseDisplay } from './utils/utils.ts';
 
 /**
@@ -116,6 +121,23 @@ export const Settings = {
     if (raw === 'all') return Infinity;
     const n = Number(raw);
     return Number.isFinite(n) && n > 0 ? n : Infinity;
+  },
+
+  /** On by default — off hides the clock and its start/pause/reset controls.
+   *  Time is still tracked underneath (session history, goals) either way;
+   *  this only controls whether it's shown. */
+  getShowTimer: (): boolean => get('table_show_timer', 'true') === 'true',
+
+  /** Whether Table mode is a race against the clock — when the limit is hit,
+   *  the quiz ends and reveals whatever's left, same as clicking Give Up. */
+  getTimedQuizEnabled: (): boolean => get('table_timed_quiz', 'false') === 'true',
+
+  /** Minutes for the timed-quiz limit above. 10 is a reasonable default for
+   *  a first try — small enough to actually create time pressure on a
+   *  Top-100-words quiz, not so short it's unusable on a bigger one. */
+  getTimedQuizMinutes: (): number => {
+    const n = Number(get('table_timed_quiz_minutes', '10'));
+    return Number.isFinite(n) && n > 0 ? n : 10;
   },
 
   /** The frequency-rank corner badge, across every Table quiz style. */
@@ -392,6 +414,14 @@ export function setOnPageSizeChange(fn: () => void): void {
   onPageSizeChange = fn;
 }
 
+/** Notified when the "Show timer" toggle changes, so a quiz already on
+ *  screen shows/hides the clock immediately rather than only on next visit. */
+let onShowTimerChange: (() => void) | null = null;
+
+export function setOnShowTimerChange(fn: () => void): void {
+  onShowTimerChange = fn;
+}
+
 /**
  * Notified when the deselected-pronoun mode changes, so conjugation mode can
  * fill in or clear the answers that 'answer' mode shows. The class alone
@@ -476,6 +506,30 @@ export function bindSettings(): void {
     activateToggle('settingPageSize', btn);
     set('table_page_size', btn.dataset.pagesize ?? '100');
     onPageSizeChange?.();
+  });
+
+  // Show timer
+  document.getElementById('settingShowTimer')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingShowTimer', btn);
+    set('table_show_timer', btn.dataset.show ?? 'true');
+    onShowTimerChange?.();
+  });
+
+  // Timed quiz — on/off, plus the minutes input it reveals
+  document.getElementById('settingTimedQuiz')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingTimedQuiz', btn);
+    const enabled = btn.dataset.timed === 'true';
+    set('table_timed_quiz', String(enabled));
+    const minutesInput = document.getElementById('settingTimedQuizMinutes') as HTMLInputElement | null;
+    if (minutesInput) minutesInput.hidden = !enabled;
+  });
+  document.getElementById('settingTimedQuizMinutes')?.addEventListener('change', e => {
+    const n = Number((e.target as HTMLInputElement).value);
+    if (Number.isFinite(n) && n > 0) set('table_timed_quiz_minutes', String(n));
   });
 
   // Hint mode
@@ -694,17 +748,117 @@ export function bindSettings(): void {
     set('guess_blank_max_attempts', btn.dataset.attempts ?? '1');
   });
 
-  // Daily word goal
-  document.getElementById('settingDailyGoal')?.addEventListener('click', e => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
-    activateToggle('settingDailyGoal', btn);
-    setDailyGoal(Number(btn.dataset.goal ?? '0'));
-  });
+  buildGoalScopeOptions();
+  bindGoalControls();
+  bindStreakCalendarNav();
 
   buildLangAppearanceRows();
   applyLangColors();
   restoreSettingsUI();
+}
+
+// ── Daily goal — type, target and per-language scope ───────────────────────
+//
+// Presets are per goal type since a word-count quick-pick (10/25/50/100)
+// doesn't mean anything sensible for "minutes" or "streak days" — rebuilt
+// into #settingDailyGoal whenever the type changes rather than three
+// separate hard-coded button rows in the markup.
+const GOAL_PRESETS: Record<GoalType, number[]> = {
+  words:   [10, 25, 50, 100],
+  minutes: [5, 10, 20, 30],
+  streak:  [7, 14, 30, 100],
+};
+const ALL_GOAL_TYPES: GoalType[] = ['words', 'minutes', 'streak'];
+
+/** '' means the global default; anything else is a language name. */
+function currentGoalScope(): string {
+  return (document.getElementById('settingGoalScope') as HTMLSelectElement | null)?.value ?? '';
+}
+
+function buildGoalScopeOptions(): void {
+  const sel = document.getElementById('settingGoalScope') as HTMLSelectElement | null;
+  if (!sel) return;
+  LANGUAGES.forEach(({ name, label }) => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = label;
+    sel.appendChild(opt);
+  });
+}
+
+/** Rebuild one goal type's preset row and mark whichever value is active. */
+function renderGoalPresets(type: GoalType, target: number): void {
+  const row = document.querySelector<HTMLElement>(`[data-goal-presets="${type}"]`);
+  if (!row) return;
+  row.innerHTML = '';
+  const off = document.createElement('button');
+  off.type = 'button';
+  off.className = 'sort-order-btn' + (target === 0 ? ' active' : '');
+  off.dataset.goal = '0';
+  off.textContent = 'Off';
+  row.appendChild(off);
+  GOAL_PRESETS[type].forEach(n => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'sort-order-btn' + (target === n ? ' active' : '');
+    btn.dataset.goal = String(n);
+    btn.textContent = String(n);
+    row.appendChild(btn);
+  });
+}
+
+/** Repaint every goal control — all three types, plus the scope reset button
+ *  — from storage for whatever scope is currently selected. Called on init
+ *  and whenever the scope dropdown changes. */
+function renderGoalSection(): void {
+  const scope = currentGoalScope();
+  const goals = scope ? getGoals(scope) : getGoals();
+
+  ALL_GOAL_TYPES.forEach(type => {
+    const target = goals[type];
+    renderGoalPresets(type, target);
+    const custom = document.querySelector<HTMLInputElement>(`[data-goal-custom="${type}"]`);
+    if (custom) {
+      const isPreset = target === 0 || GOAL_PRESETS[type].includes(target);
+      custom.value = isPreset ? '' : String(target);
+    }
+  });
+
+  // Only meaningful once a language scope is picked and it actually has its
+  // own goals — editing the global scope, or a language that's still just
+  // following the global defaults, has nothing to reset.
+  const resetBtn = document.getElementById('settingGoalScopeReset');
+  if (resetBtn) resetBtn.hidden = !scope || !hasLanguageGoal(scope);
+}
+
+function bindGoalControls(): void {
+  document.getElementById('settingGoalScope')?.addEventListener('change', renderGoalSection);
+
+  document.getElementById('settingGoalScopeReset')?.addEventListener('click', () => {
+    const scope = currentGoalScope();
+    if (scope) clearLanguageGoal(scope);
+    renderGoalSection();
+  });
+
+  // One preset row + one custom input per type, each independent — setting
+  // Words doesn't touch Minutes or Streak, so a learner can run more than
+  // one goal at once instead of picking a single active type.
+  ALL_GOAL_TYPES.forEach(type => {
+    document.querySelector(`[data-goal-presets="${type}"]`)?.addEventListener('click', e => {
+      const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+      if (!btn) return;
+      const scope = currentGoalScope();
+      setGoalTarget(type, Number(btn.dataset.goal ?? '0'), scope || undefined);
+      renderGoalSection();
+    });
+
+    document.querySelector(`[data-goal-custom="${type}"]`)?.addEventListener('change', e => {
+      const n = Number((e.target as HTMLInputElement).value);
+      const scope = currentGoalScope();
+      if (Number.isFinite(n) && n >= 0) setGoalTarget(type, n, scope || undefined);
+      renderGoalSection();
+    });
+  });
 }
 
 /**
@@ -808,6 +962,23 @@ function restoreSettingsUI(): void {
   document.querySelectorAll<HTMLElement>('#settingPageSize .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.pagesize === savedPageSize);
   });
+
+  // Show timer
+  const savedShowTimer = get('table_show_timer', 'true');
+  document.querySelectorAll<HTMLElement>('#settingShowTimer .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedShowTimer);
+  });
+
+  // Timed quiz
+  const savedTimed = get('table_timed_quiz', 'false');
+  document.querySelectorAll<HTMLElement>('#settingTimedQuiz .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.timed === savedTimed);
+  });
+  const timedMinutesInput = document.getElementById('settingTimedQuizMinutes') as HTMLInputElement | null;
+  if (timedMinutesInput) {
+    timedMinutesInput.hidden = savedTimed !== 'true';
+    timedMinutesInput.value  = get('table_timed_quiz_minutes', '10');
+  }
 
   // Hint
   const savedHint = get('hint_mode', 'full');
@@ -944,11 +1115,7 @@ function restoreSettingsUI(): void {
     b.classList.toggle('active', b.dataset.indicator === savedIndicator);
   });
 
-  // Daily word goal
-  const savedGoal = String(getDailyGoal());
-  document.querySelectorAll<HTMLElement>('#settingDailyGoal .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.goal === savedGoal);
-  });
+  renderGoalSection();
   refreshStreakReadouts();
 }
 
@@ -961,7 +1128,141 @@ export function refreshStreakReadouts(): void {
   const streakEl  = document.getElementById('streakCurrentReadout');
   const bestEl    = document.getElementById('streakBestReadout');
   const todayEl   = document.getElementById('streakTodayReadout');
+  const words     = getTodayProgress();
+  const minutes   = getTodayMinutes();
   if (streakEl) streakEl.textContent = `${getStreak()} day${getStreak() === 1 ? '' : 's'}`;
   if (bestEl)   bestEl.textContent   = `${getBestStreak()} day${getBestStreak() === 1 ? '' : 's'}`;
-  if (todayEl)  todayEl.textContent  = `${getTodayProgress()} word${getTodayProgress() === 1 ? '' : 's'}`;
+  if (todayEl) {
+    todayEl.textContent = minutes > 0
+      ? `${words} word${words === 1 ? '' : 's'} · ${minutes} min`
+      : `${words} word${words === 1 ? '' : 's'}`;
+  }
+  renderStreakCalendar();
+}
+
+// ── Streak calendar ─────────────────────────────────────────────────────────
+
+/** Months back from the current one — 0 is this month. Resets to 0 whenever
+ *  the Settings tab is (re)entered, rather than persisting a scroll position
+ *  a returning visitor would find confusing. */
+let calendarOffset = 0;
+
+/** A dot's colour for one scope — a language's own appearance colour, or a
+ *  neutral one for the global scope, which isn't a language at all. */
+function scopeColorVar(scope: string): string {
+  if (!scope) return 'var(--streak-flame, var(--warning))';
+  const lang = LANGUAGES.find(l => l.name === scope);
+  return lang ? `var(${lang.colorVar})` : 'var(--text-muted)';
+}
+
+function scopeLabel(scope: string): string {
+  if (!scope) return 'Global';
+  const lang = LANGUAGES.find(l => l.name === scope);
+  return lang ? lang.label : scope;
+}
+
+const GOAL_TYPE_LABELS: Record<GoalType, string> = { words: 'words', minutes: 'minutes', streak: 'streak' };
+
+/** "Spanish: words, minutes · Global: streak" — the exact breakdown for one
+ *  day's cell, read from getGoalHitsForDate(). Grouped by scope so a day
+ *  with several goals hit in the same language reads as one clause, not one
+ *  per type. */
+function describeDayHits(dateStr: string): string {
+  const byScope = new Map<string, GoalType[]>();
+  for (const key of getGoalHitsForDate(dateStr)) {
+    const { scope, type } = parseHitKey(key);
+    const list = byScope.get(scope) ?? [];
+    list.push(type);
+    byScope.set(scope, list);
+  }
+  return [...byScope.entries()]
+    .map(([scope, types]) => `${scopeLabel(scope)}: ${types.map(t => GOAL_TYPE_LABELS[t]).join(', ')}`)
+    .join(' · ');
+}
+
+function renderStreakCalendar(): void {
+  const label = document.getElementById('streakCalLabel');
+  const grid  = document.getElementById('streakCalGrid');
+  const next  = document.getElementById('streakCalNext') as HTMLButtonElement | null;
+  const legend = document.getElementById('streakCalLegend');
+  if (!label || !grid) return;
+
+  const base = new Date();
+  base.setDate(1);
+  base.setMonth(base.getMonth() - calendarOffset);
+  const year  = base.getFullYear();
+  const month = base.getMonth();
+
+  label.textContent = base.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  if (next) next.disabled = calendarOffset === 0;
+
+  const active = new Set(getStreakHistory());
+  const todayStr = new Date().toDateString();
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const daysInMonth  = new Date(year, month + 1, 0).getDate();
+
+  grid.innerHTML = '';
+  for (let i = 0; i < firstWeekday; i++) {
+    grid.appendChild(document.createElement('span'));
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    const cellDate = new Date(year, month, day);
+    const dateStr  = cellDate.toDateString();
+    const cell = document.createElement('span');
+    cell.className = 'settings-calendar-day';
+
+    const num = document.createElement('span');
+    num.className = 'settings-calendar-day-num';
+    num.textContent = String(day);
+    cell.appendChild(num);
+
+    if (active.has(dateStr)) {
+      cell.classList.add('settings-calendar-day--active');
+
+      // One small dot per distinct scope (language, or global) that hit at
+      // least one goal that day — the per-language breakdown the user asked
+      // for, without trying to cram every type into the cell itself; the
+      // exact types are in the tooltip instead.
+      const scopes = [...new Set(getGoalHitsForDate(dateStr).map(k => parseHitKey(k).scope))];
+      if (scopes.length > 0) {
+        const dots = document.createElement('span');
+        dots.className = 'settings-calendar-day-dots';
+        scopes.forEach(scope => {
+          const dot = document.createElement('span');
+          dot.className = 'settings-calendar-dot';
+          dot.style.background = scopeColorVar(scope);
+          dots.appendChild(dot);
+        });
+        cell.appendChild(dots);
+        cell.title = describeDayHits(dateStr);
+      }
+    }
+    if (dateStr === todayStr) cell.classList.add('settings-calendar-day--today');
+    grid.appendChild(cell);
+  }
+
+  if (legend && !legend.childElementCount) {
+    const entries: [string, string][] = [['', 'Global'], ...LANGUAGES.map(l => [l.name, l.label] as [string, string])];
+    entries.forEach(([scope, text]) => {
+      const item = document.createElement('span');
+      item.className = 'settings-calendar-legend-item';
+      const dot = document.createElement('span');
+      dot.className = 'settings-calendar-dot';
+      dot.style.background = scopeColorVar(scope);
+      item.append(dot, document.createTextNode(text));
+      legend.appendChild(item);
+    });
+  }
+}
+
+function bindStreakCalendarNav(): void {
+  document.getElementById('streakCalPrev')?.addEventListener('click', () => {
+    calendarOffset++;
+    renderStreakCalendar();
+  });
+  document.getElementById('streakCalNext')?.addEventListener('click', () => {
+    if (calendarOffset === 0) return;
+    calendarOffset--;
+    renderStreakCalendar();
+  });
 }

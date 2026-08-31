@@ -19,6 +19,7 @@ const {
   getMultiListNames, getMultiList, getMultiListLanguages, getMultiListCount,
   isInMultiList, addToMultiList, removeFromMultiList,
   createMultiList, deleteMultiList, renameMultiList,
+  qualifyListName, qualifyMultiListName, qualifySmartListName, parseSelected,
 } = await import('../../src/client/utils/word-lists.js');
 
 beforeEach(() => store.clear());
@@ -111,5 +112,36 @@ describe('deleteMultiList / renameMultiList', () => {
     createMultiList('A'); createMultiList('B');
     expect(renameMultiList('A', 'B')).toBe(false);
     expect(getMultiListNames().sort()).toEqual(['A', 'B']);
+  });
+});
+
+describe('qualifySmartListName / parseSelected — the three-way qualifier scheme', () => {
+  it('round-trips a smart-list qualifier back to its language and name', () => {
+    const qualified = qualifySmartListName('spanish', 'Weak verbs');
+    expect(parseSelected(qualified, 'french')).toEqual({
+      kind: 'smart', lang: 'spanish', name: 'Weak verbs',
+    });
+  });
+
+  it('still round-trips single and multi qualifiers alongside smart ones', () => {
+    expect(parseSelected(qualifyListName('spanish', 'Known'), 'french'))
+      .toEqual({ kind: 'single', lang: 'spanish', name: 'Known' });
+    expect(parseSelected(qualifyMultiListName('Hard words'), 'french'))
+      .toEqual({ kind: 'multi', name: 'Hard words' });
+  });
+
+  it('a smart-list name that itself contains the separator still round-trips', () => {
+    // qualifySmartListName has one more split than qualifyMultiListName
+    // (sentinel, lang, name) — the name segment has to be reassembled from
+    // everything after the second separator, not just split on the first.
+    const trickyName = 'A␟B';
+    const qualified  = qualifySmartListName('spanish', trickyName);
+    expect(parseSelected(qualified, 'french')).toEqual({
+      kind: 'smart', lang: 'spanish', name: trickyName,
+    });
+  });
+
+  it('falls back to a legacy unqualified single entry for a plain name', () => {
+    expect(parseSelected('Known', 'french')).toEqual({ kind: 'single', lang: 'french', name: 'Known' });
   });
 });

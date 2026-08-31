@@ -176,6 +176,128 @@ body:not(.advanced-mode) [data-advanced="true"] {
   white-space: nowrap;
 }
 
+/* ── A settings-row that stacks its label above its control instead of the
+   usual side-by-side layout — for a control too wide to share a line with
+   its label, like the calendar below. ── */
+.settings-row--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+/* ── Streak calendar — a month grid, each active day marked with one small
+   dot per language (plus global) that hit a goal that day; the exact
+   breakdown is in the cell's title tooltip. The "wide" variant spans the
+   full row (see .settings-row--stack) rather than sitting narrow as this
+   row's "control" the way a select or button group does elsewhere in
+   Settings — showing a per-language dot per day needs the room. ── */
+.settings-calendar {
+  width: 220px;
+  flex: 0 0 auto;
+}
+.settings-calendar--wide {
+  width: 100%;
+  max-width: 420px;
+}
+.settings-calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+}
+.settings-calendar-nav button {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm, 4px);
+}
+.settings-calendar-nav button:hover:not(:disabled) {
+  background: var(--surface2);
+  color: var(--text);
+}
+.settings-calendar-nav button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.settings-calendar-nav span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.settings-calendar-weekdays,
+.settings-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.settings-calendar-weekdays span {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+.settings-calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  border-radius: 3px;
+}
+.settings-calendar--wide .settings-calendar-day {
+  aspect-ratio: auto;
+  min-height: 34px;
+}
+.settings-calendar-day--active {
+  background: var(--correct-light);
+  color: var(--correct);
+  font-weight: 600;
+}
+.settings-calendar-day--today {
+  box-shadow: inset 0 0 0 1px var(--text-muted);
+}
+.settings-calendar-day--today.settings-calendar-day--active {
+  box-shadow: inset 0 0 0 1px var(--correct);
+}
+.settings-calendar-day-dots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.5px;
+  max-width: 100%;
+}
+.settings-calendar-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.settings-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border);
+}
+.settings-calendar-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+.settings-calendar-legend-item .settings-calendar-dot {
+  width: 7px;
+  height: 7px;
+}
+
 /* ── Group — wraps a heading + its rows in a shaded band, so a subsection
    (e.g. Table Quiz's "Layout" vs "Hints & Glosses") reads as a distinct
    visual block, not just a text label between two rows that otherwise look

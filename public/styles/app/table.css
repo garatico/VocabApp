@@ -14,18 +14,109 @@
    gap above the controls row is the same whether or not the summary strip and
    score line happen to be showing. */
 #tableArea > * + * { margin-top: 0.6rem; }
+#tableStickyBar > * + * { margin-top: 0.6rem; }
 #tableArea .progressWrap { margin-top: 0.6rem; }
-#tableArea > .progressWrap:first-child { margin-top: 0; }
+#tableArea > .progressWrap:first-child,
+#tableStickyBar > .progressWrap:first-child { margin-top: 0; }
 /* The score pills keep the roomier gap defined on .quiz-score */
+
+/* The progress bar, live score, live controls and order/pagination bar all
+   stay on screen while #tableWrap's rows scroll past underneath — so ending
+   the quiz or checking progress never needs a scroll back to the top. Same
+   `position: sticky; top: 0` pattern as .settings-nav and .ml-list-toolbar
+   elsewhere in this app; nothing else in the page is pinned to the viewport
+   top, so there's no offset to account for. The negative horizontal margin
+   cancels #tableArea's own padding so the bar's background reaches its
+   edges rather than leaving the card's padding visible on either side. */
+#tableStickyBar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--surface);
+  margin: 0 -1rem;
+  padding: 0 1rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  /* Rounded only at the bottom — the top corners sit flush with #tableArea's
+     own top edge (already rounded there), while the bottom edge is where
+     this panel visually separates from #tableWrap's rows scrolling beneath
+     it, so that's the edge that reads as "its own distinct panel". */
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* Left group (live score pills, #tableScoreTop) | centered divider | right
+   group (action buttons + timer, #tableControls) — a 1fr/auto/1fr grid puts
+   the divider at the row's true horizontal center regardless of how much
+   either side holds, and keeps both sides vertically centered against each
+   other via align-items.
+   #tableScoreTop and the divider sit OUTSIDE #tableControls deliberately —
+   table-controls.ts's syncTableStyleUI() hides #tableControls (Standard
+   style's own buttons) for Recall/Double Recall, but the score pills are
+   shared with those styles too (table-recall-mode.ts writes into the same
+   #tableScoreTop), so nesting them inside the element that gets hidden
+   would silently break their progress display for every style but Standard. */
+.controls-line {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
 
 #tableControls {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
-  align-items: flex-end;
-  margin-bottom: 0;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border);
+  justify-self: end;
+}
+
+/* A vertical rule between the live score pills and the action buttons/timer —
+   hidden until there's actually a score to divide from (buildScorePills()
+   returns '' before a quiz starts, leaving #tableScoreTop empty) or until
+   Recall/Double Recall hides #tableControls (syncTableStyleUI toggles this
+   class alongside that, since neither style has anything on the right to
+   divide the score pills from). */
+.controls-divider {
+  align-self: stretch;
+  width: 1px;
+  background: var(--border);
+}
+#tableScoreTop:empty + .controls-divider,
+.controls-divider--hidden {
+  display: none;
+}
+/* With the divider hidden (nothing to split), #tableControls is the only
+   other grid item (or is itself hidden) — let #tableScoreTop re-flow to
+   fill the row naturally rather than sitting pinned to a 1fr column's width. */
+#tableScoreTop:empty + .controls-divider + #tableControls,
+.controls-line:has(.controls-divider--hidden) #tableScoreTop {
+  grid-column: 1 / -1;
+}
+
+/* The timer's own start/pause + reset controls, grouped visually with the
+   clock they act on. */
+.timer-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.timer-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0.25rem 0.4rem;
+  cursor: pointer;
+}
+.timer-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
 }
 
 /* ── Recall / Double Recall quiz style ──
