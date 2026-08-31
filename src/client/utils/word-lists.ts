@@ -18,6 +18,10 @@ import { currentScope, type FilterScope } from '../filters/filter-scope.ts';
 import { bucketFor, bucketForRead, SHARED_BUCKET, type Bucket } from '../filters/filter-state.ts';
 import { currentExtraLanguages } from '../filters/filter-lang.ts';
 import { buildLangBadge } from '../ui/lang-badge.ts';
+// smart-lists.ts imports getAllListedWords from this module — both directions
+// only reach across the cycle from inside function bodies (never at module
+// top-level), which ES modules resolve fine; nothing here runs at import time.
+import { getSmartNames } from '../modes/my-lists/smart-lists.ts';
 
 const LISTS_PREFIX         = 'vq_lists_';
 const OLD_PREFIX           = 'vq_known_';
@@ -163,18 +167,34 @@ export function qualifyListName(lang: string, name: string): string {
 export function qualifyMultiListName(name: string): string {
   return `multi${QUAL_SEP}${name}`;
 }
+/** Smart lists carry a language too (a rule is evaluated per language), so
+ *  the qualifier has three parts — the 'smart' sentinel, then lang, then
+ *  name — one more split than 'multi' needs. */
+export function qualifySmartListName(lang: string, name: string): string {
+  return `smart${QUAL_SEP}${lang}${QUAL_SEP}${name}`;
+}
 
 export type QualifiedSelection =
   | { kind: 'single'; lang: string; name: string }
-  | { kind: 'multi'; name: string };
+  | { kind: 'multi'; name: string }
+  | { kind: 'smart'; lang: string; name: string };
 
 /** `defaultLang` is what a legacy, unqualified entry is assumed to mean. */
 export function parseSelected(entry: string, defaultLang: string): QualifiedSelection {
   const i = entry.indexOf(QUAL_SEP);
   if (i === -1) return { kind: 'single', lang: defaultLang, name: entry };
-  const lang = entry.slice(0, i);
-  const name = entry.slice(i + 1);
-  return lang === 'multi' ? { kind: 'multi', name } : { kind: 'single', lang, name };
+  const first = entry.slice(0, i);
+  const rest  = entry.slice(i + 1);
+  if (first === 'multi') return { kind: 'multi', name: rest };
+  if (first === 'smart') {
+    const j = rest.indexOf(QUAL_SEP);
+    // Malformed (no second separator) — treat as an ordinary single entry
+    // rather than throwing, same "unrecognized shape falls back to a safe
+    // default" spirit as the rest of this module's storage reads.
+    if (j === -1) return { kind: 'single', lang: defaultLang, name: entry };
+    return { kind: 'smart', lang: rest.slice(0, j), name: rest.slice(j + 1) };
+  }
+  return { kind: 'single', lang: first, name: rest };
 }
 
 function filterKey(lang: string, bucket: Bucket): string {
@@ -242,7 +262,9 @@ function migrateListFilter(lang: string): void {
 function normalizeSelected(selected: string[], lang: string): string[] {
   return selected.map(entry => {
     const parsed = parseSelected(entry, lang);
-    return parsed.kind === 'multi' ? qualifyMultiListName(parsed.name) : qualifyListName(parsed.lang, parsed.name);
+    if (parsed.kind === 'multi') return qualifyMultiListName(parsed.name);
+    if (parsed.kind === 'smart') return qualifySmartListName(parsed.lang, parsed.name);
+    return qualifyListName(parsed.lang, parsed.name);
   });
 }
 
@@ -397,6 +419,59 @@ export function refreshCountBadge(lang: string): void {
   refreshFilterSelect(lang);
 }
 
+/** One row a Lists filter (the live filter box, or a Testing Profile's own
+ *  editor) can offer to check. `count: null` means "dynamic" — a smart
+ *  list's size depends on live vocab, so it isn't computed just to list the
+ *  list; see smart-lists.ts's evaluateSmart(). */
+export interface FilterableListRow {
+  qualified:   string;
+  displayName: string;
+  badgeLangs:  string[];
+  count:       number | null;
+  group:       'single' | 'multi' | 'smart';
+}
+
+/**
+ * Every list a Lists filter can offer for `lang` (plus any "+ Languages"
+ * extras) to check: that language's own plain lists, every Cross-Language
+ * list regardless of language, and that language's smart lists. One place
+ * for this enumeration so the live filter box (refreshFilterSelect, below)
+ * and a Testing Profile's own list section (profile-panel.ts) can't drift —
+ * profile-panel.ts used to only call getListNames() directly and so never
+ * offered Cross-Language or smart lists at all.
+ */
+export function enumerateFilterableLists(lang: string, extraLangs: string[] = []): FilterableListRow[] {
+  const activeLangs = [lang, ...extraLangs.filter(l => l !== lang)];
+  const rows: FilterableListRow[] = [];
+
+  activeLangs.forEach(l => {
+    for (const name of getListNames(l)) {
+      rows.push({
+        qualified: qualifyListName(l, name), displayName: name,
+        badgeLangs: [l], count: getListCount(l, name), group: 'single',
+      });
+    }
+  });
+
+  for (const name of getMultiListNames()) {
+    rows.push({
+      qualified: qualifyMultiListName(name), displayName: name,
+      badgeLangs: getMultiListLanguages(name), count: getMultiListCount(name), group: 'multi',
+    });
+  }
+
+  activeLangs.forEach(l => {
+    for (const name of getSmartNames(l)) {
+      rows.push({
+        qualified: qualifySmartListName(l, name), displayName: name,
+        badgeLangs: [l], count: null, group: 'smart',
+      });
+    }
+  });
+
+  return rows;
+}
+
 /**
  * The Lists filter used to only ever show `lang`'s own lists — right for a
  * single-language session, wrong the moment "+ Languages" merges another
@@ -412,19 +487,22 @@ export function refreshFilterSelect(lang: string): void {
   const container = containerEl;   // narrowed, so addRow() below can close over it
 
   const extras = currentExtraLanguages().filter(l => l !== lang);
-  const activeLangs = [lang, ...extras];
+  const rows = enumerateFilterableLists(lang, extras);
   const multiNames = getMultiListNames();
 
   // Load persisted state and prune any selections for lists that no longer
-  // exist — a single-language entry whose language isn't active right now
-  // (e.g. "+ Languages" was cleared) is left alone rather than dropped, so
-  // re-adding that language brings the selection straight back.
+  // exist — a single-language (or smart-list) entry whose language isn't
+  // active right now (e.g. "+ Languages" was cleared) is checked against
+  // that language's own storage directly, not against `rows` (which is
+  // scoped to the currently-active languages), so it's left alone rather
+  // than dropped — re-adding that language brings the selection straight
+  // back rather than losing it.
   const state = getListFilterState(lang);
   const pruned = state.selected.filter(entry => {
     const parsed = parseSelected(entry, lang);
-    return parsed.kind === 'multi'
-      ? multiNames.includes(parsed.name)
-      : getListNames(parsed.lang).includes(parsed.name);
+    if (parsed.kind === 'multi') return multiNames.includes(parsed.name);
+    if (parsed.kind === 'smart') return getSmartNames(parsed.lang).includes(parsed.name);
+    return getListNames(parsed.lang).includes(parsed.name);
   });
   if (pruned.length !== state.selected.length) {
     state.selected = pruned;
@@ -435,38 +513,40 @@ export function refreshFilterSelect(lang: string): void {
   container.innerHTML = '';
   const selectedSet = new Set(state.selected);
 
-  function addRow(qualified: string, displayName: string, badgeLangs: string[], count: number): void {
+  function addRow(row: FilterableListRow): void {
     const label = document.createElement('label');
     label.className = 'list-filter-item';
 
     const cb = document.createElement('input');
     cb.type = 'checkbox';
-    cb.value = qualified;
-    cb.checked = selectedSet.has(qualified);
+    cb.value = row.qualified;
+    cb.checked = selectedSet.has(row.qualified);
     cb.addEventListener('change', () => {
       const s = getListFilterState(lang);
       if (cb.checked) {
-        if (!s.selected.includes(qualified)) s.selected.push(qualified);
+        if (!s.selected.includes(row.qualified)) s.selected.push(row.qualified);
       } else {
-        s.selected = s.selected.filter(n => n !== qualified);
+        s.selected = s.selected.filter(n => n !== row.qualified);
       }
       saveListFilterState(lang, s);
     });
 
     const nameSpan = document.createElement('span');
     nameSpan.className = 'list-filter-name';
-    nameSpan.textContent = displayName;
+    nameSpan.textContent = row.displayName;
 
     const countSpan = document.createElement('span');
     countSpan.className = 'list-filter-item-count';
-    countSpan.textContent = String(count);
+    // A smart list's size depends on live vocab and isn't computed here —
+    // see enumerateFilterableLists's doc comment.
+    countSpan.textContent = row.count === null ? '≈' : String(row.count);
+    if (row.count === null) countSpan.title = 'Dynamic — re-evaluated when the quiz runs';
 
-    label.append(cb, nameSpan, buildLangBadge(badgeLangs), countSpan);
+    label.append(cb, nameSpan, buildLangBadge(row.badgeLangs), countSpan);
     container.appendChild(label);
   }
 
-  const anyLists = activeLangs.some(l => getListNames(l).length > 0) || multiNames.length > 0;
-  if (!anyLists) {
+  if (rows.length === 0) {
     const empty       = document.createElement('span');
     empty.className   = 'list-filter-empty';
     empty.textContent = 'No lists yet — create one in My Lists';
@@ -476,22 +556,26 @@ export function refreshFilterSelect(lang: string): void {
     // each belongs to — every pill already carries its own flag badge, so a
     // full-width header row repeating just that flag for each language (as
     // this used to do) said nothing the pill itself didn't, at the cost of a
-    // blank-looking row per language. The one split worth calling out is
-    // single-language vs Cross-Language, since those behave differently.
-    activeLangs.forEach(l => {
-      for (const name of getListNames(l)) {
-        addRow(qualifyListName(l, name), name, [l], getListCount(l, name));
-      }
-    });
+    // blank-looking row per language. Cross-Language and Smart Lists each
+    // get their own header since those behave differently from a plain list.
+    rows.filter(r => r.group === 'single').forEach(addRow);
 
-    if (multiNames.length > 0) {
+    const multiRows = rows.filter(r => r.group === 'multi');
+    if (multiRows.length > 0) {
       const groupLabel = document.createElement('span');
       groupLabel.className = 'list-filter-group-label list-filter-group-label--multi';
       groupLabel.textContent = 'Cross-Language';
       container.appendChild(groupLabel);
-      for (const name of multiNames) {
-        addRow(qualifyMultiListName(name), name, getMultiListLanguages(name), getMultiListCount(name));
-      }
+      multiRows.forEach(addRow);
+    }
+
+    const smartRows = rows.filter(r => r.group === 'smart');
+    if (smartRows.length > 0) {
+      const groupLabel = document.createElement('span');
+      groupLabel.className = 'list-filter-group-label list-filter-group-label--smart';
+      groupLabel.textContent = 'Smart Lists';
+      container.appendChild(groupLabel);
+      smartRows.forEach(addRow);
     }
   }
 

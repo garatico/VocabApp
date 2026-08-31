@@ -422,6 +422,10 @@ html.dark .pos-chip[data-band]:not(.active):hover {
   color: var(--ml-accent-multi, var(--text-muted));
   border-top: 1px dashed color-mix(in srgb, var(--ml-accent-multi, var(--border-strong)) 45%, transparent);
 }
+.list-filter-group-label--smart {
+  color: var(--ml-accent-smart, var(--text-muted));
+  border-top: 1px dashed color-mix(in srgb, var(--ml-accent-smart, var(--border-strong)) 45%, transparent);
+}
 
 /* Each list item: pill-shaped checkbox label */
 .list-filter-item {

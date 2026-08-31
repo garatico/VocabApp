@@ -209,6 +209,55 @@ describe('List filter — Focus on a single-word list, in Table mode', () => {
   });
 });
 
+describe('List filter — smart lists', () => {
+  it('folds a smart list\'s live matches into Focus, same as a stored list', async () => {
+    // getCachedWords is a synchronous read of data-loader's in-memory cache —
+    // filterWords can't await a fetch mid-filter, so a smart-list branch has
+    // to work from whatever's already loaded. Stub it directly rather than
+    // going through the real (async, fetch-based) loader. Registered before
+    // load() dynamically imports word-filters.ts, so its static import of
+    // data-loader.ts resolves to this mock rather than the real module.
+    vi.doMock('../../src/client/data/data-loader.ts', () => ({
+      getCachedWords: (lang: string) => (lang === 'spanish' ? WORDS : null),
+    }));
+    const { wf, wl } = await load();
+    const smart = await import('../../src/client/modes/my-lists/smart-lists.ts');
+    switchTo('table');
+
+    smart.saveSmartRule('spanish', 'Verbs only', { ...smart.DEFAULT_SMART_RULE, pos: ['verb'] });
+    wl.saveListFilterState('spanish', {
+      active: true,
+      mode: 'focus',
+      selected: [wl.qualifySmartListName('spanish', 'Verbs only')],
+    });
+
+    const result = wf.filterWords(WORDS);
+    expect(result.map(w => w.word)).toEqual(['ser']);
+  });
+
+  it('a smart list for a language with no cached vocab contributes nothing, and does not throw', async () => {
+    vi.doMock('../../src/client/data/data-loader.ts', () => ({
+      getCachedWords: () => null,
+    }));
+    const { wf, wl } = await load();
+    const smart = await import('../../src/client/modes/my-lists/smart-lists.ts');
+    switchTo('table');
+
+    smart.saveSmartRule('spanish', 'Verbs only', { ...smart.DEFAULT_SMART_RULE, pos: ['verb'] });
+    wl.saveListFilterState('spanish', {
+      active: true,
+      mode: 'focus',
+      selected: [wl.qualifySmartListName('spanish', 'Verbs only')],
+    });
+
+    // Focus with an empty match set (nothing loaded to evaluate against)
+    // correctly narrows to nothing, rather than throwing or falling through
+    // to "everything" — same as Focus on an empty stored list would.
+    expect(() => wf.filterWords(WORDS)).not.toThrow();
+    expect(wf.filterWords(WORDS)).toEqual([]);
+  });
+});
+
 describe('Domains filter — read freshly, not from a stale in-memory cache', () => {
   it('getSelectedDomains reflects storage for the current scope even when loadFromBucket() was never called for it', async () => {
     const { domain } = await load();

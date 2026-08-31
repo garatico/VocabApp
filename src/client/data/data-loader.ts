@@ -15,6 +15,17 @@ import { getUserWords, toWord } from './user-content.ts';
 
 const cache: Record<string, Word[]> = {};
 
+/**
+ * The vocabulary for `lang` if it's already been loaded this session, or
+ * null if not — a synchronous escape hatch for callers (word-filters.ts's
+ * filterWords, evaluating a smart list) that can't await loadWords()'s
+ * fetch mid-filter. Never triggers a load itself: a language nothing has
+ * shown yet just contributes nothing, rather than blocking on a fetch.
+ */
+export function getCachedWords(lang: string): Word[] | null {
+  return cache[lang] ?? null;
+}
+
 /** "482318" -> "0.5 MB". Below 1 MB shows KB instead — Dutch/German are a few hundred KB. */
 function formatBytes(bytes: number): string {
   return bytes >= 1_048_576

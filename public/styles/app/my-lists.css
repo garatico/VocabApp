@@ -2001,6 +2001,12 @@ button.ml-profile-editor-group-title {
   flex-direction: column;
   gap: 0.3rem;
 }
+.ml-profile-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
 .ml-profile-editor-label {
   font-size: 0.64rem;
   font-weight: 700;

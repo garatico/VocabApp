@@ -93,7 +93,7 @@ export function saveSession(lang: string, entry: SessionRecord): SessionRecord[]
     // entry.correct, not entry.total — the settings copy promises a
     // celebration for words *answered*, and total is the size of the batch
     // requested, which still counts every word left undone by a Give Up.
-    recordActivity(entry.correct);
+    recordActivity(lang, entry.correct, entry.seconds);
   }
   return prior.filter(s => s.mode === entry.mode);
 }

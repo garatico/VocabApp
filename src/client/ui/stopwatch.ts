@@ -15,14 +15,26 @@
  */
 
 export interface Stopwatch {
-  /** Start (or resume) ticking. Safe to call once at quiz start. */
+  /** Hard (re)start from 0:00 — discards whatever was previously
+   *  accumulated. What every quiz mode calls once at quiz start. */
   start(): void;
-  /** Stop ticking. The display freezes at its last value. */
+  /** Pause. Unlike a hard stop this *preserves* accumulated time, so a
+   *  later resume() continues rather than restarting — the pause half of
+   *  a manual Start/Pause control (table-controls.ts's timer buttons).
+   *  Every other caller only ever calls this once, at quiz completion, and
+   *  never resumes — for them this behaves exactly as the old "stop and
+   *  freeze" did. */
   stop(): void;
-  /** Reset to 0:00 and stop. */
+  /** Continue from wherever stop() left off. No-op if already running. */
+  resume(): void;
+  /** Zero the elapsed time. Keeps running if it was running, stays paused
+   *  if it was paused — resetting mid-quiz isn't also a pause request. */
   reset(): void;
   /** Seconds elapsed, floored the way every mode already recorded it. */
   elapsedSeconds(): number;
+  /** Whether the clock is currently ticking — for a UI that shows a
+   *  Start/Pause toggle and needs to know which label/icon is current. */
+  isRunning(): boolean;
 }
 
 /** `m:ss`, e.g. 65 -> "1:05". Exported for callers that build their own
@@ -41,45 +53,69 @@ export function formatClock(totalSeconds: number): string {
  * clock rather than a bare readout).
  */
 export function createStopwatch(mountEl: HTMLElement | null): Stopwatch {
-  let startedAt = 0;
-  let stoppedAt: number | null = null;
+  // Accumulated time from every completed run segment, plus whatever the
+  // current segment (since runStartedAt) adds while ticking. Splitting it
+  // this way — rather than one startedAt the old version rewound on every
+  // start() — is what makes stop()/resume() a real pause instead of a reset.
+  let accumulatedMs = 0;
+  let runStartedAt: number | null = null;   // non-null exactly while running
   let tickTimer: ReturnType<typeof setInterval> | null = null;
 
   function render(): void {
     if (mountEl) mountEl.textContent = formatClock(rawElapsedSeconds());
   }
 
-  function rawElapsedSeconds(): number {
-    const end = stoppedAt ?? Date.now();
-    return Math.max(0, Math.floor((end - startedAt) / 1000));
+  function rawElapsedMs(): number {
+    return accumulatedMs + (runStartedAt !== null ? Date.now() - runStartedAt : 0);
   }
 
-  function start(): void {
-    startedAt = Date.now();
-    stoppedAt = null;
-    render();
+  function rawElapsedSeconds(): number {
+    return Math.max(0, Math.floor(rawElapsedMs() / 1000));
+  }
+
+  function beginTicking(): void {
     if (tickTimer) clearInterval(tickTimer);
     tickTimer = setInterval(render, 1000);
   }
 
-  function stop(): void {
-    if (stoppedAt !== null) return;
-    stoppedAt = Date.now();
+  function stopTicking(): void {
     if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+  }
+
+  function start(): void {
+    accumulatedMs = 0;
+    runStartedAt = Date.now();
+    render();
+    beginTicking();
+  }
+
+  function resume(): void {
+    if (runStartedAt !== null) return;   // already running
+    runStartedAt = Date.now();
+    render();
+    beginTicking();
+  }
+
+  function stop(): void {
+    if (runStartedAt === null) return;   // already paused
+    accumulatedMs += Date.now() - runStartedAt;
+    runStartedAt = null;
+    stopTicking();
     render();
   }
 
   function reset(): void {
-    if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
-    startedAt = Date.now();
-    stoppedAt = Date.now();
+    accumulatedMs = 0;
+    if (runStartedAt !== null) runStartedAt = Date.now();   // stay running, from 0
     render();
   }
 
   return {
     start,
+    resume,
     stop,
     reset,
+    isRunning: () => runStartedAt !== null,
     elapsedSeconds: () => Math.max(1, Math.round(rawElapsedSeconds())),
   };
 }

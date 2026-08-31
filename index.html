@@ -528,6 +528,7 @@
       </div>
 
       <section id="tableArea">
+        <div id="tableStickyBar">
         <div class="progressWrap">
           <div class="progress">
             <div id="tableBarTop" class="bar"></div>
@@ -536,14 +537,22 @@
             <span id="tableStatsTop" class="progress-label"></span>
           </div>
         </div>
-        <div id="tableScoreTop" class="quiz-score"></div>
         <div id="tableSummaryTop" class="quiz-summary" style="display:none"></div>
 
-        <div id="tableControls" class="controls-row">
-          <button id="tableJumpBtn" title="Jump to the first word you haven't answered (Ctrl+/)" data-i18n-title="table.jumpNextGapTip" data-i18n="table.jumpNextGap">↓ Next gap</button>
-          <button id="tableExport" data-i18n="table.exportCsv">Export CSV</button>
-          <button id="tableReset" data-i18n="table.giveUp">Give Up</button>
-          <span id="tableStopwatch" class="quiz-stopwatch" title="Time spent on this quiz" data-i18n-title="table.stopwatchTip">0:00</span>
+        <div class="controls-line" id="tableControlsLine">
+          <div id="tableScoreTop" class="quiz-score"></div>
+          <span class="controls-divider" aria-hidden="true"></span>
+          <div id="tableControls" class="controls-row">
+            <button id="tableJumpBtn" title="Jump to the first word you haven't answered (Ctrl+/)" data-i18n-title="table.jumpNextGapTip" data-i18n="table.jumpNextGap">↓ Next gap</button>
+            <button id="tableExport" data-i18n="table.exportCsv">Export CSV</button>
+            <button id="tableReset" data-i18n="table.giveUp">Give Up</button>
+            <button id="tableRetry" data-i18n="table.retry">Retry</button>
+            <div class="timer-group" id="tableTimerGroup">
+              <span id="tableStopwatch" class="quiz-stopwatch" title="Time spent on this quiz" data-i18n-title="table.stopwatchTip">0:00</span>
+              <button type="button" id="tableTimerToggle" class="timer-btn" title="Pause timer" aria-label="Pause timer">&#x23F8;</button>
+              <button type="button" id="tableTimerReset" class="timer-btn" title="Reset timer" aria-label="Reset timer">&#x21BA;</button>
+            </div>
+          </div>
         </div>
 
         <div class="table-nav" id="tableJumpTop">
@@ -558,8 +567,10 @@
             <button type="button" class="pager-btn" data-page="next" aria-label="Next page" data-i18n-aria-label="table.nextPage">&#x2192;</button>
           </div>
           <div class="table-nav-side table-nav-side--end">
+            <button type="button" class="jump-btn" data-jump="top" data-i18n="table.jumpToTop">&#x2191; Jump to Top</button>
             <button type="button" class="jump-btn" data-jump="bottom" data-i18n="table.jumpToBottom">&#x2193; Jump to Bottom</button>
           </div>
+        </div>
         </div>
 
         <div id="tableWrap"></div>
@@ -772,6 +783,29 @@
                 <button type="button" class="sort-order-btn" data-pagesize="200">200</button>
                 <button type="button" class="sort-order-btn" data-pagesize="all" data-i18n="controls.all">All</button>
               </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.showTimer">Show timer</span>
+                <span class="settings-desc" data-i18n="settings.table.showTimerDesc">Off hides the running clock and its controls — time is still recorded for History and goals, just not displayed.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingShowTimer">
+                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.timedQuiz">Timed quiz</span>
+                <span class="settings-desc" data-i18n="settings.table.timedQuizDesc">Race the clock — when time runs out, the quiz ends and reveals whatever's left, same as Give Up.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingTimedQuiz">
+                <button type="button" class="sort-order-btn active" data-timed="false" data-i18n="settings.streak.goalOff">Off</button>
+                <button type="button" class="sort-order-btn" data-timed="true" data-i18n="common.on">On</button>
+              </div>
+              <input type="number" id="settingTimedQuizMinutes" class="ml-profile-editor-number" min="1" placeholder="Minutes" hidden>
             </div>
 
             </div>
@@ -1009,15 +1043,56 @@
 
             <div class="settings-row">
               <div class="settings-label">
-                <span data-i18n="settings.streak.goal">Daily word goal</span>
-                <span class="settings-desc" data-i18n="settings.streak.goalDesc">Get a small celebration once you've answered this many words correctly today. "Off" just tracks the streak with no goal.</span>
+                <span data-i18n="settings.streak.goalScope">Goal scope</span>
+                <span class="settings-desc" data-i18n="settings.streak.goalScopeDesc">One set of goals for every language, or a different set for a specific language.</span>
               </div>
-              <div class="sort-order-toggle" id="settingDailyGoal">
-                <button type="button" class="sort-order-btn" data-goal="0" data-i18n="settings.streak.goalOff">Off</button>
-                <button type="button" class="sort-order-btn" data-goal="10">10</button>
-                <button type="button" class="sort-order-btn active" data-goal="25">25</button>
-                <button type="button" class="sort-order-btn" data-goal="50">50</button>
-                <button type="button" class="sort-order-btn" data-goal="100">100</button>
+              <select id="settingGoalScope" class="ml-profile-editor-select">
+                <option value="" data-i18n="settings.streak.goalScopeAll">All languages</option>
+              </select>
+              <button type="button" id="settingGoalScopeReset" data-i18n="settings.streak.goalScopeReset" hidden>Use global default</button>
+            </div>
+
+            <div class="settings-row" data-goal-row="words">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.goalWords">Words goal</span>
+                <span class="settings-desc" data-i18n="settings.streak.goalDesc">Get a small celebration once you reach this. "Off" just tracks the streak with no goal.</span>
+              </div>
+              <div class="sort-order-toggle" data-goal-presets="words"></div>
+              <input type="number" class="ml-profile-editor-number" data-goal-custom="words" min="0" placeholder="Custom…" data-i18n-placeholder="settings.streak.goalCustomPlaceholder">
+            </div>
+
+            <div class="settings-row" data-goal-row="minutes">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.goalMinutes">Minutes goal</span>
+              </div>
+              <div class="sort-order-toggle" data-goal-presets="minutes"></div>
+              <input type="number" class="ml-profile-editor-number" data-goal-custom="minutes" min="0" placeholder="Custom…" data-i18n-placeholder="settings.streak.goalCustomPlaceholder">
+            </div>
+
+            <div class="settings-row" data-goal-row="streak">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.goalStreak">Streak-days goal</span>
+              </div>
+              <div class="sort-order-toggle" data-goal-presets="streak"></div>
+              <input type="number" class="ml-profile-editor-number" data-goal-custom="streak" min="0" placeholder="Custom…" data-i18n-placeholder="settings.streak.goalCustomPlaceholder">
+            </div>
+
+            <div class="settings-row settings-row--stack">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.calendar">Activity</span>
+                <span class="settings-desc" data-i18n="settings.streak.calendarDesc">Days you practiced, and which goals were hit — hover a marked day for the breakdown by language.</span>
+              </div>
+              <div class="settings-calendar settings-calendar--wide" id="streakCalendar">
+                <div class="settings-calendar-nav">
+                  <button type="button" id="streakCalPrev" aria-label="Previous month">&#x2039;</button>
+                  <span id="streakCalLabel"></span>
+                  <button type="button" id="streakCalNext" aria-label="Next month">&#x203A;</button>
+                </div>
+                <div class="settings-calendar-weekdays">
+                  <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+                </div>
+                <div class="settings-calendar-grid" id="streakCalGrid"></div>
+                <div class="settings-calendar-legend" id="streakCalLegend"></div>
               </div>
             </div>
 

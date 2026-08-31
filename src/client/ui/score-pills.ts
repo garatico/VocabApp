@@ -19,16 +19,11 @@ export interface ScoreCounts {
 
 export function buildScorePills({ correct, revealed, missed, left, total }: ScoreCounts): string {
   if (total <= 0) return '';
-  // Each pill carries a solid swatch in its own colour. The pill text and
-  // border were already tinted, but at pill size that reads as four similar
-  // outlines; the filled square is what makes "this is the green one" legible
-  // at a glance, and it is the same green as its segment of the bar above.
-  const sw = '<i class="score-swatch" aria-hidden="true"></i>';
   return (
-    `<span class="score-pill score-correct">${sw}✓ ${correct} Correct</span>` +
-    `<span class="score-pill score-revealed">${sw}👁 ${revealed} Revealed</span>` +
-    `<span class="score-pill score-missed">${sw}✗ ${missed} Missed</span>` +
-    `<span class="score-pill score-left">${sw}${left} Left</span>`
+    `<span class="score-pill score-correct">✓ ${correct} Correct</span>` +
+    `<span class="score-pill score-revealed">👁 ${revealed} Revealed</span>` +
+    `<span class="score-pill score-missed">✗ ${missed} Missed</span>` +
+    `<span class="score-pill score-left">${left} Left</span>`
   );
 }
 

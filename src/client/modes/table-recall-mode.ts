@@ -218,6 +218,9 @@ export function renderTableRecallMode({
   const stopwatchEl = document.createElement('span');
   stopwatchEl.className = 'quiz-stopwatch';
   stopwatchEl.title = 'Time spent on this quiz';
+  // Same "Show timer" Settings toggle Standard style's clock respects —
+  // time is still tracked underneath either way, this only hides the readout.
+  stopwatchEl.hidden = !Settings.getShowTimer();
 
   const giveUpBtn = document.createElement('button');
   giveUpBtn.type = 'button';

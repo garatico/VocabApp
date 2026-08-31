@@ -17,6 +17,12 @@
  * on a file:// origin and means a packaged app pointed at a dev server picks up
  * edits immediately. Once a language resolves, the working source is remembered
  * so the fallback isn't re-probed on every language switch.
+ *
+ * That one failed request does NOT get the Render cold-start retry treatment
+ * below in a packaged build (see isPackagedApp) — there is no server back
+ * there that might still be waking up, so retrying is just a ~42s wait for a
+ * connection that will never succeed before falling through to the bundled
+ * export it should have used immediately.
  */
 
 import type { Word } from '../types.ts';
@@ -110,8 +116,29 @@ async function tryFetch(url: string, onProgress?: (loadedBytes: number) => void)
  */
 const API_RETRY_DELAYS_MS = [1000, 3000, 6000, 12000, 20000];
 
+/**
+ * True in a packaged build with no server behind it — Tauri desktop,
+ * Capacitor mobile. The Render cold-start retry loop below exists for the
+ * hosted web app's sleeping free-tier backend; applied here it just burns
+ * ~42s retrying a `/api/vocab` connection that can never succeed before
+ * falling through to the bundled static export it should have used
+ * immediately.
+ *
+ * Checked lazily rather than cached at module load so tests can stub the
+ * relevant global before calling loadVocab.
+ */
+function isPackagedApp(): boolean {
+  const g = globalThis as typeof globalThis & {
+    __TAURI_INTERNALS__?: unknown;
+    __TAURI__?: unknown;
+    Capacitor?: { isNativePlatform?: () => boolean };
+  };
+  return Boolean(g.__TAURI_INTERNALS__) || Boolean(g.__TAURI__) || Boolean(g.Capacitor?.isNativePlatform?.());
+}
+
 async function tryFetchWithRetry(url: string, callbacks: LoadVocabCallbacks): Promise<FetchOutcome> {
   let result = await tryFetch(url, callbacks.onProgress);
+  if (!result.ok && isPackagedApp()) return result;
   for (let attempt = 0; !result.ok && result.retryable && attempt < API_RETRY_DELAYS_MS.length; attempt++) {
     callbacks.onRetry?.(attempt + 1, API_RETRY_DELAYS_MS.length);
     await new Promise(resolve => setTimeout(resolve, API_RETRY_DELAYS_MS[attempt]));
