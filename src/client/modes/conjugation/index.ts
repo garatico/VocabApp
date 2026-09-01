@@ -13,6 +13,7 @@ import { activeTenses, activeRegularities, unionTenseDefs } from './controls.js'
 import {
   setProgressCallback,
   applyAllPronounToggles,
+  activePronounIndices,
 } from './controls.js';
 import { isOwnInfinitive, hasAnyForms, regularityOf } from './verb-filters.js';
 // Re-exported — one-at-a-time-mode.ts, random-table-mode.ts and
@@ -28,6 +29,7 @@ import { createStopwatch } from '../../ui/stopwatch.js';
 import { buildScorePills, scorePct } from '../../ui/score-pills.js';
 import {
   Settings, applyConjDeselectedClass, setOnConjDeselectedChange, applyAutofillAttr,
+  setOnShowTimerChange,
 } from '../../settings.js';
 
 export interface ConjugationModeOptions {
@@ -69,6 +71,14 @@ interface CardController {
 }
 
 let _cleanup: (() => void) | null = null;
+
+// setOnShowTimerChange has no "already registered" guard of its own — it's a
+// plain listener list — so without this a listener would pile up on every
+// single Start Quiz click. syncConjTimerVisibility looks its target element
+// up by id on every call rather than closing over it, so any one registered
+// copy behaves identically to any other; this just keeps there from being a
+// growing pile of them.
+let _timerVisibilityRegistered = false;
 
 const SINGLE_FORM_TENSES = new Set(['past_participle', 'gerund']);
 
@@ -272,34 +282,111 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   });
   const orderCount = document.createElement('span');
   orderCount.className = 'conj-order-count';
-  function describeSet(): string {
+  /**
+   * Fills `orderCount` with the base "N verbs × T tenses = C cards" text plus
+   * a regularity breakdown — how much of this quiz is the easy kind is worth
+   * knowing before you start. The breakdown renders as colored pill badges
+   * (one per bucket, zero-count buckets omitted) using the same three colors
+   * the Regularity filter chips above use for 'active', rather than plain
+   * text, so the two stay visually tied together. Stem-change is folded into
+   * the "irregular" pill, same as the plain-text version this replaced —
+   * it's still one of only three numbers reported, not four.
+   */
+  function renderSetSummary(): void {
+    orderCount.innerHTML = '';
     const t = selectedTenses().length;
     const v = verbs.length;
-    const base = t > 1
+    const base = document.createElement('span');
+    base.className = 'conj-set-summary-base';
+    base.textContent = t > 1
       ? `${v} verb${v === 1 ? '' : 's'} × ${t} tenses = ${v * t} cards`
       : `${v} verb${v === 1 ? '' : 's'}`;
+    orderCount.appendChild(base);
 
-    // Regularity breakdown of the verb set — how much of this quiz is the
-    // easy kind is worth knowing before you start.
     const tally = { regular: 0, ortho: 0, stem: 0, irregular: 0, unknown: 0 };
     verbs.forEach(vb => {
       const k = regularityOf(vb.linguistic?.conjugation_class ?? null).key;
       tally[k as keyof typeof tally]++;
     });
     const irregularish = tally.stem + tally.irregular;
-    const known        = v - tally.unknown;
-    if (known === 0) return base;
+    const known         = v - tally.unknown;
+    if (known === 0) return;
 
-    return `${base}  ·  ${tally.regular} regular, `
-         + `${tally.ortho} spelling, ${irregularish} irregular`;
+    const pills = document.createElement('span');
+    pills.className = 'conj-set-summary-pills';
+    ([
+      ['regular',   tally.regular,   'regular'],
+      ['ortho',     tally.ortho,     'spelling'],
+      ['irregular', irregularish,    'irregular'],
+    ] as const).forEach(([reg, count, label]) => {
+      if (count === 0) return;
+      const pill = document.createElement('span');
+      pill.className = 'conj-set-pill';
+      pill.dataset.reg = reg;
+      pill.textContent = `${count} ${label}`;
+      pills.appendChild(pill);
+    });
+    orderCount.appendChild(pills);
   }
-  orderCount.textContent = describeSet();
+  renderSetSummary();
+  orderRow.append(orderLabel, orderSel, orderCount);
+
+  // Timer — stopwatch + Start/Pause + Reset, same markup/classes as Table
+  // mode's #tableTimerGroup/.timer-btn (controls-bar.css) so it is styled
+  // and behaves identically; lives in progressSection rather than orderRow
+  // so it rides along in the sticky bar next to Give Up, the same place
+  // Table keeps its own timer group.
   const stopwatchEl = document.createElement('span');
   stopwatchEl.className = 'quiz-stopwatch';
   stopwatchEl.title     = 'Time spent on this quiz';
   const stopwatch = createStopwatch(stopwatchEl);
   stopwatch.start();
-  orderRow.append(orderLabel, orderSel, orderCount, stopwatchEl);
+
+  const timerGroup = document.createElement('div');
+  timerGroup.className = 'timer-group';
+  timerGroup.id        = 'conjTimerGroup';
+
+  const timerToggle = document.createElement('button');
+  timerToggle.type      = 'button';
+  timerToggle.className = 'timer-btn';
+
+  const timerReset = document.createElement('button');
+  timerReset.type      = 'button';
+  timerReset.className = 'timer-btn';
+  timerReset.title     = 'Reset timer';
+  timerReset.setAttribute('aria-label', 'Reset timer');
+  timerReset.textContent = '↺';
+
+  function syncTimerToggleIcon(): void {
+    const running = stopwatch.isRunning();
+    timerToggle.textContent = running ? '⏸' : '▶';
+    timerToggle.title = running ? 'Pause timer' : 'Resume timer';
+    timerToggle.setAttribute('aria-label', running ? 'Pause timer' : 'Resume timer');
+  }
+  syncTimerToggleIcon();
+
+  timerToggle.addEventListener('click', () => {
+    if (stopwatch.isRunning()) stopwatch.stop();
+    else stopwatch.resume();
+    syncTimerToggleIcon();
+  });
+  timerReset.addEventListener('click', () => stopwatch.reset());
+
+  timerGroup.append(stopwatchEl, timerToggle, timerReset);
+
+  // "Show timer" is one Settings toggle shared with Table mode — read it now
+  // for this render's initial state, and again whenever it changes while a
+  // quiz is on screen (setOnShowTimerChange supports more than one listener
+  // precisely so Table's own registration isn't displaced by this one).
+  function syncConjTimerVisibility(): void {
+    const group = document.getElementById('conjTimerGroup');
+    if (group) group.hidden = !Settings.getConjShowTimer();
+  }
+  syncConjTimerVisibility();
+  if (!_timerVisibilityRegistered) {
+    _timerVisibilityRegistered = true;
+    setOnShowTimerChange(syncConjTimerVisibility);
+  }
 
   const progressSection = document.createElement('div');
   progressSection.className = 'conj-progress-section';
@@ -369,6 +456,34 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     return { green, yellow, red, stat, pills };
   }
 
+  // Full Quiz / This Page — which scope the bars below paint. The completion
+  // check further down always uses the whole quiz regardless of this toggle;
+  // it only controls what's displayed.
+  let progressScope: 'quiz' | 'page' = 'quiz';
+
+  const scopeToggle = document.createElement('div');
+  scopeToggle.className = 'sort-order-toggle conj-progress-scope-toggle';
+  const scopeQuizBtn = document.createElement('button');
+  scopeQuizBtn.type        = 'button';
+  scopeQuizBtn.className   = 'sort-order-btn active';
+  scopeQuizBtn.textContent = 'Full Quiz';
+  scopeQuizBtn.title       = 'Show progress across every page of this quiz';
+  const scopePageBtn = document.createElement('button');
+  scopePageBtn.type        = 'button';
+  scopePageBtn.className   = 'sort-order-btn';
+  scopePageBtn.textContent = 'This Page';
+  scopePageBtn.title       = 'Show progress for only the page currently on screen';
+  scopeToggle.append(scopeQuizBtn, scopePageBtn);
+  scopeToggle.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    scopeToggle.querySelectorAll('.sort-order-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    progressScope = btn === scopePageBtn ? 'page' : 'quiz';
+    updateProgress();
+  });
+  progressBlock.appendChild(scopeToggle);
+
   const formsBar = makeProgressGroup('Forms', 'Progress across every individual conjugation');
   const verbsBar = makeProgressGroup('Verbs', 'Progress across whole verbs — a verb counts once all its forms are done');
 
@@ -376,7 +491,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   giveUpBtn.className   = 'conj-giveup-btn';
   giveUpBtn.textContent = 'Give Up';
 
-  progressSection.append(progressBlock, giveUpBtn);
+  progressSection.append(progressBlock, timerGroup, giveUpBtn);
 
   const cardsGrid = document.createElement('div');
   cardsGrid.className = 'conj-cards-grid';
@@ -388,11 +503,18 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   interface Counts { correct: number; revealed: number; missed: number; left: number; total: number }
 
   /**
-   * Tally at both levels. A verb is scored by its weakest form: all correct →
-   * correct; otherwise fully answered with a missed form → missed, with only
-   * peeks → revealed; anything still blank → left.
+   * Tally at both levels, from whatever's currently rendered in cardsGrid —
+   * i.e. only the page on screen right now. A verb is scored by its weakest
+   * form: all correct → correct; otherwise fully answered with a missed
+   * form → missed, with only peeks → revealed; anything still blank → left.
+   *
+   * Note this counts one "verb" unit per `.conj-card` — one per verb per
+   * selected tense — not per distinct verb, so a verb drilled across several
+   * tenses contributes more than one unit here. tallyQuiz() below counts
+   * differently (one unit per actual verb); this scope's own numbers are
+   * kept as they already were rather than changed alongside it.
    */
-  function tally(): { forms: Counts; verbs: Counts } {
+  function tallyPage(): { forms: Counts; verbs: Counts } {
     const forms: Counts = { correct: 0, revealed: 0, missed: 0, left: 0, total: 0 };
     const verbs: Counts = { correct: 0, revealed: 0, missed: 0, left: 0, total: 0 };
 
@@ -425,6 +547,111 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     return { forms, verbs };
   }
 
+  /**
+   * Rows a single (tense, verb-language) card produces once pronoun toggles
+   * are applied — the same rule buildCard/VISIBLE_ROW ends up with, computed
+   * without building a card. A tense's row layout depends only on the tense
+   * and the verb's language (isSingleForm, hiddenPronounSlots), never on the
+   * individual verb's own conjugation data.
+   */
+  function formsPerTenseCard(tenseKey: string, verbLang: string, activeIdx: ReadonlySet<number>): number {
+    if (isSingleForm(tenseKey)) return 1;
+    const hidden   = hiddenPronounSlots(tenseKey);
+    const pronouns = PRONOUNS[verbLang] ?? PRONOUNS.spanish;
+    let n = 0;
+    for (let i = 0; i < pronouns.length; i++) if (activeIdx.has(i) && !hidden.has(i)) n++;
+    return n;
+  }
+
+  /**
+   * Exact whole-quiz forms total, without rendering every page.
+   *
+   * Forms-per-verb is constant within one language — buildCards' own
+   * tensesForVerb filter depends only on the verb's language, never on its
+   * data — so this is one pass per distinct language among `verbs`, not per
+   * verb-tense pair.
+   */
+  function quizFormsTotal(tenses: string[], activeIdx: ReadonlySet<number>): number {
+    const perLang = new Map<string, number>();
+    let total = 0;
+    for (const verb of verbs) {
+      const verbLang = verb.language ?? lang;
+      let forms = perLang.get(verbLang);
+      if (forms === undefined) {
+        const verbTenseDefs = TENSE_DEFS[verbLang] ?? TENSE_DEFS.spanish;
+        const tensesForVerb = tenses.filter(t => verbTenseDefs.some(d => d.key === t));
+        forms = tensesForVerb.reduce((sum, t) => sum + formsPerTenseCard(t, verbLang, activeIdx), 0);
+        perLang.set(verbLang, forms);
+      }
+      total += forms;
+    }
+    return total;
+  }
+
+  /**
+   * Whole-quiz tally — every page, not just the one on screen.
+   *
+   * Forms: a live DOM pass over whatever's on screen right now, plus
+   * `banked`'s per-verb totals for everything scored and left behind on an
+   * earlier page — skipping any banked entry for a verb currently in
+   * cardsGrid, so a revisited page's live state isn't double-counted
+   * against its own stale banked copy.
+   *
+   * Verbs: one unit per actual verb (merging every tense-card a verb has —
+   * the same grouping `banked` already uses for session recording), unlike
+   * tallyPage()'s one-unit-per-card, which over-counts a verb once more
+   * than one tense is selected.
+   */
+  function tallyQuiz(): { forms: Counts; verbs: Counts } {
+    const tenses    = selectedTenses();
+    const activeIdx = activePronounIndices();
+    const forms: Counts      = { correct: 0, revealed: 0, missed: 0, left: 0, total: quizFormsTotal(tenses, activeIdx) };
+    const verbCounts: Counts = { correct: 0, revealed: 0, missed: 0, left: 0, total: verbs.length };
+
+    interface FormAcc { total: number; correct: number; revealed: number; missed: number; }
+    function classify(acc: FormAcc): 'correct' | 'revealed' | 'missed' | 'left' {
+      if (acc.correct + acc.revealed + acc.missed === 0) return 'left';
+      if (acc.correct === acc.total)                     return 'correct';
+      if (acc.missed > 0)                                return 'missed';
+      return 'revealed';
+    }
+    function fold(acc: FormAcc): void {
+      forms.correct  += acc.correct;
+      forms.revealed += acc.revealed;
+      forms.missed   += acc.missed;
+      const outcome = classify(acc);
+      if (outcome !== 'left') verbCounts[outcome]++;
+    }
+
+    const onScreen = new Set<string>();
+    const live = new Map<string, FormAcc>();
+    cardsGrid.querySelectorAll<HTMLElement>('.conj-card').forEach(card => {
+      const word = card.dataset.verb;
+      if (!word) return;
+      const verbLang = card.dataset.verbLang ?? lang;
+      const key = verbKey(word, verbLang);
+      onScreen.add(key);
+      const acc = live.get(key) ?? { total: 0, correct: 0, revealed: 0, missed: 0 };
+      card.querySelectorAll(VISIBLE_ROW).forEach(row => {
+        const inp = row.querySelector<HTMLInputElement>('.conj-drill-input');
+        if (!inp) return;
+        acc.total++;
+        if (inp.classList.contains('correct'))       acc.correct++;
+        else if (inp.classList.contains('revealed')) acc.revealed++;
+        else if (inp.classList.contains('missed'))   acc.missed++;
+      });
+      live.set(key, acc);
+    });
+
+    live.forEach(fold);
+    banked.forEach((acc, key) => { if (!onScreen.has(key)) fold(acc); });
+
+    forms.left      = Math.max(0, forms.total      - forms.correct      - forms.revealed      - forms.missed);
+    verbCounts.left = Math.max(0, verbCounts.total  - verbCounts.correct - verbCounts.revealed  - verbCounts.missed);
+
+    return { forms, verbs: verbCounts };
+  }
+
   function paint(
     bar: { green: HTMLElement; yellow: HTMLElement; red: HTMLElement; stat: HTMLElement; pills: HTMLElement },
     c: Counts,
@@ -445,10 +672,17 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   }
 
   function updateProgress(): void {
-    const { forms, verbs } = tally();
+    // The completion check always uses the whole quiz, regardless of which
+    // scope is on screen — ending the quiz is a global event, not something
+    // that should fire early just because "This Page" happens to be fully
+    // answered. The display itself follows progressScope.
+    const quizTally = tallyQuiz();
+    const { forms, verbs } = progressScope === 'page' ? tallyPage() : quizTally;
 
     paint(formsBar, forms, `${forms.correct + forms.revealed + forms.missed}/${forms.total} Answered`);
     paint(verbsBar, verbs, `${verbs.correct}/${verbs.total} Fully Conjugated`);
+
+    const { forms: qForms, verbs: qVerbs } = quizTally;
 
     // left, not correct === total: a session where every form has been
     // answered — correctly, revealed, or missed — is done, the same rule
@@ -456,9 +690,9 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     // *correct* meant revealing even one form left the quiz open forever:
     // recordConjSession() never ran, so the stopwatch kept ticking and the
     // session was never saved.
-    if (forms.total > 0 && forms.left === 0) {
+    if (qForms.total > 0 && qForms.left === 0) {
       recordConjSession();
-      showConjSummary(verbs.correct, verbs.total, forms.correct, forms.total);
+      showConjSummary(qVerbs.correct, qVerbs.total, qForms.correct, qForms.total);
     }
   }
 
@@ -494,14 +728,16 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
    * pager, same page size, shared below, now applies to both.
    */
   const CONJ_PAGE_SIZES = [5, 10, 25, 50] as const;
-  const DEFAULT_PAGE_SIZE = 10;
 
   // Named for Full Conjugation, which is where paging started — shared with
   // Grid now, which has no per-verb "page" of its own.
   let fullPage = 0;
+  // Settings.getConjPageSize() is only the *starting* default (10 out of the
+  // box) — once vq_conj_page_size holds a value the quiz's own Per Page
+  // selector wrote, that wins, same as before this was configurable.
   let pageSize = (() => {
     const n = Number(readString('vq_conj_page_size'));
-    return (CONJ_PAGE_SIZES as readonly number[]).includes(n) ? n : DEFAULT_PAGE_SIZE;
+    return (CONJ_PAGE_SIZES as readonly number[]).includes(n) ? n : Settings.getConjPageSize();
   })();
 
   const pageCount = (): number => Math.max(1, Math.ceil(verbs.length / pageSize));
@@ -606,7 +842,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
 
   sizeSel.addEventListener('change', () => {
     bankVisibleVerbs();
-    pageSize = Number(sizeSel.value) || DEFAULT_PAGE_SIZE;
+    pageSize = Number(sizeSel.value) || Settings.getConjPageSize();
     writeString('vq_conj_page_size', String(pageSize));
     // Stay near where you were rather than jumping to the top: the verb that
     // started the old page is the one you were working on.
@@ -807,11 +1043,12 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   // Keyed by verbKey() rather than bare word — two languages can share a
   // spelling once merged, so recall-mode.ts/table-mode.ts's word-collision
   // fix applies here too.
-  interface BankedVerb { word: string; language: string; }
-  const banked = {
-    correct: new Map<string, BankedVerb>(),
-    missed:  new Map<string, BankedVerb>(),
-  };
+  // total/correct/revealed/missed are form-level counts, merged across every
+  // card the verb has (one per selected tense) — the granularity tallyQuiz()
+  // and recordConjSession need to say whether the verb as a whole is done,
+  // not just one of its tenses.
+  interface BankedVerb { word: string; language: string; total: number; correct: number; revealed: number; missed: number; }
+  const banked = new Map<string, BankedVerb>();
 
   /**
    * Score every verb currently on screen and remember the results.
@@ -830,7 +1067,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     // page is about to be torn down scored and remembered before it goes —
     // this used to be a no-op for Grid, back when Grid rendered every verb at
     // once and had nothing left off-screen to lose.
-    interface Acc { word: string; language: string; total: number; correct: number; answered: number; }
+    interface Acc { word: string; language: string; total: number; correct: number; revealed: number; missed: number; answered: number; }
     const perVerb = new Map<string, Acc>();
 
     cardsGrid.querySelectorAll<HTMLElement>('.conj-card').forEach(card => {
@@ -838,22 +1075,24 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
       if (!word) return;
       const verbLang = card.dataset.verbLang ?? lang;
       const key = verbKey(word, verbLang);
-      const acc = perVerb.get(key) ?? { word, language: verbLang, total: 0, correct: 0, answered: 0 };
+      const acc = perVerb.get(key) ?? { word, language: verbLang, total: 0, correct: 0, revealed: 0, missed: 0, answered: 0 };
       card.querySelectorAll(VISIBLE_ROW).forEach(row => {
         const inp = row.querySelector<HTMLInputElement>('.conj-drill-input');
         if (!inp) return;
         acc.total++;
-        if (inp.classList.contains('correct')) { acc.correct++; acc.answered++; }
-        else if (inp.classList.contains('revealed') || inp.classList.contains('missed')) acc.answered++;
+        if (inp.classList.contains('correct'))       { acc.correct++;  acc.answered++; }
+        else if (inp.classList.contains('revealed')) { acc.revealed++; acc.answered++; }
+        else if (inp.classList.contains('missed'))   { acc.missed++;   acc.answered++; }
       });
       perVerb.set(key, acc);
     });
 
     perVerb.forEach((acc, key) => {
       if (acc.total === 0 || acc.answered === 0) return;
-      const entry = { word: acc.word, language: acc.language };
-      if (acc.correct === acc.total) banked.correct.set(key, entry);
-      else                           banked.missed.set(key, entry);
+      banked.set(key, {
+        word: acc.word, language: acc.language,
+        total: acc.total, correct: acc.correct, revealed: acc.revealed, missed: acc.missed,
+      });
     });
   }
 
@@ -910,14 +1149,13 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
 
     // Verbs already navigated past in Full Conjugation. Their cards are long
     // gone — rebuilt over for the next verb — so their outcome was banked at
-    // the moment they were left.
-    banked.correct.forEach(({ word, language }) => {
+    // the moment they were left. Live-page results (above) win over a stale
+    // banked copy of the same verb — same precedence as before this was one
+    // merged map instead of two.
+    banked.forEach(({ word, language, total, correct }) => {
       const bucket = bucketFor(language);
-      if (!bucket.missed.includes(word)) bucket.correct.push(word);
-    });
-    banked.missed.forEach(({ word, language }) => {
-      const bucket = bucketFor(language);
-      if (!bucket.correct.includes(word)) bucket.missed.push(word);
+      if (correct === total) { if (!bucket.missed.includes(word))  bucket.correct.push(word); }
+      else                   { if (!bucket.correct.includes(word)) bucket.missed.push(word); }
     });
 
     stopwatch.stop();
@@ -967,7 +1205,18 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     updateProgress();
   });
 
-  container.append(orderRow, progressSection, fullHeader, cardsGrid);
+  // Order, progress/timer/Give Up, and the pager all ride together in one
+  // sticky card — previously progressSection and fullHeader were each
+  // independently `position: sticky; top: 0`, which (once both were pinned
+  // at the same scroll position) fought over the same spot instead of
+  // stacking. orderRow used to just scroll away, losing the verb-order
+  // control and the "N verbs · regular/spelling/irregular" summary the
+  // moment you scrolled a card grid taller than one screen.
+  const stickyBar = document.createElement('div');
+  stickyBar.className = 'conj-sticky-bar';
+  stickyBar.append(orderRow, progressSection, fullHeader);
+
+  container.append(stickyBar, cardsGrid);
 
   /** Refresh what sits in the cells of deselected pronouns, on every card. */
   function syncDeselectedCells(): void {
@@ -989,11 +1238,52 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
 
   giveUpBtn.addEventListener('click', () => {
     cardUpdaters.forEach(u => u.revealAnswers('missed'));
+    bankVisibleVerbs();
+
+    // Give Up ends the whole quiz, not just the page on screen. Two kinds of
+    // gap need covering, for every verb not currently visible:
+    //   - never visited at all (nothing banked) — counts fully missed.
+    //   - visited earlier but left with some forms still blank — bankVisibleVerbs()
+    //     banks whatever was touched at the moment a page is left, but a verb
+    //     answered halfway (say, present tense done, subjunctive still blank)
+    //     stays banked at that partial total forever otherwise, silently
+    //     leaving its remaining forms out of "150/150" instead of counting
+    //     them as missed the way this same verb's blanks would be if it were
+    //     still the page on screen.
+    // Both use the same exact per-language forms count quizFormsTotal() relies
+    // on, rather than building cards for pages that were never opened.
+    const tenses    = selectedTenses();
+    const activeIdx = activePronounIndices();
+    const onScreen  = new Set(
+      Array.from(cardsGrid.querySelectorAll<HTMLElement>('.conj-card'))
+        .map(card => card.dataset.verb ? verbKey(card.dataset.verb, card.dataset.verbLang ?? lang) : null)
+        .filter((k): k is string => k !== null),
+    );
+    verbs.forEach(verb => {
+      const verbLang = verb.language ?? lang;
+      const key = verbKey(verb.word, verbLang);
+      if (onScreen.has(key)) return;
+      const verbTenseDefs = TENSE_DEFS[verbLang] ?? TENSE_DEFS.spanish;
+      const tensesForVerb = tenses.filter(t => verbTenseDefs.some(d => d.key === t));
+      const total = tensesForVerb.reduce((sum, t) => sum + formsPerTenseCard(t, verbLang, activeIdx), 0);
+      if (total === 0) return;
+      const existing  = banked.get(key);
+      const soFar     = existing ? existing.correct + existing.revealed + existing.missed : 0;
+      const remaining = total - soFar;
+      if (remaining <= 0) return;
+      banked.set(key, {
+        word: verb.word, language: verbLang, total,
+        correct:  existing?.correct  ?? 0,
+        revealed: existing?.revealed ?? 0,
+        missed:   (existing?.missed  ?? 0) + remaining,
+      });
+    });
+
     giveUpBtn.disabled = true;
     updateProgress();
     // Show a summary when giving up (progress may not be 100%)
-    const { forms, verbs } = tally();
-    showConjSummary(verbs.correct, verbs.total, forms.correct, forms.total);
+    const { forms, verbs: quizVerbs } = tallyQuiz();
+    showConjSummary(quizVerbs.correct, quizVerbs.total, forms.correct, forms.total);
   });
 
   const handleTenseChange = (): void => {
@@ -1069,7 +1359,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     // off rather than sending you back to the start.
     const at = verbs.findIndex(v => {
       const key = verbKey(v.word, v.language ?? lang);
-      return !banked.correct.has(key) && !banked.missed.has(key);
+      return !banked.has(key);
     });
     fullPage = at === -1 ? 0 : Math.floor(at / pageSize);
 

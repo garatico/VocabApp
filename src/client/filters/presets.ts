@@ -60,7 +60,8 @@ export interface ConjugationBundle {
   tenses:       string[]; // #conjTenseChips active tense keys
   regularities: string[]; // #conjRegChips active buckets: regular/ortho/stem/irregular
   view:         string;   // #conjViewToggle: grid/full/oneatatime/randomtable/cardmatch
-  verbsSize:    string;   // #conjSizeSelect value: 25/50/100/250/500/max
+  verbsSize:       string; // #conjSizeSelect value: 5/10/25/50/100/250/500/max/custom
+  verbsSizeCustom: string; // #conjSizeCustom value, meaningful only when verbsSize === 'custom'
 }
 
 export interface PresetBundle {
@@ -203,8 +204,9 @@ function captureConjugation(): ConjugationBundle {
   const regularities = [...document.querySelectorAll<HTMLElement>('#conjRegChips .conj-reg-chip.active')]
     .map(el => el.dataset.reg ?? '').filter(Boolean);
   const view = document.querySelector<HTMLElement>('#conjViewToggle .conj-toggle-btn.active')?.dataset.view ?? 'grid';
-  const verbsSize = (document.getElementById('conjSizeSelect') as HTMLSelectElement | null)?.value ?? '100';
-  return { tenses, regularities, view, verbsSize };
+  const verbsSize       = (document.getElementById('conjSizeSelect') as HTMLSelectElement | null)?.value ?? '100';
+  const verbsSizeCustom = (document.getElementById('conjSizeCustom') as HTMLInputElement | null)?.value ?? '';
+  return { tenses, regularities, view, verbsSize, verbsSizeCustom };
 }
 
 /**
@@ -229,6 +231,12 @@ function applyConjugation(bundle: ConjugationBundle): void {
   if (verbsSel && verbsSel.value !== bundle.verbsSize) {
     verbsSel.value = bundle.verbsSize;
     verbsSel.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  const verbsCustom = document.getElementById('conjSizeCustom') as HTMLInputElement | null;
+  if (verbsCustom && bundle.verbsSize === 'custom') {
+    verbsCustom.value = bundle.verbsSizeCustom;
+    verbsCustom.dispatchEvent(new Event('input', { bubbles: true }));
   }
 }
 
@@ -356,8 +364,8 @@ function describeWords(words: WordsBundle): string {
   if (words.poolMode === 'range') return `Rank ${words.rankFrom}–${words.rankTo}`;
   if (words.poolMode === 'band')  return words.bands.length > 0 ? words.bands.join(', ') : 'Level';
   if (words.size === 'max')    return 'Max words';
-  if (words.size === 'custom') return `Top ${words.customSize || '?'}`;
-  return `Top ${words.size}`;
+  if (words.size === 'custom') return `${words.customSize || '?'} Most Common`;
+  return `${words.size} Most Common`;
 }
 
 /** A short human-readable summary of what a bundle would change —
@@ -386,8 +394,9 @@ export function describePreset(bundle: PresetBundle): string {
     parts.push(QUIZ_STYLE_LABELS[bundle.quizStyle] ?? bundle.quizStyle);
   }
   if (bundle.conjugation) {
-    const { tenses, view, verbsSize } = bundle.conjugation;
-    parts.push(`${verbsSize === 'max' ? 'All' : verbsSize} verbs`);
+    const { tenses, view, verbsSize, verbsSizeCustom } = bundle.conjugation;
+    const verbsCount = verbsSize === 'custom' ? (verbsSizeCustom || '?') : verbsSize;
+    parts.push(`${verbsSize === 'max' ? 'All' : verbsCount} verbs`);
     if (tenses.length > 0) parts.push(`${tenses.length} tense${tenses.length === 1 ? '' : 's'}`);
     if (view !== 'grid') parts.push(CONJ_VIEW_LABELS[view] ?? view);
   }

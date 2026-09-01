@@ -130,9 +130,9 @@ export const es: Record<string, string> = {
   'conj.tenseAndForms':  'Tiempo y Formas',
   'conj.regScopeLabel':      'Aplicar regularidad:',
   'conj.regScopeTip':        'Si al desmarcar un grupo de Regularidad se acota el conjunto de verbos antes o después de aplicar el límite de tamaño de Verbos',
-  'conj.regScopeAfter':      'Después de Top N',
+  'conj.regScopeAfter':      'Después de los más comunes',
   'conj.regScopeAfterTip':   'Toma primero los N verbos más frecuentes por rango, luego acota por Regularidad — desmarcar un grupo puede reducir el conteo final por debajo de N',
-  'conj.regScopeBefore':     'Antes de Top N',
+  'conj.regScopeBefore':     'Antes de los más comunes',
   'conj.regScopeBeforeTip':  'Acota primero todo el idioma a los grupos de Regularidad marcados, luego toma los N verbos más frecuentes de lo que queda — el conteo final siempre coincide con N',
 
   // ── Filter boxes ────────────────────────────────────────────────────────
@@ -243,8 +243,12 @@ export const es: Record<string, string> = {
   'settings.conj.closeTip':    'Quitar la celda; el resto se acomoda',
   'settings.conj.grey':        'Atenuado',
   'settings.conj.greyTip':     'Mostrar el pronombre y una casilla vacía, atenuada',
+  'settings.conj.pageSize':     'Verbos por página',
+  'settings.conj.pageSizeDesc': 'Cuántos verbos muestra Cuadrícula/Conjugación Completa antes de dividirse en páginas que recorres con las flechas. Solo fija el valor inicial — una vez que cambias el control Por Página propio del quiz, esa elección se mantiene hasta que la cambies de nuevo.',
   'settings.conj.shape':       'Pronombres deseleccionados',
   'settings.conj.shapeDesc':   'Las primeras tres opciones mantienen la celda y sus líneas de cuadrícula, así la tarjeta sigue leyéndose como una tabla completa. Cerrar espacio quita la celda y deja que el resto se acomode.',
+  'settings.conj.showTimer':     'Mostrar cronómetro',
+  'settings.conj.showTimerDesc': 'Desactivado oculta el cronómetro y sus controles — el tiempo se sigue registrando para el Historial y las metas, solo que no se muestra. Independiente del ajuste de Mostrar cronómetro del modo Tabla, arriba.',
 
   // ── Settings — Guess the Blank ───────────────────────────────────────────
   'settings.guessBlank.attempts':     'Intentos por pregunta',
@@ -304,6 +308,10 @@ export const es: Record<string, string> = {
   // ── Settings — General ────────────────────────────────────────────────────
   'settings.general.advancedMode':      'Modo avanzado',
   'settings.general.advancedModeDesc':  'Activado muestra todos los ajustes, incluidos los que casi nadie necesita tocar. Desactivado deja este panel solo con los ajustes que la gente realmente cambia.',
+  'settings.general.kidMode':           'Modo apto para niños',
+  'settings.general.kidModeDesc':       'Simplifica la app para un niño, o para cualquiera que la pruebe por primera vez — ver la sección General más abajo para los detalles exactos de lo que cambia.',
+  'settings.general.kidModeSpecifics':      'Modo apto para niños — qué cambia',
+  'settings.general.kidModeSpecificsDesc':  'El interruptor para esto está en la barra de herramientas a la derecha, siempre visible sin importar el Modo avanzado. Activarlo: desactiva el Modo avanzado y activa el filtro de palabras soeces — ambos se pueden volver a cambiar después. Oculta las pestañas Mi Contenido y Mis Listas, el botón Perfiles de Prueba, los filtros de Categoría Gramatical/Listas/Dominios, el selector de "+ Idiomas", el modo de tamaño Omitir Conocidas, y la sección de ajustes Tabla Multi-idioma — mientras esté activado. Los filtros de Categoría Gramatical/Listas/Dominios y "+ Idiomas" también dejan de aplicarse aunque ya estuvieran configurados, no solo desaparecen de la vista — lo mismo ocurre con Omitir Conocidas, que depende del filtro de Listas. Y ajusta cada modo a su opción más sencilla: Dirección de Tabla (Palabra→Significado) y Estilo de Quiz (Estándar), Quiz de Imágenes (Toca la Imagen), Vista de Conjugación (Cuadrícula) y Regularidad (todas), Dificultad de Trivia/Dificultad de Lectura (Fácil) y Longitud de Lectura (Corta), y Dificultad de Completa el Espacio (Fácil) — cada uno se puede volver a cambiar al desactivarlo, igual que el Modo avanzado y el filtro de palabras soeces. Pensado para un niño, o para cualquiera que pruebe la app por primera vez.',
   'settings.general.clearHistory':      'Borrar historial',
   'settings.general.clearHistoryBtn':   'Borrar Historial',
   'settings.general.clearHistoryDesc':  'Elimina permanentemente cada sesión de quiz guardada y el conteo de "palabras que sigo fallando", en todos los idiomas. No afecta el dominio ni tus listas.',

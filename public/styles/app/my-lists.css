@@ -21,13 +21,13 @@
   display: flex;
   flex-direction: row;
   /* Fill the viewport down to a small gutter rather than a fixed 74vh, so the
-     word list gets every pixel that is going spare. The gutter was 190px —
-     tuned generously enough that a typical viewport still had a blank strip
-     below the panel doing nothing, which is exactly the space a scrolling
-     word list wants back. */
-  height: calc(100vh - 140px);
+     word list gets every pixel that is going spare. The gutter was 190px,
+     then 140px — both still left a visible blank strip below the panel on a
+     typical desktop monitor, which is exactly the space a scrolling word
+     list wants back. */
+  height: calc(100vh - 90px);
   min-height: 640px;
-  max-height: 1200px;
+  max-height: 1600px;
 }
 
 /* ── Left pane: lang selector + list nav ────────────────────── */

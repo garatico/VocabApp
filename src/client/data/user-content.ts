@@ -21,6 +21,7 @@ import { readJson, writeJson, isRecord, isStringArray, remove } from '../utils/s
 import { LANGUAGE_NAMES } from '../data/languages.ts';
 import type { Word } from '../types.ts';
 import type { TriviaQuestion } from './trivia-questions.ts';
+import type { GuessBlankQuestion } from './guess-blank-questions.ts';
 
 const P = 'uc_';
 
@@ -37,6 +38,11 @@ export interface UserWord {
   pos:         string | null;
   domains:     string[];
   notes:       string;
+  examples:    string[];
+  difficulty:  number | null;
+  tags:        string[];
+  synonyms:    string[];
+  antonyms:    string[];
 }
 
 function isUserWord(v: unknown): v is UserWord {
@@ -61,6 +67,11 @@ function normalizeUserWord(w: UserWord): UserWord {
     pos: w.pos ?? null,
     domains: Array.isArray(w.domains) ? w.domains : [],
     notes: typeof w.notes === 'string' ? w.notes : '',
+    examples: Array.isArray(w.examples) ? w.examples : [],
+    difficulty: typeof w.difficulty === 'number' ? w.difficulty : null,
+    tags: Array.isArray(w.tags) ? w.tags : [],
+    synonyms: Array.isArray(w.synonyms) ? w.synonyms : [],
+    antonyms: Array.isArray(w.antonyms) ? w.antonyms : [],
   };
 }
 
@@ -90,16 +101,17 @@ export function toWord(uw: UserWord): Word {
     word:        uw.word,
     translation: uw.translation,
     pos:         uw.pos,
-    difficulty:  null,
+    difficulty:  uw.difficulty,
     notes:       uw.notes,
     glosses:     uw.translation ? [uw.translation] : [],
-    examples:    [],
+    examples:    uw.examples,
     svg_url:     null,
     emoji:       null,
     linguistic:  null,
     frequency:   null,
     domains:     uw.domains,
-    tags:        [],
+    tags:        uw.tags,
+    relations:   (uw.synonyms.length || uw.antonyms.length) ? { synonyms: uw.synonyms, antonyms: uw.antonyms } : undefined,
     rank:        0,
   };
 }
@@ -146,6 +158,49 @@ export function addUserTriviaQuestion(lang: string, q: Omit<TriviaQuestion, 'id'
 
 export function removeUserTriviaQuestion(lang: string, id: string): void {
   writeJson(triviaKey(lang), getUserTriviaQuestions(lang).filter(q => q.id !== id));
+}
+
+// ── Guess the Blank questions ────────────────────────────────────────────────
+// Same shape as Trivia above: a user-written question layered on top of the
+// hand-written bank (data/guess-blank-questions.ts) the same way
+// getUserTriviaQuestions() layers onto data/trivia-questions.ts — see
+// guess-blank-mode.ts's own merge.
+
+function isGuessBlankQuestion(v: unknown): v is GuessBlankQuestion {
+  return isRecord(v) && typeof v.id === 'string' && typeof v.answerTarget === 'string'
+    && Array.isArray(v.cluesTarget);
+}
+function isGuessBlankQuestionArray(v: unknown): v is GuessBlankQuestion[] {
+  return Array.isArray(v) && v.every(isGuessBlankQuestion);
+}
+
+/** Same reasoning as normalizeTriviaQuestion: only enough to be recognizable
+ *  is checked by the type guard, so every other field is defaulted here. */
+function normalizeGuessBlankQuestion(q: GuessBlankQuestion): GuessBlankQuestion {
+  return {
+    ...q,
+    category: q.category ?? 'object',
+    difficulty: q.difficulty ?? 'medium',
+    cluesTarget: Array.isArray(q.cluesTarget) ? q.cluesTarget : [],
+    cluesEn: Array.isArray(q.cluesEn) ? q.cluesEn : [],
+    answerEn: typeof q.answerEn === 'string' ? q.answerEn : q.answerTarget,
+  };
+}
+
+function guessBlankKey(lang: string): string { return `${P}guessblank_${lang.toLowerCase()}`; }
+
+export function getUserGuessBlankQuestions(lang: string): GuessBlankQuestion[] {
+  return readJson<GuessBlankQuestion[]>(guessBlankKey(lang), [], isGuessBlankQuestionArray).map(normalizeGuessBlankQuestion);
+}
+
+export function addUserGuessBlankQuestion(lang: string, q: Omit<GuessBlankQuestion, 'id'>): GuessBlankQuestion {
+  const entry = { ...q, id: newId('gb') };
+  writeJson(guessBlankKey(lang), [...getUserGuessBlankQuestions(lang), entry]);
+  return entry;
+}
+
+export function removeUserGuessBlankQuestion(lang: string, id: string): void {
+  writeJson(guessBlankKey(lang), getUserGuessBlankQuestions(lang).filter(q => q.id !== id));
 }
 
 // ── Picture overrides ────────────────────────────────────────────────────────
@@ -235,6 +290,11 @@ export interface WordOverride {
   domains?:       string[];
   hiddenGlosses?: string[];
   glossOrder?:    string[];
+  examples?:      string[];
+  difficulty?:    number | null;
+  tags?:          string[];
+  synonyms?:      string[];
+  antonyms?:      string[];
 }
 
 function wordOverrideKey(lang: string): string { return `${P}wordoverride_${lang.toLowerCase()}`; }
@@ -299,13 +359,15 @@ function mergeWordOverride(lang: string, word: string, patch: Partial<WordOverri
  */
 export function setWordFields(
   lang: string, word: string,
-  fields: Pick<WordOverride, 'translation' | 'pos' | 'notes' | 'domains'>,
+  fields: Pick<WordOverride,
+    'translation' | 'pos' | 'notes' | 'domains' | 'examples' | 'difficulty' | 'tags' | 'synonyms' | 'antonyms'>,
 ): void {
   const current = getWordOverride(lang, word) ?? {};
   const next: WordOverride = { ...current, ...fields };
-  (['translation', 'pos', 'notes', 'domains'] as const).forEach(k => {
-    if (!(k in fields)) delete next[k];
-  });
+  (['translation', 'pos', 'notes', 'domains', 'examples', 'difficulty', 'tags', 'synonyms', 'antonyms'] as const)
+    .forEach(k => {
+      if (!(k in fields)) delete next[k];
+    });
   writeJson(wordOverrideKey(lang), { ...getWordOverrides(lang), [wordKey(word)]: next });
 }
 
@@ -346,6 +408,8 @@ export function applyWordOverride(lang: string, w: Word): Word {
   const o = getWordOverride(lang, w.word);
   if (!o) return w;
   const visible = o.hiddenGlosses?.length ? w.glosses.filter(g => !o.hiddenGlosses!.includes(g)) : w.glosses;
+  const synonyms = o.synonyms ?? w.relations?.synonyms;
+  const antonyms = o.antonyms ?? w.relations?.antonyms;
   return {
     ...w,
     translation: o.translation ?? w.translation,
@@ -353,6 +417,10 @@ export function applyWordOverride(lang: string, w: Word): Word {
     notes:       o.notes ?? w.notes,
     domains:     o.domains ?? w.domains,
     glosses:     o.glossOrder ? applyGlossOrder(visible, o.glossOrder) : visible,
+    examples:    o.examples ?? w.examples,
+    difficulty:  o.difficulty !== undefined ? o.difficulty : w.difficulty,
+    tags:        o.tags ?? w.tags,
+    relations:   (synonyms?.length || antonyms?.length) ? { synonyms, antonyms } : w.relations,
   };
 }
 
@@ -367,6 +435,7 @@ interface UserContentBackup {
   trivia:         Record<string, TriviaQuestion[]>;
   pictures:       Record<string, Record<string, string>>;
   wordOverrides?: Record<string, Record<string, WordOverride>>;
+  guessBlank?:    Record<string, GuessBlankQuestion[]>;
   /** @deprecated pre-word-override export shape — read on import, never written. */
   glossOrders?:   Record<string, Record<string, string[]>>;
 }
@@ -374,17 +443,19 @@ interface UserContentBackup {
 function buildUserContentBackup(): UserContentBackup {
   const backup: UserContentBackup = {
     version: BACKUP_VERSION, exportedAt: new Date().toISOString(),
-    words: {}, trivia: {}, pictures: {}, wordOverrides: {},
+    words: {}, trivia: {}, pictures: {}, wordOverrides: {}, guessBlank: {},
   };
   for (const l of LANGUAGE_NAMES) {
     const words         = getUserWords(l);
     const trivia         = getUserTriviaQuestions(l);
     const pics           = getPictureOverrides(l);
     const wordOverrides  = getWordOverrides(l);
+    const guessBlank     = getUserGuessBlankQuestions(l);
     if (words.length)                      backup.words[l]          = words;
     if (trivia.length)                     backup.trivia[l]         = trivia;
     if (Object.keys(pics).length)          backup.pictures[l]       = pics;
     if (Object.keys(wordOverrides).length) backup.wordOverrides![l] = wordOverrides;
+    if (guessBlank.length)                 backup.guessBlank![l]    = guessBlank;
   }
   return backup;
 }
@@ -414,10 +485,10 @@ export function downloadUserContent(): void {
 export function applyUserContentImport(raw: string): string {
   const data = JSON.parse(raw) as UserContentBackup;
   if (!data || typeof data !== 'object'
-      || (!data.words && !data.trivia && !data.pictures && !data.wordOverrides && !data.glossOrders)) {
+      || (!data.words && !data.trivia && !data.pictures && !data.wordOverrides && !data.glossOrders && !data.guessBlank)) {
     throw new Error('That file does not look like a My Content export.');
   }
-  let words = 0, trivia = 0, pics = 0, wordOverrides = 0;
+  let words = 0, trivia = 0, pics = 0, wordOverrides = 0, guessBlank = 0;
 
   for (const [l, arr] of Object.entries(data.words ?? {})) {
     if (!Array.isArray(arr)) continue;
@@ -440,6 +511,17 @@ export function applyUserContentImport(raw: string): string {
       trivia++;
     });
     if (imported.length) writeJson(triviaKey(l), [...getUserTriviaQuestions(l), ...imported]);
+  }
+  for (const [l, arr] of Object.entries(data.guessBlank ?? {})) {
+    if (!Array.isArray(arr)) continue;
+    const imported: GuessBlankQuestion[] = [];
+    arr.forEach(q => {
+      if (!q || typeof q.answerTarget !== 'string') return;
+      const { id: _id, ...rest } = q;
+      imported.push({ ...rest, id: newId('gb') });
+      guessBlank++;
+    });
+    if (imported.length) writeJson(guessBlankKey(l), [...getUserGuessBlankQuestions(l), ...imported]);
   }
   for (const [l, rec] of Object.entries(data.pictures ?? {})) {
     if (!rec || typeof rec !== 'object') continue;
@@ -475,5 +557,6 @@ export function applyUserContentImport(raw: string): string {
   }
 
   return `Imported ${words} word${words === 1 ? '' : 's'}, ${trivia} trivia question${trivia === 1 ? '' : 's'}, `
+       + `${guessBlank} Guess the Blank question${guessBlank === 1 ? '' : 's'}, `
        + `${pics} picture${pics === 1 ? '' : 's'}, ${wordOverrides} word override${wordOverrides === 1 ? '' : 's'}`;
 }

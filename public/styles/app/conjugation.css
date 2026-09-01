@@ -75,17 +75,43 @@
 .conj-empty p        { margin-bottom: 0.5rem; }
 .conj-empty-hint     { font-size: 0.875rem; }
 
-/* ── Progress section ── */
+/* ── Sticky bar: Order + Progress + Pager together ──
+   One card, like Table mode's #tableStickyBar, so the verb-order control,
+   the "N verbs · regular/spelling/irregular" summary, the bars/pills/timer/
+   Give Up, and the pager all stay on screen together while a long card grid
+   scrolls underneath. Fully rounded rather than only-rounded-at-the-bottom
+   like Table's — this box was never flush with its container's edges, so
+   staying rounded while pinned is what keeps it reading as a distinct
+   floating card over the quiz instead of a docked toolbar. Its three
+   children (.conj-order-row, .conj-progress-section, .conj-full-header)
+   used to each carry their own background/border/radius, and
+   .conj-progress-section/.conj-full-header were each independently sticky —
+   both pinned at the same top:0 fought over the same spot the moment both
+   engaged. They're plain rows now; this wrapper is the only box. */
+.conj-sticky-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 12px);
+  padding: 0.6rem 0.85rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+.conj-sticky-bar > .conj-order-row,
+.conj-sticky-bar > .conj-progress-section {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+
 .conj-progress-section {
   display: flex;
   align-items: center;
   gap: 1.25rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius, 12px);
-  padding: 0.75rem 1rem;
-  margin-bottom: 1rem;
-  box-shadow: var(--shadow-sm);
 }
 
 /* (The old .conj-prog-* thin bars were replaced by the shared .progress /
@@ -269,32 +295,52 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* One line — Forms on the left, Verbs pushed to the right and split off by a
+   vertical rule, the same role Table mode's .controls-divider plays between
+   its score pills and its button row. Two stacked, individually boxed rows
+   (the old layout) cost a full extra row of vertical space this mode can't
+   spare now that the whole section is sticky. */
 .conj-progress-pills {
   display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
-/* Each row — the FORMS / VERBS label and its four pills — is boxed, using the
-   same shell as a filter box. Loose on the background the two rows ran into
-   one another and it was not obvious which set of pills belonged to which
-   bar. */
 .conj-progress-pills .conj-pills-cell {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
   min-width: 0;
   flex-wrap: wrap;
-  padding: 0.4rem 0.6rem;
-  /* Tint, border and radius come from .ui-panel. */
+  padding: 0;
+  /* Flat, matching Table's unboxed .quiz-score row — overrides the
+     .ui-panel tint/border/radius .conj-pills-cell gets by default
+     (shared/components.css), which read as bulky once two of these sit
+     side by side instead of stacked. */
+  background: none;
+  border: none;
+  border-radius: 0;
+}
+.conj-progress-pills .conj-pills-cell + .conj-pills-cell {
+  margin-left: auto;
+  padding-left: 0.9rem;
+  border-left: 1px solid var(--border);
 }
 .conj-pills-cell > .progress-group-label {
   margin-bottom: 0;
-  flex: 0 0 3.2rem;   /* FORMS and VERBS align, so the pills line up too */
+  flex: 0 0 auto;
 }
 /* The pills carry their own top margin for the standalone table-mode layout,
-   which inside a box reads as the row being bottom-heavy. */
+   which inside this row reads as the whole thing sitting off-center. */
 .conj-pills-cell > .quiz-score { margin-top: 0; }
+/* Shrunk from the base 1.02rem/0.3rem 0.85rem — two full pill groups (eight
+   pills) now share one line, where each bar used to have the whole line to
+   itself. */
+.conj-progress-pills .score-pill {
+  font-size: 0.85rem;
+  padding: 0.2rem 0.6rem;
+}
 /* Type from .ui-label. */
 .progress-group-label { margin-bottom: 0.15rem; }
 
@@ -461,11 +507,40 @@
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  margin-bottom: 0.5rem;
 }
 /* .conj-order-label is .ui-label; .conj-order-count is .ui-stat. */
 .conj-order-label { --ui-label-size: 0.64rem; }
-.conj-order-count { margin-left: auto; }
+.conj-order-count {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.conj-set-summary-pills {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+/* Same three colors the Regularity filter chips use for '.active' above
+   (see .conj-reg-chip[data-reg="…"].active) — the pill badges reuse rather
+   than duplicate that palette so the two stay visually tied together. */
+.conj-set-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.55rem;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  border: 1px solid currentColor;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+.conj-set-pill[data-reg="regular"]   { color: var(--correct, #3d6b4f); }
+.conj-set-pill[data-reg="ortho"]     { color: var(--text-muted); }
+.conj-set-pill[data-reg="irregular"] { color: var(--danger, #b4453c); }
 
 @media (max-width: 599px) {
 }
@@ -898,6 +973,20 @@ html:not(.dark) .crt-input.incorrect {
 .conj-tf-side--wide   { flex: 2 1 0; }
 .conj-tf-side--narrow { flex: 1 1 0; }
 
+/* "After/Before Most Common" — longer than most .sort-order-toggle labels,
+   and this toggle only has half the Regularity column's already-narrow
+   width to fit in. The shared rule (controls-bar.css) sets `white-space:
+   nowrap` on a `flex:1` button inside an `overflow:hidden` track, which
+   clips text like this instead of wrapping it; letting it wrap here (a
+   little smaller, tighter line-height) keeps both words on screen. */
+.conj-reg-scope-toggle .sort-order-btn {
+  white-space: normal;
+  text-align: center;
+  line-height: 1.15;
+  font-size: 0.72rem;
+  padding: 0.3rem 0.35rem;
+}
+
 /* Regularity pill. Three buckets rather than the 26 raw classes. */
 .conj-card-reg {
   font-size: 0.6rem;
@@ -965,14 +1054,6 @@ html:not(.dark) .crt-input.incorrect {
   align-items: center;
   gap: 0.6rem;
   flex-wrap: wrap;
-  padding: 0.5rem 0.65rem;
-  margin-bottom: 0.5rem;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  position: sticky;
-  top: 0;
-  z-index: 2;
 }
 
 .conj-full-title {
@@ -1550,6 +1631,15 @@ html:not(.dark) .crt-input.incorrect {
     padding: 0;
     background: none;
     border: none;
+  }
+
+  /* Desktop's one-line layout right-aligns Verbs and splits it off with a
+     left border — meaningless once the two stack, and a stray vertical
+     line on Verbs' left edge otherwise. */
+  .conj-pills-cell + .conj-pills-cell {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: none;
   }
 
   .conj-pills-cell .quiz-score {

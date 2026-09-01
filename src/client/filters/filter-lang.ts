@@ -6,6 +6,8 @@
  * cannot reach three of the four places that read it.
  */
 
+import { Settings } from '../settings.ts';
+
 export function currentLangValue(fallback = 'spanish'): string {
   return (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? fallback;
 }
@@ -34,6 +36,9 @@ export function setExtraLanguages(langs: Set<string>): void {
  * switches to a mode that doesn't support a merge without clearing it.
  */
 export function currentExtraLanguages(): string[] {
+  // See app.ts's getExtraLanguages() — this is the second independent reader
+  // (word-lists.ts/presets.ts) that needs the same Kid-Friendly Mode guard.
+  if (Settings.getKidFriendlyMode()) return [];
   const activeMode = document.querySelector('.mode-tab.active')?.getAttribute('data-mode');
   if (!activeMode || !MULTI_LANG_MODES.has(activeMode)) return [];
   const primary = currentLangValue();

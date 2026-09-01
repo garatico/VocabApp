@@ -19,8 +19,14 @@
 }
 
 /* ── Testing Profiles popover — preset-picker.ts ──
-   Same .list-picker-popover shell; these are its own row/save-row shapes. */
-.preset-picker-popover { min-width: 220px; }
+   Same .list-picker-popover shell; these are its own row/save-row shapes.
+   Wider than the base 260px cap — a profile name is free-text and often
+   longer than a list name, and the base cap was clipping it via
+   .preset-picker-apply's ellipsis even at a readable window width. */
+.preset-picker-popover {
+  min-width: 220px;
+  max-width: min(360px, calc(100vw - 8px));
+}
 
 .preset-picker-row { padding: 0; gap: 0; }
 .preset-picker-apply {

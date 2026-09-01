@@ -7,6 +7,7 @@
  */
 
 import { logger } from './logger.ts';
+import { isPackagedApp } from '../data/vocab-source.ts';
 
 const SW_URL = '/sw.js';
 
@@ -28,8 +29,19 @@ function showOfflineBar(): void {
   offlineBar = document.createElement('div');
   offlineBar.className = 'pwa-offline-bar';
   offlineBar.setAttribute('role', 'status');
-  offlineBar.textContent =
+
+  const msg = document.createElement('span');
+  msg.textContent =
     'Offline — your lists and progress still work. Vocabulary you have already loaded is available.';
+
+  const dismiss = document.createElement('button');
+  dismiss.type      = 'button';
+  dismiss.className = 'pwa-offline-dismiss';
+  dismiss.title     = 'Dismiss';
+  dismiss.textContent = '×';
+  dismiss.addEventListener('click', () => hideOfflineBar());
+
+  offlineBar.append(msg, dismiss);
   document.body.appendChild(offlineBar);
 }
 
@@ -38,7 +50,14 @@ function hideOfflineBar(): void {
   offlineBar = null;
 }
 
+/**
+ * A packaged Tauri/Capacitor build is entirely local — vocab is bundled, see
+ * vocab-source.ts's isPackagedApp() — so it never depends on network at all.
+ * Reporting "offline" there would be alarming and wrong: nothing about the
+ * app actually stopped working just because the OS lost connectivity.
+ */
 function bindConnectivity(): void {
+  if (isPackagedApp()) return;
   window.addEventListener('offline', showOfflineBar);
   window.addEventListener('online',  hideOfflineBar);
   if (!navigator.onLine) showOfflineBar();
