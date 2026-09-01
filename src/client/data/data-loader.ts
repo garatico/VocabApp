@@ -10,7 +10,7 @@ import { loadVocab } from './vocab-source.ts';
 import { showLoading, hideLoading, showErrorMessage } from '../ui/ui.js';
 import { logger } from '../utils/logger.js';
 import { capitalize } from '../utils/utils.js';
-import { getUserWords, toWord } from './user-content.ts';
+import { getUserWords, toWord, applyWordOverride } from './user-content.ts';
 
 
 const cache: Record<string, Word[]> = {};
@@ -34,16 +34,36 @@ function formatBytes(bytes: number): string {
 }
 
 /**
- * Merges in words added on the My Content tab (see data/user-content.ts) —
- * done here rather than folded into `cache`, so a word added after this
- * language was first loaded shows up on the next call instead of needing a
- * full reload. The vocabulary fetch itself is still cached below; only this
- * cheap merge re-runs every call.
+ * The vocabulary for `lang` plus words added on the My Content tab, before
+ * any My Content word override (see data/user-content.ts's WordOverride) is
+ * applied — what My Content's own word editor needs to show the *true*
+ * original values (including glosses hidden by an existing override), so
+ * hiding something is never a one-way door. Every other caller should use
+ * `loadWords` below instead.
  */
-export async function loadWords(lang: string): Promise<Word[]> {
+export async function loadRawWords(lang: string): Promise<Word[]> {
   const words = await loadCachedVocab(lang);
   const userWords = getUserWords(lang).map(toWord);
   return userWords.length ? [...userWords, ...words] : words;
+}
+
+/**
+ * `loadRawWords` with any My Content word override applied — done here
+ * rather than folded into `cache`, so a word added, or an override changed,
+ * after this language was first loaded shows up on the next call instead of
+ * needing a full reload. The vocabulary fetch itself is still cached below;
+ * only this cheap merge and per-word override application re-run every call.
+ *
+ * This is the one place every client-side consumer of a Word's translation,
+ * pos, notes, domains or glosses — table mode, multiple-choice, tooltips, My
+ * Lists — ultimately reads from, so applying the override here propagates
+ * everywhere at once rather than needing each mode to re-check for one
+ * itself. (The real admin panel reads straight from the server and never
+ * calls this, by design — see user-content.ts's own header.)
+ */
+export async function loadWords(lang: string): Promise<Word[]> {
+  const words = await loadRawWords(lang);
+  return words.map(w => applyWordOverride(lang, w));
 }
 
 async function loadCachedVocab(lang: string): Promise<Word[]> {

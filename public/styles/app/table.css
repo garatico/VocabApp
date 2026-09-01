@@ -104,6 +104,7 @@
   align-items: center;
   gap: 0.25rem;
 }
+.timer-group[hidden] { display: none; }
 .timer-btn {
   background: none;
   border: 1px solid var(--border);

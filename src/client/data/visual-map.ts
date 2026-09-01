@@ -520,6 +520,35 @@ export function getFallbackImageUrl(lang: string, word: string): string | null {
   return _imageUrl[norm(word)] ?? null;
 }
 
+/**
+ * The distinct photos bundled under `data/images/` — one entry per file, not
+ * per word, since several words in IMAGES (pescado/pez/atun) point at the
+ * same picture. This backs My Content's "choose a stock image" picker: a
+ * gallery of every photo already shipped with the app, so a learner can set
+ * one as a word's canonical picture without needing a URL or a file of their
+ * own. The label is the filename stem, title-cased, since that is the only
+ * name these files carry.
+ */
+export interface StockImage { url: string; label: string }
+
+let _stockImages: StockImage[] | null = null;
+
+export function getStockImages(): StockImage[] {
+  if (_stockImages) return _stockImages;
+  const seen = new Set<string>();
+  const out: StockImage[] = [];
+  for (const url of Object.values(IMAGES)) {
+    if (seen.has(url)) continue;
+    seen.add(url);
+    const stem = url.slice(url.lastIndexOf('/') + 1).replace(/\.[a-z0-9]+$/i, '');
+    const label = stem.replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    out.push({ url, label });
+  }
+  out.sort((a, b) => a.label.localeCompare(b.label));
+  _stockImages = out;
+  return out;
+}
+
 export { CONCEPTS };
 
 
