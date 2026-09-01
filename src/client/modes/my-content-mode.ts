@@ -1036,11 +1036,11 @@ function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
     opts.onSelect(lang, match);
   }
 
-  langSelect.addEventListener('change', () => { lang = langSelect.value; loadLang(); });
+  langSelect.addEventListener('change', () => { lang = langSelect.value; void loadLang(); });
   searchInput.addEventListener('input', () => renderResults(searchInput.value.trim()));
 
   wrap.append(langRow, searchInput, resultsList);
-  loadLang();
+  void loadLang();
 
   return { wrap, getLang: () => lang, refreshResults: () => renderResults(searchInput.value.trim()), openWord };
 }
