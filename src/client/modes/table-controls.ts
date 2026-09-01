@@ -18,7 +18,7 @@ import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summ
 import { readString, writeString } from '../utils/storage.ts';
 import {
   saveSession, recordOutcome, orderWords, getWordOrderLabels,
-  type WordOrder,
+  type WordOrder, type WordOrderSortBy,
 } from '../utils/session-history.ts';
 import { buildScorePills, scorePct }     from '../ui/score-pills.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
@@ -110,9 +110,24 @@ function syncTimerToggleIcon(): void {
   btn.title = running ? 'Pause timer' : 'Resume timer';
   btn.setAttribute('aria-label', running ? 'Pause timer' : 'Resume timer');
 }
+
+/** Grey out the timer's Start/Pause and Reset buttons once the quiz is no
+ *  longer active (Give Up) — re-enabled by the next startTableQuiz(). */
+function setTimerControlsEnabled(enabled: boolean): void {
+  const toggle = document.getElementById('tableTimerToggle') as HTMLButtonElement | null;
+  const reset  = document.getElementById('tableTimerReset')  as HTMLButtonElement | null;
+  if (toggle) toggle.disabled = !enabled;
+  if (reset)  reset.disabled  = !enabled;
+}
 let sessionRecorded                        = false;
 let wordOrder: WordOrder =
   (readString('vq_table_order') as WordOrder | null) ?? 'rank';
+// Shared with table-recall-mode.ts's own toggle — same storage key, so
+// picking a side there or here carries over to the other style. Only
+// 'alpha' order reads this, but it's stored/restored regardless, same as
+// wordOrder itself, so picking it once sticks across sessions.
+let sortBy: WordOrderSortBy =
+  (readString('vq_table_order_sortby') as WordOrderSortBy | null) ?? 'word';
 
 export function getDirection(): TableDirection {
   return resolvedDirection;
@@ -469,7 +484,7 @@ export function startTableQuiz({
   // 'words I keep missing' mean the same thing in both. Resolved per word so
   // a Compare-mode list (mixed languages) still reads each word's own miss
   // tally rather than one language's.
-  allWords         = orderWords(words, wordOrder, w => w.language ?? lang);
+  allWords         = orderWords(words, wordOrder, w => w.language ?? lang, sortBy);
   quizColumns      = columns;
   quizLang         = lang;
   resolvedDirection = direction;
@@ -479,6 +494,7 @@ export function startTableQuiz({
   getStopwatch().start();
   syncTimerToggleIcon();
   syncTimerVisibility();
+  setTimerControlsEnabled(true);
   startTimedQuizWatch();
   sessionRecorded  = false;
   lastMissedWords   = [];
@@ -554,6 +570,9 @@ function giveUpAll(): CheckResult[] {
 function performGiveUp(): void {
   if (allWords.length === 0) return;
   stopTimedQuizWatch();
+  getStopwatch().stop();
+  syncTimerToggleIcon();
+  setTimerControlsEnabled(false);
   const results = giveUpAll();
 
   // giveUpAll() pushes exactly one result per word, in allWords order — zip
@@ -757,11 +776,33 @@ export function bindTableControls(): void {
       writeString('vq_table_order', wordOrder);
       if (allWords.length === 0) return;
       syncSessionState();
-      allWords  = orderWords(allWords, wordOrder, w => w.language ?? quizLang);
+      allWords  = orderWords(allWords, wordOrder, w => w.language ?? quizLang, sortBy);
       pageIndex = 0;
       renderCurrentPage();
     });
   }
+
+  // Which side's spelling "A → Z" alphabetizes by — meaningless for the
+  // other four orders, so it only visibly does anything once Order is set to
+  // A → Z, but stays present rather than popping in/out (see
+  // table-recall-mode.ts's own copy of this toggle, which this mirrors).
+  const sortByToggle = document.getElementById('tableSortByToggle');
+  sortByToggle?.querySelectorAll<HTMLButtonElement>('.sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.sortby === sortBy);
+  });
+  sortByToggle?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn?.dataset.sortby || btn.dataset.sortby === sortBy) return;
+    sortByToggle.querySelectorAll('.sort-order-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    sortBy = btn.dataset.sortby as WordOrderSortBy;
+    writeString('vq_table_order_sortby', sortBy);
+    if (allWords.length === 0 || wordOrder !== 'alpha') return;
+    syncSessionState();
+    allWords  = orderWords(allWords, wordOrder, w => w.language ?? quizLang, sortBy);
+    pageIndex = 0;
+    renderCurrentPage();
+  });
 
   // Page jump dropdown (top and bottom)
   ['tablePagerSelectTop', 'tablePagerSelectBottom'].forEach(id => {

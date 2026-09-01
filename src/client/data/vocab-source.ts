@@ -125,9 +125,12 @@ const API_RETRY_DELAYS_MS = [1000, 3000, 6000, 12000, 20000];
  * immediately.
  *
  * Checked lazily rather than cached at module load so tests can stub the
- * relevant global before calling loadVocab.
+ * relevant global before calling loadVocab. Exported for pwa.ts, which needs
+ * the same "no server, no network, don't bother" signal to skip the offline
+ * indicator in a packaged build — vocab there is bundled and never needs
+ * connectivity at all.
  */
-function isPackagedApp(): boolean {
+export function isPackagedApp(): boolean {
   const g = globalThis as typeof globalThis & {
     __TAURI_INTERNALS__?: unknown;
     __TAURI__?: unknown;

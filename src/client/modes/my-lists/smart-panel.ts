@@ -168,8 +168,8 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
     ['yes', 'Due Now'], ['any', 'Either'],
   ], rule.due ?? 'any', v => { rule.due = v as SmartRule['due']; }));
   editor.appendChild(selectRow('Limit', [
-    ['25', 'Top 25'], ['50', 'Top 50'], ['100', 'Top 100'],
-    ['250', 'Top 250'], ['0', 'No Limit'],
+    ['25', '25 Most Common'], ['50', '50 Most Common'], ['100', '100 Most Common'],
+    ['250', '250 Most Common'], ['0', 'No Limit'],
   ], String(rule.limit), v => { rule.limit = Number(v); }));
   editor.appendChild(selectRow('Order', [
     ['rank', 'Most Frequent First'], ['alpha', 'A → Z'],

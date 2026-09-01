@@ -26,7 +26,7 @@ import { LANGUAGES, isoCode, supportsConjugation,
          conjugationUnavailableReason }          from './data/languages.ts';
 import { availableLanguages }                    from './data/vocab-source.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
-import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, refreshStreakReadouts } from './settings.ts';
+import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, setOnKidFriendlyModeChange, refreshStreakReadouts } from './settings.ts';
 import { onActivity } from './utils/streak.ts';
 import { showToast } from './ui/toast.ts';
 import { applyTranslations } from './i18n/index.ts';
@@ -139,6 +139,10 @@ function updateLangPickerButton(): void {
  * it.
  */
 function getExtraLanguages(): string[] {
+  // Kid-Friendly Mode hides the "+ Languages" picker (data-kid-hide) but
+  // must also stop an already-picked extra language from silently still
+  // merging in — same reasoning as class-filter.ts's getSelectedClasses().
+  if (Settings.getKidFriendlyMode()) return [];
   const activeMode = document.querySelector('.mode-tab.active')?.getAttribute('data-mode');
   if (!activeMode || !MULTI_LANG_MODES.has(activeMode)) return [];
   const primary = langSelect?.value;
@@ -231,7 +235,11 @@ function refreshConjEstimate(): void {
   }
 
   const conjSizeSelect = document.getElementById('conjSizeSelect') as HTMLSelectElement | null;
-  const requested = conjSizeSelect?.value === 'max' ? Infinity : Number(conjSizeSelect?.value) || 100;
+  const requested = conjSizeSelect?.value === 'max'
+    ? Infinity
+    : conjSizeSelect?.value === 'custom'
+      ? Number((document.getElementById('conjSizeCustom') as HTMLInputElement)?.value) || 100
+      : Number(conjSizeSelect?.value) || 100;
 
   const extras   = getExtraLanguages();
   const fullLang = extras.length > 0 ? [lang, ...extras].join('+') : lang;
@@ -286,11 +294,43 @@ function syncConjugationAvailability(): void {
   }
 }
 
+/**
+ * Kid-Friendly Mode hides My Content and My Lists entirely for as long as
+ * it's on — unlike the mode's other two effects (Advanced mode off, swear
+ * filter on), which are one-time defaults the learner can still change back,
+ * these are meant to be out of reach the whole time this is on, not just
+ * disabled-but-visible the way syncConjugationAvailability() above handles a
+ * language that can't do Conjugation (where the tab staying visible-but-dead
+ * is the point — a kid poking around shouldn't find a tab that hints at
+ * something to unlock). My Lists is included because it's fundamentally
+ * about creating/organizing lists to filter by, and the POS/Lists/Domains
+ * filter boxes those lists would feed into are themselves hidden and
+ * disarmed under Kid-Friendly Mode (see class-filter.ts/domain-filter.ts/
+ * word-filters.ts's own getKidFriendlyMode() checks) — nothing left for the
+ * tab to do.
+ */
+function syncKidFriendlyLocks(): void {
+  const on = Settings.getKidFriendlyMode();
+  (['myContent', 'mylists'] as const).forEach(mode => {
+    const tab = document.querySelector<HTMLButtonElement>(`.mode-tab[data-mode="${mode}"]`);
+    if (!tab) return;
+    tab.hidden = on;
+    if (on && document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === mode) {
+      document.querySelector<HTMLElement>('.mode-tab[data-mode="table"]')?.click();
+    }
+  });
+}
+
 function restoreSettings(): void {
   if (langSelect) langSelect.value = S.get('vq_lang') ?? 'spanish';
   if (sizeSelect) { const v = S.get('vq_size'); if (v) sizeSelect.value = v; }
   const conjSizeSelect = document.getElementById('conjSizeSelect') as HTMLSelectElement | null;
   if (conjSizeSelect) { const v = S.get('vq_conj_size'); if (v) conjSizeSelect.value = v; }
+  const conjSizeCustom = document.getElementById('conjSizeCustom') as HTMLInputElement | null;
+  if (conjSizeCustom && conjSizeSelect?.value === 'custom') {
+    conjSizeCustom.value         = S.get('vq_conj_size_custom') ?? '';
+    conjSizeCustom.style.display = 'inline-block';
+  }
   const conjRandomTableSize = document.getElementById('conjRandomTableSize') as HTMLSelectElement | null;
   if (conjRandomTableSize) { const v = S.get('vq_conj_random_table_size'); if (v) conjRandomTableSize.value = v; }
   const conjRandomTableSizeCustom = document.getElementById('conjRandomTableSizeCustom') as HTMLInputElement | null;
@@ -652,7 +692,11 @@ bindStartHandler({
   getSize: () => {
     if (getCurrentMode() === 'conjugation') {
       const conjSizeSelect = document.getElementById('conjSizeSelect') as HTMLSelectElement | null;
-      return conjSizeSelect?.value === 'max' ? Infinity : Number(conjSizeSelect?.value) || 100;
+      return conjSizeSelect?.value === 'max'
+        ? Infinity
+        : conjSizeSelect?.value === 'custom'
+          ? Number((document.getElementById('conjSizeCustom') as HTMLInputElement)?.value) || 100
+          : Number(conjSizeSelect?.value) || 100;
     }
     if (getPoolMode() !== 'topn') return Infinity;
     return sizeSelect?.value === 'max'
@@ -742,8 +786,17 @@ sizeSelect?.addEventListener('change', () => {
 });
 
 const conjSizeSelectEl = document.getElementById('conjSizeSelect') as HTMLSelectElement | null;
+const conjSizeCustomEl = document.getElementById('conjSizeCustom') as HTMLInputElement | null;
 conjSizeSelectEl?.addEventListener('change', () => {
   S.set('vq_conj_size', conjSizeSelectEl.value);
+  if (conjSizeCustomEl) {
+    conjSizeCustomEl.style.display = conjSizeSelectEl.value === 'custom' ? 'inline-block' : 'none';
+    if (conjSizeSelectEl.value === 'custom') conjSizeCustomEl.focus();
+  }
+  refreshConjEstimate();
+});
+conjSizeCustomEl?.addEventListener('input', () => {
+  S.set('vq_conj_size_custom', conjSizeCustomEl.value);
   refreshConjEstimate();
 });
 
@@ -991,6 +1044,8 @@ void (async function init(): Promise<void> {
   buildLanguageOptions(); // must precede restoreSettings — it sets .value
   restoreSettings();
   syncConjugationAvailability();
+  syncKidFriendlyLocks();
+  setOnKidFriendlyModeChange(syncKidFriendlyLocks);
   bindUIState();
   bindClassFilter();
   bindDomainFilter();

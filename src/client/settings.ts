@@ -123,10 +123,27 @@ export const Settings = {
     return Number.isFinite(n) && n > 0 ? n : Infinity;
   },
 
+  /**
+   * Starting default for Conjugation's Grid/Full Conjugation "Per Page"
+   * control (conjugation/index.ts's CONJ_PAGE_SIZES: 5/10/25/50) — read only
+   * until a quiz's own selector has ever been changed, at which point that
+   * choice (vq_conj_page_size) takes over. Not the live pagination size
+   * itself, unlike getTablePageSize.
+   */
+  getConjPageSize: (): number => {
+    const raw = get('conj_page_size', '10');
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : 10;
+  },
+
   /** On by default — off hides the clock and its start/pause/reset controls.
    *  Time is still tracked underneath (session history, goals) either way;
    *  this only controls whether it's shown. */
   getShowTimer: (): boolean => get('table_show_timer', 'true') === 'true',
+
+  /** Conjugation's own copy of getShowTimer — independent so a learner can
+   *  hide the clock in one mode without losing it in the other. */
+  getConjShowTimer: (): boolean => get('conj_show_timer', 'true') === 'true',
 
   /** Whether Table mode is a race against the clock — when the limit is hit,
    *  the quiz ends and reveals whatever's left, same as clicking Give Up. */
@@ -201,6 +218,15 @@ export const Settings = {
    * deliberate choice, not a silent change to what a returning user sees.
    */
   getSwearFilterEnabled: (): boolean => get('swear_filter_enabled', 'false') === 'true',
+
+  /**
+   * Whole-app toggle for a kid, or anyone trying the app for the first time.
+   * Turning it on is a one-time nudge (not a permanent lock) for Advanced
+   * mode and the swear filter — see the click handler in bindSettings() —
+   * and, unlike those two, actively locks My Content against edits for as
+   * long as it stays on (see app.ts's syncKidFriendlyLocks()).
+   */
+  getKidFriendlyMode: (): boolean => get('kid_friendly_mode', 'false') === 'true',
 
   /**
    * Which visual categories Picture Quiz is allowed to draw from — Wikipedia
@@ -414,12 +440,29 @@ export function setOnPageSizeChange(fn: () => void): void {
   onPageSizeChange = fn;
 }
 
-/** Notified when the "Show timer" toggle changes, so a quiz already on
- *  screen shows/hides the clock immediately rather than only on next visit. */
-let onShowTimerChange: (() => void) | null = null;
+/**
+ * Notified when the "Show timer" toggle changes, so a quiz already on screen
+ * shows/hides the clock immediately rather than only on next visit.
+ *
+ * A list, not a single slot — Table and Conjugation each have their own
+ * timer group and each register their own sync function; a single slot would
+ * mean whichever mode registered last silently stole the callback from the
+ * other, which used to be exactly this bug the first time Conjugation ever
+ * called this.
+ */
+const onShowTimerChangeListeners: (() => void)[] = [];
 
 export function setOnShowTimerChange(fn: () => void): void {
-  onShowTimerChange = fn;
+  onShowTimerChangeListeners.push(fn);
+}
+
+/** Notified when Kid-Friendly Mode changes, so app.ts can lock/unlock My
+ *  Content immediately rather than only on next visit. A list for the same
+ *  reason as onShowTimerChangeListeners above. */
+const onKidFriendlyModeChangeListeners: (() => void)[] = [];
+
+export function setOnKidFriendlyModeChange(fn: () => void): void {
+  onKidFriendlyModeChangeListeners.push(fn);
 }
 
 /**
@@ -508,13 +551,35 @@ export function bindSettings(): void {
     onPageSizeChange?.();
   });
 
+  // Verbs per page (conjugation mode) — just a starting default, so no live
+  // re-paginate hook the way Table's above has; a quiz already on screen
+  // reads its own vq_conj_page_size, not this.
+  document.getElementById('settingConjPageSize')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingConjPageSize', btn);
+    set('conj_page_size', btn.dataset.pagesize ?? '10');
+  });
+
   // Show timer
   document.getElementById('settingShowTimer')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
     if (!btn) return;
     activateToggle('settingShowTimer', btn);
     set('table_show_timer', btn.dataset.show ?? 'true');
-    onShowTimerChange?.();
+    onShowTimerChangeListeners.forEach(fn => fn());
+  });
+
+  // Show timer — Conjugation's own, independent of Table's above. Both
+  // modes' sync functions are on the same listener list and just re-read
+  // their own setting when notified, so either toggle changing notifies both
+  // harmlessly.
+  document.getElementById('settingConjShowTimer')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingConjShowTimer', btn);
+    set('conj_show_timer', btn.dataset.show ?? 'true');
+    onShowTimerChangeListeners.forEach(fn => fn());
   });
 
   // Timed quiz — on/off, plus the minutes input it reveals
@@ -691,6 +756,56 @@ export function bindSettings(): void {
       const el = document.getElementById(id);
       if (el) el.hidden = !enabled;
     });
+  });
+
+  // Kid-Friendly Mode — a one-time nudge for Advanced mode/the swear filter
+  // and every quiz-mode control below (the learner can still change any of
+  // them back while it's on — this only sets them, it doesn't lock them),
+  // plus an ongoing lock on My Content (app.ts, via
+  // setOnKidFriendlyModeChange). The controls this simplifies are hidden by
+  // settings.css's `body.kid-friendly-mode [data-kid-hide]` rule; forcing
+  // their *value* here (real clicks on the real buttons, so each control's
+  // own existing handler does the actual work — same technique
+  // presets.ts's applyWords()/applyConjugation() already use) is what keeps
+  // a hidden toggle from silently leaving whatever was picked before kid
+  // mode went on.
+  document.getElementById('settingKidMode')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingKidMode', btn);
+    const on = btn.dataset.kidMode === 'true';
+    set('kid_friendly_mode', String(on));
+    document.body.classList.toggle('kid-friendly-mode', on);
+
+    if (on) {
+      set('advanced_mode', 'false');
+      document.body.classList.toggle('advanced-mode', false);
+      document.querySelectorAll<HTMLElement>('#settingAdvancedMode .sort-order-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.advancedMode === 'false');
+      });
+
+      set('swear_filter_enabled', 'true');
+      document.querySelectorAll<HTMLElement>('#settingSwearFilter .sort-order-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.swear === 'true');
+      });
+
+      document.querySelector<HTMLButtonElement>('#directionToggle .conj-toggle-btn[data-direction="target-en"]')?.click();
+      document.querySelector<HTMLButtonElement>('#tableStyleToggle .conj-toggle-btn[data-style="standard"]')?.click();
+      document.querySelector<HTMLButtonElement>('#pictureSubMode .conj-toggle-btn[data-mode="click"]')?.click();
+      document.querySelector<HTMLButtonElement>('#triviaDifficulty .conj-toggle-btn[data-difficulty="easy"]')?.click();
+      document.querySelector<HTMLButtonElement>('#triviaReadingDifficulty .conj-toggle-btn[data-reading-difficulty="easy"]')?.click();
+      document.querySelector<HTMLButtonElement>('#triviaReadingLength .conj-toggle-btn[data-reading-length="short"]')?.click();
+      document.querySelector<HTMLButtonElement>('#guessBlankDifficulty .conj-toggle-btn[data-difficulty="easy"]')?.click();
+      document.querySelector<HTMLButtonElement>('#conjViewToggle .conj-toggle-btn[data-view="grid"]')?.click();
+      document.getElementById('conjRegAll')?.click();
+      // Skip Known relies on the Lists filter, which Kid-Friendly Mode
+      // disarms outright (see word-filters.ts's own getKidFriendlyMode()
+      // check) — leaving Skip Known selectable would offer a control that
+      // silently does nothing.
+      document.querySelector<HTMLButtonElement>('#sizeModeToggle .sort-order-btn[data-mode="window"]')?.click();
+    }
+
+    onKidFriendlyModeChangeListeners.forEach(fn => fn());
   });
 
   // Advanced mode — shows/hides every [data-advanced] row and section
@@ -963,10 +1078,22 @@ function restoreSettingsUI(): void {
     b.classList.toggle('active', b.dataset.pagesize === savedPageSize);
   });
 
+  // Verbs per page (conjugation mode)
+  const savedConjPageSize = get('conj_page_size', '10');
+  document.querySelectorAll<HTMLElement>('#settingConjPageSize .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.pagesize === savedConjPageSize);
+  });
+
   // Show timer
   const savedShowTimer = get('table_show_timer', 'true');
   document.querySelectorAll<HTMLElement>('#settingShowTimer .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.show === savedShowTimer);
+  });
+
+  // Show timer — Conjugation
+  const savedConjShowTimer = get('conj_show_timer', 'true');
+  document.querySelectorAll<HTMLElement>('#settingConjShowTimer .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedConjShowTimer);
   });
 
   // Timed quiz
@@ -1090,6 +1217,13 @@ function restoreSettingsUI(): void {
     b.classList.toggle('active', b.dataset.advancedMode === savedAdvanced);
   });
   document.body.classList.toggle('advanced-mode', savedAdvanced === 'true');
+
+  // Kid-Friendly Mode
+  const savedKidMode = get('kid_friendly_mode', 'false');
+  document.querySelectorAll<HTMLElement>('#settingKidMode .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.kidMode === savedKidMode);
+  });
+  document.body.classList.toggle('kid-friendly-mode', savedKidMode === 'true');
 
   // Session history
   const savedHistory = get('history_enabled', 'true');

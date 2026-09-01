@@ -17,6 +17,18 @@ body:not(.advanced-mode) [data-advanced="true"] {
   display: none;
 }
 
+/* ── Kid-Friendly Mode — hides the controls settings.ts's kid-mode click
+   handler also forces to their simplest value (Direction, Table's Quiz
+   Style, Picture's sub-mode, Conjugation's View, Trivia's Difficulty/
+   Reading toggles, Guess the Blank's Difficulty, Regularity, Testing
+   Profiles, the POS/Lists/Domains filter boxes). `!important` because most
+   of these elements' visibility is also driven by ui-state.ts's own inline
+   `style.display` toggling per active mode — a plain class rule loses to an
+   inline style regardless of selector specificity. */
+body.kid-friendly-mode [data-kid-hide="true"] {
+  display: none !important;
+}
+
 /* ── Side nav + section list + toolbar, side by side ── */
 .settings-layout {
   display: flex;

@@ -227,6 +227,11 @@
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--focus-ring);
 }
+.mc-textarea {
+  resize: vertical;
+  min-height: 3.2rem;
+  line-height: 1.4;
+}
 
 /* ── Per-language rows — one per app language, in every add form, so which
    language an input belongs to is never ambiguous and several can be
@@ -268,6 +273,13 @@
 .mc-lang-row-inputs {
   display: flex;
   gap: 0.5rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.mc-lang-row-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
   flex: 1 1 auto;
   min-width: 0;
 }

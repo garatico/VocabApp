@@ -368,8 +368,11 @@ function populateTooltip(word: Word, revealed: boolean, lang: string, hideWordWh
 
 export interface AttachTooltipOptions {
   /** When true, replaces the word heading with '???' until the card is solved.
-   *  Use in picture mode where the word itself is what the user is guessing. */
-  hideWordWhenUnrevealed?: boolean;
+   *  Use in picture mode where the word itself is what the user is guessing.
+   *  A function instead decides per element — table mode's Meaning→Word
+   *  direction is per-row (mixed direction randomizes it per word), so one
+   *  container-wide boolean can't say it for every hovered element. */
+  hideWordWhenUnrevealed?: boolean | ((el: HTMLElement) => boolean);
 }
 
 export function attachTooltips(container: HTMLElement, opts: AttachTooltipOptions = {}): void {
@@ -383,8 +386,11 @@ export function attachTooltips(container: HTMLElement, opts: AttachTooltipOption
         const word     = JSON.parse(el.dataset.wordJson!) as Word; // element selected by [data-word-json], so attribute is always present
         const revealed = isWordRevealed(el);
         const lang     = getLang();
+        const hideWord = typeof opts.hideWordWhenUnrevealed === 'function'
+          ? opts.hideWordWhenUnrevealed(el)
+          : opts.hideWordWhenUnrevealed;
         lastAnchor     = el;
-        populateTooltip(word, revealed, lang, opts.hideWordWhenUnrevealed);
+        populateTooltip(word, revealed, lang, hideWord);
         positionTooltip();
         getTooltip().classList.add('visible');
       } catch (e) {

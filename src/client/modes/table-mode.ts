@@ -284,6 +284,12 @@ export function renderTableMode({
         wordDiv.textContent = labelText(w, dir);
         wordDiv.classList.add('spanish-word');
         wordDiv.dataset.wordJson = JSON.stringify(w);
+        // Read by attachTooltips below: in en-target direction the visible
+        // cell shows the English prompt, so word.word (the tooltip heading)
+        // is itself the answer being tested and must stay hidden until
+        // solved — mixed direction resolves this per word via `dir`, same
+        // as the cell's own text does.
+        wordDiv.dataset.dir = dir;
         tdWord.appendChild(wordDiv);
 
         const inp        = document.createElement('input');
@@ -425,7 +431,7 @@ export function renderTableMode({
     }
 
     container.appendChild(table);
-    attachTooltips(container);
+    attachTooltips(container, { hideWordWhenUnrevealed: el => el.dataset.dir === 'en-target' });
     updateProgress();
 
     // Auto-focus first unanswered input

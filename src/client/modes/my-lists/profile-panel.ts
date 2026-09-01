@@ -34,16 +34,16 @@ const DEFAULT_WORDS: WordsBundle = {
 };
 
 const POOL_MODE_OPTIONS: { value: WordsBundle['poolMode']; label: string }[] = [
-  { value: 'topn',  label: 'Top N' },
+  { value: 'topn',  label: 'Most Common' },
   { value: 'range', label: 'Rank Range' },
   { value: 'band',  label: 'Level' },
 ];
 
 const SIZE_OPTIONS: { value: string; label: string }[] = [
-  { value: '100',  label: 'Top 100' },
-  { value: '250',  label: 'Top 250' },
-  { value: '500',  label: 'Top 500' },
-  { value: '1000', label: 'Top 1000' },
+  { value: '100',  label: '100 Most Common' },
+  { value: '250',  label: '250 Most Common' },
+  { value: '500',  label: '500 Most Common' },
+  { value: '1000', label: '1000 Most Common' },
   { value: 'max',  label: 'Max' },
 ];
 
@@ -61,15 +61,17 @@ const QUIZ_STYLE_OPTIONS: { value: string; label: string }[] = [
  *  activeRegularities() falling back to every bucket. */
 const DEFAULT_CONJUGATION: ConjugationBundle = {
   tenses: [], regularities: ['regular', 'ortho', 'stem', 'irregular'],
-  view: 'grid', verbsSize: '100',
+  view: 'grid', verbsSize: '100', verbsSizeCustom: '',
 };
 
 const VERBS_SIZE_OPTIONS: { value: string; label: string }[] = [
-  { value: '25',  label: 'Top 25' },
-  { value: '50',  label: 'Top 50' },
-  { value: '100', label: 'Top 100' },
-  { value: '250', label: 'Top 250' },
-  { value: '500', label: 'Top 500' },
+  { value: '5',   label: '5 Most Common' },
+  { value: '10',  label: '10 Most Common' },
+  { value: '25',  label: '25 Most Common' },
+  { value: '50',  label: '50 Most Common' },
+  { value: '100', label: '100 Most Common' },
+  { value: '250', label: '250 Most Common' },
+  { value: '500', label: '500 Most Common' },
   { value: 'max', label: 'All Verbs' },
 ];
 
@@ -512,10 +514,22 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
       opt.value = value; opt.textContent = label; opt.selected = conj.verbsSize === value;
       verbsSelectEl.appendChild(opt);
     });
+    const verbsCustomOpt = document.createElement('option');
+    verbsCustomOpt.value = 'custom'; verbsCustomOpt.textContent = 'Custom…'; verbsCustomOpt.selected = conj.verbsSize === 'custom';
+    verbsSelectEl.appendChild(verbsCustomOpt);
     verbsSelectEl.addEventListener('change', () => {
       persist({ ...bundle, conjugation: { ...conj, verbsSize: verbsSelectEl.value } });
     });
     verbsRow.appendChild(verbsSelectEl);
+
+    if (conj.verbsSize === 'custom') {
+      const verbsCustomInput = document.createElement('input');
+      verbsCustomInput.type = 'number'; verbsCustomInput.min = '1'; verbsCustomInput.className = 'ml-profile-editor-number';
+      verbsCustomInput.placeholder = 'e.g. 750';
+      verbsCustomInput.value = conj.verbsSizeCustom;
+      verbsCustomInput.addEventListener('change', () => persist({ ...bundle, conjugation: { ...conj, verbsSizeCustom: verbsCustomInput.value } }));
+      verbsRow.appendChild(verbsCustomInput);
+    }
     const verbsSection = section('Verbs', null, verbsRow);
 
     // Same classes + data-tense the live #conjTenseChips row uses (see

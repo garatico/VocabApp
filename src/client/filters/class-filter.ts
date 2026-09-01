@@ -137,6 +137,14 @@ export const copyStateForTest = copyState;
  * meaning in one place: empty has always meant "do not narrow".
  */
 export function getSelectedClasses(): string[] {
+  // Kid-Friendly Mode hides this filter's box (data-kid-hide) but must also
+  // stop it from silently still narrowing the pool with whatever was
+  // selected before it went on — same reasoning as the per-mode hide check
+  // right below, just app-wide instead of per-mode. Checked here rather than
+  // cleared at the point kid mode is toggled on, so switching to a language
+  // whose filter was left active doesn't reopen the hole, and turning kid
+  // mode back off instantly restores the exact prior selection.
+  if (Settings.getKidFriendlyMode()) return [];
   if (Settings.getHidePOSFilter(getCurrentMode())) return [];
   const state = getState();
   if (!state.active || state.selected.length === 0) return [];

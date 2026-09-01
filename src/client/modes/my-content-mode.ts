@@ -30,6 +30,7 @@
 import {
   getUserWords, addUserWord, removeUserWord, type UserWord,
   getUserTriviaQuestions, addUserTriviaQuestion, removeUserTriviaQuestion,
+  getUserGuessBlankQuestions, addUserGuessBlankQuestion, removeUserGuessBlankQuestion,
   getPictureOverrides, getPictureOverride, setPictureOverride, removePictureOverride,
   isImageOverride,
   getWordOverrides, getWordOverride, type WordOverride,
@@ -37,6 +38,7 @@ import {
   downloadUserContent, applyUserContentImport,
 } from '../data/user-content.ts';
 import type { TriviaQuestion, TriviaCategory, TriviaDifficulty, ReadingDifficulty, ReadingLength, AnswerType } from '../data/trivia-questions.ts';
+import type { GuessBlankQuestion, BlankCategory, BlankDifficulty } from '../data/guess-blank-questions.ts';
 import { LANGUAGES, type LanguageInfo } from '../data/languages.ts';
 import { getStockImages, getFallbackImageUrl, getFallbackSvgUrl, getFallbackEmoji } from '../data/visual-map.ts';
 import { loadWords, loadRawWords } from '../data/data-loader.ts';
@@ -82,6 +84,81 @@ function selectInput(options: readonly string[], value?: string): HTMLSelectElem
 
 function csv(s: string): string[] {
   return s.split(',').map(x => x.trim()).filter(Boolean);
+}
+
+/** One example sentence per line, rather than comma-separated — a sentence
+ *  routinely contains commas of its own. */
+function lines(s: string): string[] {
+  return s.split('\n').map(x => x.trim()).filter(Boolean);
+}
+
+const WORD_DIFFICULTY_OPTIONS = ['', '1', '2', '3', '4', '5'] as const;
+
+function textArea(placeholder = '', value = ''): HTMLTextAreaElement {
+  const t = document.createElement('textarea');
+  t.className = 'mc-input mc-textarea';
+  t.rows = 2;
+  t.placeholder = placeholder;
+  t.value = value;
+  return t;
+}
+
+// ── Vocabulary CSV export ────────────────────────────────────────────────────
+//
+// A client-side twin of routes/admin/export.ts's CSV, built from loadWords()
+// (already-loaded, overrides-applied vocab) rather than a server query — the
+// packaged Tauri build has no Express behind it at all (vocab-source.ts), and
+// the real Admin panel is dev+localhost-gated regardless, so that route was
+// never reachable there. This one needs nothing but what the page already has.
+
+function csvEscape(v: unknown): string {
+  if (v == null) return '';
+  const s = String(v);
+  return (s.includes(',') || s.includes('"') || s.includes('\n'))
+    ? '"' + s.replace(/"/g, '""') + '"'
+    : s;
+}
+
+const VOCAB_CSV_HEADERS = [
+  'rank', 'word', 'translation', 'glosses', 'pos', 'difficulty', 'tags',
+  'notes', 'examples', 'ipa', 'frequency_band', 'gender', 'plural',
+  'infinitive', 'reflexive', 'register',
+];
+
+function buildVocabCsv(words: Word[]): string {
+  const lines = [VOCAB_CSV_HEADERS.join(',')];
+  for (const w of words) {
+    lines.push([
+      csvEscape(w.rank ?? ''),
+      csvEscape(w.word),
+      csvEscape(w.translation),
+      csvEscape(w.glosses.join('|')),
+      csvEscape(w.pos),
+      csvEscape(w.difficulty),
+      csvEscape(w.tags.join('|')),
+      csvEscape(w.notes),
+      csvEscape(w.examples.join('|')),
+      csvEscape(w.linguistic?.ipa),
+      csvEscape(w.frequency?.band),
+      csvEscape(w.linguistic?.gender),
+      csvEscape(w.linguistic?.plural),
+      csvEscape(w.linguistic?.infinitive),
+      csvEscape(w.linguistic?.reflexive ? 'true' : ''),
+      csvEscape(w.linguistic?.register),
+    ].join(','));
+  }
+  return lines.join('\n');
+}
+
+async function downloadVocabCsv(lang: string): Promise<void> {
+  const words = await loadWords(lang);
+  const blob  = new Blob([buildVocabCsv(words)], { type: 'text/csv;charset=utf-8' });
+  const url   = URL.createObjectURL(blob);
+  const a     = document.createElement('a');
+  a.href      = url;
+  a.download  = `${lang}_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
 // ── Language selection ──────────────────────────────────────────────────────
@@ -243,6 +320,10 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
   const exportBtn = el('button', 'mc-btn mc-btn--secondary', 'Download my content');
   exportBtn.type = 'button';
   exportBtn.addEventListener('click', () => downloadUserContent());
+  const exportCsvBtn = el('button', 'mc-btn mc-btn--secondary', 'Export vocabulary (CSV)');
+  exportCsvBtn.type = 'button';
+  exportCsvBtn.title = 'Download the current language\'s full vocabulary as CSV — works offline, no server needed';
+  exportCsvBtn.addEventListener('click', () => { void downloadVocabCsv(lang); });
   const importBtn = el('button', 'mc-btn mc-btn--secondary', 'Load a file…');
   importBtn.type = 'button';
   const importInput = el('input', undefined) as HTMLInputElement;
@@ -267,7 +348,7 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
     };
     reader.readAsText(file);
   });
-  backupRow.append(exportBtn, importBtn, importInput, importStatus);
+  backupRow.append(exportBtn, exportCsvBtn, importBtn, importInput, importStatus);
   header.appendChild(backupRow);
   wrap.appendChild(header);
 
@@ -281,6 +362,10 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
   wrap.appendChild(buildSection('trivia', 'Trivia Questions',
     'Added to the Trivia tab\'s question bank, and included in its Difficulty/Reading/Domain filters. Fill in the question and answer for whichever languages you\'re writing it in — each becomes its own entry in that language\'s bank.',
     buildTriviaSection(lang, selectedLangs, () => renderMyContent(container, lang))));
+
+  wrap.appendChild(buildSection('guessBlank', 'Guess the Blank Questions',
+    'Added to Guess the Blank\'s question bank. Write 2-4 clues per question, vaguest first — the mode reveals them one at a time as the learner asks for another hint.',
+    buildGuessBlankSection(lang, selectedLangs, () => renderMyContent(container, lang))));
 
   wrap.appendChild(buildSection('pictures', 'Pictures',
     'Search a language\'s vocabulary for words that already have a photo, icon or emoji, then choose which one Picture Quiz should show for that word. Words with none of their own can still get a custom picture — a pasted URL, an uploaded file, or a pick from the bundled photo library.',
@@ -316,11 +401,19 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>,
   const posI = selectInput(['', 'noun', 'verb', 'adjective', 'adverb', 'phrase', 'other']);
   const domainsI = textInput('e.g. animals, home (comma-separated)');
   const notesI = textInput('optional notes');
+  const difficultyI = selectInput(WORD_DIFFICULTY_OPTIONS);
+  const tagsI = textInput('comma-separated');
+  const synonymsI = textInput('comma-separated');
+  const antonymsI = textInput('comma-separated');
+  const examplesI = textArea('one example sentence per line — also what lets this word show up in Sentence Scramble');
   form.append(
     field('Translation (English)', transI), field('Part of speech', posI),
     field('Domains', domainsI), field('Notes', notesI),
+    field('Difficulty (1=easiest, 5=hardest)', difficultyI), field('Tags', tagsI),
+    field('Synonyms', synonymsI), field('Antonyms', antonymsI),
   );
   sub.appendChild(form);
+  sub.appendChild(field('Example sentences', examplesI));
 
   const { rows, values: wordInputs } = languageRows(currentLang, selectedLangs, info => {
     const input = textInput(`Word in ${info.label}`);
@@ -339,6 +432,9 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>,
       addUserWord(langName, {
         word, translation: transI.value.trim(),
         pos: posI.value || null, domains: csv(domainsI.value), notes: notesI.value.trim(),
+        difficulty: difficultyI.value ? Number(difficultyI.value) : null,
+        tags: csv(tagsI.value), synonyms: csv(synonymsI.value), antonyms: csv(antonymsI.value),
+        examples: lines(examplesI.value),
       });
       added++;
     }
@@ -425,6 +521,11 @@ function summarizeWordOverride(o: WordOverride): string {
   if (o.domains !== undefined) parts.push(o.domains.length ? `domains → ${o.domains.join(', ')}` : 'domains hidden');
   if (o.hiddenGlosses?.length) parts.push(`${o.hiddenGlosses.length} gloss${o.hiddenGlosses.length === 1 ? '' : 'es'} hidden`);
   if (o.glossOrder) parts.push('gloss order changed');
+  if (o.examples !== undefined) parts.push(o.examples.length ? `${o.examples.length} example${o.examples.length === 1 ? '' : 's'}` : 'examples cleared');
+  if (o.difficulty !== undefined) parts.push(o.difficulty ? `difficulty → ${o.difficulty}` : 'difficulty hidden');
+  if (o.tags !== undefined) parts.push(o.tags.length ? `tags → ${o.tags.join(', ')}` : 'tags hidden');
+  if (o.synonyms !== undefined) parts.push(o.synonyms.length ? `synonyms → ${o.synonyms.join(', ')}` : 'synonyms hidden');
+  if (o.antonyms !== undefined) parts.push(o.antonyms.length ? `antonyms → ${o.antonyms.join(', ')}` : 'antonyms hidden');
   return parts.join(' · ');
 }
 
@@ -495,11 +596,22 @@ function buildWordEditorSearchPanel(defaultLang: string, refresh: () => void): W
     const posI     = selectInput(WORD_POS_OPTIONS, override?.pos ?? w.pos ?? '');
     const notesI   = textInput('Notes', override?.notes ?? w.notes);
     const domainsI = textInput('e.g. animals, home (comma-separated)', (override?.domains ?? w.domains).join(', '));
+    const difficultyI = selectInput(WORD_DIFFICULTY_OPTIONS, String((override?.difficulty ?? w.difficulty) ?? ''));
+    const tagsI     = textInput('comma-separated', (override?.tags ?? w.tags).join(', '));
+    const synonymsI = textInput('comma-separated', (override?.synonyms ?? w.relations?.synonyms ?? []).join(', '));
+    const antonymsI = textInput('comma-separated', (override?.antonyms ?? w.relations?.antonyms ?? []).join(', '));
     fieldsForm.append(
       field('Translation', transI), field('Part of speech', posI),
       field('Notes', notesI), field('Domains', domainsI),
+      field('Difficulty (1=easiest, 5=hardest)', difficultyI), field('Tags', tagsI),
+      field('Synonyms', synonymsI), field('Antonyms', antonymsI),
     );
     detail.appendChild(fieldsForm);
+    const examplesI = textArea(
+      'one example sentence per line',
+      (override?.examples ?? w.examples).join('\n'),
+    );
+    detail.appendChild(field('Example sentences', examplesI));
 
     const saveBtn = el('button', 'mc-btn mc-btn--sm', 'Save changes');
     saveBtn.type = 'button';
@@ -520,6 +632,16 @@ function buildWordEditorSearchPanel(defaultLang: string, refresh: () => void): W
       if (newNotes !== w.notes) fields.notes = newNotes;
       const newDomains = csv(domainsI.value);
       if (JSON.stringify(newDomains) !== JSON.stringify(w.domains)) fields.domains = newDomains;
+      const newDifficulty = difficultyI.value ? Number(difficultyI.value) : null;
+      if (newDifficulty !== (w.difficulty ?? null)) fields.difficulty = newDifficulty;
+      const newTags = csv(tagsI.value);
+      if (JSON.stringify(newTags) !== JSON.stringify(w.tags)) fields.tags = newTags;
+      const newSynonyms = csv(synonymsI.value);
+      if (JSON.stringify(newSynonyms) !== JSON.stringify(w.relations?.synonyms ?? [])) fields.synonyms = newSynonyms;
+      const newAntonyms = csv(antonymsI.value);
+      if (JSON.stringify(newAntonyms) !== JSON.stringify(w.relations?.antonyms ?? [])) fields.antonyms = newAntonyms;
+      const newExamples = lines(examplesI.value);
+      if (JSON.stringify(newExamples) !== JSON.stringify(w.examples)) fields.examples = newExamples;
       setWordFields(lang, w.word, fields);
       afterChange();
     });
@@ -697,6 +819,92 @@ function buildTriviaRow(info: LanguageInfo, q: TriviaQuestion, refresh: () => vo
   const delBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm', 'Remove');
   delBtn.type = 'button';
   delBtn.addEventListener('click', () => { removeUserTriviaQuestion(info.name, q.id); refresh(); });
+  row.appendChild(delBtn);
+  return row;
+}
+
+// ── Guess the Blank questions ────────────────────────────────────────────────
+// Same shape as Trivia above, but a question here is 2-4 clues (weakest
+// first) rather than one line of text — see data/guess-blank-questions.ts.
+// A textarea, one clue per line, stands in for the dynamic add/remove clue
+// rows a fully general editor would need.
+
+const BLANK_CATEGORIES: readonly BlankCategory[] = ['animal', 'object', 'place', 'person', 'food'];
+const BLANK_DIFFICULTIES: readonly BlankDifficulty[] = ['easy', 'medium', 'hard'];
+
+interface GuessBlankLangInputs { answer: HTMLInputElement; clues: HTMLTextAreaElement }
+
+function buildGuessBlankSection(currentLang: string, selectedLangs: Set<string>, refresh: () => void): HTMLElement {
+  const wrap = el('div', 'mc-subsections');
+
+  const form = el('div', 'mc-form');
+  const answerEnI = textInput('Answer in English, e.g. "the monkey"');
+  const cluesEnI = textArea('One clue per line, vaguest first (2-4 clues)');
+  const categoryI = selectInput(BLANK_CATEGORIES);
+  const difficultyI = selectInput(BLANK_DIFFICULTIES);
+  form.append(
+    field('Answer (English)', answerEnI), field('Category', categoryI), field('Difficulty', difficultyI),
+  );
+  wrap.appendChild(form);
+  wrap.appendChild(field('Clues (English)', cluesEnI));
+
+  const { rows, values: blankInputs } = languageRows<GuessBlankLangInputs>(currentLang, selectedLangs, info => {
+    const answer = textInput(`Answer in ${info.label}`);
+    const clues = textArea(`Clues in ${info.label}, one per line`);
+    const rowWrap = el('div', 'mc-lang-row-stack');
+    rowWrap.append(answer, clues);
+    return { el: rowWrap, value: { answer, clues } };
+  });
+  wrap.appendChild(rows);
+
+  const addBtn = el('button', 'mc-btn', 'Add question(s)');
+  addBtn.type = 'button';
+  addBtn.addEventListener('click', () => {
+    let added = 0;
+    for (const [langName, { answer, clues }] of blankInputs) {
+      const answerTarget = answer.value.trim();
+      const cluesTarget = lines(clues.value);
+      if (!answerTarget || cluesTarget.length === 0) continue;
+      const q: Omit<GuessBlankQuestion, 'id'> = {
+        category: categoryI.value as BlankCategory,
+        difficulty: difficultyI.value as BlankDifficulty,
+        cluesTarget,
+        cluesEn: lines(cluesEnI.value).length ? lines(cluesEnI.value) : cluesTarget,
+        answerTarget,
+        answerEn: answerEnI.value.trim() || answerTarget,
+      };
+      addUserGuessBlankQuestion(langName, q);
+      added++;
+    }
+    if (added > 0) refresh();
+  });
+  wrap.appendChild(addBtn);
+
+  const list = el('div', 'mc-list');
+  const allQuestions = LANGUAGES.flatMap(info => getUserGuessBlankQuestions(info.name).map(q => ({ info, q })));
+  if (allQuestions.length === 0) {
+    list.appendChild(el('p', 'mc-empty', 'No Guess the Blank questions added yet.'));
+  } else {
+    allQuestions.forEach(({ info, q }) => list.appendChild(buildGuessBlankRow(info, q, refresh)));
+  }
+  wrap.appendChild(list);
+  return wrap;
+}
+
+function buildGuessBlankRow(info: LanguageInfo, q: GuessBlankQuestion, refresh: () => void): HTMLElement {
+  const row = el('div', 'mc-row');
+  const main = el('div', 'mc-row-main');
+  const title = el('span', 'mc-row-title');
+  title.appendChild(buildLangBadge([info.name]));
+  title.appendChild(document.createTextNode(` ${q.answerTarget}`));
+  main.appendChild(title);
+  main.appendChild(el('span', 'mc-row-meta',
+    `${q.category} · ${q.difficulty} · ${q.cluesTarget.length} clue${q.cluesTarget.length === 1 ? '' : 's'}`));
+  row.appendChild(main);
+
+  const delBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm', 'Remove');
+  delBtn.type = 'button';
+  delBtn.addEventListener('click', () => { removeUserGuessBlankQuestion(info.name, q.id); refresh(); });
   row.appendChild(delBtn);
   return row;
 }
