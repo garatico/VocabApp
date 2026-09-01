@@ -103,15 +103,40 @@
   border-color: var(--accent);
 }
 
-/* ── Section shell — one per content type ── */
+/* ── Section shell — one per content type, collapsible. The header always
+   shows; clicking it (or Enter/Space when focused) toggles `.mc-section-body`
+   via `hidden` — see buildSection in my-content-mode.ts. Collapsing never
+   rebuilds the body, so a search or a half-filled form inside it survives
+   being tucked away and reopened. ── */
 .mc-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.85rem 0.95rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface2);
+  overflow: hidden;
+}
+.mc-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.85rem 0.95rem;
+  cursor: pointer;
+  user-select: none;
+}
+.mc-section-header:hover {
+  background: var(--surface);
+}
+.mc-section-header:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.mc-section-chevron {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+.mc-section--collapsed .mc-section-chevron {
+  transform: rotate(-90deg);
 }
 .mc-section-title {
   margin: 0;
@@ -119,11 +144,54 @@
   font-weight: 700;
   color: var(--text);
 }
+.mc-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0 0.95rem 0.85rem;
+}
+/* Same `[hidden]`-vs-class-`display` cascade tie as .mc-word-results/
+   .mc-word-detail/.mc-stock-gallery elsewhere in this file: a plain class
+   selector setting `display` ties with the browser's own `[hidden] {
+   display: none }` and (being declared later in this stylesheet) wins,
+   so collapsing a section via `bodyWrap.hidden = true` did nothing visible. */
+.mc-section-body[hidden] {
+  display: none;
+}
 .mc-section-desc {
   margin: 0;
   font-size: 0.8rem;
   color: var(--text-muted);
   line-height: 1.45;
+}
+
+/* ── Subsection — a labeled block inside a section body (e.g. Words' "Add a
+   new word" and "Edit an existing word"), not independently collapsible. ── */
+.mc-subsections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.mc-subsection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.mc-subsection-title {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.mc-subsection-desc {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 
 /* ── Add form ── */
@@ -262,6 +330,16 @@
   border-radius: var(--radius-sm);
   background: var(--surface);
 }
+/* Overrides-list rows (Pictures, word edits) that reopen their editor on
+   click — Remove stops propagation so it doesn't also trigger this. */
+.mc-row--clickable {
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.mc-row--clickable:hover {
+  border-color: var(--accent);
+  background: var(--surface2);
+}
 .mc-row-main {
   display: flex;
   flex-direction: column;
@@ -287,6 +365,316 @@
   border: 1px solid var(--border);
   flex-shrink: 0;
   background: var(--surface2);
+}
+.mc-thumb--emoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+/* ── Word search panel — shared by Pictures and Gloss Order: search a
+   language's vocabulary for words eligible for that section's override, then
+   hand off to a section-specific detail view. See buildWordSearchUI in
+   my-content-mode.ts. `.mc-word-panel-outer` is the search UI plus the detail
+   panel below it; `.mc-word-panel` (nested inside it) is just the language
+   picker, search box and results list that buildWordSearchUI itself owns —
+   same layout, kept as two names because they're two different things a
+   reader might want to select independently. ── */
+.mc-word-panel-outer,
+.mc-word-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+/* .mc-field is shared with .mc-form, a *row* flex container where its
+   `flex: 1 1 180px` sizes width. Reused here inside a *column* container
+   (.mc-pic-custom below) that same rule sizes height instead — a field
+   asking to grow to 180px+ tall, and stretching further to fill whatever
+   space is left in the column. */
+.mc-pic-custom > .mc-field {
+  flex: 0 0 auto;
+}
+.mc-word-lang-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.mc-word-lang-row .mc-field-label {
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.mc-word-lang-select {
+  max-width: 200px;
+}
+.mc-word-results {
+  list-style: none;
+  margin: 0;
+  padding: 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+/* `hidden` is set/cleared straight from my-content-mode.ts to show and hide
+   these two — but `display: flex`/`column` above wins the cascade over the
+   browser's own `[hidden] { display: none }` (same specificity, declared
+   later), so a "hidden" results list or detail panel still rendered as an
+   empty bordered box. Restated here, scoped to `[hidden]`, so hiding one
+   actually removes it instead of leaving a blank placeholder behind. */
+.mc-word-results[hidden],
+.mc-word-detail[hidden] {
+  display: none;
+}
+.mc-word-result {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.mc-word-result:hover {
+  background: var(--surface2);
+}
+.mc-word-result-word {
+  font-weight: 600;
+  color: var(--text);
+}
+.mc-word-result-trans {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mc-word-result-flag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--correct);
+  flex-shrink: 0;
+}
+
+/* ── Detail panel for the currently-selected word — shared shell for both
+   Pictures and Gloss Order; the content inside it (.mc-pic-options vs
+   .mc-gloss-list) is section-specific. ── */
+.mc-word-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface2);
+}
+.mc-word-detail-header {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.mc-pic-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.mc-pic-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem;
+  min-width: 84px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.mc-pic-option:hover {
+  border-color: var(--border-strong);
+}
+.mc-pic-option--selected {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.mc-pic-option-img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+}
+.mc-pic-option-emoji {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  line-height: 1;
+}
+.mc-pic-option-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.mc-pic-option--selected .mc-pic-option-label {
+  color: var(--text);
+}
+
+/* ── Custom picture: URL / file / stock gallery, for words with no
+   built-in visual (or when none of them is the right one). ── */
+.mc-pic-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+.mc-pic-custom-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.mc-pic-custom-row .mc-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Gloss order list — Gloss Order section's detail view: each of a word's
+   glosses in its current effective order, with up/down buttons to move one
+   at a time. See buildGlossOrderSearchPanel in my-content-mode.ts. ── */
+.mc-gloss-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.mc-gloss-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+/* Unchecking hides the gloss from every quiz mode (see setGlossHidden) —
+   struck through and dimmed here so a hidden gloss still reads as present,
+   just turned off, rather than looking like the checkbox failed to apply. */
+.mc-gloss-checkbox {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.mc-gloss-item--hidden {
+  opacity: 0.55;
+}
+.mc-gloss-item--hidden .mc-gloss-item-text {
+  text-decoration: line-through;
+}
+.mc-gloss-item-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.88rem;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.mc-gloss-item-controls {
+  display: flex;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+.mc-gloss-move-btn {
+  font-size: 0.8rem;
+  line-height: 1;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.mc-gloss-move-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.mc-gloss-move-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Stock image picker — pictures section's "choose from bundled photos"
+   gallery. Collapsed behind a toggle by default (see buildStockImagePicker
+   in my-content-mode.ts); the grid itself scrolls rather than growing the
+   page indefinitely since data/images/ holds dozens of photos. ── */
+.mc-stock-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.mc-stock-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 0.5rem;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+/* Same `[hidden]`-vs-class-`display` cascade tie as .mc-pic-results/.mc-pic-detail
+   above — without this, toggling the gallery closed left a full 320px-tall
+   empty grid behind, taking up as much room as the picture options above it. */
+.mc-stock-gallery[hidden] {
+  display: none;
+}
+.mc-stock-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.mc-stock-item:hover {
+  background: var(--surface2);
+}
+.mc-stock-item--selected {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.mc-stock-thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+}
+.mc-stock-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.mc-stock-item--selected .mc-stock-label {
+  color: var(--text);
+  font-weight: 600;
 }
 
 @media (max-width: 599px) {

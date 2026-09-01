@@ -2,15 +2,16 @@
  * my-content-mode.ts — "My Content" tab: a lite, client-only admin panel.
  *
  * Lets a learner add their own vocabulary words, trivia questions and
- * picture-quiz pictures, all stored in this browser's localStorage via
- * data/user-content.ts — never written to the real SQLite database, and
- * never sent anywhere. This is deliberately separate from the real admin
- * panel (admin.html / src/client/admin/*, src/server/routes/admin*), which
- * is dev+localhost+auth gated and writes the actual database; nothing here
+ * picture-quiz pictures, and edit or hide parts of real vocabulary words, all
+ * stored in this browser's localStorage via data/user-content.ts — never
+ * written to the real SQLite database, and never sent anywhere. This is
+ * deliberately separate from the real admin panel (admin.html /
+ * src/client/admin/*, src/server/routes/admin*), which is
+ * dev+localhost+auth gated and writes the actual database; nothing here
  * touches that code path.
  *
- * Every add form is multi-language: one row per app language (LANGUAGES),
- * so adding "cat" can fill in gato/chat/gatto/Katze/kat/猫 in one pass rather
+ * Every add form is multi-language: one row per app language (LANGUAGES), so
+ * adding "cat" can fill in gato/chat/gatto/Katze/kat/猫 in one pass rather
  * than repeating the whole form once per language — and each row is always
  * labeled by language, so it's never ambiguous which language an entry (new
  * or already-added) belongs to. Only rows actually filled in produce an
@@ -18,19 +19,31 @@
  *
  * Rebuilt fresh on every visit to the tab (see app.ts's onActivate.myContent),
  * the same way History and My Lists are — cheap, and it means an edit made
- * and then navigated away from is never shown stale.
+ * and then navigated away from is never shown stale. Each section's own
+ * collapse state and the search/pictures/word-editor sub-panels' overrides
+ * lists still update in place rather than going through that rebuild — see
+ * buildSection and the "…rebuilds itself in place" comments below — since a
+ * full rebuild on every keystroke-adjacent change would also collapse
+ * sections and clear whatever search was in progress.
  */
 
 import {
   getUserWords, addUserWord, removeUserWord, type UserWord,
   getUserTriviaQuestions, addUserTriviaQuestion, removeUserTriviaQuestion,
-  getPictureOverrides, setPictureOverride, removePictureOverride,
+  getPictureOverrides, getPictureOverride, setPictureOverride, removePictureOverride,
+  isImageOverride,
+  getWordOverrides, getWordOverride, type WordOverride,
+  setWordFields, setGlossHidden, setGlossOrderOverride, removeWordOverride, applyGlossOrder,
   downloadUserContent, applyUserContentImport,
 } from '../data/user-content.ts';
 import type { TriviaQuestion, TriviaCategory, TriviaDifficulty, ReadingDifficulty, ReadingLength, AnswerType } from '../data/trivia-questions.ts';
 import { LANGUAGES, type LanguageInfo } from '../data/languages.ts';
+import { getStockImages, getFallbackImageUrl, getFallbackSvgUrl, getFallbackEmoji } from '../data/visual-map.ts';
+import { loadWords, loadRawWords } from '../data/data-loader.ts';
 import { buildLangBadge } from '../ui/lang-badge.ts';
 import { readString, readJson, writeJson, isStringArray } from '../utils/storage.ts';
+import { foldKey } from '../utils/match.ts';
+import type { Word } from '../types.ts';
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K, className?: string, text?: string,
@@ -73,12 +86,12 @@ function csv(s: string): string[] {
 
 // ── Language selection ──────────────────────────────────────────────────────
 //
-// Which languages the add forms show a row for. Shared across all three
-// sections (Words/Trivia/Pictures) — it's "which languages am I working in
-// right now" for the whole tab, not a per-section choice — and persisted so
-// it doesn't need re-picking on every visit. Defaults to just the language
-// currently selected in the main controls bar, rather than all seven, since
-// most learners only study one or two at a time.
+// Which languages the add forms show a row for. Shared across Words/Trivia —
+// it's "which languages am I working in right now" for the whole tab, not a
+// per-section choice — and persisted so it doesn't need re-picking on every
+// visit. Defaults to just the language currently selected in the main
+// controls bar, rather than all seven, since most learners only study one or
+// two at a time.
 
 const LANG_SELECTION_KEY = 'vq_mycontent_langs';
 
@@ -157,6 +170,65 @@ function languageRows<T>(
   return { rows, values };
 }
 
+// ── Collapsible sections ─────────────────────────────────────────────────────
+//
+// Words/Trivia/Pictures each run long — collapsing whichever aren't in use
+// right now is the difference between one screenful and several. Collapse
+// state persists per section key (not tied to renderMyContent's own rebuild)
+// so it survives the tab's cheap rebuild-everything-on-every-change pattern;
+// sections start expanded, same as before this existed, and stay however a
+// learner last left them.
+
+const COLLAPSED_SECTIONS_KEY = 'vq_mycontent_collapsed';
+
+function getCollapsedSections(): Set<string> {
+  return new Set(readJson<string[]>(COLLAPSED_SECTIONS_KEY, [], isStringArray));
+}
+
+function setCollapsedSections(keys: Set<string>): void {
+  writeJson(COLLAPSED_SECTIONS_KEY, [...keys]);
+}
+
+/**
+ * Wraps `body` in a `<section>` with a clickable header (title + chevron)
+ * that shows or hides it in place — deliberately not a rebuild, so a search
+ * in progress or a half-filled form inside `body` survives collapsing the
+ * section around it.
+ */
+function buildSection(key: string, title: string, description: string, body: HTMLElement): HTMLElement {
+  const section = el('section', 'mc-section');
+
+  const header = el('div', 'mc-section-header');
+  header.setAttribute('role', 'button');
+  header.tabIndex = 0;
+  header.append(el('span', 'mc-section-chevron', '▾'), el('h3', 'mc-section-title', title));
+
+  const bodyWrap = el('div', 'mc-section-body');
+  bodyWrap.append(el('p', 'mc-section-desc', description), body);
+
+  function applyState(collapsed: boolean): void {
+    bodyWrap.hidden = collapsed;
+    section.classList.toggle('mc-section--collapsed', collapsed);
+    header.setAttribute('aria-expanded', String(!collapsed));
+  }
+  applyState(getCollapsedSections().has(key));
+
+  function toggle(): void {
+    const collapsed = !bodyWrap.hidden;
+    applyState(collapsed);
+    const keys = getCollapsedSections();
+    if (collapsed) keys.add(key); else keys.delete(key);
+    setCollapsedSections(keys);
+  }
+  header.addEventListener('click', toggle);
+  header.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  });
+
+  section.append(header, bodyWrap);
+  return section;
+}
+
 export function renderMyContent(container: HTMLElement, lang: string): void {
   container.innerHTML = '';
 
@@ -202,19 +274,41 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
   const selectedLangs = getSelectedLangs(lang);
   wrap.appendChild(buildLanguagePicker(lang, selectedLangs, () => renderMyContent(container, lang)));
 
-  wrap.appendChild(buildWordsSection(lang, selectedLangs, () => renderMyContent(container, lang)));
-  wrap.appendChild(buildTriviaSection(lang, selectedLangs, () => renderMyContent(container, lang)));
-  wrap.appendChild(buildPicturesSection(lang, selectedLangs, () => renderMyContent(container, lang)));
+  wrap.appendChild(buildSection('words', 'Words',
+    'Add a brand-new word, or search real vocabulary (and words you\'ve added) to hide glosses, reorder them, or override the translation, part of speech, notes or domains.',
+    buildWordsSection(lang, selectedLangs, () => renderMyContent(container, lang))));
+
+  wrap.appendChild(buildSection('trivia', 'Trivia Questions',
+    'Added to the Trivia tab\'s question bank, and included in its Difficulty/Reading/Domain filters. Fill in the question and answer for whichever languages you\'re writing it in — each becomes its own entry in that language\'s bank.',
+    buildTriviaSection(lang, selectedLangs, () => renderMyContent(container, lang))));
+
+  wrap.appendChild(buildSection('pictures', 'Pictures',
+    'Search a language\'s vocabulary for words that already have a photo, icon or emoji, then choose which one Picture Quiz should show for that word. Words with none of their own can still get a custom picture — a pasted URL, an uploaded file, or a pick from the bundled photo library.',
+    buildPicturesSection(lang)));
 
   container.appendChild(wrap);
 }
 
 // ── Words ────────────────────────────────────────────────────────────────────
+//
+// Two sub-blocks: adding a brand-new word (unchanged from before this file
+// grew a word editor), and searching real vocabulary (plus words added just
+// above) to hide/reorder glosses or override translation/pos/notes/domains —
+// all as a client-only overlay, never touching the real data. Kept in one
+// section rather than two, since both are fundamentally "change what a word
+// looks like in this browser."
 
 function buildWordsSection(currentLang: string, selectedLangs: Set<string>, refresh: () => void): HTMLElement {
-  const section = el('section', 'mc-section');
-  section.appendChild(el('h3', 'mc-section-title', 'Words'));
-  section.appendChild(el('p', 'mc-section-desc',
+  const wrap = el('div', 'mc-subsections');
+  wrap.appendChild(buildAddWordSubsection(currentLang, selectedLangs, refresh));
+  wrap.appendChild(buildEditWordSubsection(currentLang));
+  return wrap;
+}
+
+function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>, refresh: () => void): HTMLElement {
+  const sub = el('div', 'mc-subsection');
+  sub.appendChild(el('h4', 'mc-subsection-title', 'Add a new word'));
+  sub.appendChild(el('p', 'mc-subsection-desc',
     'Shows up at the top of Table, Picture Quiz and Conjugation-eligible word lists, right alongside the real vocabulary. Fill in one language, or several at once — e.g. gato for Spanish and chat for French, both meaning "cat".'));
 
   const form = el('div', 'mc-form');
@@ -226,13 +320,13 @@ function buildWordsSection(currentLang: string, selectedLangs: Set<string>, refr
     field('Translation (English)', transI), field('Part of speech', posI),
     field('Domains', domainsI), field('Notes', notesI),
   );
-  section.appendChild(form);
+  sub.appendChild(form);
 
   const { rows, values: wordInputs } = languageRows(currentLang, selectedLangs, info => {
     const input = textInput(`Word in ${info.label}`);
     return { el: input, value: input };
   });
-  section.appendChild(rows);
+  sub.appendChild(rows);
 
   const addBtn = el('button', 'mc-btn', 'Add word(s)');
   addBtn.type = 'button';
@@ -250,7 +344,7 @@ function buildWordsSection(currentLang: string, selectedLangs: Set<string>, refr
     }
     if (added > 0) refresh();
   });
-  section.appendChild(addBtn);
+  sub.appendChild(addBtn);
 
   const list = el('div', 'mc-list');
   const allEntries = LANGUAGES.flatMap(info => getUserWords(info.name).map(w => ({ info, w })));
@@ -259,8 +353,8 @@ function buildWordsSection(currentLang: string, selectedLangs: Set<string>, refr
   } else {
     allEntries.forEach(({ info, w }) => list.appendChild(buildWordRow(info, w, refresh)));
   }
-  section.appendChild(list);
-  return section;
+  sub.appendChild(list);
+  return sub;
 }
 
 function buildWordRow(info: LanguageInfo, w: UserWord, refresh: () => void): HTMLElement {
@@ -283,6 +377,235 @@ function buildWordRow(info: LanguageInfo, w: UserWord, refresh: () => void): HTM
   return row;
 }
 
+/**
+ * Search + detail editor for hiding/reordering a word's glosses and
+ * overriding its translation/part of speech/notes/domains. Unlike the
+ * Add-a-word list above (which only knows about words you typed in
+ * yourself), this section's own overrides list rebuilds itself in place on
+ * every change rather than going through the whole tab's refresh — that
+ * would also tear down the search panel next to it, closing the search and
+ * losing the query every time an edit is made.
+ */
+function buildEditWordSubsection(currentLang: string): HTMLElement {
+  const sub = el('div', 'mc-subsection');
+  sub.appendChild(el('h4', 'mc-subsection-title', 'Edit an existing word'));
+  sub.appendChild(el('p', 'mc-subsection-desc',
+    'Search a language\'s vocabulary — real words and ones you\'ve added above — to hide glosses you don\'t want to see, reorder the rest, or override the translation, part of speech, notes or domains. Click an already-edited word below to reopen it.'));
+
+  const list = el('div', 'mc-list');
+  function renderOverridesList(): void {
+    list.innerHTML = '';
+    const allOverrides = LANGUAGES.flatMap(info =>
+      Object.entries(getWordOverrides(info.name)).map(([word, override]) => ({ info, word, override })));
+    if (allOverrides.length === 0) {
+      list.appendChild(el('p', 'mc-empty', 'No words edited yet.'));
+    } else {
+      allOverrides.forEach(({ info, word, override }) => list.appendChild(
+        buildWordOverrideRow(info, word, override, renderOverridesList, () => panel.openWord(info.name, word)),
+      ));
+    }
+  }
+
+  const panel = buildWordEditorSearchPanel(currentLang, renderOverridesList);
+  renderOverridesList();
+
+  sub.appendChild(panel.wrap);
+  sub.appendChild(list);
+  return sub;
+}
+
+/** A one-line summary of what's overridden for a word, for the list at the
+ *  bottom of "Edit an existing word" — enough to recognize the entry without
+ *  re-opening it, not a full readout of every field. */
+function summarizeWordOverride(o: WordOverride): string {
+  const parts: string[] = [];
+  if (o.translation !== undefined) parts.push(`translation → "${o.translation}"`);
+  if (o.pos !== undefined) parts.push(o.pos ? `pos → ${o.pos}` : 'pos hidden');
+  if (o.notes !== undefined) parts.push('notes edited');
+  if (o.domains !== undefined) parts.push(o.domains.length ? `domains → ${o.domains.join(', ')}` : 'domains hidden');
+  if (o.hiddenGlosses?.length) parts.push(`${o.hiddenGlosses.length} gloss${o.hiddenGlosses.length === 1 ? '' : 'es'} hidden`);
+  if (o.glossOrder) parts.push('gloss order changed');
+  return parts.join(' · ');
+}
+
+/** `onOpen` reopens this word in the editor above — the row itself is
+ *  clickable for that (see .mc-row--clickable), with Remove as the one
+ *  carve-out that doesn't trigger it. */
+function buildWordOverrideRow(
+  info: LanguageInfo, word: string, override: WordOverride, refresh: () => void, onOpen: () => void,
+): HTMLElement {
+  const row = el('div', 'mc-row mc-row--clickable');
+  row.addEventListener('click', onOpen);
+
+  const main = el('div', 'mc-row-main');
+  const title = el('span', 'mc-row-title');
+  title.appendChild(buildLangBadge([info.name]));
+  title.appendChild(document.createTextNode(` ${word}`));
+  main.appendChild(title);
+  const summary = summarizeWordOverride(override);
+  if (summary) main.appendChild(el('span', 'mc-row-meta', summary));
+  row.appendChild(main);
+
+  const delBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm', 'Remove');
+  delBtn.type = 'button';
+  delBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    removeWordOverride(info.name, word);
+    refresh();
+  });
+  row.appendChild(delBtn);
+  return row;
+}
+
+const WORD_POS_OPTIONS = ['', 'noun', 'verb', 'adjective', 'adverb', 'phrase', 'other'];
+
+interface WordEditorPanel {
+  wrap: HTMLElement;
+  /** Jumps straight to editing `word` — what an overrides-list row calls
+   *  instead of making the learner search for the word again. */
+  openWord: (lang: string, word: string) => Promise<void>;
+}
+
+function buildWordEditorSearchPanel(defaultLang: string, refresh: () => void): WordEditorPanel {
+  const wrap = el('div', 'mc-word-panel-outer');
+
+  const detail = el('div', 'mc-word-detail');
+  detail.hidden = true;
+
+  function selectWord(lang: string, w: Word): void {
+    detail.innerHTML = '';
+    detail.hidden = false;
+
+    function afterChange(): void {
+      selectWord(lang, w);
+      ui.refreshResults();
+      refresh();
+    }
+
+    const header = el('div', 'mc-word-detail-header');
+    header.appendChild(buildLangBadge([lang]));
+    header.appendChild(document.createTextNode(` ${w.word} — ${w.translation}`));
+    detail.appendChild(header);
+
+    const override = getWordOverride(lang, w.word);
+
+    // ── Translation / part of speech / notes / domains ──────────────────────
+    const fieldsForm = el('div', 'mc-form');
+    const transI   = textInput('Translation', override?.translation ?? w.translation);
+    const posI     = selectInput(WORD_POS_OPTIONS, override?.pos ?? w.pos ?? '');
+    const notesI   = textInput('Notes', override?.notes ?? w.notes);
+    const domainsI = textInput('e.g. animals, home (comma-separated)', (override?.domains ?? w.domains).join(', '));
+    fieldsForm.append(
+      field('Translation', transI), field('Part of speech', posI),
+      field('Notes', notesI), field('Domains', domainsI),
+    );
+    detail.appendChild(fieldsForm);
+
+    const saveBtn = el('button', 'mc-btn mc-btn--sm', 'Save changes');
+    saveBtn.type = 'button';
+    saveBtn.addEventListener('click', () => {
+      // Only a field whose new value actually differs from the word's real
+      // one becomes part of the override — editing a field back to its
+      // original value and saving un-overrides just that field, since
+      // setWordFields treats a key's absence here as "no override." `w` is
+      // the raw word (this panel searches via loadRawWords), so these really
+      // are the original values, not whatever an earlier override left
+      // showing.
+      const fields: Parameters<typeof setWordFields>[2] = {};
+      const newTrans = transI.value.trim();
+      if (newTrans !== w.translation) fields.translation = newTrans;
+      const newPos = posI.value || null;
+      if (newPos !== (w.pos ?? null)) fields.pos = newPos;
+      const newNotes = notesI.value.trim();
+      if (newNotes !== w.notes) fields.notes = newNotes;
+      const newDomains = csv(domainsI.value);
+      if (JSON.stringify(newDomains) !== JSON.stringify(w.domains)) fields.domains = newDomains;
+      setWordFields(lang, w.word, fields);
+      afterChange();
+    });
+    detail.appendChild(saveBtn);
+
+    // ── Glosses: hide individually, reorder the rest ────────────────────────
+    if (w.glosses.length > 0) {
+      detail.appendChild(el('h5', 'mc-subsection-title', 'Glosses'));
+
+      const hiddenSet = new Set(override?.hiddenGlosses ?? []);
+      const displayOrder = override?.glossOrder ? applyGlossOrder(w.glosses, override.glossOrder) : w.glosses;
+
+      const glossList = el('div', 'mc-gloss-list');
+      displayOrder.forEach((gloss, i) => {
+        const item = el('div', 'mc-gloss-item');
+        if (hiddenSet.has(gloss)) item.classList.add('mc-gloss-item--hidden');
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'mc-gloss-checkbox';
+        checkbox.checked = !hiddenSet.has(gloss);
+        checkbox.setAttribute('aria-label', `Show "${gloss}"`);
+        checkbox.addEventListener('change', () => {
+          setGlossHidden(lang, w.word, gloss, !checkbox.checked);
+          afterChange();
+        });
+        item.appendChild(checkbox);
+        item.appendChild(el('span', 'mc-gloss-item-text', gloss));
+
+        const controls = el('div', 'mc-gloss-item-controls');
+        const upBtn = el('button', 'mc-gloss-move-btn', '↑');
+        upBtn.type = 'button';
+        upBtn.disabled = i === 0;
+        upBtn.setAttribute('aria-label', `Move "${gloss}" earlier`);
+        upBtn.addEventListener('click', () => {
+          const next = [...displayOrder];
+          [next[i - 1], next[i]] = [next[i], next[i - 1]];
+          setGlossOrderOverride(lang, w.word, next);
+          afterChange();
+        });
+        const downBtn = el('button', 'mc-gloss-move-btn', '↓');
+        downBtn.type = 'button';
+        downBtn.disabled = i === displayOrder.length - 1;
+        downBtn.setAttribute('aria-label', `Move "${gloss}" later`);
+        downBtn.addEventListener('click', () => {
+          const next = [...displayOrder];
+          [next[i], next[i + 1]] = [next[i + 1], next[i]];
+          setGlossOrderOverride(lang, w.word, next);
+          afterChange();
+        });
+        controls.append(upBtn, downBtn);
+
+        item.appendChild(controls);
+        glossList.appendChild(item);
+      });
+      detail.appendChild(glossList);
+    }
+
+    if (override) {
+      const resetBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm', 'Reset all overrides for this word');
+      resetBtn.type = 'button';
+      resetBtn.addEventListener('click', () => { removeWordOverride(lang, w.word); afterChange(); });
+      detail.appendChild(resetBtn);
+    }
+  }
+
+  const ui = buildWordSearchUI({
+    defaultLang,
+    placeholder: 'Search for a word to edit…',
+    fetchWords: loadRawWords,
+    isEligible: () => true,
+    isOverridden: (lang, w) => !!getWordOverride(lang, w.word),
+    onSelect: selectWord,
+    onLangChange: () => { detail.innerHTML = ''; detail.hidden = true; },
+  });
+
+  wrap.append(ui.wrap, detail);
+
+  async function openWord(lang: string, word: string): Promise<void> {
+    await ui.openWord(lang, word);
+    detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  return { wrap, openWord };
+}
+
 // ── Trivia questions ─────────────────────────────────────────────────────────
 
 const CATEGORIES: readonly TriviaCategory[] = ['history', 'pop-culture'];
@@ -294,10 +617,7 @@ const ANSWER_TYPES: readonly AnswerType[] = ['year', 'number', 'person', 'place'
 interface TriviaLangInputs { question: HTMLInputElement; answers: HTMLInputElement }
 
 function buildTriviaSection(currentLang: string, selectedLangs: Set<string>, refresh: () => void): HTMLElement {
-  const section = el('section', 'mc-section');
-  section.appendChild(el('h3', 'mc-section-title', 'Trivia Questions'));
-  section.appendChild(el('p', 'mc-section-desc',
-    'Added to the Trivia tab\'s question bank, and included in its Difficulty/Reading/Domain filters. Fill in the question and answer for whichever languages you\'re writing it in — each becomes its own entry in that language\'s bank.'));
+  const wrap = el('div', 'mc-subsections');
 
   const form = el('div', 'mc-form');
   const qEnI = textInput('Question in English');
@@ -314,16 +634,16 @@ function buildTriviaSection(currentLang: string, selectedLangs: Set<string>, ref
     field('Reading difficulty', readingDiffI), field('Reading length', readingLenI),
     field('Answer type', answerTypeI), field('Domains', domainsI),
   );
-  section.appendChild(form);
+  wrap.appendChild(form);
 
   const { rows, values: triviaInputs } = languageRows<TriviaLangInputs>(currentLang, selectedLangs, info => {
     const question = textInput(`Question in ${info.label}`);
     const answers = textInput('Accepted answers, comma-separated');
-    const wrap = el('div', 'mc-lang-row-inputs');
-    wrap.append(question, answers);
-    return { el: wrap, value: { question, answers } };
+    const rowWrap = el('div', 'mc-lang-row-inputs');
+    rowWrap.append(question, answers);
+    return { el: rowWrap, value: { question, answers } };
   });
-  section.appendChild(rows);
+  wrap.appendChild(rows);
 
   const addBtn = el('button', 'mc-btn', 'Add question(s)');
   addBtn.type = 'button';
@@ -350,7 +670,7 @@ function buildTriviaSection(currentLang: string, selectedLangs: Set<string>, ref
     }
     if (added > 0) refresh();
   });
-  section.appendChild(addBtn);
+  wrap.appendChild(addBtn);
 
   const list = el('div', 'mc-list');
   const allQuestions = LANGUAGES.flatMap(info => getUserTriviaQuestions(info.name).map(q => ({ info, q })));
@@ -359,8 +679,8 @@ function buildTriviaSection(currentLang: string, selectedLangs: Set<string>, ref
   } else {
     allQuestions.forEach(({ info, q }) => list.appendChild(buildTriviaRow(info, q, refresh)));
   }
-  section.appendChild(list);
-  return section;
+  wrap.appendChild(list);
+  return wrap;
 }
 
 function buildTriviaRow(info: LanguageInfo, q: TriviaQuestion, refresh: () => void): HTMLElement {
@@ -381,68 +701,381 @@ function buildTriviaRow(info: LanguageInfo, q: TriviaQuestion, refresh: () => vo
   return row;
 }
 
-// ── Pictures ─────────────────────────────────────────────────────────────────
+// ── Word search ──────────────────────────────────────────────────────────────
+//
+// Shared by the Pictures and word-editor panels: both need to search a
+// language's vocabulary for entries eligible for that panel's kind of
+// override, then hand off to a panel-specific detail view once one is
+// picked. The language dropdown, the async vocab load, and the
+// search-box/results-list wiring are otherwise identical, so only which
+// vocabulary to fetch, the eligibility filter, the "already overridden"
+// flag, and what happens on selection vary per caller.
 
-function buildPicturesSection(currentLang: string, selectedLangs: Set<string>, refresh: () => void): HTMLElement {
-  const section = el('section', 'mc-section');
-  section.appendChild(el('h3', 'mc-section-title', 'Pictures'));
-  section.appendChild(el('p', 'mc-section-desc',
-    'Overrides Picture Quiz\'s visual for a specific word — works for real vocabulary words and words you added above. One picture can cover several languages at once: give the exact word it\'s for in each language below (e.g. gato for Spanish, gatto for Italian). Paste an image URL, or pick a file from your device (kept as part of this entry, not uploaded anywhere).'));
-
-  const form = el('div', 'mc-form');
-  const urlI = textInput('Image URL (or pick a file below)');
-  const fileI = el('input', 'mc-input') as HTMLInputElement;
-  fileI.type = 'file';
-  fileI.accept = 'image/*';
-  fileI.addEventListener('change', () => {
-    const file = fileI.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => { urlI.value = String(reader.result); };
-    reader.readAsDataURL(file);
-  });
-  form.append(field('Image URL', urlI), field('...or upload a file', fileI));
-  section.appendChild(form);
-
-  const { rows, values: wordInputs } = languageRows(currentLang, selectedLangs, info => {
-    const input = textInput(`Word in ${info.label}`);
-    return { el: input, value: input };
-  });
-  section.appendChild(rows);
-
-  const addBtn = el('button', 'mc-btn', 'Set picture(s)');
-  addBtn.type = 'button';
-  addBtn.addEventListener('click', () => {
-    if (!urlI.value.trim()) return;
-    let added = 0;
-    for (const [langName, input] of wordInputs) {
-      const word = input.value.trim();
-      if (!word) continue;
-      setPictureOverride(langName, word, urlI.value.trim());
-      added++;
-    }
-    if (added > 0) refresh();
-  });
-  section.appendChild(addBtn);
-
-  const list = el('div', 'mc-list');
-  const allOverrides = LANGUAGES.flatMap(info =>
-    Object.entries(getPictureOverrides(info.name)).map(([word, url]) => ({ info, word, url })));
-  if (allOverrides.length === 0) {
-    list.appendChild(el('p', 'mc-empty', 'No picture overrides yet.'));
-  } else {
-    allOverrides.forEach(({ info, word, url }) => list.appendChild(buildPictureRow(info, word, url, refresh)));
-  }
-  section.appendChild(list);
-  return section;
+interface WordSearchUIOptions {
+  defaultLang: string;
+  /** Search box placeholder, and what's shown while the language loads. */
+  placeholder: string;
+  /** How to fetch a language's word list — `loadWords` (overrides already
+   *  applied, what the Pictures panel wants to search and display) or
+   *  `loadRawWords` (the true original, what the word editor needs so
+   *  hiding something is never a one-way door). */
+  fetchWords: (lang: string) => Promise<Word[]>;
+  /** Which words this panel's search should surface at all. */
+  isEligible: (lang: string, w: Word) => boolean;
+  /** Whether to show the "✓ set" badge next to a result. */
+  isOverridden: (lang: string, w: Word) => boolean;
+  /** Fires when a result is clicked. */
+  onSelect: (lang: string, w: Word) => void;
+  /** Fires when the language changes, before the new vocabulary has loaded —
+   *  lets the caller clear whatever detail view was showing for the old
+   *  language's word. */
+  onLangChange: () => void;
 }
 
-function buildPictureRow(info: LanguageInfo, word: string, url: string, refresh: () => void): HTMLElement {
-  const row = el('div', 'mc-row');
-  const thumb = el('img', 'mc-thumb') as HTMLImageElement;
-  thumb.src = url;
-  thumb.alt = word;
-  row.appendChild(thumb);
+interface WordSearchUI {
+  /** Language picker + search box + results list, in that order. */
+  wrap: HTMLElement;
+  getLang: () => string;
+  /** Re-runs the current query — call after a change that should update a
+   *  result's "✓ set" badge (the word may still be on screen in the list). */
+  refreshResults: () => void;
+  /** Switches to `lang` if needed, waits for its vocabulary to load, then
+   *  selects `word` exactly as if it had been searched for and clicked —
+   *  what a row in an overrides list below calls to jump straight to
+   *  editing that word instead of making the learner search for it again.
+   *  A silent no-op if `word` can't be found (e.g. removed from the data
+   *  since the override was made). */
+  openWord: (lang: string, word: string) => Promise<void>;
+}
+
+function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
+  const wrap = el('div', 'mc-word-panel');
+
+  let lang = opts.defaultLang;
+  let words: Word[] | null = null;
+
+  const langSelect = document.createElement('select');
+  langSelect.className = 'mc-input mc-word-lang-select';
+  for (const info of LANGUAGES) {
+    const lopt = document.createElement('option');
+    lopt.value = info.name;
+    lopt.textContent = info.label;
+    langSelect.appendChild(lopt);
+  }
+  langSelect.value = lang;
+
+  const langRow = el('div', 'mc-word-lang-row');
+  langRow.append(el('span', 'mc-field-label', 'Language'), langSelect);
+
+  const searchInput = textInput(opts.placeholder);
+  searchInput.disabled = true;
+
+  const resultsList = el('ul', 'mc-word-results');
+  resultsList.hidden = true;
+
+  function renderResults(query: string): void {
+    resultsList.innerHTML = '';
+    if (!words) { resultsList.hidden = true; return; }
+    const q = foldKey(query);
+    if (!q) { resultsList.hidden = true; return; }
+    const matches = words
+      .filter(w => opts.isEligible(lang, w))
+      .filter(w => foldKey(w.word).includes(q) || foldKey(w.translation).includes(q))
+      .slice(0, 20);
+
+    if (matches.length === 0) {
+      resultsList.appendChild(el('li', 'mc-empty', 'No matching words.'));
+      resultsList.hidden = false;
+      return;
+    }
+    matches.forEach(w => {
+      const li = el('li', 'mc-word-result');
+      li.appendChild(el('span', 'mc-word-result-word', w.word));
+      li.appendChild(el('span', 'mc-word-result-trans', w.translation));
+      if (opts.isOverridden(lang, w)) li.appendChild(el('span', 'mc-word-result-flag', '✓ set'));
+      li.addEventListener('click', () => opts.onSelect(lang, w));
+      resultsList.appendChild(li);
+    });
+    resultsList.hidden = false;
+  }
+
+  function loadLang(): Promise<void> {
+    words = null;
+    resultsList.innerHTML = '';
+    resultsList.hidden = true;
+    opts.onLangChange();
+    searchInput.value = '';
+    searchInput.disabled = true;
+    searchInput.placeholder = 'Loading vocabulary…';
+    return opts.fetchWords(lang).then(loaded => {
+      if (lang !== langSelect.value) return; // language changed again before this resolved
+      words = loaded;
+      searchInput.disabled = false;
+      searchInput.placeholder = opts.placeholder;
+    });
+  }
+
+  async function openWord(targetLang: string, word: string): Promise<void> {
+    if (lang !== targetLang || !words) {
+      lang = targetLang;
+      langSelect.value = targetLang;
+      await loadLang();
+    }
+    const match = words?.find(w => foldKey(w.word) === foldKey(word));
+    if (!match) return;
+    searchInput.value = word;
+    renderResults(word);
+    opts.onSelect(lang, match);
+  }
+
+  langSelect.addEventListener('change', () => { lang = langSelect.value; loadLang(); });
+  searchInput.addEventListener('input', () => renderResults(searchInput.value.trim()));
+
+  wrap.append(langRow, searchInput, resultsList);
+  loadLang();
+
+  return { wrap, getLang: () => lang, refreshResults: () => renderResults(searchInput.value.trim()), openWord };
+}
+
+// ── Pictures ─────────────────────────────────────────────────────────────────
+//
+// Rather than typing a word blind and pasting a URL, this searches the
+// language's real vocabulary (plus words added in the section above) for
+// entries that already carry a visual — a local photo, an SVG icon or an
+// emoji, via the same lookup picture-mode.ts itself uses — and lets you pick
+// whichever one of those should be the *canonical* image, overriding
+// picture-mode's own photo > icon > emoji priority for just that word. A
+// custom URL, an uploaded file, or a pick from the bundled stock-photo
+// library are still there for words with no built-in visual at all, or when
+// none of the built-in options is the right picture.
+
+interface WordVisuals { photo: string | null; svg: string | null; emoji: string | null }
+
+function visualsFor(lang: string, w: Word): WordVisuals {
+  return {
+    photo: getFallbackImageUrl(lang, w.word),
+    svg:   w.svg_url || getFallbackSvgUrl(lang, w.word) || null,
+    emoji: w.emoji || getFallbackEmoji(lang, w.word) || null,
+  };
+}
+
+function hasAnyVisual(v: WordVisuals): boolean {
+  return Boolean(v.photo || v.svg || v.emoji);
+}
+
+/**
+ * The bundled-photo gallery offered as one of the "custom" ways to set a
+ * word's picture, alongside a pasted URL and an uploaded file — for words
+ * with no built-in visual of their own, or when none of the built-in
+ * options is the right one. Collapsed by default since the full gallery is
+ * dozens of images long. `onPick` fires once and the caller is expected to
+ * rebuild its own view — this component holds no state of its own.
+ */
+function buildStockImagePicker(selectedUrl: string | null, onPick: (url: string) => void): HTMLElement {
+  const wrap = el('div', 'mc-stock-picker');
+
+  const toggle = el('button', 'mc-btn mc-btn--secondary mc-btn--sm', 'Choose from stock images…');
+  toggle.type = 'button';
+
+  const gallery = el('div', 'mc-stock-gallery');
+  gallery.hidden = true;
+
+  for (const { url, label } of getStockImages()) {
+    const item = el('button', 'mc-stock-item');
+    item.type = 'button';
+    if (url === selectedUrl) item.classList.add('mc-stock-item--selected');
+    const thumb = el('img', 'mc-stock-thumb') as HTMLImageElement;
+    thumb.src = url;
+    thumb.alt = label;
+    thumb.loading = 'lazy';
+    item.appendChild(thumb);
+    item.appendChild(el('span', 'mc-stock-label', label));
+    item.addEventListener('click', () => onPick(url));
+    gallery.appendChild(item);
+  }
+
+  toggle.addEventListener('click', () => {
+    gallery.hidden = !gallery.hidden;
+    toggle.textContent = gallery.hidden ? 'Choose from stock images…' : 'Hide stock images';
+  });
+
+  wrap.append(toggle, gallery);
+  return wrap;
+}
+
+function buildPicturesSection(currentLang: string): HTMLElement {
+  const wrap = el('div', 'mc-subsections');
+
+  // The overrides list rebuilds itself in place on every change (a pick, a
+  // custom picture, a Remove) rather than going through the whole tab's
+  // refresh — that would also tear down and rebuild the search panel above
+  // it, closing the search and losing the query every time a word's picture
+  // is set, which is exactly the moment you're most likely to want to set
+  // the next one too.
+  const list = el('div', 'mc-list');
+  function renderOverridesList(): void {
+    list.innerHTML = '';
+    const allOverrides = LANGUAGES.flatMap(info =>
+      Object.entries(getPictureOverrides(info.name)).map(([word, value]) => ({ info, word, value })));
+    if (allOverrides.length === 0) {
+      list.appendChild(el('p', 'mc-empty', 'No picture overrides yet.'));
+    } else {
+      allOverrides.forEach(({ info, word, value }) => list.appendChild(
+        buildPictureRow(info, word, value, renderOverridesList, () => panel.openWord(info.name, word)),
+      ));
+    }
+  }
+
+  const panel = buildPictureSearchPanel(currentLang, renderOverridesList);
+  renderOverridesList();
+
+  wrap.appendChild(panel.wrap);
+  wrap.appendChild(list);
+  return wrap;
+}
+
+interface PictureEditorPanel {
+  wrap: HTMLElement;
+  /** Jumps straight to editing `word`'s picture — what an overrides-list
+   *  row calls instead of making the learner search for the word again. */
+  openWord: (lang: string, word: string) => Promise<void>;
+}
+
+/**
+ * The search UI plus the detail panel for whichever word is currently
+ * selected. Kept as one closure (rather than threading state through
+ * renderMyContent's own refresh) because switching languages needs an async
+ * vocabulary load that the rest of the tab's synchronous
+ * render-on-every-change pattern has no way to await.
+ */
+function buildPictureSearchPanel(defaultLang: string, refresh: () => void): PictureEditorPanel {
+  const wrap = el('div', 'mc-word-panel-outer');
+
+  const detail = el('div', 'mc-word-detail');
+  detail.hidden = true;
+
+  function selectWord(lang: string, w: Word): void {
+    detail.innerHTML = '';
+    detail.hidden = false;
+
+    function afterChange(): void {
+      selectWord(lang, w);
+      ui.refreshResults();
+      refresh();
+    }
+
+    const header = el('div', 'mc-word-detail-header');
+    header.appendChild(buildLangBadge([lang]));
+    header.appendChild(document.createTextNode(` ${w.word} — ${w.translation}`));
+    detail.appendChild(header);
+
+    const current = getPictureOverride(lang, w.word);
+    const v = visualsFor(lang, w);
+
+    const options = el('div', 'mc-pic-options');
+    function addOption(label: string, value: string | null, kind: 'img' | 'emoji'): void {
+      if (!value) return;
+      const btn = el('button', 'mc-pic-option');
+      btn.type = 'button';
+      if (kind === 'img') {
+        const img = el('img', 'mc-pic-option-img') as HTMLImageElement;
+        img.src = value;
+        img.alt = label;
+        btn.appendChild(img);
+      } else {
+        btn.appendChild(el('span', 'mc-pic-option-emoji', value));
+      }
+      btn.appendChild(el('span', 'mc-pic-option-label', label));
+      if (current === value) btn.classList.add('mc-pic-option--selected');
+      btn.addEventListener('click', () => { setPictureOverride(lang, w.word, value); afterChange(); });
+      options.appendChild(btn);
+    }
+    addOption('Photo', v.photo, 'img');
+    addOption('Icon',  v.svg,   'img');
+    addOption('Emoji', v.emoji, 'emoji');
+    if (!options.hasChildNodes()) {
+      options.appendChild(el('p', 'mc-empty', 'No built-in visuals for this word — set a custom one below.'));
+    }
+    detail.appendChild(options);
+
+    const custom = el('div', 'mc-pic-custom');
+    const customUrlI = textInput('Custom image URL…');
+    const useUrlBtn = el('button', 'mc-btn mc-btn--secondary mc-btn--sm', 'Use URL');
+    useUrlBtn.type = 'button';
+    useUrlBtn.addEventListener('click', () => {
+      if (!customUrlI.value.trim()) return;
+      setPictureOverride(lang, w.word, customUrlI.value.trim());
+      afterChange();
+    });
+    const urlRow = el('div', 'mc-pic-custom-row');
+    urlRow.append(customUrlI, useUrlBtn);
+
+    const fileI = el('input', 'mc-input') as HTMLInputElement;
+    fileI.type = 'file';
+    fileI.accept = 'image/*';
+    fileI.addEventListener('change', () => {
+      const file = fileI.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => { setPictureOverride(lang, w.word, String(reader.result)); afterChange(); };
+      reader.readAsDataURL(file);
+    });
+
+    custom.append(
+      urlRow,
+      field('...or upload a file', fileI),
+      buildStockImagePicker(current && isImageOverride(current) ? current : null, url => {
+        setPictureOverride(lang, w.word, url);
+        afterChange();
+      }),
+    );
+    detail.appendChild(custom);
+
+    if (current) {
+      const clearBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm', 'Clear override (use automatic default)');
+      clearBtn.type = 'button';
+      clearBtn.addEventListener('click', () => { removePictureOverride(lang, w.word); afterChange(); });
+      detail.appendChild(clearBtn);
+    }
+  }
+
+  const ui = buildWordSearchUI({
+    defaultLang,
+    placeholder: 'Search for a word with a photo, icon or emoji…',
+    fetchWords: loadWords,
+    isEligible: (lang, w) => hasAnyVisual(visualsFor(lang, w)) || !!getPictureOverride(lang, w.word),
+    isOverridden: (lang, w) => !!getPictureOverride(lang, w.word),
+    onSelect: selectWord,
+    onLangChange: () => { detail.innerHTML = ''; detail.hidden = true; },
+  });
+
+  wrap.append(ui.wrap, detail);
+
+  async function openWord(lang: string, word: string): Promise<void> {
+    await ui.openWord(lang, word);
+    detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  return { wrap, openWord };
+}
+
+/** `onOpen` reopens this word in the picture editor above — the row itself
+ *  is clickable for that (see .mc-row--clickable), with Remove as the one
+ *  carve-out that doesn't trigger it. */
+function buildPictureRow(
+  info: LanguageInfo, word: string, value: string, refresh: () => void, onOpen: () => void,
+): HTMLElement {
+  const row = el('div', 'mc-row mc-row--clickable');
+  row.addEventListener('click', onOpen);
+
+  if (isImageOverride(value)) {
+    const thumb = el('img', 'mc-thumb') as HTMLImageElement;
+    thumb.src = value;
+    thumb.alt = word;
+    row.appendChild(thumb);
+  } else {
+    row.appendChild(el('span', 'mc-thumb mc-thumb--emoji', value));
+  }
   const main = el('div', 'mc-row-main');
   const title = el('span', 'mc-row-title');
   title.appendChild(buildLangBadge([info.name]));
@@ -452,7 +1085,11 @@ function buildPictureRow(info: LanguageInfo, word: string, url: string, refresh:
 
   const delBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm', 'Remove');
   delBtn.type = 'button';
-  delBtn.addEventListener('click', () => { removePictureOverride(info.name, word); refresh(); });
+  delBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    removePictureOverride(info.name, word);
+    refresh();
+  });
   row.appendChild(delBtn);
   return row;
 }

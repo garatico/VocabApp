@@ -13,7 +13,7 @@
  */
 
 import { getFallbackEmoji, getFallbackSvgUrl, getFallbackImageUrl } from '../data/visual-map.ts';
-import { getPictureOverride } from '../data/user-content.ts';
+import { getPictureOverride, isImageOverride } from '../data/user-content.ts';
 import { saveSession, recordOutcome } from '../utils/session-history.ts';
 import { attachTooltips    } from '../utils/word-tooltip.ts';
 import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summary.ts';
@@ -1165,10 +1165,15 @@ export function renderPictureMode({
         // choice for this exact word — it wins outright, not just over the
         // Photos setting but over SVG/emoji too, so the card shows only the
         // chosen image rather than mixing it into the carousel alongside
-        // fallbacks the override was meant to replace.
+        // fallbacks the override was meant to replace. It can itself be an
+        // emoji (My Content's "choose the emoji as canonical" option), not
+        // just an image, so it has to land in whichever field actually
+        // renders that shape — see isImageOverride.
         const override = getPictureOverride(lang, w.word);
         if (override) {
-          return { ...w, _imageUrl: override, svg_url: null, emoji: null, _emoji: null };
+          return isImageOverride(override)
+            ? { ...w, _imageUrl: override, svg_url: null, emoji: null, _emoji: null }
+            : { ...w, _imageUrl: null, svg_url: null, emoji: override, _emoji: null };
         }
         return {
           ...w,
