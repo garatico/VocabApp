@@ -18,7 +18,7 @@ import { saveSession, recordOutcome } from '../utils/session-history.ts';
 import { attachTooltips    } from '../utils/word-tooltip.ts';
 import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summary.ts';
 import { buildScorePills, scorePct } from '../ui/score-pills.ts';
-import { matchesAnswer     } from '../utils/utils.ts';
+import { matchesAnswer, displayWord } from '../utils/utils.ts';
 import { shuffle           } from '../utils/shuffle.ts';
 import { Settings, applyAutofillAttr } from '../settings.ts';
 import { createStopwatch   } from '../ui/stopwatch.ts';
@@ -498,14 +498,33 @@ function recordPictureSession(
   });
 }
 
-function showPictureSummary(correct: number, total: number): void {
+/**
+ * `onRetry`, when there's anything to retry, gets exactly the missed words
+ * back — same "↺ Practice N" pattern as table mode's own summary (see
+ * table-controls.ts's buildSummaryHtml/wireSummaryButtons), centralized
+ * here since all three sub-modes (type/flashcard/click) share this one
+ * summary strip already.
+ */
+function showPictureSummary<T extends Word>(
+  correct: number, total: number,
+  missedWords: T[] = [], onRetry: ((missed: T[]) => void) | null = null,
+): void {
   const missed = total - correct;
+  const retryHtml = onRetry && missedWords.length > 0
+    ? `<button type="button" class="summary-retry-btn">↺ Practice ${missedWords.length}</button>`
+    : '';
   showSummary('picture',
+    retryHtml +
     summaryChip('correct', `✓ ${correct} correct`) +
     summaryChip('missed',  `✗ ${missed} missed`) +
     summaryChip('pct',     `${percent(correct, total)}%`),
     total > 0 && missed === 0,
   );
+  if (onRetry && missedWords.length > 0) {
+    document.querySelectorAll<HTMLButtonElement>('.summary-retry-btn').forEach(btn => {
+      btn.addEventListener('click', () => onRetry(missedWords));
+    });
+  }
 }
 
 function clearPictureSummary(): void {
@@ -629,7 +648,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
 
     inp.addEventListener('input', () => {
       if (wordIsCorrect(inp.value, word)) {
-        inp.value    = word.word;
+        inp.value    = displayWord(word);
         inp.disabled = true;
         card.classList.add('correct');
         inp.classList.add('correct');
@@ -659,7 +678,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
     const typedCorrect = cards.filter(({ inp }) => inp.classList.contains('correct')).length;
     cards.forEach(({ card, inp, word }) => {
       if (!inp.disabled) {
-        inp.value    = word.word;
+        inp.value    = displayWord(word);
         inp.disabled = true;
         card.classList.add('revealed');
         inp.classList.add('revealed');
@@ -667,13 +686,15 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
     });
     giveUpBtn.disabled = true;
     updateTypeProgress();
+    const missedCards = cards.filter(c => !c.inp.classList.contains('correct'));
     recordPictureSession(
       lang,
       cards.filter(c => c.inp.classList.contains('correct')).map(c => c.word.word),
-      cards.filter(c => !c.inp.classList.contains('correct')).map(c => c.word.word),
+      missedCards.map(c => c.word.word),
       cards.length,
     );
-    showPictureSummary(typedCorrect, cards.length);
+    showPictureSummary(typedCorrect, cards.length, missedCards.map(c => c.word), missed =>
+      renderPictureMode({ container, lang, mode: 'type', words: missed }));
   });
 
   bar.appendChild(giveUpBtn);
@@ -845,13 +866,15 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
     const allDone = states.every(s => s.correct || s.revealed);
     giveUpBtn.disabled = allDone;
     if (allDone) {
+      const missedWords = words.filter((_, i) => !states[i].correct);
       recordPictureSession(
         lang,
         words.filter((_, i) => states[i].correct).map(w => w.word),
-        words.filter((_, i) => !states[i].correct).map(w => w.word),
+        missedWords.map(w => w.word),
         words.length,
       );
-      showPictureSummary(correct, words.length);
+      showPictureSummary(correct, words.length, missedWords, missed =>
+        renderPictureMode({ container, lang, mode: 'flashcard', words: missed }));
     }
   }
 
@@ -863,7 +886,7 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
     state.value = inp.value;
     if (wordIsCorrect(inp.value, word)) {
       state.correct = true;
-      state.value   = word.word;
+      state.value   = displayWord(word);
       renderCurrent();
       // Auto-advance to next unanswered after a short delay
       const nextUnanswered = (() => {
@@ -904,9 +927,9 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
 
   giveUpBtn.addEventListener('click', () => {
     states.forEach((s, i) => {
-      if (!s.correct) { s.revealed = true; s.value = words[i].word; }
+      if (!s.correct) { s.revealed = true; s.value = displayWord(words[i]); }
     });
-    states[idx].value = words[idx].word;
+    states[idx].value = displayWord(words[idx]);
     renderCurrent();
   });
 
@@ -1028,7 +1051,7 @@ function renderClickMode(
     feedback.className   = 'pm-click-feedback';
 
     syncNav();
-    wordEl.textContent  = word.word;
+    wordEl.textContent  = displayWord(word);
 
     const distractors = shuffle(decoyPool.filter(w => w.word !== word.word)).slice(0, 3);
     const options     = shuffle([word, ...distractors]);
@@ -1056,7 +1079,7 @@ function renderClickMode(
           syncProgress();
         } else {
           card.classList.add('pm-wrong');
-          feedback.textContent = `✗  That's "${opt.word}" — the answer was "${word.word}"`;
+          feedback.textContent = `✗  That's "${opt.word}" — the answer was "${displayWord(word)}"`;
           feedback.classList.add('bad');
           clickGrid.querySelectorAll<HTMLElement>(`.pm-click-card[data-word="${CSS.escape(word.word)}"]`)
             .forEach(c => c.classList.add('pm-reveal'));
@@ -1082,7 +1105,7 @@ function renderClickMode(
         clickGrid.querySelectorAll<HTMLElement>(
           `.pm-click-card[data-word="${CSS.escape(word.word)}"]`)
           .forEach(c => c.classList.add('pm-reveal'));
-        feedback.textContent = `✗  You picked "${prior.chosen}" — the answer was "${word.word}"`;
+        feedback.textContent = `✗  You picked "${prior.chosen}" — the answer was "${displayWord(word)}"`;
         feedback.classList.add('bad');
       } else {
         feedback.textContent = '✓ Correct!';
@@ -1134,7 +1157,17 @@ function renderClickMode(
     done.appendChild(again);
     container.appendChild(done);
     syncProgress();
-    showPictureSummary(correct, queue.length);
+    const missedWords = queue.filter((_, i) => !results[i]?.right);
+    showPictureSummary(correct, queue.length, missedWords, missed => {
+      container.innerHTML = '';
+      setProgress(0, 0);
+      // Same reset playAgain (below in the caller) itself does — needed here
+      // too since this recurses into renderClickMode directly rather than
+      // going back through renderPictureMode.
+      pictureRecorded = false;
+      getPictureStopwatch().stopwatch.start();
+      renderClickMode(missed, container, onPlayAgain, lang, distractorPool);
+    });
   }
 
   renderCard(queue[idx]);

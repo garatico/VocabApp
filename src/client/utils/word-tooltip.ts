@@ -8,7 +8,7 @@
  */
 
 import type { Word } from '../types.js';
-import { buildGlossDisplay } from './utils.js';
+import { buildGlossDisplay, displayWord } from './utils.js';
 import { PRONOUNS as LANG_PRONOUNS, TENSE_DEFS } from '../modes/conjugation/data.js';
 import { logger } from './logger.js';
 import { languageInfo, LANGUAGES, flagUrl } from '../data/languages.js';
@@ -323,7 +323,9 @@ function populateTooltip(word: Word, revealed: boolean, lang: string, hideWordWh
 
   const heading = document.createElement('div');
   heading.className   = 'tt-word';
-  heading.textContent = (hideWordWhenUnrevealed && !revealed) ? '???' : word.word;
+  // disambiguator here (word side); buildGlosses below carries its own,
+  // independent meaningDisambiguator — the two can differ, so both show.
+  heading.textContent = (hideWordWhenUnrevealed && !revealed) ? '???' : displayWord(word);
   tt.appendChild(heading);
   tt.appendChild(buildMetaRow(word));
 

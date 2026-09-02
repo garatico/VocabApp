@@ -46,6 +46,8 @@ export async function fetchVocab(lang: string): Promise<VocabEntry[]> {
         examples:    Array.isArray(w.examples) ? w.examples.filter(Boolean) : [],
         ipa:         w.linguistic?.ipa || null,
         audioUrl:    w.audio_url ?? null,
+        disambiguator: w.disambiguator || null,
+        meaningDisambiguator: w.meaningDisambiguator || null,
       }));
     vocabCache.set(lang, entries);
     vocabMapCache.set(lang, new Map(entries.map(e => [e.word, e])));

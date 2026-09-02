@@ -25,6 +25,10 @@ export interface VocabEntry {
   examples:    string[];
   ipa:         string | null;
   audioUrl:    string | null;
+  /** See Word.disambiguator in ../../types.ts. */
+  disambiguator: string | null;
+  /** See Word.meaningDisambiguator in ../../types.ts. */
+  meaningDisambiguator: string | null;
 }
 
 export type SortMode =

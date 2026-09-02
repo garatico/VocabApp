@@ -323,8 +323,9 @@ export function renderSentenceScrambleMode({
     checkBtn.disabled = true;
     clearBtn.disabled = true;
 
+    const missedQuestions = queue.filter((_, i) => results[i] === false);
     const correctWords = queue.filter((_, i) => results[i]).map(q => q.word.word);
-    const missedWords  = queue.filter((_, i) => results[i] === false).map(q => q.word.word);
+    const missedWords  = missedQuestions.map(q => q.word.word);
 
     recordOutcome(lang, missedWords, correctWords);
     saveSession(lang, {
@@ -340,12 +341,28 @@ export function renderSentenceScrambleMode({
     });
 
     syncProgress();
+    // Same "↺ Practice N" pattern as table mode's own summary — see
+    // table-controls.ts's buildSummaryHtml/wireSummaryButtons. Practicing
+    // passes the missed words straight back into `words` — this mode
+    // rebuilds its own queue from that (re-picking a scramble sentence per
+    // word), so there's no separate fixedQueue param needed here.
+    const retryHtml = missedQuestions.length > 0
+      ? `<button type="button" class="summary-retry-btn">↺ Practice ${missedQuestions.length}</button>`
+      : '';
     showSummary('sentenceScramble',
+      retryHtml +
       summaryChip('correct', `✓ ${correctCount} correct`) +
       summaryChip('missed',  `✗ ${missedWords.length} missed`) +
       summaryChip('pct',     `${percent(correctCount, queue.length)}%`),
       queue.length > 0 && missedWords.length === 0 && correctCount === queue.length,
     );
+    if (missedQuestions.length > 0) {
+      document.querySelectorAll<HTMLButtonElement>('.summary-retry-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          renderSentenceScrambleMode({ container, lang, words: missedQuestions.map(q => q.word) });
+        });
+      });
+    }
   }
 
   renderQuestion(idx);

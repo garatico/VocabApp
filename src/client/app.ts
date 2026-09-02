@@ -24,7 +24,7 @@ import { getUserTriviaQuestions }                from './data/user-content.ts';
 import { renderMyContent }                       from './modes/my-content-mode.ts';
 import { LANGUAGES, isoCode, supportsConjugation,
          conjugationUnavailableReason }          from './data/languages.ts';
-import { availableLanguages }                    from './data/vocab-source.ts';
+import { availableLanguages, isPackagedApp }     from './data/vocab-source.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
 import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, setOnKidFriendlyModeChange, refreshStreakReadouts } from './settings.ts';
 import { onActivity } from './utils/streak.ts';
@@ -468,13 +468,21 @@ const allWordsByLang: Record<string, Word[]> = {};
 let currentBaseList: Word[] = [];
 
 async function ensureLoaded(lang: string): Promise<Word[]> {
-  if (!allWordsByLang[lang]) {
-    const raw = await loadWords(lang);
-    // `??`, not `||`: a My Content word's rank is 0 (see data/user-content.ts's
-    // toWord()) specifically so it sorts first — `||` treats 0 as falsy and
-    // sent it to the very back instead, alongside genuinely unranked words.
-    allWordsByLang[lang] = raw.slice().sort((a, b) => (a.rank ?? 9999) - (b.rank ?? 9999));
-  }
+  // Recomputed every call, not just the first time for `lang` (as this used
+  // to guard with `if (!allWordsByLang[lang])`) — loadWords() re-applies My
+  // Content overrides fresh on every call precisely so an edit shows up
+  // without a full reload (see data-loader.ts's own doc comment on it), but
+  // caching its result here permanently defeated that: once a language had
+  // been loaded, every mode kept reading this stale array, so a gloss
+  // hidden/reordered/added, or any other override, in My Content silently
+  // never appeared in any quiz again this session. Cheap to redo — the raw
+  // vocab fetch underneath loadWords() is what's actually cached, in
+  // data-loader.ts; this is just a map + sort over data already in memory.
+  const raw = await loadWords(lang);
+  // `??`, not `||`: a My Content word's rank is 0 (see data/user-content.ts's
+  // toWord()) specifically so it sorts first — `||` treats 0 as falsy and
+  // sent it to the very back instead, alongside genuinely unranked words.
+  allWordsByLang[lang] = raw.slice().sort((a, b) => (a.rank ?? 9999) - (b.rank ?? 9999));
   return allWordsByLang[lang];
 }
 
@@ -1037,6 +1045,21 @@ document.getElementById('guessBlankDifficulty')?.addEventListener('click', e => 
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
+/**
+ * A packaged desktop build's WebView has no browser chrome — no reload
+ * button, no dependable F5 — so a stuck screen (a bad quiz-start error, a
+ * hung fetch) had no way back short of quitting and relaunching the app.
+ * The ordinary web app already has its own browser's reload, so this stays
+ * hidden there.
+ */
+function initReloadButton(): void {
+  if (!isPackagedApp()) return;
+  const btn = document.getElementById('reloadAppBtn');
+  if (!btn) return;
+  btn.hidden = false;
+  btn.addEventListener('click', () => location.reload());
+}
+
 void (async function init(): Promise<void> {
   mountUI();
   initPWA();              // service worker + offline indicator (production only)
@@ -1053,6 +1076,7 @@ void (async function init(): Promise<void> {
   bindTableControls();
   bindSettings();
   initShortcuts();
+  initReloadButton();
   initListFilter(langSelect?.value ?? 'spanish');
   syncConjViewToggle();
 

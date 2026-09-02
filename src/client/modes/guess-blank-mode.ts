@@ -33,6 +33,11 @@ interface RenderGuessBlankModeOptions {
   lang?:       string;
   /** 'all' (default) drills every difficulty in one shuffled run. */
   difficulty?: BlankDifficulty | 'all';
+  /** When set, skips the filter-built bank and quizzes exactly these
+   *  questions instead — the "↺ Practice N" summary button's retry-missed
+   *  path, matching table mode's restartWith() and trivia-mode.ts's own
+   *  fixedQueue. */
+  fixedQueue?: GuessBlankQuestion[];
 }
 
 const CATEGORY_LABELS: Record<GuessBlankQuestion['category'], string> = {
@@ -99,6 +104,7 @@ export function renderGuessBlankMode({
   container,
   lang = 'spanish',
   difficulty = 'all',
+  fixedQueue,
 }: RenderGuessBlankModeOptions): void {
   container.innerHTML = '';
   clearSummary('guessBlank');
@@ -108,7 +114,7 @@ export function renderGuessBlankMode({
   // on top of the hand-written bank the same way trivia-mode.ts layers in
   // getUserTriviaQuestions().
   const allQuestions = [...getGuessBlankQuestions(lang), ...getUserGuessBlankQuestions(lang)];
-  const bank = difficulty === 'all' ? allQuestions : allQuestions.filter(q => q.difficulty === difficulty);
+  const bank = fixedQueue ?? (difficulty === 'all' ? allQuestions : allQuestions.filter(q => q.difficulty === difficulty));
 
   if (bank.length === 0) {
     const why = allQuestions.length > 0
@@ -401,8 +407,9 @@ export function renderGuessBlankMode({
     moreClueBtn.disabled = true;
     hintBtn.disabled = true;
 
+    const missedQuestions = queue.filter((_, i) => results[i] === false);
     const correctWords = queue.filter((_, i) => results[i]).map(q => q.answerTarget);
-    const missedWords  = queue.filter((_, i) => results[i] === false).map(q => q.answerTarget);
+    const missedWords  = missedQuestions.map(q => q.answerTarget);
     // Correct without ever opening the letter hint on that question — the
     // clues themselves don't count as assistance (they're the question).
     const unassistedCount = results.filter((r, i) => r === true && hintsShown[i] === 0).length;
@@ -421,12 +428,25 @@ export function renderGuessBlankMode({
     });
 
     syncProgress();
+    // Same "↺ Practice N" pattern as table mode's own summary — see
+    // table-controls.ts's buildSummaryHtml/wireSummaryButtons.
+    const retryHtml = missedQuestions.length > 0
+      ? `<button type="button" class="summary-retry-btn">↺ Practice ${missedQuestions.length}</button>`
+      : '';
     showSummary('guessBlank',
+      retryHtml +
       summaryChip('correct', `✓ ${correctCount} correct`) +
       summaryChip('missed',  `✗ ${missedWords.length} missed`) +
       summaryChip('pct',     `${percent(correctCount, queue.length)}%`),
       queue.length > 0 && missedWords.length === 0 && correctCount === queue.length,
     );
+    if (missedQuestions.length > 0) {
+      document.querySelectorAll<HTMLButtonElement>('.summary-retry-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          renderGuessBlankMode({ container, lang, fixedQueue: missedQuestions });
+        });
+      });
+    }
   }
 
   renderQuestion(idx);

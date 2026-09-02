@@ -20,7 +20,7 @@ import { isOwnInfinitive, hasAnyForms, regularityOf } from './verb-filters.js';
 // card-match-mode.ts import these three from here, not from verb-filters.ts
 // directly (they predate the split).
 export { isOwnInfinitive, hasAnyForms, regularityOf };
-import { buildGlossDisplay } from '../../utils/utils.js';
+import { buildGlossDisplay, displayWord } from '../../utils/utils.js';
 import { getWordLists } from '../../utils/word-lists.ts';
 import { openListPicker } from '../../utils/list-picker.ts';
 import { supportsConjugation, conjugationUnavailableReason, languageInfo } from '../../data/languages.js';
@@ -1662,7 +1662,7 @@ function buildCard({
 
   function updateHeader(): void {
     const mode = getDisplayMode();
-    targetEl.textContent  = verb.word;
+    targetEl.textContent  = displayWord(verb);
     englishEl.textContent = buildGlossDisplay(verb);
     // In Full Conjugation the view header carries the verb, so the card's copy
     // stays hidden whatever the target/english toggle says.

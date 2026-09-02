@@ -115,12 +115,35 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     });
   }
 
-  /** Everything a change to the list's *membership* has to touch. */
-  function afterBulkChange(): void {
+  /** Everything a change to the list's *membership* has to touch.
+   *
+   *  `listBefore` is whatever ctx.selectedList was immediately before the
+   *  caller's own mutation (removeFromList/addToList) ran — every call site
+   *  already has this on hand, since each already snapshots it to know
+   *  which list Undo should act on.
+   *
+   *  renderSidebar runs first, not render: renderSidebar is what notices
+   *  ctx.selectedList no longer names a real list (emptying a list deletes
+   *  it) and corrects it — usually to '' or a fallback, but back to the
+   *  right name again when a since-recreated list (Undo, restoring the last
+   *  word removed) makes it valid once more.
+   *
+   *  Comparing against listBefore afterward decides which redraw is enough.
+   *  Usually the selection is untouched — just its contents — and render()
+   *  (word-list.ts's own body-only redraw) is plenty. But when it *did*
+   *  change — the active list got deleted out from under it, or Undo just
+   *  intentionally pointed ctx.selectedList somewhere else — render() isn't:
+   *  the panel's header/title/stats were built once, by ctx.renderPanel(),
+   *  for whichever list was open *then*, and nothing about calling render()
+   *  or renderSidebar(false) touches them. Left alone, the header goes on
+   *  naming a list that's gone while the body under it — correctly — shows
+   *  a completely different one. */
+  function afterBulkChange(listBefore: string): void {
     deps.refreshCount();
     ctx.updateBadge();
-    render();
     ctx.renderSidebar(false);
+    if (ctx.selectedList !== listBefore) ctx.renderPanel();
+    else render();
   }
 
   bulkSelectAll.addEventListener('click', () => {
@@ -155,10 +178,16 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     const source = ctx.selectedList;
     words.forEach(w => removeFromList(ctx.lang, source, w));
     selectedWords.clear();
-    afterBulkChange();
+    afterBulkChange(source);
     showUndo(`Removed ${words.length} word${words.length === 1 ? '' : 's'}`, () => {
+      const before = ctx.selectedList;
       words.forEach(w => addToList(ctx.lang, source, w));
-      afterBulkChange();
+      // Undo means "take me back to the list these came from" — set
+      // explicitly rather than relying on renderSidebar's own fallback,
+      // which only fires when the current selection is invalid and might
+      // otherwise leave Undo's restored list recreated but not shown.
+      ctx.selectedList = source;
+      afterBulkChange(before);
     });
   });
 
@@ -184,17 +213,25 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     const source = ctx.selectedList;
     openMovePopover(ctx, bulkMove, words, (mode, target) => {
       selectedWords.clear();
-      afterBulkChange();
+      afterBulkChange(source);
       const verb = mode === 'move' ? 'Moved' : 'Copied';
       showUndo(`${verb} ${words.length} to "${target}"`, () => {
+        const before = ctx.selectedList;
         if (mode === 'move') {
           words.forEach(w => { removeFromList(ctx.lang, target, w); addToList(ctx.lang, source, w); });
+          // Same reasoning as bulk remove's Undo — bring the view back to
+          // where these words came from, rather than leaving it wherever
+          // the move (or a since-deleted target) left it.
+          ctx.selectedList = source;
         } else {
           // Undoing a copy removes the copies rather than re-adding
-          // anything to the source list, which the words never left.
+          // anything to the source list, which the words never left — no
+          // "list these came from" to navigate back to, so selection is
+          // left alone; afterBulkChange's own comparison still catches it
+          // if removing the copies happened to delete an emptied target.
           words.forEach(w => removeFromList(ctx.lang, target, w));
         }
-        afterBulkChange();
+        afterBulkChange(before);
       });
     });
   });
@@ -380,7 +417,8 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     });
 
     const wordSpan = document.createElement('span');
-    wordSpan.className = 'ml-word-text'; wordSpan.textContent = word;
+    wordSpan.className = 'ml-word-text';
+    wordSpan.textContent = entry?.disambiguator ? `${word} (${entry.disambiguator})` : word;
 
     const audioBtn = buildAudioButton(entry?.audioUrl);
 
@@ -390,7 +428,10 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     else posSpan.hidden = true;
 
     const transSpan = document.createElement('span');
-    transSpan.className = 'ml-word-trans'; transSpan.textContent = entry?.translation ?? '';
+    transSpan.className = 'ml-word-trans';
+    transSpan.textContent = entry?.translation
+      ? (entry.meaningDisambiguator ? `${entry.translation} (${entry.meaningDisambiguator})` : entry.translation)
+      : '';
 
     const rankBadge = document.createElement('span');
     rankBadge.className = 'ml-word-rank';
@@ -410,14 +451,15 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     moveBtn.title = 'Move or copy to another list'; moveBtn.textContent = '⇥';
     moveBtn.addEventListener('click', e => {
       e.stopPropagation();
+      // Captured before the popover applies the move, not after — same
+      // reasoning as afterBulkChange's own listBefore, since moving out a
+      // list's last word deletes it.
+      const listBefore = ctx.selectedList;
       openMovePopover(ctx, moveBtn, [word], () => {
         // Move/copy already applied by the popover — nothing here needs to
         // know which or where; Undo for a single word isn't offered on this
         // path (only the bulk toolbar's own action wires one up).
-        deps.refreshCount();
-        ctx.updateBadge();
-        render();
-        ctx.renderSidebar(false);
+        afterBulkChange(listBefore);
       });
     });
 
@@ -436,17 +478,15 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
       // from — silent data loss dressed up as a working Undo.
       const listAtRemoval = ctx.selectedList;
       removeFromList(ctx.lang, listAtRemoval, word);
-      deps.refreshCount();
-      ctx.updateBadge();
       deps.refreshAddResults();
-      // Re-render the word list too, or the removed row stays on screen
-      // until some other action happens to redraw it.
-      render();
-      ctx.renderSidebar(false);
+      afterBulkChange(listAtRemoval);
       showUndo(`Removed "${word}"`, () => {
+        const before = ctx.selectedList;
         addToList(ctx.lang, listAtRemoval, word);
-        deps.refreshCount();
-        ctx.updateBadge(); render(); ctx.renderSidebar(false);
+        // Undo means "take me back to the list this came from" — see the
+        // same reasoning on bulk remove's Undo above.
+        ctx.selectedList = listAtRemoval;
+        afterBulkChange(before);
       });
     });
 
