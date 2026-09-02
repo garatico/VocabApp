@@ -110,32 +110,38 @@
              My Lists — see my-lists/profiles-panel.ts. -->
         <button type="button" id="presetsBtn" data-kid-hide="true" aria-label="Testing Profiles" title="Testing Profiles" data-i18n-aria-label="controls.profiles" data-i18n-title="controls.profiles" data-i18n="controls.profiles">Profiles</button>
         <div id="controls-top">
-          <div class="control-group">
-            <label for="langSelect" data-i18n="controls.language">Language</label>
-            <!-- Options are rebuilt from LANGUAGES in data/languages.ts on
-                 load; these are the no-JS fallback and must match it. -->
-            <select id="langSelect">
-              <option value="spanish">Spanish</option>
-              <option value="portuguese">Portuguese</option>
-              <option value="italian">Italian</option>
-              <option value="french">French</option>
-              <option value="german">German</option>
-              <option value="dutch">Dutch</option>
-            </select>
-          </div>
+          <!-- Language and the multi-language picker share one column —
+               the picker is a secondary row under Language(s) rather than
+               its own side-by-side group, same idea as the Quiz
+               Style/Direction stack below. -->
+          <div class="control-stack">
+            <div class="control-group" id="langGroup">
+              <label for="langSelect" data-i18n="controls.language">Language(s)</label>
+              <!-- Options are rebuilt from LANGUAGES in data/languages.ts on
+                   load; these are the no-JS fallback and must match it. -->
+              <select id="langSelect">
+                <option value="spanish">Spanish</option>
+                <option value="portuguese">Portuguese</option>
+                <option value="italian">Italian</option>
+                <option value="french">French</option>
+                <option value="german">German</option>
+                <option value="dutch">Dutch</option>
+              </select>
+            </div>
 
-          <!-- Table mode only: merges one or more additional languages' words
-               into the same table, tagged per-row so scoring/mastery/lists
-               still land in the right language. Hidden on every other tab —
-               see ui-state.ts. Opens a checkbox popover — language-picker.ts. -->
-          <div class="control-group" id="compareGroup" data-kid-hide="true">
-            <label data-i18n="controls.languages">Languages</label>
-            <button type="button" id="langPickerBtn" class="lang-picker-btn" data-i18n="controls.addLanguages">+ Languages</button>
+            <!-- Table mode only: merges one or more additional languages'
+                 words into the same table, tagged per-row so scoring/mastery
+                 /lists still land in the right language. Hidden on every
+                 other tab — see ui-state.ts. Opens a checkbox popover —
+                 language-picker.ts. -->
+            <div class="control-group" id="compareGroup" data-kid-hide="true">
+              <button type="button" id="langPickerBtn" class="lang-picker-btn" data-i18n="controls.addLanguages">+ Languages</button>
+            </div>
           </div>
 
           <div class="control-group" id="wordsSizeGroup">
             <label data-i18n="controls.words">Words</label>
-            <div class="sort-order-toggle" id="poolModeToggle" title="Most Common: the N most frequent words. Rank Range: a specific slice of the frequency list. Level: every word at the CEFR level(s) you pick." data-i18n-title="controls.poolModeTip">
+            <div class="sort-order-toggle chip-toggle" id="poolModeToggle" title="Most Common: the N most frequent words. Rank Range: a specific slice of the frequency list. Level: every word at the CEFR level(s) you pick." data-i18n-title="controls.poolModeTip">
               <button type="button" class="sort-order-btn active" data-pool="topn" data-i18n="controls.topN">Most Common</button>
               <button type="button" class="sort-order-btn" data-pool="range" data-i18n="controls.rankRange">Rank Range</button>
               <button type="button" class="sort-order-btn" data-pool="band" data-i18n="controls.level">Level</button>
@@ -150,7 +156,7 @@
                 <option value="custom">Custom...</option>
               </select>
               <input type="number" id="sizeCustom" class="custom-count-input" min="1" max="9999" step="1" placeholder="e.g. 750" data-i18n-placeholder="controls.egCustom" style="display:none;"/>
-              <div class="sort-order-toggle" id="sizeModeToggle" data-kid-hide="true" title="By rank: the words ranked 1–N, whatever their status. Skip known: N words that aren't on any of your lists, digging further down the frequency list as needed." data-i18n-title="controls.sizeModeTip">
+              <div class="sort-order-toggle chip-toggle" id="sizeModeToggle" data-kid-hide="true" title="By rank: the words ranked 1–N, whatever their status. Skip known: N words that aren't on any of your lists, digging further down the frequency list as needed." data-i18n-title="controls.sizeModeTip">
                 <button type="button" class="sort-order-btn active" data-mode="window" title="Take the words ranked 1–N in frequency order" data-i18n-title="controls.byRankTip" data-i18n="controls.byRank">By Rank</button>
                 <button type="button" class="sort-order-btn" data-mode="fill" title="Always return N words you haven't listed yet, pulling deeper if needed" data-i18n-title="controls.skipKnownTip" data-i18n="controls.skipKnown">Skip Known</button>
               </div>
@@ -194,147 +200,191 @@
             <input type="number" id="conjSizeCustom" class="custom-count-input" min="1" max="9999" step="1" placeholder="e.g. 750" data-i18n-placeholder="controls.egCustom" style="display:none;"/>
           </div>
 
-          <div class="controls-sep" aria-hidden="true"></div>
+          <!-- Order (shared with Sentence Scramble — ui-state.ts's
+               hasOwnOrder) and Picture Quiz's own sub-mode toggle stack as
+               one column, same idea as Table's Quiz Style/Direction. When
+               Quiz Style is hidden (every mode but Picture Quiz) Order just
+               sits alone under the spacer, one row lower than its neighbors
+               — a minor, mode-only quirk rather than a second markup copy of
+               Order. -->
+          <div class="control-stack control-stack--inline-labels">
+            <div class="control-group control-group--chip" id="sortOrderGroup">
+              <label data-i18n="controls.order">Order</label>
+              <div class="sort-order-toggle" id="sortOrderToggle">
+                <button class="sort-order-btn active" data-order="frequency" title="Order by word frequency, most common first" data-i18n-title="controls.freqTip" data-i18n="controls.freq">Freq</button>
+                <button class="sort-order-btn" data-order="rarest" title="Order by word frequency, rarest first" data-i18n-title="controls.rarestTip" data-i18n="controls.rarest">Rarest</button>
+                <button class="sort-order-btn" data-order="alpha" title="Order alphabetically" data-i18n-title="controls.alphaTip">A&#x2013;Z</button>
+                <button class="sort-order-btn" data-order="random" title="Randomize order" data-i18n-title="controls.shuffleTip" data-i18n="controls.shuffle">Shuffle</button>
+                <button class="sort-order-btn" data-order="trouble" title="Words you've missed most in past sessions first" data-i18n-title="controls.troubleTip" data-i18n="controls.trouble">Trouble</button>
+              </div>
+            </div>
 
-          <div class="control-group" id="sortOrderGroup">
-            <label data-i18n="controls.order">Order</label>
-            <div class="sort-order-toggle" id="sortOrderToggle">
-              <button class="sort-order-btn active" data-order="frequency" title="Order by word frequency, most common first" data-i18n-title="controls.freqTip" data-i18n="controls.freq">Freq</button>
-              <button class="sort-order-btn" data-order="rarest" title="Order by word frequency, rarest first" data-i18n-title="controls.rarestTip" data-i18n="controls.rarest">Rarest</button>
-              <button class="sort-order-btn" data-order="alpha" title="Order alphabetically" data-i18n-title="controls.alphaTip">A&#x2013;Z</button>
-              <button class="sort-order-btn" data-order="random" title="Randomize order" data-i18n-title="controls.shuffleTip" data-i18n="controls.shuffle">Shuffle</button>
-              <button class="sort-order-btn" data-order="trouble" title="Words you've missed most in past sessions first" data-i18n-title="controls.troubleTip" data-i18n="controls.trouble">Trouble</button>
+            <!-- Picture Quiz only: which of the three sub-modes to run. Sits
+                 next to Order (the pre-quiz order control Picture Quiz also
+                 keeps — see ui-state.ts's hasOwnOrder check), always visible
+                 rather than a collapsible filter box, since it's a core setup
+                 choice for this mode, not an incidental narrowing filter. -->
+            <div class="control-group control-group--chip" id="pictureStyleGroup" data-kid-hide="true" style="display:none">
+              <label data-i18n="controls.quizStyle">Quiz Style</label>
+              <div class="conj-display-toggle" id="pictureSubMode">
+                <button class="conj-toggle-btn active" data-mode="type" data-i18n="controls.typeWord">Type the Word</button>
+                <button class="conj-toggle-btn" data-mode="flashcard" data-i18n="controls.flashcard">Flashcard</button>
+                <button class="conj-toggle-btn" data-mode="click" data-i18n="controls.clickPicture">Click the Picture</button>
+              </div>
             </div>
           </div>
 
-          <!-- Picture Quiz only: which of the three sub-modes to run. Sits
-               next to Order (the pre-quiz order control Picture Quiz also
-               keeps — see ui-state.ts's hasOwnOrder check), always visible
-               rather than a collapsible filter box, since it's a core setup
-               choice for this mode, not an incidental narrowing filter. -->
-          <div class="control-group" id="pictureStyleGroup" data-kid-hide="true" style="display:none">
-            <label data-i18n="controls.quizStyle">Quiz Style</label>
-            <div class="conj-display-toggle" id="pictureSubMode">
-              <button class="conj-toggle-btn active" data-mode="type" data-i18n="controls.typeWord">Type the Word</button>
-              <button class="conj-toggle-btn" data-mode="flashcard" data-i18n="controls.flashcard">Flashcard</button>
-              <button class="conj-toggle-btn" data-mode="click" data-i18n="controls.clickPicture">Click the Picture</button>
+          <!-- Trivia only. Answer Style + Category stack as one column (what
+               kind of question, what it's about); Difficulty + Reading
+               Difficulty stack as another (how hard the fact vs. the wording
+               is); Reading Length stands alone in its own spacer-aligned
+               column — five single-row toggles read as three columns instead
+               of five, each lined up with Language(s)'s row. -->
+          <div class="control-stack control-stack--inline-labels">
+            <div class="control-group control-group--chip" id="triviaStyleGroup" style="display:none">
+              <label data-i18n="controls.answerStyle">Answer Style</label>
+              <div class="conj-display-toggle" id="triviaSubMode">
+                <button class="conj-toggle-btn active" data-mode="type" data-i18n="controls.typeAnswer">Type the Answer</button>
+                <button class="conj-toggle-btn" data-mode="choice" data-i18n="controls.multipleChoice">Multiple Choice</button>
+                <button class="conj-toggle-btn" data-mode="table" data-i18n="nav.table">Table</button>
+              </div>
+            </div>
+
+            <!-- Trivia only — see data/trivia-questions.ts's category field. -->
+            <div class="control-group control-group--chip" id="triviaCategoryGroup" style="display:none">
+              <label data-i18n="controls.category">Category</label>
+              <div class="conj-display-toggle" id="triviaCategory">
+                <button class="conj-toggle-btn active" data-category="all" data-i18n="controls.all">All</button>
+                <button class="conj-toggle-btn" data-category="history" data-i18n="controls.history">History</button>
+                <button class="conj-toggle-btn" data-category="pop-culture" data-i18n="controls.popCulture">Pop Culture</button>
+              </div>
             </div>
           </div>
 
-          <!-- Trivia mode only — see trivia-mode.ts. -->
-          <div class="control-group" id="triviaStyleGroup" style="display:none">
-            <label data-i18n="controls.answerStyle">Answer Style</label>
-            <div class="conj-display-toggle" id="triviaSubMode">
-              <button class="conj-toggle-btn active" data-mode="type" data-i18n="controls.typeAnswer">Type the Answer</button>
-              <button class="conj-toggle-btn" data-mode="choice" data-i18n="controls.multipleChoice">Multiple Choice</button>
-              <button class="conj-toggle-btn" data-mode="table" data-i18n="nav.table">Table</button>
+          <div class="control-stack control-stack--inline-labels">
+            <!-- Trivia only — see data/trivia-questions.ts's difficulty field. -->
+            <div class="control-group control-group--chip" id="triviaDifficultyGroup" data-kid-hide="true" style="display:none">
+              <label data-i18n="controls.difficulty">Trivia Difficulty</label>
+              <div class="conj-display-toggle" id="triviaDifficulty">
+                <button class="conj-toggle-btn active" data-difficulty="all" data-i18n="controls.all">All</button>
+                <button class="conj-toggle-btn" data-difficulty="easy" data-i18n="controls.easy">Easy</button>
+                <button class="conj-toggle-btn" data-difficulty="medium" data-i18n="controls.medium">Medium</button>
+                <button class="conj-toggle-btn" data-difficulty="hard" data-i18n="controls.hard">Hard</button>
+              </div>
+            </div>
+
+            <!-- Trivia only — how hard the question's own wording is, independent
+                 of how obscure the fact is (see data/trivia-questions.ts's
+                 readingDifficulty field). -->
+            <div class="control-group control-group--chip" id="triviaReadingDifficultyGroup" data-kid-hide="true" style="display:none">
+              <label>Reading Difficulty</label>
+              <div class="conj-display-toggle" id="triviaReadingDifficulty">
+                <button class="conj-toggle-btn active" data-reading-difficulty="all" data-i18n="controls.all">All</button>
+                <button class="conj-toggle-btn" data-reading-difficulty="easy" data-i18n="controls.easy">Easy</button>
+                <button class="conj-toggle-btn" data-reading-difficulty="medium" data-i18n="controls.medium">Medium</button>
+                <button class="conj-toggle-btn" data-reading-difficulty="hard" data-i18n="controls.hard">Hard</button>
+              </div>
             </div>
           </div>
 
-          <!-- Trivia only — see data/trivia-questions.ts's category field. -->
-          <div class="control-group" id="triviaCategoryGroup" style="display:none">
-            <label data-i18n="controls.category">Category</label>
-            <div class="conj-display-toggle" id="triviaCategory">
-              <button class="conj-toggle-btn active" data-category="all" data-i18n="controls.all">All</button>
-              <button class="conj-toggle-btn" data-category="history" data-i18n="controls.history">History</button>
-              <button class="conj-toggle-btn" data-category="pop-culture" data-i18n="controls.popCulture">Pop Culture</button>
-            </div>
-          </div>
-
-          <!-- Trivia only — see data/trivia-questions.ts's difficulty field. -->
-          <div class="control-group" id="triviaDifficultyGroup" data-kid-hide="true" style="display:none">
-            <label data-i18n="controls.difficulty">Trivia Difficulty</label>
-            <div class="conj-display-toggle" id="triviaDifficulty">
-              <button class="conj-toggle-btn active" data-difficulty="all" data-i18n="controls.all">All</button>
-              <button class="conj-toggle-btn" data-difficulty="easy" data-i18n="controls.easy">Easy</button>
-              <button class="conj-toggle-btn" data-difficulty="medium" data-i18n="controls.medium">Medium</button>
-              <button class="conj-toggle-btn" data-difficulty="hard" data-i18n="controls.hard">Hard</button>
-            </div>
-          </div>
-
-          <!-- Trivia only — how hard the question's own wording is, independent
-               of how obscure the fact is (see data/trivia-questions.ts's
-               readingDifficulty field). -->
-          <div class="control-group" id="triviaReadingDifficultyGroup" data-kid-hide="true" style="display:none">
-            <label>Reading Difficulty</label>
-            <div class="conj-display-toggle" id="triviaReadingDifficulty">
-              <button class="conj-toggle-btn active" data-reading-difficulty="all" data-i18n="controls.all">All</button>
-              <button class="conj-toggle-btn" data-reading-difficulty="easy" data-i18n="controls.easy">Easy</button>
-              <button class="conj-toggle-btn" data-reading-difficulty="medium" data-i18n="controls.medium">Medium</button>
-              <button class="conj-toggle-btn" data-reading-difficulty="hard" data-i18n="controls.hard">Hard</button>
-            </div>
-          </div>
-
-          <!-- Trivia only — one short clause vs. a multi-sentence prompt (see
-               data/trivia-questions.ts's readingLength field). -->
-          <div class="control-group" id="triviaReadingLengthGroup" data-kid-hide="true" style="display:none">
-            <label>Reading Length</label>
-            <div class="conj-display-toggle" id="triviaReadingLength">
-              <button class="conj-toggle-btn active" data-reading-length="all" data-i18n="controls.all">All</button>
-              <button class="conj-toggle-btn" data-reading-length="short">Short</button>
-              <button class="conj-toggle-btn" data-reading-length="long">Long</button>
+          <div class="control-stack control-stack--inline-labels">
+            <!-- Trivia only — one short clause vs. a multi-sentence prompt (see
+                 data/trivia-questions.ts's readingLength field). -->
+            <div class="control-group control-group--chip" id="triviaReadingLengthGroup" data-kid-hide="true" style="display:none">
+              <label>Reading Length</label>
+              <div class="conj-display-toggle" id="triviaReadingLength">
+                <button class="conj-toggle-btn active" data-reading-length="all" data-i18n="controls.all">All</button>
+                <button class="conj-toggle-btn" data-reading-length="short">Short</button>
+                <button class="conj-toggle-btn" data-reading-length="long">Long</button>
+              </div>
             </div>
           </div>
 
           <!-- Guess the Blank only — see guess-blank-mode.ts /
-               guess-blank-questions.ts's difficulty field. -->
-          <div class="control-group" id="guessBlankDifficultyGroup" data-kid-hide="true" style="display:none">
-            <label data-i18n="controls.difficulty">Difficulty</label>
-            <div class="conj-display-toggle" id="guessBlankDifficulty">
-              <button class="conj-toggle-btn active" data-difficulty="all" data-i18n="controls.all">All</button>
-              <button class="conj-toggle-btn" data-difficulty="easy" data-i18n="controls.easy">Easy</button>
-              <button class="conj-toggle-btn" data-difficulty="medium" data-i18n="controls.medium">Medium</button>
-              <button class="conj-toggle-btn" data-difficulty="hard" data-i18n="controls.hard">Hard</button>
+               guess-blank-questions.ts's difficulty field. Solo in its own
+               spacer-aligned stack so its row lines up with Language(s)'s
+               select instead of sitting a row higher (control-group--chip's
+               label has no row of its own the way Language(s)'s does). -->
+          <div class="control-stack control-stack--inline-labels">
+            <div class="control-group control-group--chip" id="guessBlankDifficultyGroup" data-kid-hide="true" style="display:none">
+              <label data-i18n="controls.difficulty">Difficulty</label>
+              <div class="conj-display-toggle" id="guessBlankDifficulty">
+                <button class="conj-toggle-btn active" data-difficulty="all" data-i18n="controls.all">All</button>
+                <button class="conj-toggle-btn" data-difficulty="easy" data-i18n="controls.easy">Easy</button>
+                <button class="conj-toggle-btn" data-difficulty="medium" data-i18n="controls.medium">Medium</button>
+                <button class="conj-toggle-btn" data-difficulty="hard" data-i18n="controls.hard">Hard</button>
+              </div>
             </div>
           </div>
 
           <!-- Table mode only: folds Recall/Double Recall's blind-guess
                mechanic into Table's own grid — see table-recall-mode.ts.
-               Standard is Table's existing per-row behaviour, unchanged. -->
-          <div class="control-group" id="tableStyleGroup" data-kid-hide="true" style="display:none">
-            <label data-i18n="controls.quizStyle">Quiz Style</label>
-            <div class="conj-display-toggle" id="tableStyleToggle">
-              <button class="conj-toggle-btn active" data-style="standard" data-i18n="controls.standard">Standard</button>
-              <button class="conj-toggle-btn" data-style="recall" data-i18n="controls.recall">Recall</button>
-              <button class="conj-toggle-btn" data-style="double" data-i18n="controls.doubleRecall">Double Recall</button>
+               Standard is Table's existing per-row behaviour, unchanged.
+
+               Quiz Style and Direction stack as one unit — two short chip
+               rows read better sharing one column than each claiming a
+               full-width row of its own (Direction used to wrap alone under
+               a wide gap Quiz Style's own row left unused).
+               control-stack--inline-labels adds a blank spacer the height
+               of a real label (::before, controls-bar.css) above the pair,
+               since neither row has a label of its own above it the way
+               Language(s)/Words do — without it Quiz Style's chips sat one
+               row higher than Words' own chips instead of lining up. -->
+          <div class="control-stack control-stack--inline-labels">
+            <div class="control-group control-group--chip" id="tableStyleGroup" data-kid-hide="true" style="display:none">
+              <label data-i18n="controls.quizStyle">Quiz Style</label>
+              <div class="conj-display-toggle" id="tableStyleToggle">
+                <button class="conj-toggle-btn active" data-style="standard" data-i18n="controls.standard">Standard</button>
+                <button class="conj-toggle-btn" data-style="recall" data-i18n="controls.recall">Recall</button>
+                <button class="conj-toggle-btn" data-style="double" data-i18n="controls.doubleRecall">Double Recall</button>
+              </div>
+            </div>
+
+            <div class="control-group control-group--chip" id="directionGroup" data-kid-hide="true">
+              <label data-i18n="controls.direction">Direction</label>
+              <div class="conj-display-toggle" id="directionToggle">
+                <button class="conj-toggle-btn active" data-direction="target-en" data-i18n="controls.wordToMeaning">Word &#x2192; Meaning</button>
+                <button class="conj-toggle-btn"        data-direction="en-target" data-i18n="controls.meaningToWord">Meaning &#x2192; Word</button>
+                <button class="conj-toggle-btn"        data-direction="mixed" data-i18n="controls.mixed">Mixed</button>
+              </div>
             </div>
           </div>
 
-          <div class="control-group" id="directionGroup" data-kid-hide="true">
-            <label data-i18n="controls.direction">Direction</label>
-            <div class="conj-display-toggle" id="directionToggle">
-              <button class="conj-toggle-btn active" data-direction="target-en" data-i18n="controls.wordToMeaning">Word &#x2192; Meaning</button>
-              <button class="conj-toggle-btn"        data-direction="en-target" data-i18n="controls.meaningToWord">Meaning &#x2192; Word</button>
-              <button class="conj-toggle-btn"        data-direction="mixed" data-i18n="controls.mixed">Mixed</button>
+          <!-- View and Display stack as one column, same idea as Table's
+               Quiz Style/Direction. Card Match's own Match toggle sits in a
+               separate solo stack of its own right after (rather than
+               folded into this pair) since it only ever appears alongside
+               View, never in the same relationship Display has to it. -->
+          <div class="control-stack control-stack--inline-labels">
+            <div class="control-group control-group--chip" id="conjViewGroup" data-kid-hide="true" style="display:none">
+              <label data-i18n="controls.view">View</label>
+              <div class="conj-display-toggle" id="conjViewToggle">
+                <button class="conj-toggle-btn active" data-view="grid" title="Every verb, one card per tense" data-i18n-title="controls.gridTip" data-i18n="controls.grid">Grid</button>
+                <button class="conj-toggle-btn" data-view="full" title="One verb at a time, every tense side by side" data-i18n-title="controls.fullConjugationTip" data-i18n="controls.fullConjugation">Full Conjugation</button>
+                <button class="conj-toggle-btn" data-view="oneatatime" title="One blank at a time — a verb, tense and pronoun, then the next" data-i18n-title="controls.oneAtATimeTip" data-i18n="controls.oneAtATime">One at a Time</button>
+                <button class="conj-toggle-btn" data-view="randomtable" title="Every blank at once, fully shuffled — a random tense of a random verb on every row" data-i18n-title="controls.randomTableTip" data-i18n="controls.randomTable">Random Table</button>
+                <button class="conj-toggle-btn" data-view="cardmatch" title="Match pronouns or infinitives to their conjugated forms" data-i18n-title="controls.cardMatchTip" data-i18n="controls.cardMatch">Card Match</button>
+              </div>
             </div>
-          </div>
 
-          <div class="control-group" id="conjViewGroup" data-kid-hide="true" style="display:none">
-            <label data-i18n="controls.view">View</label>
-            <div class="conj-display-toggle" id="conjViewToggle">
-              <button class="conj-toggle-btn active" data-view="grid" title="Every verb, one card per tense" data-i18n-title="controls.gridTip" data-i18n="controls.grid">Grid</button>
-              <button class="conj-toggle-btn" data-view="full" title="One verb at a time, every tense side by side" data-i18n-title="controls.fullConjugationTip" data-i18n="controls.fullConjugation">Full Conjugation</button>
-              <button class="conj-toggle-btn" data-view="oneatatime" title="One blank at a time — a verb, tense and pronoun, then the next" data-i18n-title="controls.oneAtATimeTip" data-i18n="controls.oneAtATime">One at a Time</button>
-              <button class="conj-toggle-btn" data-view="randomtable" title="Every blank at once, fully shuffled — a random tense of a random verb on every row" data-i18n-title="controls.randomTableTip" data-i18n="controls.randomTable">Random Table</button>
-              <button class="conj-toggle-btn" data-view="cardmatch" title="Match pronouns or infinitives to their conjugated forms" data-i18n-title="controls.cardMatchTip" data-i18n="controls.cardMatch">Card Match</button>
+            <div class="control-group control-group--chip" id="conjDisplayGroup" style="display:none">
+              <label data-i18n="controls.display">Display</label>
+              <div class="conj-display-toggle" id="conjDisplayToggle">
+                <button class="conj-toggle-btn" data-mode="target" data-i18n="controls.target">Target</button>
+                <button class="conj-toggle-btn active" data-mode="both" data-i18n="controls.both">Both</button>
+                <button class="conj-toggle-btn" data-mode="english" data-i18n="controls.english">English</button>
+              </div>
             </div>
           </div>
 
           <!-- Card Match only — which two things get matched. -->
-          <div class="control-group" id="conjMatchStyleGroup" style="display:none">
-            <label data-i18n="controls.match">Match</label>
-            <div class="conj-display-toggle" id="conjMatchStyleToggle">
-              <button class="conj-toggle-btn active" data-pairing="pronoun" title="One verb and tense at a time — match each pronoun to its conjugated form" data-i18n-title="controls.pronounFormTip" data-i18n="controls.pronounForm">Pronoun &#x2194; Form</button>
-              <button class="conj-toggle-btn" data-pairing="infinitive" title="Several verbs at once — match each infinitive to its conjugated form" data-i18n-title="controls.infinitiveFormTip" data-i18n="controls.infinitiveForm">Infinitive &#x2194; Form</button>
-            </div>
-          </div>
-
-          <div class="control-group" id="conjDisplayGroup" style="display:none">
-            <label data-i18n="controls.display">Display</label>
-            <div class="conj-display-toggle" id="conjDisplayToggle">
-              <button class="conj-toggle-btn" data-mode="target" data-i18n="controls.target">Target</button>
-              <button class="conj-toggle-btn active" data-mode="both" data-i18n="controls.both">Both</button>
-              <button class="conj-toggle-btn" data-mode="english" data-i18n="controls.english">English</button>
+          <div class="control-stack control-stack--inline-labels">
+            <div class="control-group control-group--chip" id="conjMatchStyleGroup" style="display:none">
+              <label data-i18n="controls.match">Match</label>
+              <div class="conj-display-toggle" id="conjMatchStyleToggle">
+                <button class="conj-toggle-btn active" data-pairing="pronoun" title="One verb and tense at a time — match each pronoun to its conjugated form" data-i18n-title="controls.pronounFormTip" data-i18n="controls.pronounForm">Pronoun &#x2194; Form</button>
+                <button class="conj-toggle-btn" data-pairing="infinitive" title="Several verbs at once — match each infinitive to its conjugated form" data-i18n-title="controls.infinitiveFormTip" data-i18n="controls.infinitiveForm">Infinitive &#x2194; Form</button>
+              </div>
             </div>
           </div>
 

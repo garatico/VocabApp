@@ -11,33 +11,61 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* Top row: selects + start button inline.
-   Used to be nowrap + horizontal scroll — every control stayed on the one
-   row it belonged to, but that meant a hidden scrollbar (or worse, no visual
-   hint of one at all) was the only way to reach Direction on a typical
-   desktop width, where the full row of mode-conditional groups plus
-   Direction never fit on one line. Wrapping instead means nothing is ever
-   off-screen: a control group that doesn't fit drops to the next line,
-   full stop. The shared control sizing just below (min-height/font-size on
-   selects and toggle buttons) was trimmed at the same time specifically to
-   cut down how often that happens. Column-stacking below 599px (further
-   down) still applies on top of this for phone widths. */
+/* Top row: selects + chip groups, wrapping onto as many lines as it needs.
+   A hidden "More" button that moved groups behind a click (adaptive
+   overflow) tested badly — collapsing Direction or Quiz Style out of sight
+   read as broken, not tidy. Wrapping is the honest version: every group is
+   always visible, and the .control-group--chip treatment below (pill
+   buttons, a muted inline label instead of a bordered box) is what keeps a
+   wrapped second or third line reading as "more of the same row" rather
+   than a control awkwardly bumped down on its own. Column-stacking below
+   599px (further down) replaces this entirely at phone widths. */
 #controls-top {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 0.6rem;
-  align-items: flex-end;
+  gap: 0.6rem 0.5rem;
+  align-items: flex-start;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--border-strong);
   margin-bottom: 0.5rem;
 }
 /* A group that's currently display:none (most modes' controls, hidden by
-   ui-state.ts) must not hold its flex basis open in a nowrap row the way it
-   could get away with in a wrapping one — already true for display:none,
-   noted here since nowrap is what makes it load-bearing. */
+   ui-state.ts) must not hold its flex basis open in the row. */
 #controls-top > .control-group,
-#controls-top > .controls-sep {
+#controls-top > .control-stack {
   flex-shrink: 0;
+}
+
+/* Two or more chip groups sharing one column instead of each claiming a
+   full-width row when it wraps — e.g. Table's Quiz Style + Direction.
+   Wrapping still happens at the stack's own width, as one unit; a group
+   that's currently display:none (ui-state.ts / table-controls.ts) just
+   leaves the stack shorter, same as it would on its own. */
+.control-stack {
+  display: flex;
+  flex-direction: column;
+  /* Matches .control-group's own row gap exactly (not a stylistic pick) —
+     Language(s)/Words/Quiz Style+Direction only land on the same rows
+     because every gap stacking up to a given row is identical. */
+  gap: 0.2rem;
+}
+
+/* Language(s) and Words both put a real label above their first control
+   row, which is what actually sets each column's row-1/row-2 rhythm. A
+   .control-group--chip's label sits inline beside its chips instead — no
+   row of its own — so stacked chip-only groups like Quiz Style + Direction
+   need a same-height blank stand-in up top, or their chips render a full
+   row higher than Words' chips and nothing lines up. Sized to match
+   .control-group > label exactly (same font-size/weight/case), not the
+   .ui-label default. */
+.control-stack--inline-labels::before {
+  content: '\00a0';
+  display: block;
+  visibility: hidden;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
 }
 
 /* Reserve space on the right for the shortcuts button and the Profiles
@@ -72,32 +100,74 @@
    so the row reads as one set of controls. */
 #controls :is(#langSelect, #sizeSelect, #conjSizeSelect) {
   min-height: 36px;
-  font-size: 0.85rem;
-  padding: 0.25rem 1.8rem 0.25rem 0.6rem;   /* room for the dropdown chevron */
+  font-size: 0.78rem;
+  padding: 0.22rem 1.4rem 0.22rem 0.45rem;   /* room for the dropdown chevron */
 }
 /* The select must fit its longest option ("Custom…") without clipping */
-#sizeSelect { min-width: 7.5rem; }
-#conjSizeSelect { min-width: 7.5rem; }
-#langSelect { min-width: 8rem; }
+#sizeSelect { min-width: 7rem; }
+#conjSizeSelect { min-width: 7rem; }
+#langSelect { min-width: 7.5rem; }
 
-/* Every segmented toggle group that can appear in #controls-top, so no
-   mode's row of buttons is shorter than another's. New mode-conditional
-   groups belong in this list, not a one-off rule. */
-#controls :is(
-  #sortOrderToggle, #directionToggle, #sizeModeToggle, #poolModeToggle,
-  #pictureSubMode, #triviaSubMode, #tableStyleToggle, #conjViewToggle,
-  #conjMatchStyleToggle, #conjDisplayToggle
-) :is(.sort-order-btn, .conj-toggle-btn) {
+/* ── Chip-styled groups ──────────────────────────────────────────
+   Every mode-conditional toggle group in #controls-top (Direction, Quiz
+   Style, View, Display, Order, ...) plus the two toggles nested inside
+   Words (#poolModeToggle, #sizeModeToggle) — individual pill chips rather
+   than the fused/connected box .sort-order-toggle/.conj-display-toggle use
+   everywhere else in the app. Two hooks, same look: .control-group--chip
+   on a whole group (label sits beside the chips) for a group that's just a
+   label + one toggle, and .chip-toggle directly on a toggle that shares its
+   row with something else (Words' select) instead of getting a label of
+   its own. */
+#controls-top .control-group--chip {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+#controls-top .control-group--chip > label {
+  flex-shrink: 0;
+}
+#controls-top .control-group--chip :is(.sort-order-toggle, .conj-display-toggle),
+#controls-top .chip-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+}
+#controls-top .control-group--chip :is(.sort-order-btn, .conj-toggle-btn),
+#controls-top .chip-toggle :is(.sort-order-btn, .conj-toggle-btn) {
+  flex: 0 0 auto;
+  /* Matches #langSelect/#sizeSelect's own min-height — a chip row this tall
+     is what lets row 2 land on the same line across every column, not just
+     row 1 (a select's height decides how far down its own row 2 sits). */
   min-height: 36px;
-  font-size: 0.78rem;
-  padding: 0.25rem 0.65rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface2);
+}
+#controls-top .control-group--chip :is(.sort-order-btn, .conj-toggle-btn):hover,
+#controls-top .chip-toggle :is(.sort-order-btn, .conj-toggle-btn):hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+#controls-top .control-group--chip :is(.sort-order-btn, .conj-toggle-btn).active,
+#controls-top .chip-toggle :is(.sort-order-btn, .conj-toggle-btn).active {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
 }
 
 /* "+ Languages" trigger — sized to match the selects either side of it. */
 .lang-picker-btn {
   min-height: 36px;
-  font-size: 0.8rem;
-  padding: 0.25rem 0.65rem;
+  font-size: 0.72rem;
+  padding: 0.22rem 0.5rem;
   background: var(--surface2);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
@@ -147,16 +217,6 @@
    sibling toggle buttons also shrink at that width. */
 @media (min-width: 768px) {
   #bandChips .pos-chip { min-height: 36px; }
-}
-
-/* Vertical divider between control groups */
-.controls-sep {
-  width: 1px;
-  align-self: stretch;
-  background: var(--border);
-  margin: 0 0.25rem;
-  flex-shrink: 0;
-  opacity: 0.8;
 }
 
 /* Controls row (secondary actions below) */
@@ -266,8 +326,6 @@
 }
 
 @media (max-width: 599px) {
-  .controls-sep { display: none; }
-
   /*
    * One control per row.
    *
@@ -287,14 +345,16 @@
     gap: 0.5rem;
   }
 
-  #controls-top > .control-group { width: 100%; min-width: 0; }
+  #controls-top > .control-group,
+  #controls-top > .control-stack { width: 100%; min-width: 0; }
 
   /* The ? and Profiles buttons are absolutely positioned in the card's top
      corner, so only the row that sits under them needs to keep clear.
      Reserving the width down the whole column is what made the filter boxes
      look off-centre. 7.5rem clears both — see shortcuts.css. */
   #controls-top { padding-right: 0; }
-  #controls-top > .control-group:first-child { padding-right: 7.5rem; }
+  #controls-top > .control-group:first-child,
+  #controls-top > .control-stack:first-child { padding-right: 7.5rem; }
 
   /* Words: select, custom number and the By Rank / Skip Known toggle. Wraps
      onto as many rows as it needs instead of forcing the card wider. */
@@ -337,6 +397,28 @@
     white-space: normal;
     line-height: 1.15;
   }
+
+  /* One column now, so nothing needs row-matching against a neighbour —
+     the spacer would just be a blank line above Quiz Style. */
+  .control-stack--inline-labels::before {
+    content: none;
+  }
+
+  /* Chip groups fall back to the same stacked, label-above shape as every
+     other group in this column — written explicitly rather than relying on
+     the desktop chip rule's higher specificity to lose gracefully. */
+  #controls-top .control-group--chip {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.2rem;
+  }
+  #controls-top .control-group--chip :is(.sort-order-btn, .conj-toggle-btn),
+  #controls-top .chip-toggle :is(.sort-order-btn, .conj-toggle-btn) {
+    font-size: 0.72rem;
+    padding: 0.4rem 0.5rem;
+    white-space: normal;
+    line-height: 1.15;
+  }
 }
 
 @media (max-width: 480px) {
@@ -344,7 +426,8 @@
   #controls-top { padding-right: 0; }
   /* Profiles drops to an icon-only 36px pill at this width (shortcuts.css) —
      less to clear than the labeled version above 480px. */
-  #controls-top > .control-group:first-child { padding-right: 5.5rem; }
+  #controls-top > .control-group:first-child,
+  #controls-top > .control-stack:first-child { padding-right: 5.5rem; }
   .size-row { width: 100%; }
 }
 
