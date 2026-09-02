@@ -182,7 +182,22 @@ export function renderAiChat(container: HTMLElement, lang = 'spanish'): void {
     opt.value = l.name; opt.textContent = l.label; opt.selected = l.name === currentLang;
     langSel.appendChild(opt);
   });
-  langSel.addEventListener('change', () => { currentLang = langSel.value; });
+  // Same treatment switching a task preset already gets, and for the same
+  // reason: the language is baked into the system prompt at the *start* of
+  // a conversation (see send() below) and into every grounding lookup after
+  // that — changing it mid-chat used to just flip `currentLang` in place,
+  // leaving the system prompt (and the reply already in progress) talking
+  // about the old language while groundedHistory() started looking words up
+  // in the new one's dictionary instead. Archiving and starting fresh keeps
+  // a conversation internally consistent with whichever language it claims
+  // to be in, the same way switching presets already does.
+  langSel.addEventListener('change', () => {
+    if (langSel.value === currentLang) return;
+    archiveCurrentChat();
+    currentLang = langSel.value;
+    renderMessages();
+    if (!historyPanel.hidden) renderHistoryPanel();
+  });
 
   const statusPill = document.createElement('span');
   statusPill.className = 'chat-status-pill';

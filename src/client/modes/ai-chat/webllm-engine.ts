@@ -18,6 +18,12 @@ export class WebLLMEngine implements ChatEngine {
   private _status: EngineStatus = 'unloaded';
   private _error: string | null = null;
   private handle: WebWorkerMLCEngine | null = null;
+  /** The raw Worker behind `handle` — WebWorkerMLCEngine's own `.worker` is
+   *  typed as the narrower `ChatWorker` interface (onmessage/postMessage
+   *  only), which doesn't expose `.terminate()` even though the runtime
+   *  object is a real Worker. Tracked separately so load() (the "Reload
+   *  model" button) can actually shut the previous one down. */
+  private worker: Worker | null = null;
 
   status(): EngineStatus {
     return this._status;
@@ -28,17 +34,37 @@ export class WebLLMEngine implements ChatEngine {
   }
 
   async load(onProgress: (pct: number, note: string) => void): Promise<void> {
+    // "Reload model" calling load() a second time used to just create a
+    // fresh worker and overwrite `this.handle`, leaking the previous one —
+    // both its GPU-resident model weights (WebWorkerMLCEngine.unload()
+    // exists precisely to release those) and the worker thread itself.
+    // Clicking Reload a few times left that many abandoned model instances
+    // running in the background.
+    if (this.handle) {
+      try { await this.handle.unload(); } catch { /* best-effort — proceed either way */ }
+    }
+    this.worker?.terminate();
+    this.handle = null;
+    this.worker = null;
+
     this._status = 'loading';
     this._error = null;
+    // Kept as a local until the engine actually finishes constructing — if
+    // CreateWebWorkerMLCEngine rejects, this worker was still created and
+    // needs cleaning up itself, but never becomes `this.worker` (nothing
+    // else should treat a failed load as having one).
+    let worker: Worker | null = null;
     try {
-      const worker = new Worker(new URL('./webllm-worker.ts', import.meta.url), { type: 'module' });
+      worker = new Worker(new URL('./webllm-worker.ts', import.meta.url), { type: 'module' });
       this.handle = await CreateWebWorkerMLCEngine(worker, DEFAULT_MODEL_ID, {
         initProgressCallback: report => {
           onProgress(Math.round(report.progress * 100), report.text);
         },
       });
+      this.worker = worker;
       this._status = 'ready';
     } catch (err) {
+      worker?.terminate();
       this._status = 'error';
       this._error = err instanceof Error ? err.message : String(err);
       throw err;

@@ -14,10 +14,10 @@ import {
   getListNames, getList, createList, addToList,
   getMultiListNames, getMultiList, createMultiList, addToMultiList, type MultiListEntry,
 } from '../../utils/word-lists.ts';
-import { getMastered, saveMastered } from './mastery.ts';
+import { getMastered, saveMastered, getMasteryLevels, setMasteryLevel } from './mastery.ts';
 import { LANGUAGE_NAMES } from '../../data/languages.ts';
 
-const BACKUP_VERSION = 3;
+const BACKUP_VERSION = 4;
 
 export interface ListsBackup {
   version:    number;
@@ -27,6 +27,16 @@ export interface ListsBackup {
   mastery:    Record<string, string[] | Record<string, string[]>>;
   /** v3+. Absent in older files — restores as "nothing to add". */
   multiLists?: Record<string, MultiListEntry[]>;
+  /**
+   * v4+. The finer 0–MAX_MASTERY_LEVEL scale (New/Learning/Familiar/
+   * Confident/Mastered) — a genuinely separate storage key from `mastery`
+   * above (that one only ever answers "at max level or not"). Absent from
+   * every backup through v3, which meant restoring one recovered *whether*
+   * a word was fully mastered but silently reset anything sitting at
+   * Learning/Familiar/Confident back to New — a real gap in "the whole
+   * disaster-recovery story" this file's own header claims to be.
+   */
+  masteryLevels?: Record<string, Record<string, number>>;
 }
 
 /** Serialise every list, in every language, plus mastery and cross-language lists. */
@@ -39,13 +49,19 @@ export function buildBackup(): ListsBackup {
   for (const l of LANGUAGE_NAMES) {
     const names = getListNames(l);
     const mastered = [...getMastered(l)];
-    if (names.length === 0 && mastered.length === 0) continue;
+    const levels = getMasteryLevels(l);
+    const hasLevels = Object.keys(levels).length > 0;
+    if (names.length === 0 && mastered.length === 0 && !hasLevels) continue;
 
     if (names.length) {
       backup.lists[l] = {};
       for (const name of names) backup.lists[l][name] = [...getList(l, name)];
     }
     if (mastered.length) backup.mastery[l] = mastered;
+    if (hasLevels) {
+      backup.masteryLevels = backup.masteryLevels ?? {};
+      backup.masteryLevels[l] = levels;
+    }
   }
 
   const multiNames = getMultiListNames();
@@ -102,6 +118,22 @@ export function applyBackup(raw: string): string {
       });
     }
     saveMastered(l, merged);
+  }
+
+  // Mastery levels (the New/Learning/Familiar/Confident/Mastered scale) —
+  // absent entirely before v4. Merged by taking the higher of the two levels
+  // per word, never the backup's alone: restoring an old file should recover
+  // progress that has since been lost, not roll back progress made since the
+  // backup was taken. setMasteryLevel keeps the boolean Set above in sync
+  // too, so a word restored to the max level here also ends up in `mastery`.
+  for (const [l, levels] of Object.entries(data.masteryLevels ?? {})) {
+    if (!levels || typeof levels !== 'object') continue;
+    const current = getMasteryLevels(l);
+    for (const [w, level] of Object.entries(levels)) {
+      if (typeof level !== 'number') continue;
+      const merged = Math.max(current[w] ?? 0, level);
+      if (merged > 0) setMasteryLevel(l, w, merged);
+    }
   }
 
   // Cross-language lists. Absent entirely in v1/v2 files — nothing to add.

@@ -25,9 +25,15 @@
     <header>
       <div class="header-left">
         <a href="/" class="back-link" title="Back to app">← App</a>
-        <h1>📚 VocabApp Admin</h1>
+        <h1>VocabApp Admin</h1>
       </div>
-      <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">☾</button>
+      <!-- Same sort-order-toggle pill pattern as the main app's Settings →
+           Appearance theme control, so switching themes looks the same in
+           both places rather than a bespoke circular button here. -->
+      <div class="sort-order-toggle admin-theme-toggle" id="themeToggle">
+        <button type="button" class="sort-order-btn" data-theme="light">☀ Light</button>
+        <button type="button" class="sort-order-btn" data-theme="dark">☾ Dark</button>
+      </div>
     </header>
 
     <div class="tabs">
@@ -49,10 +55,8 @@
       <div class="filter-bar">
         <span class="filter-label">Language</span>
         <select id="langSelect">
+          <!-- placeholder; repopulated from /api/admin/meta with every language the DB actually has -->
           <option value="spanish">Spanish</option>
-          <option value="portuguese">Portuguese</option>
-          <option value="italian">Italian</option>
-          <option value="french">French</option>
         </select>
 
         <div class="filter-divider"></div>
@@ -322,23 +326,15 @@
           <div class="db-card">
             <h3>Clear Language Cache</h3>
             <p>Clear the in-memory cache for one language only.</p>
-            <div class="button-group">
-              <button class="secondary clear-lang-cache-btn" data-lang="spanish">Clear Spanish</button>
-              <button class="secondary clear-lang-cache-btn" data-lang="portuguese">Clear Portuguese</button>
-              <button class="secondary clear-lang-cache-btn" data-lang="italian">Clear Italian</button>
-              <button class="secondary clear-lang-cache-btn" data-lang="french">Clear French</button>
-            </div>
+            <!-- populated from /api/admin/meta with every language the DB actually has -->
+            <div class="button-group" id="clearLangCacheGroup"></div>
           </div>
 
           <div class="db-card">
             <h3>Export to CSV</h3>
             <p>Download the current SQLite data for a language as a CSV file.</p>
-            <div class="button-group">
-              <button class="secondary export-btn" data-lang="spanish">↓ Spanish</button>
-              <button class="secondary export-btn" data-lang="portuguese">↓ Portuguese</button>
-              <button class="secondary export-btn" data-lang="italian">↓ Italian</button>
-              <button class="secondary export-btn" data-lang="french">↓ French</button>
-            </div>
+            <!-- populated from /api/admin/meta with every language the DB actually has -->
+            <div class="button-group" id="exportGroup"></div>
           </div>
         </div>
       </div>

@@ -16,11 +16,21 @@ button {
               transform var(--transition-fast), box-shadow var(--transition-fast);
   white-space: nowrap;
 }
+/* Lift magnitude matches the main app's own button.css exactly — this used
+   to be a smaller lift (-1px / 3px blur) than the app's (-2px / 4px), a
+   difference too small to name but big enough that a button felt slightly
+   "off" switching between the two. */
 button:hover:not(:disabled) {
   background: var(--accent-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
+html.dark button:hover:not(:disabled) { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+/* .sort-order-btn is a segment of a toggle, not a standalone action — the
+   app suppresses the lift for it too, so its buttons.css list is where
+   this belongs conceptually even though the component itself is defined
+   further down this file. */
+button.sort-order-btn:hover:not(:disabled) { transform: none; box-shadow: none; }
 button:active:not(:disabled) { transform: translateY(0); }
 button:disabled               { opacity: 0.5; cursor: not-allowed; }
 button:focus-visible          { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -53,3 +63,33 @@ button.ghost:hover:not(:disabled) {
 }
 
 .button-group { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+/* ── Segmented toggle ──
+   Copied from the main app's controls-bar.css (.sort-order-toggle /
+   .sort-order-btn — the control behind Order, Direction and Settings'
+   Appearance theme picker there) rather than shared, since admin.html
+   doesn't load the app's stylesheets. Used here by the header's theme
+   toggle; available to any other admin control that wants the same
+   look. */
+.sort-order-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.sort-order-btn {
+  flex: 1;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  background: var(--surface);
+  color: var(--text-muted);
+  border: none;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.sort-order-btn:last-child { border-right: none; }
+.sort-order-btn:hover { background: var(--surface2); color: var(--text); }
+.sort-order-btn.active { background: var(--accent); color: #fff; }

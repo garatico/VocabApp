@@ -68,7 +68,19 @@ export interface PresetBundle {
   classes:       ClassFilterState;
   domains:       DomainFilterState;
   listFilter:    ListFilterState;
-  direction:     TableDirection;
+  /**
+   * Table-only, like quizStyle/conjugation below — #directionToggle is
+   * only ever shown for Table mode (Picture has no direction concept, and
+   * Conjugation drills both directions via its own Display setting instead).
+   * This used to be a required field captured/applied for every mode
+   * regardless, back when Direction applied to more than just Table — so a
+   * Picture Quiz or Conjugation profile silently captured whatever Table's
+   * #directionToggle last happened to show (the element is only hidden by
+   * CSS for those modes, not removed) and, worse, reapplied it to the
+   * *global* vq_dir key on Apply — meaning applying an unrelated Picture
+   * Quiz profile could silently overwrite the Direction you'd set in Table.
+   */
+  direction?:    TableDirection;
   /** Optional — added after v1. Absent on an older saved profile, in which
    *  case applying it leaves language/words/style exactly as they are. */
   language?:       string;
@@ -246,7 +258,7 @@ export function captureCurrentBundle(mode: FilterScope = 'table'): PresetBundle 
     classes:        getClassFilterState(),
     domains:        getDomainFilterState(),
     listFilter:     getListFilterState(currentLangValue()),
-    direction:      currentDirection(),
+    direction:      mode === 'table' ? currentDirection() : undefined,
     language:       currentLangValue(),
     extraLanguages: currentExtraLanguages(),
     words:          captureWords(),
@@ -279,7 +291,12 @@ function normalizeBundle(raw: PresetBundle): PresetBundle {
     classes:        normalizeFilterPick(raw.classes),
     domains:        normalizeFilterPick(raw.domains),
     listFilter:     raw.listFilter ?? { active: false, mode: 'hide', selected: [] },
-    direction:      raw.direction ?? 'target-en',
+    // No default forced here any more — an older Table profile already has a
+    // real value; an older Picture/Conjugation profile may carry a stale one
+    // from before direction became Table-only, and applyPreset's own
+    // mode === 'table' gate is what actually keeps that from being applied
+    // anywhere it doesn't belong, not this normalization.
+    direction:      raw.direction,
     // Added after v1 — absent on an older saved profile, which is fine: it's
     // optional precisely so applying it is a no-op rather than a crash.
     language:       raw.language,
@@ -370,8 +387,12 @@ function describeWords(words: WordsBundle): string {
 
 /** A short human-readable summary of what a bundle would change —
  *  "Verbs · Hide 2 lists · Meaning → Word" — for a management list row
- *  that has no live filter UI of its own to show instead. */
-export function describePreset(bundle: PresetBundle): string {
+ *  that has no live filter UI of its own to show instead. `mode` gates the
+ *  Direction line the same way applyPreset gates actually applying it —
+ *  Table-only — so a Picture Quiz or Conjugation profile carrying a stale
+ *  direction from before that (see PresetBundle.direction) doesn't describe
+ *  itself as having a direction it does not act on. */
+export function describePreset(bundle: PresetBundle, mode?: FilterScope): string {
   const parts: string[] = [];
   if (bundle.language) parts.push(bundle.language[0].toUpperCase() + bundle.language.slice(1));
   if (bundle.extraLanguages && bundle.extraLanguages.length > 0) {
@@ -400,9 +421,10 @@ export function describePreset(bundle: PresetBundle): string {
     if (tenses.length > 0) parts.push(`${tenses.length} tense${tenses.length === 1 ? '' : 's'}`);
     if (view !== 'grid') parts.push(CONJ_VIEW_LABELS[view] ?? view);
   }
-  const directionLabel = bundle.direction === 'mixed' ? 'Mixed'
-    : bundle.direction === 'en-target' ? 'Meaning → Word' : 'Word → Meaning';
-  parts.push(directionLabel);
+  if (bundle.direction && (mode === undefined || mode === 'table')) {
+    parts.push(bundle.direction === 'mixed' ? 'Mixed'
+      : bundle.direction === 'en-target' ? 'Meaning → Word' : 'Word → Meaning');
+  }
   return parts.join(' · ');
 }
 
@@ -440,14 +462,20 @@ export function applyPreset(mode: FilterScope, name: string): boolean {
   if (mode === 'table' && bundle.quizStyle) applyQuizStyle(bundle.quizStyle);
   if (mode === 'conjugation' && bundle.conjugation) applyConjugation(bundle.conjugation);
 
-  const toggle = document.getElementById('directionToggle');
-  toggle?.querySelectorAll<HTMLButtonElement>('.conj-toggle-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.direction === bundle.direction);
-  });
-  // Direction is stored globally (not per-mode, unlike the filters above —
-  // see app.ts), same key its own click handler writes, so the choice
-  // survives a reload instead of reverting the next time app.ts restores it.
-  writeString('vq_dir', bundle.direction);
+  // Table-only — see PresetBundle.direction's own comment. Gated on mode,
+  // not just on bundle.direction being set: an older Picture/Conjugation
+  // profile can still carry a stale direction from before this was Table-
+  // only, and applying that profile must not touch Table's own setting.
+  if (mode === 'table' && bundle.direction) {
+    const toggle = document.getElementById('directionToggle');
+    toggle?.querySelectorAll<HTMLButtonElement>('.conj-toggle-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.direction === bundle.direction);
+    });
+    // Direction is stored globally (not per-mode, unlike the filters above —
+    // see app.ts), same key its own click handler writes, so the choice
+    // survives a reload instead of reverting the next time app.ts restores it.
+    writeString('vq_dir', bundle.direction);
+  }
 
   return true;
 }

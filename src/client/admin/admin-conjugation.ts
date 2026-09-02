@@ -83,7 +83,7 @@ async function loadVerbs(): Promise<void> {
     const params = new URLSearchParams({ lang, pos: 'verb', limit: '200' });
     if (query) params.set('search', query);
 
-    const data = await apiCall(`/words?${params}`);
+    const data = await apiCall(`/vocab?${params}`);
     const words = ((data.words ?? data) as VerbWord[]).filter(
       w => !w.tags?.includes('function_word') && w.conjugation_class !== 'irregular-hay'
     );

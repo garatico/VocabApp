@@ -68,6 +68,15 @@ interface CardController {
    * setting stays in the box after the pronoun is switched back on.
    */
   syncDeselected: () => void;
+  /**
+   * Re-apply previously banked outcomes to a freshly built card — turning a
+   * page, changing page size, or switching Grid/Full always rebuilds every
+   * card from scratch, so without this a verb that comes back on screen
+   * (paging back, or switching the view and back) showed blank inputs even
+   * though bankVisibleVerbs() had already scored it. See buildCards()'s own
+   * call site for where the banked slots come from.
+   */
+  restoreBanked: (states: ReadonlyMap<number | 'single', 'correct' | 'revealed' | 'missed'>) => void;
 }
 
 let _cleanup: (() => void) | null = null;
@@ -263,6 +272,23 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     const allSingle  = selectedTenses().every(isSingleForm);
     const pronounRow = document.getElementById('conjPronounRow');
     if (pronounRow) pronounRow.hidden = allSingle;
+  }
+
+  // Nothing to drill: every selected tense has a pronoun paradigm (not
+  // gerund/participle), and Forms → None switched off every pronoun. One at a
+  // Time / Random Table / Card Match already guard this exact case with the
+  // same message (their own queue/rows/rounds end up empty); Grid and Full
+  // Conjugation build one card per verb regardless — pronoun toggles only
+  // hide rows via CSS — so without this they silently rendered a grid of
+  // fully-disabled cards with nothing to type into, and one that could never
+  // register as complete (qForms.total is 0, so the "every form answered"
+  // check that ends the quiz never fires).
+  if (!selectedTenses().some(isSingleForm) && activePronounIndices().size === 0) {
+    container.innerHTML = `<div class="conj-empty">
+      <p>No forms to drill for the current Tense &amp; Forms selection.</p>
+      <p class="conj-empty-hint">Turn at least one pronoun back on in Forms, then hit Start Quiz again.</p>
+    </div>`;
+    return;
   }
 
   // ── Progress: same segmented bar + score pills as table mode ───────────────
@@ -1021,6 +1047,23 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
         updater.card.dataset.verbLang = verbLang;
         updater.card.dataset.tense    = tenseKey;
 
+        // A verb coming back on screen (paging back, switching Grid ↔ Full,
+        // changing page size) gets a brand new, blank card — restore
+        // whatever bankVisibleVerbs() scored for this exact tense last time
+        // it was banked, or the rebuild would silently throw away answered
+        // forms the learner already got right.
+        const bankedSlots = banked.get(verbKey(verb.word, verbLang))?.slots;
+        if (bankedSlots) {
+          const forThisTense = new Map<number | 'single', 'correct' | 'revealed' | 'missed'>();
+          bankedSlots.forEach((state, slotKey) => {
+            const sep = slotKey.lastIndexOf(':');
+            if (slotKey.slice(0, sep) !== tenseKey) return;
+            const slot = slotKey.slice(sep + 1);
+            forThisTense.set(slot === 'single' ? 'single' : Number(slot), state);
+          });
+          if (forThisTense.size > 0) updater.restoreBanked(forThisTense);
+        }
+
         (block ? block.row : cardsGrid).appendChild(updater.card);
         cardUpdaters.push(updater);
       });
@@ -1047,7 +1090,17 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   // card the verb has (one per selected tense) — the granularity tallyQuiz()
   // and recordConjSession need to say whether the verb as a whole is done,
   // not just one of its tenses.
-  interface BankedVerb { word: string; language: string; total: number; correct: number; revealed: number; missed: number; }
+  interface BankedVerb {
+    word: string; language: string; total: number; correct: number; revealed: number; missed: number;
+    /**
+     * Per-form outcome, keyed `${tenseKey}:${slot}` (slot is a pronoun index
+     * or 'single') — lets buildCards() restore exactly what a verb's fresh,
+     * blank card should show when it comes back on screen, rather than only
+     * feeding the aggregate counts above into the whole-quiz tally while the
+     * rebuilt inputs themselves stay empty.
+     */
+    slots: Map<string, 'correct' | 'revealed' | 'missed'>;
+  }
   const banked = new Map<string, BankedVerb>();
 
   /**
@@ -1067,22 +1120,27 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     // page is about to be torn down scored and remembered before it goes —
     // this used to be a no-op for Grid, back when Grid rendered every verb at
     // once and had nothing left off-screen to lose.
-    interface Acc { word: string; language: string; total: number; correct: number; revealed: number; missed: number; answered: number; }
+    interface Acc {
+      word: string; language: string; total: number; correct: number; revealed: number; missed: number; answered: number;
+      slots: Map<string, 'correct' | 'revealed' | 'missed'>;
+    }
     const perVerb = new Map<string, Acc>();
 
     cardsGrid.querySelectorAll<HTMLElement>('.conj-card').forEach(card => {
       const word = card.dataset.verb;
       if (!word) return;
-      const verbLang = card.dataset.verbLang ?? lang;
+      const verbLang  = card.dataset.verbLang ?? lang;
+      const cardTense = card.dataset.tense ?? '';
       const key = verbKey(word, verbLang);
-      const acc = perVerb.get(key) ?? { word, language: verbLang, total: 0, correct: 0, revealed: 0, missed: 0, answered: 0 };
-      card.querySelectorAll(VISIBLE_ROW).forEach(row => {
+      const acc = perVerb.get(key) ?? { word, language: verbLang, total: 0, correct: 0, revealed: 0, missed: 0, answered: 0, slots: new Map() };
+      card.querySelectorAll<HTMLElement>(VISIBLE_ROW).forEach(row => {
         const inp = row.querySelector<HTMLInputElement>('.conj-drill-input');
         if (!inp) return;
         acc.total++;
-        if (inp.classList.contains('correct'))       { acc.correct++;  acc.answered++; }
-        else if (inp.classList.contains('revealed')) { acc.revealed++; acc.answered++; }
-        else if (inp.classList.contains('missed'))   { acc.missed++;   acc.answered++; }
+        const slotKey = `${cardTense}:${row.dataset.pi}`;
+        if (inp.classList.contains('correct'))       { acc.correct++;  acc.answered++; acc.slots.set(slotKey, 'correct'); }
+        else if (inp.classList.contains('revealed')) { acc.revealed++; acc.answered++; acc.slots.set(slotKey, 'revealed'); }
+        else if (inp.classList.contains('missed'))   { acc.missed++;   acc.answered++; acc.slots.set(slotKey, 'missed'); }
       });
       perVerb.set(key, acc);
     });
@@ -1092,6 +1150,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
       banked.set(key, {
         word: acc.word, language: acc.language,
         total: acc.total, correct: acc.correct, revealed: acc.revealed, missed: acc.missed,
+        slots: acc.slots,
       });
     });
   }
@@ -1276,6 +1335,11 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
         correct:  existing?.correct  ?? 0,
         revealed: existing?.revealed ?? 0,
         missed:   (existing?.missed  ?? 0) + remaining,
+        // Give Up ends the quiz — nothing rebuilds a card after this, so
+        // there is no rebuilt-card restore to feed; carry over whatever slot
+        // detail an earlier partial visit already recorded rather than
+        // discarding it.
+        slots: existing?.slots ?? new Map(),
       });
     });
 
@@ -1817,7 +1881,7 @@ function buildCard({
     inp: HTMLInputElement,
     btn: HTMLButtonElement | undefined,
     answer: string | null,
-    mark: 'revealed' | 'missed',
+    mark: 'correct' | 'revealed' | 'missed',
   ): void {
     if (inp.classList.contains('correct') ||
         inp.classList.contains('revealed') ||
@@ -1857,6 +1921,21 @@ function buildCard({
     }
   }
 
+  /**
+   * Re-paint a freshly built, still-blank card with what bankVisibleVerbs()
+   * scored for it last time — see buildCards()'s call site. Reuses fill()
+   * (now taking 'correct' too), which already no-ops on a slot that somehow
+   * carries a scoring class already, so this is safe to call before or after
+   * attachChecking() has wired the inputs up.
+   */
+  function restoreBanked(states: ReadonlyMap<number | 'single', 'correct' | 'revealed' | 'missed'>): void {
+    states.forEach((state, slot) => {
+      const inp = slot === 'single' ? singleInp       : inputs[slot];
+      const btn = slot === 'single' ? singleRevealBtn : revealBtns[slot];
+      if (inp) fill(inp, btn, answerFor(slot), state);
+    });
+  }
+
   function syncDeselected(): void {
     const showAnswer = Settings.getConjDeselected() === 'answer';
     pronounRows.forEach((row, i) => {
@@ -1885,5 +1964,5 @@ function buildCard({
   updateHeader();
   attachChecking();
 
-  return { card, updateHeader, updateInputs, revealAnswers, syncDeselected };
+  return { card, updateHeader, updateInputs, revealAnswers, syncDeselected, restoreBanked };
 }

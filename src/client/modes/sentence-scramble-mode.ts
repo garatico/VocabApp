@@ -112,6 +112,13 @@ export function renderSentenceScrambleMode({
 
   shuffle(queue);
   const results: (boolean | null)[] = queue.map(() => null);
+  // What the learner actually arranged, captured at Check time — a wrong
+  // answer used to be unrecoverable the moment settle() ran (answer/bank are
+  // reset on the very next renderQuestion), so revisiting a missed question
+  // via Back silently swapped in the *correct* order instead, styled
+  // identically to a right answer. This is what the review branch below
+  // shows instead, so a miss actually looks like the attempt that was made.
+  const builtAnswers: (string[] | null)[] = queue.map(() => null);
   let idx = 0;
   let correctCount = 0;
 
@@ -232,14 +239,22 @@ export function renderSentenceScrambleMode({
       (q.word.translation ? ` (${q.word.translation})` : '');
 
     if (prior !== null) {
-      // Already answered — show the finished arrangement, not a fresh scramble.
-      answer = q.tokens.map((text, id) => ({ id, text }));
+      // Already answered — show what was actually submitted (builtAnswers),
+      // not the canonical tokens: for a miss those are two different
+      // orderings, and showing the correct one here looked exactly like a
+      // right answer, with nothing but the feedback text below to say
+      // otherwise.
+      const submitted = builtAnswers[i] ?? q.tokens;
+      answer = submitted.map((text, id) => ({ id, text }));
       bank = [];
       renderChips();
+      answerRow.classList.toggle('ss-answer-row--correct', prior);
+      answerRow.classList.toggle('ss-answer-row--wrong', !prior);
       showFeedback(prior, q.tokens);
       return;
     }
 
+    answerRow.classList.remove('ss-answer-row--correct', 'ss-answer-row--wrong');
     answer = [];
     bank = shuffle(q.tokens.map((text, id) => ({ id, text })));
     renderChips();
@@ -254,6 +269,7 @@ export function renderSentenceScrambleMode({
   checkBtn.addEventListener('click', () => {
     if (results[idx] !== null || answer.length !== queue[idx].tokens.length) return;
     const built = answer.map(c => c.text);
+    builtAnswers[idx] = built;
     settle(idx, answersMatch(built, queue[idx].tokens));
   });
 
@@ -271,6 +287,8 @@ export function renderSentenceScrambleMode({
     syncProgress();
     showFeedback(right, queue[i].tokens);
     renderChips(); // disable further chip moves on this question
+    answerRow.classList.toggle('ss-answer-row--correct', right);
+    answerRow.classList.toggle('ss-answer-row--wrong', !right);
 
     const delay = right ? 650 : 1800;
     setTimeout(() => advance(), delay);

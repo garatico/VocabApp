@@ -8,6 +8,7 @@ import {
   type InputSnapshot,
   type CheckResult,
 } from './table-mode.ts';
+import { buildGlossDisplay } from '../utils/utils.ts';
 import { Settings, setOnPageSizeChange, setOnShowTimerChange } from '../settings.ts';
 // Mastery lives with the lists UI. Importing across modes is not lovely, but
 // the alternative is a second copy of the storage rules, which is how the two
@@ -50,19 +51,36 @@ export function getTableStyle(): TableQuizStyle {
  * Only touches these elements while the Table tab is actually active —
  * ui-state.ts's updateModeUI already decides their visibility for every other
  * tab, and this must not fight that when called from onActivate.table.
+ * #directionGroup is resynced unconditionally on every call, live quiz or
+ * not; the other three are pre-quiz-setup only and skip themselves entirely
+ * while a quiz is rendered — see the comments below for why each behaves
+ * differently.
  */
 export function syncTableStyleUI(): void {
   const isTableTab = document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === 'table';
   if (!isTableTab) return;
-  // These controls are pre-quiz setup only — clicking Standard/Recall/Double
+  const showStandardOnly = tableStyle === 'standard';
+
+  // Direction is pre-quiz setup too, but unlike the group below it isn't tied
+  // to a live Standard-style pager that could get yanked out from under
+  // itself — it just needs to reflect the currently-selected Quiz Style, so
+  // it's updated even while a quiz (of any style) sits rendered in
+  // #tableWrap. ui-state.ts's updateModeUI unconditionally shows this group
+  // for every table-tab render (mode === 'table' ? '' : 'none') before
+  // calling this function right after — without this line running
+  // unconditionally too, that reset wins and Direction stays stuck visible
+  // under a rendered Recall/Double Recall quiz, where it does nothing.
+  const directionGroup = document.getElementById('directionGroup');
+  if (directionGroup) directionGroup.style.display = showStandardOnly ? '' : 'none';
+
+  // The rest are pre-quiz setup only — clicking Standard/Recall/Double
   // Recall previews what the *next* Start Quiz click will use. If a quiz
-  // (any style) is already rendered into #tableWrap, leave it alone: hiding
+  // (any style) is already rendered into #tableWrap, leave them alone: hiding
   // tableJumpTop/tableJumpBottom here would yank the live pager out from
   // under whatever's on screen, which reads as the quiz being ended.
   const tableWrap = document.getElementById('tableWrap');
   if (tableWrap && tableWrap.children.length > 0) return;
-  const showStandardOnly = tableStyle === 'standard';
-  ['tableControls', 'tableJumpTop', 'tableJumpBottom', 'directionGroup'].forEach(id => {
+  ['tableControls', 'tableJumpTop', 'tableJumpBottom'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = showStandardOnly ? '' : 'none';
   });
@@ -118,6 +136,21 @@ function setTimerControlsEnabled(enabled: boolean): void {
   const reset  = document.getElementById('tableTimerReset')  as HTMLButtonElement | null;
   if (toggle) toggle.disabled = !enabled;
   if (reset)  reset.disabled  = !enabled;
+}
+
+/** Retry/Export/Next-gap are meaningless before the first Start Quiz click —
+ *  there is no word set yet to retry, export or jump within. Their click
+ *  handlers already no-op on an empty allWords, but leaving them clickable
+ *  reads as "this does something". Unlike the timer buttons, these stay
+ *  enabled once a quiz has been started, even after Give Up — retrying and
+ *  exporting the finished set are still meaningful then. */
+function setPrestartControlsEnabled(enabled: boolean): void {
+  const retry  = document.getElementById('tableRetry')   as HTMLButtonElement | null;
+  const exportBtn = document.getElementById('tableExport') as HTMLButtonElement | null;
+  const jumpBtn = document.getElementById('tableJumpBtn') as HTMLButtonElement | null;
+  if (retry)     retry.disabled     = !enabled;
+  if (exportBtn) exportBtn.disabled = !enabled;
+  if (jumpBtn)   jumpBtn.disabled   = !enabled;
 }
 let sessionRecorded                        = false;
 let wordOrder: WordOrder =
@@ -305,7 +338,7 @@ function renderProgress(): void {
   });
 
   const giveUpBtn = document.getElementById('tableReset') as HTMLButtonElement | null;
-  if (giveUpBtn) giveUpBtn.disabled = total > 0 && answered === total;
+  if (giveUpBtn) giveUpBtn.disabled = total === 0 || answered === total;
 }
 
 function isQuizComplete(): boolean {
@@ -495,6 +528,7 @@ export function startTableQuiz({
   syncTimerToggleIcon();
   syncTimerVisibility();
   setTimerControlsEnabled(true);
+  setPrestartControlsEnabled(true);
   startTimedQuizWatch();
   sessionRecorded  = false;
   lastMissedWords   = [];
@@ -503,11 +537,27 @@ export function startTableQuiz({
   renderCurrentPage();
 }
 
-/** Restart with a new word set (retry-missed), resetting pagination. */
+/**
+ * Restart with a new word set (retry-missed), resetting pagination.
+ *
+ * Mirrors startTableQuiz()'s own session bookkeeping — sessionRecorded and
+ * the stopwatch included — because this is a new, separate attempt: without
+ * resetting sessionRecorded, recordMastery() sees a stale "already recorded
+ * this session" flag from the round that was just given up on and silently
+ * skips saving this practice round's results (history, mastery, miss
+ * tallies) entirely. Without restarting the clock, this round would open
+ * already showing the previous round's elapsed time, frozen and paused.
+ */
 function restartWith(words: Word[]): void {
   allWords     = words;
   sessionState = new Map();
   pageIndex    = 0;
+  getStopwatch().start();
+  syncTimerToggleIcon();
+  syncTimerVisibility();
+  setTimerControlsEnabled(true);
+  startTimedQuizWatch();
+  sessionRecorded = false;
   clearSummary('table');
   renderCurrentPage();
 }
@@ -633,6 +683,29 @@ function jumpToFirstUnanswered(): void {
   document.querySelector<HTMLInputElement>('#tableWrap input[data-word]:not(:disabled)')?.focus();
 }
 
+// ── CSV export ─────────────────────────────────────────────────────────────────
+
+function csvEscape(v: string): string {
+  return (v.includes(',') || v.includes('"') || v.includes('\n'))
+    ? '"' + v.replace(/"/g, '""') + '"'
+    : v;
+}
+
+function csvFor(words: Word[]): string {
+  const headers = ['rank', 'word', 'language', 'part_of_speech', 'translation'];
+  const lines = [headers.join(',')];
+  for (const w of words) {
+    lines.push([
+      String(w.rank ?? ''),
+      w.word,
+      w.language ?? quizLang,
+      w.pos ?? '',
+      buildGlossDisplay(w),
+    ].map(csvEscape).join(','));
+  }
+  return lines.join('\r\n');
+}
+
 // ── After-summary button wiring ───────────────────────────────────────────────
 
 function wireSummaryButtons(): void {
@@ -666,6 +739,15 @@ export function bindTableControls(): void {
   const tableJumpBtn = document.getElementById('tableJumpBtn');
   const dirToggle    = document.getElementById('directionToggle');
   const styleToggle  = document.getElementById('tableStyleToggle');
+
+  // Nothing is active until Start Quiz is clicked — without this, Give Up,
+  // Retry, Export, Next gap and the timer's Start/Pause and Reset all sit
+  // there looking clickable (Give Up in particular is styled to draw the
+  // eye) while every one of them is either a silent no-op or, for the timer
+  // toggle, starts a stray clock ticking with no quiz behind it.
+  if (tableReset) (tableReset as HTMLButtonElement).disabled = true;
+  setPrestartControlsEnabled(false);
+  setTimerControlsEnabled(false);
 
   // Reflect whatever was persisted from a prior session — the HTML always
   // marks "Standard" active by default.
@@ -717,13 +799,16 @@ export function bindTableControls(): void {
     });
   });
 
-  // Export all words
+  // Export all words — genuinely CSV, matching the button's own label (this
+  // used to write a .json file named table_words.json despite saying
+  // "Export CSV", which is not what a learner asking for CSV wants to open
+  // in a spreadsheet).
   tableExport?.addEventListener('click', () => {
     if (allWords.length === 0) return;
-    const blob = new Blob([JSON.stringify(allWords, null, 2)], { type: 'application/json' });
+    const blob = new Blob([csvFor(allWords)], { type: 'text/csv' });
     const a    = document.createElement('a');
     a.href     = URL.createObjectURL(blob);
-    a.download = 'table_words.json';
+    a.download = 'table_words.csv';
     a.click();
   });
 

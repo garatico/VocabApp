@@ -48,6 +48,72 @@ async function exportCsv(lang: string): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
+// ── Per-language buttons (Clear cache / Export) ────────────────────────────────
+
+// admin.html used to hard-code these two groups to four languages. That list
+// silently fell behind as languages were added to the DB — German, Dutch and
+// Chinese vocab existed and were fully clearable/exportable through the API,
+// but had no button here to reach them. Built from /api/admin/meta instead,
+// so a language present in the DB always gets one.
+async function buildLangButtons(): Promise<void> {
+  const clearGroup  = document.getElementById('clearLangCacheGroup') as HTMLElement;
+  const exportGroup = document.getElementById('exportGroup')         as HTMLElement;
+
+  let languages: string[] = ['spanish', 'portuguese', 'italian', 'french'];
+  try {
+    const meta = await apiCall('/meta') as { languages?: string[] };
+    if (meta.languages?.length) languages = meta.languages;
+  } catch { /* fall back to the default list above */ }
+
+  clearGroup.innerHTML = languages.map(lang => {
+    const label = lang.charAt(0).toUpperCase() + lang.slice(1);
+    return `<button class="secondary clear-lang-cache-btn" data-lang="${escapeHtml(lang)}">Clear ${escapeHtml(label)}</button>`;
+  }).join('');
+
+  exportGroup.innerHTML = languages.map(lang => {
+    const label = lang.charAt(0).toUpperCase() + lang.slice(1);
+    return `<button class="secondary export-btn" data-lang="${escapeHtml(lang)}">↓ ${escapeHtml(label)}</button>`;
+  }).join('');
+
+  // Clear per-language cache
+  clearGroup.querySelectorAll<HTMLButtonElement>('.clear-lang-cache-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const lang  = btn.dataset.lang ?? '';
+      const label = lang.charAt(0).toUpperCase() + lang.slice(1);
+      try {
+        btn.disabled    = true;
+        btn.textContent = 'Clearing...';
+        const msg = await clearCache(lang);
+        showDbStatus(msg, 'success');
+      } catch (err) {
+        showDbStatus(`Error: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = `Clear ${label}`;
+      }
+    });
+  });
+
+  // Export CSV
+  exportGroup.querySelectorAll<HTMLButtonElement>('.export-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const lang         = btn.dataset.lang ?? '';
+      const originalText = btn.textContent ?? '';
+      try {
+        btn.disabled    = true;
+        btn.textContent = 'Exporting...';
+        await exportCsv(lang);
+        showDbStatus(`Exported ${lang}.csv successfully`, 'success');
+      } catch (err) {
+        showDbStatus(`Export error: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = originalText;
+      }
+    });
+  });
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 export function initDbAdmin(): void {
@@ -67,41 +133,5 @@ export function initDbAdmin(): void {
     }
   });
 
-  // Clear per-language cache
-  document.querySelectorAll<HTMLButtonElement>('.clear-lang-cache-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const lang  = btn.dataset.lang ?? '';
-      const label = lang.charAt(0).toUpperCase() + lang.slice(1);
-      try {
-        btn.disabled    = true;
-        btn.textContent = 'Clearing...';
-        const msg = await clearCache(lang);
-        showDbStatus(msg, 'success');
-      } catch (err) {
-        showDbStatus(`Error: ${err instanceof Error ? err.message : String(err)}`, 'error');
-      } finally {
-        btn.disabled    = false;
-        btn.textContent = `Clear ${label}`;
-      }
-    });
-  });
-
-  // Export CSV
-  document.querySelectorAll<HTMLButtonElement>('.export-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const lang         = btn.dataset.lang ?? '';
-      const originalText = btn.textContent ?? '';
-      try {
-        btn.disabled    = true;
-        btn.textContent = 'Exporting...';
-        await exportCsv(lang);
-        showDbStatus(`Exported ${lang}.csv successfully`, 'success');
-      } catch (err) {
-        showDbStatus(`Export error: ${err instanceof Error ? err.message : String(err)}`, 'error');
-      } finally {
-        btn.disabled    = false;
-        btn.textContent = originalText;
-      }
-    });
-  });
+  void buildLangButtons();
 }

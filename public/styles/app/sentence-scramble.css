@@ -81,6 +81,22 @@
   background: var(--surface2);
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-sm);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+/* Checked (or reviewed via Back) — green/red match every other mode's own
+   correct/missed colouring (Table's word-cell, Picture's click-mode card).
+   Without this a wrong answer's chips looked identical to a right one,
+   distinguished only by the feedback text underneath. */
+.ss-answer-row--correct {
+  border-style: solid;
+  border-color: var(--correct);
+  background: var(--correct-light);
+}
+.ss-answer-row--wrong {
+  border-style: solid;
+  border-color: var(--incorrect, var(--danger));
+  background: var(--incorrect-light, var(--danger-light));
 }
 
 .ss-bank-row {

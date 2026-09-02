@@ -290,6 +290,13 @@ export interface WordOverride {
   domains?:       string[];
   hiddenGlosses?: string[];
   glossOrder?:    string[];
+  /** Brand-new senses typed in by the learner — the one thing hide/reorder
+   *  above can't do, since both only operate on glosses the real vocabulary
+   *  already has. Merged in ahead of hiddenGlosses/glossOrder in
+   *  applyWordOverride, so an added gloss can be repositioned the same way a
+   *  real one can; there's no hiding one, since deleting it outright (see
+   *  removeAddedGloss) already covers that. */
+  addedGlosses?:  string[];
   examples?:      string[];
   difficulty?:    number | null;
   tags?:          string[];
@@ -382,6 +389,26 @@ export function setGlossOrderOverride(lang: string, word: string, order: string[
   mergeWordOverride(lang, word, { glossOrder: order });
 }
 
+/** Adds a brand-new sense to a word's gloss list. Silently ignored if blank
+ *  or already added — not checked against the word's real glosses too, since
+ *  typing in a sense that happens to match one already there is harmless. */
+export function addGlossOverride(lang: string, word: string, gloss: string): void {
+  const trimmed = gloss.trim();
+  if (!trimmed) return;
+  const added = getWordOverride(lang, word)?.addedGlosses ?? [];
+  if (added.includes(trimmed)) return;
+  mergeWordOverride(lang, word, { addedGlosses: [...added, trimmed] });
+}
+
+/** Removes a gloss the learner added — the delete counterpart to
+ *  addGlossOverride, since an added gloss (unlike a real one) has nothing to
+ *  hide instead. */
+export function removeAddedGloss(lang: string, word: string, gloss: string): void {
+  const added = getWordOverride(lang, word)?.addedGlosses;
+  if (!added) return;
+  mergeWordOverride(lang, word, { addedGlosses: added.filter(g => g !== gloss) });
+}
+
 export function removeWordOverride(lang: string, word: string): void {
   const overrides = { ...getWordOverrides(lang) };
   delete overrides[wordKey(word)];
@@ -407,7 +434,8 @@ export function applyGlossOrder(glosses: string[], order: string[]): string[] {
 export function applyWordOverride(lang: string, w: Word): Word {
   const o = getWordOverride(lang, w.word);
   if (!o) return w;
-  const visible = o.hiddenGlosses?.length ? w.glosses.filter(g => !o.hiddenGlosses!.includes(g)) : w.glosses;
+  const withAdded = o.addedGlosses?.length ? [...w.glosses, ...o.addedGlosses] : w.glosses;
+  const visible = o.hiddenGlosses?.length ? withAdded.filter(g => !o.hiddenGlosses!.includes(g)) : withAdded;
   const synonyms = o.synonyms ?? w.relations?.synonyms;
   const antonyms = o.antonyms ?? w.relations?.antonyms;
   return {

@@ -26,8 +26,20 @@ export function clickedOutsidePopover(target: Node): boolean {
   return activePopover !== null && !activePopover.contains(target);
 }
 
+/**
+ * @param words One word (a row's own ⇥ button) or several (the bulk toolbar's
+ * "Move to…", anchored to that button instead of any one row) — same
+ * popover either way, since the only thing that changes is how many words
+ * get removeFromList/addToList'd per click. Used to be bulk-only: a plain
+ * window.prompt() dumping every other list name as text for the user to
+ * retype exactly (case- and whitespace-sensitive — a trailing space or a
+ * capitalization slip silently did nothing, with no error), while the very
+ * same action on a single row already had this click-to-pick popover. Bulk
+ * now gets the same one.
+ */
 export function openMovePopover(
-  ctx: ListsCtx, anchorBtn: HTMLElement, word: string, onDone: () => void,
+  ctx: ListsCtx, anchorBtn: HTMLElement, words: string[],
+  onDone: (mode: 'move' | 'copy', listName: string) => void,
 ): void {
   closePopover();
   let mode: 'move' | 'copy' = 'move';
@@ -35,6 +47,16 @@ export function openMovePopover(
 
   const popover = document.createElement('div');
   popover.className = 'ml-move-popover';
+
+  // Only worth naming when it's not obvious from context — a row's own ⇥
+  // button is right next to the word it acts on, but the bulk toolbar's
+  // button is anchored to itself, not to any particular row.
+  if (words.length > 1) {
+    const label = document.createElement('div');
+    label.className = 'ml-move-popover-label';
+    label.textContent = `${words.length} words selected`;
+    popover.appendChild(label);
+  }
 
   // Mode tabs
   const tabs = document.createElement('div');
@@ -63,9 +85,11 @@ export function openMovePopover(
       item.textContent = listName;
       item.addEventListener('click', e => {
         e.stopPropagation();
-        if (mode === 'move') removeFromList(ctx.lang, ctx.selectedList, word);
-        addToList(ctx.lang, listName, word);
-        onDone();
+        words.forEach(word => {
+          if (mode === 'move') removeFromList(ctx.lang, ctx.selectedList, word);
+          addToList(ctx.lang, listName, word);
+        });
+        onDone(mode, listName);
         closePopover();
       });
       popover.appendChild(item);

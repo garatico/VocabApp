@@ -35,6 +35,7 @@ import {
   isImageOverride,
   getWordOverrides, getWordOverride, type WordOverride,
   setWordFields, setGlossHidden, setGlossOrderOverride, removeWordOverride, applyGlossOrder,
+  addGlossOverride, removeAddedGloss,
   downloadUserContent, applyUserContentImport,
 } from '../data/user-content.ts';
 import type { TriviaQuestion, TriviaCategory, TriviaDifficulty, ReadingDifficulty, ReadingLength, AnswerType } from '../data/trivia-questions.ts';
@@ -520,6 +521,7 @@ function summarizeWordOverride(o: WordOverride): string {
   if (o.notes !== undefined) parts.push('notes edited');
   if (o.domains !== undefined) parts.push(o.domains.length ? `domains → ${o.domains.join(', ')}` : 'domains hidden');
   if (o.hiddenGlosses?.length) parts.push(`${o.hiddenGlosses.length} gloss${o.hiddenGlosses.length === 1 ? '' : 'es'} hidden`);
+  if (o.addedGlosses?.length) parts.push(`${o.addedGlosses.length} gloss${o.addedGlosses.length === 1 ? '' : 'es'} added`);
   if (o.glossOrder) parts.push('gloss order changed');
   if (o.examples !== undefined) parts.push(o.examples.length ? `${o.examples.length} example${o.examples.length === 1 ? '' : 's'}` : 'examples cleared');
   if (o.difficulty !== undefined) parts.push(o.difficulty ? `difficulty → ${o.difficulty}` : 'difficulty hidden');
@@ -647,28 +649,45 @@ function buildWordEditorSearchPanel(defaultLang: string, refresh: () => void): W
     });
     detail.appendChild(saveBtn);
 
-    // ── Glosses: hide individually, reorder the rest ────────────────────────
-    if (w.glosses.length > 0) {
-      detail.appendChild(el('h5', 'mc-subsection-title', 'Glosses'));
+    // ── Glosses: hide/reorder real senses, add and remove new ones ──────────
+    // Always shown, even for a word with no real glosses at all (rank/domain
+    // words sometimes have none) — "Add a gloss" below works regardless.
+    detail.appendChild(el('h5', 'mc-subsection-title', 'Glosses'));
 
-      const hiddenSet = new Set(override?.hiddenGlosses ?? []);
-      const displayOrder = override?.glossOrder ? applyGlossOrder(w.glosses, override.glossOrder) : w.glosses;
+    const hiddenSet = new Set(override?.hiddenGlosses ?? []);
+    const addedSet  = new Set(override?.addedGlosses ?? []);
+    // Added senses are appended after the real ones so a fresh add always
+    // lands at the end, then glossOrder (saved against whichever glosses
+    // were visible at the time, real or added — see applyGlossOrder) can
+    // reposition either kind the same way.
+    const allGlosses   = [...w.glosses, ...(override?.addedGlosses ?? [])];
+    const displayOrder = override?.glossOrder ? applyGlossOrder(allGlosses, override.glossOrder) : allGlosses;
 
-      const glossList = el('div', 'mc-gloss-list');
+    const glossList = el('div', 'mc-gloss-list');
+    if (displayOrder.length === 0) {
+      glossList.appendChild(el('p', 'mc-empty', 'No glosses yet — add one below.'));
+    } else {
       displayOrder.forEach((gloss, i) => {
+        const isAdded = addedSet.has(gloss);
         const item = el('div', 'mc-gloss-item');
         if (hiddenSet.has(gloss)) item.classList.add('mc-gloss-item--hidden');
 
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.className = 'mc-gloss-checkbox';
-        checkbox.checked = !hiddenSet.has(gloss);
-        checkbox.setAttribute('aria-label', `Show "${gloss}"`);
-        checkbox.addEventListener('change', () => {
-          setGlossHidden(lang, w.word, gloss, !checkbox.checked);
-          afterChange();
-        });
-        item.appendChild(checkbox);
+        if (isAdded) {
+          // Nothing to hide — a sense the learner typed in themselves is
+          // just deleted outright instead (the ✕ button below).
+          item.appendChild(el('span', 'mc-gloss-item-added-tag', '+'));
+        } else {
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.className = 'mc-gloss-checkbox';
+          checkbox.checked = !hiddenSet.has(gloss);
+          checkbox.setAttribute('aria-label', `Show "${gloss}"`);
+          checkbox.addEventListener('change', () => {
+            setGlossHidden(lang, w.word, gloss, !checkbox.checked);
+            afterChange();
+          });
+          item.appendChild(checkbox);
+        }
         item.appendChild(el('span', 'mc-gloss-item-text', gloss));
 
         const controls = el('div', 'mc-gloss-item-controls');
@@ -694,11 +713,41 @@ function buildWordEditorSearchPanel(defaultLang: string, refresh: () => void): W
         });
         controls.append(upBtn, downBtn);
 
+        if (isAdded) {
+          const delBtn = el('button', 'mc-gloss-move-btn mc-gloss-remove-btn', '✕');
+          delBtn.type = 'button';
+          delBtn.setAttribute('aria-label', `Remove "${gloss}"`);
+          delBtn.addEventListener('click', () => {
+            removeAddedGloss(lang, w.word, gloss);
+            afterChange();
+          });
+          controls.appendChild(delBtn);
+        }
+
         item.appendChild(controls);
         glossList.appendChild(item);
       });
-      detail.appendChild(glossList);
     }
+    detail.appendChild(glossList);
+
+    const addGlossRow = el('div', 'mc-gloss-add-row');
+    const newGlossI = textInput('Add a new sense, e.g. "to talk"');
+    newGlossI.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      if (!newGlossI.value.trim()) return;
+      addGlossOverride(lang, w.word, newGlossI.value);
+      afterChange();
+    });
+    const addGlossBtn = el('button', 'mc-btn mc-btn--sm', 'Add gloss');
+    addGlossBtn.type = 'button';
+    addGlossBtn.addEventListener('click', () => {
+      if (!newGlossI.value.trim()) return;
+      addGlossOverride(lang, w.word, newGlossI.value);
+      afterChange();
+    });
+    addGlossRow.append(newGlossI, addGlossBtn);
+    detail.appendChild(addGlossRow);
 
     if (override) {
       const resetBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm', 'Reset all overrides for this word');
@@ -1008,6 +1057,17 @@ function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
   }
 
   function loadLang(): Promise<void> {
+    // Snapshotted now, not read back from the outer `lang` inside .then()
+    // below: `lang` is the same mutable variable every call closes over, so
+    // if the language is switched again before this fetch resolves, the
+    // *next* call already reassigns it — and the guard below, comparing
+    // against that same variable, would then always agree with itself
+    // regardless of which call it's checking from. Two fetches racing
+    // (a slow first request, a second one resolving from cache before it)
+    // could resolve out of order, and the stale one would pass its own
+    // check and overwrite `words` with the wrong language's list right after
+    // the current one had already loaded correctly.
+    const requestedLang = lang;
     words = null;
     resultsList.innerHTML = '';
     resultsList.hidden = true;
@@ -1015,8 +1075,8 @@ function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
     searchInput.value = '';
     searchInput.disabled = true;
     searchInput.placeholder = 'Loading vocabulary…';
-    return opts.fetchWords(lang).then(loaded => {
-      if (lang !== langSelect.value) return; // language changed again before this resolved
+    return opts.fetchWords(requestedLang).then(loaded => {
+      if (requestedLang !== langSelect.value) return; // superseded by a later change
       words = loaded;
       searchInput.disabled = false;
       searchInput.placeholder = opts.placeholder;

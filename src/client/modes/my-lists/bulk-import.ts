@@ -51,16 +51,25 @@ export function findVariations(token: string, vocab: VocabEntry[]): VocabEntry[]
   return vocab
     .filter(e => {
       const w = norm(e.word);
-      return w !== t && (w.startsWith(stem) || t.startsWith(norm(e.word).slice(0, Math.max(3, w.length - 2))));
+      return w !== t && (w.startsWith(stem) || t.startsWith(w.slice(0, Math.max(3, w.length - 2))));
     })
     .slice(0, 6);
 }
 
-/** Ask which of several candidates the user meant; resolves to picks. */
-export function askVariations(pending: Ambiguity[]): Promise<string[]> {
+/**
+ * Ask which of several candidates the user meant.
+ *
+ * Resolves to one entry per `pending` row, in the same order — `null` for a
+ * row left unpicked. Not a flat list of the words that got picked: two rows
+ * can share an overlapping candidate list (pasting both "como" and "cómo"
+ * looks up the same accent-stripped bucket, so both rows offer the same
+ * [como, cómo] options) — a flat "which words were picked anywhere" set
+ * couldn't tell that row apart from the other, and could silently treat an
+ * untouched row as resolved just because *some other* row happened to pick
+ * one of the same candidates. Positional correspondence avoids that.
+ */
+export function askVariations(pending: Ambiguity[]): Promise<(string | null)[]> {
   return new Promise(resolve => {
-    const chosen: string[] = [];
-
     const backdrop = document.createElement('div');
     backdrop.className = 'ml-variation-backdrop';
 
@@ -130,19 +139,20 @@ export function askVariations(pending: Ambiguity[]): Promise<string[]> {
     addBtn.textContent = 'Add selected';
     actions.append(skipBtn, addBtn);
 
-    function close(result: string[]): void {
+    function close(result: (string | null)[]): void {
       backdrop.remove();
       resolve(result);
     }
+    const allSkipped = (): null[] => pending.map(() => null);
 
-    skipBtn.addEventListener('click', () => close([]));
+    skipBtn.addEventListener('click', () => close(allSkipped()));
     addBtn.addEventListener('click', () => {
-      body.querySelectorAll<HTMLElement>('.ml-variation-row').forEach(r => {
-        if (r.dataset.picked) chosen.push(r.dataset.picked);
-      });
-      close(chosen);
+      // DOM order matches pending's — each row was appended in that same
+      // forEach above — so this lines up positionally with no extra bookkeeping.
+      const rows = [...body.querySelectorAll<HTMLElement>('.ml-variation-row')];
+      close(rows.map(r => r.dataset.picked || null));
     });
-    backdrop.addEventListener('click', e => { if (e.target === backdrop) close([]); });
+    backdrop.addEventListener('click', e => { if (e.target === backdrop) close(allSkipped()); });
 
     dialog.append(title, sub, body, actions);
     backdrop.appendChild(dialog);
@@ -245,7 +255,11 @@ export function createBulkImport(
     const ambiguous: Ambiguity[] = [];
 
     function take(word: string): void {
-      if (existing.has(word.toLowerCase())) return;
+      // Reachable from the ambiguity dialog, not just an exact match below —
+      // a token like "como" can resolve to a word ("cómo") that's already in
+      // the list. Reported as already-listed rather than silently doing
+      // nothing, matching the exact-match path just below.
+      if (existing.has(word.toLowerCase())) { already.push(word); return; }
       addToList(ctx.lang, ctx.selectedList, word);
       existing.add(word.toLowerCase());
       added.push(word);
@@ -289,11 +303,13 @@ export function createBulkImport(
 
     if (ambiguous.length > 0) {
       void askVariations(ambiguous).then(picks => {
-        picks.forEach(take);
-        // Anything left unpicked is reported as not found
-        const picked = new Set(picks.map(p => norm(p)));
-        ambiguous.forEach(({ token, options }) => {
-          if (!options.some(o => picked.has(norm(o.word)))) unmatched.push(token);
+        // picks[i] answers ambiguous[i] specifically — positional, not a
+        // flat "which words got picked anywhere" set (see askVariations'
+        // own doc comment for why that used to under-report skipped rows
+        // whenever two tokens shared an overlapping candidate list).
+        picks.forEach((word, i) => {
+          if (word) take(word);
+          else unmatched.push(ambiguous[i].token);
         });
         finish();
       });

@@ -112,7 +112,7 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
 
   const desc = document.createElement('p');
   desc.className = 'ml-smart-desc';
-  desc.textContent = describePreset(bundle);
+  desc.textContent = describePreset(bundle, mode);
   header.appendChild(desc);
 
   const editor = document.createElement('div');
@@ -458,25 +458,33 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
 
   const listSection = section(`Lists (${primaryLang})`, listActive, listModeRow, listNamesRow);
 
-  // Direction
-  const dirRow = document.createElement('div');
-  dirRow.className = 'ml-profile-editor-chips';
-  const dirOptions: { value: PresetBundle['direction']; label: string }[] = [
-    { value: 'target-en', label: 'Word → Meaning' },
-    { value: 'en-target', label: 'Meaning → Word' },
-    { value: 'mixed',     label: 'Mixed' },
-  ];
-  dirOptions.forEach(({ value, label }) => {
-    const chipLabel = document.createElement('label');
-    chipLabel.className = 'ml-profile-editor-chip';
-    const input = document.createElement('input');
-    input.type = 'radio'; input.name = `ml-profile-direction-${mode}-${name}`;
-    input.checked = bundle.direction === value;
-    input.addEventListener('change', () => persist({ ...bundle, direction: value }));
-    chipLabel.append(input, document.createTextNode(label));
-    dirRow.appendChild(chipLabel);
-  });
-  const dirSection = section('Direction', null, dirRow);
+  // Direction — Table only. #directionToggle itself is only ever shown for
+  // Table mode (Picture has no direction concept; Conjugation drills both
+  // directions via its own Display setting) — this editor used to offer it
+  // for every mode regardless, which is how a Picture Quiz or Conjugation
+  // profile ended up carrying a direction it never used and, on Apply,
+  // silently overwriting Table's own setting (see PresetBundle.direction).
+  let dirSection: HTMLElement | null = null;
+  if (mode === 'table') {
+    const dirRow = document.createElement('div');
+    dirRow.className = 'ml-profile-editor-chips';
+    const dirOptions: { value: NonNullable<PresetBundle['direction']>; label: string }[] = [
+      { value: 'target-en', label: 'Word → Meaning' },
+      { value: 'en-target', label: 'Meaning → Word' },
+      { value: 'mixed',     label: 'Mixed' },
+    ];
+    dirOptions.forEach(({ value, label }) => {
+      const chipLabel = document.createElement('label');
+      chipLabel.className = 'ml-profile-editor-chip';
+      const input = document.createElement('input');
+      input.type = 'radio'; input.name = `ml-profile-direction-${mode}-${name}`;
+      input.checked = (bundle.direction ?? 'target-en') === value;
+      input.addEventListener('change', () => persist({ ...bundle, direction: value }));
+      chipLabel.append(input, document.createTextNode(label));
+      dirRow.appendChild(chipLabel);
+    });
+    dirSection = section('Direction', null, dirRow);
+  }
 
   // Quiz Style — Table only, mirrors #tableStyleToggle. Picture/Conjugation
   // have no such control, so this section simply doesn't exist for them.
@@ -589,16 +597,19 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
     conjugationSection = group('conjugation', 'Conjugation', verbsSection, tenseFormsSection, viewSection);
   }
 
+  // Conjugation has neither Quiz Style nor Direction of its own (see above),
+  // so unlike Table/Picture it has nothing at all for this group to hold —
+  // omitted entirely rather than showing an empty "Quiz Behavior" box.
   const behaviorSections = [
     ...(styleSection ? [styleSection] : []),
-    dirSection,
+    ...(dirSection   ? [dirSection]   : []),
   ];
 
   editor.append(
     group('wordpool', 'Word Pool', langSection, extraSection, wordsSection),
     group('filters', 'Filters', classSection, domainSection, listSection),
     ...(conjugationSection ? [conjugationSection] : []),
-    group('quizbehavior', 'Quiz Behavior', ...behaviorSections),
+    ...(behaviorSections.length > 0 ? [group('quizbehavior', 'Quiz Behavior', ...behaviorSections)] : []),
   );
   header.appendChild(editor);
   ctx.panel.appendChild(header);
