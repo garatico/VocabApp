@@ -25,6 +25,7 @@ import {
   isOwnInfinitive, hasAnyForms, regularityOf, isSingleForm, verbKey, hiddenPronounSlots,
 } from './index.js';
 import { foldKey as normalize } from '../../utils/match.js';
+import { displayWord } from '../../utils/utils.js';
 import { shuffle } from '../../utils/shuffle.js';
 import {
   orderWords, getWordOrderLabels, saveSession, recordOutcome, type WordOrder,
@@ -40,6 +41,10 @@ export interface ConjOneAtATimeOptions {
   container:  HTMLElement;
   lang?:      string;
   extraLangs?: string[];
+  /** When set, skips the verb/tense/pronoun expansion below and drills
+   *  exactly these blanks instead — the "↺ Practice N" summary button's
+   *  retry-missed path, matching table mode's restartWith(). */
+  fixedQueue?: QueueItem[];
 }
 
 interface QueueItem {
@@ -58,6 +63,7 @@ export function renderConjOneAtATime({
   container,
   lang = 'spanish',
   extraLangs = [],
+  fixedQueue,
 }: ConjOneAtATimeOptions): void {
   container.innerHTML = '';
   clearSummary('conjugation');
@@ -75,7 +81,7 @@ export function renderConjOneAtATime({
         return cls == null || regs.includes(regularityOf(cls).key);
       });
 
-  if (allVerbs.length === 0) {
+  if (allVerbs.length === 0 && !fixedQueue) {
     container.innerHTML = `<div class="conj-empty">
       <p>No verbs available to drill one at a time.</p>
       <p class="conj-empty-hint">Check the Tense &amp; Forms and Regularity filters, then hit Start Quiz again.</p>
@@ -128,7 +134,7 @@ export function renderConjOneAtATime({
     return ordered.flatMap(flattenVerb);
   }
 
-  let queue = buildQueue();
+  let queue = fixedQueue ?? buildQueue();
   if (queue.length === 0) {
     container.innerHTML = `<div class="conj-empty">
       <p>No forms to drill for the current Tense &amp; Forms selection.</p>
@@ -238,7 +244,7 @@ export function renderConjOneAtATime({
     nextBtn.disabled = i >= queue.length - 1 && results.some(r => r === null);
     giveUpBtn.disabled = finished;
 
-    verbEl.textContent = item.verb.word;
+    verbEl.textContent = displayWord(item.verb);
     tenseEl.textContent = item.tenseLabel;
     pronounEl.textContent = item.slot === 'single' ? '' : item.pronoun;
     pronounEl.style.visibility = item.slot === 'single' ? 'hidden' : 'visible';
@@ -392,11 +398,25 @@ export function renderConjOneAtATime({
 
     const total = queue.length;
     const correct = results.filter(r => r === 'correct').length;
+    const missedItems = queue.filter((_, i) => results[i] === 'missed');
+    // Same "↺ Practice N" pattern as table mode's own summary — see
+    // table-controls.ts's buildSummaryHtml/wireSummaryButtons.
+    const retryHtml = missedItems.length > 0
+      ? `<button type="button" class="summary-retry-btn">↺ Practice ${missedItems.length}</button>`
+      : '';
     showSummary('conjugation',
+      retryHtml +
       summaryChip('correct', `✓ ${correct} / ${total} forms`) +
       summaryChip('pct',     `${percent(correct, total)}%`),
       total > 0 && correct === total,
     );
+    if (missedItems.length > 0) {
+      document.querySelectorAll<HTMLButtonElement>('.summary-retry-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          renderConjOneAtATime({ container, lang, extraLangs, words: [], fixedQueue: missedItems });
+        });
+      });
+    }
   }
 
   giveUpBtn.addEventListener('click', finish);

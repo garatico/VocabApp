@@ -322,6 +322,17 @@ export function getDisplay(entry: Word): { prompt: string; hint: string | null }
   };
 }
 
+/**
+ * The word's own text, with its cosmetic sense annotation appended in
+ * parentheses when it has one — e.g. "haber (auxiliary)" vs "tener
+ * (possession)", both otherwise glossed just "have". Never used for
+ * matching, only wherever a word is shown as a resolved answer: this reads
+ * `entry.word`, not `entry.glosses`, so it can't touch isCorrect/getGlosses.
+ */
+export function displayWord(entry: Word): string {
+  return entry.disambiguator ? `${entry.word} (${entry.disambiguator})` : entry.word;
+}
+
 /** Return a short label for the part of speech badge. */
 export function getPosLabel(entry: Word): string {
   const map: Record<string, string> = {
@@ -375,8 +386,14 @@ function chosenGlosses(entry: Word): string[] {
  */
 export function buildGlossDisplay(entry: Word, maxGlosses = Infinity): string {
   const chosen = chosenGlosses(entry);
-  if (chosen.length === 0) return entry.translation ?? entry.word ?? '';
-  return chosen.slice(0, maxGlosses).join(' / ');
+  const base = chosen.length === 0 ? (entry.translation ?? entry.word ?? '') : chosen.slice(0, maxGlosses).join(' / ');
+  // Appended after slicing/joining, not baked into any one gloss, so it
+  // shows once per word regardless of maxGlosses — and never touches
+  // getGlosses/chosenGlosses, which matching (isCorrect et al.) reads
+  // instead, so a learner's answer is never scored against this text.
+  // meaningDisambiguator, not disambiguator — that one decorates the word
+  // itself (see displayWord), independently of this side.
+  return entry.meaningDisambiguator ? `${base} (${entry.meaningDisambiguator})` : base;
 }
 
 /**

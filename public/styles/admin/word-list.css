@@ -110,6 +110,13 @@ html.dark .badge-band { background: rgba(254, 243, 199, 0.12); color: #fcd34d; }
 .form-panel-empty .hint-icon { font-size: 2.5rem; opacity: 0.4; }
 .form-panel-empty .hint-text { font-size: 0.9rem; }
 
+/* ── Inline field annotation (e.g. "requires a data column not yet added") ── */
+label .hint {
+  font-weight: normal;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .editor-layout { flex-direction: column; }

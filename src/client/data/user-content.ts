@@ -35,6 +35,13 @@ export interface UserWord {
   id:          string;
   word:        string;
   translation: string;
+  /** Senses beyond `translation` — which stays the required, primary one
+   *  (used for the word-row display, CSV export, etc.) so this is purely
+   *  additive. Once a word has more than one, it's hideable/reorderable
+   *  through the same "Edit an existing word" panel real words already use
+   *  — that machinery works on any word's `glosses` array, custom or not,
+   *  it's only ever had one entry to work with here before now. */
+  extraGlosses: string[];
   pos:         string | null;
   domains:     string[];
   notes:       string;
@@ -43,6 +50,11 @@ export interface UserWord {
   tags:        string[];
   synonyms:    string[];
   antonyms:    string[];
+  /** See Word.disambiguator in types.ts — same cosmetic parenthetical, just
+   *  authored directly since a custom word has no server row to override. */
+  disambiguator: string;
+  /** See Word.meaningDisambiguator in types.ts — the meaning-side counterpart. */
+  meaningDisambiguator: string;
 }
 
 function isUserWord(v: unknown): v is UserWord {
@@ -65,6 +77,9 @@ function normalizeUserWord(w: UserWord): UserWord {
   return {
     ...w,
     pos: w.pos ?? null,
+    extraGlosses: Array.isArray(w.extraGlosses) ? w.extraGlosses : [],
+    disambiguator: typeof w.disambiguator === 'string' ? w.disambiguator : '',
+    meaningDisambiguator: typeof w.meaningDisambiguator === 'string' ? w.meaningDisambiguator : '',
     domains: Array.isArray(w.domains) ? w.domains : [],
     notes: typeof w.notes === 'string' ? w.notes : '',
     examples: Array.isArray(w.examples) ? w.examples : [],
@@ -103,10 +118,12 @@ export function toWord(uw: UserWord): Word {
     pos:         uw.pos,
     difficulty:  uw.difficulty,
     notes:       uw.notes,
-    glosses:     uw.translation ? [uw.translation] : [],
+    glosses:     [uw.translation, ...uw.extraGlosses].filter(Boolean),
     examples:    uw.examples,
     svg_url:     null,
     emoji:       null,
+    disambiguator: uw.disambiguator || undefined,
+    meaningDisambiguator: uw.meaningDisambiguator || undefined,
     linguistic:  null,
     frequency:   null,
     domains:     uw.domains,
@@ -302,6 +319,12 @@ export interface WordOverride {
   tags?:          string[];
   synonyms?:      string[];
   antonyms?:      string[];
+  /** See Word.disambiguator in types.ts. Overrides (or, for a custom word
+   *  authors) the cosmetic sense annotation shown next to the word. */
+  disambiguator?: string;
+  /** See Word.meaningDisambiguator in types.ts — the meaning-side counterpart,
+   *  independent of disambiguator above. */
+  meaningDisambiguator?: string;
 }
 
 function wordOverrideKey(lang: string): string { return `${P}wordoverride_${lang.toLowerCase()}`; }
@@ -367,11 +390,11 @@ function mergeWordOverride(lang: string, word: string, patch: Partial<WordOverri
 export function setWordFields(
   lang: string, word: string,
   fields: Pick<WordOverride,
-    'translation' | 'pos' | 'notes' | 'domains' | 'examples' | 'difficulty' | 'tags' | 'synonyms' | 'antonyms'>,
+    'translation' | 'pos' | 'notes' | 'domains' | 'examples' | 'difficulty' | 'tags' | 'synonyms' | 'antonyms' | 'disambiguator' | 'meaningDisambiguator'>,
 ): void {
   const current = getWordOverride(lang, word) ?? {};
   const next: WordOverride = { ...current, ...fields };
-  (['translation', 'pos', 'notes', 'domains', 'examples', 'difficulty', 'tags', 'synonyms', 'antonyms'] as const)
+  (['translation', 'pos', 'notes', 'domains', 'examples', 'difficulty', 'tags', 'synonyms', 'antonyms', 'disambiguator', 'meaningDisambiguator'] as const)
     .forEach(k => {
       if (!(k in fields)) delete next[k];
     });
@@ -449,6 +472,8 @@ export function applyWordOverride(lang: string, w: Word): Word {
     difficulty:  o.difficulty !== undefined ? o.difficulty : w.difficulty,
     tags:        o.tags ?? w.tags,
     relations:   (synonyms?.length || antonyms?.length) ? { synonyms, antonyms } : w.relations,
+    disambiguator: o.disambiguator ?? w.disambiguator,
+    meaningDisambiguator: o.meaningDisambiguator ?? w.meaningDisambiguator,
   };
 }
 

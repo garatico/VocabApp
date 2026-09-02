@@ -38,6 +38,7 @@ interface WordData {
   frequency?: Frequency;
   linguistic?: Linguistic;
   tags?: string[];
+  disambiguator?: string | null;
 }
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -64,6 +65,10 @@ const cancelBtn         = document.getElementById('cancelBtn')         as HTMLBu
 // ── State ─────────────────────────────────────────────────────────────────────
 
 let currentWord: WordData | null = null;
+// Whether the connected database has a `disambiguator` column yet — see
+// vocab-loader.ts's supportsDisambiguator(). false until /meta answers, so
+// the field starts disabled rather than briefly editable-then-locked.
+let disambiguatorSupported = false;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -90,7 +95,17 @@ function buildQuery(): string {
 
 export async function loadMeta(): Promise<void> {
   try {
-    const { pos, domains, languages } = await apiCall('/meta') as { pos: string[]; domains: string[]; languages?: string[] };
+    const { pos, domains, languages, disambiguatorSupported: supported } = await apiCall('/meta') as {
+      pos: string[]; domains: string[]; languages?: string[]; disambiguatorSupported?: boolean;
+    };
+    disambiguatorSupported = Boolean(supported);
+    const disambigInput = document.getElementById('editDisambiguator') as HTMLInputElement | null;
+    const disambigHint  = document.getElementById('editDisambiguatorHint') as HTMLElement | null;
+    if (disambigInput) disambigInput.disabled = !disambiguatorSupported;
+    if (disambigHint) {
+      disambigHint.hidden = disambiguatorSupported;
+      disambigHint.textContent = disambiguatorSupported ? '' : '(requires a database column not yet added)';
+    }
 
     // langSelect ships with only "Spanish" as a placeholder so the filter
     // bar isn't empty before this resolves — this replaces it with every
@@ -266,6 +281,7 @@ function populateForm(word: WordData): void {
 
   (document.getElementById('editEmoji') as HTMLInputElement).value = word.emoji ?? '';
   (document.getElementById('editNotes') as HTMLTextAreaElement).value = word.notes ?? '';
+  (document.getElementById('editDisambiguator') as HTMLInputElement).value = word.disambiguator ?? '';
 }
 
 function setSelectValue(id: string, value: string): void {
@@ -300,6 +316,8 @@ function collectFormData(): Omit<WordData, 'word'> {
   const extraDomains = (currentWord?.domains ?? []).slice(1).filter(d => d !== domainVal);
   const domains      = domainVal ? [domainVal, ...extraDomains] : extraDomains;
 
+  const disambigVal = (document.getElementById('editDisambiguator') as HTMLInputElement).value.trim();
+
   return {
     translation: (document.getElementById('editTranslation') as HTMLInputElement).value.trim(),
     pos:         (document.getElementById('editPos')          as HTMLSelectElement).value || null,
@@ -309,6 +327,10 @@ function collectFormData(): Omit<WordData, 'word'> {
     glosses:     glossLines,
     examples:    exampleLines,
     domains,
+    // Omitted entirely (rather than sent as null) when the column isn't
+    // there yet — the server would just drop it, but this way a database
+    // with no support for it never even puts the field on the wire.
+    ...(disambiguatorSupported ? { disambiguator: disambigVal || null } : {}),
     linguistic: {
       ipa:        (document.getElementById('editIPA')        as HTMLInputElement).value.trim()  || null,
       syllables:  syllablesRaw || null,

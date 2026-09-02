@@ -49,6 +49,29 @@ const tsClientConfig = tseslint.config({
   },
 });
 
+// Playwright e2e specs — a project of their own (tsconfig.e2e.json) rather
+// than folding into tsClientConfig above: these aren't part of the app
+// bundle Vite builds, they're Node-run test files that happen to drive a
+// browser, so src/client's project (and its DOM-focused strictness) doesn't
+// apply. no-floating-promises matters most here — a forgotten `await` on a
+// `page.click()` lets a test race ahead of the action it just "performed".
+const tsE2eConfig = tseslint.config({
+  files: ['tests/e2e/**/*.ts'],
+  extends: [
+    ...tseslint.configs.recommended,
+  ],
+  languageOptions: {
+    parserOptions: {
+      project:   './tsconfig.e2e.json',
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
+  rules: {
+    '@typescript-eslint/no-unused-vars':        ['warn', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
+    '@typescript-eslint/no-floating-promises':   'error',
+  },
+});
+
 // The two logger modules are the only place raw console access is allowed;
 // everything else in src/ must route through them.
 const loggerConfig = {
@@ -72,6 +95,9 @@ export default [
 
   // TypeScript — client
   ...tsClientConfig,
+
+  // TypeScript — Playwright e2e specs
+  ...tsE2eConfig,
 
   // Must come after the two TS configs so it wins for the logger files.
   loggerConfig,

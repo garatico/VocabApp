@@ -402,19 +402,24 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>,
   const posI = selectInput(['', 'noun', 'verb', 'adjective', 'adverb', 'phrase', 'other']);
   const domainsI = textInput('e.g. animals, home (comma-separated)');
   const notesI = textInput('optional notes');
+  const disambiguatorI = textInput('e.g. auxiliary — shown as "word (auxiliary)"');
+  const meaningDisambiguatorI = textInput('e.g. function — shown as "translation (function)"');
   const difficultyI = selectInput(WORD_DIFFICULTY_OPTIONS);
   const tagsI = textInput('comma-separated');
   const synonymsI = textInput('comma-separated');
   const antonymsI = textInput('comma-separated');
   const examplesI = textArea('one example sentence per line — also what lets this word show up in Sentence Scramble');
+  const extraGlossesI = textArea('one additional sense per line — e.g. "to converse" alongside "to talk"');
   form.append(
     field('Translation (English)', transI), field('Part of speech', posI),
     field('Domains', domainsI), field('Notes', notesI),
     field('Difficulty (1=easiest, 5=hardest)', difficultyI), field('Tags', tagsI),
     field('Synonyms', synonymsI), field('Antonyms', antonymsI),
+    field('Word disambiguator', disambiguatorI), field('Meaning disambiguator', meaningDisambiguatorI),
   );
   sub.appendChild(form);
   sub.appendChild(field('Example sentences', examplesI));
+  sub.appendChild(field('Additional senses', extraGlossesI));
 
   const { rows, values: wordInputs } = languageRows(currentLang, selectedLangs, info => {
     const input = textInput(`Word in ${info.label}`);
@@ -432,10 +437,13 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>,
       if (!word) continue;
       addUserWord(langName, {
         word, translation: transI.value.trim(),
+        extraGlosses: lines(extraGlossesI.value),
         pos: posI.value || null, domains: csv(domainsI.value), notes: notesI.value.trim(),
         difficulty: difficultyI.value ? Number(difficultyI.value) : null,
         tags: csv(tagsI.value), synonyms: csv(synonymsI.value), antonyms: csv(antonymsI.value),
         examples: lines(examplesI.value),
+        disambiguator: disambiguatorI.value.trim(),
+        meaningDisambiguator: meaningDisambiguatorI.value.trim(),
       });
       added++;
     }
@@ -528,6 +536,8 @@ function summarizeWordOverride(o: WordOverride): string {
   if (o.tags !== undefined) parts.push(o.tags.length ? `tags → ${o.tags.join(', ')}` : 'tags hidden');
   if (o.synonyms !== undefined) parts.push(o.synonyms.length ? `synonyms → ${o.synonyms.join(', ')}` : 'synonyms hidden');
   if (o.antonyms !== undefined) parts.push(o.antonyms.length ? `antonyms → ${o.antonyms.join(', ')}` : 'antonyms hidden');
+  if (o.disambiguator !== undefined) parts.push(o.disambiguator ? `word disambiguator → ${o.disambiguator}` : 'word disambiguator hidden');
+  if (o.meaningDisambiguator !== undefined) parts.push(o.meaningDisambiguator ? `meaning disambiguator → ${o.meaningDisambiguator}` : 'meaning disambiguator hidden');
   return parts.join(' · ');
 }
 
@@ -602,11 +612,20 @@ function buildWordEditorSearchPanel(defaultLang: string, refresh: () => void): W
     const tagsI     = textInput('comma-separated', (override?.tags ?? w.tags).join(', '));
     const synonymsI = textInput('comma-separated', (override?.synonyms ?? w.relations?.synonyms ?? []).join(', '));
     const antonymsI = textInput('comma-separated', (override?.antonyms ?? w.relations?.antonyms ?? []).join(', '));
+    const disambiguatorI = textInput(
+      'e.g. auxiliary — shown as "word (auxiliary)"',
+      override?.disambiguator ?? w.disambiguator ?? '',
+    );
+    const meaningDisambiguatorI = textInput(
+      'e.g. function — shown as "translation (function)"',
+      override?.meaningDisambiguator ?? w.meaningDisambiguator ?? '',
+    );
     fieldsForm.append(
       field('Translation', transI), field('Part of speech', posI),
       field('Notes', notesI), field('Domains', domainsI),
       field('Difficulty (1=easiest, 5=hardest)', difficultyI), field('Tags', tagsI),
       field('Synonyms', synonymsI), field('Antonyms', antonymsI),
+      field('Word disambiguator', disambiguatorI), field('Meaning disambiguator', meaningDisambiguatorI),
     );
     detail.appendChild(fieldsForm);
     const examplesI = textArea(
@@ -635,7 +654,16 @@ function buildWordEditorSearchPanel(defaultLang: string, refresh: () => void): W
       const newDomains = csv(domainsI.value);
       if (JSON.stringify(newDomains) !== JSON.stringify(w.domains)) fields.domains = newDomains;
       const newDifficulty = difficultyI.value ? Number(difficultyI.value) : null;
-      if (newDifficulty !== (w.difficulty ?? null)) fields.difficulty = newDifficulty;
+      // w.difficulty is typed number|null, but the server's own column is
+      // TEXT (see vocab-loader.ts's VocabRow) — real words reach the client
+      // as the string "1", never the number 1. Comparing newDifficulty
+      // straight against that (`1 !== "1"`) flagged every real word's
+      // difficulty as "changed" on every save, recording a spurious
+      // same-value override that would silently freeze it against a future
+      // data resync. Coercing both sides here is the narrow fix; the wider
+      // number|null lie in the Word type is a separate, bigger thing.
+      const currentDifficulty = w.difficulty != null ? Number(w.difficulty) : null;
+      if (newDifficulty !== currentDifficulty) fields.difficulty = newDifficulty;
       const newTags = csv(tagsI.value);
       if (JSON.stringify(newTags) !== JSON.stringify(w.tags)) fields.tags = newTags;
       const newSynonyms = csv(synonymsI.value);
@@ -644,6 +672,10 @@ function buildWordEditorSearchPanel(defaultLang: string, refresh: () => void): W
       if (JSON.stringify(newAntonyms) !== JSON.stringify(w.relations?.antonyms ?? [])) fields.antonyms = newAntonyms;
       const newExamples = lines(examplesI.value);
       if (JSON.stringify(newExamples) !== JSON.stringify(w.examples)) fields.examples = newExamples;
+      const newDisambiguator = disambiguatorI.value.trim();
+      if (newDisambiguator !== (w.disambiguator ?? '')) fields.disambiguator = newDisambiguator;
+      const newMeaningDisambiguator = meaningDisambiguatorI.value.trim();
+      if (newMeaningDisambiguator !== (w.meaningDisambiguator ?? '')) fields.meaningDisambiguator = newMeaningDisambiguator;
       setWordFields(lang, w.word, fields);
       afterChange();
     });

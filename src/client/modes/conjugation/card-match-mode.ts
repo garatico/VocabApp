@@ -41,6 +41,10 @@ export interface ConjCardMatchOptions {
   lang?:      string;
   extraLangs?: string[];
   pairing:    ConjMatchPairing;
+  /** When set, skips the verb/tense expansion below and matches exactly
+   *  these pairs, in one round, instead — the "↺ Practice N" summary
+   *  button's retry-missed path, matching table mode's restartWith(). */
+  fixedPairs?: Pair[];
 }
 
 interface Pair {
@@ -61,6 +65,7 @@ export function renderConjCardMatch({
   lang = 'spanish',
   extraLangs = [],
   pairing,
+  fixedPairs,
 }: ConjCardMatchOptions): void {
   container.innerHTML = '';
   clearSummary('conjugation');
@@ -78,7 +83,7 @@ export function renderConjCardMatch({
         return cls == null || regs.includes(regularityOf(cls).key);
       });
 
-  if (allVerbs.length === 0) {
+  if (allVerbs.length === 0 && !fixedPairs) {
     container.innerHTML = `<div class="conj-empty">
       <p>No verbs available for Card Match.</p>
       <p class="conj-empty-hint">Check the Tense &amp; Forms and Regularity filters, then hit Start Quiz again.</p>
@@ -194,7 +199,7 @@ export function renderConjCardMatch({
     return rounds;
   }
 
-  let rounds = buildRounds();
+  let rounds = fixedPairs ? [{ pairs: fixedPairs }] : buildRounds();
   if (rounds.length === 0) {
     container.innerHTML = `<div class="conj-empty">
       <p>No matchable pairs for the current selection.</p>
@@ -454,11 +459,25 @@ export function renderConjCardMatch({
     recordSession();
 
     const correct = matchedIds.size;
+    // Same "↺ Practice N" pattern as table mode's own summary — see
+    // table-controls.ts's buildSummaryHtml/wireSummaryButtons.
+    const retryHtml = missedPairs.length > 0
+      ? `<button type="button" class="summary-retry-btn">↺ Practice ${missedPairs.length}</button>`
+      : '';
     showSummary('conjugation',
+      retryHtml +
       summaryChip('correct', `✓ ${correct} / ${totalPairs} matched`) +
       summaryChip('pct',     `${percent(correct, totalPairs)}%`),
       totalPairs > 0 && correct === totalPairs,
     );
+    if (missedPairs.length > 0) {
+      const retryPairs = [...missedPairs];
+      document.querySelectorAll<HTMLButtonElement>('.summary-retry-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          renderConjCardMatch({ container, lang, extraLangs, pairing, words: [], fixedPairs: retryPairs });
+        });
+      });
+    }
   }
 
   giveUpBtn.addEventListener('click', finish);

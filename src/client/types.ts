@@ -68,6 +68,27 @@ export interface Word {
   /** Legacy pipe-delimited answers string (pre-glosses schema). */
   answers?:   string;
   /**
+   * Cosmetic sense annotation for words that share a translation with another
+   * word — e.g. "auxiliary" on haber vs "possession" on tener, both "have".
+   * Shown in parentheses next to the word wherever it's revealed as an
+   * answer; never part of matching (see utils.ts's isCorrect family, which
+   * only ever reads `glosses`/`translation`, not this). Optional because most
+   * words never need one, and because the DB column backing it may not exist
+   * yet — see data-requirements.ts's REQUIRED_WORD_COLUMNS, which does not
+   * name it, and vocab-loader.ts's runtime column check.
+   */
+  disambiguator?: string | null;
+  /**
+   * Same idea as disambiguator, but shown next to the *meaning/gloss* side
+   * instead of the word — e.g. funcionar's gloss "work" annotated "work
+   * (function)" to tell it apart from trabajar's "work (job)". Independent of
+   * disambiguator: a word can carry either, both (possibly different text on
+   * each side), or neither. Client-only for now — My Content's own override,
+   * not backed by a DB column the way disambiguator is (see
+   * vocab-loader.ts's supportsDisambiguator).
+   */
+  meaningDisambiguator?: string | null;
+  /**
    * Which language this word belongs to. Absent on every normal single-language
    * load — the language is implied by which array you fetched. Only set when a
    * word is merged into a multi-language list (see table-mode's Compare

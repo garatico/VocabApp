@@ -28,6 +28,35 @@
   border-color: var(--accent);
 }
 
+/* ── Reload button — packaged desktop builds only (see index.html's own
+   comment); same circular shape as #shortcutsBtn, far enough left that
+   #presetsBtn's pill (up to ~4.4rem wide, starting at right: 2.75rem) never
+   collides with it even at its widest label. ── */
+#reloadAppBtn {
+  position: absolute;
+  top: 0.5rem;
+  right: 7.5rem;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast),
+              border-color var(--transition-fast);
+  z-index: 2;
+}
+#reloadAppBtn:hover {
+  background: var(--surface2);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 /* ── Testing Profiles trigger — same corner as the ? button, its own shape
    so the two read as separate things: a pill, not a circle, with a label
    rather than a glyph, sitting just to its left. ── */

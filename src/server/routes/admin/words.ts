@@ -10,7 +10,7 @@
 
 import { Router }                             from 'express';
 import Database                               from 'better-sqlite3';
-import { getDb, clearCache, bandFromRank, BAND_CUTOFFS } from '../../lib/vocab-loader.js';
+import { getDb, clearCache, bandFromRank, BAND_CUTOFFS, supportsDisambiguator } from '../../lib/vocab-loader.js';
 import { getSvgUrl }                          from '../../lib/svg-loader.js';
 import { validateLanguage }                   from './_utils.js';
 import { logger }                             from '../../lib/logger.js';
@@ -55,6 +55,9 @@ interface DbWordRow {
   glosses_raw:       string | null;
   examples_raw:      string | null;
   tags_raw:          string | null;
+  /** Only present when supportsDisambiguator() — WORD_SELECT is `w.*`, so an
+   *  absent column just means this key is absent from the row, not an error. */
+  disambiguator?:    string | null;
 }
 
 interface LinguisticBody {
@@ -83,6 +86,7 @@ interface WordUpdateBody {
   examples?:    string[];
   linguistic?:  LinguisticBody;
   frequency?:   FrequencyBody;
+  disambiguator?: string | null;
 }
 
 interface BatchUpdateItem {
@@ -125,6 +129,7 @@ function formatWord(row: DbWordRow, lang: string) {
     domains,
     tags:              row.tags_raw ? row.tags_raw.split('|||').filter(Boolean) : [],
     conjugation_class: row.conjugation_class || null,
+    disambiguator:     row.disambiguator || null,
   };
 }
 
@@ -251,6 +256,16 @@ router.post('/vocab/:word', (req, res) => {
       if ('notes'       in body) { setClauses.push('notes = ?');            params.push(body.notes       ?? null); }
       if ('emoji'       in body) { setClauses.push('emoji = ?');            params.push(body.emoji       ?? null); }
       if ('difficulty'  in body) { setClauses.push('difficulty = ?');       params.push(body.difficulty  ?? null); }
+      if ('disambiguator' in body) {
+        if (supportsDisambiguator()) {
+          setClauses.push('disambiguator = ?'); params.push(body.disambiguator ?? null);
+        } else {
+          // Column doesn't exist on this database yet — dropped rather than
+          // thrown, so the rest of this word's edit still saves. See
+          // supportsDisambiguator's own comment in vocab-loader.ts.
+          logger.warn(`Ignoring disambiguator update for '${req.params['word']}' — no disambiguator column on this database yet`);
+        }
+      }
       if ('domains'     in body) {
         setClauses.push('domains = ?');
         params.push(body.domains != null ? JSON.stringify(body.domains) : null);

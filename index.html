@@ -94,6 +94,13 @@
 
       <div id="controls">
         <button id="shortcutsBtn" aria-label="Keyboard shortcuts (?)">?</button>
+        <!-- Packaged desktop builds have no browser chrome at all — no
+             reload button, no F5 shortcut past what Tauri's WebView passes
+             through — so a stuck screen (a bad quiz-start error, a hung
+             fetch) had no way back short of quitting the app. Hidden here
+             and unhidden by app.ts only when isPackagedApp() — the ordinary
+             web app already has its own browser's reload. -->
+        <button type="button" id="reloadAppBtn" hidden aria-label="Reload the app" title="Reload the app">⟳</button>
         <!-- Testing Profiles: save/apply a bundle of Part of Speech, Lists,
              Domains and Direction at once — see filters/presets.ts. Sits in
              the same top corner as the ? button rather than inline with the

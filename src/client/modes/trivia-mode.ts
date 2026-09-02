@@ -57,6 +57,11 @@ interface RenderTriviaModeOptions {
   readingDifficulty?: ReadingDifficulty | 'all';
   /** 'all' (default) drills every reading length. */
   readingLength?:     ReadingLength | 'all';
+  /** When set, skips the filter-built bank and quizzes exactly these
+   *  questions instead — the "↺ Practice N" summary button's retry-missed
+   *  path (see finish()'s own summary-retry-btn wiring), matching table
+   *  mode's restartWith(). */
+  fixedQueue?:        TriviaQuestion[];
 }
 
 const CATEGORY_LABELS: Record<TriviaQuestion['category'], string> = {
@@ -237,6 +242,7 @@ function renderFillInTable(bank: TriviaQuestion[], container: HTMLElement, lang:
 
     const correct = inputs.filter(i => i.classList.contains('correct')).length;
     const missed  = bank.length - correct;
+    const missedQuestions = bank.filter((_, i) => !inputs[i].classList.contains('correct'));
     updateProgress();
 
     recordOutcome(lang, bank.filter((_, i) => !inputs[i].value || inputs[i].classList.contains('incorrect')).map(q => canonicalAnswer(q)),
@@ -253,12 +259,30 @@ function renderFillInTable(bank: TriviaQuestion[], container: HTMLElement, lang:
       lang,
     });
 
+    // Same "↺ Practice N" pattern as the 'type'/'choice' finish() above and
+    // table mode's own summary — see table-controls.ts's buildSummaryHtml.
+    const retryHtml = missedQuestions.length > 0
+      ? `<button type="button" class="summary-retry-btn">↺ Practice ${missedQuestions.length}</button>`
+      : '';
     showSummary('trivia',
+      retryHtml +
       summaryChip('correct', `✓ ${correct} correct`) +
       summaryChip('missed',  `✗ ${missed} missed`) +
       summaryChip('pct',     `${percent(correct, bank.length)}%`),
       bank.length > 0 && missed === 0,
     );
+    if (missedQuestions.length > 0) {
+      document.querySelectorAll<HTMLButtonElement>('.summary-retry-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          // renderFillInTable doesn't clear the container itself — it's
+          // normally only ever reached through renderTriviaMode, which
+          // already did this before dispatching to it.
+          container.innerHTML = '';
+          clearSummary('trivia');
+          renderFillInTable(missedQuestions, container, lang);
+        });
+      });
+    }
   }
 
   giveUpBtn.addEventListener('click', finish);
@@ -274,6 +298,7 @@ export function renderTriviaMode({
   difficulty = 'all',
   readingDifficulty = 'all',
   readingLength = 'all',
+  fixedQueue,
 }: RenderTriviaModeOptions): void {
   container.innerHTML = '';
   clearSummary('trivia');
@@ -284,7 +309,7 @@ export function renderTriviaMode({
   // user-added vocabulary words.
   const allQuestions = [...getTriviaQuestions(lang), ...getUserTriviaQuestions(lang)];
   const selectedDomains = getSelectedDomains();
-  const bank = allQuestions.filter(q =>
+  const bank = fixedQueue ?? allQuestions.filter(q =>
     (category === 'all' || q.category === category)
     && (difficulty === 'all' || q.difficulty === difficulty)
     && (readingDifficulty === 'all' || q.readingDifficulty === readingDifficulty)
@@ -596,8 +621,9 @@ export function renderTriviaMode({
     // own repeat-offender tracking) with material never even seen. Matches
     // guess-blank-mode.ts's own explicit choice here: only a question
     // actually answered counts either way.
+    const missedQuestions = queue.filter((_, i) => results[i] === false);
     const correctWords = queue.filter((_, i) => results[i]).map(q => canonicalAnswer(q));
-    const missedWords  = queue.filter((_, i) => results[i] === false).map(q => canonicalAnswer(q));
+    const missedWords  = missedQuestions.map(q => canonicalAnswer(q));
     // Correct without ever opening the letter hint on that question — only
     // meaningful for 'type' sub-mode; hintsShown stays all-zero for 'choice'
     // and 'table', so this is just correctCount there.
@@ -617,7 +643,14 @@ export function renderTriviaMode({
     });
 
     syncProgress();
+    // Same "↺ Practice N" pattern as table mode's own summary — see
+    // table-controls.ts's buildSummaryHtml/wireSummaryButtons, the original
+    // this is modeled on.
+    const retryHtml = missedQuestions.length > 0
+      ? `<button type="button" class="summary-retry-btn">↺ Practice ${missedQuestions.length}</button>`
+      : '';
     showSummary('trivia',
+      retryHtml +
       summaryChip('correct', `✓ ${correctCount} correct`) +
       summaryChip('missed',  `✗ ${missedWords.length} missed`) +
       summaryChip('pct',     `${percent(correctCount, queue.length)}%`),
@@ -626,6 +659,13 @@ export function renderTriviaMode({
       // unattempted), which isn't the same as actually finishing clean.
       queue.length > 0 && missedWords.length === 0 && correctCount === queue.length,
     );
+    if (missedQuestions.length > 0) {
+      document.querySelectorAll<HTMLButtonElement>('.summary-retry-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          renderTriviaMode({ container, lang, subMode, fixedQueue: missedQuestions });
+        });
+      });
+    }
   }
 
   renderQuestion(idx);

@@ -49,6 +49,7 @@ interface DbRow {
   examples:              string | null;
   domains:               string | null;
   tags:                  string | null;
+  disambiguator:         string | null;
 }
 
 /** Public word object served via the API. */
@@ -82,6 +83,16 @@ export interface Word {
   };
   domains: string[];
   tags:    string[];
+  /**
+   * Cosmetic sense annotation ("haber" vs "tener", both glossed "have") — see
+   * Word.disambiguator in the client's types.ts for the full rationale. Not
+   * in data-requirements.ts's REQUIRED_WORD_COLUMNS: unlike every other field
+   * above, this one is authored through this app's own Admin panel rather
+   * than by the pipeline that builds vocabulary.db, so a database built
+   * before the column existed is still a completely valid database — see
+   * hasDisambiguatorColumn below, checked at runtime instead of at boot.
+   */
+  disambiguator: string | null;
 }
 
 /** In-memory cache entry for a loaded language. */
@@ -118,6 +129,24 @@ export function bandFromRank(rank: number | null): string | null {
 
 // Singleton DB connection
 let db: Database.Database | null = null;
+
+// Whether the connected database has a `disambiguator` column on `words` yet
+// — see the Word.disambiguator field comment above. Recomputed whenever the
+// connection changes (initializeDatabase, setDb, reloadDb) rather than once
+// at import time, since a test or an admin DB reload can swap the database
+// out from under a running process.
+let hasDisambiguatorCol = false;
+
+function checkDisambiguatorColumn(conn: Database.Database): void {
+  const cols = conn.prepare("PRAGMA table_info('words')").all() as { name: string }[];
+  hasDisambiguatorCol = cols.some(c => c.name === 'disambiguator');
+}
+
+/** Whether admin routes can read/write the `disambiguator` column on this
+ *  database — false on a database built before the feature existed. */
+export function supportsDisambiguator(): boolean {
+  return hasDisambiguatorCol;
+}
 
 // Per-language in-memory cache
 const vocabCache = new Map<string, VocabData>();
@@ -205,6 +234,7 @@ function initializeDatabase(): void {
     db.pragma('journal_mode = WAL');
     logger.info('Connected to SQLite database');
     verifyDatabase(db, dbPath);
+    checkDisambiguatorColumn(db);
   } catch (error) {
     logger.error('Database connection error:', error);
     if ((error as NodeJS.ErrnoException).code === 'SQLITE_CANTOPEN') {
@@ -269,6 +299,7 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
         w.conjugations,
         w.conjugation_class, w.future_stem, w.conjugation_overrides,
         w.emoji, w.rank, w.corpus_frequency,
+        ${hasDisambiguatorCol ? 'w.disambiguator,' : 'NULL as disambiguator,'}
         (SELECT json_group_array(gloss)
            FROM (SELECT gloss FROM word_glosses  WHERE word_id = w.id ORDER BY position)
         ) AS glosses,
@@ -337,6 +368,7 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
         },
         domains: row.domains ? (parseJsonField<string[]>(row.domains, row.word, 'domains', []) ?? []) : [],
         tags:    row.tags    ? (parseJsonField<string[]>(row.tags,    row.word, 'tags',    []) ?? []).filter(Boolean) : [],
+        disambiguator: row.disambiguator || null,
       };
     });
 
@@ -451,6 +483,7 @@ export function getDb(): Database.Database {
 export function setDb(testDb: Database.Database): void {
   db = testDb;
   vocabCache.clear();
+  checkDisambiguatorColumn(testDb);
 }
 
 export function closeDatabase(): void {

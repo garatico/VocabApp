@@ -50,6 +50,12 @@ dist/
 build/
 tmp/
 coverage/
+
+# Playwright e2e output — traces/screenshots from failed runs and the HTML
+# report, regenerated on every `npm run test:e2e`.
+test-results/
+playwright-report/
+blob-report/
 __pycache__/
 .pytest_cache/
 .ruff_cache/

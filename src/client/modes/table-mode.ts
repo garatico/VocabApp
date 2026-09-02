@@ -1,6 +1,6 @@
 import type { Word } from '../types.ts';
 import {
-  slotText, slotMatches, extraMatchedGloss, DEFAULT_CHINESE_DISPLAY,
+  slotText, slotMatches, extraMatchedGloss, displayWord, DEFAULT_CHINESE_DISPLAY,
   type QuizSlot, type ChineseDisplay,
 } from '../utils/utils.ts';
 import { attachTooltips }        from '../utils/word-tooltip.ts';
@@ -75,7 +75,12 @@ export function revealTextFor(
   display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
 ): string {
   const [, answerSlot] = slotsFor(dir);
-  return slotText(entry, answerSlot, lang, display, Settings.getAnswerGlossCount());
+  const base = slotText(entry, answerSlot, lang, display, Settings.getAnswerGlossCount());
+  // Only the target-word slot carries a disambiguator — appending it here
+  // (once the word is the *answer* being revealed) rather than in slotText
+  // itself keeps it from leaking into an en-target prompt, where the same
+  // slot value is what the learner still has to guess.
+  return answerSlot === 'word' ? displayWord({ ...entry, word: base }) : base;
 }
 
 /**
@@ -122,7 +127,12 @@ export function renderTableMode({
 
   function labelText(entry: Word, dir: DirectionPair): string {
     const [promptSlot] = slotsFor(dir);
-    return slotText(entry, promptSlot, entry.language ?? lang, chineseDisplay, Settings.getQuestionGlossCount());
+    const base = slotText(entry, promptSlot, entry.language ?? lang, chineseDisplay, Settings.getQuestionGlossCount());
+    // target-en direction hands the target word over as the prompt — nothing
+    // left to guess about it, so showing its disambiguator here is a free
+    // clarification, not a hint. en-target direction never reaches here with
+    // promptSlot === 'word' (the target word is the answer there instead).
+    return promptSlot === 'word' ? displayWord({ ...entry, word: base }) : base;
   }
 
   /**

@@ -9,7 +9,7 @@
  */
 
 import { Router }                                                  from 'express';
-import { getDb, clearCache, reloadDb, getSupportedLanguages }      from '../../lib/vocab-loader.js';
+import { getDb, clearCache, reloadDb, getSupportedLanguages, supportsDisambiguator } from '../../lib/vocab-loader.js';
 import { logger }                                                  from '../../lib/logger.js';
 
 const router = Router();
@@ -93,7 +93,10 @@ router.get('/meta', (_req, res) => {
     }
 
     const bands = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-    res.json({ success: true, pos, domains: [...domainSet].sort(), bands, languages: getSupportedLanguages() });
+    res.json({
+      success: true, pos, domains: [...domainSet].sort(), bands, languages: getSupportedLanguages(),
+      disambiguatorSupported: supportsDisambiguator(),
+    });
   } catch (err) {
     logger.error('GET /admin/meta:', err);
     res.status(500).json({ error: (err as Error).message });
