@@ -625,6 +625,33 @@
   cursor: not-allowed;
 }
 
+/* A learner-added sense (see addGlossOverride) has nothing to hide — this
+   sits where the checkbox does on a real gloss, marking the row as "yours"
+   without implying it can be toggled off the same way. */
+.mc-gloss-item-added-tag {
+  flex-shrink: 0;
+  width: 15px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.mc-gloss-remove-btn:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ── Add a gloss — sits under the list, same row shape as the add form ── */
+.mc-gloss-add-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.mc-gloss-add-row .mc-input {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ── Stock image picker — pictures section's "choose from bundled photos"
    gallery. Collapsed behind a toggle by default (see buildStockImagePicker
    in my-content-mode.ts); the grid itself scrolls rather than growing the

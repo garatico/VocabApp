@@ -293,9 +293,16 @@ export function renderTriviaMode({
   );
 
   if (bank.length === 0) {
+    // Four independent filters (Category, Difficulty, Reading Difficulty,
+    // Reading Length) plus Domains can each narrow the bank to zero — this
+    // used to always name Difficulty specifically ("No {label} questions"),
+    // which broke outright when Difficulty was left at "All" (DIFFICULTY_LABELS
+    // has no 'all' entry, so it printed "No undefined questions") and was
+    // misleading even when it didn't crash, pointing at Difficulty when a
+    // different filter was the one actually narrowing the bank to nothing.
     const why = allQuestions.length > 0
-      ? `<p>No ${DIFFICULTY_LABELS[difficulty as TriviaDifficulty]} questions yet for ${languageInfo(lang.split('+')[0]).label}.</p>
-         <p>Try "All" difficulties, or check back once more are written.</p>`
+      ? `<p>No questions match the current filters for ${languageInfo(lang.split('+')[0]).label}.</p>
+         <p>Try widening Category, Difficulty, Reading Difficulty or Reading Length, or check back once more are written.</p>`
       : `<p>❓ No trivia questions yet for ${languageInfo(lang.split('+')[0]).label}.</p>
          <p>Spanish has a starter set — try that language, or check back once more are written.</p>`;
     container.innerHTML = `<div class="tv-empty">${why}</div>`;
@@ -501,7 +508,13 @@ export function renderTriviaMode({
     optionsGrid.style.display = 'none';
     typeRow.style.display = '';
     hintRow.style.display = '';
-    typeInput.value = '';
+    // Revisiting an answered question (Back) used to always blank this box —
+    // right or wrong, going back showed an empty, disabled input with no
+    // trace of the answer, unlike every other mode's own "reveal what was
+    // resolved" convention (Table's revealText, choice sub-mode's own locked
+    // buttons here). The feedback line below already names the answer for a
+    // miss, but there was nothing to read *in the box itself*.
+    typeInput.value = prior !== null ? canonicalAnswer(q) : '';
     typeInput.disabled = prior !== null || finished;
     if (!typeInput.disabled) typeInput.focus();
     renderHint(i);
@@ -575,8 +588,16 @@ export function renderTriviaMode({
     typeInput.disabled = true;
     hintBtn.disabled = true;
 
+    // results[i] is null for a question Give Up caught before the learner
+    // ever reached it — `!results[i]` used to treat that the same as an
+    // actual wrong answer (false), so giving up right on question 1 quietly
+    // recorded every other question in the run as missed, poisoning the
+    // "words I keep missing" tally (recordOutcome, shared with Table mode's
+    // own repeat-offender tracking) with material never even seen. Matches
+    // guess-blank-mode.ts's own explicit choice here: only a question
+    // actually answered counts either way.
     const correctWords = queue.filter((_, i) => results[i]).map(q => canonicalAnswer(q));
-    const missedWords  = queue.filter((_, i) => !results[i]).map(q => canonicalAnswer(q));
+    const missedWords  = queue.filter((_, i) => results[i] === false).map(q => canonicalAnswer(q));
     // Correct without ever opening the letter hint on that question — only
     // meaningful for 'type' sub-mode; hintsShown stays all-zero for 'choice'
     // and 'table', so this is just correctCount there.
@@ -600,7 +621,10 @@ export function renderTriviaMode({
       summaryChip('correct', `✓ ${correctCount} correct`) +
       summaryChip('missed',  `✗ ${missedWords.length} missed`) +
       summaryChip('pct',     `${percent(correctCount, queue.length)}%`),
-      queue.length > 0 && missedWords.length === 0,
+      // Not just "nothing wrong" — a Give Up part-way through a run has
+      // missedWords.length === 0 too (nothing explicitly wrong, just
+      // unattempted), which isn't the same as actually finishing clean.
+      queue.length > 0 && missedWords.length === 0 && correctCount === queue.length,
     );
   }
 

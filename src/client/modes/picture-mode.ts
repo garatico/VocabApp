@@ -461,6 +461,16 @@ function mountPictureStopwatch(bar: HTMLElement): void {
 
 let pictureRecorded  = false;
 
+// Flashcard mode's own document-level ArrowLeft/ArrowRight listener (see
+// renderFlashcardMode below) — tracked so a fresh render can remove the
+// previous one first. #pictureWrap is cleared and reused rather than
+// replaced on every Start Quiz click, so its own isConnected guard never
+// goes false on a same-tab restart: without this, every restart left the
+// old listener attached forever, each one calling its own stale render
+// closure (rebuilding a detached card, including its images) on every
+// arrow-key press from then on.
+let _flashcardKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+
 /**
  * Fold a finished picture session into the shared history and miss tally.
  *
@@ -879,14 +889,18 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
     renderCurrent();
   });
 
-  // Keyboard arrow support
-  document.addEventListener('keydown', onKey);
+  // Keyboard arrow support. Only one of these is ever meant to be live at a
+  // time — remove whatever the previous render left attached before adding
+  // this one (see _flashcardKeyHandler above).
+  if (_flashcardKeyHandler) document.removeEventListener('keydown', _flashcardKeyHandler);
   function onKey(e: KeyboardEvent): void {
     if (!container.isConnected) { document.removeEventListener('keydown', onKey); return; }
     if (e.target === inp) return; // don't hijack while typing
     if (e.key === 'ArrowLeft')  { prevBtn.click(); e.preventDefault(); }
     if (e.key === 'ArrowRight') { nextBtn.click(); e.preventDefault(); }
   }
+  _flashcardKeyHandler = onKey;
+  document.addEventListener('keydown', onKey);
 
   giveUpBtn.addEventListener('click', () => {
     states.forEach((s, i) => {

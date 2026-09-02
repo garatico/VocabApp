@@ -15,17 +15,21 @@ import { readString, writeString } from '../utils/storage.ts';
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
 const themeToggle = document.getElementById('themeToggle');
+const themeButtons = themeToggle?.querySelectorAll<HTMLButtonElement>('[data-theme]') ?? [];
 
-if (readString('admin-theme') === 'dark') {
-  document.documentElement.classList.add('dark');
+function applyTheme(dark: boolean): void {
+  document.documentElement.classList.toggle('dark', dark);
+  themeButtons.forEach(btn => btn.classList.toggle('active', (btn.dataset.theme === 'dark') === dark));
 }
 
-themeToggle?.addEventListener('click', () => {
-  document.documentElement.classList.toggle('dark');
-  writeString(
-    'admin-theme',
-    document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-  );
+applyTheme(readString('admin-theme') === 'dark');
+
+themeButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const dark = btn.dataset.theme === 'dark';
+    applyTheme(dark);
+    writeString('admin-theme', dark ? 'dark' : 'light');
+  });
 });
 
 // ── Tab navigation ────────────────────────────────────────────────────────────

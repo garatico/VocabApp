@@ -144,30 +144,58 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
   bulkRemove.addEventListener('click', () => {
     const words = [...selectedWords];
     if (words.length === 0) return;
-    words.forEach(w => removeFromList(ctx.lang, ctx.selectedList, w));
+    // Snapshotted before removeFromList runs, not read live inside Undo:
+    // removing every word in the list (Select all + Remove is the obvious
+    // way to clear one out) empties it, and removeFromList deletes a list
+    // the instant it goes empty. Once that happens, ctx.selectedList no
+    // longer names a real list and the next render (afterBulkChange, right
+    // below) falls back to whichever list sorts first — so Undo, reading
+    // ctx.selectedList live, put the words back into that unrelated list
+    // instead of recreating the one they actually came from.
+    const source = ctx.selectedList;
+    words.forEach(w => removeFromList(ctx.lang, source, w));
     selectedWords.clear();
     afterBulkChange();
     showUndo(`Removed ${words.length} word${words.length === 1 ? '' : 's'}`, () => {
-      words.forEach(w => addToList(ctx.lang, ctx.selectedList, w));
+      words.forEach(w => addToList(ctx.lang, source, w));
       afterBulkChange();
     });
   });
 
+  // Same click-to-pick popover a row's own ⇥ button opens — this used to be
+  // a window.prompt() asking the user to retype a list name exactly
+  // (case/whitespace-sensitive, with every other list dumped in as plain
+  // text to copy from), the one rough, inconsistent corner in an otherwise
+  // click-driven pane.
   bulkMove.addEventListener('click', () => {
+    if (selectedWords.size === 0) return;
     const others = getListNames(ctx.lang).filter(n => n !== ctx.selectedList);
     if (others.length === 0) { alert('No other list to move to. Create one first.'); return; }
-    const target = window.prompt(
-      `Move ${selectedWords.size} word(s) to which list?\n\n${others.join('\n')}`,
-      others[0],
-    );
-    if (!target || !others.includes(target)) return;
     const words = [...selectedWords];
-    words.forEach(w => { removeFromList(ctx.lang, ctx.selectedList, w); addToList(ctx.lang, target, w); });
-    selectedWords.clear();
-    afterBulkChange();
-    showUndo(`Moved ${words.length} to "${target}"`, () => {
-      words.forEach(w => { removeFromList(ctx.lang, target, w); addToList(ctx.lang, ctx.selectedList, w); });
+    // Snapshotted now, not read live inside the Undo closure below: moving
+    // every word out of the source list empties it, and removeFromList
+    // deletes a list the moment it goes empty — sidebar.ts's own render then
+    // notices ctx.selectedList no longer names a real list and falls back to
+    // whichever list sorts first, which was often the very list these words
+    // just moved *into*. Undo read ctx.selectedList at click time and so
+    // "restored" words into the target list a second time instead of the
+    // source — a no-op that looked like it had done something (each write
+    // landed, just against the wrong list).
+    const source = ctx.selectedList;
+    openMovePopover(ctx, bulkMove, words, (mode, target) => {
+      selectedWords.clear();
       afterBulkChange();
+      const verb = mode === 'move' ? 'Moved' : 'Copied';
+      showUndo(`${verb} ${words.length} to "${target}"`, () => {
+        if (mode === 'move') {
+          words.forEach(w => { removeFromList(ctx.lang, target, w); addToList(ctx.lang, source, w); });
+        } else {
+          // Undoing a copy removes the copies rather than re-adding
+          // anything to the source list, which the words never left.
+          words.forEach(w => removeFromList(ctx.lang, target, w));
+        }
+        afterBulkChange();
+      });
     });
   });
 
@@ -282,7 +310,17 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     if (visibleWords.length === 0) {
       const empty = document.createElement('li');
       empty.className = 'ml-word-empty';
-      empty.textContent = filter ? 'No matches.' : 'No words in this list yet.';
+      // This used to read "No words in this list yet." whenever the *visible*
+      // set was empty — including a list that has words but Hide mastered (or
+      // a Part of Speech/Level chip) filtered every one of them out, which
+      // reads as if adding words had silently failed rather than as a filter
+      // doing its job.
+      const hasWords = getList(ctx.lang, ctx.selectedList).length > 0;
+      empty.textContent = filter
+        ? 'No matches.'
+        : hasWords
+          ? 'No words match the current filters.'
+          : 'No words in this list yet.';
       listEl.appendChild(empty); return;
     }
 
@@ -372,7 +410,10 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     moveBtn.title = 'Move or copy to another list'; moveBtn.textContent = '⇥';
     moveBtn.addEventListener('click', e => {
       e.stopPropagation();
-      openMovePopover(ctx, moveBtn, word, () => {
+      openMovePopover(ctx, moveBtn, [word], () => {
+        // Move/copy already applied by the popover — nothing here needs to
+        // know which or where; Undo for a single word isn't offered on this
+        // path (only the bulk toolbar's own action wires one up).
         deps.refreshCount();
         ctx.updateBadge();
         render();
@@ -385,7 +426,16 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     removeBtn.title = 'Remove from list'; removeBtn.textContent = '×';
     removeBtn.addEventListener('click', e => {
       e.stopPropagation();
-      removeFromList(ctx.lang, ctx.selectedList, word);
+      // Captured before removeFromList/renderSidebar run, not after: removing
+      // the last word in a list empties it, and removeFromList deletes a
+      // list the instant it goes empty — ctx.renderSidebar's own render()
+      // then notices ctx.selectedList no longer names a real list and falls
+      // back to whichever list sorts first. Capturing *after* that fallback
+      // (as this used to) meant Undo on a list's last word restored it into
+      // that unrelated fallback list instead of recreating the one it came
+      // from — silent data loss dressed up as a working Undo.
+      const listAtRemoval = ctx.selectedList;
+      removeFromList(ctx.lang, listAtRemoval, word);
       deps.refreshCount();
       ctx.updateBadge();
       deps.refreshAddResults();
@@ -393,7 +443,6 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
       // until some other action happens to redraw it.
       render();
       ctx.renderSidebar(false);
-      const listAtRemoval = ctx.selectedList;
       showUndo(`Removed "${word}"`, () => {
         addToList(ctx.lang, listAtRemoval, word);
         deps.refreshCount();

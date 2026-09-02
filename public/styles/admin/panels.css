@@ -2,15 +2,13 @@
    ADMIN PANELS — Stats tab + DB Admin tab cards.
 ================================================================ */
 
-/* ── Generic section card ── */
-.section {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: var(--shadow);
-}
+/* ── Generic section ──
+   No border/shadow/background of its own — both tabs that use this
+   (Statistics, DB Admin) already sit inside .tabs-wrap's card, so a second
+   full card here just doubled the chrome around the same content, the way
+   the main app never nests one bordered card directly inside another. */
+.section { margin-bottom: 1.5rem; }
+.section:last-child { margin-bottom: 0; }
 .section-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; }
 
 /* ── Statistics grid ── */

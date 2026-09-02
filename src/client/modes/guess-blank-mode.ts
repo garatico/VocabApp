@@ -288,7 +288,12 @@ export function renderGuessBlankMode({
     renderClues(i);
     renderHint(i);
 
-    typeInput.value = '';
+    // Revisiting an answered question (Back) used to always blank this box,
+    // right or wrong, leaving an empty disabled input with only the feedback
+    // line below to say what happened — every other mode's own "reveal what
+    // was resolved" convention (Table's revealText, Trivia's own type
+    // sub-mode) shows the answer itself once a question is settled.
+    typeInput.value = prior !== null ? q.answerTarget : '';
     typeInput.disabled = prior !== null || finished;
     if (!typeInput.disabled) typeInput.focus();
     if (prior !== null) showFeedback(prior, q.answerTarget);

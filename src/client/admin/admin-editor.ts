@@ -90,7 +90,21 @@ function buildQuery(): string {
 
 export async function loadMeta(): Promise<void> {
   try {
-    const { pos, domains } = await apiCall('/meta') as { pos: string[]; domains: string[] };
+    const { pos, domains, languages } = await apiCall('/meta') as { pos: string[]; domains: string[]; languages?: string[] };
+
+    // langSelect ships with only "Spanish" as a placeholder so the filter
+    // bar isn't empty before this resolves — this replaces it with every
+    // language the DB actually has. It used to be a hand-written list of
+    // four baked into admin.html, which silently fell behind as languages
+    // were added: German, Dutch and Chinese vocab existed and were fully
+    // editable through the API, but had no way to be reached from this UI.
+    if (languages?.length) {
+      const cur = langSelect.value;
+      langSelect.innerHTML = languages
+        .map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l.charAt(0).toUpperCase() + l.slice(1))}</option>`)
+        .join('');
+      langSelect.value = languages.includes(cur) ? cur : languages[0];
+    }
 
     const editPosEl = document.getElementById('editPos') as HTMLSelectElement | null;
     if (editPosEl && pos.length) {
@@ -159,7 +173,10 @@ function renderWordList(words: WordData[], total: number): void {
 
   words.forEach(word => {
     const item = document.createElement('div');
-    item.className = 'word-item';
+    // Reload after a save rebuilds this list from scratch — without this,
+    // the just-saved word's highlight vanished even though the form panel
+    // stayed open on it, since nothing here knew which item used to be active.
+    item.className = currentWord && word.word === currentWord.word ? 'word-item active' : 'word-item';
 
     const badgesHtml = [
       word.pos              ? `<span class="badge badge-pos">${escapeHtml(word.pos)}</span>`             : '',
@@ -274,6 +291,15 @@ function collectFormData(): Omit<WordData, 'word'> {
   const corpusFreq   = (document.getElementById('editCorpusFrequency') as HTMLInputElement).value;
   const domainVal    = (document.getElementById('editDomain')          as HTMLSelectElement).value;
 
+  // The form only exposes one domain slot, but a word's `domains` is an
+  // array and thousands in the current dataset carry more than one — this
+  // used to send `[domainVal]` unconditionally, silently deleting every
+  // domain past the first on any save. Carry over what index 0 onward
+  // already held on the word as loaded, so only the shown slot is actually
+  // editable.
+  const extraDomains = (currentWord?.domains ?? []).slice(1).filter(d => d !== domainVal);
+  const domains      = domainVal ? [domainVal, ...extraDomains] : extraDomains;
+
   return {
     translation: (document.getElementById('editTranslation') as HTMLInputElement).value.trim(),
     pos:         (document.getElementById('editPos')          as HTMLSelectElement).value || null,
@@ -282,7 +308,7 @@ function collectFormData(): Omit<WordData, 'word'> {
     notes:       (document.getElementById('editNotes')        as HTMLTextAreaElement).value.trim(),
     glosses:     glossLines,
     examples:    exampleLines,
-    domains:     domainVal ? [domainVal] : [],
+    domains,
     linguistic: {
       ipa:        (document.getElementById('editIPA')        as HTMLInputElement).value.trim()  || null,
       syllables:  syllablesRaw || null,

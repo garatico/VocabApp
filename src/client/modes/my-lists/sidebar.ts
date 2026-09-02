@@ -289,16 +289,11 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   // ── Smart lists ────────────────────────────────────────────────────────────
 
   function renderSmartNav(): void {
-    ctx.listNav.appendChild(sectionHead(
-      'ml-smart-head', 'Smart Lists', 'Create a smart list — a saved query that stays current', () => {
-        const name = window.prompt('Name this smart list:', 'New words to learn');
-        if (!name?.trim()) return;
-        saveSmartRule(ctx.lang, name.trim(), { ...DEFAULT_SMART_RULE });
-        ctx.selectedList = ''; ctx.selectedMultiList = null; ctx.selectedProfile = null;
-        ctx.selectedSmart = name.trim();
-        render();
-      },
-    ));
+    const head = sectionHead(
+      'ml-smart-head', 'Smart Lists', 'Create a smart list — a saved query that stays current',
+      () => startCreateSmart(head),
+    );
+    ctx.listNav.appendChild(head);
 
     const smartNames = getSmartNames(ctx.lang);
     if (smartNames.length === 0) {
@@ -388,6 +383,39 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     return candidate;
   }
 
+  /** Inline creation row, the same shape startCreateList/startCreateProfile
+   *  use — this used to be a window.prompt() with no collision check at all,
+   *  so naming a new smart list the same as an existing one silently
+   *  overwrote that list's rule with a fresh default one. */
+  function startCreateSmart(afterHead: HTMLElement): void {
+    const li = document.createElement('li');
+    li.className = 'ml-list-item ml-list-item--editing';
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.placeholder = 'Smart list name...'; inp.className = 'ml-list-name-input';
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button'; okBtn.className = 'ml-icon-btn'; okBtn.textContent = '✓';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button'; cancelBtn.className = 'ml-icon-btn'; cancelBtn.textContent = '✕';
+    function confirmCreate(): void {
+      const name = inp.value.trim(); if (!name) { li.remove(); return; }
+      if (getSmartNames(ctx.lang).includes(name)) {
+        alert(`A smart list named "${name}" already exists.`); return;
+      }
+      saveSmartRule(ctx.lang, name, { ...DEFAULT_SMART_RULE });
+      ctx.selectedList = ''; ctx.selectedMultiList = null; ctx.selectedProfile = null;
+      ctx.selectedSmart = name;
+      render();
+    }
+    okBtn.addEventListener('click', confirmCreate);
+    cancelBtn.addEventListener('click', () => li.remove());
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') confirmCreate(); if (e.key === 'Escape') li.remove();
+    });
+    li.append(inp, okBtn, cancelBtn);
+    afterHead.insertAdjacentElement('afterend', li);
+    inp.focus();
+  }
+
   function startRenameSmart(oldName: string, li: HTMLElement, nameSpan: HTMLElement): void {
     const inp = document.createElement('input');
     inp.type = 'text'; inp.value = oldName; inp.className = 'ml-list-name-input';
@@ -419,16 +447,11 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   // on a word elsewhere, or from its own Add Vocabulary box (multi-panel.ts).
 
   function renderMultiNav(): void {
-    ctx.listNav.appendChild(sectionHead(
-      'ml-multi-head', 'Cross-Language Lists', 'Create a list that can hold words from any language', () => {
-        const name = window.prompt('Name this cross-language list:', 'Hard words');
-        if (!name?.trim()) return;
-        if (!createMultiList(name.trim())) { alert(`A cross-language list named "${name.trim()}" already exists.`); return; }
-        ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedProfile = null;
-        ctx.selectedMultiList = name.trim();
-        render();
-      },
-    ));
+    const head = sectionHead(
+      'ml-multi-head', 'Cross-Language Lists', 'Create a list that can hold words from any language',
+      () => startCreateMulti(head),
+    );
+    ctx.listNav.appendChild(head);
 
     const names = getMultiListNames();
     if (names.length === 0) {
@@ -436,8 +459,17 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       hint.className = 'ml-list-empty ml-smart-hint';
       hint.textContent = 'Add words from its own panel, or the ★ button on any word';
       ctx.listNav.appendChild(hint);
+      ctx.selectedMultiList = null;
       return;
     }
+    // Same fallback the single-language list section runs above:
+    // removeFromMultiList deletes a cross-language list the instant its last
+    // word leaves (same as an ordinary list), so the one just emptied can
+    // vanish out from under whichever list happened to be selected. Without
+    // this, the sidebar dropped it from the nav entirely while the panel on
+    // the right kept rendering it as still selected — a "0 words" ghost of a
+    // list that no longer existed in storage.
+    if (ctx.selectedMultiList && !names.includes(ctx.selectedMultiList)) ctx.selectedMultiList = null;
 
     names.forEach(name => {
       const li = document.createElement('li');
@@ -523,6 +555,34 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     let n = 2;
     while (names.includes(candidate)) candidate = `${sourceName} (${n++})`;
     return candidate;
+  }
+
+  /** Inline creation row, the same shape startCreateList/startCreateProfile
+   *  use — this used to be a window.prompt(). */
+  function startCreateMulti(afterHead: HTMLElement): void {
+    const li = document.createElement('li');
+    li.className = 'ml-list-item ml-list-item--editing';
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.placeholder = 'List name...'; inp.className = 'ml-list-name-input';
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button'; okBtn.className = 'ml-icon-btn'; okBtn.textContent = '✓';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button'; cancelBtn.className = 'ml-icon-btn'; cancelBtn.textContent = '✕';
+    function confirmCreate(): void {
+      const name = inp.value.trim(); if (!name) { li.remove(); return; }
+      if (!createMultiList(name)) { alert(`A cross-language list named "${name}" already exists.`); return; }
+      ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedProfile = null;
+      ctx.selectedMultiList = name;
+      render();
+    }
+    okBtn.addEventListener('click', confirmCreate);
+    cancelBtn.addEventListener('click', () => li.remove());
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') confirmCreate(); if (e.key === 'Escape') li.remove();
+    });
+    li.append(inp, okBtn, cancelBtn);
+    afterHead.insertAdjacentElement('afterend', li);
+    inp.focus();
   }
 
   // ── Testing Profiles ──────────────────────────────────────────────────────

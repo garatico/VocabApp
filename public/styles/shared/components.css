@@ -152,7 +152,10 @@
 .conj-giveup-btn:disabled,
 .picture-give-up-btn:disabled,
 .pm-giveup-btn:disabled,
-.recall-giveup-btn:disabled {
+.recall-giveup-btn:disabled,
+#tableReset:disabled,
+#resetBtn:disabled,
+#quizGiveUp:disabled {
   opacity: 0.4;
   cursor: default;
 }

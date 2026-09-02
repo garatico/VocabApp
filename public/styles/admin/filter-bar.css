@@ -2,17 +2,20 @@
    ADMIN FILTER BAR — search + filter controls above the word list.
 ================================================================ */
 
+/* No border/shadow/background of its own — it already sits inside
+   .tabs-wrap's card. A second nested card here (this used to have its own
+   full border + box-shadow, the same as a top-level panel) is exactly what
+   the main app's own equivalent — #controls-top's row of filters, inside
+   the single #controls card — never does. A bottom border is enough to
+   separate it from the word list below. */
 .filter-bar {
   display: flex;
   gap: 0.5rem;
   align-items: center;
   flex-wrap: wrap;
-  padding: 0.875rem 1rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  padding-bottom: 0.875rem;
   margin-bottom: 1rem;
-  box-shadow: var(--shadow);
+  border-bottom: 1px solid var(--border);
 }
 
 .filter-bar input[type="text"] { flex: 1; min-width: 180px; }

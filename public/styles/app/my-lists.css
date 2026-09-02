@@ -1050,8 +1050,16 @@ html.dark .ml-word-pos[data-pos] {
   overflow: hidden;
 }
 
-/* (.ml-move-popover-title removed — the popover renders -tabs and -empty,
-   never a title.) */
+/* Only rendered for a multi-word move (the bulk toolbar's own button, which
+   — unlike a row's own ⇥ — isn't anchored next to the word(s) it acts on,
+   so the popover needs to say how many are about to move. */
+.ml-move-popover-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0.35rem 0.55rem 0.2rem;
+  white-space: nowrap;
+}
 
 .ml-move-popover-item {
   display: block;

@@ -24,7 +24,11 @@ header {
   gap: 1rem;
 }
 
-h1 { font-size: 1.75rem; font-weight: 700; }
+/* Restrained on purpose — the main app has no page-level branding at all
+   (no logo, no title bar), so this is already the outlier; sized as a small
+   eyebrow rather than a hero heading keeps it from reading as a different
+   product with its own visual identity bolted on. */
+h1 { font-size: 1.1rem; font-weight: 700; }
 
 /* Back link to main app */
 .back-link {
@@ -48,19 +52,17 @@ h1 { font-size: 1.75rem; font-weight: 700; }
   background: var(--accent-light);
 }
 
-/* Theme-toggle button in the header */
-.theme-toggle {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  width: 36px; height: 36px;
-  cursor: pointer;
-  font-size: 1.1rem;
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Sora', sans-serif;
-  transition: all var(--transition-fast);
+/* Theme toggle in the header — sizing only; the pill/segment look itself
+   is .sort-order-toggle/.sort-order-btn in buttons.css, shared with any
+   other admin control that wants the same component. */
+.admin-theme-toggle {
+  flex-shrink: 0;
 }
-.theme-toggle:hover { background: var(--surface2); border-color: var(--accent); }
+.admin-theme-toggle .sort-order-btn {
+  min-height: 32px;
+  font-size: 0.78rem;
+  padding: 0.25rem 0.65rem;
+}
 
 /* ── Responsive ── */
 @media (max-width: 900px) {
