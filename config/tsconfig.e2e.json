@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "types": ["@playwright/test", "node"]
   },
-  "include": ["tests/e2e"]
+  "include": ["../tests/e2e"]
 }

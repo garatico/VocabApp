@@ -10,7 +10,7 @@ const tsServerConfig = tseslint.config({
   ],
   languageOptions: {
     parserOptions: {
-      project:   './tsconfig.server.json',
+      project:   './config/tsconfig.server.json',
       tsconfigRootDir: import.meta.dirname,
     },
   },
@@ -62,7 +62,7 @@ const tsE2eConfig = tseslint.config({
   ],
   languageOptions: {
     parserOptions: {
-      project:   './tsconfig.e2e.json',
+      project:   './config/tsconfig.e2e.json',
       tsconfigRootDir: import.meta.dirname,
     },
   },

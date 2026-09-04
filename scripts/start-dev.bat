@@ -2,6 +2,12 @@
 REM VocabApp Development Server Startup Script
 REM For Windows
 
+REM This script lives in scripts/, one level below the repo root — every
+REM check and command below (node_modules, npm install/run) assumes the repo
+REM root as its working directory, so move there first regardless of where
+REM this .bat was launched from (double-click, a shortcut, another cwd).
+cd /d "%~dp0.."
+
 echo.
 echo ╔════════════════════════════════════════════════════════════╗
 echo ║                     VocabApp                               ║
