@@ -2,7 +2,6 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
 export default defineConfig({
-  // Root is backend/ so that src/client/app.ts resolves to backend/src/client/app.ts
   root: '.',
 
   // Serve static assets (CSS, images, fonts) from public/

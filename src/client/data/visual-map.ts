@@ -17,7 +17,7 @@
  * case and strips diacritics, so Bär, BÄR and bar all resolve to the same
  * concept.
  *
- * SVG files: run backend/scripts/download_emoji.py to populate data/emoji/animals/.
+ * SVG files: run VocabApp-Data's emoji-download step to populate data/emoji/animals/.
  * Browse OpenMoji at: https://openmoji.org
  */
 
@@ -392,7 +392,7 @@ export function getFallbackSvgUrl(lang: string, word: string): string | null {
 
 // ── Local photo map ───────────────────────────────────────────────────────────
 // Maps normalised Spanish (and other lang) words to local image files.
-// Files live in data/images/ — run backend/scripts/download_images.py to populate.
+// Files live in data/images/ — run VocabApp-Data's image-download step to populate.
 // Add entries here as new images are downloaded.
 
 const IMAGES: Record<string, string> = {
