@@ -23,6 +23,7 @@ export interface VocabEntry {
   band:        string | null;
   glosses:     string[];
   examples:    string[];
+  domains:     string[];
   ipa:         string | null;
   audioUrl:    string | null;
   /** See Word.disambiguator in ../../types.ts. */

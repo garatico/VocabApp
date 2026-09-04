@@ -21,6 +21,12 @@ import type { VocabEntry } from './types.ts';
 export interface SmartRule {
   bands:    string[];               // empty = any level
   pos:      string[];               // empty = any part of speech
+  /**
+   * Empty = any domain. Matches like the Table/Picture Domains filter — a
+   * word needs only one of these in common (OR, not AND), and a word with no
+   * domain data at all does not get a free pass.
+   */
+  domains:  string[];
   mastered: 'any' | 'yes' | 'no';
   listed:   'any' | 'no';           // 'no' = not in any of your lists yet
   /**
@@ -29,12 +35,17 @@ export interface SmartRule {
    * (just seen), or mastered long ago and now overdue for a refresher.
    */
   due:      'any' | 'yes';
+  /** Case/accent-insensitive prefix match on the word itself. '' = any. */
+  wordStartsWith:  string;
+  /** Case/accent-insensitive substring match on the translation. '' = any. */
+  meaningContains: string;
   limit:    number;                 // 0 = no cap
   sort:     'rank' | 'alpha';
 }
 
 export const DEFAULT_SMART_RULE: SmartRule = {
-  bands: [], pos: [], mastered: 'no', listed: 'no', due: 'any', limit: 100, sort: 'rank',
+  bands: [], pos: [], domains: [], mastered: 'no', listed: 'no', due: 'any',
+  wordStartsWith: '', meaningContains: '', limit: 100, sort: 'rank',
 };
 
 import { readJson, writeJson, isRecord } from '../../utils/storage.ts';
@@ -42,8 +53,27 @@ const SMART_PREFIX = 'vq_smart_';
 
 function smartKey(lang: string): string { return SMART_PREFIX + lang.toLowerCase(); }
 
+/**
+ * Read every saved rule for a language, filling in defaults for any field
+ * that did not exist yet when the rule was saved.
+ *
+ * A rule on disk is whatever shape SmartRule had the day it was written —
+ * `domains`, `wordStartsWith` and `meaningContains` were all added after this
+ * feature shipped, so a rule saved before any one of them is missing it.
+ * Every reader downstream (evaluateSmart, the sidebar's per-rule word counts,
+ * the editor's chip groups) assumes a complete SmartRule and indexes straight
+ * into these fields — `rule.domains.length`, `selected.includes(v)` — with no
+ * guard, so an old rule read raw crashed mid-render the moment `domains`
+ * shipped, taking every sidebar section rendered after Smart Lists down with
+ * it. Filling defaults once, here, at the only place a rule enters the app,
+ * means a future field can be added the same way without auditing every call
+ * site for one more optional-chain.
+ */
 export function getSmartLists(lang: string): Record<string, SmartRule> {
-  return readJson<Record<string, SmartRule>>(smartKey(lang), {}, isRecord);
+  const raw = readJson<Record<string, Partial<SmartRule>>>(smartKey(lang), {}, isRecord);
+  const out: Record<string, SmartRule> = {};
+  for (const [name, rule] of Object.entries(raw)) out[name] = { ...DEFAULT_SMART_RULE, ...rule };
+  return out;
 }
 
 function saveSmartLists(lang: string, all: Record<string, SmartRule>): void {
@@ -81,10 +111,13 @@ export function evaluateSmart(lang: string, rule: SmartRule, vocab: VocabEntry[]
   let out = vocab.filter(e => {
     if (rule.bands.length && !rule.bands.includes(e.band ?? '')) return false;
     if (rule.pos.length   && !rule.pos.includes(e.pos ?? ''))    return false;
+    if (rule.domains.length && !e.domains.some(d => rule.domains.includes(d))) return false;
     if (rule.mastered === 'yes' && !mastered.has(e.word)) return false;
     if (rule.mastered === 'no'  &&  mastered.has(e.word)) return false;
     if (rule.listed   === 'no'  &&  listed.has(e.word))   return false;
     if (due && !due.has(e.word)) return false;
+    if (rule.wordStartsWith && !norm(e.word).startsWith(norm(rule.wordStartsWith))) return false;
+    if (rule.meaningContains && !norm(e.translation).includes(norm(rule.meaningContains))) return false;
     return true;
   });
 

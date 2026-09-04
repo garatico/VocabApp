@@ -44,6 +44,7 @@ export async function fetchVocab(lang: string): Promise<VocabEntry[]> {
         band:        w.frequency?.band ?? null,
         glosses:     Array.isArray(w.glosses)  ? w.glosses.filter(Boolean)  : [],
         examples:    Array.isArray(w.examples) ? w.examples.filter(Boolean) : [],
+        domains:     Array.isArray(w.domains)  ? w.domains.filter(Boolean)  : [],
         ipa:         w.linguistic?.ipa || null,
         audioUrl:    w.audio_url ?? null,
         disambiguator: w.disambiguator || null,
