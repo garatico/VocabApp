@@ -256,6 +256,12 @@ function languageRows<T>(
 // so it survives the tab's cheap rebuild-everything-on-every-change pattern;
 // sections start expanded, same as before this existed, and stay however a
 // learner last left them.
+//
+// The Words section itself nests two of these — "Add a new word" and "Edit
+// an existing word" (buildSubsection) — one visual step down from a
+// top-level section (buildSection): a <div>/<h4> instead of a <section>/<h3>,
+// sharing every key in the same COLLAPSED_SECTIONS_KEY set as long as each
+// caller picks its own unique key ('words-add'/'words-edit' vs. 'words').
 
 const COLLAPSED_SECTIONS_KEY = 'vq_mycontent_collapsed';
 
@@ -267,26 +273,38 @@ function setCollapsedSections(keys: Set<string>): void {
   writeJson(COLLAPSED_SECTIONS_KEY, [...keys]);
 }
 
-/**
- * Wraps `body` in a `<section>` with a clickable header (title + chevron)
- * that shows or hides it in place — deliberately not a rebuild, so a search
- * in progress or a half-filled form inside `body` survives collapsing the
- * section around it.
- */
-function buildSection(key: string, title: string, description: string, body: HTMLElement): HTMLElement {
-  const section = el('section', 'mc-section');
+interface CollapsibleClasses {
+  wrap: string; header: string; chevron: string; title: string; body: string; desc: string; collapsedModifier: string;
+}
 
-  const header = el('div', 'mc-section-header');
+/**
+ * Shared toggle/persistence behind buildSection and buildSubsection below —
+ * only the tag names, heading level and class names differ between a
+ * top-level section and one nested inside it, so the collapse mechanics
+ * (and the storage key both read from) can't drift apart between the two.
+ *
+ * Wraps `body` in a clickable header (title + chevron) that shows or hides
+ * it in place — deliberately not a rebuild, so a search in progress or a
+ * half-filled form inside `body` survives collapsing the wrapper around it.
+ */
+function buildCollapsible(
+  wrapTag: 'section' | 'div', titleTag: 'h3' | 'h4', classes: CollapsibleClasses,
+  key: string, title: string, description: string, body: HTMLElement,
+): HTMLElement {
+  const wrap = document.createElement(wrapTag);
+  wrap.className = classes.wrap;
+
+  const header = el('div', classes.header);
   header.setAttribute('role', 'button');
   header.tabIndex = 0;
-  header.append(el('span', 'mc-section-chevron', '▾'), el('h3', 'mc-section-title', title));
+  header.append(el('span', classes.chevron, '▾'), el(titleTag, classes.title, title));
 
-  const bodyWrap = el('div', 'mc-section-body');
-  bodyWrap.append(el('p', 'mc-section-desc', description), body);
+  const bodyWrap = el('div', classes.body);
+  bodyWrap.append(el('p', classes.desc, description), body);
 
   function applyState(collapsed: boolean): void {
     bodyWrap.hidden = collapsed;
-    section.classList.toggle('mc-section--collapsed', collapsed);
+    wrap.classList.toggle(classes.collapsedModifier, collapsed);
     header.setAttribute('aria-expanded', String(!collapsed));
   }
   applyState(getCollapsedSections().has(key));
@@ -303,8 +321,24 @@ function buildSection(key: string, title: string, description: string, body: HTM
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
   });
 
-  section.append(header, bodyWrap);
-  return section;
+  wrap.append(header, bodyWrap);
+  return wrap;
+}
+
+function buildSection(key: string, title: string, description: string, body: HTMLElement): HTMLElement {
+  return buildCollapsible('section', 'h3', {
+    wrap: 'mc-section', header: 'mc-section-header', chevron: 'mc-section-chevron',
+    title: 'mc-section-title', body: 'mc-section-body', desc: 'mc-section-desc',
+    collapsedModifier: 'mc-section--collapsed',
+  }, key, title, description, body);
+}
+
+function buildSubsection(key: string, title: string, description: string, body: HTMLElement): HTMLElement {
+  return buildCollapsible('div', 'h4', {
+    wrap: 'mc-subsection', header: 'mc-subsection-header', chevron: 'mc-subsection-chevron',
+    title: 'mc-subsection-title', body: 'mc-subsection-body', desc: 'mc-subsection-desc',
+    collapsedModifier: 'mc-subsection--collapsed',
+  }, key, title, description, body);
 }
 
 export function renderMyContent(container: HTMLElement, lang: string): void {
@@ -392,10 +426,7 @@ function buildWordsSection(currentLang: string, selectedLangs: Set<string>, refr
 }
 
 function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>, refresh: () => void): HTMLElement {
-  const sub = el('div', 'mc-subsection');
-  sub.appendChild(el('h4', 'mc-subsection-title', 'Add a new word'));
-  sub.appendChild(el('p', 'mc-subsection-desc',
-    'Shows up at the top of Table, Picture Quiz and Conjugation-eligible word lists, right alongside the real vocabulary. Fill in one language, or several at once — e.g. gato for Spanish and chat for French, both meaning "cat".'));
+  const sub = el('div', 'mc-subsection-fields');
 
   const form = el('div', 'mc-form');
   const transI = textInput('e.g. cat');
@@ -459,7 +490,9 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>,
     allEntries.forEach(({ info, w }) => list.appendChild(buildWordRow(info, w, refresh)));
   }
   sub.appendChild(list);
-  return sub;
+  return buildSubsection('words-add', 'Add a new word',
+    'Shows up at the top of Table, Picture Quiz and Conjugation-eligible word lists, right alongside the real vocabulary. Fill in one language, or several at once — e.g. gato for Spanish and chat for French, both meaning "cat".',
+    sub);
 }
 
 function buildWordRow(info: LanguageInfo, w: UserWord, refresh: () => void): HTMLElement {
@@ -492,10 +525,7 @@ function buildWordRow(info: LanguageInfo, w: UserWord, refresh: () => void): HTM
  * losing the query every time an edit is made.
  */
 function buildEditWordSubsection(currentLang: string): HTMLElement {
-  const sub = el('div', 'mc-subsection');
-  sub.appendChild(el('h4', 'mc-subsection-title', 'Edit an existing word'));
-  sub.appendChild(el('p', 'mc-subsection-desc',
-    'Search a language\'s vocabulary — real words and ones you\'ve added above — to hide glosses you don\'t want to see, reorder the rest, or override the translation, part of speech, notes or domains. Click an already-edited word below to reopen it.'));
+  const sub = el('div', 'mc-subsection-fields');
 
   const list = el('div', 'mc-list');
   function renderOverridesList(): void {
@@ -516,7 +546,9 @@ function buildEditWordSubsection(currentLang: string): HTMLElement {
 
   sub.appendChild(panel.wrap);
   sub.appendChild(list);
-  return sub;
+  return buildSubsection('words-edit', 'Edit an existing word',
+    'Search a language\'s vocabulary — real words and ones you\'ve added above — to hide glosses you don\'t want to see, reorder the rest, or override the translation, part of speech, notes or domains. Click an already-edited word below to reopen it.',
+    sub);
 }
 
 /** A one-line summary of what's overridden for a word, for the list at the

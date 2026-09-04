@@ -1104,7 +1104,17 @@ void (async function init(): Promise<void> {
   });
 
   // Restore active mode tab (must happen after bindModeSwitch set up click handlers)
-  const savedMode = S.get('vq_mode');
+  //
+  // A manifest shortcut (public/manifest.webmanifest) launches with
+  // ?mode=<tab> — e.g. the home-screen "Picture Quiz" shortcut. That should
+  // win over whatever tab the last session left off on, since picking a
+  // shortcut is a specific request to land there, not a return visit.
+  // Stripped from the address bar immediately so it doesn't linger and
+  // re-force the same mode on every reload/share of the URL afterward.
+  const urlMode = new URLSearchParams(location.search).get('mode');
+  if (urlMode) history.replaceState(null, '', location.pathname);
+
+  const savedMode = urlMode ?? S.get('vq_mode');
   const savedTab = savedMode
     ? document.querySelector<HTMLElement>(`.mode-tab[data-mode="${savedMode}"]`)
     : null;

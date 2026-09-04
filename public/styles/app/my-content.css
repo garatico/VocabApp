@@ -165,21 +165,46 @@
   line-height: 1.45;
 }
 
-/* ── Subsection — a labeled block inside a section body (e.g. Words' "Add a
-   new word" and "Edit an existing word"), not independently collapsible. ── */
+/* ── Subsection — a labeled, independently collapsible block inside a
+   section body (e.g. Words' "Add a new word" and "Edit an existing word") —
+   one visual step down from .mc-section above: <div>/<h4> instead of
+   <section>/<h3>, otherwise the same collapse mechanics (buildSubsection in
+   my-content-mode.ts shares buildSection's toggle/persistence logic via
+   buildCollapsible, so the two can't drift apart). ── */
 .mc-subsections {
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
 }
 .mc-subsection {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.75rem 0.8rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
+  overflow: hidden;
+}
+.mc-subsection-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.7rem;
+  cursor: pointer;
+  user-select: none;
+}
+.mc-subsection-header:hover {
+  background: var(--surface2);
+}
+.mc-subsection-header:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.mc-subsection-chevron {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+.mc-subsection--collapsed .mc-subsection-chevron {
+  transform: rotate(-90deg);
 }
 .mc-subsection-title {
   margin: 0;
@@ -187,11 +212,29 @@
   font-weight: 700;
   color: var(--text);
 }
+.mc-subsection-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0 0.8rem 0.75rem;
+}
+/* Same [hidden]-vs-class-display cascade tie as .mc-section-body above. */
+.mc-subsection-body[hidden] {
+  display: none;
+}
 .mc-subsection-desc {
   margin: 0;
   font-size: 0.78rem;
   color: var(--text-muted);
   line-height: 1.4;
+}
+/* The actual form/list content passed into buildSubsection as `body` — kept
+   separate from .mc-subsection-body (which also lays out the description
+   paragraph above it) so each can change independently. */
+.mc-subsection-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
 /* ── Add form ── */

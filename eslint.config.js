@@ -136,6 +136,22 @@ export default [
     rules: commonJsRules,
   },
   {
+    // Service worker (public/sw.js) — runs in its own worker global scope,
+    // not a window/document one: `self` instead of `window`, plus the Cache
+    // Storage API. A classic script (registered without `{ type: 'module' }`
+    // — see utils/pwa.ts), so no import/export syntax to allow either.
+    files: ['public/sw.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType:  'script',
+      globals: {
+        self: 'readonly', caches: 'readonly', clients: 'readonly',
+        fetch: 'readonly', URL: 'readonly', Response: 'readonly',
+      },
+    },
+    rules: commonJsRules,
+  },
+  {
     // Test files
     files: ['tests/**/*.js'],
     languageOptions: {

@@ -116,7 +116,12 @@ self.addEventListener('fetch', event => {
   // ── Shell: stale-while-revalidate ─────────────────────────────────────────
   if (isShellAsset(url)) {
     event.respondWith(
-      caches.match(request).then(cached => {
+      // ignoreSearch: a manifest shortcut (public/manifest.webmanifest) opens
+      // e.g. /?mode=picture — only "/" itself is precached, and Cache.match
+      // treats a different query string as a different URL by default. Safe
+      // to ignore here since nothing in PRECACHE_URLS is versioned by query
+      // string (Vite hashes filenames instead — see the file header).
+      caches.match(request, { ignoreSearch: true }).then(cached => {
         const network = fetch(request)
           .then(response => {
             if (response.ok) {

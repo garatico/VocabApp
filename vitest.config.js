@@ -20,7 +20,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      include: ['src/server/**/*.{js,ts}'],
+      include: ['src/server/**/*.{js,ts}', 'src/client/**/*.{js,ts}'],
       exclude: ['src/server/index.js', 'src/server/index.ts'],
     },
   },
