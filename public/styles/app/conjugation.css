@@ -1255,6 +1255,27 @@ html:not(.dark) .crt-input.incorrect {
   color: hsl(var(--pronoun-hue, 210) 65% 70%);
 }
 
+/* Grid view: same coloring, own rule. Its cards aren't inside a
+   .conj-verb-row — each one is a standalone verb×tense block, not a column
+   sharing a row with others — so the selector above never matched them.
+   Doesn't need Full's extra specificity: Grid's own nth-child(3)/(6) rule
+   (above, "Remove bottom border on last row of each column") drops those
+   rows' border-bottom to `none` outright rather than re-adding a plain one
+   the way Full's does, so there is no border left for a lower-specificity
+   color to lose a fight against. */
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-pronoun {
+  color: hsl(var(--pronoun-hue, 210) 50% 42%);
+}
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-row[data-pi] {
+  border-bottom-color: hsl(var(--pronoun-hue, 210) 45% 45% / 0.5);
+}
+@media (prefers-color-scheme: dark) {
+  .conj-cards-grid:not(.conj-cards-grid--full) .conj-pronoun { color: hsl(var(--pronoun-hue, 210) 65% 70%); }
+}
+:root[data-theme="dark"] .conj-cards-grid:not(.conj-cards-grid--full) .conj-pronoun {
+  color: hsl(var(--pronoun-hue, 210) 65% 70%);
+}
+
 /* Falls back to stacking on narrow screens. A horizontal scroll containing
    text inputs is miserable on a phone: focusing a field scrolls the row and
    you lose your place mid-answer. Each card gets its own border back too —
