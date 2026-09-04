@@ -136,11 +136,13 @@ VocabApp/
 │   ├── images/                      # Wikipedia photos (animals/, food/, nature/)
 │   ├── emoji/                       # OpenMoji SVGs (animals/)
 │   └── svgs/                        # shared custom SVGs
-├── VocabApp-Data/                   # SEPARATE PROJECT — builds the database.
-│                                    #   Sitting here for now; meant to move out.
-│                                    #   Nothing in src/ or tests/ may read it.
-└── mobile/                          # Parked — not in active development; excluded from git
+└── mobile/                          # Parked — not in active development; sources still tracked,
+                                    #   only its own node_modules/ is ignored
 ```
+
+VocabApp-Data — the SEPARATE PROJECT that builds the database — has moved out to sit
+alongside this repo (`../VocabApp-Data`), not nested inside it. `DATA_DIR` in `.env`
+points there. Nothing in `src/` or `tests/` may read a file out of it.
 
 ## Running Tests
 
