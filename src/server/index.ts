@@ -5,8 +5,14 @@
  * App logic lives in src/server/app.ts so tests can import it without binding a port.
  */
 
-import dotenv from 'dotenv';
-dotenv.config();
+// Must be the first import: ESM hoists and evaluates every static import
+// before this module's own top-level statements run, so a plain
+// `import dotenv from 'dotenv'; dotenv.config();` here would call config()
+// *after* './app.js' (and its transitive import of lib/paths.ts) already
+// read DATA_DIR — too late, since paths.ts computes it once, at import time.
+// `dotenv/config` runs its side effect during its own module evaluation, so
+// declaring it first guarantees it runs before any other import.
+import 'dotenv/config';
 
 import { createApp }                          from './app.js';
 import { preloadAll, closeDatabase }          from './lib/vocab-loader.js';

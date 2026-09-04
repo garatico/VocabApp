@@ -22,6 +22,13 @@ async function clearCache(lang: string | null = null): Promise<string> {
   return message as string;
 }
 
+// ── DB reload ─────────────────────────────────────────────────────────────────
+
+async function reloadDb(): Promise<string> {
+  const { message } = await apiCall('/db/reload', 'POST', {});
+  return message as string;
+}
+
 // ── CSV export ────────────────────────────────────────────────────────────────
 
 async function exportCsv(lang: string): Promise<void> {
@@ -130,6 +137,22 @@ export function initDbAdmin(): void {
     } finally {
       clearAllBtn.disabled    = false;
       clearAllBtn.textContent = 'Clear All Caches';
+    }
+  });
+
+  // Reload database (close + reopen from disk)
+  const reloadBtn = document.getElementById('reloadDbBtn') as HTMLButtonElement;
+  reloadBtn.addEventListener('click', async () => {
+    try {
+      reloadBtn.disabled    = true;
+      reloadBtn.textContent = 'Reloading...';
+      const msg = await reloadDb();
+      showDbStatus(msg, 'success');
+    } catch (err) {
+      showDbStatus(`Error: ${err instanceof Error ? err.message : String(err)}`, 'error');
+    } finally {
+      reloadBtn.disabled    = false;
+      reloadBtn.textContent = 'Reload Database';
     }
   });
 

@@ -11,6 +11,7 @@
 
 import Database from 'better-sqlite3';
 import path     from 'path';
+import fs       from 'fs';
 import { dataDir } from './paths.js';
 import {
   checkDatabase, BAND_CUTOFFS as REQUIRED_BANDS, REBUILD_INSTRUCTION,
@@ -130,6 +131,56 @@ export function bandFromRank(rank: number | null): string | null {
 // Singleton DB connection
 let db: Database.Database | null = null;
 
+// mtime of vocabulary.db as of the last (re)open, so an external edit — a
+// pipeline sync, a one-off cleanup script, restoring a backup, anything that
+// isn't this app's own admin routes — is noticed on the next request instead
+// of silently serving whatever was cached at connect time. Belt-and-braces:
+// admin routes still clear the cache explicitly, this just covers the writes
+// that didn't come through them.
+let dbFileMtimeMs: number | null = null;
+
+/**
+ * The newest mtime across vocabulary.db and its WAL sidecar. In WAL mode (set
+ * below) a committed write lands in `<db>-wal` and isn't folded back into the
+ * main file until a checkpoint runs, which a long-lived reader connection —
+ * this app's own — can hold off indefinitely. Watching only the main file's
+ * mtime missed exactly that case: an external script's write would sit in
+ * the WAL, the main file's mtime would never move, and the change would go
+ * unnoticed until something else happened to trigger a checkpoint.
+ */
+function newestDbMtimeMs(dbPath: string): number | null {
+  let newest: number | null = null;
+  for (const p of [dbPath, `${dbPath}-wal`]) {
+    try {
+      const mtimeMs = fs.statSync(p).mtimeMs;
+      if (newest === null || mtimeMs > newest) newest = mtimeMs;
+    } catch {
+      // missing is normal for -wal when nothing's been written since the
+      // last checkpoint, or briefly during an external file replace
+    }
+  }
+  return newest;
+}
+
+/**
+ * If vocabulary.db (or its WAL) has moved since we last opened it, someone
+ * wrote to it outside this process. A plain SELECT on the existing connection
+ * would already see the new rows — SQLite doesn't need a reopen for that — so
+ * this exists only to invalidate `vocabCache`, the layer that actually goes
+ * stale. Goes through the same close+reopen as /db/reload rather than just
+ * clearing the cache, in case the external write also changed the schema
+ * (e.g. a pipeline sync bumping schema_version), and because closing our own
+ * connection is what lets SQLite checkpoint the WAL an external write left
+ * behind — cheap either way, this runs once per request at most.
+ */
+function checkForExternalDbChange(dbPath: string): void {
+  if (dbFileMtimeMs === null) return; // not connected yet — initializeDatabase will set it
+  const mtimeMs = newestDbMtimeMs(dbPath);
+  if (mtimeMs === null || mtimeMs === dbFileMtimeMs) return;
+  logger.info(`vocabulary.db changed on disk (external edit) — reloading (was ${dbFileMtimeMs}, now ${mtimeMs})`);
+  reloadDb();
+}
+
 // Whether the connected database has a `disambiguator` column on `words` yet
 // — see the Word.disambiguator field comment above. Recomputed whenever the
 // connection changes (initializeDatabase, setDb, reloadDb) rather than once
@@ -235,6 +286,7 @@ function initializeDatabase(): void {
     logger.info('Connected to SQLite database');
     verifyDatabase(db, dbPath);
     checkDisambiguatorColumn(db);
+    dbFileMtimeMs = newestDbMtimeMs(dbPath);
   } catch (error) {
     logger.error('Database connection error:', error);
     if ((error as NodeJS.ErrnoException).code === 'SQLITE_CANTOPEN') {
@@ -253,12 +305,18 @@ function initializeDatabase(): void {
   }
 }
 
+/** Open the connection if needed, or reload it if vocabulary.db changed under us. */
+function ensureDb(): Database.Database {
+  if (db) checkForExternalDbChange(path.join(dataDir, 'vocabulary.db'));
+  if (!db) initializeDatabase();
+  return db as Database.Database;
+}
+
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 /** Query the DB for languages that actually have data. */
 export function getSupportedLanguages(): string[] {
-  if (!db) initializeDatabase();
-  return (db as Database.Database)
+  return ensureDb()
     .prepare('SELECT DISTINCT language FROM words ORDER BY language')
     .all()
     .map((r: unknown) => (r as { language: string }).language);
@@ -268,6 +326,8 @@ export function getSupportedLanguages(): string[] {
  * Load vocabulary for a language from SQLite.
  */
 export function loadVocabFile(language: string): VocabData & { cacheAge: number } {
+  ensureDb();
+
   const lang = language.toLowerCase();
 
   if (vocabCache.has(lang)) {
@@ -286,8 +346,7 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
   }
 
   try {
-    if (!db) initializeDatabase();
-    const conn = db as Database.Database;
+    const conn = ensureDb();
 
     logger.info(`Loading vocabulary for: ${lang}`);
 
@@ -411,6 +470,7 @@ export function clearCache(language: string | null = null): void {
 export function reloadDb(): void {
   vocabCache.clear();
   dataReport = null;
+  dbFileMtimeMs = null;
   if (db) { try { db.close(); } catch (_) {} db = null; }
 }
 
@@ -476,8 +536,7 @@ export async function preloadAll(): Promise<{ language: string; status: string; 
 }
 
 export function getDb(): Database.Database {
-  if (!db) initializeDatabase();
-  return db as Database.Database;
+  return ensureDb();
 }
 
 export function setDb(testDb: Database.Database): void {

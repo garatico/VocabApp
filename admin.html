@@ -328,6 +328,12 @@
           </div>
 
           <div class="db-card">
+            <h3>Reload Database</h3>
+            <p>Closes and reopens vocabulary.db from disk — use this after replacing the file itself (a pipeline sync, restoring a backup), not just after editing rows. The server also does this on its own the moment it notices the file changed, so this button is mainly for an immediate confirmation rather than a strict requirement.</p>
+            <button id="reloadDbBtn">Reload Database</button>
+          </div>
+
+          <div class="db-card">
             <h3>Clear Language Cache</h3>
             <p>Clear the in-memory cache for one language only.</p>
             <!-- populated from /api/admin/meta with every language the DB actually has -->
