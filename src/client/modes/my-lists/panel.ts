@@ -13,7 +13,8 @@
 
 import { getList, saveListFilterState, refreshFilterSelect } from '../../utils/word-lists.ts';
 import type { FilterScope } from '../../filters/filter-scope.ts';
-import type { ListsCtx } from './context.ts';
+import { BROWSE_ALL_LIST, type ListsCtx } from './context.ts';
+import { renderBrowsePanel } from './browse-panel.ts';
 import { cachedVocab, cachedVocabMap, fetchVocab } from './vocab-cache.ts';
 import { readString } from '../../utils/storage.ts';
 import { logger } from '../../utils/logger.ts';
@@ -58,6 +59,8 @@ export function renderPanel(ctx: ListsCtx): void {
     renderProfilePanel(ctx, ctx.selectedProfile.mode, ctx.selectedProfile.name);
     return;
   }
+
+  if (ctx.selectedList === BROWSE_ALL_LIST) { renderBrowsePanel(ctx); return; }
 
   if (!ctx.selectedList) {
     const empty = document.createElement('p');
@@ -151,14 +154,9 @@ export function renderPanel(ctx: ListsCtx): void {
   titleGroup.appendChild(title);
   titleGroup.appendChild(exportBtn);
   titleGroup.appendChild(exportFmtLabel); titleGroup.appendChild(exportFmtSel);
-
-  // Its own full-width row below the title, rather than squeezed in alongside
-  // Export — the same "own row, runs the full width of the container" shape
-  // #startBtn uses everywhere else, so this is the one obvious action left to
-  // take once a list is open, not one more inline button.
-  const quizRow = document.createElement('div');
-  quizRow.className = 'ml-quiz-row';
-  quizRow.appendChild(quizBtn);
+  // Inline with Export/Export Format rather than its own full-width row
+  // below — one less row means the word list gets that height back.
+  titleGroup.appendChild(quizBtn);
 
   // Stats row — filled in by the word list on every render.
   const statsRow = document.createElement('div');
@@ -279,7 +277,6 @@ export function renderPanel(ctx: ListsCtx): void {
   }
 
   panelHeader.appendChild(titleGroup);
-  panelHeader.appendChild(quizRow);
   panelHeader.appendChild(statsRow);
   panelHeader.appendChild(posRow);
   panelHeader.appendChild(bandRow);
@@ -300,7 +297,6 @@ export function renderPanel(ctx: ListsCtx): void {
   const addHeading = document.createElement('div');
   addHeading.className = 'ml-add-heading';
   addHeading.textContent = '+ Add Vocabulary';
-  addSection.appendChild(addHeading);
 
   const add = createAddSearch(ctx, getVocab, (fullSidebar = false) => {
     refreshCount();
@@ -316,11 +312,12 @@ export function renderPanel(ctx: ListsCtx): void {
     ctx.renderSidebar(false);
   });
 
-  // Search box and bulk-import toggle share a line — the toggle used to sit
-  // below, easy to miss next to the much larger search box above it.
+  // Heading, search box and bulk-import toggle all share one line now — the
+  // heading used to sit on its own row above, costing a full row of height
+  // for a label the search box's placeholder text already implies.
   const addTopRow = document.createElement('div');
   addTopRow.className = 'ml-add-top-row';
-  addTopRow.append(add.row, bulk.toggle);
+  addTopRow.append(addHeading, add.row, bulk.toggle);
 
   addSection.appendChild(addTopRow);
   addSection.appendChild(add.results);

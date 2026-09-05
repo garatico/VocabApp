@@ -328,9 +328,13 @@ export function getDisplay(entry: Word): { prompt: string; hint: string | null }
  * (possession)", both otherwise glossed just "have". Never used for
  * matching, only wherever a word is shown as a resolved answer: this reads
  * `entry.word`, not `entry.glosses`, so it can't touch isCorrect/getGlosses.
+ *
+ * `show` gates the annotation itself (default on) — threaded through rather
+ * than read from `Settings` directly, same as `ChineseDisplay` above, so
+ * this stays pure and testable; callers pass `Settings.getShowDisambiguator()`.
  */
-export function displayWord(entry: Word): string {
-  return entry.disambiguator ? `${entry.word} (${entry.disambiguator})` : entry.word;
+export function displayWord(entry: Word, show = true): string {
+  return show && entry.disambiguator ? `${entry.word} (${entry.disambiguator})` : entry.word;
 }
 
 /** Return a short label for the part of speech badge. */
@@ -375,6 +379,22 @@ function chosenGlosses(entry: Word): string[] {
 }
 
 /**
+ * `gloss`, annotated with its own entry from `entry.meaningDisambiguators`
+ * (if any) — e.g. "work (function)". A plain `{}` from JSON still has
+ * `Object.prototype` behind it, so a gloss that happens to be "constructor"
+ * or "toString" would otherwise resolve to that inherited member instead of
+ * `undefined`; guarding with `hasOwnProperty` is what user-content.ts's own
+ * `ownGet` does for the same reason, restated here rather than imported so
+ * this file — read by every quiz mode — never depends on the My Content
+ * storage module.
+ */
+export function glossWithMeaningNote(gloss: string, entry: Word): string {
+  const notes = entry.meaningDisambiguators;
+  const note = notes && Object.prototype.hasOwnProperty.call(notes, gloss) ? notes[gloss] : undefined;
+  return note ? `${gloss} (${note})` : gloss;
+}
+
+/**
  * Build the human-readable gloss string for a word entry.
  * - Verbs: filter to "to X" forms and join with " / "  (e.g. "to speak / to talk")
  * - Everything else: join all glosses with " / "        (e.g. "of / from")
@@ -383,17 +403,17 @@ function chosenGlosses(entry: Word): string[] {
  * @param maxGlosses Cap on how many senses are joined in, keeping the first
  * N — callers that let a learner tune this (table mode's question/answer
  * gloss-count settings) pass it; everyone else gets every sense, unchanged.
+ *
+ * Each shown sense is annotated independently via glossWithMeaningNote
+ * before joining — not baked into getGlosses/chosenGlosses, which matching
+ * (isCorrect et al.) reads instead, so a learner's answer is never scored
+ * against this text. disambiguator (the word-side annotation, see
+ * displayWord) is independent of this and never touched here.
  */
 export function buildGlossDisplay(entry: Word, maxGlosses = Infinity): string {
   const chosen = chosenGlosses(entry);
-  const base = chosen.length === 0 ? (entry.translation ?? entry.word ?? '') : chosen.slice(0, maxGlosses).join(' / ');
-  // Appended after slicing/joining, not baked into any one gloss, so it
-  // shows once per word regardless of maxGlosses — and never touches
-  // getGlosses/chosenGlosses, which matching (isCorrect et al.) reads
-  // instead, so a learner's answer is never scored against this text.
-  // meaningDisambiguator, not disambiguator — that one decorates the word
-  // itself (see displayWord), independently of this side.
-  return entry.meaningDisambiguator ? `${base} (${entry.meaningDisambiguator})` : base;
+  const shown  = chosen.length === 0 ? [entry.translation ?? entry.word ?? ''] : chosen.slice(0, maxGlosses);
+  return shown.map(g => glossWithMeaningNote(g, entry)).join(' / ');
 }
 
 /**

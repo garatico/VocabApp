@@ -24,7 +24,7 @@ import {
   createMultiList, deleteMultiList, renameMultiList, addToMultiList,
 } from '../../utils/word-lists.ts';
 import { logger } from '../../utils/logger.ts';
-import type { ListsCtx } from './context.ts';
+import { BROWSE_ALL_LIST, type ListsCtx } from './context.ts';
 import { migrateMastery } from './mastery.ts';
 import { closePopover } from './move-popover.ts';
 import { showUndo } from './undo-toast.ts';
@@ -213,6 +213,24 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     return btn;
   }
 
+  // ── Browse All Words ─────────────────────────────────────────────────────
+  // A single static entry, not a section — there's nothing to create, copy,
+  // rename or delete here, just the language's whole vocabulary to look at,
+  // so it skips sectionHead's "+ New" and every card's action row.
+
+  function renderBrowseNav(): void {
+    const li = document.createElement('li');
+    li.className = 'ml-list-item ml-browse-item'
+      + (ctx.selectedList === BROWSE_ALL_LIST ? ' active' : '');
+    li.textContent = '📖 Browse All Words';
+    li.addEventListener('click', () => {
+      ctx.selectedList = BROWSE_ALL_LIST;
+      ctx.selectedSmart = null; ctx.selectedMultiList = null; ctx.selectedProfile = null;
+      closePopover(); render(); ctx.renderPanel();
+    });
+    ctx.listNav.appendChild(li);
+  }
+
   // ── Single-Language Lists ───────────────────────────────────────────────────
 
   function renderSingleNav(): void {
@@ -225,10 +243,12 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       const empty = document.createElement('li');
       empty.className = 'ml-list-empty'; empty.textContent = 'No lists yet.';
       ctx.listNav.appendChild(empty);
-      ctx.selectedList = '';
+      // Leaves BROWSE_ALL_LIST alone — Browse All Words doesn't need any
+      // real list to exist, so having none yet shouldn't bump it back to ''.
+      if (ctx.selectedList !== BROWSE_ALL_LIST) ctx.selectedList = '';
       return;
     }
-    if (!names.includes(ctx.selectedList)) ctx.selectedList = names[0];
+    if (ctx.selectedList !== BROWSE_ALL_LIST && !names.includes(ctx.selectedList)) ctx.selectedList = names[0];
 
     names.forEach(name => {
       const li = document.createElement('li');
@@ -762,6 +782,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     const hadFocus = ctx.listNav.contains(document.activeElement);
 
     ctx.listNav.innerHTML = '';
+    renderBrowseNav();
     renderSingleNav();
     renderSmartNav();
     renderMultiNav();

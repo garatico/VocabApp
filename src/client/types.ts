@@ -79,15 +79,18 @@ export interface Word {
    */
   disambiguator?: string | null;
   /**
-   * Same idea as disambiguator, but shown next to the *meaning/gloss* side
+   * Same idea as disambiguator, but shown next to a specific *meaning/gloss*
    * instead of the word — e.g. funcionar's gloss "work" annotated "work
-   * (function)" to tell it apart from trabajar's "work (job)". Independent of
-   * disambiguator: a word can carry either, both (possibly different text on
-   * each side), or neither. Client-only for now — My Content's own override,
-   * not backed by a DB column the way disambiguator is (see
+   * (function)" to tell it apart from trabajar's "work (job)". Keyed by the
+   * gloss's own text (same convention as glosses/hiddenGlosses elsewhere),
+   * since a word's different senses can each need their own note — or none
+   * at all; a gloss absent from this map just shows unannotated. Independent
+   * of disambiguator: a word can carry either, both (possibly different text
+   * on each side), or neither. Client-only for now — My Content's own
+   * override, not backed by a DB column the way disambiguator is (see
    * vocab-loader.ts's supportsDisambiguator).
    */
-  meaningDisambiguator?: string | null;
+  meaningDisambiguators?: Record<string, string> | null;
   /**
    * Which language this word belongs to. Absent on every normal single-language
    * load — the language is implied by which array you fetched. Only set when a

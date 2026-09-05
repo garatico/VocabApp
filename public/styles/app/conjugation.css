@@ -615,19 +615,24 @@
 
    Defined as --tense-hue on the element, so the chip and the card
    derive their tint, border and badge from a single value.
-   ═══════════════════════════════════════════════════════════════ */
-[data-tense="present"]                 { --tense-hue: 145; }  /* green       */
-[data-tense="preterite"]               { --tense-hue: 210; }  /* blue        */
-[data-tense="imperfect"]               { --tense-hue: 265; }  /* violet      */
-[data-tense="future"]                  { --tense-hue:  25; }  /* orange      */
-[data-tense="conditional"]             { --tense-hue: 330; }  /* pink        */
-[data-tense="subjunctive"]             { --tense-hue: 190; }  /* teal        */
-[data-tense="past_participle"]         { --tense-hue:  45; }  /* amber       */
-[data-tense="gerund"]                  { --tense-hue: 285; }  /* purple      */
-[data-tense="imperative_affirmative"]  { --tense-hue: 355; }  /* crimson     */
-[data-tense="imperative_negative"]     { --tense-hue: 100; }  /* olive       */
-[data-tense="imperfect_subjunctive"]   { --tense-hue: 235; }  /* indigo      */
-[data-tense="future_subjunctive"]      { --tense-hue:  65; }  /* gold        */
+
+   Each rule reads through a --tense-hue-<key> custom property rather than
+   the number directly, falling back to that same default — Settings'
+   "Conjugation Colors" section (see settings.ts's applyTenseColors) sets
+   --tense-hue-<key> on :root when the user picks a custom color, which
+   then wins here without this file needing to change. */
+[data-tense="present"]                 { --tense-hue: var(--tense-hue-present, 145); }
+[data-tense="preterite"]               { --tense-hue: var(--tense-hue-preterite, 210); }
+[data-tense="imperfect"]               { --tense-hue: var(--tense-hue-imperfect, 265); }
+[data-tense="future"]                  { --tense-hue: var(--tense-hue-future, 25); }
+[data-tense="conditional"]             { --tense-hue: var(--tense-hue-conditional, 330); }
+[data-tense="subjunctive"]             { --tense-hue: var(--tense-hue-subjunctive, 190); }
+[data-tense="past_participle"]         { --tense-hue: var(--tense-hue-past_participle, 45); }
+[data-tense="gerund"]                  { --tense-hue: var(--tense-hue-gerund, 285); }
+[data-tense="imperative_affirmative"]  { --tense-hue: var(--tense-hue-imperative_affirmative, 355); }
+[data-tense="imperative_negative"]     { --tense-hue: var(--tense-hue-imperative_negative, 100); }
+[data-tense="imperfect_subjunctive"]   { --tense-hue: var(--tense-hue-imperfect_subjunctive, 235); }
+[data-tense="future_subjunctive"]      { --tense-hue: var(--tense-hue-future_subjunctive, 65); }
 
 /* ═══════════════════════════════════════════════════════════════
    Grammatical person colour coding
@@ -637,13 +642,15 @@
    data-pi and random-table-mode.ts), shared by the Forms toggle
    button and any table cell drilling that person, so a learner can
    match a random table's rows back to the filter that produced them.
-   ═══════════════════════════════════════════════════════════════ */
-[data-pi="0"] { --pronoun-hue:   0; }  /* red    */
-[data-pi="1"] { --pronoun-hue:  60; }  /* yellow */
-[data-pi="2"] { --pronoun-hue: 120; }  /* green  */
-[data-pi="3"] { --pronoun-hue: 180; }  /* cyan   */
-[data-pi="4"] { --pronoun-hue: 240; }  /* blue   */
-[data-pi="5"] { --pronoun-hue: 300; }  /* magenta*/
+
+   Reads through --pronoun-hue-<index> the same way --tense-hue-<key> does
+   above, so Settings can override these too. */
+[data-pi="0"] { --pronoun-hue: var(--pronoun-hue-0, 0); }    /* red    */
+[data-pi="1"] { --pronoun-hue: var(--pronoun-hue-1, 60); }   /* yellow */
+[data-pi="2"] { --pronoun-hue: var(--pronoun-hue-2, 120); }  /* green  */
+[data-pi="3"] { --pronoun-hue: var(--pronoun-hue-3, 180); }  /* cyan   */
+[data-pi="4"] { --pronoun-hue: var(--pronoun-hue-4, 240); }  /* blue   */
+[data-pi="5"] { --pronoun-hue: var(--pronoun-hue-5, 300); }  /* magenta*/
 
 /* ── Tense chips: two columns ─────────────────────────────────
    There was never a base rule here — only the 767px override — so the

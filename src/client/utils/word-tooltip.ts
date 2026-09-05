@@ -185,9 +185,16 @@ function buildConjTable(conj: Record<string, string[]>, tenses: readonly string[
   const thead     = document.createElement('thead');
   const headerRow = document.createElement('tr');
   headerRow.appendChild(document.createElement('th'));
-  tenses.forEach(t => {
+  tenses.forEach((t, colIdx) => {
     const th = document.createElement('th');
     th.textContent = labels[t] ?? t;
+    // Same data-tense → --tense-hue scheme Conjugation Mode's own tense
+    // chips/cards use (see conjugation.css) — harmless here on its own; only
+    // My Lists' detail view (.ml-detail-conj) actually reads it for color.
+    th.dataset.tense = t;
+    // data-col drives the hover column-highlight below — shared by this
+    // header cell and every body cell in the same tense column.
+    th.dataset.col = String(colIdx);
     headerRow.appendChild(th);
   });
   thead.appendChild(headerRow);
@@ -199,23 +206,69 @@ function buildConjTable(conj: Record<string, string[]>, tenses: readonly string[
     const tdPronoun = document.createElement('td');
     tdPronoun.className   = 'tt-pronoun';
     tdPronoun.textContent = pronoun;
+    // Same data-pi → --pronoun-hue scheme Conjugation Mode's Forms toggles
+    // use, so a "Forms" (person/pronoun) color can match here too.
+    tdPronoun.dataset.pi = String(i);
     tr.appendChild(tdPronoun);
-    tenses.forEach(t => {
+    tenses.forEach((t, colIdx) => {
       const td   = document.createElement('td');
       const form = conj[t]?.[i];
       td.textContent = form ?? '—';
       if (!form) td.className = 'tt-empty';
+      td.dataset.tense = t;
+      td.dataset.col = String(colIdx);
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
+  attachConjTableHoverHighlight(table);
   return table;
 }
 
-function buildNonFiniteSection(word: Word, lang: string): HTMLElement | null {
-  const pp  = (word.linguistic?.conjugations?.['past_participle'] as string | null) ?? null;
-  const ger = (word.linguistic?.conjugations?.['gerund']          as string | null) ?? null;
+/**
+ * Hovering any cell highlights its whole row (Form) and whole column
+ * (Tense) — a verb's full conjugation table is a wall of near-identical
+ * short strings, and tracing "this row, this column" by eye alone is easy
+ * to lose track of once several tenses are showing side by side.
+ *
+ * Delegated on the table rather than per-cell: rebuilding cell listeners on
+ * every render (this table is torn down and rebuilt on each hover in the
+ * quiz tooltip) would be wasteful, and delegation only needs the two
+ * listeners below regardless of table size. Only .ml-detail-conj (My
+ * Lists' own conjugation view) actually styles the highlight classes —
+ * see my-lists.css — so this is inert everywhere else the table appears.
+ */
+function attachConjTableHoverHighlight(table: HTMLTableElement): void {
+  const clear = (): void => {
+    table.querySelectorAll('.tt-conj-hl-row, .tt-conj-hl-col').forEach(el => {
+      el.classList.remove('tt-conj-hl-row', 'tt-conj-hl-col');
+    });
+  };
+  table.addEventListener('mouseover', e => {
+    const cell = (e.target as HTMLElement).closest<HTMLElement>('td, th');
+    if (!cell || !table.contains(cell)) return;
+    clear();
+    cell.closest('tr')?.classList.add('tt-conj-hl-row');
+    const col = cell.dataset.col;
+    if (col !== undefined) {
+      table.querySelectorAll(`[data-col="${col}"]`).forEach(el => el.classList.add('tt-conj-hl-col'));
+    }
+  });
+  table.addEventListener('mouseleave', clear);
+}
+
+/**
+ * Exported alongside buildConjSection below so other modules that already
+ * have a word's conjugations on hand (My Lists' VocabEntry carries them
+ * separately from a full Word — see vocab-cache.ts) can build the same
+ * table without needing a whole Word object just to reach one field.
+ */
+export function buildNonFiniteSection(
+  conjugations: Record<string, string[] | string> | null | undefined, lang: string,
+): HTMLElement | null {
+  const pp  = (conjugations?.['past_participle'] as string | null) ?? null;
+  const ger = (conjugations?.['gerund']          as string | null) ?? null;
   if (!pp && !ger) return null;
 
   const labels = tenseLabels(lang);
@@ -231,27 +284,34 @@ function buildNonFiniteSection(word: Word, lang: string): HTMLElement | null {
   const table = document.createElement('table');
   table.className = 'tt-conj-table tt-nonfinite-table';
 
-  const pairs: [string, string][] = [];
-  if (ger) pairs.push([labels['gerund']          ?? 'Gerund',          ger]);
-  if (pp)  pairs.push([labels['past_participle'] ?? 'Past Participle', pp]);
+  const pairs: [string, string, string][] = [];
+  if (ger) pairs.push([labels['gerund']          ?? 'Gerund',          ger, 'gerund']);
+  if (pp)  pairs.push([labels['past_participle'] ?? 'Past Participle', pp, 'past_participle']);
 
-  pairs.forEach(([rowLabel, form]) => {
+  pairs.forEach(([rowLabel, form, tenseKey]) => {
     const tr  = document.createElement('tr');
     const tdL = document.createElement('td');
     tdL.className   = 'tt-pronoun';
     tdL.textContent = rowLabel;
+    tdL.dataset.tense = tenseKey;
     const tdF = document.createElement('td');
     tdF.textContent = form;
+    tdF.dataset.tense = tenseKey;
+    tdF.dataset.col = '0';
     tr.append(tdL, tdF);
     table.appendChild(tr);
   });
 
+  attachConjTableHoverHighlight(table);
   section.appendChild(table);
   return section;
 }
 
-function buildConjSection(word: Word, lang: string): HTMLElement | null {
-  const conj = word.linguistic?.conjugations;
+/** See buildNonFiniteSection's own comment — same reasoning, same export. */
+export function buildConjSection(
+  conjugations: Record<string, string[] | string> | null | undefined, lang: string,
+): HTMLElement | null {
+  const conj = conjugations;
   if (!conj) return null;
 
   // Only show finite tenses relevant to the selected language
@@ -324,8 +384,9 @@ function populateTooltip(word: Word, revealed: boolean, lang: string, hideWordWh
   const heading = document.createElement('div');
   heading.className   = 'tt-word';
   // disambiguator here (word side); buildGlosses below carries its own,
-  // independent meaningDisambiguator — the two can differ, so both show.
-  heading.textContent = (hideWordWhenUnrevealed && !revealed) ? '???' : displayWord(word);
+  // independent per-gloss meaningDisambiguators — the two can differ, so
+  // both show.
+  heading.textContent = (hideWordWhenUnrevealed && !revealed) ? '???' : displayWord(word, Settings.getShowDisambiguator());
   tt.appendChild(heading);
   tt.appendChild(buildMetaRow(word));
 
@@ -339,9 +400,9 @@ function populateTooltip(word: Word, revealed: boolean, lang: string, hideWordWh
   }
 
   if (revealed && word.pos === 'verb') {
-    const conjSection = buildConjSection(word, lang);
+    const conjSection = buildConjSection(word.linguistic?.conjugations, lang);
     if (conjSection) tt.appendChild(conjSection);
-    const nonFiniteSection = buildNonFiniteSection(word, lang);
+    const nonFiniteSection = buildNonFiniteSection(word.linguistic?.conjugations, lang);
     if (nonFiniteSection) tt.appendChild(nonFiniteSection);
   }
 

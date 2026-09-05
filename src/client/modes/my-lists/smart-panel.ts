@@ -18,6 +18,8 @@
 import {
   getListNames, createList, addToList, deleteList,
 } from '../../utils/word-lists.ts';
+import { foldKey as norm } from '../../utils/match.ts';
+import { readString, writeString } from '../../utils/storage.ts';
 import type { ListsCtx } from './context.ts';
 import { cachedVocab, cachedVocabMap } from './vocab-cache.ts';
 import { getMastered } from './mastery.ts';
@@ -182,6 +184,132 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
     return row;
   }
 
+  /**
+   * A labelled, collapsible group of rows — "Filters", "Refine", "Manual
+   * Additions", "Limit & Order" — so the full rule editor can be shrunk down
+   * to just its section titles, leaving more of the pane for the preview
+   * list below. Mirrors profile-panel.ts's own `group()` (same
+   * `.filter-collapse-btn`/`.filter-body` CSS and `s_section_open_`-style
+   * persistence convention) but themed to Smart Lists' own accent color
+   * rather than Testing Profiles'.
+   */
+  function group(id: string, titleText: string, ...rows: HTMLElement[]): HTMLElement {
+    const storageKey = 'ml_smart_group_open_' + id;
+    const g = document.createElement('div');
+    g.className = 'ml-smart-editor-group';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'filter-collapse-btn ml-smart-editor-group-title';
+    const bodyId = `mlSmartGroupBody-${id}`;
+    btn.setAttribute('aria-controls', bodyId);
+
+    const arrow = document.createElement('span');
+    arrow.className = 'filter-collapse-arrow';
+    arrow.textContent = '▾';
+    const label = document.createElement('span');
+    label.className = 'filter-section-label';
+    label.textContent = titleText;
+    btn.append(arrow, label);
+
+    const body = document.createElement('div');
+    body.id = bodyId;
+    body.className = 'filter-body ml-smart-editor-group-body';
+    body.append(...rows);
+
+    const open = readString(storageKey) !== 'false';
+    btn.setAttribute('aria-expanded', String(open));
+    body.classList.toggle('filter-body--collapsed', !open);
+    btn.addEventListener('click', () => {
+      const nowOpen = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', String(nowOpen));
+      body.classList.toggle('filter-body--collapsed', !nowOpen);
+      writeString(storageKey, String(nowOpen));
+    });
+
+    g.append(btn, body);
+    return g;
+  }
+
+  /**
+   * Search-and-add for words the rule's own filters wouldn't otherwise
+   * select — a plain word list rather than chips, since there is no bounded
+   * set of options to offer. Writes straight to `rule.manualWords`; every
+   * change goes through `persist()`, which re-renders the whole panel, so
+   * this closure never needs to redraw its own chip list in place.
+   */
+  function manualWordsSection(): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.className = 'ml-smart-manual';
+
+    const searchRow = document.createElement('div');
+    searchRow.className = 'ml-add-row';
+    const icon = document.createElement('span');
+    icon.className = 'ml-add-icon'; icon.textContent = '+';
+    const input = document.createElement('input');
+    input.type = 'text'; input.placeholder = 'Add a specific word…';
+    input.className = 'ml-add-input';
+    searchRow.append(icon, input);
+
+    const results = document.createElement('ul');
+    results.className = 'ml-add-results'; results.hidden = true;
+
+    function renderResults(query: string): void {
+      results.innerHTML = '';
+      if (!query) { results.hidden = true; return; }
+      const already = new Set(rule.manualWords.map(w => w.toLowerCase()));
+      const q = norm(query);
+      const matches = vocab
+        .filter(e => !already.has(e.word.toLowerCase()))
+        .filter(e => norm(e.word).includes(q) || norm(e.translation).includes(q))
+        .slice(0, 12);
+      if (!matches.length) { results.hidden = true; return; }
+      matches.forEach(entry => {
+        const li = document.createElement('li');
+        li.className = 'ml-add-result-item';
+        const wordSpan = document.createElement('span');
+        wordSpan.className = 'ml-add-result-word'; wordSpan.textContent = entry.word;
+        const transSpan = document.createElement('span');
+        transSpan.className = 'ml-add-result-trans'; transSpan.textContent = entry.translation;
+        li.append(wordSpan, transSpan);
+        li.addEventListener('click', () => {
+          rule.manualWords.push(entry.word);
+          persist();
+        });
+        results.appendChild(li);
+      });
+      results.hidden = false;
+    }
+    input.addEventListener('input', () => renderResults(input.value.trim()));
+
+    const chips = document.createElement('div');
+    chips.className = 'ml-smart-manual-chips';
+    if (rule.manualWords.length === 0) {
+      const empty = document.createElement('span');
+      empty.className = 'ml-smart-manual-empty';
+      empty.textContent = 'No manually added words yet.';
+      chips.appendChild(empty);
+    }
+    rule.manualWords.forEach(w => {
+      const chip = document.createElement('span');
+      chip.className = 'pos-chip ml-smart-manual-chip';
+      const text = document.createElement('span');
+      text.textContent = w;
+      const rm = document.createElement('button');
+      rm.type = 'button'; rm.className = 'ml-smart-manual-remove';
+      rm.textContent = '×'; rm.title = `Remove "${w}"`;
+      rm.addEventListener('click', () => {
+        rule.manualWords = rule.manualWords.filter(x => x !== w);
+        persist();
+      });
+      chip.append(text, rm);
+      chips.appendChild(chip);
+    });
+
+    wrap.append(searchRow, results, chips);
+    return wrap;
+  }
+
   function selectRow(
     label: string, opts: readonly [string, string][],
     current: string, onPick: (v: string) => void,
@@ -202,45 +330,60 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
     return row;
   }
 
-  editor.appendChild(chipGroup('Level', BANDS, rule.bands, v => {
-    const i = rule.bands.indexOf(v);
-    if (i >= 0) rule.bands.splice(i, 1); else rule.bands.push(v);
-  }, 'band'));
-  editor.appendChild(chipGroup(
-    'Type', POS_CHIPS.filter(c => c.value).map(c => c.value), rule.pos, v => {
-      const i = rule.pos.indexOf(v);
-      if (i >= 0) rule.pos.splice(i, 1); else rule.pos.push(v);
-    }, 'pos'));
+  const filterRows: HTMLElement[] = [
+    chipGroup('Level', BANDS, rule.bands, v => {
+      const i = rule.bands.indexOf(v);
+      if (i >= 0) rule.bands.splice(i, 1); else rule.bands.push(v);
+    }, 'band'),
+    chipGroup(
+      'Type', POS_CHIPS.filter(c => c.value).map(c => c.value), rule.pos, v => {
+        const i = rule.pos.indexOf(v);
+        if (i >= 0) rule.pos.splice(i, 1); else rule.pos.push(v);
+      }, 'pos'),
+  ];
   if (domainList.length) {
-    editor.appendChild(chipGroup('Domain', domainList, rule.domains, v => {
+    filterRows.push(chipGroup('Domain', domainList, rule.domains, v => {
       const i = rule.domains.indexOf(v);
       if (i >= 0) rule.domains.splice(i, 1); else rule.domains.push(v);
     }, undefined, fmtDomain));
   }
-  editor.appendChild(selectRow('Mastered', [
-    ['no', 'Not Yet Mastered'], ['yes', 'Mastered'], ['any', 'Either'],
-  ], rule.mastered, v => { rule.mastered = v as SmartRule['mastered']; }));
-  editor.appendChild(selectRow('In a List', [
-    ['no', 'Not In Any List'], ['any', 'Either'],
-  ], rule.listed, v => { rule.listed = v as SmartRule['listed']; }));
-  editor.appendChild(selectRow('Review', [
-    ['yes', 'Due Now'], ['any', 'Either'],
-  ], rule.due ?? 'any', v => { rule.due = v as SmartRule['due']; }));
-  editor.appendChild(textRow(
-    'Word Starts With', 'e.g. "a"', rule.wordStartsWith ?? '',
-    v => { rule.wordStartsWith = v; },
-  ));
-  editor.appendChild(textRow(
-    'Meaning Contains', 'e.g. "house"', rule.meaningContains ?? '',
-    v => { rule.meaningContains = v; },
-  ));
-  editor.appendChild(selectRow('Limit', [
-    ['25', '25 Most Common'], ['50', '50 Most Common'], ['100', '100 Most Common'],
-    ['250', '250 Most Common'], ['0', 'No Limit'],
-  ], String(rule.limit), v => { rule.limit = Number(v); }));
-  editor.appendChild(selectRow('Order', [
-    ['rank', 'Most Frequent First'], ['alpha', 'A → Z'],
-  ], rule.sort, v => { rule.sort = v as SmartRule['sort']; }));
+
+  const refineRows: HTMLElement[] = [
+    selectRow('Mastered', [
+      ['no', 'Not Yet Mastered'], ['yes', 'Mastered'], ['any', 'Either'],
+    ], rule.mastered, v => { rule.mastered = v as SmartRule['mastered']; }),
+    selectRow('In a List', [
+      ['no', 'Not In Any List'], ['any', 'Either'],
+    ], rule.listed, v => { rule.listed = v as SmartRule['listed']; }),
+    selectRow('Review', [
+      ['yes', 'Due Now'], ['any', 'Either'],
+    ], rule.due ?? 'any', v => { rule.due = v as SmartRule['due']; }),
+    textRow(
+      'Word Starts With', 'e.g. "a"', rule.wordStartsWith ?? '',
+      v => { rule.wordStartsWith = v; },
+    ),
+    textRow(
+      'Meaning Contains', 'e.g. "house"', rule.meaningContains ?? '',
+      v => { rule.meaningContains = v; },
+    ),
+  ];
+
+  const limitRows: HTMLElement[] = [
+    selectRow('Limit', [
+      ['25', '25 Most Common'], ['50', '50 Most Common'], ['100', '100 Most Common'],
+      ['250', '250 Most Common'], ['0', 'No Limit'],
+    ], String(rule.limit), v => { rule.limit = Number(v); }),
+    selectRow('Order', [
+      ['rank', 'Most Frequent First'], ['alpha', 'A → Z'],
+    ], rule.sort, v => { rule.sort = v as SmartRule['sort']; }),
+  ];
+
+  editor.append(
+    group('filters', 'Filters', ...filterRows),
+    group('refine', 'Refine', ...refineRows),
+    group('manual', 'Manual Additions', manualWordsSection()),
+    group('limit', 'Limit & Order', ...limitRows),
+  );
 
   header.appendChild(editor);
   ctx.panel.appendChild(header);

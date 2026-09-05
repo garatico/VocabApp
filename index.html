@@ -880,13 +880,23 @@
 
             <div class="settings-row">
               <div class="settings-label">
-                <span data-i18n="settings.table.hints">Hints</span>
-                <span class="settings-desc" data-i18n="settings.table.hintsDesc">What the ? button does — None hides it, First letter shows one character, Full reveal shows the answer immediately</span>
+                <span data-i18n="settings.table.hintButton">Hint button</span>
+                <span class="settings-desc" data-i18n="settings.table.hintButtonDesc">Shows a Hint button next to each answer box that reveals the first letter. (A more complete hint system is planned — this is a first pass.)</span>
               </div>
-              <div class="sort-order-toggle" id="settingHint">
-                <button type="button" class="sort-order-btn" data-hint="none" data-i18n="common.none">None</button>
-                <button type="button" class="sort-order-btn" data-hint="first-letter" data-i18n="settings.table.firstLetter">First letter</button>
-                <button type="button" class="sort-order-btn active" data-hint="full" data-i18n="settings.table.fullReveal">Full reveal</button>
+              <div class="sort-order-toggle" id="settingHintButton">
+                <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.revealButton">Reveal word button</span>
+                <span class="settings-desc" data-i18n="settings.table.revealButtonDesc">Shows a Reveal button next to each answer box that fills in the full answer immediately (counts as missed)</span>
+              </div>
+              <div class="sort-order-toggle" id="settingRevealButton">
+                <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
               </div>
             </div>
 
@@ -951,6 +961,17 @@
                 <span class="settings-desc" data-i18n="settings.table.historyMarkersDesc">The list star and the "missed before" count badge on a word cell, across every Table quiz style</span>
               </div>
               <div class="sort-order-toggle" id="settingTableShowMarkers">
+                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
+              </div>
+            </div>
+
+            <div class="settings-row" data-advanced="true">
+              <div class="settings-label">
+                <span data-i18n="settings.table.disambiguator">Sense disambiguator</span>
+                <span class="settings-desc" data-i18n="settings.table.disambiguatorDesc">The "(permanent)"-style clarifier shown after a word that has one, wherever the word itself is displayed</span>
+              </div>
+              <div class="sort-order-toggle" id="settingShowDisambiguator">
                 <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
                 <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
               </div>
@@ -1095,6 +1116,40 @@
               <div class="sort-order-toggle" id="settingConjShowTimer">
                 <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
                 <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.conj.hints">Hints</span>
+                <span class="settings-desc" data-i18n="settings.conj.hintsDesc">What a slot's ? button does — None hides it, First letter shows one character, Full reveal shows the answer immediately. Separate from Table mode's own Hint/Reveal buttons.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingConjHint">
+                <button type="button" class="sort-order-btn" data-hint="none" data-i18n="common.none">None</button>
+                <button type="button" class="sort-order-btn" data-hint="first-letter" data-i18n="settings.table.firstLetter">First letter</button>
+                <button type="button" class="sort-order-btn active" data-hint="full" data-i18n="settings.table.fullReveal">Full reveal</button>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack">
+              <div class="settings-label">
+                <span data-i18n="settings.conj.tenseColors">Tense colors</span>
+                <span class="settings-desc" data-i18n="settings.conj.tenseColorsDesc">The color each tense's chip, card and table column uses throughout Conjugation Mode and a verb's conjugation table in My Lists.</span>
+              </div>
+              <button type="button" id="settingResetTenseColors" class="settings-action-btn" data-i18n="settings.conj.resetColors">Reset to defaults</button>
+              <div class="conj-color-list" id="settingTenseColors">
+                <!-- One row per tense, built from TENSE_DEFS — see settings.ts -->
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack">
+              <div class="settings-label">
+                <span data-i18n="settings.conj.personColors">Form (person) colors</span>
+                <span class="settings-desc" data-i18n="settings.conj.personColorsDesc">The color each grammatical person's Forms toggle and table rows use.</span>
+              </div>
+              <button type="button" id="settingResetPersonColors" class="settings-action-btn" data-i18n="settings.conj.resetColors">Reset to defaults</button>
+              <div class="conj-color-list" id="settingPersonColors">
+                <!-- One row per pronoun slot (0-5) — see settings.ts -->
               </div>
             </div>
 

@@ -12,7 +12,7 @@
  * old single per-language filter to one setting per mode.
  */
 
-import { readString, readJson, writeJson, remove as removeKey, isRecord, isStringArray }
+import { readString, readJson, writeJson, remove as removeKey, isRecord, isStringArray, isNumberRecord }
   from './storage.ts';
 import { currentScope, type FilterScope } from '../filters/filter-scope.ts';
 import { bucketFor, bucketForRead, SHARED_BUCKET, type Bucket } from '../filters/filter-state.ts';
@@ -28,6 +28,7 @@ const OLD_PREFIX           = 'vq_known_';
 const DEFAULT_LIST         = 'Known';
 const FILTER_STATE_PREFIX  = 'vq_listfilter_';
 const MULTI_LISTS_KEY      = 'vq_lists_multi';
+const ADDED_DATES_PREFIX   = 'vq_list_added_';
 
 type ListStore = Record<string, string[]>;
 
@@ -64,6 +65,31 @@ function saveMultiStore(store: MultiListStore): void {
   writeJson(MULTI_LISTS_KEY, store);
 }
 
+// Same added-date tracking as the per-language store below, one level
+// deeper (listName -> language -> word) since a cross-language list's
+// membership is a (word, language) pair, not a bare word.
+type MultiAddedDates = Record<string, Record<string, Record<string, number>>>;
+const MULTI_ADDED_DATES_KEY = 'vq_lists_multi_added';
+
+function isMultiAddedDates(v: unknown): v is MultiAddedDates {
+  return isRecord(v) && Object.values(v).every(
+    byLang => isRecord(byLang) && Object.values(byLang).every(isNumberRecord),
+  );
+}
+
+function loadMultiAddedDates(): MultiAddedDates {
+  return readJson<MultiAddedDates>(MULTI_ADDED_DATES_KEY, {}, isMultiAddedDates);
+}
+
+function saveMultiAddedDates(dates: MultiAddedDates): void {
+  writeJson(MULTI_ADDED_DATES_KEY, dates);
+}
+
+/** When (`word`, `language`) was added to `listName`, as epoch ms — null if never recorded. */
+export function getMultiAddedDate(listName: string, language: string, word: string): number | null {
+  return loadMultiAddedDates()[listName]?.[language]?.[word] ?? null;
+}
+
 export function getMultiListNames(): string[] {
   return Object.keys(loadMultiStore());
 }
@@ -89,6 +115,12 @@ export function addToMultiList(listName: string, word: string, language: string)
   if (!store[listName].some(e => e.word === word && e.language === language)) {
     store[listName].push({ word, language });
     saveMultiStore(store);
+
+    const dates = loadMultiAddedDates();
+    if (!dates[listName]) dates[listName] = {};
+    if (!dates[listName][language]) dates[listName][language] = {};
+    dates[listName][language][word] = Date.now();
+    saveMultiAddedDates(dates);
   }
 }
 
@@ -98,6 +130,14 @@ export function removeFromMultiList(listName: string, word: string, language: st
   store[listName] = store[listName].filter(e => !(e.word === word && e.language === language));
   if (store[listName].length === 0) delete store[listName];
   saveMultiStore(store);
+
+  const dates = loadMultiAddedDates();
+  if (dates[listName]?.[language]) {
+    delete dates[listName][language][word];
+    if (Object.keys(dates[listName][language]).length === 0) delete dates[listName][language];
+    if (Object.keys(dates[listName]).length === 0) delete dates[listName];
+    saveMultiAddedDates(dates);
+  }
 }
 
 export function createMultiList(listName: string): boolean {
@@ -112,12 +152,22 @@ export function deleteMultiList(listName: string): void {
   const store = loadMultiStore();
   delete store[listName];
   saveMultiStore(store);
+
+  const dates = loadMultiAddedDates();
+  if (dates[listName]) { delete dates[listName]; saveMultiAddedDates(dates); }
 }
 
 export function renameMultiList(oldName: string, newName: string): boolean {
   const store = loadMultiStore();
   if (!store[oldName] || store[newName]) return false;
   store[newName] = store[oldName];
+
+  const dates = loadMultiAddedDates();
+  if (dates[oldName]) {
+    dates[newName] = dates[oldName];
+    delete dates[oldName];
+    saveMultiAddedDates(dates);
+  }
   delete store[oldName];
   saveMultiStore(store);
   return true;
@@ -312,6 +362,38 @@ function saveStore(lang: string, store: ListStore): void {
   writeJson(storageKey(lang), store);
 }
 
+// ── Added-date tracking ──────────────────────────────────────────────────────
+//
+// A separate, additive key per language — same reasoning as mastery.ts's own
+// level-scale key: every existing reader of the list store above (getList,
+// isInList, rename/copy/delete) keeps working on plain word arrays,
+// untouched, while this tracks *when* each (list, word) pair was added, for
+// My Lists' own word-detail panel to show. A word added before this shipped
+// simply has no entry — getAddedDate returns null rather than a made-up date.
+
+type AddedDates = Record<string, Record<string, number>>; // listName -> word -> epoch ms
+
+function addedDatesKey(lang: string): string {
+  return ADDED_DATES_PREFIX + lang.toLowerCase();
+}
+
+function isAddedDates(v: unknown): v is AddedDates {
+  return isRecord(v) && Object.values(v).every(isNumberRecord);
+}
+
+function loadAddedDates(lang: string): AddedDates {
+  return readJson<AddedDates>(addedDatesKey(lang), {}, isAddedDates);
+}
+
+function saveAddedDates(lang: string, dates: AddedDates): void {
+  writeJson(addedDatesKey(lang), dates);
+}
+
+/** When `word` was added to `listName`, as epoch ms — null if never recorded. */
+export function getAddedDate(lang: string, listName: string, word: string): number | null {
+  return loadAddedDates(lang)[listName]?.[word] ?? null;
+}
+
 function maybeRunMigration(lang: string): void {
   const newKey = storageKey(lang);
   if (readString(newKey) !== null) return;
@@ -368,6 +450,11 @@ export function addToList(lang: string, listName: string, word: string): void {
     store[listName].push(word);
     saveStore(lang, store);
     refreshCountBadge(lang);
+
+    const dates = loadAddedDates(lang);
+    if (!dates[listName]) dates[listName] = {};
+    dates[listName][word] = Date.now();
+    saveAddedDates(lang, dates);
   }
 }
 
@@ -378,6 +465,13 @@ export function removeFromList(lang: string, listName: string, word: string): vo
   if (store[listName].length === 0) delete store[listName];
   saveStore(lang, store);
   refreshCountBadge(lang);
+
+  const dates = loadAddedDates(lang);
+  if (dates[listName]) {
+    delete dates[listName][word];
+    if (Object.keys(dates[listName]).length === 0) delete dates[listName];
+    saveAddedDates(lang, dates);
+  }
 }
 
 export function createList(lang: string, listName: string): boolean {
@@ -393,6 +487,9 @@ export function deleteList(lang: string, listName: string): void {
   delete store[listName];
   saveStore(lang, store);
   refreshCountBadge(lang);
+
+  const dates = loadAddedDates(lang);
+  if (dates[listName]) { delete dates[listName]; saveAddedDates(lang, dates); }
 }
 
 export function renameList(lang: string, oldName: string, newName: string): boolean {
@@ -401,6 +498,13 @@ export function renameList(lang: string, oldName: string, newName: string): bool
   store[newName] = store[oldName];
   delete store[oldName];
   saveStore(lang, store);
+
+  const dates = loadAddedDates(lang);
+  if (dates[oldName]) {
+    dates[newName] = dates[oldName];
+    delete dates[oldName];
+    saveAddedDates(lang, dates);
+  }
   return true;
 }
 

@@ -169,4 +169,17 @@ describe('display helpers', () => {
     expect(buildGlossDisplay(word({ word: 'de', translation: 'of' }))).toBe('of');
     expect(buildGlossDisplay(word({ word: 'de' }))).toBe('de');
   });
+
+  it('buildGlossDisplay annotates only the gloss that has a meaning note', () => {
+    const w = word({
+      pos: 'preposition', glosses: ['of', 'from'],
+      meaningDisambiguators: { from: 'origin' },
+    });
+    expect(buildGlossDisplay(w)).toBe('of / from (origin)');
+  });
+
+  it('buildGlossDisplay leaves glosses unannotated when no note applies', () => {
+    const w = word({ pos: 'preposition', glosses: ['of', 'from'], meaningDisambiguators: {} });
+    expect(buildGlossDisplay(w)).toBe('of / from');
+  });
 });

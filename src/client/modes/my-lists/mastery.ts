@@ -65,8 +65,13 @@ export function markMastered(lang: string, words: Iterable<string>): number {
   migrateMastery(lang);
   const m = getMastered(lang);
   const before = m.size;
-  for (const w of words) m.add(w);
+  const newlyMastered: string[] = [];
+  for (const w of words) {
+    if (!m.has(w)) newlyMastered.push(w);
+    m.add(w);
+  }
   saveMastered(lang, m);
+  if (newlyMastered.length > 0) recordMasteredDates(lang, newlyMastered);
   return m.size - before;
 }
 
@@ -120,6 +125,49 @@ export function setMasteryLevel(lang: string, word: string, level: number): void
   saveMasteryLevels(lang, levels);
 
   const m = getMastered(lang);
-  if (clamped >= MAX_MASTERY_LEVEL) m.add(word); else m.delete(word);
+  if (clamped >= MAX_MASTERY_LEVEL) {
+    if (!m.has(word)) recordMasteredDates(lang, [word]);
+    m.add(word);
+  } else {
+    m.delete(word);
+    clearMasteredDate(lang, word);
+  }
   saveMastered(lang, m);
+}
+
+// ── Mastered-date tracking ───────────────────────────────────────────────────
+//
+// A third, additive key alongside the boolean Set and the 0-4 scale above —
+// same reasoning as both: every existing reader of getMastered()/
+// getMasteryLevel() is untouched, while this records *when* a word first
+// crossed into "Mastered", for My Lists' own word-detail panel to show. A
+// word mastered before this shipped simply has no entry.
+
+function masteryDateKey(lang: string): string {
+  return `vq_mastery_dates_${lang}`;
+}
+
+function getMasteredDates(lang: string): Record<string, number> {
+  return readJson<Record<string, number>>(masteryDateKey(lang), {}, isNumberRecord);
+}
+
+function recordMasteredDates(lang: string, words: readonly string[]): void {
+  const dates = getMasteredDates(lang);
+  const now = Date.now();
+  for (const w of words) if (!(w in dates)) dates[w] = now;
+  writeJson(masteryDateKey(lang), dates);
+}
+
+/** Dropping back below Mastered clears the date — re-achieving it later records a fresh one. */
+function clearMasteredDate(lang: string, word: string): void {
+  const dates = getMasteredDates(lang);
+  if (word in dates) {
+    delete dates[word];
+    writeJson(masteryDateKey(lang), dates);
+  }
+}
+
+/** When `word` first reached Mastered, as epoch ms — null if never recorded. */
+export function getMasteredDate(lang: string, word: string): number | null {
+  return getMasteredDates(lang)[word] ?? null;
 }

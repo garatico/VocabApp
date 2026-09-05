@@ -250,8 +250,26 @@
   gap: 0.25rem;
   font-size: 0.78rem;
   color: var(--text-muted);
+}
+/* `flex: 1 1 180px` only makes sense as a *row* sizing (grow to at least
+   180px wide, alongside its siblings in .mc-form) — scoped here rather than
+   on bare .mc-field because a field appended standalone into a *column*
+   flex parent (Example sentences/Additional senses, below .mc-form) would
+   otherwise apply that same 180px and flex-grow:1 to its *height* instead,
+   stretching the field to fill the column and leaving a huge empty gap
+   under its textarea before whatever comes next. */
+.mc-form > .mc-field {
   flex: 1 1 180px;
   min-width: 140px;
+}
+/* Same `[hidden]`-vs-class-`display` cascade tie as .mc-section-body and
+   friends elsewhere in this file: `display: flex` above wins over the
+   browser's own `[hidden] { display: none }` (same specificity, declared
+   later), so a `.mc-field` hidden via the `hidden` property — the
+   already-edited-words filter row, shown only once there's enough of them
+   to need filtering — rendered anyway instead of disappearing. */
+.mc-field[hidden] {
+  display: none;
 }
 .mc-field-label {
   font-weight: 600;
@@ -274,6 +292,54 @@
   resize: vertical;
   min-height: 3.2rem;
   line-height: 1.4;
+}
+
+/* ── Overridable-note control — shows a word or gloss's own default value,
+   then gates the editable input behind an Override checkbox, so it's never
+   ambiguous whether what's showing is the default or a learner's own edit
+   (see buildOverridableNote in my-content-mode.ts). Shared by the Word
+   disambiguator field (once per word) and each gloss's own meaning
+   disambiguator (once per sense, inline in the Glosses list below) — a flex
+   row that wraps, so it degrades gracefully whether it has a whole .mc-form
+   row's width (word disambiguator) or a narrow slice of a gloss row. ── */
+.mc-disambig-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+}
+/* flex: 1 1 260px rather than .mc-field's own 180px — the default-value
+   text plus the checkbox need more width to stay legible on one line. */
+.mc-disambig-field {
+  flex: 1 1 260px;
+}
+.mc-disambig-default {
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.mc-disambig-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mc-disambig-checkbox {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.mc-disambig-inline .mc-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.mc-disambig-inline .mc-input {
+  flex: 1 1 140px;
+  min-width: 100px;
 }
 
 /* ── Per-language rows — one per app language, in every add form, so which
@@ -443,14 +509,6 @@
   flex-direction: column;
   gap: 0.6rem;
 }
-/* .mc-field is shared with .mc-form, a *row* flex container where its
-   `flex: 1 1 180px` sizes width. Reused here inside a *column* container
-   (.mc-pic-custom below) that same rule sizes height instead — a field
-   asking to grow to 180px+ tall, and stretching further to fill whatever
-   space is left in the column. */
-.mc-pic-custom > .mc-field {
-  flex: 0 0 auto;
-}
 .mc-word-lang-row {
   display: flex;
   align-items: center;
@@ -465,6 +523,47 @@
 .mc-word-lang-select {
   max-width: 200px;
 }
+
+/* Search box + clear (✕) button, so a query can be dismissed in one click
+   rather than selecting and deleting it by hand. */
+.mc-word-search-row {
+  display: flex;
+  gap: 0.4rem;
+}
+.mc-word-search-row .mc-input {
+  flex: 1;
+  min-width: 0;
+}
+.mc-word-search-clear {
+  flex-shrink: 0;
+  width: 2.1rem;
+  font-size: 0.85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.mc-word-search-clear:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.mc-word-search-clear[hidden] {
+  display: none;
+}
+
+/* "Showing 20 of 143 matches" — only appears once results are actually
+   capped, so refining the search is a hint rather than a permanent fixture. */
+.mc-word-results-count {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.mc-word-results-count[hidden] {
+  display: none;
+}
+
 .mc-word-results {
   list-style: none;
   margin: 0;
@@ -518,6 +617,20 @@
   color: var(--correct);
   flex-shrink: 0;
 }
+/* The result whose word is currently open in the detail panel below —
+   without this, nothing on screen said which of several similar-looking
+   matches you were actually editing. */
+.mc-word-result--active {
+  background: var(--accent-light);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+/* Arrow-key cursor, independent of --active (you can arrow past results
+   without opening each one) — a visible ring rather than a fill, so it
+   never gets confused with the "currently open" highlight above. */
+.mc-word-result--kbd-focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
 
 /* ── Detail panel for the currently-selected word — shared shell for both
    Pictures and Gloss Order; the content inside it (.mc-pic-options vs
@@ -531,10 +644,45 @@
   border-radius: var(--radius);
   background: var(--surface2);
 }
+/* Clickable/collapsible, like every section header elsewhere in this tab
+   (see .mc-section-header) — toggles .mc-word-detail-body's `hidden`
+   without rebuilding it, so collapsing a word never loses anything typed
+   into its form. */
 .mc-word-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+.mc-word-detail-header:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.mc-word-detail-chevron {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+.mc-word-detail--collapsed .mc-word-detail-chevron {
+  transform: rotate(-90deg);
+}
+/* The form/glosses/buttons below the header — a flex column of its own so
+   the 0.7rem gap that used to come from .mc-word-detail's own flex (back
+   when these were its direct children) still applies between them. */
+.mc-word-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+/* Same `[hidden]`-vs-class-`display` cascade tie as .mc-word-detail and
+   friends above. */
+.mc-word-detail-body[hidden] {
+  display: none;
 }
 .mc-pic-options {
   display: flex;
@@ -621,6 +769,16 @@
   border-radius: var(--radius-sm);
   background: var(--surface);
 }
+/* Position among this word's senses (see my-content-mode.ts) — a quiet
+   label, not a badge that competes with the gloss text for attention. */
+.mc-gloss-rank {
+  flex-shrink: 0;
+  width: 1.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: right;
+}
 /* Unchecking hides the gloss from every quiz mode (see setGlossHidden) —
    struck through and dimmed here so a hidden gloss still reads as present,
    just turned off, rather than looking like the checkbox failed to apply. */
@@ -643,6 +801,20 @@
   font-size: 0.88rem;
   color: var(--text);
   overflow-wrap: anywhere;
+}
+/* Per-sense meaning disambiguator — a compact .mc-disambig-inline (see
+   above), independent of the word disambiguator field up in .mc-form. Sized
+   down from that one's own defaults since it sits inline in a gloss row
+   rather than owning a whole form-field's width. */
+.mc-gloss-note-field {
+  flex: 1 1 220px;
+  font-size: 0.74rem;
+  gap: 0.3rem 0.5rem;
+}
+.mc-gloss-note-field .mc-input {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.5rem;
+  flex-basis: 100px;
 }
 .mc-gloss-item-controls {
   display: flex;
@@ -765,4 +937,7 @@
   .mc-lang-row { flex-wrap: wrap; }
   .mc-lang-row-label { flex: 1 1 100%; }
   .mc-lang-row-inputs { flex-direction: column; }
+  .mc-gloss-item { flex-wrap: wrap; }
+  .mc-gloss-note-field { flex: 1 1 100%; order: 1; }
+  .mc-gloss-item-controls { order: 2; }
 }

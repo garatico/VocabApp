@@ -32,7 +32,7 @@ function entry(overrides: Partial<VocabEntry> = {}): VocabEntry {
   return {
     word: 'casa', translation: 'house', pos: 'noun', rank: 10, band: 'A1',
     glosses: [], examples: [], domains: ['home'], ipa: null, audioUrl: null,
-    disambiguator: null, meaningDisambiguator: null,
+    disambiguator: null, meaningDisambiguators: null, conjugations: null,
     ...overrides,
   };
 }

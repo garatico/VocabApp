@@ -53,8 +53,10 @@ export interface UserWord {
   /** See Word.disambiguator in types.ts — same cosmetic parenthetical, just
    *  authored directly since a custom word has no server row to override. */
   disambiguator: string;
-  /** See Word.meaningDisambiguator in types.ts — the meaning-side counterpart. */
-  meaningDisambiguator: string;
+  /** See Word.meaningDisambiguators in types.ts — the meaning-side
+   *  counterpart, keyed by gloss text (`translation`, or one of
+   *  `extraGlosses`) — same reasoning as WordOverride.meaningDisambiguators. */
+  meaningDisambiguators: Record<string, string>;
 }
 
 function isUserWord(v: unknown): v is UserWord {
@@ -79,7 +81,7 @@ function normalizeUserWord(w: UserWord): UserWord {
     pos: w.pos ?? null,
     extraGlosses: Array.isArray(w.extraGlosses) ? w.extraGlosses : [],
     disambiguator: typeof w.disambiguator === 'string' ? w.disambiguator : '',
-    meaningDisambiguator: typeof w.meaningDisambiguator === 'string' ? w.meaningDisambiguator : '',
+    meaningDisambiguators: isStringRecord(w.meaningDisambiguators) ? w.meaningDisambiguators : {},
     domains: Array.isArray(w.domains) ? w.domains : [],
     notes: typeof w.notes === 'string' ? w.notes : '',
     examples: Array.isArray(w.examples) ? w.examples : [],
@@ -123,7 +125,7 @@ export function toWord(uw: UserWord): Word {
     svg_url:     null,
     emoji:       null,
     disambiguator: uw.disambiguator || undefined,
-    meaningDisambiguator: uw.meaningDisambiguator || undefined,
+    meaningDisambiguators: Object.keys(uw.meaningDisambiguators).length ? uw.meaningDisambiguators : undefined,
     linguistic:  null,
     frequency:   null,
     domains:     uw.domains,
@@ -322,9 +324,16 @@ export interface WordOverride {
   /** See Word.disambiguator in types.ts. Overrides (or, for a custom word
    *  authors) the cosmetic sense annotation shown next to the word. */
   disambiguator?: string;
-  /** See Word.meaningDisambiguator in types.ts — the meaning-side counterpart,
-   *  independent of disambiguator above. */
-  meaningDisambiguator?: string;
+  /**
+   * See Word.meaningDisambiguators in types.ts — the meaning-side
+   * counterpart, independent of disambiguator above. Keyed by gloss text,
+   * same convention as hiddenGlosses/glossOrder: a key absent here means "no
+   * override for this sense," inheriting whatever note the word itself
+   * already carries (always none, for a real word) rather than clearing it —
+   * see applyWordOverride, which merges rather than replaces this map. A
+   * learner only ever writes an entry for the senses that actually need one.
+   */
+  meaningDisambiguators?: Record<string, string>;
 }
 
 function wordOverrideKey(lang: string): string { return `${P}wordoverride_${lang.toLowerCase()}`; }
@@ -390,11 +399,11 @@ function mergeWordOverride(lang: string, word: string, patch: Partial<WordOverri
 export function setWordFields(
   lang: string, word: string,
   fields: Pick<WordOverride,
-    'translation' | 'pos' | 'notes' | 'domains' | 'examples' | 'difficulty' | 'tags' | 'synonyms' | 'antonyms' | 'disambiguator' | 'meaningDisambiguator'>,
+    'translation' | 'pos' | 'notes' | 'domains' | 'examples' | 'difficulty' | 'tags' | 'synonyms' | 'antonyms' | 'disambiguator'>,
 ): void {
   const current = getWordOverride(lang, word) ?? {};
   const next: WordOverride = { ...current, ...fields };
-  (['translation', 'pos', 'notes', 'domains', 'examples', 'difficulty', 'tags', 'synonyms', 'antonyms', 'disambiguator', 'meaningDisambiguator'] as const)
+  (['translation', 'pos', 'notes', 'domains', 'examples', 'difficulty', 'tags', 'synonyms', 'antonyms', 'disambiguator'] as const)
     .forEach(k => {
       if (!(k in fields)) delete next[k];
     });
@@ -410,6 +419,21 @@ export function setGlossHidden(lang: string, word: string, gloss: string, hidden
 
 export function setGlossOrderOverride(lang: string, word: string, order: string[]): void {
   mergeWordOverride(lang, word, { glossOrder: order });
+}
+
+/**
+ * Sets (or, if blanked out, clears) one gloss's meaning-disambiguator note —
+ * independent of every other gloss's, so a learner only ever has to
+ * annotate the senses that actually need one. Clearing an entry here means
+ * "no override for this sense," not "no note at all": applyWordOverride
+ * merges this map with the word's own (always empty, for a real word), so a
+ * custom word's own authored note for a gloss still shows through.
+ */
+export function setGlossMeaningNote(lang: string, word: string, gloss: string, note: string): void {
+  const current = { ...(getWordOverride(lang, word)?.meaningDisambiguators ?? {}) };
+  const trimmed = note.trim();
+  if (trimmed) current[gloss] = trimmed; else delete current[gloss];
+  mergeWordOverride(lang, word, { meaningDisambiguators: current });
 }
 
 /** Adds a brand-new sense to a word's gloss list. Silently ignored if blank
@@ -461,6 +485,13 @@ export function applyWordOverride(lang: string, w: Word): Word {
   const visible = o.hiddenGlosses?.length ? withAdded.filter(g => !o.hiddenGlosses!.includes(g)) : withAdded;
   const synonyms = o.synonyms ?? w.relations?.synonyms;
   const antonyms = o.antonyms ?? w.relations?.antonyms;
+  // Merged rather than replaced: a gloss the override doesn't mention keeps
+  // whatever note the word itself already carries (always none, for a real
+  // word — but a custom UserWord's own authored note survives an override
+  // that only touches a *different* gloss). See setGlossMeaningNote.
+  const meaningDisambiguators = (w.meaningDisambiguators || o.meaningDisambiguators)
+    ? { ...w.meaningDisambiguators, ...o.meaningDisambiguators }
+    : undefined;
   return {
     ...w,
     translation: o.translation ?? w.translation,
@@ -473,7 +504,7 @@ export function applyWordOverride(lang: string, w: Word): Word {
     tags:        o.tags ?? w.tags,
     relations:   (synonyms?.length || antonyms?.length) ? { synonyms, antonyms } : w.relations,
     disambiguator: o.disambiguator ?? w.disambiguator,
-    meaningDisambiguator: o.meaningDisambiguator ?? w.meaningDisambiguator,
+    meaningDisambiguators,
   };
 }
 

@@ -28,8 +28,16 @@ export interface VocabEntry {
   audioUrl:    string | null;
   /** See Word.disambiguator in ../../types.ts. */
   disambiguator: string | null;
-  /** See Word.meaningDisambiguator in ../../types.ts. */
-  meaningDisambiguator: string | null;
+  /** See Word.meaningDisambiguators in ../../types.ts. */
+  meaningDisambiguators: Record<string, string> | null;
+  /**
+   * See WordLinguistic.conjugations in ../../types.ts — carried through
+   * (unlike the rest of `linguistic`, which this type deliberately drops)
+   * so a verb row can show its full conjugation table without a second
+   * fetch; already present in the same API payload fetchVocab reads,
+   * just discarded before now. Only ever non-null for verbs.
+   */
+  conjugations: Record<string, string[] | string> | null;
 }
 
 export type SortMode =

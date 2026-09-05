@@ -19,6 +19,18 @@
 import type { SortMode } from './types.ts';
 import type { FilterScope } from '../../filters/filter-scope.ts';
 
+/**
+ * Reserved sentinel for `selectedList` meaning "Browse All Words" is open,
+ * not any real list — chosen so it can never collide with a name a learner
+ * could actually type (list names come from free text; this can't, since it
+ * carries a NUL either side). Lets the browse view slot into the exact same
+ * selectedList/selectedSmart/selectedMultiList/selectedProfile mutual-
+ * exclusivity every existing "switch to X" click handler already
+ * maintains — see sidebar.ts's renderBrowseNav — rather than adding a fifth
+ * field every one of those handlers would also have to remember to clear.
+ */
+export const BROWSE_ALL_LIST = '\u0000browse-all\u0000';
+
 export interface ListsCtx {
   // ── Selection state ────────────────────────────────────────────────────────
   /** The language whose lists are shown. Owned by the sidebar's picker. */

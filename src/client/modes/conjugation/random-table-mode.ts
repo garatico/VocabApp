@@ -252,7 +252,7 @@ export function renderConjRandomTable({
 
     const verbTd = document.createElement('td');
     verbTd.className = 'crt-verb';
-    verbTd.textContent = displayWord(item.verb);
+    verbTd.textContent = displayWord(item.verb, Settings.getShowDisambiguator());
 
     const tenseTd = document.createElement('td');
     tenseTd.className = 'crt-tense';

@@ -92,7 +92,37 @@ export function applyConjDeselectedClass(grid: Element | null, mode: ConjDeselec
 export const Settings = {
   // ── Table ──────────────────────────────────────────────────────────────────
   getTableCols: (): number    => Math.max(1, Math.min(5, Number(get('table_cols', '2')))),
-  getHintMode:  (): HintMode  => get('hint_mode',  'full')  as HintMode,
+
+  /**
+   * Table mode's Hint and Reveal buttons, split apart and independently
+   * switchable — a learner can have either, both, or neither. Hint always
+   * gives just the first letter (a fuller hint system is planned separately
+   * — see table-mode.ts); Reveal fills in the full answer and counts it as
+   * missed. Both used to be one button whose behavior was chosen by the
+   * now-Conjugation-only hint_mode below, so an existing user's prior choice
+   * becomes each of these two toggles' starting default rather than
+   * silently resetting — first-letter mode had both capabilities, full mode
+   * had only Reveal, none had neither.
+   */
+  getShowHintButton: (): boolean => {
+    const v = readString(P + 'table_hint_button');
+    return v !== null ? v === 'true' : get('hint_mode', 'full') === 'first-letter';
+  },
+  getShowRevealButton: (): boolean => {
+    const v = readString(P + 'table_reveal_button');
+    return v !== null ? v === 'true' : get('hint_mode', 'full') !== 'none';
+  },
+
+  /**
+   * Conjugation mode's own hint/reveal setting — still the original 3-way
+   * choice (unlike Table mode's two independent toggles above), since its
+   * reveal buttons work per-slot in a grid rather than per-row and weren't
+   * part of this split. Storage key moved off the shared hint_mode so it can
+   * keep evolving separately from Table's; an existing user's old shared
+   * choice is this setting's starting default the first time it's read.
+   */
+  getConjHintMode: (): HintMode =>
+    (readString(P + 'conj_hint_mode') ?? get('hint_mode', 'full')) as HintMode,
 
   /**
    * How many English senses buildGlossDisplay() joins with " / " before
@@ -162,6 +192,16 @@ export const Settings = {
 
   /** The list star and "missed before" count badge, across every Table quiz style. */
   getTableShowWordMarkers: (): boolean => get('table_show_word_markers', 'true') === 'true',
+
+  /**
+   * The "(permanent)"-style sense clarifier appended after a word that has
+   * one — see utils.ts's displayWord(). On by default, since that's what
+   * every session already saw before this setting existed. Threaded through
+   * as a parameter everywhere displayWord() is called, same as
+   * getChineseDisplay(), rather than read inside displayWord() itself, so
+   * that function stays pure and testable.
+   */
+  getShowDisambiguator: (): boolean => get('show_disambiguator', 'true') === 'true',
 
   // ── All quizzes ────────────────────────────────────────────────────────────
   getMatchMode: (): MatchMode => get('match_mode', 'fuzzy') as MatchMode,
@@ -373,6 +413,17 @@ export const Settings = {
     const match = info.flagOptions.find(o => o.country === saved);
     return match ? match.country : info.flagCountry;
   },
+
+  /** A per-tense hue override (0-360), or null to use conjugation.css's default. */
+  getTenseHue: (key: string): number | null => {
+    const v = readString(P + 'tense_hue_' + key);
+    return v === null ? null : Number(v);
+  },
+  /** A per-pronoun-slot (0-5) hue override, or null to use the default. */
+  getPersonHue: (i: number): number | null => {
+    const v = readString(P + 'person_hue_' + i);
+    return v === null ? null : Number(v);
+  },
 };
 
 // ── Language color application ────────────────────────────────────────────────
@@ -390,6 +441,60 @@ export function applyLangColors(): void {
     } else {
       document.documentElement.style.removeProperty(lang.colorVar);
     }
+  }
+}
+
+// ── Conjugation tense/person color application ────────────────────────────────
+
+/**
+ * Every tense conjugation.css assigns a hue to, alongside the default hue
+ * itself — kept here (not read out of TENSE_DEFS) because TENSE_DEFS' own
+ * labels are per-language display strings ("Preterito Indefinido"), not
+ * generic English names suited to one settings row shown regardless of
+ * which language is active.
+ */
+const TENSE_COLOR_DEFS: readonly [key: string, label: string, defaultHue: number][] = [
+  ['present',                  'Present',                    145],
+  ['preterite',                'Preterite',                  210],
+  ['imperfect',                'Imperfect',                  265],
+  ['future',                   'Future',                      25],
+  ['conditional',              'Conditional',                330],
+  ['subjunctive',              'Subjunctive',                190],
+  ['past_participle',          'Past Participle',             45],
+  ['gerund',                   'Gerund',                     285],
+  ['imperative_affirmative',   'Imperative (Affirmative)',   355],
+  ['imperative_negative',      'Imperative (Negative)',      100],
+  ['imperfect_subjunctive',    'Imperfect Subjunctive',      235],
+  ['future_subjunctive',       'Future Subjunctive',          65],
+];
+
+/** Same idea, for the 6 grammatical-person slots (data-pi="0".."5"). */
+const PERSON_COLOR_DEFS: readonly [i: number, label: string, defaultHue: number][] = [
+  [0, '1st Person Singular', 0],
+  [1, '2nd Person Singular', 60],
+  [2, '3rd Person Singular', 120],
+  [3, '1st Person Plural', 180],
+  [4, '2nd Person Plural', 240],
+  [5, '3rd Person Plural', 300],
+];
+
+/**
+ * Apply any saved tense/person hue overrides as inline :root properties —
+ * same mechanism as applyLangColors above, but each override feeds a
+ * --tense-hue-<key>/--pronoun-hue-<i> custom property that conjugation.css's
+ * [data-tense]/[data-pi] rules read through (see that file's own comments),
+ * rather than replacing a single fixed variable.
+ */
+export function applyTenseColors(): void {
+  for (const [key] of TENSE_COLOR_DEFS) {
+    const hue = Settings.getTenseHue(key);
+    if (hue !== null) document.documentElement.style.setProperty('--tense-hue-' + key, String(hue));
+    else document.documentElement.style.removeProperty('--tense-hue-' + key);
+  }
+  for (const [i] of PERSON_COLOR_DEFS) {
+    const hue = Settings.getPersonHue(i);
+    if (hue !== null) document.documentElement.style.setProperty('--pronoun-hue-' + i, String(hue));
+    else document.documentElement.style.removeProperty('--pronoun-hue-' + i);
   }
 }
 
@@ -597,12 +702,26 @@ export function bindSettings(): void {
     if (Number.isFinite(n) && n > 0) set('table_timed_quiz_minutes', String(n));
   });
 
-  // Hint mode
-  document.getElementById('settingHint')?.addEventListener('click', e => {
+  // Table mode: Hint button and Reveal Word button, independently switchable
+  document.getElementById('settingHintButton')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
     if (!btn) return;
-    activateToggle('settingHint', btn);
-    set('hint_mode', btn.dataset.hint ?? 'full');
+    activateToggle('settingHintButton', btn);
+    set('table_hint_button', btn.dataset.enabled ?? 'true');
+  });
+  document.getElementById('settingRevealButton')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingRevealButton', btn);
+    set('table_reveal_button', btn.dataset.enabled ?? 'true');
+  });
+
+  // Conjugation mode's own hint mode (see getConjHintMode)
+  document.getElementById('settingConjHint')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingConjHint', btn);
+    set('conj_hint_mode', btn.dataset.hint ?? 'full');
   });
 
   // Question / answer gloss count
@@ -641,6 +760,14 @@ export function bindSettings(): void {
     if (!btn) return;
     activateToggle('settingTableShowMarkers', btn);
     set('table_show_word_markers', btn.dataset.show ?? 'true');
+  });
+
+  // Sense disambiguator — the "(permanent)"-style clarifier after a word
+  document.getElementById('settingShowDisambiguator')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingShowDisambiguator', btn);
+    set('show_disambiguator', btn.dataset.show ?? 'true');
   });
 
   // Match mode
@@ -869,6 +996,20 @@ export function bindSettings(): void {
 
   buildLangAppearanceRows();
   applyLangColors();
+
+  buildConjColorRows();
+  applyTenseColors();
+  document.getElementById('settingResetTenseColors')?.addEventListener('click', () => {
+    for (const [key] of TENSE_COLOR_DEFS) removeKey(P + 'tense_hue_' + key);
+    applyTenseColors();
+    buildConjColorRows();
+  });
+  document.getElementById('settingResetPersonColors')?.addEventListener('click', () => {
+    for (const [i] of PERSON_COLOR_DEFS) removeKey(P + 'person_hue_' + i);
+    applyTenseColors();
+    buildConjColorRows();
+  });
+
   restoreSettingsUI();
 }
 
@@ -1047,6 +1188,89 @@ function rgbToHex(color: string): string {
   return '#' + [r, g, b].map(n => Number(n).toString(16).padStart(2, '0')).join('');
 }
 
+/**
+ * Tense/person colors store only a hue (0-360) — conjugation.css derives
+ * saturation and lightness itself, varying them by state (hover/active) and
+ * theme, so storing a full color would fight those variations. `<input
+ * type="color">` only speaks full hex, so a swatch is rendered at a fixed,
+ * representative saturation/lightness (45%/45%, matching the un-selected
+ * chip's own hsl() call in conjugation.css) and any hex the user picks is
+ * converted back down to just its hue on input.
+ */
+function hueToHex(hue: number): string {
+  const h = ((hue % 360) + 360) % 360;
+  const s = 0.45, l = 0.45;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = l - c / 2;
+  const [r, g, b] =
+    h < 60  ? [c, x, 0] :
+    h < 120 ? [x, c, 0] :
+    h < 180 ? [0, c, x] :
+    h < 240 ? [0, x, c] :
+    h < 300 ? [x, 0, c] :
+              [c, 0, x];
+  const toHex = (v: number) => Math.round((v + m) * 255).toString(16).padStart(2, '0');
+  return '#' + toHex(r) + toHex(g) + toHex(b);
+}
+
+function hexToHue(hex: string): number {
+  const m = hex.trim().match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+  if (!m) return 0;
+  const [r, g, b] = [m[1], m[2], m[3]].map(h => parseInt(h, 16) / 255);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  if (max === min) return 0;
+  const d = max - min;
+  let h: number;
+  if (max === r)      h = ((g - b) / d) % 6;
+  else if (max === g) h = (b - r) / d + 2;
+  else                h = (r - g) / d + 4;
+  h *= 60;
+  return Math.round(h < 0 ? h + 360 : h);
+}
+
+/**
+ * One row per tense (or per pronoun slot) — a label and a color swatch —
+ * built from TENSE_COLOR_DEFS/PERSON_COLOR_DEFS rather than hand-written,
+ * same reasoning as buildLangAppearanceRows above.
+ */
+function buildConjColorRows(): void {
+  const tenseList = document.getElementById('settingTenseColors');
+  if (tenseList) {
+    tenseList.innerHTML = '';
+    for (const [key, label, defaultHue] of TENSE_COLOR_DEFS) {
+      tenseList.appendChild(buildColorSwatchRow(
+        label, Settings.getTenseHue(key) ?? defaultHue,
+        hue => { set('tense_hue_' + key, String(hue)); applyTenseColors(); },
+      ));
+    }
+  }
+  const personList = document.getElementById('settingPersonColors');
+  if (personList) {
+    personList.innerHTML = '';
+    for (const [i, label, defaultHue] of PERSON_COLOR_DEFS) {
+      personList.appendChild(buildColorSwatchRow(
+        label, Settings.getPersonHue(i) ?? defaultHue,
+        hue => { set('person_hue_' + i, String(hue)); applyTenseColors(); },
+      ));
+    }
+  }
+}
+
+function buildColorSwatchRow(label: string, currentHue: number, onPick: (hue: number) => void): HTMLElement {
+  const row = document.createElement('label');
+  row.className = 'conj-color-row';
+  const name = document.createElement('span');
+  name.className   = 'conj-color-name';
+  name.textContent = label;
+  const input = document.createElement('input');
+  input.type  = 'color';
+  input.value = hueToHex(currentHue);
+  input.addEventListener('input', () => onPick(hexToHue(input.value)));
+  row.append(name, input);
+  return row;
+}
+
 function restoreSettingsUI(): void {
   // Theme
   const savedTheme = readString('theme') ?? 'system';
@@ -1107,10 +1331,20 @@ function restoreSettingsUI(): void {
     timedMinutesInput.value  = get('table_timed_quiz_minutes', '10');
   }
 
-  // Hint
-  const savedHint = get('hint_mode', 'full');
-  document.querySelectorAll<HTMLElement>('#settingHint .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.hint === savedHint);
+  // Table mode: Hint button / Reveal Word button
+  const savedHintBtn = String(Settings.getShowHintButton());
+  document.querySelectorAll<HTMLElement>('#settingHintButton .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedHintBtn);
+  });
+  const savedRevealBtn = String(Settings.getShowRevealButton());
+  document.querySelectorAll<HTMLElement>('#settingRevealButton .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedRevealBtn);
+  });
+
+  // Conjugation mode's own hint mode
+  const savedConjHint = Settings.getConjHintMode();
+  document.querySelectorAll<HTMLElement>('#settingConjHint .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.hint === savedConjHint);
   });
 
   // Question / answer gloss count
@@ -1133,6 +1367,10 @@ function restoreSettingsUI(): void {
   const savedShowMarkers = get('table_show_word_markers', 'true');
   document.querySelectorAll<HTMLElement>('#settingTableShowMarkers .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.show === savedShowMarkers);
+  });
+  const savedShowDisambiguator = get('show_disambiguator', 'true');
+  document.querySelectorAll<HTMLElement>('#settingShowDisambiguator .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedShowDisambiguator);
   });
 
   // Match

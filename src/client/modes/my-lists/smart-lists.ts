@@ -41,11 +41,19 @@ export interface SmartRule {
   meaningContains: string;
   limit:    number;                 // 0 = no cap
   sort:     'rank' | 'alpha';
+  /**
+   * Words pinned into the result regardless of whether the rule above would
+   * otherwise select them — the escape hatch for "this one specific word
+   * too", without loosening the filter for everything else. Added after the
+   * limit/sort so they can never be pushed out by `limit`.
+   */
+  manualWords: string[];
 }
 
 export const DEFAULT_SMART_RULE: SmartRule = {
   bands: [], pos: [], domains: [], mastered: 'no', listed: 'no', due: 'any',
   wordStartsWith: '', meaningContains: '', limit: 100, sort: 'rank',
+  manualWords: [],
 };
 
 import { readJson, writeJson, isRecord } from '../../utils/storage.ts';
@@ -126,5 +134,12 @@ export function evaluateSmart(lang: string, rule: SmartRule, vocab: VocabEntry[]
     : out.sort((a, b) => (a.rank ?? 9999) - (b.rank ?? 9999));
 
   const words = out.map(e => e.word);
-  return rule.limit > 0 ? words.slice(0, rule.limit) : words;
+  const limited = rule.limit > 0 ? words.slice(0, rule.limit) : words;
+
+  // Manually pinned words join the result after the limit is applied, so a
+  // narrow "Top 25" rule can't silently drop one the user explicitly added.
+  const already = new Set(limited);
+  const validWords = new Set(vocab.map(e => e.word));
+  const manual = rule.manualWords.filter(w => validWords.has(w) && !already.has(w));
+  return manual.length ? [...limited, ...manual] : limited;
 }

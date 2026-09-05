@@ -27,6 +27,7 @@ const {
   getPictureOverrides, getPictureOverride, setPictureOverride, removePictureOverride, isImageOverride,
   getWordOverride, getWordOverrides, setWordFields, setGlossHidden, setGlossOrderOverride,
   addGlossOverride, removeAddedGloss, removeWordOverride, applyGlossOrder, applyWordOverride,
+  setGlossMeaningNote,
   applyUserContentImport,
 } = await import('../../src/client/data/user-content.js');
 
@@ -37,7 +38,7 @@ function lang(): string { return `lang${n++}`; }
 const baseWord = {
   word: 'perro', translation: 'dog', extraGlosses: [], pos: 'noun',
   domains: [], notes: '', examples: [], difficulty: null, tags: [],
-  synonyms: [], antonyms: [], disambiguator: '', meaningDisambiguator: '',
+  synonyms: [], antonyms: [], disambiguator: '', meaningDisambiguators: {},
 };
 
 beforeEach(() => store.clear());
@@ -73,7 +74,7 @@ describe('user words', () => {
       id: 'w-1', word: 'perro', translation: 'dog',
       extraGlosses: [], pos: null, domains: [], notes: '', examples: [],
       difficulty: null, tags: [], synonyms: [], antonyms: [],
-      disambiguator: '', meaningDisambiguator: '',
+      disambiguator: '', meaningDisambiguators: {},
     }]);
   });
 
@@ -99,10 +100,15 @@ describe('toWord', () => {
     expect(toWord(baseWord).rank).toBe(0);
   });
 
-  it('turns empty disambiguators into undefined, not empty strings', () => {
+  it('turns empty disambiguators into undefined, not empty strings/objects', () => {
     const w = toWord(baseWord);
     expect(w.disambiguator).toBeUndefined();
-    expect(w.meaningDisambiguator).toBeUndefined();
+    expect(w.meaningDisambiguators).toBeUndefined();
+  });
+
+  it('carries a non-empty meaningDisambiguators map through', () => {
+    const w = toWord({ ...baseWord, meaningDisambiguators: { dog: 'canine' } });
+    expect(w.meaningDisambiguators).toEqual({ dog: 'canine' });
   });
 
   it('omits relations entirely when there are no synonyms or antonyms', () => {
@@ -261,6 +267,21 @@ describe('word overrides', () => {
     expect(getWordOverride(l, 'perro')?.addedGlosses).toEqual(['pooch']);
   });
 
+  it('setGlossMeaningNote sets one gloss\'s note without disturbing another\'s', () => {
+    const l = lang();
+    setGlossMeaningNote(l, 'perro', 'dog', 'generic');
+    setGlossMeaningNote(l, 'perro', 'canine', 'formal');
+    expect(getWordOverride(l, 'perro')?.meaningDisambiguators).toEqual({ dog: 'generic', canine: 'formal' });
+  });
+
+  it('setGlossMeaningNote clears a note by blanking it, leaving others intact', () => {
+    const l = lang();
+    setGlossMeaningNote(l, 'perro', 'dog', 'generic');
+    setGlossMeaningNote(l, 'perro', 'canine', 'formal');
+    setGlossMeaningNote(l, 'perro', 'dog', '   ');
+    expect(getWordOverride(l, 'perro')?.meaningDisambiguators).toEqual({ canine: 'formal' });
+  });
+
   it('removeWordOverride clears the whole entry', () => {
     const l = lang();
     setWordFields(l, 'perro', { translation: 'doggo' });
@@ -348,6 +369,22 @@ describe('applyWordOverride', () => {
     const l = lang();
     setWordFields(l, 'perro', { synonyms: ['can'] });
     expect(applyWordOverride(l, word).relations).toEqual({ synonyms: ['can'], antonyms: undefined });
+  });
+
+  it('merges per-gloss meaning notes rather than replacing the whole map', () => {
+    const l = lang();
+    const wordWithNote = { ...word, meaningDisambiguators: { dog: 'generic' } };
+    setGlossMeaningNote(l, 'perro', 'canine', 'formal');
+    // 'dog' keeps the word's own note; 'canine' gets the override's — neither
+    // side had to repeat what the other already said.
+    expect(applyWordOverride(l, wordWithNote).meaningDisambiguators).toEqual({ dog: 'generic', canine: 'formal' });
+  });
+
+  it('an override note for a gloss replaces the word\'s own note for it', () => {
+    const l = lang();
+    const wordWithNote = { ...word, meaningDisambiguators: { dog: 'generic' } };
+    setGlossMeaningNote(l, 'perro', 'dog', 'overridden');
+    expect(applyWordOverride(l, wordWithNote).meaningDisambiguators).toEqual({ dog: 'overridden' });
   });
 });
 

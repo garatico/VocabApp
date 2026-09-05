@@ -196,12 +196,26 @@
   font-size: 1.55rem;
   text-align: center;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 24px;
   color: var(--accent);
   letter-spacing: -0.025em;
   line-height: 1.25;
+}
+
+/* Sense clarifier, e.g. "be (permanent)" — this cell only ever carries one
+   when it's the *given* side (the prompt, nothing left to guess about it),
+   so it sits on its own line under the word rather than crowding the same
+   line — a footnote, not part of the word. */
+#tableWrap .spanish-word .word-disambiguator {
+  font-weight: 500;
+  font-size: 0.5em;
+  letter-spacing: normal;
+  color: var(--text-muted);
+  opacity: 0.75;
+  margin-top: 2px;
 }
 
 #tableWrap td:has(.spanish-word),
@@ -332,6 +346,19 @@
   opacity: 1;
   border-color: var(--text-muted);
   background: var(--surface2);
+}
+
+/* Hint is spent after one use (see table-mode.ts) rather than hidden
+   outright — a dimmed, inert button still shows a hint was already taken,
+   where removing it would read as "no hint was ever offered here". */
+.hint-btn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+.hint-btn:disabled:hover {
+  opacity: 0.2;
+  border-color: var(--border-strong);
+  background: transparent;
 }
 
 /* Auto-hide once the input is answered */

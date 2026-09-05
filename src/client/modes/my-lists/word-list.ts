@@ -20,7 +20,7 @@
 
 import { foldKey as norm } from '../../utils/match.ts';
 import {
-  getList, getListNames, addToList, removeFromList,
+  getList, getListNames, addToList, removeFromList, getAddedDate,
 } from '../../utils/word-lists.ts';
 import type { ListsCtx } from './context.ts';
 import { cachedVocabMap } from './vocab-cache.ts';
@@ -30,8 +30,9 @@ import { showUndo } from './undo-toast.ts';
 import {
   POS_ABBREV, POS_CHIPS, WORD_CHUNK, type VocabEntry,
 } from './types.ts';
-import { buildMasteryControls, appendCountChip, appendMasteredChip } from './row-shared.ts';
+import { buildMasteryControls, appendCountChip, appendMasteredChip, buildWordDetail } from './row-shared.ts';
 import { buildAudioButton } from '../../ui/audio-play-button.ts';
+import { fillHighlighted } from '../../utils/dom.ts';
 
 export interface WordListDeps {
   /** Read at render time so the toolbar owns the text and this module doesn't. */
@@ -416,9 +417,13 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
       syncBulkBar();
     });
 
+    // Word/meaning disambiguators used to be appended straight onto this
+    // text ("gato (cat)") — moved into the expanded detail below instead
+    // (see row-shared.ts's buildWordDetail), since that widened the column
+    // unpredictably from row to row and fought the row's own alignment.
     const wordSpan = document.createElement('span');
     wordSpan.className = 'ml-word-text';
-    wordSpan.textContent = entry?.disambiguator ? `${word} (${entry.disambiguator})` : word;
+    fillHighlighted(wordSpan, word, filterInput.value);
 
     const audioBtn = buildAudioButton(entry?.audioUrl);
 
@@ -429,9 +434,7 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
 
     const transSpan = document.createElement('span');
     transSpan.className = 'ml-word-trans';
-    transSpan.textContent = entry?.translation
-      ? (entry.meaningDisambiguator ? `${entry.translation} (${entry.meaningDisambiguator})` : entry.translation)
-      : '';
+    if (entry?.translation) fillHighlighted(transSpan, entry.translation, filterInput.value);
 
     const rankBadge = document.createElement('span');
     rankBadge.className = 'ml-word-rank';
@@ -498,33 +501,10 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     li.appendChild(rankBadge); li.appendChild(transSpan); li.appendChild(actionsDiv);
 
     // ── Preview row (collapsed unless expanded) ──────────────────────────────
-    const detail = document.createElement('div');
-    detail.className = 'ml-word-detail';
-
-    if (word === ctx.expandedWord && entry) {
-      if (entry.glosses.length > 1) {
-        const gl = document.createElement('span');
-        gl.className = 'ml-detail-glosses';
-        gl.textContent = entry.glosses.join(', ');
-        detail.appendChild(gl);
-      }
-      if (entry.ipa) {
-        const ipa = document.createElement('span');
-        ipa.className = 'ml-detail-ipa'; ipa.textContent = '/' + entry.ipa + '/';
-        detail.appendChild(ipa);
-      }
-      if (entry.examples.length > 0) {
-        const ex = document.createElement('span');
-        ex.className = 'ml-detail-example'; ex.textContent = entry.examples[0];
-        detail.appendChild(ex);
-      }
-      if (detail.children.length === 0) {
-        const none = document.createElement('span');
-        none.className = 'ml-detail-none'; none.textContent = 'No additional details.';
-        detail.appendChild(none);
-      }
-    }
-
+    const detail = (word === ctx.expandedWord && entry)
+      ? buildWordDetail(entry, ctx.lang, getAddedDate(ctx.lang, ctx.selectedList, word))
+      : document.createElement('div');
+    detail.classList.add('ml-word-detail');
     li.appendChild(detail);
 
     // Toggle preview on row click (but not on action buttons)

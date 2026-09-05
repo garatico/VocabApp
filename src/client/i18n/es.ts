@@ -199,6 +199,8 @@ export const es: Record<string, string> = {
   'settings.table.answerGlossesDesc':    'Cuántos significados en inglés se muestran en el cuadro de respuesta cuando una palabra tiene varios',
   'settings.table.cols':                 'Columnas por defecto',
   'settings.table.colsDesc':             'Pares de palabras por fila al iniciar un quiz de tabla',
+  'settings.table.disambiguator':        'Aclaración de sentido',
+  'settings.table.disambiguatorDesc':    'La aclaración tipo "(permanente)" que se muestra tras una palabra que tiene una, dondequiera que se muestre la palabra',
   'settings.table.expandGloss':          'Mostrar el significado que escribiste',
   'settings.table.expandGlossDesc':      'Si tu respuesta coincide con un significado más allá del límite de Significados de la respuesta (p. ej. "probar" para probar, cuando normalmente solo se mostraría "intentar / catar"), añádelo a la respuesta en vez de ocultarlo.',
   'settings.table.firstLetter':          'Primera letra',

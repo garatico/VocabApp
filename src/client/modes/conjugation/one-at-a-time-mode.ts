@@ -34,7 +34,7 @@ import { readString, writeString } from '../../utils/storage.js';
 import { createStopwatch } from '../../ui/stopwatch.js';
 import { showSummary, clearSummary, summaryChip, percent } from '../../ui/quiz-summary.js';
 import { buildScorePills, scorePct } from '../../ui/score-pills.js';
-import { applyAutofillAttr } from '../../settings.js';
+import { Settings, applyAutofillAttr } from '../../settings.js';
 
 export interface ConjOneAtATimeOptions {
   words:      Word[];
@@ -244,7 +244,7 @@ export function renderConjOneAtATime({
     nextBtn.disabled = i >= queue.length - 1 && results.some(r => r === null);
     giveUpBtn.disabled = finished;
 
-    verbEl.textContent = displayWord(item.verb);
+    verbEl.textContent = displayWord(item.verb, Settings.getShowDisambiguator());
     tenseEl.textContent = item.tenseLabel;
     pronounEl.textContent = item.slot === 'single' ? '' : item.pronoun;
     pronounEl.style.visibility = item.slot === 'single' ? 'hidden' : 'visible';

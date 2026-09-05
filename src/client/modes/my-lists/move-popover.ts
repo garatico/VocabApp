@@ -36,14 +36,22 @@ export function clickedOutsidePopover(target: Node): boolean {
  * capitalization slip silently did nothing, with no error), while the very
  * same action on a single row already had this click-to-pick popover. Bulk
  * now gets the same one.
+ *
+ * @param opts.copyOnly Hides the Move/Copy tabs and fixes the mode to
+ * 'copy' — for a word that isn't a member of any particular list to begin
+ * with (Browse All Words' own rows), where "move" has no source list to
+ * remove the word from and would just be a confusing option to offer.
  */
 export function openMovePopover(
   ctx: ListsCtx, anchorBtn: HTMLElement, words: string[],
   onDone: (mode: 'move' | 'copy', listName: string) => void,
+  opts: { copyOnly?: boolean } = {},
 ): void {
   closePopover();
-  let mode: 'move' | 'copy' = 'move';
-  const otherLists = getListNames(ctx.lang).filter(n => n !== ctx.selectedList);
+  let mode: 'move' | 'copy' = opts.copyOnly ? 'copy' : 'move';
+  const otherLists = opts.copyOnly
+    ? getListNames(ctx.lang)
+    : getListNames(ctx.lang).filter(n => n !== ctx.selectedList);
 
   const popover = document.createElement('div');
   popover.className = 'ml-move-popover';
@@ -58,21 +66,28 @@ export function openMovePopover(
     popover.appendChild(label);
   }
 
-  // Mode tabs
-  const tabs = document.createElement('div');
-  tabs.className = 'ml-move-popover-tabs';
-  (['move', 'copy'] as const).forEach(m => {
-    const tab = document.createElement('button');
-    tab.type = 'button'; tab.className = 'ml-move-tab' + (m === mode ? ' active' : '');
-    tab.textContent = m === 'move' ? '⇥ Move' : '+ Copy';
-    tab.addEventListener('click', () => {
-      mode = m;
-      tabs.querySelectorAll('.ml-move-tab').forEach((t, i) =>
-        t.classList.toggle('active', i === (m === 'move' ? 0 : 1)));
+  if (opts.copyOnly) {
+    const label = document.createElement('div');
+    label.className = 'ml-move-popover-label';
+    label.textContent = 'Add to:';
+    popover.appendChild(label);
+  } else {
+    // Mode tabs
+    const tabs = document.createElement('div');
+    tabs.className = 'ml-move-popover-tabs';
+    (['move', 'copy'] as const).forEach(m => {
+      const tab = document.createElement('button');
+      tab.type = 'button'; tab.className = 'ml-move-tab' + (m === mode ? ' active' : '');
+      tab.textContent = m === 'move' ? '⇥ Move' : '+ Copy';
+      tab.addEventListener('click', () => {
+        mode = m;
+        tabs.querySelectorAll('.ml-move-tab').forEach((t, i) =>
+          t.classList.toggle('active', i === (m === 'move' ? 0 : 1)));
+      });
+      tabs.appendChild(tab);
     });
-    tabs.appendChild(tab);
-  });
-  popover.appendChild(tabs);
+    popover.appendChild(tabs);
+  }
 
   if (otherLists.length === 0) {
     const empty = document.createElement('div');

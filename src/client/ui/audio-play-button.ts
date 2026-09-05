@@ -7,9 +7,15 @@
  * most words don't have audio yet (this starts as a small pilot, not full
  * coverage — see CLAUDE.md), and a button disabled on the vast majority of
  * rows reads as broken, not as "coming soon". Callers just skip appending it.
+ *
+ * Temporarily disabled everywhere (returns null unconditionally) — the
+ * generated pilot audio came out low quality. Flip AUDIO_ENABLED back to
+ * true once better clips are in, rather than reverting every call site.
  */
+const AUDIO_ENABLED = false;
+
 export function buildAudioButton(audioUrl: string | null | undefined): HTMLButtonElement | null {
-  if (!audioUrl) return null;
+  if (!AUDIO_ENABLED || !audioUrl) return null;
 
   const btn = document.createElement('button');
   btn.type = 'button';

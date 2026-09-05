@@ -57,11 +57,12 @@
  * different skin, not a third thing worth its own history bucket.
  */
 import type { Word } from '../types.ts';
-import { matchesAnswer, buildGlossDisplay, chineseWordText } from '../utils/utils.ts';
+import { matchesAnswer, buildGlossDisplay, chineseWordText, displayWord } from '../utils/utils.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker } from '../utils/list-picker.ts';
 import { Settings, applyAutofillAttr } from '../settings.ts';
 import { languageInfo, flagUrl } from '../data/languages.ts';
+import { enableInputWheelScroll } from '../utils/dom.ts';
 import {
   saveSession, recordOutcome, missCount, orderWords, getWordOrderLabels,
   type WordOrder, type WordOrderSortBy,
@@ -162,8 +163,15 @@ export function renderTableRecallMode({
 
   let finished = false;
 
+  /**
+   * The disambiguator clarifies which English sense a word maps to (e.g.
+   * "ser" vs "estar", both "be") — it belongs on the gloss, not the word
+   * itself, which is never ambiguous once correctly spelled. See
+   * paintWordCell below, which deliberately does *not* carry it.
+   */
   function displayTranslation(w: Word): string {
-    return buildGlossDisplay(w, Settings.getAnswerGlossCount());
+    const base = buildGlossDisplay(w, Settings.getAnswerGlossCount());
+    return displayWord({ ...w, word: base }, Settings.getShowDisambiguator());
   }
 
   // ── Layout ───────────────────────────────────────────────────────────────
@@ -302,6 +310,8 @@ export function renderTableRecallMode({
     return btn;
   }
 
+  // No disambiguator here — recalling "estar" correctly needs no further
+  // clarification; see displayTranslation above, which carries it instead.
   function paintWordCell(w: Word, state: AnswerState): void {
     const ref = cellRefs.get(cellKey(w));
     if (!ref) return;
@@ -396,6 +406,7 @@ export function renderTableRecallMode({
         inputEl.tabIndex = -1;
         inputEl.style.pointerEvents = 'none';
         inputEl.placeholder = '···';
+        enableInputWheelScroll(inputEl, inputRowDiv);
         inputRowDiv.appendChild(inputEl);
 
         let transRevealBtn: HTMLButtonElement | null = null;
@@ -536,6 +547,9 @@ export function renderTableRecallMode({
     }
 
     if (matched) {
+      // Confirms the recalled *word*, so no disambiguator here either — same
+      // reasoning as paintWordCell; the row's translation cell is what shows
+      // "be (permanent)" once this match reveals it.
       flash(`✓ ${matched.word}`, 'ok', 800);
       inp.value = '';
       updateProgress();

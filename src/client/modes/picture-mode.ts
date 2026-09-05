@@ -22,6 +22,7 @@ import { matchesAnswer, displayWord } from '../utils/utils.ts';
 import { shuffle           } from '../utils/shuffle.ts';
 import { Settings, applyAutofillAttr } from '../settings.ts';
 import { createStopwatch   } from '../ui/stopwatch.ts';
+import { enableInputWheelScroll } from '../utils/dom.ts';
 import type { Word }        from '../types.ts';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -644,11 +645,12 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
     inp.placeholder = '…';
     inp.dataset.word = word.word;
     applyAutofillAttr(inp);
+    enableInputWheelScroll(inp);
     inp.setAttribute('spellcheck', 'false');
 
     inp.addEventListener('input', () => {
       if (wordIsCorrect(inp.value, word)) {
-        inp.value    = displayWord(word);
+        inp.value    = displayWord(word, Settings.getShowDisambiguator());
         inp.disabled = true;
         card.classList.add('correct');
         inp.classList.add('correct');
@@ -678,7 +680,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
     const typedCorrect = cards.filter(({ inp }) => inp.classList.contains('correct')).length;
     cards.forEach(({ card, inp, word }) => {
       if (!inp.disabled) {
-        inp.value    = displayWord(word);
+        inp.value    = displayWord(word, Settings.getShowDisambiguator());
         inp.disabled = true;
         card.classList.add('revealed');
         inp.classList.add('revealed');
@@ -817,6 +819,7 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
   inp.className   = 'picture-card-input fc-input';
   inp.placeholder = '…';
   applyAutofillAttr(inp);
+  enableInputWheelScroll(inp);
   inp.setAttribute('spellcheck',   'false');
 
   inputWrap.appendChild(inp);
@@ -886,7 +889,7 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
     state.value = inp.value;
     if (wordIsCorrect(inp.value, word)) {
       state.correct = true;
-      state.value   = displayWord(word);
+      state.value   = displayWord(word, Settings.getShowDisambiguator());
       renderCurrent();
       // Auto-advance to next unanswered after a short delay
       const nextUnanswered = (() => {
@@ -927,9 +930,9 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
 
   giveUpBtn.addEventListener('click', () => {
     states.forEach((s, i) => {
-      if (!s.correct) { s.revealed = true; s.value = displayWord(words[i]); }
+      if (!s.correct) { s.revealed = true; s.value = displayWord(words[i], Settings.getShowDisambiguator()); }
     });
-    states[idx].value = displayWord(words[idx]);
+    states[idx].value = displayWord(words[idx], Settings.getShowDisambiguator());
     renderCurrent();
   });
 
@@ -1051,7 +1054,7 @@ function renderClickMode(
     feedback.className   = 'pm-click-feedback';
 
     syncNav();
-    wordEl.textContent  = displayWord(word);
+    wordEl.textContent  = displayWord(word, Settings.getShowDisambiguator());
 
     const distractors = shuffle(decoyPool.filter(w => w.word !== word.word)).slice(0, 3);
     const options     = shuffle([word, ...distractors]);
@@ -1079,7 +1082,7 @@ function renderClickMode(
           syncProgress();
         } else {
           card.classList.add('pm-wrong');
-          feedback.textContent = `✗  That's "${opt.word}" — the answer was "${displayWord(word)}"`;
+          feedback.textContent = `✗  That's "${opt.word}" — the answer was "${displayWord(word, Settings.getShowDisambiguator())}"`;
           feedback.classList.add('bad');
           clickGrid.querySelectorAll<HTMLElement>(`.pm-click-card[data-word="${CSS.escape(word.word)}"]`)
             .forEach(c => c.classList.add('pm-reveal'));
@@ -1105,7 +1108,7 @@ function renderClickMode(
         clickGrid.querySelectorAll<HTMLElement>(
           `.pm-click-card[data-word="${CSS.escape(word.word)}"]`)
           .forEach(c => c.classList.add('pm-reveal'));
-        feedback.textContent = `✗  You picked "${prior.chosen}" — the answer was "${displayWord(word)}"`;
+        feedback.textContent = `✗  You picked "${prior.chosen}" — the answer was "${displayWord(word, Settings.getShowDisambiguator())}"`;
         feedback.classList.add('bad');
       } else {
         feedback.textContent = '✓ Correct!';

@@ -1,6 +1,6 @@
 import type { Word } from '../types.ts';
 import {
-  slotText, slotMatches, extraMatchedGloss, displayWord, DEFAULT_CHINESE_DISPLAY,
+  slotText, slotMatches, extraMatchedGloss, displayWord, glossWithMeaningNote, DEFAULT_CHINESE_DISPLAY,
   type QuizSlot, type ChineseDisplay,
 } from '../utils/utils.ts';
 import { attachTooltips }        from '../utils/word-tooltip.ts';
@@ -9,6 +9,7 @@ import { openListPicker }        from '../utils/list-picker.ts';
 import { Settings, applyAutofillAttr } from '../settings.ts';
 import { missCount }             from '../utils/session-history.ts';
 import { flagUrl }               from '../data/languages.ts';
+import { setWordWithDisambiguator, enableInputWheelScroll } from '../utils/dom.ts';
 
 export type DirectionPair = 'target-en' | 'en-target';
 export type TableDirection = DirectionPair | 'mixed';
@@ -76,11 +77,14 @@ export function revealTextFor(
 ): string {
   const [, answerSlot] = slotsFor(dir);
   const base = slotText(entry, answerSlot, lang, display, Settings.getAnswerGlossCount());
-  // Only the target-word slot carries a disambiguator — appending it here
-  // (once the word is the *answer* being revealed) rather than in slotText
-  // itself keeps it from leaking into an en-target prompt, where the same
-  // slot value is what the learner still has to guess.
-  return answerSlot === 'word' ? displayWord({ ...entry, word: base }) : base;
+  // The disambiguator clarifies which English sense a word maps to (e.g.
+  // "ser" vs "estar", both "be") — so it belongs on the English slot, not
+  // the word slot: the word's own spelling is never ambiguous, only its
+  // shared gloss is. Appending it here (once the gloss is the *answer*
+  // being revealed, target-en direction) rather than in slotText itself
+  // keeps it from leaking into an en-target *prompt*, where labelParts
+  // below is the one that shows it instead (same slot, opposite role).
+  return answerSlot === 'english' ? displayWord({ ...entry, word: base }, Settings.getShowDisambiguator()) : base;
 }
 
 /**
@@ -108,7 +112,8 @@ export function renderTableMode({
   }
 
   const cols      = Math.max(1, Math.min(5, Number(columns) || 3));
-  const hintMode  = Settings.getHintMode();
+  const showHintButton   = Settings.getShowHintButton();
+  const showRevealButton = Settings.getShowRevealButton();
   const matchMode = Settings.getMatchMode();
   const chineseDisplay = Settings.getChineseDisplay();
 
@@ -125,14 +130,22 @@ export function renderTableMode({
     return direction;
   }
 
-  function labelText(entry: Word, dir: DirectionPair): string {
+  /**
+   * The prompt cell's own text, plus whether it's the slot allowed to carry
+   * a disambiguator — split out (rather than folded into one string via
+   * displayWord) so the caller can render the parenthetical in its own,
+   * smaller span instead of plain text. en-target direction hands the
+   * English gloss over as the prompt: with the target word as the thing to
+   * guess, two rows can both prompt with the same bare gloss ("be" for
+   * "ser" and "estar" alike) — the disambiguator is what tells them apart
+   * *before* typing, so it belongs here, not on the word being guessed.
+   * target-en direction never reaches here with promptSlot === 'english'
+   * (the gloss is the answer there instead — see revealTextFor above).
+   */
+  function labelParts(entry: Word, dir: DirectionPair): { text: string; showDisambiguator: boolean } {
     const [promptSlot] = slotsFor(dir);
-    const base = slotText(entry, promptSlot, entry.language ?? lang, chineseDisplay, Settings.getQuestionGlossCount());
-    // target-en direction hands the target word over as the prompt — nothing
-    // left to guess about it, so showing its disambiguator here is a free
-    // clarification, not a hint. en-target direction never reaches here with
-    // promptSlot === 'word' (the target word is the answer there instead).
-    return promptSlot === 'word' ? displayWord({ ...entry, word: base }) : base;
+    const text = slotText(entry, promptSlot, entry.language ?? lang, chineseDisplay, Settings.getQuestionGlossCount());
+    return { text, showDisambiguator: promptSlot === 'english' && Settings.getShowDisambiguator() };
   }
 
   /**
@@ -148,7 +161,7 @@ export function renderTableMode({
     const [, answerSlot] = slotsFor(dir);
     if (answerSlot !== 'english' || !typedInput || !Settings.getExpandGlossOnMatch()) return base;
     const extra = extraMatchedGloss(typedInput, entry, Settings.getAnswerGlossCount(), matchMode);
-    return extra ? `${base} / ${extra}` : base;
+    return extra ? `${base} / ${glossWithMeaningNote(extra, entry)}` : base;
   }
 
   function checkInput(input: string, entry: Word, dir: DirectionPair): boolean {
@@ -291,7 +304,8 @@ export function renderTableMode({
         tdWord.appendChild(rankEl);
 
         const wordDiv = document.createElement('div');
-        wordDiv.textContent = labelText(w, dir);
+        const { text: labelTextValue, showDisambiguator } = labelParts(w, dir);
+        setWordWithDisambiguator(wordDiv, labelTextValue, w.disambiguator, showDisambiguator);
         wordDiv.classList.add('spanish-word');
         wordDiv.dataset.wordJson = JSON.stringify(w);
         // Read by attachTooltips below: in en-target direction the visible
@@ -305,6 +319,7 @@ export function renderTableMode({
         const inp        = document.createElement('input');
         inp.type         = 'text';
         applyAutofillAttr(inp);
+        enableInputWheelScroll(inp);
         inp.dataset.word = w.word;
         // Read back alongside data-word to rebuild the composite rowKey — see
         // rowKey() above. Always set, even outside Compare mode, so callers
@@ -324,11 +339,19 @@ export function renderTableMode({
         // read fresh inside buildKnownBtn, not from the snapshot.
         const knownBtn = buildKnownBtn(w, tdWord);
 
-        // ── Reveal button — behaviour driven by hint mode setting ────────────
+        // ── Hint and Reveal buttons — independent, each only built when its
+        // own setting is on (see Settings.getShowHintButton/getShowRevealButton).
+        // Used to be one button whose behavior depended on a single hint-mode
+        // setting; split apart so a learner can have either, both, or neither. ──
+        const hintBtn = document.createElement('button');
+        hintBtn.type      = 'button';
+        hintBtn.className = 'reveal-btn hint-btn';
+        // Tab should land on the next word's input, not on this button.
+        hintBtn.tabIndex  = -1;
+
         const revealBtn = document.createElement('button');
         revealBtn.type      = 'button';
         revealBtn.className = 'reveal-btn';
-        // Tab should land on the next word's input, not on this button.
         revealBtn.tabIndex  = -1;
 
         // ── Correct answer handler ───────────────────────────────────────────
@@ -396,7 +419,7 @@ export function renderTableMode({
           if (checkAllComplete() && onComplete) { const cb = onComplete; setTimeout(() => cb(), 300); }
         }
 
-        // ── Append input, then hint button based on hintMode ─────────────────
+        // ── Append input, then Hint/Reveal buttons per their own settings ────
         // The row wrapper is a plain div, not the <td> itself: making the cell
         // a flex container would take it out of the table layout and break the
         // fixed column widths.
@@ -405,28 +428,30 @@ export function renderTableMode({
         tdInput.appendChild(inputRow);
         inputRow.appendChild(inp);
 
-        if (hintMode === 'none') {
-          // No hint button
-        } else if (hintMode === 'first-letter') {
-          revealBtn.textContent = '?';
-          revealBtn.title       = 'Show first letter';
-          let hinted = false;
-          revealBtn.addEventListener('click', () => {
-            if (!hinted) {
-              const answer    = revealText(w, dir);
-              inp.value       = answer[0];
-              inp.placeholder = `${answer.length} letters`;
-              inp.focus();
-              hinted = true;
-              revealBtn.textContent = '??';
-              revealBtn.title       = 'Reveal full answer (counts as missed)';
-            } else {
-              doFullReveal();
-            }
+        if (showHintButton) {
+          hintBtn.textContent = '?';
+          hintBtn.title       = 'Show first letter';
+          // First pass at a hint system — just the first letter for now,
+          // with a more complete one planned separately. Disables itself
+          // after one use rather than doing anything more on a second
+          // click: Reveal (its own button, when on) is the only "give the
+          // rest of it" affordance now.
+          hintBtn.addEventListener('click', () => {
+            const answer    = revealText(w, dir);
+            inp.value       = answer[0];
+            inp.placeholder = `${answer.length} letters`;
+            inp.focus();
+            hintBtn.disabled = true;
           });
-          inputRow.appendChild(revealBtn);
-        } else {
-          revealBtn.textContent = '?';
+          inputRow.appendChild(hintBtn);
+        }
+
+        if (showRevealButton) {
+          // '??' rather than '?' — kept from the old two-stage button, where
+          // a single '?' meant "hint available" and '??' meant "next click
+          // reveals everything". Distinguishes it from Hint's own '?' at a
+          // glance now that both can be showing at once.
+          revealBtn.textContent = '??';
           revealBtn.title       = 'Reveal answer (counts as missed)';
           revealBtn.addEventListener('click', doFullReveal);
           inputRow.appendChild(revealBtn);

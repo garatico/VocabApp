@@ -35,7 +35,7 @@ import {
   isImageOverride,
   getWordOverrides, getWordOverride, type WordOverride,
   setWordFields, setGlossHidden, setGlossOrderOverride, removeWordOverride, applyGlossOrder,
-  addGlossOverride, removeAddedGloss,
+  addGlossOverride, removeAddedGloss, setGlossMeaningNote,
   downloadUserContent, applyUserContentImport,
 } from '../data/user-content.ts';
 import type { TriviaQuestion, TriviaCategory, TriviaDifficulty, ReadingDifficulty, ReadingLength, AnswerType } from '../data/trivia-questions.ts';
@@ -46,6 +46,7 @@ import { loadWords, loadRawWords } from '../data/data-loader.ts';
 import { buildLangBadge } from '../ui/lang-badge.ts';
 import { readString, readJson, writeJson, isStringArray } from '../utils/storage.ts';
 import { foldKey } from '../utils/match.ts';
+import { fillHighlighted } from '../utils/dom.ts';
 import type { Word } from '../types.ts';
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -446,7 +447,8 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>,
     field('Domains', domainsI), field('Notes', notesI),
     field('Difficulty (1=easiest, 5=hardest)', difficultyI), field('Tags', tagsI),
     field('Synonyms', synonymsI), field('Antonyms', antonymsI),
-    field('Word disambiguator', disambiguatorI), field('Meaning disambiguator', meaningDisambiguatorI),
+    field('Word disambiguator', disambiguatorI),
+    field('Meaning disambiguator (for the translation above)', meaningDisambiguatorI),
   );
   sub.appendChild(form);
   sub.appendChild(field('Example sentences', examplesI));
@@ -474,7 +476,8 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>,
         tags: csv(tagsI.value), synonyms: csv(synonymsI.value), antonyms: csv(antonymsI.value),
         examples: lines(examplesI.value),
         disambiguator: disambiguatorI.value.trim(),
-        meaningDisambiguator: meaningDisambiguatorI.value.trim(),
+        meaningDisambiguators: meaningDisambiguatorI.value.trim()
+          ? { [transI.value.trim()]: meaningDisambiguatorI.value.trim() } : {},
       });
       added++;
     }
@@ -490,7 +493,7 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>,
     allEntries.forEach(({ info, w }) => list.appendChild(buildWordRow(info, w, refresh)));
   }
   sub.appendChild(list);
-  return buildSubsection('words-add', 'Add a new word',
+  return buildSubsection('words-add', 'Add a New Word',
     'Shows up at the top of Table, Picture Quiz and Conjugation-eligible word lists, right alongside the real vocabulary. Fill in one language, or several at once — e.g. gato for Spanish and chat for French, both meaning "cat".',
     sub);
 }
@@ -528,25 +531,37 @@ function buildEditWordSubsection(currentLang: string): HTMLElement {
   const sub = el('div', 'mc-subsection-fields');
 
   const list = el('div', 'mc-list');
+  // Only shown once there's enough already-edited words that finding one by
+  // eye stops being the fastest way — filtering by the word's own text
+  // across every language at once, since the list below already mixes them.
+  const filterI = textInput('Filter edited words…');
+  const filterRow = field('Filter already-edited words', filterI);
+  filterRow.hidden = true;
+
   function renderOverridesList(): void {
     list.innerHTML = '';
-    const allOverrides = LANGUAGES.flatMap(info =>
+    const raw = LANGUAGES.flatMap(info =>
       Object.entries(getWordOverrides(info.name)).map(([word, override]) => ({ info, word, override })));
-    if (allOverrides.length === 0) {
-      list.appendChild(el('p', 'mc-empty', 'No words edited yet.'));
+    filterRow.hidden = raw.length <= 5;
+    const q = foldKey(filterI.value.trim());
+    const filtered = q ? raw.filter(({ word }) => foldKey(word).includes(q)) : raw;
+    if (filtered.length === 0) {
+      list.appendChild(el('p', 'mc-empty', raw.length === 0 ? 'No words edited yet.' : 'No edited words match that filter.'));
     } else {
-      allOverrides.forEach(({ info, word, override }) => list.appendChild(
+      filtered.forEach(({ info, word, override }) => list.appendChild(
         buildWordOverrideRow(info, word, override, renderOverridesList, () => panel.openWord(info.name, word)),
       ));
     }
   }
+  filterI.addEventListener('input', renderOverridesList);
 
   const panel = buildWordEditorSearchPanel(currentLang, renderOverridesList);
   renderOverridesList();
 
   sub.appendChild(panel.wrap);
+  sub.appendChild(filterRow);
   sub.appendChild(list);
-  return buildSubsection('words-edit', 'Edit an existing word',
+  return buildSubsection('words-edit', 'Edit an Existing Word',
     'Search a language\'s vocabulary — real words and ones you\'ve added above — to hide glosses you don\'t want to see, reorder the rest, or override the translation, part of speech, notes or domains. Click an already-edited word below to reopen it.',
     sub);
 }
@@ -568,8 +583,9 @@ function summarizeWordOverride(o: WordOverride): string {
   if (o.tags !== undefined) parts.push(o.tags.length ? `tags → ${o.tags.join(', ')}` : 'tags hidden');
   if (o.synonyms !== undefined) parts.push(o.synonyms.length ? `synonyms → ${o.synonyms.join(', ')}` : 'synonyms hidden');
   if (o.antonyms !== undefined) parts.push(o.antonyms.length ? `antonyms → ${o.antonyms.join(', ')}` : 'antonyms hidden');
-  if (o.disambiguator !== undefined) parts.push(o.disambiguator ? `word disambiguator → ${o.disambiguator}` : 'word disambiguator hidden');
-  if (o.meaningDisambiguator !== undefined) parts.push(o.meaningDisambiguator ? `meaning disambiguator → ${o.meaningDisambiguator}` : 'meaning disambiguator hidden');
+  if (o.disambiguator !== undefined) parts.push(o.disambiguator ? `word disambiguator → ${o.disambiguator}` : 'word disambiguator cleared');
+  const noteCount = o.meaningDisambiguators ? Object.keys(o.meaningDisambiguators).length : 0;
+  if (noteCount) parts.push(`${noteCount} meaning note${noteCount === 1 ? '' : 's'}`);
   return parts.join(' · ');
 }
 
@@ -604,6 +620,64 @@ function buildWordOverrideRow(
 
 const WORD_POS_OPTIONS = ['', 'noun', 'verb', 'adjective', 'adverb', 'phrase', 'other'];
 
+interface OverridableNote {
+  wrap:     HTMLElement;
+  checkbox: HTMLInputElement;
+  input:    HTMLInputElement;
+}
+
+/**
+ * Shared "default value → Override checkbox → editable input" control.
+ * Unlike a plain text input pre-filled with `override ?? default` (this
+ * panel's old approach for both disambiguator fields, and still how every
+ * other field here works) that looks identical whether you're seeing the
+ * real default or a learner's own edit, this shows the default as its own
+ * line and gates the editable input behind an explicit checkbox — so it's
+ * never ambiguous which one is in effect. Used both for the word
+ * disambiguator (once per word, see buildDisambiguatorField below) and each
+ * gloss's own meaning disambiguator (once per sense, inline in that gloss's
+ * row in the Glosses list) — both sides of the word/meaning distinction get
+ * the same treatment rather than one being a plain optional text box.
+ */
+function buildOverridableNote(defaultValue: string, overrideValue: string | undefined, placeholder: string): OverridableNote {
+  const wrap = el('div', 'mc-disambig-inline');
+  wrap.appendChild(el('span', 'mc-disambig-default',
+    defaultValue ? `Default: "${defaultValue}"` : 'No default'));
+
+  const toggleLabel = el('label', 'mc-disambig-toggle');
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.className = 'mc-disambig-checkbox';
+  checkbox.checked = overrideValue !== undefined;
+  toggleLabel.append(checkbox, document.createTextNode('Override'));
+  wrap.appendChild(toggleLabel);
+
+  const input = textInput(placeholder, overrideValue ?? defaultValue);
+  input.disabled = !checkbox.checked;
+  wrap.appendChild(input);
+
+  checkbox.addEventListener('change', () => {
+    input.disabled = !checkbox.checked;
+    if (checkbox.checked) input.focus();
+  });
+
+  return { wrap, checkbox, input };
+}
+
+/**
+ * "Word disambiguator" field for the word editor — buildOverridableNote
+ * wrapped in a labeled .mc-field, matching every other field in the form.
+ * Unchecking clears any override on save (see the caller, which omits
+ * `disambiguator` from `fields` entirely when unchecked).
+ */
+function buildDisambiguatorField(defaultValue: string, overrideValue: string | undefined): OverridableNote {
+  const wrap = el('div', 'mc-field mc-disambig-field');
+  wrap.appendChild(el('span', 'mc-field-label', 'Word disambiguator'));
+  const note = buildOverridableNote(defaultValue, overrideValue, 'e.g. auxiliary — shown as "word (auxiliary)"');
+  wrap.appendChild(note.wrap);
+  return { wrap, checkbox: note.checkbox, input: note.input };
+}
+
 interface WordEditorPanel {
   wrap: HTMLElement;
   /** Jumps straight to editing `word` — what an overrides-list row calls
@@ -617,6 +691,13 @@ function buildWordEditorSearchPanel(defaultLang: string, refresh: () => void): W
   const detail = el('div', 'mc-word-detail');
   detail.hidden = true;
 
+  // Which word's panel is collapsed, by folded text — outside selectWord so
+  // it survives afterChange()'s rebuild-in-place (toggling a gloss checkbox,
+  // say, shouldn't silently re-expand a panel the learner just collapsed).
+  // Not keyed by anything richer than that: opening a *different* word
+  // always starts expanded, same as before this existed.
+  let collapsedWordKey: string | null = null;
+
   function selectWord(lang: string, w: Word): void {
     detail.innerHTML = '';
     detail.hidden = false;
@@ -627,10 +708,45 @@ function buildWordEditorSearchPanel(defaultLang: string, refresh: () => void): W
       refresh();
     }
 
+    const wordKey = foldKey(w.word);
+    let collapsed = collapsedWordKey === wordKey;
+
+    // Collapsible, like every section/subsection elsewhere in this tab
+    // (see buildCollapsible) — chevron + clickable header, body toggled via
+    // `hidden` rather than rebuilt, so collapsing never loses anything
+    // typed into the form below. Its own lightweight version rather than
+    // reusing buildCollapsible directly: that one persists state under a
+    // fixed key across the whole tab's lifetime, which fits static sections
+    // but not a panel that's rebuilt fresh for a different word on every
+    // search result click.
     const header = el('div', 'mc-word-detail-header');
-    header.appendChild(buildLangBadge([lang]));
+    header.setAttribute('role', 'button');
+    header.tabIndex = 0;
+    const chevron = el('span', 'mc-word-detail-chevron', '▾');
+    header.append(chevron, buildLangBadge([lang]));
     header.appendChild(document.createTextNode(` ${w.word} — ${w.translation}`));
     detail.appendChild(header);
+
+    const bodyWrap = el('div', 'mc-word-detail-body');
+
+    function applyCollapsed(): void {
+      bodyWrap.hidden = collapsed;
+      detail.classList.toggle('mc-word-detail--collapsed', collapsed);
+      header.setAttribute('aria-expanded', String(!collapsed));
+    }
+    applyCollapsed();
+
+    function toggleCollapsed(): void {
+      collapsed = !collapsed;
+      collapsedWordKey = collapsed ? wordKey : null;
+      applyCollapsed();
+    }
+    header.addEventListener('click', toggleCollapsed);
+    header.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCollapsed(); }
+    });
+
+    detail.appendChild(bodyWrap);
 
     const override = getWordOverride(lang, w.word);
 
@@ -644,27 +760,20 @@ function buildWordEditorSearchPanel(defaultLang: string, refresh: () => void): W
     const tagsI     = textInput('comma-separated', (override?.tags ?? w.tags).join(', '));
     const synonymsI = textInput('comma-separated', (override?.synonyms ?? w.relations?.synonyms ?? []).join(', '));
     const antonymsI = textInput('comma-separated', (override?.antonyms ?? w.relations?.antonyms ?? []).join(', '));
-    const disambiguatorI = textInput(
-      'e.g. auxiliary — shown as "word (auxiliary)"',
-      override?.disambiguator ?? w.disambiguator ?? '',
-    );
-    const meaningDisambiguatorI = textInput(
-      'e.g. function — shown as "translation (function)"',
-      override?.meaningDisambiguator ?? w.meaningDisambiguator ?? '',
-    );
+    const disambig = buildDisambiguatorField(w.disambiguator ?? '', override?.disambiguator);
     fieldsForm.append(
       field('Translation', transI), field('Part of speech', posI),
       field('Notes', notesI), field('Domains', domainsI),
       field('Difficulty (1=easiest, 5=hardest)', difficultyI), field('Tags', tagsI),
       field('Synonyms', synonymsI), field('Antonyms', antonymsI),
-      field('Word disambiguator', disambiguatorI), field('Meaning disambiguator', meaningDisambiguatorI),
+      disambig.wrap,
     );
-    detail.appendChild(fieldsForm);
+    bodyWrap.appendChild(fieldsForm);
     const examplesI = textArea(
       'one example sentence per line',
       (override?.examples ?? w.examples).join('\n'),
     );
-    detail.appendChild(field('Example sentences', examplesI));
+    bodyWrap.appendChild(field('Example sentences', examplesI));
 
     const saveBtn = el('button', 'mc-btn mc-btn--sm', 'Save changes');
     saveBtn.type = 'button';
@@ -704,19 +813,20 @@ function buildWordEditorSearchPanel(defaultLang: string, refresh: () => void): W
       if (JSON.stringify(newAntonyms) !== JSON.stringify(w.relations?.antonyms ?? [])) fields.antonyms = newAntonyms;
       const newExamples = lines(examplesI.value);
       if (JSON.stringify(newExamples) !== JSON.stringify(w.examples)) fields.examples = newExamples;
-      const newDisambiguator = disambiguatorI.value.trim();
-      if (newDisambiguator !== (w.disambiguator ?? '')) fields.disambiguator = newDisambiguator;
-      const newMeaningDisambiguator = meaningDisambiguatorI.value.trim();
-      if (newMeaningDisambiguator !== (w.meaningDisambiguator ?? '')) fields.meaningDisambiguator = newMeaningDisambiguator;
+      // Checkbox-driven, unlike every field above: unchecked means "no
+      // override" regardless of what the (disabled) input still shows, so
+      // the key is omitted from `fields` entirely rather than compared
+      // against the default — setWordFields treats that as "clear it."
+      if (disambig.checkbox.checked) fields.disambiguator = disambig.input.value.trim();
       setWordFields(lang, w.word, fields);
       afterChange();
     });
-    detail.appendChild(saveBtn);
+    bodyWrap.appendChild(saveBtn);
 
     // ── Glosses: hide/reorder real senses, add and remove new ones ──────────
     // Always shown, even for a word with no real glosses at all (rank/domain
     // words sometimes have none) — "Add a gloss" below works regardless.
-    detail.appendChild(el('h5', 'mc-subsection-title', 'Glosses'));
+    bodyWrap.appendChild(el('h5', 'mc-subsection-title', 'Glosses'));
 
     const hiddenSet = new Set(override?.hiddenGlosses ?? []);
     const addedSet  = new Set(override?.addedGlosses ?? []);
@@ -736,6 +846,15 @@ function buildWordEditorSearchPanel(defaultLang: string, refresh: () => void): W
         const item = el('div', 'mc-gloss-item');
         if (hiddenSet.has(gloss)) item.classList.add('mc-gloss-item--hidden');
 
+        // Position among this word's senses — the ↑/↓ buttons below change
+        // it, and it's what "Question glosses"/"Answer glosses" in Settings
+        // actually counts off when capping how many senses a quiz shows, so
+        // it's worth seeing at a glance rather than only inferring it from
+        // the gloss's position in the list.
+        const rankBadge = el('span', 'mc-gloss-rank', `#${i + 1}`);
+        rankBadge.title = 'Position among this word’s senses — earlier senses are the ones shown first when a quiz caps how many it displays.';
+        item.appendChild(rankBadge);
+
         if (isAdded) {
           // Nothing to hide — a sense the learner typed in themselves is
           // just deleted outright instead (the ✕ button below).
@@ -753,6 +872,36 @@ function buildWordEditorSearchPanel(defaultLang: string, refresh: () => void): W
           item.appendChild(checkbox);
         }
         item.appendChild(el('span', 'mc-gloss-item-text', gloss));
+
+        // Per-sense meaning disambiguator — independent of every other
+        // gloss's, and independent of the word disambiguator field above
+        // (that one annotates the word; this annotates this specific sense).
+        // Same default-vs-override treatment as the word disambiguator: the
+        // default is whatever note the word itself already carries (always
+        // none for a real word, but a custom word can have its own), and
+        // only the Override checkbox — not just typing in the box — decides
+        // whether this sense's note actually changes on this row's own
+        // immediate-apply model (matching hide/reorder/add-gloss above,
+        // rather than the batched "Save changes" the word-level fields use).
+        const baseGlossNote = w.meaningDisambiguators?.[gloss] ?? '';
+        const overrideGlossNote = override?.meaningDisambiguators?.[gloss];
+        const noteField = buildOverridableNote(baseGlossNote, overrideGlossNote, 'e.g. "function"');
+        noteField.wrap.classList.add('mc-gloss-note-field');
+        noteField.input.setAttribute('aria-label', `Meaning note for "${gloss}"`);
+        noteField.checkbox.setAttribute('aria-label', `Override meaning note for "${gloss}"`);
+        noteField.checkbox.addEventListener('change', () => {
+          // Unchecking clears the override outright (falls back to the
+          // word's own default); checking just unlocks the input — nothing
+          // to persist until the learner actually types something.
+          if (!noteField.checkbox.checked) { setGlossMeaningNote(lang, w.word, gloss, ''); afterChange(); }
+        });
+        noteField.input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); noteField.input.blur(); } });
+        noteField.input.addEventListener('blur', () => {
+          if (!noteField.checkbox.checked) return;
+          const value = noteField.input.value.trim();
+          if (value !== (overrideGlossNote ?? baseGlossNote)) { setGlossMeaningNote(lang, w.word, gloss, value); afterChange(); }
+        });
+        item.appendChild(noteField.wrap);
 
         const controls = el('div', 'mc-gloss-item-controls');
         const upBtn = el('button', 'mc-gloss-move-btn', '↑');
@@ -792,7 +941,7 @@ function buildWordEditorSearchPanel(defaultLang: string, refresh: () => void): W
         glossList.appendChild(item);
       });
     }
-    detail.appendChild(glossList);
+    bodyWrap.appendChild(glossList);
 
     const addGlossRow = el('div', 'mc-gloss-add-row');
     const newGlossI = textInput('Add a new sense, e.g. "to talk"');
@@ -811,13 +960,13 @@ function buildWordEditorSearchPanel(defaultLang: string, refresh: () => void): W
       afterChange();
     });
     addGlossRow.append(newGlossI, addGlossBtn);
-    detail.appendChild(addGlossRow);
+    bodyWrap.appendChild(addGlossRow);
 
     if (override) {
       const resetBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm', 'Reset all overrides for this word');
       resetBtn.type = 'button';
       resetBtn.addEventListener('click', () => { removeWordOverride(lang, w.word); afterChange(); });
-      detail.appendChild(resetBtn);
+      bodyWrap.appendChild(resetBtn);
     }
   }
 
@@ -1048,8 +1197,10 @@ interface WordSearchUIOptions {
   /** Fires when a result is clicked. */
   onSelect: (lang: string, w: Word) => void;
   /** Fires when the language changes, before the new vocabulary has loaded —
-   *  lets the caller clear whatever detail view was showing for the old
-   *  language's word. */
+   *  lets the caller close whatever detail view was showing for the old
+   *  language's word (it's no longer reachable in the new one). The ✕ button
+   *  and Escape only clear the search text/results; they leave a currently
+   *  open detail view alone — see its own collapse toggle instead. */
   onLangChange: () => void;
 }
 
@@ -1061,19 +1212,31 @@ interface WordSearchUI {
    *  result's "✓ set" badge (the word may still be on screen in the list). */
   refreshResults: () => void;
   /** Switches to `lang` if needed, waits for its vocabulary to load, then
-   *  selects `word` exactly as if it had been searched for and clicked —
-   *  what a row in an overrides list below calls to jump straight to
-   *  editing that word instead of making the learner search for it again.
-   *  A silent no-op if `word` can't be found (e.g. removed from the data
-   *  since the override was made). */
+   *  opens `word`'s detail view directly — what a row in an overrides list
+   *  below calls to jump straight to editing that word instead of making
+   *  the learner search for it again. Deliberately leaves the search box
+   *  and results list alone (see the implementation): this is "open this
+   *  one word," not "search for it." A silent no-op if `word` can't be
+   *  found (e.g. removed from the data since the override was made). */
   openWord: (lang: string, word: string) => Promise<void>;
 }
+
+const RESULTS_LIMIT = 20;
 
 function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
   const wrap = el('div', 'mc-word-panel');
 
   let lang = opts.defaultLang;
   let words: Word[] | null = null;
+  // Which word (by folded text) the detail panel below is currently open
+  // on, so the results list can highlight it — otherwise nothing on screen
+  // says which of several similar-looking results you're actually editing.
+  let selectedKey: string | null = null;
+  // The list actually on screen right now (already capped to RESULTS_LIMIT)
+  // and which of them the keyboard cursor is on — kept outside renderResults
+  // so the search box's own keydown handler can act on the same rows it drew.
+  let currentMatches: Word[] = [];
+  let kbdIndex = -1;
 
   const langSelect = document.createElement('select');
   langSelect.className = 'mc-input mc-word-lang-select';
@@ -1091,30 +1254,79 @@ function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
   const searchInput = textInput(opts.placeholder);
   searchInput.disabled = true;
 
+  const clearBtn = el('button', 'mc-word-search-clear', '✕');
+  clearBtn.type = 'button';
+  clearBtn.hidden = true;
+  clearBtn.setAttribute('aria-label', 'Clear search');
+  clearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    renderResults('');
+    searchInput.focus();
+  });
+
+  const searchRow = el('div', 'mc-word-search-row');
+  searchRow.append(searchInput, clearBtn);
+
+  const countLabel = el('p', 'mc-word-results-count');
+  countLabel.hidden = true;
+
   const resultsList = el('ul', 'mc-word-results');
   resultsList.hidden = true;
 
+  function selectMatch(i: number): void {
+    const w = currentMatches[i];
+    if (!w) return;
+    selectedKey = foldKey(w.word);
+    opts.onSelect(lang, w);
+    // Repaint the active/kbd-focus classes in place rather than re-running
+    // the whole search — the list of matches hasn't changed, just which one
+    // is now open below.
+    Array.from(resultsList.children).forEach((li, idx) => {
+      li.classList.toggle('mc-word-result--active', idx === i);
+    });
+  }
+
+  function paintKbdFocus(): void {
+    Array.from(resultsList.children).forEach((li, idx) => {
+      li.classList.toggle('mc-word-result--kbd-focus', idx === kbdIndex);
+    });
+    (resultsList.children[kbdIndex] as HTMLElement | undefined)?.scrollIntoView({ block: 'nearest' });
+  }
+
   function renderResults(query: string): void {
     resultsList.innerHTML = '';
-    if (!words) { resultsList.hidden = true; return; }
+    kbdIndex = -1;
+    clearBtn.hidden = !query.trim();
+    if (!words) { resultsList.hidden = true; countLabel.hidden = true; currentMatches = []; return; }
     const q = foldKey(query);
-    if (!q) { resultsList.hidden = true; return; }
-    const matches = words
+    if (!q) { resultsList.hidden = true; countLabel.hidden = true; currentMatches = []; return; }
+    const allMatches = words
       .filter(w => opts.isEligible(lang, w))
-      .filter(w => foldKey(w.word).includes(q) || foldKey(w.translation).includes(q))
-      .slice(0, 20);
+      .filter(w => foldKey(w.word).includes(q) || foldKey(w.translation).includes(q));
+    currentMatches = allMatches.slice(0, RESULTS_LIMIT);
 
-    if (matches.length === 0) {
+    if (currentMatches.length === 0) {
       resultsList.appendChild(el('li', 'mc-empty', 'No matching words.'));
       resultsList.hidden = false;
+      countLabel.hidden = true;
       return;
     }
-    matches.forEach(w => {
+    if (allMatches.length > currentMatches.length) {
+      countLabel.textContent = `Showing ${currentMatches.length} of ${allMatches.length} matches — keep typing to narrow it down.`;
+      countLabel.hidden = false;
+    } else {
+      countLabel.hidden = true;
+    }
+    currentMatches.forEach((w, i) => {
       const li = el('li', 'mc-word-result');
-      li.appendChild(el('span', 'mc-word-result-word', w.word));
-      li.appendChild(el('span', 'mc-word-result-trans', w.translation));
+      const wordSpan = el('span', 'mc-word-result-word');
+      fillHighlighted(wordSpan, w.word, query);
+      const transSpan = el('span', 'mc-word-result-trans');
+      fillHighlighted(transSpan, w.translation, query);
+      li.append(wordSpan, transSpan);
       if (opts.isOverridden(lang, w)) li.appendChild(el('span', 'mc-word-result-flag', '✓ set'));
-      li.addEventListener('click', () => opts.onSelect(lang, w));
+      if (selectedKey && foldKey(w.word) === selectedKey) li.classList.add('mc-word-result--active');
+      li.addEventListener('click', () => selectMatch(i));
       resultsList.appendChild(li);
     });
     resultsList.hidden = false;
@@ -1133,8 +1345,11 @@ function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
     // the current one had already loaded correctly.
     const requestedLang = lang;
     words = null;
+    selectedKey = null;
     resultsList.innerHTML = '';
     resultsList.hidden = true;
+    countLabel.hidden = true;
+    clearBtn.hidden = true;
     opts.onLangChange();
     searchInput.value = '';
     searchInput.disabled = true;
@@ -1155,15 +1370,38 @@ function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
     }
     const match = words?.find(w => foldKey(w.word) === foldKey(word));
     if (!match) return;
-    searchInput.value = word;
-    renderResults(word);
+    // Deliberately leaves the search box and results list untouched — jumping
+    // here from the already-edited-words list below is "open this one word,"
+    // not "search for it," so it shouldn't dump a page of unrelated-looking
+    // matches on screen the learner never asked to see.
+    selectedKey = foldKey(word);
     opts.onSelect(lang, match);
   }
 
   langSelect.addEventListener('change', () => { lang = langSelect.value; void loadLang(); });
   searchInput.addEventListener('input', () => renderResults(searchInput.value.trim()));
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      searchInput.value = '';
+      renderResults('');
+      return;
+    }
+    if (resultsList.hidden || currentMatches.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      kbdIndex = Math.min(kbdIndex + 1, currentMatches.length - 1);
+      paintKbdFocus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      kbdIndex = Math.max(kbdIndex - 1, 0);
+      paintKbdFocus();
+    } else if (e.key === 'Enter' && kbdIndex >= 0) {
+      e.preventDefault();
+      selectMatch(kbdIndex);
+    }
+  });
 
-  wrap.append(langRow, searchInput, resultsList);
+  wrap.append(langRow, searchRow, countLabel, resultsList);
   void loadLang();
 
   return { wrap, getLang: () => lang, refreshResults: () => renderResults(searchInput.value.trim()), openWord };

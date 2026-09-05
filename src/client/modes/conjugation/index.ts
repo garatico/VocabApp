@@ -1662,7 +1662,7 @@ function buildCard({
 
   function updateHeader(): void {
     const mode = getDisplayMode();
-    targetEl.textContent  = displayWord(verb);
+    targetEl.textContent  = displayWord(verb, Settings.getShowDisambiguator());
     englishEl.textContent = buildGlossDisplay(verb);
     // In Full Conjugation the view header carries the verb, so the card's copy
     // stays hidden whatever the target/english toggle says.
@@ -1679,7 +1679,7 @@ function buildCard({
 
   // Reveal buttons mirror table mode: hidden entirely when hints are off,
   // otherwise a ? that fills the answer in and scores it as revealed.
-  const hintMode = Settings.getHintMode();
+  const hintMode = Settings.getConjHintMode();
 
   function makeRevealBtn(onReveal: () => void): HTMLButtonElement {
     const btn = document.createElement('button');
