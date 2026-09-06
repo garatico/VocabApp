@@ -3,7 +3,7 @@
  * the Blank (src/client/utils/hint-reveal.ts). Pure string logic, no DOM.
  */
 import { describe, it, expect } from 'vitest';
-import { hintReveal, hintableLength } from '../../src/client/utils/hint-reveal.js';
+import { hintReveal, hintableLength, hintPrefix } from '../../src/client/utils/hint-reveal.js';
 
 describe('hintReveal', () => {
   it('reveals the first N non-space characters and blanks the rest', () => {
@@ -50,5 +50,33 @@ describe('hintableLength', () => {
     const answer = 'the monkey';
     const full = hintReveal(answer, hintableLength(answer));
     expect(full.replace(/ /g, '')).toBe(answer.replace(/ /g, ''));
+  });
+});
+
+describe('hintPrefix', () => {
+  it('returns just the revealed prefix, no trailing underscores', () => {
+    expect(hintPrefix('monkey', 3)).toBe('mon');
+  });
+
+  it('is empty when nothing is revealed yet', () => {
+    expect(hintPrefix('monkey', 0)).toBe('');
+  });
+
+  it('caps at the full answer once the count meets or exceeds its length', () => {
+    expect(hintPrefix('monkey', 100)).toBe('monkey');
+  });
+
+  it('preserves a space that falls within the revealed span', () => {
+    // 5 non-space characters: t, h, e, m, o — the space at index 3 passes
+    // through for free without spending any of the budget.
+    expect(hintPrefix('the monkey', 5)).toBe('the mo');
+  });
+
+  it('does not trail a space when the cutoff lands right before one', () => {
+    expect(hintPrefix('the monkey', 3)).toBe('the');
+  });
+
+  it('handles an empty answer', () => {
+    expect(hintPrefix('', 3)).toBe('');
   });
 });

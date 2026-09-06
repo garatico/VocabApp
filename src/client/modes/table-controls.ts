@@ -9,6 +9,7 @@ import {
   type CheckResult,
 } from './table-mode.ts';
 import { buildGlossDisplay } from '../utils/utils.ts';
+import { openBulkListPicker } from '../utils/list-picker.ts';
 import { Settings, setOnPageSizeChange, setOnShowTimerChange } from '../settings.ts';
 // Mastery lives with the lists UI. Importing across modes is not lovely, but
 // the alternative is a second copy of the storage rules, which is how the two
@@ -148,9 +149,15 @@ function setPrestartControlsEnabled(enabled: boolean): void {
   const retry  = document.getElementById('tableRetry')   as HTMLButtonElement | null;
   const exportBtn = document.getElementById('tableExport') as HTMLButtonElement | null;
   const jumpBtn = document.getElementById('tableJumpBtn') as HTMLButtonElement | null;
+  const selectPageBtn = document.getElementById('tableSelectPageBtn') as HTMLButtonElement | null;
   if (retry)     retry.disabled     = !enabled;
   if (exportBtn) exportBtn.disabled = !enabled;
   if (jumpBtn)   jumpBtn.disabled   = !enabled;
+  if (selectPageBtn) selectPageBtn.disabled = !enabled;
+  // tableBulkAddBtn is deliberately not part of this group — it stays
+  // disabled/enabled purely on whether anything is checked (syncBulkAddButton),
+  // which is already false with an empty pre-quiz table.
+  syncBulkAddButton();
 }
 let sessionRecorded                        = false;
 let wordOrder: WordOrder =
@@ -221,6 +228,8 @@ function snapshotState(): Map<string, InputSnapshot> {
       disabled: inp.disabled,
       stateClass,
       dir:      (inp.dataset.dir ?? 'target-en') as 'target-en' | 'en-target',
+      hintsShown: Number(inp.dataset.hints ?? '0'),
+      selected: inp.dataset.selected === 'true',
     });
   });
   return snap;
@@ -229,6 +238,36 @@ function snapshotState(): Map<string, InputSnapshot> {
 /** Fold whatever is on screen back into the cross-page answer record. */
 function syncSessionState(): void {
   snapshotState().forEach((snap, word) => sessionState.set(word, snap));
+}
+
+/** Every word checked via the bulk-select checkbox, across every page —
+ *  syncs the current page in first so a row checked earlier and since
+ *  navigated away from is still counted. */
+function getSelectedWords(): Word[] {
+  syncSessionState();
+  return allWords.filter(w => sessionState.get(rowKey(w, quizLang))?.selected);
+}
+
+/** Unchecks every bulk-select checkbox, current page and every other one —
+ *  called after a successful "Add to list(s)" so the next selection starts
+ *  fresh rather than silently re-adding the same words again. */
+function clearSelection(): void {
+  document.querySelectorAll<HTMLInputElement>('#tableWrap .row-select-cb').forEach(cb => {
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change'));
+  });
+  for (const snap of sessionState.values()) snap.selected = false;
+  syncBulkAddButton();
+}
+
+/** Enabled only once at least one word is checked — label carries the count
+ *  so "how many did I actually select" never has to be guessed. */
+function syncBulkAddButton(): void {
+  const btn = document.getElementById('tableBulkAddBtn') as HTMLButtonElement | null;
+  if (!btn) return;
+  const count = getSelectedWords().length;
+  btn.disabled = count === 0;
+  btn.textContent = count > 0 ? `+ Add ${count} to list(s)` : '+ Add to list(s)';
 }
 
 // ── Pagination helpers ────────────────────────────────────────────────────────
@@ -273,25 +312,51 @@ export interface ProgressCounts {
   left:     number;
   answered: number;
   total:    number;
+  /** Subset of `correct` where a hint was used first. */
+  hintedCorrect:  number;
+  /** Subset of `revealed` where a hint was used first. */
+  hintedRevealed: number;
+  /** Subset of `missed` where a hint was used first. */
+  hintedMissed:   number;
+  /** Not yet disabled, but a hint has been used on it — resolves into one of
+   *  the three hinted-* counts above once the row is disabled, so this is
+   *  always 0 by the time a quiz finishes. Exists purely for a live "N
+   *  still being hinted on" display while the quiz is still running. */
+  hintedInProgress: number;
 }
 
 /** Exported for tests — counts for a set of words against the answer record. */
 export function countProgress(
   words: readonly { word: string; language?: string }[],
-  state: ReadonlyMap<string, { disabled: boolean; stateClass: string }>,
+  state: ReadonlyMap<string, { disabled: boolean; stateClass: string; hintsShown?: number }>,
   fallbackLang = 'spanish',
 ): ProgressCounts {
   let correct = 0, revealed = 0, missed = 0;
+  let hintedCorrect = 0, hintedRevealed = 0, hintedMissed = 0, hintedInProgress = 0;
   for (const w of words) {
     const snap = state.get(rowKey(w, fallbackLang));
-    if (!snap?.disabled) continue;
-    if (snap.stateClass === 'correct')     correct++;
-    else if (snap.stateClass === 'peeked') revealed++;
-    else                                   missed++;
+    const wasHinted = (snap?.hintsShown ?? 0) > 0;
+    if (!snap?.disabled) {
+      if (wasHinted) hintedInProgress++;
+      continue;
+    }
+    if (snap.stateClass === 'correct') {
+      correct++;
+      if (wasHinted) hintedCorrect++;
+    } else if (snap.stateClass === 'peeked') {
+      revealed++;
+      if (wasHinted) hintedRevealed++;
+    } else {
+      missed++;
+      if (wasHinted) hintedMissed++;
+    }
   }
   const total    = words.length;
   const answered = correct + revealed + missed;
-  return { correct, revealed, missed, left: total - answered, answered, total };
+  return {
+    correct, revealed, missed, left: total - answered, answered, total,
+    hintedCorrect, hintedRevealed, hintedMissed, hintedInProgress,
+  };
 }
 
 function globalProgress(): ProgressCounts {
@@ -300,35 +365,85 @@ function globalProgress(): ProgressCounts {
 
 function renderProgress(): void {
   syncSessionState();
-  const { correct, revealed, missed, left, answered, total } = globalProgress();
+  const {
+    correct, revealed, missed, left, answered, total,
+    hintedCorrect, hintedRevealed, hintedMissed, hintedInProgress,
+  } = globalProgress();
   const pct = (n: number): number => scorePct(n, total);
-  const greenPct   = pct(correct);
-  const yellowPct  = pct(revealed);
-  const redPct     = pct(missed);
+
+  // Seven segments end to end: unassisted-correct, hinted-correct,
+  // unassisted-revealed, hinted-revealed, unassisted-missed, hinted-missed,
+  // hint-in-progress — the hinted-* ones are subsets carved out of
+  // correct/revealed/missed (which still count the *whole* category, hinted
+  // or not — the segments just split each into two adjacent shades), except
+  // hint-in-progress, which is carved out of the still-unanswered remainder
+  // instead. A running cursor positions each `left` off of where the
+  // previous one ended, so adding/removing a segment never has to touch its
+  // neighbors' math.
+  const segmentPcts = [
+    pct(correct - hintedCorrect), pct(hintedCorrect),
+    pct(revealed - hintedRevealed), pct(hintedRevealed),
+    pct(missed - hintedMissed), pct(hintedMissed),
+    pct(hintedInProgress),
+  ];
+  let cursor = 0;
+  const segmentLefts = segmentPcts.map(w => { const left = cursor; cursor += w; return left; });
+  const [
+    unassistedCorrectPct, hintedCorrectPct,
+    unassistedRevealedPct, hintedRevealedPct,
+    unassistedMissedPct, hintedMissedPct,
+    hintProgressPct,
+  ] = segmentPcts;
+  const [
+    , hintedCorrectLeft,
+    unassistedRevealedLeft, hintedRevealedLeft,
+    unassistedMissedLeft, hintedMissedLeft,
+    hintProgressLeft,
+  ] = segmentLefts;
+
   // The label now lives inside the bar, so it carries the percentage too —
   // there used to be a separate summary block that appeared solely to say
   // "100%" once you finished.
   const donePct    = total > 0 ? Math.round((answered / total) * 100) : 0;
   const statsText  = total > 0 ? `${answered} / ${total}  ·  ${donePct}%` : '';
-  const scoreHtml  = buildScorePills({ correct, revealed, missed, left, total });
+  const scoreHtml  = buildScorePills({ correct, revealed, missed, left, total })
+    + buildHintOutcomePills({ hintedCorrect, hintedRevealed, hintedMissed, hintedInProgress });
 
   (['Top', 'Bottom'] as const).forEach(pos => {
-    const bar       = document.getElementById('tableBar' + pos);
-    const yellowBar = document.getElementById('tableBar' + pos + 'Revealed');
-    const redBar    = document.getElementById('tableBar' + pos + 'Missed');
+    const bar             = document.getElementById('tableBar' + pos);
+    const yellowBar       = document.getElementById('tableBar' + pos + 'Revealed');
+    const redBar          = document.getElementById('tableBar' + pos + 'Missed');
+    const hintedCorrectBar  = document.getElementById('tableBar' + pos + 'HintedCorrect');
+    const hintedRevealedBar = document.getElementById('tableBar' + pos + 'HintedRevealed');
+    const hintedMissedBar   = document.getElementById('tableBar' + pos + 'HintedMissed');
+    const hintProgressBar   = document.getElementById('tableBar' + pos + 'HintProgress');
     const stats     = document.getElementById('tableStats' + pos);
     const score     = document.getElementById('tableScore' + pos);
 
-    // Segments sit end to end — green, then yellow, then red — so the bar
-    // reads as one continuous run.
-    if (bar) bar.style.width = greenPct + '%';
+    if (bar) bar.style.width = unassistedCorrectPct + '%';
+    if (hintedCorrectBar) {
+      hintedCorrectBar.style.left  = hintedCorrectLeft + '%';
+      hintedCorrectBar.style.width = hintedCorrectPct + '%';
+    }
     if (yellowBar) {
-      yellowBar.style.left  = greenPct + '%';
-      yellowBar.style.width = yellowPct + '%';
+      yellowBar.style.left  = unassistedRevealedLeft + '%';
+      yellowBar.style.width = unassistedRevealedPct + '%';
+    }
+    if (hintedRevealedBar) {
+      hintedRevealedBar.style.left  = hintedRevealedLeft + '%';
+      hintedRevealedBar.style.width = hintedRevealedPct + '%';
     }
     if (redBar) {
-      redBar.style.left  = (greenPct + yellowPct) + '%';
-      redBar.style.width = redPct + '%';
+      redBar.style.left  = unassistedMissedLeft + '%';
+      redBar.style.width = unassistedMissedPct + '%';
+    }
+    if (hintedMissedBar) {
+      hintedMissedBar.style.left  = hintedMissedLeft + '%';
+      hintedMissedBar.style.width = hintedMissedPct + '%';
+    }
+    if (hintProgressBar) {
+      hintProgressBar.style.left  = hintProgressLeft + '%';
+      hintProgressBar.style.width = hintProgressPct + '%';
     }
     if (stats) {
       stats.textContent = statsText;
@@ -339,6 +454,34 @@ function renderProgress(): void {
 
   const giveUpBtn = document.getElementById('tableReset') as HTMLButtonElement | null;
   if (giveUpBtn) giveUpBtn.disabled = total === 0 || answered === total;
+}
+
+/**
+ * Table-only pills for the 4 hint-outcome categories — appended after
+ * buildScorePills' own shared pills (ui/score-pills.ts), not folded into
+ * that function, since every other quiz mode reuses it unchanged and has
+ * no hint-outcome concept at all. A category with 0 words is omitted, same
+ * as the bar segments above showing nothing for it.
+ */
+export function buildHintOutcomePills({
+  hintedCorrect, hintedRevealed, hintedMissed, hintedInProgress,
+}: {
+  hintedCorrect: number; hintedRevealed: number; hintedMissed: number; hintedInProgress: number;
+}): string {
+  let html = '';
+  if (hintedInProgress > 0) {
+    html += `<span class="score-pill score-hinted-inprogress">🔵 ${hintedInProgress} Hint Used, Still Solving</span>`;
+  }
+  if (hintedCorrect > 0) {
+    html += `<span class="score-pill score-hinted-correct">🟢 ${hintedCorrect} Hinted → Solved</span>`;
+  }
+  if (hintedRevealed > 0) {
+    html += `<span class="score-pill score-hinted-revealed">🟠 ${hintedRevealed} Hinted → Revealed</span>`;
+  }
+  if (hintedMissed > 0) {
+    html += `<span class="score-pill score-hinted-missed">🟣 ${hintedMissed} Hinted → Missed</span>`;
+  }
+  return html;
 }
 
 function isQuizComplete(): boolean {
@@ -418,23 +561,41 @@ function recordMastery(): void {
   // session — a Compare-mode quiz mixing two languages must still write
   // mastery/history/session records into the right language's storage,
   // exactly as if it had been quizzed on its own.
-  interface Bucket { correct: string[]; missed: string[]; revealed: number; }
+  interface Bucket {
+    correct: string[]; missed: string[]; revealed: number; hinted: number;
+    hintedRevealed: number; hintedMissed: number;
+  }
   const byLang = new Map<string, Bucket>();
   for (const w of allWords) {
     const wl = w.language ?? quizLang;
     let bucket = byLang.get(wl);
-    if (!bucket) { bucket = { correct: [], missed: [], revealed: 0 }; byLang.set(wl, bucket); }
+    if (!bucket) {
+      bucket = { correct: [], missed: [], revealed: 0, hinted: 0, hintedRevealed: 0, hintedMissed: 0 };
+      byLang.set(wl, bucket);
+    }
 
-    const cls = sessionState.get(rowKey(w, quizLang))?.stateClass;
-    if (cls === 'correct')     bucket.correct.push(w.word);
-    else if (cls === 'peeked') { bucket.revealed++; bucket.missed.push(w.word); }
-    else                       bucket.missed.push(w.word);
+    const snap = sessionState.get(rowKey(w, quizLang));
+    const cls  = snap?.stateClass;
+    const wasHinted = (snap?.hintsShown ?? 0) > 0;
+    if (cls === 'correct') {
+      bucket.correct.push(w.word);
+      if (wasHinted) bucket.hinted++;
+    }
+    else if (cls === 'peeked') {
+      bucket.revealed++;
+      bucket.missed.push(w.word);
+      if (wasHinted) bucket.hintedRevealed++;
+    }
+    else {
+      bucket.missed.push(w.word);
+      if (wasHinted) bucket.hintedMissed++;
+    }
   }
 
   getStopwatch().stop();
   const seconds = getStopwatch().elapsedSeconds();
   const langs = [...byLang.keys()];
-  for (const [wl, { correct, missed, revealed }] of byLang) {
+  for (const [wl, { correct, missed, revealed, hinted, hintedRevealed, hintedMissed }] of byLang) {
     if (correct.length > 0) {
       const added = markMastered(wl, correct);
       if (added > 0) logger.info(`mastery: +${added} from quiz (${correct.length} correct)`);
@@ -449,9 +610,17 @@ function recordMastery(): void {
       mode: 'table',
       total: correct.length + missed.length,
       correct: correct.length,
-      unassisted: correct.length,   // table has no hint-per-word concept
-      hints: 0,
+      // unassisted always reflects real hint usage, tracking setting or not
+      // — it's "was this word actually solved unaided," not itself one of
+      // the trackable hint-outcome stats. Each *hint-outcome* count below is
+      // independently gated by its own tracking setting instead — off means
+      // "don't record this one," not "don't color it" (table.css's
+      // input.correct.hinted etc. show regardless).
+      unassisted: correct.length - hinted,
+      hints: Settings.getTrackHintedCorrect() ? hinted : 0,
       revealed,
+      hintedRevealed: Settings.getTrackHintedRevealed() ? hintedRevealed : 0,
+      hintedMissed: Settings.getTrackHintedMissed() ? hintedMissed : 0,
       seconds,
       lang: wl,
       langs: langs.length > 1 ? langs : undefined,
@@ -769,6 +938,34 @@ export function bindTableControls(): void {
 
   // Give Up — reveal the whole quiz, show summary with missed words
   tableReset?.addEventListener('click', () => performGiveUp());
+
+  // Bulk select — "Select page" checks every row currently rendered; the
+  // Add-to-list(s) count/label stays in sync via a delegated change listener
+  // (checkboxes are recreated on every page render, so one listener on the
+  // container beats attaching/detaching one per checkbox per render).
+  document.getElementById('tableSelectPageBtn')?.addEventListener('click', () => {
+    const boxes = document.querySelectorAll<HTMLInputElement>('#tableWrap .row-select-cb');
+    const allChecked = Array.from(boxes).every(cb => cb.checked);
+    boxes.forEach(cb => {
+      cb.checked = !allChecked;
+      cb.dispatchEvent(new Event('change'));
+    });
+    syncBulkAddButton();
+  });
+  document.getElementById('tableWrap')?.addEventListener('change', e => {
+    if ((e.target as HTMLElement)?.classList.contains('row-select-cb')) syncBulkAddButton();
+  });
+
+  document.getElementById('tableBulkAddBtn')?.addEventListener('click', e => {
+    const words = getSelectedWords();
+    if (words.length === 0) return;
+    openBulkListPicker({
+      anchorEl: e.currentTarget as HTMLElement,
+      words: words.map(w => ({ word: w.word, language: w.language })),
+      fallbackLang: quizLang,
+      onClose: clearSelection,
+    });
+  });
 
   // Timer — Start/Pause toggle and Reset, alongside the running clock.
   syncTimerVisibility();

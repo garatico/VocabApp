@@ -146,13 +146,47 @@ html.dark .tt-band[data-band] { color: hsl(var(--pos-hue) 65% 72%); }
   white-space: nowrap;
 }
 .tt-conj-table th {
-  font-weight: 600; color: var(--text-muted);
+  font-weight: 600;
   text-align: left; padding: 0.1rem 0.6rem 0.2rem 0;
   border-bottom: 1px solid var(--border);
 }
 .tt-conj-table td { padding: 0.15rem 0.6rem 0.15rem 0; color: var(--text); }
-.tt-pronoun { color: var(--text-muted) !important; font-style: italic; min-width: 60px; }
-.tt-empty   { color: var(--border-strong) !important; }
+.tt-pronoun { font-style: italic; min-width: 60px; }
+.tt-empty   { color: var(--border-strong); }
+
+/* Forms (pronoun) and Tenses color-coded the same way Conjugation Mode does
+   — same --tense-hue/--pronoun-hue custom properties, set by the same
+   data-tense/data-pi attributes (conjugation.css's own [data-tense]/[data-pi]
+   blocks, set here by buildConjTable). Applies wherever this table shows up
+   — the hover tooltip, the click popover (word-info-popover.ts), and My
+   Lists' own expanded row (my-lists.css used to duplicate this scoped to
+   just that one context; now it's the same everywhere, so that duplicate
+   was removed there). */
+.tt-conj-table th[data-tense],
+.tt-conj-table td[data-tense]:not(.tt-empty) {
+  color: hsl(var(--tense-hue, 145) 55% 32%);
+}
+.tt-conj-table td.tt-pronoun[data-pi] {
+  color: hsl(var(--pronoun-hue, 210) 55% 32%);
+}
+html.dark .tt-conj-table th[data-tense],
+html.dark .tt-conj-table td[data-tense]:not(.tt-empty) {
+  color: hsl(var(--tense-hue, 145) 60% 72%);
+}
+html.dark .tt-conj-table td.tt-pronoun[data-pi] {
+  color: hsl(var(--pronoun-hue, 210) 60% 72%);
+}
+
+/* Row/column highlight on hover — buildConjTable's delegated mouseover
+   toggles .tt-conj-hl-row/.tt-conj-hl-col (see attachConjTableHoverHighlight
+   in word-tooltip.ts) so hovering any cell shows which Form (row) and Tense
+   (column) it belongs to. */
+.tt-conj-table tr.tt-conj-hl-row > td,
+.tt-conj-table tr.tt-conj-hl-row > th,
+.tt-conj-table td.tt-conj-hl-col,
+.tt-conj-table th.tt-conj-hl-col {
+  background: var(--accent-light);
+}
 
 /* ── Expand button ── */
 .tt-expand-btn {

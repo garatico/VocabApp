@@ -13,6 +13,7 @@
 
 import type { Word as ApiWord } from '../../types.ts';
 import { loadVocab } from '../../data/vocab-source.ts';
+import { applyWordOverride } from '../../data/user-content.ts';
 import type { VocabEntry } from './types.ts';
 
 const vocabCache    = new Map<string, VocabEntry[]>();
@@ -36,6 +37,11 @@ export async function fetchVocab(lang: string): Promise<VocabEntry[]> {
     const data = (await loadVocab(lang)).data as ApiWord[];
     const entries: VocabEntry[] = data
       .filter(w => w.word)
+      // Same override step data-loader.ts's loadWords() applies for every
+      // other consumer (table mode, tooltips, ...) — without it, a My
+      // Content gloss reorder/hide or field override never showed up here,
+      // since this cache read straight from the raw vocab source instead.
+      .map(w => applyWordOverride(lang, w))
       .map(w => ({
         word:        w.word,
         translation: w.translation || '',

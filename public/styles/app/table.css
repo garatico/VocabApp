@@ -10,6 +10,74 @@
   box-shadow: var(--shadow);
 }
 
+/* ── Hint-outcome progress-bar segments (Table mode only) ──
+   Same positioning shape as .bar-revealed/.bar-missed (quiz.css, shared by
+   every quiz mode) — these are new, Table-specific siblings rather than a
+   change to that shared component, positioned end-to-end alongside the
+   shared ones by renderProgress() in table-controls.ts. Each reads through
+   the same --table-color-<state> override chain the row colors themselves
+   use (table.css above), so a custom color picked in Settings recolors the
+   bar too. */
+.bar-hinted-correct,
+.bar-hinted-revealed,
+.bar-hinted-missed,
+.bar-hint-progress {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0%;
+  /* Same "round the trailing edge regardless of whether this segment turns
+     out to be the last one" convention .bar-revealed/.bar-missed already
+     use (quiz.css) — with up to 7 segments now, exactly which one is last
+     depends on the quiz's own state, and the container's own
+     border-radius+overflow:hidden (.progress) already clips the whole bar
+     to a pill regardless, so this is purely a per-seam cosmetic, not a
+     correctness concern. */
+  border-radius: 0 99px 99px 0;
+  transition: width 0.4s ease-out, left 0.4s ease-out;
+}
+.bar-hinted-correct {
+  background: var(--table-color-hinted-correct, var(--hinted-correct));
+}
+.bar-hinted-revealed {
+  background: var(--table-color-hinted-revealed, var(--hinted-revealed));
+}
+.bar-hinted-missed {
+  background: var(--table-color-hinted-missed, var(--hinted-missed));
+}
+.bar-hint-progress {
+  background: var(--table-color-hinted, var(--info));
+}
+
+/* ── Hint-outcome score pills (Table mode only) ──
+   Same .score-pill shape as buildScorePills' own Correct/Revealed/Missed/
+   Left pills (quiz.css, shared by every quiz mode) — these four are
+   Table-specific additions appended after them (see buildHintOutcomePills
+   in table-controls.ts), not a change to that shared set. Colors read
+   through the same --table-color-* override chain as the row/bar colors,
+   so a custom color picked in Settings recolors these too. */
+.score-hinted-inprogress {
+  color: var(--table-color-hinted, var(--info));
+  background: color-mix(in srgb, var(--table-color-hinted, var(--info)) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--table-color-hinted, var(--info)) 55%, transparent);
+}
+.score-hinted-correct {
+  color: var(--table-color-hinted-correct, var(--hinted-correct));
+  background: color-mix(in srgb, var(--table-color-hinted-correct, var(--hinted-correct)) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--table-color-hinted-correct, var(--hinted-correct)) 55%, transparent);
+}
+.score-hinted-revealed {
+  color: var(--table-color-hinted-revealed, var(--hinted-revealed));
+  background: color-mix(in srgb, var(--table-color-hinted-revealed, var(--hinted-revealed)) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--table-color-hinted-revealed, var(--hinted-revealed)) 55%, transparent);
+}
+.score-hinted-missed {
+  color: var(--table-color-hinted-missed, var(--hinted-missed));
+  background: color-mix(in srgb, var(--table-color-hinted-missed, var(--hinted-missed)) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--table-color-hinted-missed, var(--hinted-missed)) 55%, transparent);
+}
+
 /* Uniform vertical rhythm between the blocks stacked in the table area, so the
    gap above the controls row is the same whether or not the summary strip and
    score line happen to be showing. */
@@ -228,9 +296,18 @@
    input.correct), individually peeked with its own reveal button (yellow,
    same as input.peeked), or given up on via Show All / Give Up (red, same
    as input.incorrect) — see table-recall-mode.ts. */
-#tableWrap .spanish-word.correct   { color: var(--correct); }
-#tableWrap .spanish-word.peeked    { color: color-mix(in srgb, var(--warning) 75%, var(--text)); }
-#tableWrap .spanish-word.incorrect { color: var(--incorrect); }
+#tableWrap .spanish-word.correct   { color: var(--table-color-correct,   var(--correct)); }
+#tableWrap .spanish-word.peeked    { color: color-mix(in srgb, var(--table-color-revealed, var(--warning)) 75%, var(--text)); }
+#tableWrap .spanish-word.incorrect { color: var(--table-color-incorrect, var(--incorrect)); }
+/* Double Recall's word-side hint, in progress — see input.hinted above for
+   why this is guarded with :not() rather than removed in JS. */
+#tableWrap .spanish-word.hinted:not(.correct):not(.peeked):not(.incorrect) {
+  color: var(--table-color-hinted, var(--info));
+}
+/* Resolved after a hint — see input.correct.hinted etc. above, same idea. */
+#tableWrap .spanish-word.correct.hinted   { color: var(--table-color-hinted-correct,  var(--hinted-correct)); }
+#tableWrap .spanish-word.peeked.hinted    { color: color-mix(in srgb, var(--table-color-hinted-revealed, var(--hinted-revealed)) 75%, var(--text)); }
+#tableWrap .spanish-word.incorrect.hinted { color: var(--table-color-hinted-missed,   var(--hinted-missed)); }
 
 /* ── Row hover highlight ── */
 #tableWrap tr:hover .word-cell {
@@ -269,25 +346,65 @@
   opacity: 0.65;
 }
 
+/* ── Table mode state colors ──
+   Every state reads through a --table-color-<state> custom property before
+   falling back to its built-in token — Settings' color customization (see
+   applyTableColors in settings.ts) sets these as inline :root properties
+   when a learner picks their own; unset, the var() falls straight through
+   to the same colors this always had. The light background for each is
+   derived from that one color via color-mix rather than a second stored
+   -light token, so customizing a state only ever means picking one color,
+   not two. */
 #tableWrap input.correct {
-  background-color: var(--correct-light);
-  border-color: var(--correct);
-  color: var(--correct);
+  background-color: color-mix(in srgb, var(--table-color-correct, var(--correct)) 18%, var(--surface));
+  border-color: var(--table-color-correct, var(--correct));
+  color: var(--table-color-correct, var(--correct));
   font-weight: 600;
   animation: correctFill 0.25s ease;
 }
 #tableWrap input.incorrect {
-  background-color: var(--incorrect-light);
-  border-color: var(--incorrect);
-  color: var(--incorrect);
+  background-color: color-mix(in srgb, var(--table-color-incorrect, var(--incorrect)) 18%, var(--surface));
+  border-color: var(--table-color-incorrect, var(--incorrect));
+  color: var(--table-color-incorrect, var(--incorrect));
   font-weight: 600;
 }
 /* Revealed with the ? button — same yellow as the Revealed pill */
 #tableWrap input.peeked {
-  background-color: var(--warning-light);
-  border-color: color-mix(in srgb, var(--warning) 60%, transparent);
-  color: color-mix(in srgb, var(--warning) 75%, var(--text));
+  background-color: color-mix(in srgb, var(--table-color-revealed, var(--warning)) 18%, var(--surface));
+  border-color: color-mix(in srgb, var(--table-color-revealed, var(--warning)) 60%, transparent);
+  color: color-mix(in srgb, var(--table-color-revealed, var(--warning)) 75%, var(--text));
   font-weight: 600;
+}
+/* A Hint was used, but the row isn't resolved yet — a distinct blue from
+   .peeked's yellow, since "used a hint, still solving this" isn't the same
+   as "gave up, it's fully revealed". The :not()s mean this never needs to be
+   removed in JS: the moment .correct/.peeked/.incorrect lands, this stops
+   applying on its own, even though the .hinted class itself is left in place. */
+#tableWrap input.hinted:not(.correct):not(.peeked):not(.incorrect) {
+  background-color: color-mix(in srgb, var(--table-color-hinted, var(--info)) 18%, var(--surface));
+  border-color: color-mix(in srgb, var(--table-color-hinted, var(--info)) 55%, transparent);
+}
+
+/* ── Resolved *after* a hint was used — three more outcomes than the plain
+   correct/peeked/incorrect above, so "got it right anyway" doesn't look
+   identical to an unassisted answer. .hinted is never removed once set (see
+   above), so once .correct/.peeked/.incorrect lands alongside it, these
+   compound rules simply win over the plain ones — no JS change needed to
+   add these three, just the extra selectors. */
+#tableWrap input.correct.hinted {
+  background-color: color-mix(in srgb, var(--table-color-hinted-correct, var(--hinted-correct)) 18%, var(--surface));
+  border-color: var(--table-color-hinted-correct, var(--hinted-correct));
+  color: var(--table-color-hinted-correct, var(--hinted-correct));
+}
+#tableWrap input.peeked.hinted {
+  background-color: color-mix(in srgb, var(--table-color-hinted-revealed, var(--hinted-revealed)) 18%, var(--surface));
+  border-color: color-mix(in srgb, var(--table-color-hinted-revealed, var(--hinted-revealed)) 60%, transparent);
+  color: color-mix(in srgb, var(--table-color-hinted-revealed, var(--hinted-revealed)) 75%, var(--text));
+}
+#tableWrap input.incorrect.hinted {
+  background-color: color-mix(in srgb, var(--table-color-hinted-missed, var(--hinted-missed)) 18%, var(--surface));
+  border-color: var(--table-color-hinted-missed, var(--hinted-missed));
+  color: var(--table-color-hinted-missed, var(--hinted-missed));
 }
 
 /* ── Shake animation class (added/removed in JS) ── */
@@ -348,9 +465,10 @@
   background: var(--surface2);
 }
 
-/* Hint is spent after one use (see table-mode.ts) rather than hidden
-   outright — a dimmed, inert button still shows a hint was already taken,
-   where removing it would read as "no hint was ever offered here". */
+/* Once a hint reaches its cap (one letter short of the full word — see
+   table-mode.ts), the button dims and disables rather than hiding outright —
+   an inert button still shows a hint was already taken, where removing it
+   would read as "no hint was ever offered here". */
 .hint-btn:disabled {
   opacity: 0.2;
   cursor: not-allowed;
@@ -373,6 +491,28 @@
    em-based so the frequency number scales with the font-size setting. */
 /* .table-word-rank is .ui-rank-badge — shared with conjugation mode so a
    word carries the same badge wherever you meet it. Nothing local. */
+
+/* ── Bulk-select checkbox — table-controls.ts's "Add N to list(s)" ──
+   Mirrors the rank badge's own corner-overlay treatment (top-left), just the
+   opposite corner, so neither ever needs to make room for the other. */
+.row-select-cb {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+#tableWrap td.word-cell--selected {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+/* ── Word info/actions popover trigger — word-info-popover.ts ── */
+.word-info-trigger {
+  cursor: pointer;
+}
 
 /* ── Known-word button ── (box metrics shared with .reveal-btn above)
    Always visible, dimmed until hovered or already on a list — adding a word
@@ -406,8 +546,12 @@
 .word-cell--known::after {
   content: '★';
   position: absolute;
-  top: 3px;
-  right: 5px;
+  /* Bottom-left — the only corner left free. Rank owns top-left,
+     .row-select-cb (the bulk-select checkbox) owns top-right, and
+     .table-word--trouble's own "×N missed before" badge already owns
+     bottom-right (this used to collide with that one there). */
+  bottom: 3px;
+  left: 5px;
   font-size: 0.42em;
   line-height: 1;
   color: var(--accent);

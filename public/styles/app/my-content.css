@@ -461,6 +461,49 @@
   border-color: var(--accent);
   background: var(--surface2);
 }
+/* Word rows (Add a New Word / Edit an Existing Word) that expand their
+   editor in place below — wraps .mc-row (the always-visible title/meta +
+   Remove strip, unchanged and shared with every other .mc-row in this file)
+   and, only while expanded, a sibling .mc-row-detail underneath it. Grouped
+   in its own wrapper rather than nesting the detail inside .mc-row itself so
+   .mc-row's own flex-row layout (title/meta beside Remove) never has to
+   change for the sake of this one caller. */
+.mc-row-wrap .mc-row--expanded {
+  border-color: var(--accent);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+/* Same body area a word's inline editor renders into (renderWordEditorBody)
+   as My Lists' own .ml-word-detail — a sibling of the row itself, directly
+   under it, not a panel living elsewhere on the page. */
+.mc-row-detail {
+  padding: 0.75rem 0.85rem 0.9rem;
+  border: 1px solid var(--accent);
+  border-top: none;
+  border-bottom-left-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+/* Once a list runs past one page, it scrolls in place rather than growing
+   the whole tab — see MC_LIST_PAGE_SIZE / buildListPager. */
+.mc-scroll-list {
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+.mc-list-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+.mc-list-pager-status {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
 .mc-row-main {
   display: flex;
   flex-direction: column;

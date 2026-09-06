@@ -593,8 +593,12 @@
         <div class="progressWrap">
           <div class="progress">
             <div id="tableBarTop" class="bar"></div>
+            <div id="tableBarTopHintedCorrect" class="bar-hinted-correct"></div>
             <div id="tableBarTopRevealed" class="bar-revealed"></div>
+            <div id="tableBarTopHintedRevealed" class="bar-hinted-revealed"></div>
             <div id="tableBarTopMissed" class="bar-missed"></div>
+            <div id="tableBarTopHintedMissed" class="bar-hinted-missed"></div>
+            <div id="tableBarTopHintProgress" class="bar-hint-progress"></div>
             <span id="tableStatsTop" class="progress-label"></span>
           </div>
         </div>
@@ -604,6 +608,8 @@
           <div id="tableScoreTop" class="quiz-score"></div>
           <span class="controls-divider" aria-hidden="true"></span>
           <div id="tableControls" class="controls-row">
+            <button id="tableSelectPageBtn" title="Check every word on this page">☑ Select page</button>
+            <button id="tableBulkAddBtn" title="Add every checked word to a list" disabled>+ Add to list(s)</button>
             <button id="tableJumpBtn" title="Jump to the first word you haven't answered (Ctrl+/)" data-i18n-title="table.jumpNextGapTip" data-i18n="table.jumpNextGap">↓ Next gap</button>
             <button id="tableExport" data-i18n="table.exportCsv">Export CSV</button>
             <button id="tableReset" data-i18n="table.giveUp">Give Up</button>
@@ -659,8 +665,12 @@
         <div class="progressWrap">
           <div class="progress">
             <div id="tableBarBottom" class="bar"></div>
+            <div id="tableBarBottomHintedCorrect" class="bar-hinted-correct"></div>
             <div id="tableBarBottomRevealed" class="bar-revealed"></div>
+            <div id="tableBarBottomHintedRevealed" class="bar-hinted-revealed"></div>
             <div id="tableBarBottomMissed" class="bar-missed"></div>
+            <div id="tableBarBottomHintedMissed" class="bar-hinted-missed"></div>
+            <div id="tableBarBottomHintProgress" class="bar-hint-progress"></div>
             <span id="tableStatsBottom" class="progress-label"></span>
           </div>
         </div>
@@ -822,7 +832,11 @@
             <div id="settingsBodyTable" class="filter-body settings-section-body">
 
             <div class="settings-group">
-            <div class="settings-group-heading" data-i18n="settings.table.groupLayout">Layout</div>
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupLayout" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupLayout">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.table.groupLayout">Layout</span>
+            </button>
+            <div id="settingsGroupLayout" class="filter-body">
 
             <div class="settings-row">
               <div class="settings-label">
@@ -874,14 +888,19 @@
             </div>
 
             </div>
+            </div>
 
             <div class="settings-group">
-            <div class="settings-group-heading" data-i18n="settings.table.groupHints">Hints &amp; Glosses</div>
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupHints" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupHints">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.table.groupHints">Hints &amp; Glosses</span>
+            </button>
+            <div id="settingsGroupHints" class="filter-body">
 
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.table.hintButton">Hint button</span>
-                <span class="settings-desc" data-i18n="settings.table.hintButtonDesc">Shows a Hint button next to each answer box that reveals the first letter. (A more complete hint system is planned — this is a first pass.)</span>
+                <span class="settings-desc" data-i18n="settings.table.hintButtonDesc">Shows a Hint button next to each answer box. Each click reveals one more letter, up to one letter short of the full answer.</span>
               </div>
               <div class="sort-order-toggle" id="settingHintButton">
                 <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
@@ -939,10 +958,90 @@
               </div>
             </div>
 
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.hintMultiGloss">Confirm multiple meanings on Hint</span>
+                <span class="settings-desc" data-i18n="settings.table.hintMultiGlossDesc">A Hint only ever spells out one sense of a word. When this is on and the word has more than one accepted sense, Standard style's Hint button says so in its tooltip, and Double Recall's hint shows a trailing " /" — neither reveals what the other sense is, just that one exists.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingHintMultiGloss">
+                <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupHintTracking" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupHintTracking">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Hint Outcome Tracking</span>
+            </button>
+            <div id="settingsGroupHintTracking" class="filter-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Track "hinted, then solved"</span>
+                <span class="settings-desc">Whether a word answered correctly after a Hint counts toward session history's stats. The row's color shows this either way — this only controls whether it's recorded.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingTrackHintedCorrect">
+                <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Track "hinted, then revealed"</span>
+                <span class="settings-desc">Whether a word revealed with the ?? button, after a Hint was used on it first, counts toward session history's stats.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingTrackHintedRevealed">
+                <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Track "hinted, then given up on"</span>
+                <span class="settings-desc">Whether a word left unanswered after a Hint, only revealed by the whole quiz's Give Up, counts toward session history's stats.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingTrackHintedMissed">
+                <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTableColors" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupTableColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Table Colors</span>
+            </button>
+            <div id="settingsGroupTableColors" class="filter-body">
+
+            <div class="settings-row settings-row--stack">
+              <div class="settings-label">
+                <span>Answer state colors</span>
+                <span class="settings-desc">The color each answer state uses in Table mode — correct, revealed, missed, the in-progress hint color, and each of the three hint-outcome states above.</span>
+              </div>
+              <button type="button" id="settingResetTableColors" class="settings-action-btn">Reset to defaults</button>
+              <div class="conj-color-list" id="settingTableColors">
+                <!-- One row per state, built from TABLE_COLOR_DEFS — see settings.ts -->
+              </div>
+            </div>
+
+            </div>
             </div>
 
             <div class="settings-group">
-            <div class="settings-group-heading" data-i18n="settings.table.groupCellInfo">Cell Info</div>
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupCellInfo" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupCellInfo">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.table.groupCellInfo">Cell Info</span>
+            </button>
+            <div id="settingsGroupCellInfo" class="filter-body">
 
             <div class="settings-row" data-advanced="true">
               <div class="settings-label">
@@ -977,6 +1076,7 @@
               </div>
             </div>
 
+            </div>
             </div>
 
             </div>

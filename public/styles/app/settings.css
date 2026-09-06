@@ -333,7 +333,10 @@ body.kid-friendly-mode [data-kid-hide="true"] {
 /* ── Group heading — a small sub-label at the top of a .settings-group,
    lighter-weight than a whole new collapsible section for categories that
    don't warrant their own top-level nav entry but have grown past one flat
-   list. ── */
+   list. Collapsible the same way a top-level section is (filter-collapse-btn
+   + [data-collapse], section-collapse.ts) — .settings-group-collapse-btn
+   just sizes that same mechanism for a lighter, group-level heading rather
+   than restating it. ── */
 .settings-group-heading {
   font-family: 'Sora', sans-serif;
   font-size: 0.72rem;
@@ -341,9 +344,18 @@ body.kid-friendly-mode [data-kid-hide="true"] {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+.settings-group-collapse-btn {
+  display: flex;
+  width: 100%;
+  justify-content: flex-start;
   padding: 0.9rem 0 0.3rem;
 }
-.settings-group > .settings-group-heading:first-child { padding-top: 0.7rem; }
+.settings-group > .settings-group-collapse-btn:first-child { padding-top: 0.7rem; }
+/* The group's own body sits right under its heading, same spacing the
+   heading used to carry itself before it became a separate wrapped
+   .filter-body sibling of the button. */
+.settings-group-collapse-btn + .filter-body { padding-top: 0; }
 
 /* ── Subsection — a full-width block under a .settings-row, for content that
    doesn't fit the label-left/control-right layout (a per-language list). ── */

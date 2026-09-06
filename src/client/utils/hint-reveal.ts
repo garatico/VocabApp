@@ -27,3 +27,22 @@ export function hintReveal(answer: string, revealedCount: number): string {
 export function hintableLength(answer: string): number {
   return [...answer].filter(ch => ch !== ' ').length;
 }
+
+/**
+ * `answer` truncated to its first `revealedCount` non-space characters —
+ * spaces within that span pass through, nothing past it is included at all
+ * (no trailing underscores). For Table mode's hint, which seeds an *editable*
+ * input the learner keeps typing from rather than a read-only display —
+ * unlike `hintReveal` above, where the underscores are the point.
+ */
+export function hintPrefix(answer: string, revealedCount: number): string {
+  let shown = 0;
+  let out = '';
+  for (const ch of answer) {
+    if (shown >= revealedCount) break;
+    if (ch === ' ') { out += ' '; continue; }
+    out += ch;
+    shown++;
+  }
+  return out;
+}

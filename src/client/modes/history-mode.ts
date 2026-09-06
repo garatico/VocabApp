@@ -348,6 +348,8 @@ export function renderHistory(container: HTMLElement, lang: string): void {
     const thead = document.createElement('thead');
     thead.innerHTML = '<tr>'
       + '<th>Date</th><th>Mode</th><th>Language</th><th>Score</th><th>Accuracy</th>'
+      + '<th title="Hinted, then revealed with the ?? button">Hint→Revealed</th>'
+      + '<th title="Hinted, then never resolved until the whole quiz\'s Give Up">Hint→Missed</th>'
       + '<th>Time</th><th>Pace</th></tr>';
     table.appendChild(thead);
 
@@ -405,6 +407,17 @@ export function renderHistory(container: HTMLElement, lang: string): void {
     pctTd.className = 'history-session-mono';
     pctTd.textContent = `${percent(s.correct, s.total)}%`;
 
+    // Table mode only — undefined for every other mode and for a session
+    // recorded before this field existed, both shown the same way as
+    // "nothing to report" rather than a misleading 0.
+    const hintedRevealedTd = document.createElement('td');
+    hintedRevealedTd.className = 'history-session-mono';
+    hintedRevealedTd.textContent = s.hintedRevealed != null ? String(s.hintedRevealed) : '—';
+
+    const hintedMissedTd = document.createElement('td');
+    hintedMissedTd.className = 'history-session-mono';
+    hintedMissedTd.textContent = s.hintedMissed != null ? String(s.hintedMissed) : '—';
+
     const secTd = document.createElement('td');
     secTd.className = 'history-session-mono';
     const mins = Math.floor(s.seconds / 60);
@@ -416,7 +429,7 @@ export function renderHistory(container: HTMLElement, lang: string): void {
     const rate = wordsPerMinute(s.correct, s.seconds);
     paceTd.textContent = rate > 0 ? `${rate}/min` : '—';
 
-    tr.append(dateTd, modeTd, langTd, scoreTd, pctTd, secTd, paceTd);
+    tr.append(dateTd, modeTd, langTd, scoreTd, pctTd, hintedRevealedTd, hintedMissedTd, secTd, paceTd);
     return tr;
   }
 

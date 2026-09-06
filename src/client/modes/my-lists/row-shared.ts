@@ -105,50 +105,58 @@ export function appendMasteredChip(statsRow: HTMLElement, masteredCount: number)
  * word+language), so there is no one lookup this shared helper could make on
  * every caller's behalf. Omit it (or pass null) where there's no list to date.
  */
+/** One labeled row in the detail table below — a dimmed label to the left,
+ *  the value beside it, same shape for every fact so Added/IPA/Example(s)/
+ *  etc. all read the same way instead of running together in a flat
+ *  wrapped list. */
+function detailRow(label: string, value: string): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'ml-detail-row';
+  const labelEl = document.createElement('span');
+  labelEl.className = 'ml-detail-label';
+  labelEl.textContent = label;
+  const valueEl = document.createElement('span');
+  valueEl.className = 'ml-detail-value';
+  valueEl.textContent = value;
+  row.append(labelEl, valueEl);
+  return row;
+}
+
 export function buildWordDetail(entry: VocabEntry, lang: string, addedDate?: number | null): HTMLElement {
   const detail = document.createElement('div');
   detail.className = 'ml-word-detail';
 
-  if (addedDate || getMasteredDate(lang, entry.word)) {
-    const history = document.createElement('span');
-    history.className = 'ml-detail-history';
-    const parts: string[] = [];
-    if (addedDate) parts.push(`Added ${new Date(addedDate).toLocaleDateString()}`);
-    const masteredDate = getMasteredDate(lang, entry.word);
-    if (masteredDate) parts.push(`Mastered ${new Date(masteredDate).toLocaleDateString()}`);
-    history.textContent = parts.join(' · ');
-    detail.appendChild(history);
-  }
+  const table = document.createElement('div');
+  table.className = 'ml-detail-table';
 
+  if (addedDate) {
+    table.appendChild(detailRow('Added', new Date(addedDate).toLocaleDateString()));
+  }
+  const masteredDate = getMasteredDate(lang, entry.word);
+  if (masteredDate) {
+    table.appendChild(detailRow('Mastered', new Date(masteredDate).toLocaleDateString()));
+  }
   if (entry.disambiguator) {
-    const d = document.createElement('span');
-    d.className = 'ml-detail-disambig';
-    d.textContent = `Sense: ${entry.disambiguator}`;
-    detail.appendChild(d);
+    table.appendChild(detailRow('Sense', entry.disambiguator));
   }
   if (entry.glosses.length > 1) {
-    const gl = document.createElement('span');
-    gl.className = 'ml-detail-glosses';
     // Per-gloss meaning notes, e.g. "of, from (origin)" — same guarded
     // lookup as the rest of My Lists' meaningDisambiguators reads (a plain
     // object from JSON still has Object.prototype behind it).
     const notes = entry.meaningDisambiguators;
-    gl.textContent = entry.glosses.map(g => {
+    const glossText = entry.glosses.map(g => {
       const note = notes && Object.prototype.hasOwnProperty.call(notes, g) ? notes[g] : undefined;
       return note ? `${g} (${note})` : g;
     }).join(', ');
-    detail.appendChild(gl);
+    table.appendChild(detailRow('Glosses', glossText));
   }
   if (entry.ipa) {
-    const ipa = document.createElement('span');
-    ipa.className = 'ml-detail-ipa'; ipa.textContent = '/' + entry.ipa + '/';
-    detail.appendChild(ipa);
+    table.appendChild(detailRow('IPA', '/' + entry.ipa + '/'));
   }
   if (entry.examples.length > 0) {
-    const ex = document.createElement('span');
-    ex.className = 'ml-detail-example'; ex.textContent = entry.examples[0];
-    detail.appendChild(ex);
+    table.appendChild(detailRow(entry.examples.length > 1 ? 'Examples' : 'Example', entry.examples[0]));
   }
+  if (table.children.length > 0) detail.appendChild(table);
 
   if (entry.pos === 'verb' && entry.conjugations) {
     const conjBtn = document.createElement('button');

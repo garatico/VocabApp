@@ -532,6 +532,20 @@
   font-size: 0.71rem;
   padding: 0.15rem 0.4rem;
 }
+/* Level chips get the same tighter sizing — without this they fell back to
+   .pos-chip's base 0.78rem/0.2rem-0.55rem size while Part of Speech chips
+   sat at 0.71rem/0.15rem-0.4rem right above them, visibly larger for no
+   reason. Placed here rather than by .ml-band-row's own definition further
+   down: the mobile breakpoint's own `.ml-pos-row .pos-chip, .ml-band-row
+   .pos-chip` override further below in this file needs to out-rank this at
+   equal specificity by coming later in the cascade — if this sat after that
+   media query instead, it would win there too and Level chips would stop
+   responding to the mobile breakpoint that Part of Speech chips still do. */
+.ml-band-row .pos-chip {
+  flex-shrink: 0;
+  font-size: 0.71rem;
+  padding: 0.15rem 0.4rem;
+}
 
 /* ── Add-words search ────────────────────────────────────────── */
 /* Tinted background + its own border/radius so this reads as its own card,
@@ -908,6 +922,46 @@ html.dark .ml-word-pos[data-pos] {
   padding: 0.08rem 0.28rem;
 }
 
+/* ── Level (CEFR band) badge, Smart List rows ────────────────────
+   Same pill metrics as .ml-word-pos above (font-size, padding,
+   border-radius, left alignment) — this used to reuse .ml-word-rank (the
+   plain right-aligned monospace frequency-rank number), which is why it
+   looked larger and unstyled next to the POS pill on the same row. Sits in
+   the rank column (unlike .ml-word-pos, which owns the pos column) since
+   Smart List rows don't otherwise show a rank number. */
+.ml-word-band {
+  grid-column: rank;
+  justify-self: start;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-family: 'DM Mono', monospace;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: var(--surface2);
+  white-space: nowrap;
+  line-height: 1.5;
+}
+/* Same hue-per-level convention as tooltip.css's .tt-band, so a word's Level
+   badge reads the same color whether you're looking at a Smart List row or
+   its hover card. */
+.ml-word-band[data-band="A1"] { --pos-hue: 142; }
+.ml-word-band[data-band="A2"] { --pos-hue: 100; }
+.ml-word-band[data-band="B1"] { --pos-hue:  60; }
+.ml-word-band[data-band="B2"] { --pos-hue:  35; }
+.ml-word-band[data-band="C1"] { --pos-hue:  15; }
+.ml-word-band[data-band="C2"] { --pos-hue:   0; }
+.ml-word-band[data-band] {
+  color:        hsl(var(--pos-hue) 55% 32%);
+  border-color: hsl(var(--pos-hue) 50% 45% / 0.5);
+  background:   hsl(var(--pos-hue) 55% 50% / 0.16);
+}
+html.dark .ml-word-band[data-band] {
+  color: hsl(var(--pos-hue) 65% 72%);
+}
+
 /* ── Export button ───────────────────────────────────────────── */
 
 /* Inline on the title row next to Export/Export Format, not its own
@@ -1275,8 +1329,8 @@ html.dark .ml-word-pos[data-pos] {
 .ml-word-detail {
   grid-column: 1 / -1;
   display: none;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  flex-direction: column;
+  gap: 0.5rem;
   padding: 0.4rem 0.5rem 0.2rem;
   margin-top: 0.25rem;
   border-top: 1px dashed var(--border);
@@ -1286,35 +1340,36 @@ html.dark .ml-word-pos[data-pos] {
 .ml-word-item--expanded { background: var(--accent-light); }
 .ml-word-item--expanded .ml-word-text { color: var(--accent); }
 
-.ml-detail-glosses {
+/* Labeled fact table — Added/Mastered/Sense/Glosses/IPA/Example(s), one per
+   row, label dimmed and left of its value (see row-shared.ts's detailRow) —
+   rather than every fact reading as the same flat wrapped run of text. */
+.ml-detail-table {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 0.6rem;
+  row-gap: 0.3rem;
+}
+.ml-detail-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+}
+.ml-detail-label {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  padding-top: 0.1rem;
+}
+.ml-detail-value {
   color: var(--text);
-  font-weight: 500;
-  flex-basis: 100%;
-}
-.ml-detail-ipa {
-  color: var(--text-muted);
-  font-family: 'DM Mono', monospace;
-  font-size: 0.78rem;
-}
-.ml-detail-example {
-  color: var(--text-muted);
-  font-style: italic;
-  flex-basis: 100%;
   line-height: 1.4;
 }
 .ml-detail-none {
   color: var(--text-muted);
   font-style: italic;
-}
-
-/* When this word was added to the current list, and/or when it first
-   reached Mastered — see row-shared.ts's buildWordDetail. Its own full-width
-   line above everything else in the detail panel, since it's a fact about
-   this word's history rather than about its meaning. */
-.ml-detail-history {
-  flex-basis: 100%;
-  color: var(--text-muted);
-  font-size: 0.74rem;
 }
 
 /* Matched substring in a search result — see dom.ts's fillHighlighted. Not
@@ -1326,15 +1381,6 @@ mark.search-match {
   color: inherit;
   border-radius: 3px;
   padding: 0 1px;
-}
-
-/* Word/meaning disambiguators — moved here from inline next to the word
-   (see row-shared.ts's buildWordDetail) so a word carrying one doesn't
-   widen its row's own column past its neighbors'. */
-.ml-detail-disambig {
-  color: var(--accent);
-  font-weight: 600;
-  flex-basis: 100%;
 }
 
 /* ── Conjugation, shown on demand (see buildWordDetail) ───────── */
@@ -1364,29 +1410,14 @@ mark.search-match {
 .ml-detail-conj .tt-conj-table th,
 .ml-detail-conj .tt-conj-table td { padding: 0.3rem 0.55rem; }
 
-/* Forms (pronoun) and Tenses color-coded the same way Conjugation Mode does
-   — same --tense-hue/--pronoun-hue custom properties, set by the same
-   data-tense/data-pi attributes (see conjugation.css's own [data-tense]/
-   [data-pi] blocks and word-tooltip.ts's buildConjTable). Settings' own
-   conjugation colors (below) can override these hues per-language.
-   tooltip.css's .tt-pronoun/.tt-empty rules use !important to stay muted in
-   the quiz hover tooltip this table is shared with — matching !important
-   here, scoped to .ml-detail-conj, is what lets color win only in this
-   view without touching that tooltip's own look. */
-.ml-detail-conj .tt-conj-table th[data-tense],
-.ml-detail-conj .tt-conj-table td[data-tense]:not(.tt-empty) {
-  color: hsl(var(--tense-hue, 145) 55% 32%) !important;
-}
+/* Forms (pronoun) and Tenses are color-coded by tooltip.css's own base
+   .tt-conj-table rules now — every consumer of this table (hover tooltip,
+   the word-info click popover, and this expanded row) gets the same
+   treatment, so nothing color-specific needs duplicating here any more.
+   Pronoun text stays upright at this view's larger font-size, though —
+   the tooltip's own italic reads worse blown up to full row width. */
 .ml-detail-conj .tt-conj-table td.tt-pronoun[data-pi] {
-  color: hsl(var(--pronoun-hue, 210) 55% 32%) !important;
   font-style: normal;
-}
-html.dark .ml-detail-conj .tt-conj-table th[data-tense],
-html.dark .ml-detail-conj .tt-conj-table td[data-tense]:not(.tt-empty) {
-  color: hsl(var(--tense-hue, 145) 60% 72%) !important;
-}
-html.dark .ml-detail-conj .tt-conj-table td.tt-pronoun[data-pi] {
-  color: hsl(var(--pronoun-hue, 210) 60% 72%) !important;
 }
 
 /* Grid lines — tooltip.css's table only underlines the header row (right
@@ -1395,19 +1426,6 @@ html.dark .ml-detail-conj .tt-conj-table td.tt-pronoun[data-pi] {
 .ml-detail-conj .tt-conj-table th,
 .ml-detail-conj .tt-conj-table td {
   border: 1px solid var(--border);
-}
-
-/* Row/column highlight on hover — buildConjTable (word-tooltip.ts) tags each
-   data cell with data-col and toggles .tt-conj-hl-row/.tt-conj-hl-col via a
-   delegated mouseover/mouseleave on the table, so hovering any cell makes it
-   obvious which Form (row) and Tense (column) it belongs to. Scoped to
-   .ml-detail-conj the same way the color-coding above is — the quiz hover
-   tooltip shares this table markup but not this behavior. */
-.ml-detail-conj .tt-conj-table tr.tt-conj-hl-row > td,
-.ml-detail-conj .tt-conj-table tr.tt-conj-hl-row > th,
-.ml-detail-conj .tt-conj-table td.tt-conj-hl-col,
-.ml-detail-conj .tt-conj-table th.tt-conj-hl-col {
-  background: var(--accent-light);
 }
 
 /* ── Move popover: mode tabs ─────────────────────────────────── */

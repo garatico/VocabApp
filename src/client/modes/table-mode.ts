@@ -1,15 +1,18 @@
 import type { Word } from '../types.ts';
 import {
   slotText, slotMatches, extraMatchedGloss, displayWord, glossWithMeaningNote, DEFAULT_CHINESE_DISPLAY,
+  primaryGlossForHint, chosenGlosses,
   type QuizSlot, type ChineseDisplay,
 } from '../utils/utils.ts';
 import { attachTooltips }        from '../utils/word-tooltip.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker }        from '../utils/list-picker.ts';
+import { openWordInfoPopover }   from '../utils/word-info-popover.ts';
 import { Settings, applyAutofillAttr } from '../settings.ts';
 import { missCount }             from '../utils/session-history.ts';
 import { flagUrl }               from '../data/languages.ts';
 import { setWordWithDisambiguator, enableInputWheelScroll } from '../utils/dom.ts';
+import { hintPrefix, hintableLength } from '../utils/hint-reveal.ts';
 
 export type DirectionPair = 'target-en' | 'en-target';
 export type TableDirection = DirectionPair | 'mixed';
@@ -36,6 +39,15 @@ export interface InputSnapshot {
   disabled:   boolean;
   stateClass: 'correct' | 'incorrect' | 'peeked' | '';
   dir:        DirectionPair;
+  /** Letters revealed via the Hint button so far — undefined/0 means never
+   *  used. Optional so the handful of call sites that build an InputSnapshot
+   *  without any hint involved (e.g. giveUpAll's "never touched" case) don't
+   *  all need updating; every reader falls back to `?? 0`. */
+  hintsShown?: number;
+  /** Checked via the row's bulk-select checkbox (table-controls.ts's "Add N
+   *  to list(s)" toolbar action) — same optional/`?? false`-fallback reasoning
+   *  as hintsShown. */
+  selected?: boolean;
 }
 
 export interface TableController {
@@ -162,6 +174,22 @@ export function renderTableMode({
     if (answerSlot !== 'english' || !typedInput || !Settings.getExpandGlossOnMatch()) return base;
     const extra = extraMatchedGloss(typedInput, entry, Settings.getAnswerGlossCount(), matchMode);
     return extra ? `${base} / ${glossWithMeaningNote(extra, entry)}` : base;
+  }
+
+  /**
+   * The text a letter-by-letter Hint should target — unlike revealText, this
+   * never joins multiple senses with " / " and never carries the word-level
+   * disambiguator: a hint gives away letters of one sense, not the fact that
+   * more senses or a disambiguator exist (see Settings.getShowHintMultiGlossHint
+   * for the one deliberate, opt-in exception, applied separately at the call
+   * site since it's additive to the *displayed* hint text, not this target).
+   * The word slot is untouched — revealTextFor never attaches a disambiguator
+   * there, so it's already hint-safe.
+   */
+  function hintText(entry: Word, dir: DirectionPair): string {
+    const [, answerSlot] = slotsFor(dir);
+    if (answerSlot !== 'english') return revealTextFor(entry, dir, entry.language ?? lang, chineseDisplay);
+    return primaryGlossForHint(entry);
   }
 
   function checkInput(input: string, entry: Word, dir: DirectionPair): boolean {
@@ -303,6 +331,20 @@ export function renderTableMode({
         rankEl.textContent = String(w.rank || (i + j + 1));
         tdWord.appendChild(rankEl);
 
+        // ── Bulk-select checkbox — table-controls.ts's "Add N to list(s)"
+        // toolbar action. Mirrors its checked state onto inp.dataset.selected
+        // (set below, once `inp` exists) the same way the Hint button mirrors
+        // hintsShown, so a page round-trip doesn't lose which rows were
+        // checked — snapshotState() in table-controls.ts reads it back from
+        // there rather than needing to separately track checkbox elements.
+        const selectCb = document.createElement('input');
+        selectCb.type      = 'checkbox';
+        selectCb.className = 'row-select-cb';
+        selectCb.title     = 'Select this word';
+        selectCb.tabIndex  = -1;
+        selectCb.checked   = snap?.selected ?? false;
+        tdWord.appendChild(selectCb);
+
         const wordDiv = document.createElement('div');
         const { text: labelTextValue, showDisambiguator } = labelParts(w, dir);
         setWordWithDisambiguator(wordDiv, labelTextValue, w.disambiguator, showDisambiguator);
@@ -314,6 +356,25 @@ export function renderTableMode({
         // solved — mixed direction resolves this per word via `dir`, same
         // as the cell's own text does.
         wordDiv.dataset.dir = dir;
+        // Click for the word info/actions popover — full detail, Add to
+        // list, copy actions, and (verbs) a Conjugation-mode shortcut. Same
+        // reveal-gating as the hover tooltip above it (word-tooltip.ts):
+        // the word is still being tested mid-quiz, so this must not hand
+        // over the answer before it's been solved, revealed, or given up
+        // on — it only adds reachability on a touch device, where hover
+        // never fires at all. The checkbox and star live in their own
+        // cells/rows, so nothing here needs to guard against double-firing
+        // on top of them.
+        wordDiv.classList.add('word-info-trigger');
+        wordDiv.addEventListener('click', () => {
+          const revealed = inp.classList.contains('correct')
+            || inp.classList.contains('incorrect')
+            || inp.classList.contains('peeked');
+          openWordInfoPopover({
+            anchorEl: wordDiv, word: w, lang: wordLang, revealed,
+            hideWordWhenUnrevealed: dir === 'en-target',
+          });
+        });
         tdWord.appendChild(wordDiv);
 
         const inp        = document.createElement('input');
@@ -326,7 +387,18 @@ export function renderTableMode({
         // never have to special-case "no language tag on this row".
         inp.dataset.lang = wordLang;
         inp.dataset.dir  = dir;
+        // Letters revealed via the Hint button so far — mirrors `dir` above,
+        // read back the same way so a page round-trip resumes the button at
+        // the right spot instead of forgetting how far a hint got.
+        inp.dataset.hints = String(snap?.hintsShown ?? 0);
+        inp.dataset.selected = String(snap?.selected ?? false);
         inp.placeholder  = PLACEHOLDER_FOR[slotsFor(dir)[1]];
+
+        selectCb.addEventListener('change', () => {
+          inp.dataset.selected = String(selectCb.checked);
+          tdWord.classList.toggle('word-cell--selected', selectCb.checked);
+        });
+        tdWord.classList.toggle('word-cell--selected', selectCb.checked);
 
         // ── Restore saved state (column change preserves progress) ────────────
         if (snap) {
@@ -430,18 +502,43 @@ export function renderTableMode({
 
         if (showHintButton) {
           hintBtn.textContent = '?';
-          hintBtn.title       = 'Show first letter';
-          // First pass at a hint system — just the first letter for now,
-          // with a more complete one planned separately. Disables itself
-          // after one use rather than doing anything more on a second
-          // click: Reveal (its own button, when on) is the only "give the
-          // rest of it" affordance now.
+
+          // Progressive: each click reveals one more letter into the input
+          // itself (the learner keeps typing from there), capped one short
+          // of the full word — Reveal (its own button, when on) stays the
+          // only "give the rest of it" affordance. `shown` picks up where a
+          // prior page render left off via inp.dataset.hints (see above).
+          let shown = snap?.hintsShown ?? 0;
+          if (shown > 0) inp.classList.add('hinted');
+
+          // Multi-gloss confirmation is a Settings-gated tooltip suffix, not
+          // part of the hint text itself — this input is what the learner
+          // keeps typing into, so a literal " /" would just be stray
+          // characters they'd have to delete (see Double Recall's own hint,
+          // which has no such input to protect and shows it directly).
+          const multiGlossSuffix =
+            Settings.getShowHintMultiGlossHint() && chosenGlosses(w).length > 1
+              ? ' (multiple meanings accepted)' : '';
+
+          function syncHintButton(): void {
+            const cap = Math.max(0, hintableLength(hintText(w, dir)) - 1);
+            hintBtn.disabled = shown >= cap;
+            hintBtn.title    = (cap === 0 ? 'No letters to show'
+              : shown >= cap ? 'No more letters'
+              : shown === 0  ? 'Show a letter' : 'Show another letter') + multiGlossSuffix;
+          }
+          syncHintButton();
+
           hintBtn.addEventListener('click', () => {
-            const answer    = revealText(w, dir);
-            inp.value       = answer[0];
-            inp.placeholder = `${answer.length} letters`;
+            const answer = hintText(w, dir);
+            const cap    = Math.max(0, hintableLength(answer) - 1);
+            if (shown < cap) shown++;
+            inp.value         = hintPrefix(answer, shown);
+            inp.dataset.hints = String(shown);
+            inp.classList.add('hinted');
             inp.focus();
-            hintBtn.disabled = true;
+            syncHintButton();
+            updateProgress();
           });
           inputRow.appendChild(hintBtn);
         }

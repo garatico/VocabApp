@@ -112,7 +112,10 @@ function isWordRevealed(anchorEl: Element): boolean {
   if (!inputTd) return false;
   const inp = inputTd.querySelector('input');
   if (!inp) return true;
-  return inp.classList.contains('correct') || inp.classList.contains('incorrect');
+  // 'peeked' (revealed via the row's own ?? button) shows the full word on
+  // screen just as much as 'correct'/'incorrect' do — the tooltip should
+  // match what's already visible, not still gate on "solve it first".
+  return inp.classList.contains('correct') || inp.classList.contains('incorrect') || inp.classList.contains('peeked');
 }
 
 // -- Content builders ---------------------------------------------------------
@@ -307,9 +310,19 @@ export function buildNonFiniteSection(
   return section;
 }
 
-/** See buildNonFiniteSection's own comment — same reasoning, same export. */
+/**
+ * See buildNonFiniteSection's own comment — same reasoning, same export.
+ *
+ * @param onExpandToggle Called with the new expanded state instead of the
+ * default tooltip-resize behavior below — word-info-popover.ts passes its
+ * own resize/reposition logic, since "Show all tenses" there needs to grow
+ * a *different* visible container (the click popover), not the hidden hover
+ * tooltip singleton this function resizes by default. Omitted, this keeps
+ * resizing the hover tooltip exactly as before.
+ */
 export function buildConjSection(
   conjugations: Record<string, string[] | string> | null | undefined, lang: string,
+  onExpandToggle?: (expanding: boolean) => void,
 ): HTMLElement | null {
   const conj = conjugations;
   if (!conj) return null;
@@ -349,12 +362,91 @@ export function buildConjSection(
     fullWrap.hidden    = !expanding;
     presentWrap.hidden = expanding;
     expandBtn.textContent = expanding ? 'Show less' : 'Show all tenses';
-    const tt = getTooltip();
-    tt.style.width = expanding ? '' : '280px';
-    positionTooltip();
+    if (onExpandToggle) {
+      onExpandToggle(expanding);
+    } else {
+      const tt = getTooltip();
+      tt.style.width = expanding ? '' : '280px';
+      positionTooltip();
+    }
   });
 
   return section;
+}
+
+/**
+ * Everything shown once a word is revealed, beyond the heading/meta row
+ * every tooltip shows regardless: glosses, conjugation (verbs), synonyms/
+ * antonyms. Factored out of populateTooltip so Table mode's word-click info
+ * popover (see buildWordDetailContent below) can show the exact same detail
+ * without a reveal-gating concept of its own, and without duplicating this
+ * logic where the two could quietly drift apart.
+ */
+function appendRevealedDetail(
+  container: HTMLElement, word: Word, lang: string,
+  onExpandToggle?: (expanding: boolean) => void,
+): void {
+  container.appendChild(buildGlosses(word));
+
+  if (word.pos === 'verb') {
+    const conjSection = buildConjSection(word.linguistic?.conjugations, lang, onExpandToggle);
+    if (conjSection) container.appendChild(conjSection);
+    const nonFiniteSection = buildNonFiniteSection(word.linguistic?.conjugations, lang);
+    if (nonFiniteSection) container.appendChild(nonFiniteSection);
+  }
+
+  const syns = word.relations?.synonyms ?? [];
+  const ants = word.relations?.antonyms ?? [];
+  if (syns.length || ants.length) {
+    const rel = document.createElement('div');
+    rel.className = 'tt-relations';
+    if (syns.length) {
+      const s = document.createElement('span');
+      s.innerHTML = `<em>syn:</em> ${syns.join(', ')}`;
+      rel.appendChild(s);
+    }
+    if (ants.length) {
+      const a = document.createElement('span');
+      a.innerHTML = `<em>ant:</em> ${ants.join(', ')}`;
+      rel.appendChild(a);
+    }
+    container.appendChild(rel);
+  }
+}
+
+/**
+ * The word detail — heading, meta badges, and (once `revealed`) glosses,
+ * conjugation, relations — as a standalone element for Table mode's
+ * click-to-open word info popover (word-info-popover.ts). Same reveal
+ * gating as the hover tooltip's own populateTooltip, and for the same
+ * reason: a word mid-quiz is still being tested, so a "look it up" click
+ * must not hand over the very answer the quiz is asking for. `revealed`
+ * and `hideWordWhenUnrevealed` mean exactly what they do there — see
+ * isWordRevealed and attachTooltips' own hideWordWhenUnrevealed option.
+ */
+export function buildWordDetailContent(
+  word: Word, lang: string, revealed: boolean, hideWordWhenUnrevealed = false,
+  onExpandToggle?: (expanding: boolean) => void,
+): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'tt-detail-content';
+
+  const heading = document.createElement('div');
+  heading.className   = 'tt-word';
+  heading.textContent = (hideWordWhenUnrevealed && !revealed) ? '???' : displayWord(word, Settings.getShowDisambiguator());
+  wrap.appendChild(heading);
+  wrap.appendChild(buildMetaRow(word));
+
+  if (revealed) {
+    appendRevealedDetail(wrap, word, lang, onExpandToggle);
+  } else {
+    const hint = document.createElement('div');
+    hint.className   = 'tt-glosses tt-hidden-hint';
+    hint.textContent = 'Answer, reveal, or give up on this word to see its details';
+    wrap.appendChild(hint);
+  }
+
+  return wrap;
 }
 
 /** Clear whatever the previous hover's word left on the shared tooltip element. */
@@ -391,37 +483,12 @@ function populateTooltip(word: Word, revealed: boolean, lang: string, hideWordWh
   tt.appendChild(buildMetaRow(word));
 
   if (revealed) {
-    tt.appendChild(buildGlosses(word));
+    appendRevealedDetail(tt, word, lang);
   } else {
     const hint = document.createElement('div');
     hint.className   = 'tt-glosses tt-hidden-hint';
     hint.textContent = 'Solve the word to see the translation';
     tt.appendChild(hint);
-  }
-
-  if (revealed && word.pos === 'verb') {
-    const conjSection = buildConjSection(word.linguistic?.conjugations, lang);
-    if (conjSection) tt.appendChild(conjSection);
-    const nonFiniteSection = buildNonFiniteSection(word.linguistic?.conjugations, lang);
-    if (nonFiniteSection) tt.appendChild(nonFiniteSection);
-  }
-
-  const syns = word.relations?.synonyms ?? [];
-  const ants = word.relations?.antonyms ?? [];
-  if (revealed && (syns.length || ants.length)) {
-    const rel = document.createElement('div');
-    rel.className = 'tt-relations';
-    if (syns.length) {
-      const s = document.createElement('span');
-      s.innerHTML = `<em>syn:</em> ${syns.join(', ')}`;
-      rel.appendChild(s);
-    }
-    if (ants.length) {
-      const a = document.createElement('span');
-      a.innerHTML = `<em>ant:</em> ${ants.join(', ')}`;
-      rel.appendChild(a);
-    }
-    tt.appendChild(rel);
   }
 
   tt.style.width = '280px';

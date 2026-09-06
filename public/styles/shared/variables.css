@@ -56,6 +56,15 @@
   --success:       #047857;
   --success-light: #d1fae5;
 
+  /* Table mode — a word resolved *after* a hint was used on it, one hue per
+     outcome so "got it right anyway" / "gave up on just this one" / "never
+     answered at all" read as three different things, not the same hint-used
+     flag. Settings can override each as a full color (see
+     applyTableColors) — these are just the defaults. */
+  --hinted-correct:  #0f766e;
+  --hinted-revealed: #c2410c;
+  --hinted-missed:   #7c3aed;
+
   /* Motion */
   --transition-fast:   0.15s ease;
   --transition-normal: 0.3s ease;
@@ -134,6 +143,10 @@ html.dark {
   --info-light:    #0f1c3d;
   --success:       #34d399;
   --success-light: #0d2a1e;
+
+  --hinted-correct:  #2dd4bf;
+  --hinted-revealed: #fb923c;
+  --hinted-missed:   #c4b5fd;
 
   --ml-accent-smart:       #a58ce0;
   --ml-accent-smart-light: #2a2140;

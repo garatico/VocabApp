@@ -442,9 +442,9 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
       posSpan.textContent = POS_ABBREV[entry?.pos ?? ''] ?? '';
       if (entry?.pos) posSpan.dataset.pos = entry.pos; else posSpan.hidden = true;
       const bandSpan = document.createElement('span');
-      bandSpan.className = 'ml-word-rank';
+      bandSpan.className = 'ml-word-band';
       bandSpan.textContent = entry?.band ?? '';
-      if (!bandSpan.textContent) bandSpan.hidden = true;
+      if (entry?.band) bandSpan.dataset.band = entry.band; else bandSpan.hidden = true;
       const transSpan = document.createElement('span');
       transSpan.className = 'ml-word-trans';
       transSpan.textContent = entry?.translation ?? '';

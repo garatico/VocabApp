@@ -42,6 +42,16 @@ export interface SessionRecord {
   unassisted: number;
   hints:      number;
   revealed:   number;
+  /** Table mode only — peeked/revealed after a hint was used on that word
+   *  first (a subset of `revealed`), gated by
+   *  Settings.getTrackHintedRevealed(). Omitted for every other mode, and
+   *  for a Table session predating this field. */
+  hintedRevealed?: number;
+  /** Table mode only — never resolved by typing or peeking, revealed only
+   *  by the whole-quiz Give Up, after a hint was used on that word (not a
+   *  subset of `revealed`, which peeked-specifically means the `??`
+   *  button). Gated by Settings.getTrackHintedMissed(). */
+  hintedMissed?: number;
   seconds:    number;    // elapsed, not remaining
   /** The language this record is filed under — same as the bucket it's stored
    *  in, kept alongside it so a record is self-describing on its own. */

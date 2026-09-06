@@ -368,14 +368,27 @@ export function getGlosses(entry: Word): string[] {
  * maxGlosses — verbs narrow to "to X" forms when any exist, everything else
  * keeps every sense. Its own function so extraMatchedGloss can search the
  * same list buildGlossDisplay would, and the two can never drift apart.
+ * Exported for primaryGlossForHint below.
  */
-function chosenGlosses(entry: Word): string[] {
+export function chosenGlosses(entry: Word): string[] {
   const glosses = getGlosses(entry);
   if (entry.pos === 'verb') {
     const toForms = glosses.filter(g => g.toLowerCase().startsWith('to '));
     if (toForms.length > 0) return toForms;
   }
   return glosses;
+}
+
+/**
+ * The single primary sense a letter-by-letter Hint should target — no
+ * per-gloss meaning note, no " / "-joined second sense, no word-level
+ * disambiguator. The full reveal / correct-answer display (buildGlossDisplay,
+ * displayWord) stays as rich as ever; only the hint is narrowed to one sense,
+ * since a hint is meant to give away letters, not structure or extra senses.
+ */
+export function primaryGlossForHint(entry: Word): string {
+  const chosen = chosenGlosses(entry);
+  return chosen.length === 0 ? (entry.translation ?? entry.word ?? '') : chosen[0];
 }
 
 /**

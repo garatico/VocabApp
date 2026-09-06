@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   capitalize, displayWord, extraMatchedGloss, chineseWordText, slotText, slotMatches,
-  DEFAULT_CHINESE_DISPLAY, type ChineseDisplay,
+  primaryGlossForHint, DEFAULT_CHINESE_DISPLAY, type ChineseDisplay,
 } from '../../src/client/utils/utils.js';
 import type { Word } from '../../src/client/types.js';
 
@@ -35,6 +35,30 @@ describe('displayWord', () => {
 
   it('appends the disambiguator in parentheses', () => {
     expect(displayWord(word({ word: 'haber', disambiguator: 'auxiliary' }))).toBe('haber (auxiliary)');
+  });
+});
+
+describe('primaryGlossForHint', () => {
+  it('returns just the first chosen gloss, no " / " join', () => {
+    const de = word({ word: 'de', glosses: ['of', 'from'] });
+    expect(primaryGlossForHint(de)).toBe('of');
+  });
+
+  it('never carries a meaning note, unlike buildGlossDisplay', () => {
+    const trabajar = word({
+      word: 'trabajar', glosses: ['work'], meaningDisambiguators: { work: 'function' },
+    });
+    expect(primaryGlossForHint(trabajar)).toBe('work');
+  });
+
+  it('narrows to "to X" forms for a verb, same as buildGlossDisplay', () => {
+    const probar = word({ word: 'probar', pos: 'verb', glosses: ['to test', 'to try', 'to prove'] });
+    expect(primaryGlossForHint(probar)).toBe('to test');
+  });
+
+  it('falls back to translation, then word, when there are no glosses', () => {
+    expect(primaryGlossForHint(word({ word: 'x', glosses: [], translation: 'y' }))).toBe('y');
+    expect(primaryGlossForHint(word({ word: 'x', glosses: [] }))).toBe('x');
   });
 });
 

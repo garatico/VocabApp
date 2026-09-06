@@ -142,6 +142,29 @@ export const Settings = {
   getExpandGlossOnMatch: (): boolean => get('expand_gloss_on_match', 'true') === 'true',
 
   /**
+   * Whether a letter Hint, on a word with more than one accepted sense,
+   * confirms that fact — Standard style (its hint pre-fills the actual
+   * editable answer input) puts this in the Hint button's tooltip rather
+   * than the input's value; Double Recall (a read-only hint display) shows
+   * a literal trailing " /" instead. Off by default — even confirming
+   * "there's more than one answer" is a form of hint some learners would
+   * rather not have.
+   */
+  getShowHintMultiGlossHint: (): boolean => get('hint_multi_gloss', 'false') === 'true',
+
+  /**
+   * Whether Table mode's session history records each hint-outcome count —
+   * independent per outcome, so a learner can track "hinted but got it
+   * right" without also tracking "hinted and gave up," say. Purely a
+   * recording toggle: the row still gets its distinct color (see table.css's
+   * input.correct.hinted etc.) regardless of these — this only gates what
+   * gets written to SessionRecord/History. All default on.
+   */
+  getTrackHintedCorrect:  (): boolean => get('track_hinted_correct', 'true') === 'true',
+  getTrackHintedRevealed: (): boolean => get('track_hinted_revealed', 'true') === 'true',
+  getTrackHintedMissed:   (): boolean => get('track_hinted_missed', 'true') === 'true',
+
+  /**
    * Words shown per page in table mode. 'all' (or any unparseable value)
    * means no pagination, represented as Infinity so callers can slice with it
    * directly.
@@ -424,6 +447,11 @@ export const Settings = {
     const v = readString(P + 'person_hue_' + i);
     return v === null ? null : Number(v);
   },
+
+  /** A full-color (#rrggbb) override for one of Table mode's 7 semantic
+   *  states (TABLE_COLOR_DEFS's own keys), or null to use its built-in
+   *  default token. */
+  getTableColor: (key: string): string | null => readString(P + 'table_color_' + key),
 };
 
 // ── Language color application ────────────────────────────────────────────────
@@ -479,6 +507,28 @@ const PERSON_COLOR_DEFS: readonly [i: number, label: string, defaultHue: number]
 ];
 
 /**
+ * Table mode's 7 semantic state colors — key (storage suffix and
+ * --table-color-<key> custom property, hyphens not underscores to match
+ * table.css's own naming), label, and the existing token each falls back
+ * to when not customized (the 3 hinted-outcome states have no prior token,
+ * so they fall back to the new --hinted-* ones in variables.css instead).
+ * Unlike TENSE_COLOR_DEFS/PERSON_COLOR_DEFS above, these store a full color
+ * rather than just a hue — table.css's states aren't a "12 evenly-spaced
+ * categories" palette the way tenses are, they're specific, meaningful
+ * colors (green/red/yellow/...) a learner would want to pick precisely,
+ * not just nudge the hue of.
+ */
+const TABLE_COLOR_DEFS: readonly [key: string, label: string, fallbackVar: string][] = [
+  ['correct',         'Correct',                     '--correct'],
+  ['revealed',        'Revealed (?? button)',         '--warning'],
+  ['incorrect',       'Missed / Give Up',             '--incorrect'],
+  ['hinted',          'Hint used, still solving',     '--info'],
+  ['hinted-correct',  'Hinted, then solved',          '--hinted-correct'],
+  ['hinted-revealed', 'Hinted, then revealed',        '--hinted-revealed'],
+  ['hinted-missed',   'Hinted, then given up on',     '--hinted-missed'],
+];
+
+/**
  * Apply any saved tense/person hue overrides as inline :root properties —
  * same mechanism as applyLangColors above, but each override feeds a
  * --tense-hue-<key>/--pronoun-hue-<i> custom property that conjugation.css's
@@ -495,6 +545,20 @@ export function applyTenseColors(): void {
     const hue = Settings.getPersonHue(i);
     if (hue !== null) document.documentElement.style.setProperty('--pronoun-hue-' + i, String(hue));
     else document.documentElement.style.removeProperty('--pronoun-hue-' + i);
+  }
+}
+
+/**
+ * Apply any saved Table mode color overrides as inline :root properties —
+ * table.css's own rules already fall through to each state's built-in token
+ * when --table-color-<key> is unset, so this only ever needs to set or clear
+ * it, never supply the default itself.
+ */
+export function applyTableColors(): void {
+  for (const [key] of TABLE_COLOR_DEFS) {
+    const hex = Settings.getTableColor(key);
+    if (hex) document.documentElement.style.setProperty('--table-color-' + key, hex);
+    else document.documentElement.style.removeProperty('--table-color-' + key);
   }
 }
 
@@ -744,6 +808,28 @@ export function bindSettings(): void {
     if (!btn) return;
     activateToggle('settingExpandGloss', btn);
     set('expand_gloss_on_match', btn.dataset.expand ?? 'true');
+  });
+
+  // Confirm multiple glosses exist when a Hint is given
+  document.getElementById('settingHintMultiGloss')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingHintMultiGloss', btn);
+    set('hint_multi_gloss', btn.dataset.enabled ?? 'false');
+  });
+
+  // Hint-outcome tracking — independent on/off per outcome
+  ([
+    ['settingTrackHintedCorrect',  'track_hinted_correct'],
+    ['settingTrackHintedRevealed', 'track_hinted_revealed'],
+    ['settingTrackHintedMissed',   'track_hinted_missed'],
+  ] as const).forEach(([groupId, key]) => {
+    document.getElementById(groupId)?.addEventListener('click', e => {
+      const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+      if (!btn) return;
+      activateToggle(groupId, btn);
+      set(key, btn.dataset.enabled ?? 'true');
+    });
   });
 
   // Table: frequency rank badge
@@ -1010,6 +1096,14 @@ export function bindSettings(): void {
     buildConjColorRows();
   });
 
+  buildTableColorRows();
+  applyTableColors();
+  document.getElementById('settingResetTableColors')?.addEventListener('click', () => {
+    for (const [key] of TABLE_COLOR_DEFS) removeKey(P + 'table_color_' + key);
+    applyTableColors();
+    buildTableColorRows();
+  });
+
   restoreSettingsUI();
 }
 
@@ -1271,6 +1365,45 @@ function buildColorSwatchRow(label: string, currentHue: number, onPick: (hue: nu
   return row;
 }
 
+/**
+ * One row per Table mode state — built from TABLE_COLOR_DEFS, same layout
+ * as buildColorSwatchRow above. Unlike that one, this stores and reads a
+ * full #rrggbb color directly rather than a hue: `<input type="color">`
+ * already speaks hex natively, and table.css's states are specific colors a
+ * learner would want to set precisely, not hue-only categories the way
+ * tenses are — no hueToHex/hexToHue round-trip needed at all.
+ */
+function buildTableColorRows(): void {
+  const list = document.getElementById('settingTableColors');
+  if (!list) return;
+  list.innerHTML = '';
+  for (const [key, label, fallbackVar] of TABLE_COLOR_DEFS) {
+    // No override stored — show whatever the active theme actually
+    // resolves the fallback token to, not a hardcoded guess, so switching
+    // themes with no override set always shows the truthful current color.
+    const current = Settings.getTableColor(key)
+      ?? rgbToHex(getComputedStyle(document.documentElement).getPropertyValue(fallbackVar));
+    list.appendChild(buildHexColorSwatchRow(label, current, hex => {
+      set('table_color_' + key, hex);
+      applyTableColors();
+    }));
+  }
+}
+
+function buildHexColorSwatchRow(label: string, currentHex: string, onPick: (hex: string) => void): HTMLElement {
+  const row = document.createElement('label');
+  row.className = 'conj-color-row';
+  const name = document.createElement('span');
+  name.className   = 'conj-color-name';
+  name.textContent = label;
+  const input = document.createElement('input');
+  input.type  = 'color';
+  input.value = currentHex;
+  input.addEventListener('input', () => onPick(input.value));
+  row.append(name, input);
+  return row;
+}
+
 function restoreSettingsUI(): void {
   // Theme
   const savedTheme = readString('theme') ?? 'system';
@@ -1359,6 +1492,20 @@ function restoreSettingsUI(): void {
   const savedExpandGloss = get('expand_gloss_on_match', 'true');
   document.querySelectorAll<HTMLElement>('#settingExpandGloss .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.expand === savedExpandGloss);
+  });
+  const savedHintMultiGloss = get('hint_multi_gloss', 'false');
+  document.querySelectorAll<HTMLElement>('#settingHintMultiGloss .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedHintMultiGloss);
+  });
+  ([
+    ['settingTrackHintedCorrect',  'track_hinted_correct'],
+    ['settingTrackHintedRevealed', 'track_hinted_revealed'],
+    ['settingTrackHintedMissed',   'track_hinted_missed'],
+  ] as const).forEach(([groupId, key]) => {
+    const saved = get(key, 'true');
+    document.querySelectorAll<HTMLElement>(`#${groupId} .sort-order-btn`).forEach(b => {
+      b.classList.toggle('active', b.dataset.enabled === saved);
+    });
   });
   const savedShowRank = get('table_show_rank', 'true');
   document.querySelectorAll<HTMLElement>('#settingTableShowRank .sort-order-btn').forEach(b => {

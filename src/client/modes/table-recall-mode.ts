@@ -19,8 +19,12 @@
  * 'double' style asks for BOTH independently: the word cell and the
  * translation cell each need their own correct guess (in either order —
  * type the word, then later the translation, or vice versa) before the row
- * counts done. Each side also gets its own "?" reveal button (yellow/peeked,
- * same as Standard style's), separate from the bulk "Show All Words" /
+ * counts done. Each side gets its own "??" reveal button (yellow/peeked,
+ * same as Standard style's) and, when the setting is on, its own "?" hint
+ * button — a progressive, underscore-masked letter reveal capped one short
+ * of the full answer (see hintSingle/paintWordHint/paintTransHint below;
+ * same mechanic and cap as Standard style's own hint, and as Trivia/Guess
+ * the Blank's). Both are separate from the bulk "Show All Words" /
  * "Show All Translations" buttons (red/incorrect — those are a given-up-on
  * batch action, not an individual hint).
  *
@@ -57,12 +61,13 @@
  * different skin, not a third thing worth its own history bucket.
  */
 import type { Word } from '../types.ts';
-import { matchesAnswer, buildGlossDisplay, chineseWordText, displayWord } from '../utils/utils.ts';
+import { matchesAnswer, buildGlossDisplay, chineseWordText, displayWord, primaryGlossForHint, chosenGlosses } from '../utils/utils.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker } from '../utils/list-picker.ts';
 import { Settings, applyAutofillAttr } from '../settings.ts';
 import { languageInfo, flagUrl } from '../data/languages.ts';
 import { enableInputWheelScroll } from '../utils/dom.ts';
+import { hintReveal, hintableLength } from '../utils/hint-reveal.ts';
 import {
   saveSession, recordOutcome, missCount, orderWords, getWordOrderLabels,
   type WordOrder, type WordOrderSortBy,
@@ -72,6 +77,7 @@ import { createStopwatch } from '../ui/stopwatch.ts';
 import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summary.ts';
 import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import { rowKey } from './table-mode.ts';
+import { buildHintOutcomePills } from './table-controls.ts';
 import { pageSlice, pageCountFor } from './table-controls.ts';
 import { t } from '../i18n/index.ts';
 
@@ -93,6 +99,8 @@ interface CellRefs {
   inputEl:       HTMLInputElement;
   wordRevealBtn: HTMLButtonElement | null;
   transRevealBtn: HTMLButtonElement | null;
+  wordHintBtn:   HTMLButtonElement | null;
+  transHintBtn:  HTMLButtonElement | null;
 }
 
 export function renderTableRecallMode({
@@ -140,6 +148,13 @@ export function renderTableRecallMode({
   // every read site below.
   const wordState  = new Map<string, AnswerState>();
   const transState = new Map<string, AnswerState>();
+
+  // Letters revealed via each side's Hint button so far ('double' style
+  // only — see buildGrid below). Lives for the whole quiz's lifetime, same
+  // as wordState/transState — unlike Standard style, this function isn't
+  // re-invoked per page, so there's no cross-render snapshot to plumb.
+  const wordHints  = new Map<string, number>();
+  const transHints = new Map<string, number>();
 
   function isRowDone(w: Word): boolean {
     const key = cellKey(w);
@@ -310,16 +325,23 @@ export function renderTableRecallMode({
     return btn;
   }
 
+  // The word cell's own bare spelling — what both the final reveal and the
+  // letter hint (see paintWordHint below) target.
+  function wordHintTarget(w: Word): string {
+    return chineseWordText(w, w.language ?? lang, chineseDisplay);
+  }
+
   // No disambiguator here — recalling "estar" correctly needs no further
   // clarification; see displayTranslation above, which carries it instead.
   function paintWordCell(w: Word, state: AnswerState): void {
     const ref = cellRefs.get(cellKey(w));
     if (!ref) return;
-    ref.wordDiv.textContent = chineseWordText(w, w.language ?? lang, chineseDisplay);
+    ref.wordDiv.textContent = wordHintTarget(w);
     ref.wordDiv.classList.remove('correct', 'peeked', 'incorrect');
     ref.wordDiv.classList.add(state);
     if (isInAnyList(w.language ?? lang, w.word)) ref.tdWord.classList.add('word-cell--known');
     if (ref.wordRevealBtn) ref.wordRevealBtn.style.display = 'none';
+    if (ref.wordHintBtn)   ref.wordHintBtn.style.display   = 'none';
   }
 
   function paintTransCell(w: Word, state: AnswerState): void {
@@ -329,6 +351,42 @@ export function renderTableRecallMode({
     ref.inputEl.classList.remove('correct', 'peeked', 'incorrect');
     ref.inputEl.classList.add(state);
     if (ref.transRevealBtn) ref.transRevealBtn.style.display = 'none';
+    if (ref.transHintBtn)   ref.transHintBtn.style.display   = 'none';
+  }
+
+  // The translation side's hint target — unlike displayTranslation (the
+  // final reveal/correct-answer text), never joins multiple senses with
+  // " / " and never carries a disambiguator: a hint gives away letters of
+  // one sense only. See utils.ts's primaryGlossForHint.
+  function hintTransTarget(w: Word): string {
+    return primaryGlossForHint(w);
+  }
+
+  // Trailing " /" confirming more senses exist, when the setting is on —
+  // safe to append directly here (unlike Standard style's editable input)
+  // since this cell is read-only; the mask itself, not something typed
+  // into, is the whole display.
+  function multiGlossSuffix(w: Word): string {
+    return Settings.getShowHintMultiGlossHint() && chosenGlosses(w).length > 1 ? ' /' : '';
+  }
+
+  // In-progress letter hint, painted into the still-blind cell — an
+  // underscore-masked partial reveal (unlike Standard style's hint, which
+  // pre-fills an editable input the learner keeps typing in, these cells
+  // are read-only, so the mask itself is the point, same as Trivia/Guess
+  // the Blank's own hint display).
+  function paintWordHint(w: Word, shown: number): void {
+    const ref = cellRefs.get(cellKey(w));
+    if (!ref || wordState.has(cellKey(w))) return;
+    ref.wordDiv.textContent = hintReveal(wordHintTarget(w), shown);
+    ref.wordDiv.classList.add('hinted');
+  }
+
+  function paintTransHint(w: Word, shown: number): void {
+    const ref = cellRefs.get(cellKey(w));
+    if (!ref || transState.has(cellKey(w))) return;
+    ref.inputEl.value = hintReveal(hintTransTarget(w), shown) + multiGlossSuffix(w);
+    ref.inputEl.classList.add('hinted');
   }
 
   function buildGrid(): void {
@@ -379,15 +437,26 @@ export function renderTableRecallMode({
         wordDiv.className = 'spanish-word';
         wordRowDiv.appendChild(wordDiv);
 
-        // Per-side reveal — 'double' style only. 'recall' style has no
-        // separate translation question, so there's nothing to peek at
-        // independently of the word itself.
+        // Per-side hint + reveal — 'double' style only. 'recall' style has
+        // no separate translation question, so there's nothing to peek (or
+        // hint) at independently of the word itself.
+        let wordHintBtn: HTMLButtonElement | null = null;
+        if (style === 'double' && Settings.getShowHintButton()) {
+          wordHintBtn = document.createElement('button');
+          wordHintBtn.type = 'button';
+          wordHintBtn.className = 'reveal-btn hint-btn';
+          wordHintBtn.textContent = '?';
+          wordHintBtn.tabIndex = -1;
+          wordHintBtn.addEventListener('click', () => hintSingle(w, 'word'));
+          syncHintBtn(wordHintBtn, wordHints.get(key) ?? 0, Math.max(0, hintableLength(wordHintTarget(w)) - 1));
+          wordRowDiv.appendChild(wordHintBtn);
+        }
         let wordRevealBtn: HTMLButtonElement | null = null;
         if (style === 'double') {
           wordRevealBtn = document.createElement('button');
           wordRevealBtn.type = 'button';
           wordRevealBtn.className = 'reveal-btn';
-          wordRevealBtn.textContent = '?';
+          wordRevealBtn.textContent = '??';
           wordRevealBtn.title = 'Reveal this word (counts as peeked)';
           wordRevealBtn.tabIndex = -1;
           wordRevealBtn.addEventListener('click', () => revealSingle(w, 'word'));
@@ -409,12 +478,23 @@ export function renderTableRecallMode({
         enableInputWheelScroll(inputEl, inputRowDiv);
         inputRowDiv.appendChild(inputEl);
 
+        let transHintBtn: HTMLButtonElement | null = null;
+        if (style === 'double' && Settings.getShowHintButton()) {
+          transHintBtn = document.createElement('button');
+          transHintBtn.type = 'button';
+          transHintBtn.className = 'reveal-btn hint-btn';
+          transHintBtn.textContent = '?';
+          transHintBtn.tabIndex = -1;
+          transHintBtn.addEventListener('click', () => hintSingle(w, 'trans'));
+          syncHintBtn(transHintBtn, transHints.get(key) ?? 0, Math.max(0, hintableLength(hintTransTarget(w)) - 1));
+          inputRowDiv.appendChild(transHintBtn);
+        }
         let transRevealBtn: HTMLButtonElement | null = null;
         if (style === 'double') {
           transRevealBtn = document.createElement('button');
           transRevealBtn.type = 'button';
           transRevealBtn.className = 'reveal-btn';
-          transRevealBtn.textContent = '?';
+          transRevealBtn.textContent = '??';
           transRevealBtn.title = 'Reveal this translation (counts as peeked)';
           transRevealBtn.tabIndex = -1;
           transRevealBtn.addEventListener('click', () => revealSingle(w, 'trans'));
@@ -425,10 +505,12 @@ export function renderTableRecallMode({
         inputRowDiv.appendChild(knownBtn);
         tdInput.appendChild(inputRowDiv);
 
-        cellRefs.set(key, { tdWord, wordDiv, inputEl, wordRevealBtn, transRevealBtn });
+        cellRefs.set(key, { tdWord, wordDiv, inputEl, wordRevealBtn, transRevealBtn, wordHintBtn, transHintBtn });
 
-        if (wordState.has(key))  paintWordCell(w, wordState.get(key)!);
-        if (transState.has(key)) paintTransCell(w, transState.get(key)!);
+        if (wordState.has(key))       paintWordCell(w, wordState.get(key)!);
+        else if (wordHints.get(key))  paintWordHint(w, wordHints.get(key)!);
+        if (transState.has(key))      paintTransCell(w, transState.get(key)!);
+        else if (transHints.get(key)) paintTransHint(w, transHints.get(key)!);
 
         tr.append(tdWord, tdInput);
       }
@@ -488,6 +570,38 @@ export function renderTableRecallMode({
   updateProgress();
 
   // ── Per-row reveal (peek), Double Recall only ─────────────────────────────
+
+  // ── Per-side hint, Double Recall only ─────────────────────────────────────
+
+  /** Button title/disabled state for a given hint progress — same cadence
+   *  as Standard style's own hint button (see table-mode.ts). */
+  function syncHintBtn(btn: HTMLButtonElement | null, shown: number, cap: number): void {
+    if (!btn) return;
+    btn.disabled = shown >= cap;
+    btn.title = cap === 0 ? 'No letters to show'
+      : shown >= cap ? 'No more letters'
+      : shown === 0  ? 'Show a letter' : 'Show another letter';
+  }
+
+  function hintSingle(w: Word, side: 'word' | 'trans'): void {
+    if (finished) return;
+    const key  = cellKey(w);
+    const done = side === 'word' ? wordState.has(key) : transState.has(key);
+    if (done) return;
+
+    const target = side === 'word' ? wordHintTarget(w) : hintTransTarget(w);
+    const cap    = Math.max(0, hintableLength(target) - 1);
+    const hints  = side === 'word' ? wordHints : transHints;
+    const shown  = Math.min((hints.get(key) ?? 0) + 1, cap);
+    hints.set(key, shown);
+
+    if (side === 'word') paintWordHint(w, shown);
+    else                 paintTransHint(w, shown);
+
+    const ref = cellRefs.get(key);
+    syncHintBtn(side === 'word' ? (ref?.wordHintBtn ?? null) : (ref?.transHintBtn ?? null), shown, cap);
+    updateProgress();
+  }
 
   function revealSingle(w: Word, side: 'word' | 'trans'): void {
     if (finished) return;
@@ -616,31 +730,87 @@ export function renderTableRecallMode({
   function updateProgress(): void {
     const total = sorted.length;
     let correct = 0, revealed = 0, missed = 0;
+    let hintedCorrect = 0, hintedRevealed = 0, hintedMissed = 0, hintedInProgress = 0;
     sorted.forEach(w => {
+      const key = cellKey(w);
+      const wasHinted = (wordHints.get(key) ?? 0) > 0 || (transHints.get(key) ?? 0) > 0;
       const s = rowState(w);
-      if (s === 'correct') correct++;
-      else if (s === 'revealed') revealed++;
-      else if (s === 'missed') missed++;
+      if (s === 'correct') { correct++; if (wasHinted) hintedCorrect++; }
+      else if (s === 'revealed') { revealed++; if (wasHinted) hintedRevealed++; }
+      else if (s === 'missed') { missed++; if (wasHinted) hintedMissed++; }
+      else if (wasHinted) hintedInProgress++;
     });
     const pct = (n: number): number => scorePct(n, total);
-    const g = pct(correct), y = pct(revealed), r = pct(missed);
     const done = correct + revealed + missed;
 
+    // Same seven-segment layout as Standard style's renderProgress — see
+    // table-controls.ts for the rationale (a running cursor so each segment's
+    // position only depends on the ones before it).
+    const segmentPcts = [
+      pct(correct - hintedCorrect), pct(hintedCorrect),
+      pct(revealed - hintedRevealed), pct(hintedRevealed),
+      pct(missed - hintedMissed), pct(hintedMissed),
+      pct(hintedInProgress),
+    ];
+    let cursor = 0;
+    const segmentLefts = segmentPcts.map(w2 => { const left = cursor; cursor += w2; return left; });
+    const [
+      unassistedCorrectPct, hintedCorrectPct,
+      unassistedRevealedPct, hintedRevealedPct,
+      unassistedMissedPct, hintedMissedPct,
+      hintProgressPct,
+    ] = segmentPcts;
+    const [
+      , hintedCorrectLeft,
+      unassistedRevealedLeft, hintedRevealedLeft,
+      unassistedMissedLeft, hintedMissedLeft,
+      hintProgressLeft,
+    ] = segmentLefts;
+
+    const scoreHtml = buildScorePills({ correct, revealed, missed, left: Math.max(0, total - done), total })
+      + buildHintOutcomePills({ hintedCorrect, hintedRevealed, hintedMissed, hintedInProgress });
+
     (['Top', 'Bottom'] as const).forEach(pos => {
-      const bar      = document.getElementById(`tableBar${pos}`);
-      const yellowBar = document.getElementById(`tableBar${pos}Revealed`);
-      const redBar   = document.getElementById(`tableBar${pos}Missed`);
+      const bar               = document.getElementById(`tableBar${pos}`);
+      const yellowBar         = document.getElementById(`tableBar${pos}Revealed`);
+      const redBar            = document.getElementById(`tableBar${pos}Missed`);
+      const hintedCorrectBar  = document.getElementById(`tableBar${pos}HintedCorrect`);
+      const hintedRevealedBar = document.getElementById(`tableBar${pos}HintedRevealed`);
+      const hintedMissedBar   = document.getElementById(`tableBar${pos}HintedMissed`);
+      const hintProgressBar   = document.getElementById(`tableBar${pos}HintProgress`);
       const stats    = document.getElementById(`tableStats${pos}`);
       const score    = document.getElementById(`tableScore${pos}`);
 
-      if (bar) (bar as HTMLElement).style.width = g + '%';
-      if (yellowBar) { (yellowBar as HTMLElement).style.left = g + '%'; (yellowBar as HTMLElement).style.width = y + '%'; }
-      if (redBar) { (redBar as HTMLElement).style.left = (g + y) + '%'; (redBar as HTMLElement).style.width = r + '%'; }
+      if (bar) (bar as HTMLElement).style.width = unassistedCorrectPct + '%';
+      if (hintedCorrectBar) {
+        (hintedCorrectBar as HTMLElement).style.left  = hintedCorrectLeft + '%';
+        (hintedCorrectBar as HTMLElement).style.width = hintedCorrectPct + '%';
+      }
+      if (yellowBar) {
+        (yellowBar as HTMLElement).style.left  = unassistedRevealedLeft + '%';
+        (yellowBar as HTMLElement).style.width = unassistedRevealedPct + '%';
+      }
+      if (hintedRevealedBar) {
+        (hintedRevealedBar as HTMLElement).style.left  = hintedRevealedLeft + '%';
+        (hintedRevealedBar as HTMLElement).style.width = hintedRevealedPct + '%';
+      }
+      if (redBar) {
+        (redBar as HTMLElement).style.left  = unassistedMissedLeft + '%';
+        (redBar as HTMLElement).style.width = unassistedMissedPct + '%';
+      }
+      if (hintedMissedBar) {
+        (hintedMissedBar as HTMLElement).style.left  = hintedMissedLeft + '%';
+        (hintedMissedBar as HTMLElement).style.width = hintedMissedPct + '%';
+      }
+      if (hintProgressBar) {
+        (hintProgressBar as HTMLElement).style.left  = hintProgressLeft + '%';
+        (hintProgressBar as HTMLElement).style.width = hintProgressPct + '%';
+      }
       if (stats) {
         stats.textContent = total > 0 ? `${done} / ${total}` : '';
         stats.classList.toggle('progress-label--done', total > 0 && done === total);
       }
-      if (score) score.innerHTML = buildScorePills({ correct, revealed, missed, left: Math.max(0, total - done), total });
+      if (score) score.innerHTML = scoreHtml;
     });
 
     giveUpBtn.disabled = total > 0 && done === total;
@@ -652,21 +822,36 @@ export function renderTableRecallMode({
     const seconds = clock.elapsedSeconds();
     const mode: 'recall' | 'doubleRecall' = style === 'double' ? 'doubleRecall' : 'recall';
 
-    interface Bucket { correct: string[]; missed: string[]; revealed: number; }
+    interface Bucket {
+      correct: string[]; missed: string[]; revealed: number; hinted: number;
+      hintedRevealed: number; hintedMissed: number;
+    }
     const byLang = new Map<string, Bucket>();
     function bucketFor(wl: string): Bucket {
       let b = byLang.get(wl);
-      if (!b) { b = { correct: [], missed: [], revealed: 0 }; byLang.set(wl, b); }
+      if (!b) {
+        b = { correct: [], missed: [], revealed: 0, hinted: 0, hintedRevealed: 0, hintedMissed: 0 };
+        byLang.set(wl, b);
+      }
       return b;
     }
     sorted.forEach(w => {
       const wl = w.language ?? lang;
       const s = rowState(w);
       const bucket = bucketFor(wl);
-      if (s === 'correct') bucket.correct.push(w.word);
-      else {
+      const key = cellKey(w);
+      const wasHinted = (wordHints.get(key) ?? 0) > 0 || (transHints.get(key) ?? 0) > 0;
+      if (s === 'correct') {
+        bucket.correct.push(w.word);
+        if (wasHinted) bucket.hinted++;
+      } else {
         bucket.missed.push(w.word);
-        if (s === 'revealed') bucket.revealed++;
+        if (s === 'revealed') {
+          bucket.revealed++;
+          if (wasHinted) bucket.hintedRevealed++;
+        } else if (wasHinted) {
+          bucket.hintedMissed++;
+        }
       }
     });
 
@@ -678,9 +863,11 @@ export function renderTableRecallMode({
         mode,
         total: b.correct.length + b.missed.length,
         correct: b.correct.length,
-        unassisted: b.correct.length,
-        hints: 0,
+        unassisted: b.correct.length - b.hinted,
+        hints: Settings.getTrackHintedCorrect() ? b.hinted : 0,
         revealed: b.revealed,
+        hintedRevealed: Settings.getTrackHintedRevealed() ? b.hintedRevealed : 0,
+        hintedMissed: Settings.getTrackHintedMissed() ? b.hintedMissed : 0,
         seconds,
         lang: wl,
         langs: langs.length > 1 ? langs : undefined,

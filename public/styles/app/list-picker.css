@@ -87,6 +87,79 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* ── Word info/actions popover — Table mode's click-a-word menu ──
+   Same .list-picker-popover shell, wider (it carries a full word-tooltip
+   .tt-detail-content body, not a short list of checkboxes) and not
+   pointer-events:none the way #wordTooltip is — this one is meant to be
+   clicked, not just hovered over. */
+.word-info-popover {
+  min-width: 220px;
+  max-width: min(320px, calc(100vw - 8px));
+  padding: 0.65rem 0.75rem 0.4rem;
+  font-family: 'Sora', sans-serif;
+  font-size: 0.78rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+/* "Show all tenses" (buildConjSection's own expand button) needs room for
+   every tense column at once — toggled by word-info-popover.ts's
+   onExpandToggle callback, same idea as #wordTooltip's own width swap
+   between its 280px collapsed and 90vw expanded states: a language with a
+   full tense set (present/preterite/imperfect/future/conditional/
+   subjunctive/both imperatives/imperfect+future subjunctive, each a
+   nowrap column) genuinely needs close to the full viewport, not a modest
+   fixed cap — and .tt-conj-full itself can still scroll horizontally on
+   top of that for whatever doesn't fit even at 96vw. */
+.word-info-popover--wide {
+  max-width: calc(100vw - 8px);
+}
+.word-info-popover--wide .tt-conj-full {
+  overflow-x: auto;
+}
+.word-info-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.5rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border);
+}
+.word-info-action-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.32rem 0.4rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: 0.78rem;
+  color: var(--text);
+  cursor: pointer;
+}
+.word-info-action-btn:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.word-info-action-btn:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.word-info-action-btn:disabled:hover {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+/* ── Bulk "Add N to list(s)" popover — Table mode's multi-select ── */
+.list-picker-bulk-count {
+  margin: 0;
+  padding: 0.3rem 0.75rem 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
 .list-picker-row {
   display: flex;
   align-items: center;
