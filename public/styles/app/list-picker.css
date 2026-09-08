@@ -22,13 +22,17 @@
    Same .list-picker-popover shell; these are its own row/save-row shapes.
    Wider than the base 260px cap — a profile name is free-text and often
    longer than a list name, and the base cap was clipping it via
-   .preset-picker-apply's ellipsis even at a readable window width. */
+   .preset-picker-apply's ellipsis even at a readable window width. Wider
+   still than that (420px → 520px) now that "Full Profile" and "⚡ Quick
+   Edit" are spelled-out button labels rather than a bare "+"/"⚡": at 420px
+   a normal-length profile name left the two barely any room and wrapped
+   the row. */
 .preset-picker-popover {
   min-width: 220px;
-  max-width: min(360px, calc(100vw - 8px));
+  max-width: min(520px, calc(100vw - 8px));
 }
 
-.preset-picker-row { padding: 0; gap: 0; }
+.preset-picker-row { padding: 0; gap: 0.15rem; }
 .preset-picker-apply {
   flex: 1;
   min-width: 0;
@@ -59,26 +63,49 @@
 .preset-picker-delete:hover { color: var(--danger); }
 
 /* ── Inline "+" editor (Settings.getInlineProfileEditing) ──
-   Widens the popover — the full field-control set (buildProfileEditorGroups,
-   shared with My Lists' own profile editor) needs more than a plain list of
-   names ever did — and scrolls its own body rather than growing the popover
-   past a usable height when a language's tense set is long. */
+   Widens the popover well past the plain-list width above — the full
+   field-control set (buildProfileEditorGroups, shared with My Lists' own
+   profile editor) needs the room, especially Conjugation's Tense & Forms
+   chip grid, which reads as a cramped single column at anything narrower —
+   and scrolls its own body (.preset-picker-inline-groups) rather than
+   growing the popover past a usable height when a language's tense set is
+   long. positionPopover measures this box after the class below is applied
+   (see preset-picker.ts's render(), which toggles it and repositions in the
+   same pass) and flips to right-aligned — anchored to the Profiles button's
+   own right edge, growing left — the moment it would not fit left-aligned,
+   which a popover this much wider almost always triggers near the right
+   edge of the screen. */
 .preset-picker-popover--editing {
-  max-width: min(420px, calc(100vw - 8px));
+  max-width: min(600px, calc(100vw - 8px));
 }
+/* "Full Profile" / "⚡ Quick Edit" — spelled out, not left as a bare "+"/"⚡":
+   an icon-only toggle this small, sitting quietly at the end of a row, was
+   too easy to both miss and, once spotted, not know the meaning of. Small
+   pill buttons (same shape family as .sort-order-btn elsewhere in the app)
+   rather than plain text, so which one (if either) is currently open reads
+   at a glance from its own filled/bordered state, not just its color. */
 .preset-picker-inline-toggle {
   flex: none;
   background: none;
-  border: none;
-  padding: 0.42rem 0.5rem;
-  font-size: 0.85rem;
-  font-weight: 700;
-  line-height: 1;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.1;
   color: var(--text-muted);
   cursor: pointer;
+  white-space: nowrap;
 }
-.preset-picker-inline-toggle:hover,
-.preset-picker-inline-toggle.active { color: var(--accent); }
+.preset-picker-inline-toggle:hover {
+  color: var(--accent);
+  border-color: var(--border-strong);
+}
+.preset-picker-inline-toggle.active {
+  color: var(--accent);
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
 
 .preset-picker-inline-editor {
   padding: 0.5rem 0.75rem 0.6rem;
@@ -104,6 +131,7 @@
   background: var(--surface);
   color: var(--text);
 }
+
 .preset-picker-inline-groups {
   display: flex;
   flex-direction: column;
@@ -112,6 +140,45 @@
   overflow-y: auto;
   padding-right: 0.2rem;
 }
+/* "Reset" (discard live tweaks, quiet — .ui-btn-mini's own neutral outline)
+   beside "Update" (save them back into the profile the editor was opened
+   on, replacing its saved filters — filled/accent, same weight as
+   .preset-picker-apply's own hover state). Update is the one button here
+   that overwrites something, so it needs to read as a deliberate, distinct
+   action, not a twin of the equally-styled "Save as new" beneath it — Reset
+   stays visually quiet since undoing is the lower-stakes of the two. Both
+   disabled together (preset-picker.ts's isDirty) when there is nothing to
+   reset or update. */
+.preset-picker-update-row {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem 0;
+}
+.preset-picker-reset-btn {
+  flex: 0 0 auto;
+}
+.preset-picker-update-btn {
+  flex: 1;
+  text-align: center;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.preset-picker-update-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+.preset-picker-reset-btn:disabled,
+.preset-picker-update-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.preset-picker-update-btn:disabled {
+  background: var(--surface);
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}
+
 .preset-picker-inline-editor .preset-picker-save-row {
   margin-top: 0.5rem;
   padding: 0.5rem 0 0;

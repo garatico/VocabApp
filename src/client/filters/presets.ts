@@ -91,6 +91,19 @@ export interface PresetBundle {
   quizStyle?:      string;
   /** Conjugation-only — see ConjugationBundle. */
   conjugation?:    ConjugationBundle;
+  /**
+   * Which of this profile's own fields (by profile-panel.ts's own stable
+   * section keys — 'language', 'words', 'tenseForms', etc., not the
+   * language-interpolated display label) the lightweight Testing Profiles
+   * popover's "Quick edit" mode shows — configured from the field's own "⚡"
+   * toggle in the full editor (profile-panel.ts) or the popover's own
+   * "Whole profile" view, both of which share buildProfileEditorGroups.
+   * Never read by applyBundle/captureCurrentBundle — this is metadata about
+   * the profile itself, not a live filter value. Absent or empty means no
+   * quick-edit set has been chosen yet, in which case the popover falls
+   * back to only offering "Whole profile".
+   */
+  quickEditFields?: string[];
 }
 
 const KEY_PREFIX = 'vq_presets_';
@@ -304,6 +317,9 @@ function normalizeBundle(raw: PresetBundle): PresetBundle {
     words:          raw.words,
     quizStyle:      raw.quizStyle,
     conjugation:    raw.conjugation,
+    // Added after v1, same reasoning as extraLanguages above — absent (or
+    // malformed) on an older saved profile just means nothing's marked yet.
+    quickEditFields: Array.isArray(raw.quickEditFields) ? raw.quickEditFields : undefined,
   };
 }
 

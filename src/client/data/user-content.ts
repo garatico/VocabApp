@@ -20,8 +20,8 @@
 import { readJson, writeJson, isRecord, isStringArray, remove } from '../utils/storage.ts';
 import { LANGUAGE_NAMES } from '../data/languages.ts';
 import type { Word } from '../types.ts';
-import type { TriviaQuestion } from './trivia-questions.ts';
-import type { GuessBlankQuestion } from './guess-blank-questions.ts';
+import { getTriviaQuestions as getBuiltinTriviaQuestions, type TriviaQuestion } from './trivia-questions.ts';
+import { getGuessBlankQuestions as getBuiltinGuessBlankQuestions, type GuessBlankQuestion } from './guess-blank-questions.ts';
 
 const P = 'uc_';
 
@@ -234,6 +234,73 @@ export function removeUserTriviaQuestion(lang: string, id: string): void {
   writeJson(triviaKey(lang), getUserTriviaQuestions(lang).filter(q => q.id !== id));
 }
 
+export function updateUserTriviaQuestion(lang: string, id: string, patch: Partial<Omit<TriviaQuestion, 'id'>>): void {
+  writeJson(triviaKey(lang), getUserTriviaQuestions(lang).map(q => q.id === id ? { ...q, ...patch } : q));
+}
+
+// ── Trivia question overrides (the hand-written bank) ───────────────────────
+// Same idea as WordOverride below, scaled down: My Content can't delete or
+// add to data/trivia-questions.ts (it's shipped source, not a database), but
+// a learner can still patch any field of one of its questions — a typo fix,
+// a friendlier reading level, a different accepted answer — the same way a
+// word override sits on top of a real vocabulary word without touching it.
+// Keyed by the built-in question's own `id` (e.g. 'es-h1'), one full-question
+// patch per entry rather than per-field, since the editor that writes this
+// always shows (and submits) every field at once — unlike WordOverride, whose
+// caller only includes a field when it actually changed.
+
+export type TriviaQuestionOverride = Partial<Omit<TriviaQuestion, 'id'>> & { updatedAt: number };
+
+function triviaOverrideKey(lang: string): string { return `${P}triviaoverride_${lang.toLowerCase()}`; }
+
+function isTriviaQuestionOverrideRecord(v: unknown): v is Record<string, TriviaQuestionOverride> {
+  return isRecord(v) && Object.values(v).every(isRecord);
+}
+
+export function getTriviaQuestionOverrides(lang: string): Record<string, TriviaQuestionOverride> {
+  return readJson<Record<string, TriviaQuestionOverride>>(triviaOverrideKey(lang), {}, isTriviaQuestionOverrideRecord);
+}
+
+export function getTriviaQuestionOverride(lang: string, id: string): TriviaQuestionOverride | null {
+  return ownGet(getTriviaQuestionOverrides(lang), id) ?? null;
+}
+
+/** Replaces a built-in question's override wholesale — same "always the
+ *  complete, current set" reasoning as setWordFields, since the editor this
+ *  feeds always shows every field pre-filled with its current effective
+ *  value, not just the ones that differ. */
+export function setTriviaQuestionOverride(lang: string, id: string, fields: Partial<Omit<TriviaQuestion, 'id'>>): void {
+  const overrides = getTriviaQuestionOverrides(lang);
+  writeJson(triviaOverrideKey(lang), { ...overrides, [id]: { ...fields, updatedAt: Date.now() } });
+}
+
+export function removeTriviaQuestionOverride(lang: string, id: string): void {
+  const overrides = getTriviaQuestionOverrides(lang);
+  if (!(id in overrides)) return;
+  const next = { ...overrides };
+  delete next[id];
+  writeJson(triviaOverrideKey(lang), next);
+}
+
+/** The built-in bank's own questions for `lang`, with any saved override
+ *  patched in — data/trivia-questions.ts itself untouched. */
+export function getBuiltinTriviaQuestionsWithOverrides(lang: string): TriviaQuestion[] {
+  const overrides = getTriviaQuestionOverrides(lang);
+  return getBuiltinTriviaQuestions(lang).map(q => {
+    const o = overrides[q.id];
+    return o ? { ...q, ...o } : q;
+  });
+}
+
+/** What a quiz should actually draw from: the built-in bank (overrides
+ *  applied) plus every question a learner has added of their own — the same
+ *  two-layer merge trivia-mode.ts used to do inline, moved here so the My
+ *  Content editor and the quiz itself can never drift apart on how the two
+ *  layers combine. */
+export function getEffectiveTriviaQuestions(lang: string): TriviaQuestion[] {
+  return [...getBuiltinTriviaQuestionsWithOverrides(lang), ...getUserTriviaQuestions(lang)];
+}
+
 // ── Guess the Blank questions ────────────────────────────────────────────────
 // Same shape as Trivia above: a user-written question layered on top of the
 // hand-written bank (data/guess-blank-questions.ts) the same way
@@ -275,6 +342,54 @@ export function addUserGuessBlankQuestion(lang: string, q: Omit<GuessBlankQuesti
 
 export function removeUserGuessBlankQuestion(lang: string, id: string): void {
   writeJson(guessBlankKey(lang), getUserGuessBlankQuestions(lang).filter(q => q.id !== id));
+}
+
+export function updateUserGuessBlankQuestion(lang: string, id: string, patch: Partial<Omit<GuessBlankQuestion, 'id'>>): void {
+  writeJson(guessBlankKey(lang), getUserGuessBlankQuestions(lang).map(q => q.id === id ? { ...q, ...patch } : q));
+}
+
+// ── Guess the Blank question overrides (the hand-written bank) ─────────────
+// Same reasoning as the trivia overrides above, for data/guess-blank-questions.ts.
+
+export type GuessBlankQuestionOverride = Partial<Omit<GuessBlankQuestion, 'id'>> & { updatedAt: number };
+
+function guessBlankOverrideKey(lang: string): string { return `${P}guessblankoverride_${lang.toLowerCase()}`; }
+
+function isGuessBlankQuestionOverrideRecord(v: unknown): v is Record<string, GuessBlankQuestionOverride> {
+  return isRecord(v) && Object.values(v).every(isRecord);
+}
+
+export function getGuessBlankQuestionOverrides(lang: string): Record<string, GuessBlankQuestionOverride> {
+  return readJson<Record<string, GuessBlankQuestionOverride>>(guessBlankOverrideKey(lang), {}, isGuessBlankQuestionOverrideRecord);
+}
+
+export function getGuessBlankQuestionOverride(lang: string, id: string): GuessBlankQuestionOverride | null {
+  return ownGet(getGuessBlankQuestionOverrides(lang), id) ?? null;
+}
+
+export function setGuessBlankQuestionOverride(lang: string, id: string, fields: Partial<Omit<GuessBlankQuestion, 'id'>>): void {
+  const overrides = getGuessBlankQuestionOverrides(lang);
+  writeJson(guessBlankOverrideKey(lang), { ...overrides, [id]: { ...fields, updatedAt: Date.now() } });
+}
+
+export function removeGuessBlankQuestionOverride(lang: string, id: string): void {
+  const overrides = getGuessBlankQuestionOverrides(lang);
+  if (!(id in overrides)) return;
+  const next = { ...overrides };
+  delete next[id];
+  writeJson(guessBlankOverrideKey(lang), next);
+}
+
+export function getBuiltinGuessBlankQuestionsWithOverrides(lang: string): GuessBlankQuestion[] {
+  const overrides = getGuessBlankQuestionOverrides(lang);
+  return getBuiltinGuessBlankQuestions(lang).map(q => {
+    const o = overrides[q.id];
+    return o ? { ...q, ...o } : q;
+  });
+}
+
+export function getEffectiveGuessBlankQuestions(lang: string): GuessBlankQuestion[] {
+  return [...getBuiltinGuessBlankQuestionsWithOverrides(lang), ...getUserGuessBlankQuestions(lang)];
 }
 
 // ── Picture overrides ────────────────────────────────────────────────────────

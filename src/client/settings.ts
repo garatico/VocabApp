@@ -353,12 +353,13 @@ export const Settings = {
   /**
    * Whether the lightweight Testing Profiles popover (preset-picker.ts,
    * opened from the "Profiles" button on Table/Picture/Conjugation) shows a
-   * "+" next to each profile to tweak its parameters inline. Off by
-   * default — the popover's plain Apply/Delete list is the simpler default,
-   * and this adds a fair amount of UI to it. Inline tweaks only ever apply
-   * live to the current session (see filters/presets.ts's applyBundle); they
-   * never overwrite the saved profile except through its own explicit
-   * "Save as new profile…" action.
+   * "Full Profile"/"⚡ Quick Edit" button next to each profile to tweak its
+   * parameters inline. Off by default — the popover's plain Apply/Delete
+   * list is the simpler default, and this adds a fair amount of UI to it.
+   * Inline tweaks only ever apply live to the current session (see
+   * filters/presets.ts's applyBundle) until "Update" (overwrites the
+   * profile you opened) or "Save as new profile…" (forks a copy) is
+   * clicked — the two explicit ways a tweak here becomes permanent.
    */
   getInlineProfileEditing: (): boolean => get('inline_profile_editing', 'false') === 'true',
 
@@ -370,6 +371,21 @@ export const Settings = {
    * action; off lets a learner who's already sure skip the prompt every time.
    */
   getConfirmRemoveWordOverride: (): boolean => get('confirm_remove_word_override', 'true') === 'true',
+
+  /**
+   * Starting page size for My Content's "Edit an Existing Trivia Question"
+   * and "Edit an Existing Guess the Blank Question" lists (buildListPager's
+   * own 5/10/15 options) — read only until a list's own Per Page control has
+   * been changed, same relationship getConjPageSize has to Conjugation's own
+   * pagination control below. 5 by default: unlike vocabulary, the trivia/
+   * Guess the Blank banks are short enough that a shorter page reads as a
+   * quick glance rather than a list you have to page through to escape.
+   */
+  getMyContentPageSize: (): number => {
+    const raw = get('my_content_page_size', '5');
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : 5;
+  },
 
   /**
    * Whether a filter (Lists, Class, Domain) can be shared across modes at
@@ -1094,6 +1110,14 @@ export function bindSettings(): void {
     set('confirm_remove_word_override', btn.dataset.enabled ?? 'true');
   });
 
+  // My Content: starting page size for the Trivia/Guess the Blank edit lists
+  document.getElementById('settingMyContentPageSize')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingMyContentPageSize', btn);
+    set('my_content_page_size', btn.dataset.pagesize ?? '5');
+  });
+
   // Clear history — every language's saved sessions and miss tallies.
   // Mastery and lists live in their own storage (word-lists.ts) and are
   // untouched.
@@ -1683,6 +1707,12 @@ function restoreSettingsUI(): void {
   const savedConfirmRemoveWordOverride = get('confirm_remove_word_override', 'true');
   document.querySelectorAll<HTMLElement>('#settingConfirmRemoveWordOverride .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.enabled === savedConfirmRemoveWordOverride);
+  });
+
+  // My Content: Trivia/Guess the Blank edit list page size
+  const savedMyContentPageSize = get('my_content_page_size', '5');
+  document.querySelectorAll<HTMLElement>('#settingMyContentPageSize .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.pagesize === savedMyContentPageSize);
   });
 
   // Guess the Blank: guesses per question

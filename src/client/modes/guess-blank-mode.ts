@@ -15,9 +15,9 @@
  * something even before every clue is out.
  */
 import {
-  getGuessBlankQuestions, type GuessBlankQuestion, type BlankDifficulty,
+  type GuessBlankQuestion, type BlankDifficulty,
 } from '../data/guess-blank-questions.ts';
-import { getUserGuessBlankQuestions } from '../data/user-content.ts';
+import { getEffectiveGuessBlankQuestions } from '../data/user-content.ts';
 import { normalize } from '../utils/match.ts';
 import { shuffle } from '../utils/shuffle.ts';
 import { applyAutofillAttr, Settings } from '../settings.ts';
@@ -110,10 +110,10 @@ export function renderGuessBlankMode({
   clearSummary('guessBlank');
   setProgress(0, 0);
 
-  // My Content tab additions (data/user-content.ts) — client-only, layered
-  // on top of the hand-written bank the same way trivia-mode.ts layers in
-  // getUserTriviaQuestions().
-  const allQuestions = [...getGuessBlankQuestions(lang), ...getUserGuessBlankQuestions(lang)];
+  // The hand-written bank (any My Content overrides applied) plus every
+  // question a learner has added of their own — see
+  // user-content.ts's getEffectiveGuessBlankQuestions.
+  const allQuestions = getEffectiveGuessBlankQuestions(lang);
   const bank = fixedQueue ?? (difficulty === 'all' ? allQuestions : allQuestions.filter(q => q.difficulty === difficulty));
 
   if (bank.length === 0) {

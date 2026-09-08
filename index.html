@@ -1015,27 +1015,6 @@
             </div>
             </div>
 
-            <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTableColors" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupTableColors">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading">Table Colors</span>
-            </button>
-            <div id="settingsGroupTableColors" class="filter-body">
-
-            <div class="settings-row settings-row--stack">
-              <div class="settings-label">
-                <span>Answer state colors</span>
-                <span class="settings-desc">The color each answer state uses in Table mode — correct, revealed, missed, the in-progress hint color, and each of the three hint-outcome states above.</span>
-              </div>
-              <button type="button" id="settingResetTableColors" class="settings-action-btn">Reset to defaults</button>
-              <div class="conj-color-list" id="settingTableColors">
-                <!-- One row per state, built from TABLE_COLOR_DEFS — see settings.ts -->
-              </div>
-            </div>
-
-            </div>
-            </div>
-
             <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupCellInfo" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupCellInfo">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
@@ -1149,6 +1128,13 @@
             </button>
             <div id="settingsBodyConj" class="filter-body settings-section-body">
 
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupConjLayout" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupConjLayout">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Layout</span>
+            </button>
+            <div id="settingsGroupConjLayout" class="filter-body">
+
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.conj.pageSize">Verbs per page</span>
@@ -1161,6 +1147,27 @@
                 <button type="button" class="sort-order-btn" data-pagesize="50">50</button>
               </div>
             </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.conj.showTimer">Show timer</span>
+                <span class="settings-desc" data-i18n="settings.conj.showTimerDesc">Off hides the running clock and its controls — time is still recorded for History and goals, just not displayed. Separate from Table mode's own Show Timer setting above.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingConjShowTimer">
+                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
+              </div>
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupConjHints" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupConjHints">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Hints</span>
+            </button>
+            <div id="settingsGroupConjHints" class="filter-body">
 
             <div class="settings-row">
               <div class="settings-label">
@@ -1177,17 +1184,6 @@
 
             <div class="settings-row">
               <div class="settings-label">
-                <span data-i18n="settings.conj.showTimer">Show timer</span>
-                <span class="settings-desc" data-i18n="settings.conj.showTimerDesc">Off hides the running clock and its controls — time is still recorded for History and goals, just not displayed. Separate from Table mode's own Show Timer setting above.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingConjShowTimer">
-                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
-                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
                 <span data-i18n="settings.conj.hints">Hints</span>
                 <span class="settings-desc" data-i18n="settings.conj.hintsDesc">What a slot's ? button does — None hides it, First letter shows one character, Full reveal shows the answer immediately. Separate from Table mode's own Hint/Reveal buttons.</span>
               </div>
@@ -1198,26 +1194,7 @@
               </div>
             </div>
 
-            <div class="settings-row settings-row--stack">
-              <div class="settings-label">
-                <span data-i18n="settings.conj.tenseColors">Tense colors</span>
-                <span class="settings-desc" data-i18n="settings.conj.tenseColorsDesc">The color each tense's chip, card and table column uses throughout Conjugation Mode and a verb's conjugation table in My Lists.</span>
-              </div>
-              <button type="button" id="settingResetTenseColors" class="settings-action-btn" data-i18n="settings.conj.resetColors">Reset to defaults</button>
-              <div class="conj-color-list" id="settingTenseColors">
-                <!-- One row per tense, built from TENSE_DEFS — see settings.ts -->
-              </div>
             </div>
-
-            <div class="settings-row settings-row--stack">
-              <div class="settings-label">
-                <span data-i18n="settings.conj.personColors">Form (person) colors</span>
-                <span class="settings-desc" data-i18n="settings.conj.personColorsDesc">The color each grammatical person's Forms toggle and table rows use.</span>
-              </div>
-              <button type="button" id="settingResetPersonColors" class="settings-action-btn" data-i18n="settings.conj.resetColors">Reset to defaults</button>
-              <div class="conj-color-list" id="settingPersonColors">
-                <!-- One row per pronoun slot (0-5) — see settings.ts -->
-              </div>
             </div>
 
             </div>
@@ -1389,7 +1366,11 @@
             <div id="settingsBodyFilters" class="filter-body settings-section-body">
 
             <div class="settings-group">
-            <div class="settings-group-heading" data-i18n="settings.filters.groupContent">Content</div>
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupFiltersContent" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupFiltersContent">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.filters.groupContent">Content</span>
+            </button>
+            <div id="settingsGroupFiltersContent" class="filter-body">
 
             <div class="settings-row">
               <div class="settings-label">
@@ -1403,9 +1384,14 @@
             </div>
 
             </div>
+            </div>
 
             <div class="settings-group">
-            <div class="settings-group-heading" data-i18n="settings.filters.groupBehavior">Behavior</div>
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupFiltersBehavior" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupFiltersBehavior">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.filters.groupBehavior">Behavior</span>
+            </button>
+            <div id="settingsGroupFiltersBehavior" class="filter-body">
 
             <div class="settings-row" data-advanced="true">
               <div class="settings-label">
@@ -1419,9 +1405,14 @@
             </div>
 
             </div>
+            </div>
 
             <div class="settings-group" data-advanced="true">
-            <div class="settings-group-heading" data-i18n="settings.filters.groupVisibility">Visibility per Mode</div>
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupFiltersVisibility" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupFiltersVisibility">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.filters.groupVisibility">Visibility per Mode</span>
+            </button>
+            <div id="settingsGroupFiltersVisibility" class="filter-body">
 
             <div class="settings-row">
               <div class="settings-label">
@@ -1461,6 +1452,7 @@
 
             </div>
 
+            </div>
             </div>
           </div>
 
@@ -1516,6 +1508,13 @@
             </button>
             <div id="settingsBodyAppearance" class="filter-body settings-section-body">
 
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAppearanceDisplay" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupAppearanceDisplay">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Display</span>
+            </button>
+            <div id="settingsGroupAppearanceDisplay" class="filter-body">
+
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.appearance.textSize">Text size</span>
@@ -1542,14 +1541,70 @@
               </div>
             </div>
 
-            <div class="settings-subsection" data-advanced="true" data-kid-hide="true">
-              <div class="settings-label">
-                <span data-i18n="settings.appearance.langAppearance">Language appearance</span>
-                <span class="settings-desc" data-i18n="settings.appearance.langAppearanceDesc">Override each language's flag (Flag mode) and cell color (Color mode) above</span>
-              </div>
-              <div class="lang-appearance-list" id="settingLangColors">
-                <!-- One row per language, built from LANGUAGES — see settings.ts -->
-              </div>
+            </div>
+            </div>
+
+            <div class="settings-group" data-advanced="true" data-kid-hide="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupLangAppearance" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupLangAppearance">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.appearance.langAppearance">Language appearance</span>
+            </button>
+            <div id="settingsGroupLangAppearance" class="filter-body">
+
+            <p class="settings-desc" data-i18n="settings.appearance.langAppearanceDesc">Override each language's flag (Flag mode) and cell color (Color mode) above</p>
+            <div class="lang-appearance-list" id="settingLangColors">
+              <!-- One row per language, built from LANGUAGES — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTableColors" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupTableColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Table Colors</span>
+            </button>
+            <div id="settingsGroupTableColors" class="filter-body">
+
+            <p class="settings-desc">The color each answer state uses in Table mode — correct, revealed, missed, the in-progress hint color, and each of the three hint-outcome states above.</p>
+            <button type="button" id="settingResetTableColors" class="settings-action-btn">Reset to defaults</button>
+            <div class="conj-color-list" id="settingTableColors">
+              <!-- One row per state, built from TABLE_COLOR_DEFS — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTenseColors" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupTenseColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.conj.tenseColors">Tense Colors</span>
+            </button>
+            <div id="settingsGroupTenseColors" class="filter-body">
+
+            <p class="settings-desc" data-i18n="settings.conj.tenseColorsDesc">The color each tense's chip, card and table column uses throughout Conjugation Mode and a verb's conjugation table in My Lists.</p>
+            <button type="button" id="settingResetTenseColors" class="settings-action-btn" data-i18n="settings.conj.resetColors">Reset to defaults</button>
+            <div class="conj-color-list" id="settingTenseColors">
+              <!-- One row per tense, built from TENSE_DEFS — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupFormColors" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupFormColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.conj.personColors">Form Colors</span>
+            </button>
+            <div id="settingsGroupFormColors" class="filter-body">
+
+            <p class="settings-desc" data-i18n="settings.conj.personColorsDesc">The color each grammatical person's Forms toggle and table rows use.</p>
+            <button type="button" id="settingResetPersonColors" class="settings-action-btn" data-i18n="settings.conj.resetColors">Reset to defaults</button>
+            <div class="conj-color-list" id="settingPersonColors">
+              <!-- One row per pronoun slot (0-5) — see settings.ts -->
+            </div>
+
+            </div>
             </div>
 
             </div>
@@ -1581,7 +1636,7 @@
             <div class="settings-row" data-advanced="true">
               <div class="settings-label">
                 <span data-i18n="settings.general.inlineProfileEditing">Inline profile editing</span>
-                <span class="settings-desc" data-i18n="settings.general.inlineProfileEditingDesc">Adds a + next to each Testing Profile in the Profiles popover (Table/Picture/Conjugation), letting you tweak its parameters right there and try them out immediately — without saving over the profile unless you choose "Save as new profile…".</span>
+                <span class="settings-desc" data-i18n="settings.general.inlineProfileEditingDesc">Adds "Full Profile" and "⚡ Quick Edit" buttons to each Testing Profile in the Profiles popover (Table/Picture/Conjugation), letting you tweak its parameters right there and try them out immediately — without saving over the profile unless you choose "Update" or "Save as new profile…".</span>
               </div>
               <div class="sort-order-toggle" id="settingInlineProfileEditing">
                 <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
@@ -1597,6 +1652,18 @@
               <div class="sort-order-toggle" id="settingConfirmRemoveWordOverride">
                 <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
                 <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row" data-advanced="true">
+              <div class="settings-label">
+                <span>Trivia/Guess the Blank list page size</span>
+                <span class="settings-desc">Starting "per page" for My Content's "Edit an Existing Trivia Question" and "Edit an Existing Guess the Blank Question" lists — only sets the default; once a list's own Per Page control has been changed, that choice sticks until you change it again.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingMyContentPageSize">
+                <button type="button" class="sort-order-btn active" data-pagesize="5">5</button>
+                <button type="button" class="sort-order-btn" data-pagesize="10">10</button>
+                <button type="button" class="sort-order-btn" data-pagesize="15">15</button>
               </div>
             </div>
 

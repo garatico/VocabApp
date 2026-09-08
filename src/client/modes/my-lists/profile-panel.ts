@@ -141,10 +141,22 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
  * saved preset) for the full My Lists editor, or an apply-live-without-
  * saving callback for the lightweight picker's session-only tweaks. Neither
  * caller is assumed here; `onChange` is the only way anything gets written.
+ *
+ * `onLayoutChange`, when given, fires whenever a group's own collapse
+ * button opens or closes it — nothing else in this module resizes on its
+ * own. The full My Lists editor has no use for it (its panel isn't
+ * anchored to anything that needs to stay on screen), but the popover does:
+ * without this, expanding a group inside it — e.g. Conjugation's own group,
+ * revealing the wide Tense & Forms chip grid — grew the popover well past
+ * where positionPopover last measured it, with nothing to tell that
+ * function to run again. The popover's own edge, not just its content,
+ * would then sit wherever it was before the group opened, cut off by
+ * whichever screen edge the newly-revealed content pushed past.
  */
 export function buildProfileEditorGroups(
   bundle: PresetBundle, mode: FilterScope, ctxLang: string, name: string,
   onChange: (next: PresetBundle) => void,
+  onLayoutChange?: () => void,
 ): HTMLElement[] {
   const persist = onChange;
 
@@ -216,6 +228,7 @@ export function buildProfileEditorGroups(
       btn.setAttribute('aria-expanded', String(nowOpen));
       body.classList.toggle('filter-body--collapsed', !nowOpen);
       writeString(storageKey, String(nowOpen));
+      onLayoutChange?.();
     });
 
     g.append(btn, body);
@@ -223,20 +236,63 @@ export function buildProfileEditorGroups(
   }
 
   /**
+   * `key` is a stable identifier ('language', 'tenseForms', ...) — unlike
+   * `labelText`, which for Lists is interpolated with the current language
+   * ("Lists (spanish)") and so isn't safe to persist against. Used for two
+   * things: the quick-edit "⚡" toggle below (bundle.quickEditFields stores
+   * these keys, not labels), and as `dataset.paramKey` so preset-picker.ts's
+   * "Quick edit" popover mode can find a section's fields back out of
+   * whatever buildProfileEditorGroups just built.
+   *
    * `activeToggleEl`, when given, sits inline with the label on the same
    * header row — "Apply this filter" reads as answering the label right next
    * to it rather than as one more stacked control underneath.
    */
-  function section(labelText: string, activeToggleEl: HTMLElement | null, ...children: (HTMLElement | null)[]): HTMLElement {
+  function section(
+    key: string, labelText: string, activeToggleEl: HTMLElement | null, ...children: (HTMLElement | null)[]
+  ): HTMLElement {
     const el = document.createElement('div');
     el.className = 'ml-profile-editor-section';
+    el.dataset.paramKey = key;
     const headerRow = document.createElement('div');
     headerRow.className = 'ml-profile-editor-header';
     const label = document.createElement('div');
     label.className = 'ml-profile-editor-label';
     label.textContent = labelText;
     headerRow.appendChild(label);
-    if (activeToggleEl) headerRow.appendChild(activeToggleEl);
+
+    // activeToggleEl and the quick-edit toggle share one flex group at the
+    // header's trailing end — headerRow itself is only ever `label` plus
+    // this one group, so justify-content: space-between still puts the
+    // group flush right regardless of whether activeToggleEl is present.
+    const actions = document.createElement('div');
+    actions.className = 'ml-profile-editor-header-actions';
+    if (activeToggleEl) actions.appendChild(activeToggleEl);
+
+    // Quick edit — marks this field as one the lightweight Testing Profiles
+    // popover's "Quick edit" mode shows on its own, without every other
+    // field alongside it. Configured here (the field's own toggle) rather
+    // than picked fresh in the popover each time, so a profile's quick-edit
+    // set is a property of the profile itself — see PresetBundle's own
+    // quickEditFields doc comment (presets.ts). Named in full ("⚡ Quick
+    // edit"), not just the bare icon — an icon-only checkbox this small,
+    // sitting quietly at the end of a header row, was too easy to miss
+    // entirely, let alone recognize what it did.
+    const quickLabel = document.createElement('label');
+    quickLabel.className = 'ml-profile-editor-quickedit';
+    quickLabel.title = 'Quick edit — the Testing Profiles popover\'s "⚡" button can tweak this field on its own when checked, without opening the rest of the profile';
+    const quickInput = document.createElement('input');
+    quickInput.type = 'checkbox';
+    quickInput.checked = (bundle.quickEditFields ?? []).includes(key);
+    quickInput.addEventListener('change', () => {
+      const current = bundle.quickEditFields ?? [];
+      const next = quickInput.checked ? [...current, key] : current.filter(k => k !== key);
+      persist({ ...bundle, quickEditFields: next });
+    });
+    quickLabel.append(quickInput, document.createTextNode('⚡ Quick edit'));
+    actions.appendChild(quickLabel);
+    headerRow.appendChild(actions);
+
     el.append(headerRow, ...children.filter((c): c is HTMLElement => c !== null));
     return el;
   }
@@ -254,7 +310,7 @@ export function buildProfileEditorGroups(
   });
   langSelectEl.addEventListener('change', () => persist({ ...bundle, language: langSelectEl.value }));
   langRow.appendChild(langSelectEl);
-  const langSection = section('Language', null, langRow);
+  const langSection = section('language', 'Language', null, langRow);
 
   // ── Extra languages ("+ Languages" merge, Table/Conjugation only) ──────────
   const extraRow = document.createElement('div');
@@ -277,7 +333,7 @@ export function buildProfileEditorGroups(
   const extraHint = document.createElement('span');
   extraHint.className = 'ml-profile-editor-hint';
   extraHint.textContent = 'Merges into the pool on Table and Conjugation only';
-  const extraSection = section('Languages (+)', null, extraRow, extraHint);
+  const extraSection = section('extraLanguages', 'Languages (+)', null, extraRow, extraHint);
 
   // ── Words: pool mode + whichever sub-control that mode uses ────────────────
   const words = bundle.words ?? DEFAULT_WORDS;
@@ -354,7 +410,7 @@ export function buildProfileEditorGroups(
     });
     wordsSubRow.appendChild(sizeModeRow);
   }
-  const wordsSection = section('Words', null, poolRow, wordsSubRow);
+  const wordsSection = section('words', 'Words', null, poolRow, wordsSubRow);
 
   // Part of speech
   const classActive = activeToggle(bundle.classes.active, active => {
@@ -376,7 +432,7 @@ export function buildProfileEditorGroups(
     });
     classRow.appendChild(chip);
   });
-  const classSection = section('Part of Speech', classActive, classRow);
+  const classSection = section('partOfSpeech', 'Part of Speech', classActive, classRow);
 
   // Domains — free-form, comma separated. Per-language and dynamic, so
   // unlike POS there's no fixed list to offer as checkboxes.
@@ -391,7 +447,7 @@ export function buildProfileEditorGroups(
     const selected = domainInput.value.split(',').map(d => d.trim()).filter(Boolean);
     persist({ ...bundle, domains: { ...bundle.domains, selected } });
   });
-  const domainSection = section('Domains (comma-separated)', domainActive, domainInput);
+  const domainSection = section('domains', 'Domains (comma-separated)', domainActive, domainInput);
 
   // Lists — Active toggle + Hide/Focus + which of the profile's own
   // language's lists. Entries are stored qualified (qualifyListName), the
@@ -478,7 +534,7 @@ export function buildProfileEditorGroups(
     smartRows.forEach(addListChip);
   }
 
-  const listSection = section(`Lists (${primaryLang})`, listActive, listModeRow, listNamesRow);
+  const listSection = section('lists', `Lists (${primaryLang})`, listActive, listModeRow, listNamesRow);
 
   // Direction — Table only. #directionToggle itself is only ever shown for
   // Table mode (Picture has no direction concept; Conjugation drills both
@@ -505,7 +561,7 @@ export function buildProfileEditorGroups(
       chipLabel.append(input, document.createTextNode(label));
       dirRow.appendChild(chipLabel);
     });
-    dirSection = section('Direction', null, dirRow);
+    dirSection = section('direction', 'Direction', null, dirRow);
   }
 
   // Quiz Style — Table only, mirrors #tableStyleToggle. Picture/Conjugation
@@ -524,7 +580,7 @@ export function buildProfileEditorGroups(
       chipLabel.append(input, document.createTextNode(label));
       styleRow.appendChild(chipLabel);
     });
-    styleSection = section('Quiz Style', null, styleRow);
+    styleSection = section('quizStyle', 'Quiz Style', null, styleRow);
   }
 
   // Conjugation's own Tense & Forms / View / Verbs — mirrors #conjTenseChips,
@@ -560,7 +616,7 @@ export function buildProfileEditorGroups(
       verbsCustomInput.addEventListener('change', () => persist({ ...bundle, conjugation: { ...conj, verbsSizeCustom: verbsCustomInput.value } }));
       verbsRow.appendChild(verbsCustomInput);
     }
-    const verbsSection = section('Verbs', null, verbsRow);
+    const verbsSection = section('verbs', 'Verbs', null, verbsRow);
 
     // Same classes + data-tense the live #conjTenseChips row uses (see
     // conjugation.css's `[data-tense="…"] { --tense-hue: … }` block) — reused
@@ -600,7 +656,7 @@ export function buildProfileEditorGroups(
       });
       regRow.appendChild(chip);
     });
-    const tenseFormsSection = section('Tense & Forms', null, tenseRow, regRow);
+    const tenseFormsSection = section('tenseForms', 'Tense & Forms', null, tenseRow, regRow);
 
     const viewRow = document.createElement('div');
     viewRow.className = 'ml-profile-editor-chips';
@@ -614,7 +670,7 @@ export function buildProfileEditorGroups(
       chipLabel.append(input, document.createTextNode(label));
       viewRow.appendChild(chipLabel);
     });
-    const viewSection = section('View', null, viewRow);
+    const viewSection = section('view', 'View', null, viewRow);
 
     conjugationSection = group('conjugation', 'Conjugation', verbsSection, tenseFormsSection, viewSection);
   }

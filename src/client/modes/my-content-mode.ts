@@ -29,8 +29,10 @@
 
 import {
   getUserWords, addUserWord, removeUserWord, toWord, type UserWord,
-  getUserTriviaQuestions, addUserTriviaQuestion, removeUserTriviaQuestion,
-  getUserGuessBlankQuestions, addUserGuessBlankQuestion, removeUserGuessBlankQuestion,
+  getUserTriviaQuestions, addUserTriviaQuestion, removeUserTriviaQuestion, updateUserTriviaQuestion,
+  getUserGuessBlankQuestions, addUserGuessBlankQuestion, removeUserGuessBlankQuestion, updateUserGuessBlankQuestion,
+  getBuiltinTriviaQuestionsWithOverrides, getTriviaQuestionOverride, setTriviaQuestionOverride, removeTriviaQuestionOverride,
+  getBuiltinGuessBlankQuestionsWithOverrides, getGuessBlankQuestionOverride, setGuessBlankQuestionOverride, removeGuessBlankQuestionOverride,
   getPictureOverrides, getPictureOverride, setPictureOverride, removePictureOverride,
   isImageOverride,
   getWordOverrides, getWordOverride, type WordOverride,
@@ -196,8 +198,11 @@ function applyMCSortFilter<T>(items: T[], state: MCListState, get: MCSortGetters
 /** Ascending/Descending — reuses Settings' own .sort-order-toggle/
  *  .sort-order-btn pill-pair styling (buttons.css) so this reads as the same
  *  kind of control wherever it shows up in the app, rather than a bespoke
- *  one just for this toolbar. */
-function buildSortDirToggle(state: MCListState, onChange: () => void): HTMLElement {
+ *  one just for this toolbar. Takes just `{ dir }` rather than the full
+ *  MCListState so a caller with its own differently-shaped sort state (the
+ *  trivia/Guess the Blank editors' own TriviaListState) can reuse this
+ *  exact control too, not just the word editors. */
+function buildSortDirToggle(state: { dir: MCSortDir }, onChange: () => void): HTMLElement {
   const wrap = el('div', 'sort-order-toggle mc-sort-dir-toggle');
   const ascBtn = el('button', 'sort-order-btn', 'Ascending');
   ascBtn.type = 'button';
@@ -414,10 +419,12 @@ interface ListPager {
   getPageSize: () => MCPageSize;
 }
 
-function buildListPager(onPageChange: (page: number) => void, onPageSizeChange: () => void): ListPager {
+function buildListPager(
+  onPageChange: (page: number) => void, onPageSizeChange: () => void, initialPageSize: MCPageSize = 10,
+): ListPager {
   const row = el('div', 'mc-list-pager');
 
-  let pageSize: MCPageSize = 10;
+  let pageSize: MCPageSize = initialPageSize;
   const sizeSelect = el('select', 'pager-select mc-list-pager-size');
   MC_PAGE_SIZES.forEach(n => sizeSelect.appendChild(new Option(`${n} per page`, String(n))));
   sizeSelect.value = String(pageSize);
@@ -456,6 +463,15 @@ function buildListPager(onPageChange: (page: number) => void, onPageSizeChange: 
     status.textContent = totalItems > 0 ? `Page ${page + 1} of ${pages}  (${first}–${last})` : '';
   }
   return { row, sync, getPageSize: () => pageSize };
+}
+
+/** Settings.getMyContentPageSize() reads back a plain number — clamped to
+ *  one of buildListPager's own three options rather than trusted outright,
+ *  in case a future release narrows MC_PAGE_SIZES and leaves an old saved
+ *  value that no longer matches any of them. */
+function myContentInitialPageSize(): MCPageSize {
+  const n = Settings.getMyContentPageSize();
+  return (MC_PAGE_SIZES as readonly number[]).includes(n) ? (n as MCPageSize) : 5;
 }
 
 // ── Vocabulary CSV export ────────────────────────────────────────────────────
@@ -751,11 +767,11 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
 
   wrap.appendChild(buildSection('trivia', 'Trivia Questions',
     'Added to the Trivia tab\'s question bank, and included in its Difficulty/Reading/Domain filters. Fill in the question and answer for whichever languages you\'re writing it in — each becomes its own entry in that language\'s bank.',
-    buildTriviaSection(lang, selectedLangs, () => renderMyContent(container, lang))));
+    buildTriviaSection(lang, selectedLangs)));
 
   wrap.appendChild(buildSection('guessBlank', 'Guess the Blank Questions',
     'Added to Guess the Blank\'s question bank. Write 2-4 clues per question, vaguest first — the mode reveals them one at a time as the learner asks for another hint.',
-    buildGuessBlankSection(lang, selectedLangs, () => renderMyContent(container, lang))));
+    buildGuessBlankSection(lang, selectedLangs)));
 
   wrap.appendChild(buildSection('pictures', 'Pictures',
     'Search a language\'s vocabulary for words that already have a photo, icon or emoji, then choose which one Picture Quiz should show for that word. Words with none of their own can still get a custom picture — a pasted URL, an uploaded file, or a pick from the bundled photo library.',
@@ -1702,8 +1718,16 @@ const ANSWER_TYPES: readonly AnswerType[] = ['year', 'number', 'person', 'place'
 
 interface TriviaLangInputs { question: HTMLInputElement; answers: HTMLInputElement }
 
-function buildTriviaSection(currentLang: string, selectedLangs: Set<string>, refresh: () => void): HTMLElement {
+function buildTriviaSection(currentLang: string, selectedLangs: Set<string>): HTMLElement {
   const wrap = el('div', 'mc-subsections');
+  const editSub = buildEditTriviaSubsection(currentLang);
+  wrap.appendChild(buildAddTriviaSubsection(currentLang, selectedLangs, editSub.refresh));
+  wrap.appendChild(editSub.el);
+  return wrap;
+}
+
+function buildAddTriviaSubsection(currentLang: string, selectedLangs: Set<string>, onAdded: () => void): HTMLElement {
+  const sub = el('div', 'mc-subsection-fields');
 
   const form = el('div', 'mc-form');
   const qEnI = textInput('Question in English');
@@ -1720,7 +1744,7 @@ function buildTriviaSection(currentLang: string, selectedLangs: Set<string>, ref
     field('Reading difficulty', readingDiffI), field('Reading length', readingLenI),
     field('Answer type', answerTypeI), field('Domains', domainsI),
   );
-  wrap.appendChild(form);
+  sub.appendChild(form);
 
   const { rows, values: triviaInputs } = languageRows<TriviaLangInputs>(currentLang, selectedLangs, info => {
     const question = textInput(`Question in ${info.label}`);
@@ -1729,7 +1753,7 @@ function buildTriviaSection(currentLang: string, selectedLangs: Set<string>, ref
     rowWrap.append(question, answers);
     return { el: rowWrap, value: { question, answers } };
   });
-  wrap.appendChild(rows);
+  sub.appendChild(rows);
 
   const addBtn = el('button', 'mc-btn', 'Add question(s)');
   addBtn.type = 'button';
@@ -1754,37 +1778,346 @@ function buildTriviaSection(currentLang: string, selectedLangs: Set<string>, ref
       addUserTriviaQuestion(langName, q);
       added++;
     }
-    if (added > 0) refresh();
+    if (added > 0) onAdded();
   });
-  wrap.appendChild(addBtn);
+  sub.appendChild(addBtn);
 
-  const list = el('div', 'mc-list');
-  const allQuestions = LANGUAGES.flatMap(info => getUserTriviaQuestions(info.name).map(q => ({ info, q })));
-  if (allQuestions.length === 0) {
-    list.appendChild(el('p', 'mc-empty', 'No trivia questions added yet.'));
-  } else {
-    allQuestions.forEach(({ info, q }) => list.appendChild(buildTriviaRow(info, q, refresh)));
-  }
-  wrap.appendChild(list);
-  return wrap;
+  return buildSubsection('trivia-add', 'Add a New Trivia Question',
+    'Fill in the question and answer for whichever languages you\'re writing it in — each becomes its own entry in that language\'s bank.',
+    sub);
 }
 
-function buildTriviaRow(info: LanguageInfo, q: TriviaQuestion, refresh: () => void): HTMLElement {
-  const row = el('div', 'mc-row');
+/** One row in the Edit list: either a built-in trivia question (from
+ *  data/trivia-questions.ts, `overridden` says whether My Content has
+ *  patched it) or one a learner added themselves via the Add form above. */
+interface TriviaEntry { info: LanguageInfo; q: TriviaQuestion; origin: 'builtin' | 'user'; overridden: boolean; }
+
+// ── Trivia sort/filter toolbar (Edit an Existing Trivia Question) ──────────
+// Same shape as MCListState/applyMCSortFilter above, sized to trivia's own
+// fields (category/difficulty stand in for Part of Speech/Level) rather than
+// forcing those word-specific dimensions onto a question. `dir` is still the
+// same MCSortDir buildSortDirToggle already knows how to drive.
+
+type TriviaSortMode = 'question' | 'category' | 'difficulty';
+const TRIVIA_SORT_LABELS: Record<TriviaSortMode, string> = {
+  question: 'Question', category: 'Category', difficulty: 'Difficulty',
+};
+const TRIVIA_DIFFICULTY_ORDER: Record<TriviaDifficulty, number> = { easy: 0, medium: 1, hard: 2 };
+
+interface TriviaListState { sort: TriviaSortMode; dir: MCSortDir; category: Set<string>; difficulty: Set<string>; domains: Set<string>; }
+
+function applyTriviaSortFilter(items: TriviaEntry[], state: TriviaListState): TriviaEntry[] {
+  let filtered = state.category.size === 0 ? items : items.filter(({ q }) => state.category.has(q.category));
+  if (state.difficulty.size > 0) filtered = filtered.filter(({ q }) => state.difficulty.has(q.difficulty));
+  // Any-match, not all-match — same reasoning as applyMCSortFilter's own
+  // domains check: a question tagged both "history" and "culture" should
+  // still show up when only "history" is checked.
+  if (state.domains.size > 0) filtered = filtered.filter(({ q }) => q.domains.some(d => state.domains.has(d)));
+  const arr = [...filtered];
+  const cmp = (a: TriviaEntry, b: TriviaEntry): number => {
+    switch (state.sort) {
+      case 'category':   return a.q.category.localeCompare(b.q.category) || a.q.questionTarget.localeCompare(b.q.questionTarget);
+      case 'difficulty':  return TRIVIA_DIFFICULTY_ORDER[a.q.difficulty] - TRIVIA_DIFFICULTY_ORDER[b.q.difficulty]
+        || a.q.questionTarget.localeCompare(b.q.questionTarget);
+      default:            return a.q.questionTarget.localeCompare(b.q.questionTarget); // 'question'
+    }
+  };
+  const mul = state.dir === 'desc' ? -1 : 1;
+  arr.sort((a, b) => mul * cmp(a, b));
+  return arr;
+}
+
+/** "pop-culture" → "Pop culture", "easy" → "Easy" — same single-
+ *  leading-capital convention formatDomainLabel above uses for domains,
+ *  applied to trivia/Guess the Blank's own category and difficulty values
+ *  (hyphenated or plain) so their filter chips read as words, not raw enum
+ *  keys, without a separate display-name table to keep in sync with either
+ *  fixed value list. */
+function formatChipLabel(v: string): string {
+  return v.replace(/-/g, ' ').replace(/^./, c => c.toUpperCase());
+}
+
+/** One chip row — "All" plus one pill per value in `values` — same
+ *  `.pos-chip`/"All" shape appendPosChips uses for Part of Speech, reused
+ *  here for any small fixed value set (trivia/Guess the Blank's own
+ *  category and difficulty) rather than a near-identical function per set. */
+function appendChipGroup(
+  target: HTMLElement, groupLabel: string, values: readonly string[], selected: Set<string>, onChange: () => void,
+): void {
+  target.appendChild(el('span', 'ml-band-label mc-toolbar-group-label', groupLabel));
+  const allChip = el('button', 'pos-chip pos-chip-all', 'All');
+  allChip.type = 'button';
+  allChip.classList.toggle('active', selected.size === 0);
+  allChip.addEventListener('click', () => { selected.clear(); onChange(); });
+  target.appendChild(allChip);
+  values.forEach(v => {
+    const chip = el('button', 'pos-chip', formatChipLabel(v));
+    chip.type = 'button';
+    chip.classList.toggle('active', selected.has(v));
+    chip.addEventListener('click', () => {
+      if (selected.has(v)) selected.delete(v); else selected.add(v);
+      onChange();
+    });
+    target.appendChild(chip);
+  });
+}
+
+/**
+ * Every trivia question for the language(s) picked above — built-in
+ * (data/trivia-questions.ts, overrides applied) and added via the form
+ * above — in one paginated, scrollable list, same row/expand-to-edit/
+ * sort-and-filter shape as buildEditWordSubsection's own overrides list.
+ * Unlike that one, this doesn't wait for a typed query before showing
+ * anything: the whole bank is small enough (low hundreds at most) to just
+ * page through directly, so the search box here only narrows the list
+ * already on screen rather than being the only way to find something in
+ * the first place.
+ */
+function buildEditTriviaSubsection(currentLang: string): { el: HTMLElement; refresh: () => void } {
+  const sub = el('div', 'mc-subsection-fields');
+
+  let expanded: { lang: string; id: string } | null = null;
+  let pageIndex = 0;
+  let searchLang = currentLang;
+  let searchQuery = '';
+  const sortState: TriviaListState = { sort: 'question', dir: 'asc', category: new Set(), difficulty: new Set(), domains: new Set() };
+
+  const list = el('div', 'mc-list mc-scroll-list');
+  const pager = buildListPager(i => { pageIndex = i; renderList(); }, () => { pageIndex = 0; renderList(); }, myContentInitialPageSize());
+
+  function openRow(lang: string, id: string): void {
+    const same = expanded?.lang === lang && expanded.id === id;
+    expanded = same ? null : { lang, id };
+    pageIndex = 0;
+    renderList();
+    if (expanded) list.querySelector('.mc-row--expanded')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  const langSelect = document.createElement('select');
+  langSelect.className = 'mc-input mc-word-lang-select';
+  langSelect.appendChild(new Option('All languages', ALL_LANGS));
+  for (const info of LANGUAGES) langSelect.appendChild(new Option(info.label, info.name));
+  langSelect.value = searchLang;
+  langSelect.addEventListener('change', () => { searchLang = langSelect.value; pageIndex = 0; renderList(); });
+  const langRow = el('div', 'mc-word-lang-row');
+  langRow.append(el('span', 'ml-band-label', 'Language'), langSelect);
+
+  const sortLabel = el('span', 'ml-band-label', 'Sort');
+  const sortSel = el('select', 'mc-input mc-list-toolbar-select');
+  (Object.keys(TRIVIA_SORT_LABELS) as TriviaSortMode[]).forEach(mode => {
+    sortSel.appendChild(new Option(TRIVIA_SORT_LABELS[mode], mode));
+  });
+  sortSel.value = sortState.sort;
+  const onFilterChange = (): void => { pageIndex = 0; renderList(); };
+  sortSel.addEventListener('change', () => { sortState.sort = sortSel.value as TriviaSortMode; onFilterChange(); });
+  const sortRow = el('div', 'mc-sort-control');
+  sortRow.append(sortLabel, sortSel, buildSortDirToggle(sortState, onFilterChange));
+
+  const topRow = el('div', 'mc-edit-top-row');
+  topRow.append(langRow, sortRow);
+  sub.appendChild(topRow);
+
+  const chipsRow = el('div', 'mc-list-toolbar');
+  appendChipGroup(chipsRow, 'Category', CATEGORIES, sortState.category, onFilterChange);
+  appendChipGroup(chipsRow, 'Difficulty', DIFFICULTIES, sortState.difficulty, onFilterChange);
+  sub.appendChild(chipsRow);
+
+  const domainsRow = el('div', 'mc-list-toolbar');
+  sub.appendChild(domainsRow);
+
+  const searchInput = textInput('Search to narrow the list below…');
+  const clearBtn = el('button', 'mc-word-search-clear', '✕');
+  clearBtn.type = 'button';
+  clearBtn.hidden = true;
+  clearBtn.setAttribute('aria-label', 'Clear search');
+  clearBtn.addEventListener('click', () => { searchInput.value = ''; searchQuery = ''; clearBtn.hidden = true; onFilterChange(); searchInput.focus(); });
+  searchInput.addEventListener('input', () => {
+    searchQuery = searchInput.value.trim();
+    clearBtn.hidden = !searchQuery;
+    onFilterChange();
+  });
+  const searchRow = el('div', 'mc-word-search-row');
+  searchRow.append(searchInput, clearBtn);
+  sub.appendChild(searchRow);
+
+  function collectEntries(): TriviaEntry[] {
+    const langs = searchLang === ALL_LANGS ? LANGUAGES : LANGUAGES.filter(l => l.name === searchLang);
+    const entries: TriviaEntry[] = [];
+    for (const info of langs) {
+      for (const q of getBuiltinTriviaQuestionsWithOverrides(info.name)) {
+        entries.push({ info, q, origin: 'builtin', overridden: !!getTriviaQuestionOverride(info.name, q.id) });
+      }
+      for (const q of getUserTriviaQuestions(info.name)) entries.push({ info, q, origin: 'user', overridden: false });
+    }
+    return entries;
+  }
+
+  function renderList(): void {
+    list.innerHTML = '';
+    const all = collectEntries();
+    if (all.length === 0) {
+      list.appendChild(el('p', 'mc-empty', 'No trivia questions for this language yet.'));
+      domainsRow.hidden = true;
+      pager.sync(0, 0);
+      return;
+    }
+    const qf = foldKey(searchQuery);
+    const textFiltered = qf
+      ? all.filter(({ q }) => foldKey(q.questionTarget).includes(qf) || foldKey(q.questionEn).includes(qf))
+      : all;
+
+    // How many of the questions currently in view (this language, this
+    // search query) carry each domain — same "count next to the label" as
+    // appendDomainChips' other callers.
+    const domainCounts = new Map<string, number>();
+    textFiltered.forEach(({ q }) => q.domains.forEach(d => domainCounts.set(d, (domainCounts.get(d) ?? 0) + 1)));
+    domainsRow.innerHTML = '';
+    appendDomainChips(domainsRow, domainCounts, sortState.domains, textFiltered.length, onFilterChange);
+    domainsRow.hidden = domainCounts.size === 0;
+
+    const filtered = applyTriviaSortFilter(textFiltered, sortState);
+    const pageSize = pager.getPageSize();
+    const pages = pageCountFor(filtered.length, pageSize);
+    pageIndex = Math.max(0, Math.min(pageIndex, pages - 1));
+    const shown = pageSlice(filtered, pageSize, pageIndex);
+
+    if (filtered.length === 0) {
+      list.appendChild(el('p', 'mc-empty', 'No trivia questions match that filter.'));
+    } else {
+      shown.forEach(entry => {
+        const isExpanded = !!expanded && expanded.lang === entry.info.name && expanded.id === entry.q.id;
+        list.appendChild(buildTriviaEditRow(entry, isExpanded, () => openRow(entry.info.name, entry.q.id), renderList));
+      });
+    }
+    pager.sync(pageIndex, filtered.length);
+  }
+  renderList();
+  sub.appendChild(list);
+  sub.appendChild(pager.row);
+
+  return {
+    el: buildSubsection('trivia-edit', 'Edit an Existing Trivia Question',
+      'Every trivia question for the language(s) picked above, plus any you\'ve added — sort, filter or search to find one, then click it to override its wording, answers, category or difficulty.',
+      sub),
+    refresh: renderList,
+  };
+}
+
+function buildTriviaEditRow(entry: TriviaEntry, expanded: boolean, onToggle: () => void, refresh: () => void): HTMLElement {
+  const { info, q, origin, overridden } = entry;
+  const wrap = el('div', 'mc-row-wrap');
+  const row = el('div', 'mc-row mc-row--clickable' + (expanded ? ' mc-row--expanded' : ''));
+  row.addEventListener('click', onToggle);
+
   const main = el('div', 'mc-row-main');
   const title = el('span', 'mc-row-title');
   title.appendChild(buildLangBadge([info.name]));
   title.appendChild(document.createTextNode(` ${q.questionTarget}`));
   main.appendChild(title);
+  const tag = origin === 'user' ? 'Added by you · ' : overridden ? 'Edited · ' : '';
   main.appendChild(el('span', 'mc-row-meta',
-    `${q.difficulty} · reading ${q.readingDifficulty}/${q.readingLength} · ${q.answerType} · answer: ${q.answersTarget[0]}`));
+    `${tag}${q.difficulty} · reading ${q.readingDifficulty}/${q.readingLength} · ${q.answerType} · answer: ${q.answersTarget[0]}`));
   row.appendChild(main);
 
-  const delBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm', 'Remove');
-  delBtn.type = 'button';
-  delBtn.addEventListener('click', () => { removeUserTriviaQuestion(info.name, q.id); refresh(); });
-  row.appendChild(delBtn);
-  return row;
+  if (origin === 'user') {
+    const delBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm mc-row-actions', 'Remove');
+    delBtn.type = 'button';
+    delBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      removeUserTriviaQuestion(info.name, q.id);
+      refresh();
+    });
+    row.appendChild(delBtn);
+  }
+  wrap.appendChild(row);
+
+  if (expanded) {
+    const detail = el('div', 'mc-row-detail');
+    detail.appendChild(buildTriviaEditForm(entry, refresh));
+    wrap.appendChild(detail);
+  }
+  return wrap;
+}
+
+/**
+ * Pre-filled twin of the Add form's fields. Saves with
+ * updateUserTriviaQuestion for a question a learner added themselves, or
+ * setTriviaQuestionOverride for a built-in one — the built-in bank itself
+ * (data/trivia-questions.ts) is shipped source and never touched; overriding
+ * one just patches how it appears and plays from here on, and a built-in
+ * question that's already overridden gets a "Reset to original" button to
+ * drop that patch entirely.
+ */
+function buildTriviaEditForm(entry: TriviaEntry, refresh: () => void): HTMLElement {
+  const { info, q, origin, overridden } = entry;
+  const wrap = el('div');
+
+  // Textareas, not the plain single-line inputs the Add form above still
+  // uses — a trivia question routinely runs longer than a text input can
+  // show at once, and this is the one place a learner needs to read the
+  // *whole* thing back to check an edit, not just glance at a summary row.
+  // Full-width fields of their own above .mc-form, same reasoning as the Add
+  // Word form's Example sentences/Additional senses: .mc-form's flex-wrap
+  // row caps every field at ~180px, which a paragraph-length textarea would
+  // just be cramped inside.
+  const qTargetI = textArea(`Question in ${info.label}`, q.questionTarget);
+  const qEnI = textArea('Question in English', q.questionEn);
+  wrap.appendChild(field(`Question (${info.label})`, qTargetI));
+  wrap.appendChild(field('Question (English)', qEnI));
+
+  const form = el('div', 'mc-form');
+  const ansTargetI = textInput('Accepted answers, comma-separated', q.answersTarget.join(', '));
+  const ansEnI = textInput('Accepted English answers, comma-separated', q.answersEn.join(', '));
+  const categoryI = selectInput(CATEGORIES, q.category);
+  const difficultyI = selectInput(DIFFICULTIES, q.difficulty);
+  const readingDiffI = selectInput(READING_DIFFICULTIES, q.readingDifficulty);
+  const readingLenI = selectInput(READING_LENGTHS, q.readingLength);
+  const answerTypeI = selectInput(ANSWER_TYPES, q.answerType);
+  const domainsI = textInput('e.g. history, geography (comma-separated)', q.domains.join(', '));
+  form.append(
+    field('Accepted answers', ansTargetI), field('Accepted answers (English)', ansEnI),
+    field('Category', categoryI), field('Trivia difficulty', difficultyI),
+    field('Reading difficulty', readingDiffI), field('Reading length', readingLenI),
+    field('Answer type', answerTypeI), field('Domains', domainsI),
+  );
+  wrap.appendChild(form);
+
+  if (origin === 'builtin') {
+    wrap.appendChild(el('p', 'mc-empty',
+      'This is one of the app\'s built-in trivia questions. Saving overrides how it looks and plays here — the original is never changed.'));
+  }
+
+  const saveBtn = el('button', 'mc-btn', 'Save changes');
+  saveBtn.type = 'button';
+  saveBtn.addEventListener('click', () => {
+    const questionTarget = qTargetI.value.trim();
+    const answersTarget = csv(ansTargetI.value);
+    if (!questionTarget || answersTarget.length === 0) return;
+    const patch = {
+      category: categoryI.value as TriviaCategory,
+      difficulty: difficultyI.value as TriviaDifficulty,
+      readingDifficulty: readingDiffI.value as ReadingDifficulty,
+      readingLength: readingLenI.value as ReadingLength,
+      answerType: answerTypeI.value as AnswerType,
+      domains: csv(domainsI.value),
+      questionTarget,
+      questionEn: qEnI.value.trim() || questionTarget,
+      answersTarget,
+      answersEn: csv(ansEnI.value).length ? csv(ansEnI.value) : answersTarget,
+    };
+    if (origin === 'user') updateUserTriviaQuestion(info.name, q.id, patch);
+    else setTriviaQuestionOverride(info.name, q.id, patch);
+    refresh();
+  });
+  wrap.appendChild(saveBtn);
+
+  if (origin === 'builtin' && overridden) {
+    const resetBtn = el('button', 'mc-btn mc-btn--secondary', 'Reset to original');
+    resetBtn.type = 'button';
+    resetBtn.addEventListener('click', () => { removeTriviaQuestionOverride(info.name, q.id); refresh(); });
+    wrap.appendChild(resetBtn);
+  }
+  return wrap;
 }
 
 // ── Guess the Blank questions ────────────────────────────────────────────────
@@ -1798,8 +2131,16 @@ const BLANK_DIFFICULTIES: readonly BlankDifficulty[] = ['easy', 'medium', 'hard'
 
 interface GuessBlankLangInputs { answer: HTMLInputElement; clues: HTMLTextAreaElement }
 
-function buildGuessBlankSection(currentLang: string, selectedLangs: Set<string>, refresh: () => void): HTMLElement {
+function buildGuessBlankSection(currentLang: string, selectedLangs: Set<string>): HTMLElement {
   const wrap = el('div', 'mc-subsections');
+  const editSub = buildEditGuessBlankSubsection(currentLang);
+  wrap.appendChild(buildAddGuessBlankSubsection(currentLang, selectedLangs, editSub.refresh));
+  wrap.appendChild(editSub.el);
+  return wrap;
+}
+
+function buildAddGuessBlankSubsection(currentLang: string, selectedLangs: Set<string>, onAdded: () => void): HTMLElement {
+  const sub = el('div', 'mc-subsection-fields');
 
   const form = el('div', 'mc-form');
   const answerEnI = textInput('Answer in English, e.g. "the monkey"');
@@ -1809,8 +2150,8 @@ function buildGuessBlankSection(currentLang: string, selectedLangs: Set<string>,
   form.append(
     field('Answer (English)', answerEnI), field('Category', categoryI), field('Difficulty', difficultyI),
   );
-  wrap.appendChild(form);
-  wrap.appendChild(field('Clues (English)', cluesEnI));
+  sub.appendChild(form);
+  sub.appendChild(field('Clues (English)', cluesEnI));
 
   const { rows, values: blankInputs } = languageRows<GuessBlankLangInputs>(currentLang, selectedLangs, info => {
     const answer = textInput(`Answer in ${info.label}`);
@@ -1819,7 +2160,7 @@ function buildGuessBlankSection(currentLang: string, selectedLangs: Set<string>,
     rowWrap.append(answer, clues);
     return { el: rowWrap, value: { answer, clues } };
   });
-  wrap.appendChild(rows);
+  sub.appendChild(rows);
 
   const addBtn = el('button', 'mc-btn', 'Add question(s)');
   addBtn.type = 'button';
@@ -1840,37 +2181,256 @@ function buildGuessBlankSection(currentLang: string, selectedLangs: Set<string>,
       addUserGuessBlankQuestion(langName, q);
       added++;
     }
-    if (added > 0) refresh();
+    if (added > 0) onAdded();
   });
-  wrap.appendChild(addBtn);
+  sub.appendChild(addBtn);
 
-  const list = el('div', 'mc-list');
-  const allQuestions = LANGUAGES.flatMap(info => getUserGuessBlankQuestions(info.name).map(q => ({ info, q })));
-  if (allQuestions.length === 0) {
-    list.appendChild(el('p', 'mc-empty', 'No Guess the Blank questions added yet.'));
-  } else {
-    allQuestions.forEach(({ info, q }) => list.appendChild(buildGuessBlankRow(info, q, refresh)));
-  }
-  wrap.appendChild(list);
-  return wrap;
+  return buildSubsection('guessblank-add', 'Add a New Guess the Blank Question',
+    'Write 2-4 clues per question, vaguest first — the mode reveals them one at a time as the learner asks for another hint.',
+    sub);
 }
 
-function buildGuessBlankRow(info: LanguageInfo, q: GuessBlankQuestion, refresh: () => void): HTMLElement {
-  const row = el('div', 'mc-row');
+/** Same shape as TriviaEntry above. */
+interface GuessBlankEntry { info: LanguageInfo; q: GuessBlankQuestion; origin: 'builtin' | 'user'; overridden: boolean; }
+
+// ── Guess the Blank sort/filter toolbar (Edit an Existing ... Question) ────
+// Same shape as TriviaListState/applyTriviaSortFilter above — no domains
+// row here, though: unlike TriviaQuestion, GuessBlankQuestion carries no
+// domains field to filter by.
+
+type BlankSortMode = 'answer' | 'category' | 'difficulty';
+const BLANK_SORT_LABELS: Record<BlankSortMode, string> = {
+  answer: 'Answer', category: 'Category', difficulty: 'Difficulty',
+};
+const BLANK_DIFFICULTY_ORDER: Record<BlankDifficulty, number> = { easy: 0, medium: 1, hard: 2 };
+
+interface BlankListState { sort: BlankSortMode; dir: MCSortDir; category: Set<string>; difficulty: Set<string>; }
+
+function applyBlankSortFilter(items: GuessBlankEntry[], state: BlankListState): GuessBlankEntry[] {
+  let filtered = state.category.size === 0 ? items : items.filter(({ q }) => state.category.has(q.category));
+  if (state.difficulty.size > 0) filtered = filtered.filter(({ q }) => state.difficulty.has(q.difficulty));
+  const arr = [...filtered];
+  const cmp = (a: GuessBlankEntry, b: GuessBlankEntry): number => {
+    switch (state.sort) {
+      case 'category':   return a.q.category.localeCompare(b.q.category) || a.q.answerTarget.localeCompare(b.q.answerTarget);
+      case 'difficulty':  return BLANK_DIFFICULTY_ORDER[a.q.difficulty] - BLANK_DIFFICULTY_ORDER[b.q.difficulty]
+        || a.q.answerTarget.localeCompare(b.q.answerTarget);
+      default:            return a.q.answerTarget.localeCompare(b.q.answerTarget); // 'answer'
+    }
+  };
+  const mul = state.dir === 'desc' ? -1 : 1;
+  arr.sort((a, b) => mul * cmp(a, b));
+  return arr;
+}
+
+/** Same reasoning as buildEditTriviaSubsection above, for the Guess the
+ *  Blank bank (data/guess-blank-questions.ts). */
+function buildEditGuessBlankSubsection(currentLang: string): { el: HTMLElement; refresh: () => void } {
+  const sub = el('div', 'mc-subsection-fields');
+
+  let expanded: { lang: string; id: string } | null = null;
+  let pageIndex = 0;
+  let searchLang = currentLang;
+  let searchQuery = '';
+  const sortState: BlankListState = { sort: 'answer', dir: 'asc', category: new Set(), difficulty: new Set() };
+
+  const list = el('div', 'mc-list mc-scroll-list');
+  const pager = buildListPager(i => { pageIndex = i; renderList(); }, () => { pageIndex = 0; renderList(); }, myContentInitialPageSize());
+
+  function openRow(lang: string, id: string): void {
+    const same = expanded?.lang === lang && expanded.id === id;
+    expanded = same ? null : { lang, id };
+    pageIndex = 0;
+    renderList();
+    if (expanded) list.querySelector('.mc-row--expanded')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  const langSelect = document.createElement('select');
+  langSelect.className = 'mc-input mc-word-lang-select';
+  langSelect.appendChild(new Option('All languages', ALL_LANGS));
+  for (const info of LANGUAGES) langSelect.appendChild(new Option(info.label, info.name));
+  langSelect.value = searchLang;
+  langSelect.addEventListener('change', () => { searchLang = langSelect.value; pageIndex = 0; renderList(); });
+  const langRow = el('div', 'mc-word-lang-row');
+  langRow.append(el('span', 'ml-band-label', 'Language'), langSelect);
+
+  const sortLabel = el('span', 'ml-band-label', 'Sort');
+  const sortSel = el('select', 'mc-input mc-list-toolbar-select');
+  (Object.keys(BLANK_SORT_LABELS) as BlankSortMode[]).forEach(mode => {
+    sortSel.appendChild(new Option(BLANK_SORT_LABELS[mode], mode));
+  });
+  sortSel.value = sortState.sort;
+  const onFilterChange = (): void => { pageIndex = 0; renderList(); };
+  sortSel.addEventListener('change', () => { sortState.sort = sortSel.value as BlankSortMode; onFilterChange(); });
+  const sortRow = el('div', 'mc-sort-control');
+  sortRow.append(sortLabel, sortSel, buildSortDirToggle(sortState, onFilterChange));
+
+  const topRow = el('div', 'mc-edit-top-row');
+  topRow.append(langRow, sortRow);
+  sub.appendChild(topRow);
+
+  const chipsRow = el('div', 'mc-list-toolbar');
+  appendChipGroup(chipsRow, 'Category', BLANK_CATEGORIES, sortState.category, onFilterChange);
+  appendChipGroup(chipsRow, 'Difficulty', BLANK_DIFFICULTIES, sortState.difficulty, onFilterChange);
+  sub.appendChild(chipsRow);
+
+  const searchInput = textInput('Search to narrow the list below…');
+  const clearBtn = el('button', 'mc-word-search-clear', '✕');
+  clearBtn.type = 'button';
+  clearBtn.hidden = true;
+  clearBtn.setAttribute('aria-label', 'Clear search');
+  clearBtn.addEventListener('click', () => { searchInput.value = ''; searchQuery = ''; clearBtn.hidden = true; onFilterChange(); searchInput.focus(); });
+  searchInput.addEventListener('input', () => {
+    searchQuery = searchInput.value.trim();
+    clearBtn.hidden = !searchQuery;
+    onFilterChange();
+  });
+  const searchRow = el('div', 'mc-word-search-row');
+  searchRow.append(searchInput, clearBtn);
+  sub.appendChild(searchRow);
+
+  function collectEntries(): GuessBlankEntry[] {
+    const langs = searchLang === ALL_LANGS ? LANGUAGES : LANGUAGES.filter(l => l.name === searchLang);
+    const entries: GuessBlankEntry[] = [];
+    for (const info of langs) {
+      for (const q of getBuiltinGuessBlankQuestionsWithOverrides(info.name)) {
+        entries.push({ info, q, origin: 'builtin', overridden: !!getGuessBlankQuestionOverride(info.name, q.id) });
+      }
+      for (const q of getUserGuessBlankQuestions(info.name)) entries.push({ info, q, origin: 'user', overridden: false });
+    }
+    return entries;
+  }
+
+  function renderList(): void {
+    list.innerHTML = '';
+    const all = collectEntries();
+    if (all.length === 0) {
+      list.appendChild(el('p', 'mc-empty', 'No Guess the Blank questions for this language yet.'));
+      pager.sync(0, 0);
+      return;
+    }
+    const qf = foldKey(searchQuery);
+    const textFiltered = qf
+      ? all.filter(({ q }) => foldKey(q.answerTarget).includes(qf) || foldKey(q.answerEn).includes(qf)
+          || q.cluesTarget.some(c => foldKey(c).includes(qf)))
+      : all;
+
+    const filtered = applyBlankSortFilter(textFiltered, sortState);
+    const pageSize = pager.getPageSize();
+    const pages = pageCountFor(filtered.length, pageSize);
+    pageIndex = Math.max(0, Math.min(pageIndex, pages - 1));
+    const shown = pageSlice(filtered, pageSize, pageIndex);
+
+    if (filtered.length === 0) {
+      list.appendChild(el('p', 'mc-empty', 'No Guess the Blank questions match that filter.'));
+    } else {
+      shown.forEach(entry => {
+        const isExpanded = !!expanded && expanded.lang === entry.info.name && expanded.id === entry.q.id;
+        list.appendChild(buildGuessBlankEditRow(entry, isExpanded, () => openRow(entry.info.name, entry.q.id), renderList));
+      });
+    }
+    pager.sync(pageIndex, filtered.length);
+  }
+  renderList();
+  sub.appendChild(list);
+  sub.appendChild(pager.row);
+
+  return {
+    el: buildSubsection('guessblank-edit', 'Edit an Existing Guess the Blank Question',
+      'Every Guess the Blank question for the language(s) picked above, plus any you\'ve added — sort, filter or search to find one, then click it to override its clues, answer, category or difficulty.',
+      sub),
+    refresh: renderList,
+  };
+}
+
+function buildGuessBlankEditRow(entry: GuessBlankEntry, expanded: boolean, onToggle: () => void, refresh: () => void): HTMLElement {
+  const { info, q, origin, overridden } = entry;
+  const wrap = el('div', 'mc-row-wrap');
+  const row = el('div', 'mc-row mc-row--clickable' + (expanded ? ' mc-row--expanded' : ''));
+  row.addEventListener('click', onToggle);
+
   const main = el('div', 'mc-row-main');
   const title = el('span', 'mc-row-title');
   title.appendChild(buildLangBadge([info.name]));
   title.appendChild(document.createTextNode(` ${q.answerTarget}`));
   main.appendChild(title);
+  const tag = origin === 'user' ? 'Added by you · ' : overridden ? 'Edited · ' : '';
   main.appendChild(el('span', 'mc-row-meta',
-    `${q.category} · ${q.difficulty} · ${q.cluesTarget.length} clue${q.cluesTarget.length === 1 ? '' : 's'}`));
+    `${tag}${q.category} · ${q.difficulty} · ${q.cluesTarget.length} clue${q.cluesTarget.length === 1 ? '' : 's'}`));
   row.appendChild(main);
 
-  const delBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm', 'Remove');
-  delBtn.type = 'button';
-  delBtn.addEventListener('click', () => { removeUserGuessBlankQuestion(info.name, q.id); refresh(); });
-  row.appendChild(delBtn);
-  return row;
+  if (origin === 'user') {
+    const delBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm mc-row-actions', 'Remove');
+    delBtn.type = 'button';
+    delBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      removeUserGuessBlankQuestion(info.name, q.id);
+      refresh();
+    });
+    row.appendChild(delBtn);
+  }
+  wrap.appendChild(row);
+
+  if (expanded) {
+    const detail = el('div', 'mc-row-detail');
+    detail.appendChild(buildGuessBlankEditForm(entry, refresh));
+    wrap.appendChild(detail);
+  }
+  return wrap;
+}
+
+/** Same reasoning as buildTriviaEditForm above. */
+function buildGuessBlankEditForm(entry: GuessBlankEntry, refresh: () => void): HTMLElement {
+  const { info, q, origin, overridden } = entry;
+  const wrap = el('div');
+  const form = el('div', 'mc-form');
+  const answerTargetI = textInput(`Answer in ${info.label}`, q.answerTarget);
+  const answerEnI = textInput('Answer in English, e.g. "the monkey"', q.answerEn);
+  const categoryI = selectInput(BLANK_CATEGORIES, q.category);
+  const difficultyI = selectInput(BLANK_DIFFICULTIES, q.difficulty);
+  form.append(
+    field(`Answer (${info.label})`, answerTargetI), field('Answer (English)', answerEnI),
+    field('Category', categoryI), field('Difficulty', difficultyI),
+  );
+  wrap.appendChild(form);
+
+  const cluesTargetI = textArea(`Clues in ${info.label}, one per line`, q.cluesTarget.join('\n'));
+  const cluesEnI = textArea('One clue per line, vaguest first (2-4 clues)', q.cluesEn.join('\n'));
+  wrap.appendChild(field(`Clues (${info.label})`, cluesTargetI));
+  wrap.appendChild(field('Clues (English)', cluesEnI));
+
+  if (origin === 'builtin') {
+    wrap.appendChild(el('p', 'mc-empty',
+      'This is one of the app\'s built-in Guess the Blank questions. Saving overrides how it looks and plays here — the original is never changed.'));
+  }
+
+  const saveBtn = el('button', 'mc-btn', 'Save changes');
+  saveBtn.type = 'button';
+  saveBtn.addEventListener('click', () => {
+    const answerTarget = answerTargetI.value.trim();
+    const cluesTarget = lines(cluesTargetI.value);
+    if (!answerTarget || cluesTarget.length === 0) return;
+    const patch = {
+      category: categoryI.value as BlankCategory,
+      difficulty: difficultyI.value as BlankDifficulty,
+      cluesTarget,
+      cluesEn: lines(cluesEnI.value).length ? lines(cluesEnI.value) : cluesTarget,
+      answerTarget,
+      answerEn: answerEnI.value.trim() || answerTarget,
+    };
+    if (origin === 'user') updateUserGuessBlankQuestion(info.name, q.id, patch);
+    else setGuessBlankQuestionOverride(info.name, q.id, patch);
+    refresh();
+  });
+  wrap.appendChild(saveBtn);
+
+  if (origin === 'builtin' && overridden) {
+    const resetBtn = el('button', 'mc-btn mc-btn--secondary', 'Reset to original');
+    resetBtn.type = 'button';
+    resetBtn.addEventListener('click', () => { removeGuessBlankQuestionOverride(info.name, q.id); refresh(); });
+    wrap.appendChild(resetBtn);
+  }
+  return wrap;
 }
 
 // ── Word search ──────────────────────────────────────────────────────────────

@@ -2322,6 +2322,42 @@ button.ml-profile-editor-group-title {
   letter-spacing: 0.05em;
   color: var(--text-muted);
 }
+.ml-profile-editor-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem 0.6rem;
+}
+/* Quick edit — the "⚡ Quick edit" checkbox next to every field's own
+   label, marking it for the Testing Profiles popover's "Quick edit" mode
+   (preset-picker.ts). Named in full rather than a bare icon (an icon-only
+   checkbox this small was too easy to both miss and, once spotted, not
+   know the meaning of) but still visually a notch quieter than "Apply this
+   filter" next to it — most fields in a profile are never marked, so it
+   should read as an occasional option, not a second control every row
+   equally asks you to consider. */
+.ml-profile-editor-quickedit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  opacity: 0.8;
+  transition: opacity var(--transition-fast);
+}
+.ml-profile-editor-quickedit:hover,
+.ml-profile-editor-quickedit:has(input:checked) {
+  opacity: 1;
+  color: var(--ml-accent-profile);
+}
+.ml-profile-editor-quickedit input {
+  accent-color: var(--ml-accent-profile);
+  cursor: pointer;
+}
 .ml-profile-editor-chips {
   display: flex;
   flex-wrap: wrap;
@@ -2337,15 +2373,21 @@ button.ml-profile-editor-group-title {
    two-column live containers, neither of which this editor opts into — so
    without this, .conj-reg-chip's own width:100% forced one chip per line
    inside a plain flex-wrap row, and the tense chips ran at full size too.
-   A multi-column auto-fill grid of shrunk chips replaces both, with a
-   max-height + scroll fallback if a language's tense set still overflows it. */
+   A multi-column auto-fill grid of shrunk chips replaces both — sized wide
+   enough that most labels ("Subjuntivo Imperfecto") fit on one line, with
+   `white-space: normal` below wrapping the rare longer one onto a second
+   line instead of overflowing its cell. No max-height/overflow here: the
+   live quiz's own wide 2-column grid never needed a scrollbar for the same
+   ~12 tenses, and capping this denser one just traded one problem
+   (overflowing text, invisible behind the next cell since buttons don't
+   clip their own overflow) for another (a always-there scrollbar even when
+   the row would otherwise fit). Growing the box to fit every chip is the
+   plainer behavior. */
 .ml-profile-editor-tense-chips,
 .ml-profile-editor-reg-chips {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 0.25rem;
-  max-height: 8.5rem;
-  overflow-y: auto;
 }
 .ml-profile-editor-tense-chips .conj-tense-chip,
 .ml-profile-editor-reg-chips .conj-reg-chip {
@@ -2354,6 +2396,8 @@ button.ml-profile-editor-group-title {
   padding: 0.25rem 0.4rem;
   min-height: 0;
   border-radius: 6px;
+  white-space: normal;
+  line-height: 1.25;
 }
 .ml-profile-editor-words-sub {
   margin-top: 0.15rem;

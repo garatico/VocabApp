@@ -28,11 +28,11 @@
  * not wired to a tab, since the mechanic may be useful again later.)
  */
 import {
-  getTriviaQuestions, type TriviaQuestion, type TriviaDifficulty,
+  type TriviaQuestion, type TriviaDifficulty,
   type ReadingDifficulty, type ReadingLength,
 } from '../data/trivia-questions.ts';
 import { getSelectedDomains, matchesDomainFilter } from '../filters/domain-filter.ts';
-import { getUserTriviaQuestions } from '../data/user-content.ts';
+import { getEffectiveTriviaQuestions } from '../data/user-content.ts';
 import { normalize } from '../utils/match.ts';
 import { shuffle } from '../utils/shuffle.ts';
 import { applyAutofillAttr } from '../settings.ts';
@@ -304,10 +304,10 @@ export function renderTriviaMode({
   clearSummary('trivia');
   setProgress(0, 0);
 
-  // My Content tab additions (data/user-content.ts) — client-only, layered
-  // on top of the hand-written bank the same way loadWords() layers in
-  // user-added vocabulary words.
-  const allQuestions = [...getTriviaQuestions(lang), ...getUserTriviaQuestions(lang)];
+  // The hand-written bank (any My Content overrides applied) plus every
+  // question a learner has added of their own — see
+  // user-content.ts's getEffectiveTriviaQuestions.
+  const allQuestions = getEffectiveTriviaQuestions(lang);
   const selectedDomains = getSelectedDomains();
   const bank = fixedQueue ?? allQuestions.filter(q =>
     (category === 'all' || q.category === category)
