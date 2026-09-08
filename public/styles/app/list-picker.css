@@ -58,6 +58,65 @@
 }
 .preset-picker-delete:hover { color: var(--danger); }
 
+/* ── Inline "+" editor (Settings.getInlineProfileEditing) ──
+   Widens the popover — the full field-control set (buildProfileEditorGroups,
+   shared with My Lists' own profile editor) needs more than a plain list of
+   names ever did — and scrolls its own body rather than growing the popover
+   past a usable height when a language's tense set is long. */
+.preset-picker-popover--editing {
+  max-width: min(420px, calc(100vw - 8px));
+}
+.preset-picker-inline-toggle {
+  flex: none;
+  background: none;
+  border: none;
+  padding: 0.42rem 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.preset-picker-inline-toggle:hover,
+.preset-picker-inline-toggle.active { color: var(--accent); }
+
+.preset-picker-inline-editor {
+  padding: 0.5rem 0.75rem 0.6rem;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.preset-picker-inline-startfrom {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+.preset-picker-inline-startfrom select {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.78rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+}
+.preset-picker-inline-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+.preset-picker-inline-editor .preset-picker-save-row {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0 0;
+}
+
 .preset-picker-save-row {
   display: flex;
   gap: 0.35rem;

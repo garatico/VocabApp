@@ -126,12 +126,12 @@ body.kid-friendly-mode [data-kid-hide="true"] {
 .settings-section-body > .settings-row:first-child { border-top: none; }
 
 .settings-section--table       { border-left: 3px solid var(--accent); }
-.settings-section--multilang   { border-left: 3px solid #6d9dc5; }
 .settings-section--allquiz     { border-left: 3px solid #b78a4a; }
 .settings-section--conj        { border-left: 3px solid #4aa88a; }
 .settings-section--appearance  { border-left: 3px solid #c56d8f; }
 .settings-section--general     { border-left: 3px solid var(--text-muted); }
 .settings-section--streak      { border-left: 3px solid #d9822b; }
+.settings-section--history     { border-left: 3px solid #6b7fd7; }
 
 /* ── Collapsible header — filter-collapse-btn's own layout/arrow behaviour
    (class-filter.css) is reused as-is; this only sizes it for a page-level

@@ -41,8 +41,12 @@ import {
 import type { TriviaQuestion, TriviaCategory, TriviaDifficulty, ReadingDifficulty, ReadingLength, AnswerType } from '../data/trivia-questions.ts';
 import type { GuessBlankQuestion, BlankCategory, BlankDifficulty } from '../data/guess-blank-questions.ts';
 import { LANGUAGES, type LanguageInfo } from '../data/languages.ts';
+import { BANDS, type Band, representativeRankForBand, bandForRank } from '../data/bands.ts';
+import { POS_CHIPS, POS_ABBREV } from './my-lists/types.ts';
 import { getStockImages, getFallbackImageUrl, getFallbackSvgUrl, getFallbackEmoji } from '../data/visual-map.ts';
 import { loadWords, loadRawWords } from '../data/data-loader.ts';
+import { availableLanguages } from '../data/vocab-source.ts';
+import { Settings } from '../settings.ts';
 import { buildLangBadge } from '../ui/lang-badge.ts';
 import { readString, readJson, writeJson, isStringArray } from '../utils/storage.ts';
 import { foldKey } from '../utils/match.ts';
@@ -89,6 +93,18 @@ function csv(s: string): string[] {
   return s.split(',').map(x => x.trim()).filter(Boolean);
 }
 
+/** Short "added"/"edited" date for a row's own grid column — an em dash
+ *  (rather than an epoch date, or leaving the column looking simply empty)
+ *  for the one timestamp that's genuinely unrecoverable, a pre-existing word
+ *  override with no updatedAt (see normalizeWordOverride): a bare "" here
+ *  used to render as nothing at all, indistinguishable from the column not
+ *  being there, which read as "there's no date" rather than "there's a date
+ *  column, this one row just predates it." */
+function formatMCDate(ts: number | undefined): string {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
 /** One example sentence per line, rather than comma-separated — a sentence
  *  routinely contains commas of its own. */
 function lines(s: string): string[] {
@@ -106,47 +122,340 @@ function textArea(placeholder = '', value = ''): HTMLTextAreaElement {
   return t;
 }
 
+// ── Shared sort/filter toolbar (Add a New Word / Edit an Existing Word) ─────
+//
+// Both lists below are otherwise unrelated (UserWord rows vs. word-override
+// rows), so this works off small getter callbacks rather than either row
+// shape directly — one sort+filter implementation instead of two near-copies.
+
+type MCSortMode = 'date' | 'word' | 'pos' | 'rank' | 'meaning';
+type MCSortDir = 'asc' | 'desc';
+
+const MC_SORT_LABELS: Record<MCSortMode, string> = {
+  date: 'Date', word: 'Word', pos: 'Part of Speech', rank: 'Frequency Rank', meaning: 'Meaning',
+};
+
+/** `pos`/`band`/`domains` are Sets (multi-select), matching My Lists' own
+ *  Part of Speech and Level filters (ctx.selectedPos/ctx.selectedBands)
+ *  rather than the single-select dropdown `pos` used to be — see the
+ *  appendPosChips/appendBandChips/appendDomainChips pill rows below, which
+ *  reuse those same filters' POS_CHIPS/BANDS/.pos-chip markup so both look
+ *  and behave identically.
+ *
+ *  `sort`/`dir` are two independent controls rather than a combined
+ *  "Newest first"/"Oldest first"/"A–Z"/"Z–A" enum (what this used to be):
+ *  every sort dimension gets the same Ascending/Descending toggle instead of
+ *  each dimension inventing its own pair of direction-flipped labels. */
+interface MCListState { sort: MCSortMode; dir: MCSortDir; pos: Set<string>; band: Set<string>; domains: Set<string>; }
+
+interface MCSortGetters<T> {
+  pos:     (item: T) => string | null;
+  word:    (item: T) => string;
+  time:    (item: T) => number;
+  rank:    (item: T) => number;
+  meaning: (item: T) => string;
+  domains: (item: T) => string[];
+}
+
+function applyMCSortFilter<T>(items: T[], state: MCListState, get: MCSortGetters<T>): T[] {
+  let filtered = state.pos.size === 0 ? items : items.filter(item => {
+    const p = get.pos(item);
+    return p ? state.pos.has(p) : false;
+  });
+  if (state.band.size > 0) {
+    filtered = filtered.filter(item => {
+      const b = bandForRank(get.rank(item));
+      return b ? state.band.has(b) : false;
+    });
+  }
+  // Any-match, not all-match — a word tagged both "food" and "animals" should
+  // still show up when only "food" is checked, same as domain filtering
+  // elsewhere in the app (filters/domain-filter.ts).
+  if (state.domains.size > 0) {
+    filtered = filtered.filter(item => get.domains(item).some(d => state.domains.has(d)));
+  }
+  const arr = [...filtered];
+  // Always ascending on its own terms — oldest-first, A–Z, cheapest-rank-
+  // first, etc. — with state.dir flipping the *whole* comparison (including
+  // the word tie-break on pos/meaning) via `mul` below, rather than each
+  // case hardcoding its own asc/desc pair the way this used to.
+  const cmp = (a: T, b: T): number => {
+    switch (state.sort) {
+      case 'word':    return get.word(a).localeCompare(get.word(b));
+      case 'pos':     return (get.pos(a) ?? '').localeCompare(get.pos(b) ?? '') || get.word(a).localeCompare(get.word(b));
+      case 'rank':    return get.rank(a) - get.rank(b);
+      case 'meaning': return get.meaning(a).localeCompare(get.meaning(b)) || get.word(a).localeCompare(get.word(b));
+      default:        return get.time(a) - get.time(b); // 'date'
+    }
+  };
+  const mul = state.dir === 'desc' ? -1 : 1;
+  arr.sort((a, b) => mul * cmp(a, b));
+  return arr;
+}
+
+/** Ascending/Descending — reuses Settings' own .sort-order-toggle/
+ *  .sort-order-btn pill-pair styling (buttons.css) so this reads as the same
+ *  kind of control wherever it shows up in the app, rather than a bespoke
+ *  one just for this toolbar. */
+function buildSortDirToggle(state: MCListState, onChange: () => void): HTMLElement {
+  const wrap = el('div', 'sort-order-toggle mc-sort-dir-toggle');
+  const ascBtn = el('button', 'sort-order-btn', 'Ascending');
+  ascBtn.type = 'button';
+  const descBtn = el('button', 'sort-order-btn', 'Descending');
+  descBtn.type = 'button';
+  function sync(): void {
+    ascBtn.classList.toggle('active', state.dir === 'asc');
+    descBtn.classList.toggle('active', state.dir === 'desc');
+  }
+  sync();
+  ascBtn.addEventListener('click', () => { state.dir = 'asc'; sync(); onChange(); });
+  descBtn.addEventListener('click', () => { state.dir = 'desc'; sync(); onChange(); });
+  wrap.append(ascBtn, descBtn);
+  return wrap;
+}
+
+/** Appends the "Part of Speech" label + POS_CHIPS pills to `target` — shared
+ *  by buildMCListToolbar (Add a New Word) and buildEditWordFilterRows (Edit
+ *  an Existing Word), so both filter the same way off the same fixed chip
+ *  set (my-lists/types.ts's own POS_CHIPS) rather than two near-copies. */
+function appendPosChips(target: HTMLElement, selected: Set<string>, onChange: () => void): void {
+  target.appendChild(el('span', 'ml-band-label mc-toolbar-group-label', 'Part of Speech'));
+  POS_CHIPS.forEach(({ value, label }) => {
+    const chip = el('button', 'pos-chip' + (value === '' ? ' pos-chip-all' : ''), label);
+    chip.type = 'button';
+    // Same [data-pos]-keyed hue coding My Lists' own Part of Speech chips
+    // use (class-filter.css) — without this attribute a chip renders in the
+    // plain uncolored default, same look for every part of speech.
+    if (value) chip.dataset.pos = value;
+    chip.classList.toggle('active', value === '' ? selected.size === 0 : selected.has(value));
+    chip.addEventListener('click', () => {
+      if (value === '') selected.clear();
+      else if (selected.has(value)) selected.delete(value);
+      else selected.add(value);
+      onChange();
+    });
+    target.appendChild(chip);
+  });
+}
+
+/** Appends the "Level" (CEFR) label + BANDS pills to `target` — see
+ *  appendPosChips above for why this is shared rather than duplicated.
+ *  bandForRank(get.rank(item)) is only ever meaningful for items with a real
+ *  or overridden rank to bucket; see each caller's own "no rank to sort/
+ *  filter by" fallback (Number.POSITIVE_INFINITY sorts last and matches no
+ *  band). */
+function appendBandChips(target: HTMLElement, selected: Set<string>, onChange: () => void): void {
+  target.appendChild(el('span', 'ml-band-label mc-toolbar-group-label', 'Level'));
+  const bandAllChip = el('button', 'pos-chip pos-chip-all', 'All');
+  bandAllChip.type = 'button';
+  bandAllChip.classList.toggle('active', selected.size === 0);
+  bandAllChip.addEventListener('click', () => { selected.clear(); onChange(); });
+  target.appendChild(bandAllChip);
+  BANDS.forEach(band => {
+    const chip = el('button', 'pos-chip ml-band-chip', band);
+    chip.type = 'button';
+    // Same [data-band]-keyed hue coding My Lists' own Level chips use
+    // (class-filter.css).
+    chip.dataset.band = band;
+    chip.classList.toggle('active', selected.has(band));
+    chip.addEventListener('click', () => {
+      if (selected.has(band)) selected.delete(band);
+      else selected.add(band);
+      onChange();
+    });
+    target.appendChild(chip);
+  });
+}
+
+/** "food" → "Food", "daily_life" → "Daily life" — same capitalization Table
+ *  mode's own Domains filter uses (filters/domain-filter.ts's own private
+ *  fmt()), reproduced here rather than imported since that module pulls in
+ *  a whole quiz-filter-chaining system this lightweight toolbar has no use
+ *  for. */
+function formatDomainLabel(d: string): string {
+  return d.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());
+}
+
+/** Appends a "Domains" label + one pill per domain actually present in
+ *  `counts` (alphabetical by display label, distinct — there's no fixed enum
+ *  for domains the way there is for Part of Speech/Level) to `target`. Each
+ *  pill shows how many of the words currently in view carry that domain,
+ *  and the label itself is capitalized — both matching Table mode's own
+ *  Domains filter (.domain-qpick/.domain-qpick-count, domain-filter.css)
+ *  rather than this toolbar's plain .pos-chip look, since this is the one
+ *  filter here without a small fixed vocabulary a reader would already
+ *  recognize the way Verb/Noun/A1/B2 read at a glance. A no-op when
+ *  `counts` is empty, so a caller with nothing to filter by doesn't render a
+ *  bare "Domains / All" row with nothing underneath it. */
+function appendDomainChips(
+  target: HTMLElement, counts: Map<string, number>, selected: Set<string>, totalCount: number, onChange: () => void,
+): void {
+  if (counts.size === 0) return;
+  target.appendChild(el('span', 'ml-band-label mc-toolbar-group-label', 'Domains'));
+
+  const allChip = el('button', 'domain-qpick pos-chip-all');
+  allChip.type = 'button';
+  allChip.append(el('span', undefined, 'All'), el('span', 'domain-qpick-count', String(totalCount)));
+  allChip.classList.toggle('active', selected.size === 0);
+  allChip.addEventListener('click', () => { selected.clear(); onChange(); });
+  target.appendChild(allChip);
+
+  [...counts.keys()]
+    .sort((a, b) => formatDomainLabel(a).localeCompare(formatDomainLabel(b)))
+    .forEach(domain => {
+      const chip = el('button', 'domain-qpick mc-domain-chip');
+      chip.type = 'button';
+      chip.append(el('span', undefined, formatDomainLabel(domain)), el('span', 'domain-qpick-count', String(counts.get(domain))));
+      chip.classList.toggle('active', selected.has(domain));
+      chip.addEventListener('click', () => {
+        if (selected.has(domain)) selected.delete(domain);
+        else selected.add(domain);
+        onChange();
+      });
+      target.appendChild(chip);
+    });
+}
+
+/** Rebuilt on every render alongside the list it controls (see
+ *  renderAddedList) rather than kept as a standing element — cheap for a
+ *  `<select>` and two rows of chips. Styled like My Lists' own filter row
+ *  (same .pos-chip/POS_CHIPS/BANDS appendPosChips/appendBandChips import
+ *  from my-lists/types.ts and data/bands.ts) rather than a plain dropdown,
+ *  so filtering looks and behaves the same way across both parts of the
+ *  app — and always shows the full fixed chip set (not just values already
+ *  present), same as My Lists, so the row doesn't change shape as the list
+ *  itself changes.
+ *
+ *  Add a New Word's own toolbar — Sort, Part of Speech and Level all in one
+ *  flat flex-wrap row, unchanged since before this file grew a Domains
+ *  filter. Edit an Existing Word's own layout (buildEditWordFilterRows
+ *  below) needs Sort on its own line next to the language picker instead,
+ *  so it doesn't share this function. */
+function buildMCListToolbar<T>(
+  state: MCListState, get: MCSortGetters<T>, onChange: () => void,
+): HTMLElement {
+  // One flat flex-wrap row — Sort, then every Part-of-speech chip, then
+  // every Level chip, all as direct siblings rather than three nested
+  // sub-rows — so the browser can wrap at *any* chip boundary and pack the
+  // line as full as it actually fits, instead of bouncing a whole label+
+  // chips group down together the moment it doesn't fit the space left on
+  // the current line by whatever came before it.
+  const bar = el('div', 'mc-list-toolbar');
+
+  const sortLabel = el('span', 'ml-band-label', 'Sort');
+  const sortSel = el('select', 'mc-input mc-list-toolbar-select');
+  (Object.keys(MC_SORT_LABELS) as MCSortMode[]).forEach(mode => {
+    sortSel.appendChild(new Option(MC_SORT_LABELS[mode], mode));
+  });
+  sortSel.value = state.sort;
+  sortSel.addEventListener('change', () => { state.sort = sortSel.value as MCSortMode; onChange(); });
+  bar.append(sortLabel, sortSel, buildSortDirToggle(state, onChange));
+
+  appendPosChips(bar, state.pos, onChange);
+  appendBandChips(bar, state.band, onChange);
+
+  return bar;
+}
+
+/**
+ * Edit an Existing Word's own layout: Sort + its Ascending/Descending
+ * toggle by themselves (small, so they sit beside the language picker
+ * rather than getting shoved onto their own line only because they happen
+ * to share a bar with a wide chip wall), Part of Speech + Level chips on
+ * their own line below that, and Domains — only present here, not in Add a
+ * New Word's own toolbar above, since a word you typed in yourself rarely
+ * carries domains worth filtering by yet — on a further line below that,
+ * only rendered at all when there's at least one domain among the words
+ * currently in view (see appendDomainChips).
+ */
+function buildEditWordFilterRows(
+  state: MCListState, domainCounts: Map<string, number>, domainTotal: number, onChange: () => void,
+): { sortRow: HTMLElement; chipsRow: HTMLElement; domainsRow: HTMLElement } {
+  const sortRow = el('div', 'mc-sort-control');
+  const sortLabel = el('span', 'ml-band-label', 'Sort');
+  const sortSel = el('select', 'mc-input mc-list-toolbar-select');
+  (Object.keys(MC_SORT_LABELS) as MCSortMode[]).forEach(mode => {
+    sortSel.appendChild(new Option(MC_SORT_LABELS[mode], mode));
+  });
+  sortSel.value = state.sort;
+  sortSel.addEventListener('change', () => { state.sort = sortSel.value as MCSortMode; onChange(); });
+  sortRow.append(sortLabel, sortSel, buildSortDirToggle(state, onChange));
+
+  const chipsRow = el('div', 'mc-list-toolbar');
+  appendPosChips(chipsRow, state.pos, onChange);
+  appendBandChips(chipsRow, state.band, onChange);
+
+  const domainsRow = el('div', 'mc-list-toolbar');
+  appendDomainChips(domainsRow, domainCounts, state.domains, domainTotal, onChange);
+  domainsRow.hidden = domainCounts.size === 0;
+
+  return { sortRow, chipsRow, domainsRow };
+}
+
 // ── Shared paginated-list pager (Add a New Word / Edit an Existing Word) ────
 //
 // Same page-size math as Table mode (table-controls.ts's own pageSlice/
 // pageCountFor), so a list here paginates exactly the way that one does —
-// not reinvented, just reused for a much shorter list.
+// not reinvented, just reused for a much shorter list. Styled with Table
+// mode's own pager classes (.table-pager/.pager-btn/.pager-status,
+// table.css) rather than this file's own, so the two look identical; a
+// page-size <select> (.pager-select, controls-bar.css) is the one addition
+// Table mode's own pager doesn't have, since that mode sets its page size
+// from the WORDS control bar instead.
 
-const MC_LIST_PAGE_SIZE = 20;
+const MC_PAGE_SIZES = [5, 10, 15] as const;
+type MCPageSize = (typeof MC_PAGE_SIZES)[number];
 
 interface ListPager {
   row: HTMLElement;
   /** Repaints prev/next/status for `page` (already clamped by the caller)
    *  against `totalItems`. */
   sync: (page: number, totalItems: number) => void;
+  getPageSize: () => MCPageSize;
 }
 
-function buildListPager(onPageChange: (page: number) => void): ListPager {
+function buildListPager(onPageChange: (page: number) => void, onPageSizeChange: () => void): ListPager {
   const row = el('div', 'mc-list-pager');
-  row.hidden = true;
 
-  const prevBtn = el('button', 'mc-btn mc-btn--sm', '← Prev');
+  let pageSize: MCPageSize = 10;
+  const sizeSelect = el('select', 'pager-select mc-list-pager-size');
+  MC_PAGE_SIZES.forEach(n => sizeSelect.appendChild(new Option(`${n} per page`, String(n))));
+  sizeSelect.value = String(pageSize);
+  sizeSelect.addEventListener('change', () => {
+    pageSize = Number(sizeSelect.value) as MCPageSize;
+    onPageSizeChange();
+  });
+
+  const nav = el('div', 'table-pager');
+  const prevBtn = el('button', 'pager-btn', '←');
   prevBtn.type = 'button';
-  const status = el('span', 'mc-list-pager-status');
-  const nextBtn = el('button', 'mc-btn mc-btn--sm', 'Next →');
+  prevBtn.setAttribute('aria-label', 'Previous page');
+  const status = el('span', 'pager-status');
+  const nextBtn = el('button', 'pager-btn', '→');
   nextBtn.type = 'button';
+  nextBtn.setAttribute('aria-label', 'Next page');
 
   let currentPage = 0;
   prevBtn.addEventListener('click', () => onPageChange(Math.max(0, currentPage - 1)));
   nextBtn.addEventListener('click', () => onPageChange(currentPage + 1));
-  row.append(prevBtn, status, nextBtn);
+  nav.append(prevBtn, status, nextBtn);
+  row.append(sizeSelect, nav);
 
   function sync(page: number, totalItems: number): void {
     currentPage = page;
-    const pages = pageCountFor(totalItems, MC_LIST_PAGE_SIZE);
-    row.hidden = pages <= 1;
+    // The size picker stays available even at one page — smaller pages are
+    // still a reasonable thing to want before there's enough to actually
+    // paginate — only the prev/status/next group hides.
+    row.hidden = totalItems === 0;
+    const pages = pageCountFor(totalItems, pageSize);
+    nav.hidden = pages <= 1;
     prevBtn.disabled = page === 0;
     nextBtn.disabled = page >= pages - 1;
-    const first = totalItems === 0 ? 0 : page * MC_LIST_PAGE_SIZE + 1;
-    const last  = Math.min((page + 1) * MC_LIST_PAGE_SIZE, totalItems);
-    status.textContent = totalItems > 0 ? `${first}–${last} of ${totalItems}` : '';
+    const first = totalItems === 0 ? 0 : page * pageSize + 1;
+    const last  = Math.min((page + 1) * pageSize, totalItems);
+    status.textContent = totalItems > 0 ? `Page ${page + 1} of ${pages}  (${first}–${last})` : '';
   }
-  return { row, sync };
+  return { row, sync, getPageSize: () => pageSize };
 }
 
 // ── Vocabulary CSV export ────────────────────────────────────────────────────
@@ -284,6 +593,7 @@ function languageRows<T>(
   for (const info of langs) {
     const row = el('div', 'mc-lang-row');
     if (info.name === currentLang) row.classList.add('mc-lang-row--current');
+    row.appendChild(buildLangBadge([info.name]));
     row.appendChild(el('span', 'mc-lang-row-label', info.label));
     const { el: inputEl, value } = makeRow(info);
     row.appendChild(inputEl);
@@ -486,6 +796,11 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>)
   const antonymsI = textInput('comma-separated');
   const examplesI = textArea('one example sentence per line — also what lets this word show up in Sentence Scramble');
   const extraGlossesI = textArea('one additional sense per line — e.g. "to converse" alongside "to talk"');
+  // Left blank by default — each language gets its own auto-computed default
+  // (lowest rank among that language's added words) at submit time, since
+  // one shared number here couldn't be right for every language at once
+  // when adding to several. A number typed in is used as-is for all of them.
+  const freq = buildFrequencyControl(null, 'auto: lowest rank of your added words');
   form.append(
     field('Translation (English)', transI), field('Part of speech', posI),
     field('Domains', domainsI), field('Notes', notesI),
@@ -493,6 +808,7 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>)
     field('Synonyms', synonymsI), field('Antonyms', antonymsI),
     field('Word disambiguator', disambiguatorI),
     field('Meaning disambiguator (for the translation above)', meaningDisambiguatorI),
+    field('Frequency rank', freq.wrap),
   );
   sub.appendChild(form);
   sub.appendChild(field('Example sentences', examplesI));
@@ -522,6 +838,7 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>)
         disambiguator: disambiguatorI.value.trim(),
         meaningDisambiguators: meaningDisambiguatorI.value.trim()
           ? { [transI.value.trim()]: meaningDisambiguatorI.value.trim() } : {},
+        rank: freq.getRank(),
       });
       added++;
     }
@@ -539,19 +856,36 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>)
   let expandedKey: string | null = null;
   let pageIndex = 0;
   const rowKey = (lang: string, id: string): string => `${lang}:${id}`;
+  const sortState: MCListState = { sort: 'date', dir: 'desc', pos: new Set(), band: new Set(), domains: new Set() };
+  const sortGetters: MCSortGetters<{ info: LanguageInfo; w: UserWord }> = {
+    pos: e => e.w.pos, word: e => e.w.word, time: e => e.w.createdAt ?? 0, rank: e => e.w.rank,
+    meaning: e => e.w.translation, domains: e => e.w.domains,
+  };
 
+  const toolbar = el('div');
   const list = el('div', 'mc-list mc-scroll-list');
-  const pager = buildListPager(i => { pageIndex = i; renderAddedList(); });
+  const pager = buildListPager(i => { pageIndex = i; renderAddedList(); }, () => { pageIndex = 0; renderAddedList(); });
 
   function renderAddedList(): void {
     list.innerHTML = '';
     const allEntries = LANGUAGES.flatMap(info => getUserWords(info.name).map(w => ({ info, w })));
-    const pages = pageCountFor(allEntries.length, MC_LIST_PAGE_SIZE);
+
+    toolbar.innerHTML = '';
+    toolbar.hidden = allEntries.length === 0;
+    if (allEntries.length > 0) {
+      toolbar.appendChild(buildMCListToolbar(sortState, sortGetters, () => { pageIndex = 0; renderAddedList(); }));
+    }
+
+    const filtered = applyMCSortFilter(allEntries, sortState, sortGetters);
+    const pageSize = pager.getPageSize();
+    const pages = pageCountFor(filtered.length, pageSize);
     pageIndex = Math.max(0, Math.min(pageIndex, pages - 1));
-    const shown = pageSlice(allEntries, MC_LIST_PAGE_SIZE, pageIndex);
+    const shown = pageSlice(filtered, pageSize, pageIndex);
 
     if (allEntries.length === 0) {
       list.appendChild(el('p', 'mc-empty', 'No words added yet.'));
+    } else if (filtered.length === 0) {
+      list.appendChild(el('p', 'mc-empty', 'No added words match that filter.'));
     } else {
       shown.forEach(({ info, w }) => {
         const key = rowKey(info.name, w.id);
@@ -561,9 +895,10 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>)
         }));
       });
     }
-    pager.sync(pageIndex, allEntries.length);
+    pager.sync(pageIndex, filtered.length);
   }
   renderAddedList();
+  sub.appendChild(toolbar);
   sub.appendChild(list);
   sub.appendChild(pager.row);
 
@@ -584,21 +919,26 @@ function buildWordRow(
   info: LanguageInfo, w: UserWord, refresh: () => void, expanded: boolean, onToggle: () => void,
 ): HTMLElement {
   const wrap = el('div', 'mc-row-wrap');
-  const row = el('div', 'mc-row mc-row--clickable' + (expanded ? ' mc-row--expanded' : ''));
+  const row = el('div', 'mc-row mc-row--wordlist mc-row--clickable' + (expanded ? ' mc-row--expanded' : ''));
   row.addEventListener('click', onToggle);
 
+  const badge = buildLangBadge([info.name]);
+  badge.classList.add('mc-row-badge');
+  row.appendChild(badge);
+
   const main = el('div', 'mc-row-main');
-  const title = el('span', 'mc-row-title');
-  title.appendChild(buildLangBadge([info.name]));
-  title.appendChild(document.createTextNode(` ${w.word} — ${w.translation}`));
-  main.appendChild(title);
+  main.appendChild(el('span', 'mc-row-title', `${w.word} — ${w.translation}`));
   const meta: string[] = [];
   if (w.pos) meta.push(w.pos);
   if (w.domains.length) meta.push(w.domains.join(', '));
   if (meta.length) main.appendChild(el('span', 'mc-row-meta', meta.join(' · ')));
   row.appendChild(main);
 
-  const delBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm', 'Remove');
+  const dateEl = el('span', 'mc-row-date', formatMCDate(w.createdAt));
+  dateEl.title = 'Added';
+  row.appendChild(dateEl);
+
+  const delBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm mc-row-actions', 'Remove');
   delBtn.type = 'button';
   delBtn.addEventListener('click', e => {
     e.stopPropagation();
@@ -634,6 +974,22 @@ function buildEditWordSubsection(currentLang: string): HTMLElement {
   // there's no folded-text (un)parsing to get wrong.
   let expanded: { lang: string; word: string } | null = null;
   let pageIndex = 0;
+  const sortState: MCListState = { sort: 'date', dir: 'desc', pos: new Set(), band: new Set(), domains: new Set() };
+  // Three separately-rebuilt containers rather than one shared bar: Sort
+  // sits beside the language picker (see topRow below), while Part of
+  // Speech/Level and Domains each get their own full-width line — see
+  // buildEditWordFilterRows, which is what actually populates all three on
+  // every render.
+  const sortWrap = el('div');
+  const chipsWrap = el('div', 'mc-edit-filter-row');
+  const domainsWrap = el('div', 'mc-edit-filter-row');
+
+  // The list below is narrowed to whichever language (or ALL_LANGS) and
+  // search text the one search box above it currently holds — see
+  // onLangChange/onQueryChange below — rather than a second, separate filter
+  // box repeating what that search box already lets you type.
+  let searchLang = currentLang;
+  let searchQuery = '';
 
   // Raw (override-free) vocabulary per language, fetched lazily and cached
   // here — expanding a row needs the word's true original values (hiding
@@ -649,14 +1005,7 @@ function buildEditWordSubsection(currentLang: string): HTMLElement {
   }
 
   const list = el('div', 'mc-list mc-scroll-list');
-  const pager = buildListPager(i => { pageIndex = i; renderOverridesList(); });
-
-  // Only shown once there's enough already-edited words that finding one by
-  // eye stops being the fastest way — filtering by the word's own text
-  // across every language at once, since the list below already mixes them.
-  const filterI = textInput('Filter edited words…');
-  const filterRow = field('Filter already-edited words', filterI);
-  filterRow.hidden = true;
+  const pager = buildListPager(i => { pageIndex = i; renderOverridesList(); }, () => { pageIndex = 0; renderOverridesList(); });
 
   /** Toggles `word`'s row open/closed — called both by a list row's own
    *  click and by picking a search result, so however you got to a word,
@@ -671,6 +1020,13 @@ function buildEditWordSubsection(currentLang: string): HTMLElement {
     }
   }
 
+  // Declared (as null) before buildWordSearchUI is even called: that call
+  // kicks off a fetch synchronously, which fires onLangChange →
+  // renderOverridesList before buildWordSearchUI has returned — at that
+  // point `const ui = buildWordSearchUI(...)` below wouldn't exist yet, so
+  // renderOverridesList reads this instead and gets a safe `null` for that
+  // one call. Reassigned once, right after, for every call after that.
+  let searchPanel: HTMLElement | null = null;
   const ui = buildWordSearchUI({
     defaultLang: currentLang,
     placeholder: 'Search for a word to edit…',
@@ -678,11 +1034,23 @@ function buildEditWordSubsection(currentLang: string): HTMLElement {
     isEligible: () => true,
     isOverridden: (lang, w) => !!getWordOverride(lang, w.word),
     onSelect: (lang, w) => { void openRow(lang, w.word); },
-    onLangChange: () => { expanded = null; renderOverridesList(); },
+    onLangChange: lang => { searchLang = lang; expanded = null; pageIndex = 0; renderOverridesList(); },
+    onQueryChange: query => { searchQuery = query; pageIndex = 0; renderOverridesList(); },
   });
+  searchPanel = ui.wrap;
 
   function renderOverridesList(): void {
     list.innerHTML = '';
+    // The search box + results have nothing left to do once a row is open —
+    // the learner has what they wanted, and the results list would just sit
+    // there above the editor they're now looking at. Reappears the moment
+    // every row is closed again (clicking the open row a second time, or
+    // Remove) since `expanded` reverts to null either way, which runs back
+    // through here. The language picker (ui.langRow) stays put regardless,
+    // so switching languages remains possible without first closing the row.
+    // `searchPanel` is null on the one call that happens mid-construction
+    // (see its own declaration above) — nothing to hide yet at that point.
+    if (searchPanel) searchPanel.hidden = expanded !== null;
     const raw: { info: LanguageInfo; word: string; override: WordOverride | null }[] = LANGUAGES.flatMap(info =>
       Object.entries(getWordOverrides(info.name)).map(([word, override]) => ({ info, word, override })));
 
@@ -695,20 +1063,80 @@ function buildEditWordSubsection(currentLang: string): HTMLElement {
       if (info) raw.unshift({ info, word: exp.word, override: null });
     }
 
-    filterRow.hidden = raw.length <= 5;
-    const q = foldKey(filterI.value.trim());
-    const filtered = q ? raw.filter(({ word }) => foldKey(word).includes(q)) : raw;
+    // Narrowed to the search box's own language — ALL_LANGS (its "All
+    // languages" option) keeps every language, same as leaving this list
+    // unfiltered used to behave. Without this, picking a language up there
+    // only scoped which vocabulary the search box itself could find a new
+    // word in; the list of already-edited words below stayed showing every
+    // language's overrides regardless, so choosing e.g. Spanish still left
+    // a French override sitting in the list.
+    const langFiltered = searchLang === ALL_LANGS ? raw : raw.filter(r => r.info.name === searchLang);
 
-    const pages = pageCountFor(filtered.length, MC_LIST_PAGE_SIZE);
+    const q = foldKey(searchQuery);
+    const textFiltered = q ? langFiltered.filter(({ word }) => foldKey(word).includes(q)) : langFiltered;
+
+    // Every language actually represented in this list needs its raw
+    // vocabulary loaded so pos/rank filtering and sorting can read a word's
+    // *real* value, not just an override's — a verb whose override never
+    // touched `pos` is still a verb, and used to simply fall out of the
+    // Verbs filter entirely because only the override's own (usually unset)
+    // pos was ever consulted. ensureWords is cached per language (see its
+    // own definition above) and this only kicks off a fetch for a language
+    // not already loading/loaded, so a re-render here (once each finishes)
+    // costs nothing once every present language has been fetched once.
+    const presentLangs = new Set(langFiltered.map(r => r.info.name));
+    const stillLoading = [...presentLangs].filter(l => !rawWordsCache.has(l));
+    if (stillLoading.length > 0) {
+      void Promise.all(stillLoading.map(ensureWords)).then(renderOverridesList);
+    }
+
+    function rawWordFor(info: LanguageInfo, word: string): Word | undefined {
+      return rawWordsCache.get(info.name)?.find(x => foldKey(x.word) === foldKey(word));
+    }
+
+    // pos/rank/meaning/domains fall back to the real word's own value once
+    // its language has loaded; until then (or for a word since removed from
+    // the data) they read as unset, same as before this existed.
+    const sortGetters: MCSortGetters<{ info: LanguageInfo; word: string; override: WordOverride | null }> = {
+      pos: r => r.override?.pos !== undefined ? r.override.pos : (rawWordFor(r.info, r.word)?.pos ?? null),
+      word: r => r.word,
+      time: r => r.override?.updatedAt ?? 0,
+      rank: r => r.override?.rank ?? rawWordFor(r.info, r.word)?.rank ?? Number.POSITIVE_INFINITY,
+      meaning: r => r.override?.translation ?? rawWordFor(r.info, r.word)?.translation ?? '',
+      domains: r => r.override?.domains !== undefined ? r.override.domains : (rawWordFor(r.info, r.word)?.domains ?? []),
+    };
+
+    const onFilterChange = (): void => { pageIndex = 0; renderOverridesList(); };
+    // How many of the words currently in view (this language, this search
+    // query) carry each domain — same "count next to the label" Table
+    // mode's own Domains filter shows (see appendDomainChips).
+    const domainCounts = new Map<string, number>();
+    langFiltered.forEach(r => {
+      sortGetters.domains(r).forEach(d => domainCounts.set(d, (domainCounts.get(d) ?? 0) + 1));
+    });
+    const { sortRow, chipsRow, domainsRow } = buildEditWordFilterRows(sortState, domainCounts, langFiltered.length, onFilterChange);
+    sortWrap.innerHTML = '';
+    sortWrap.appendChild(sortRow);
+    chipsWrap.innerHTML = '';
+    chipsWrap.hidden = langFiltered.length === 0;
+    if (langFiltered.length > 0) chipsWrap.appendChild(chipsRow);
+    domainsWrap.innerHTML = '';
+    domainsWrap.hidden = langFiltered.length === 0 || domainCounts.size === 0;
+    if (!domainsWrap.hidden) domainsWrap.appendChild(domainsRow);
+
+    const filtered = applyMCSortFilter(textFiltered, sortState, sortGetters);
+
+    const pageSize = pager.getPageSize();
+    const pages = pageCountFor(filtered.length, pageSize);
     pageIndex = Math.max(0, Math.min(pageIndex, pages - 1));
-    const shown = pageSlice(filtered, MC_LIST_PAGE_SIZE, pageIndex);
+    const shown = pageSlice(filtered, pageSize, pageIndex);
 
     if (filtered.length === 0) {
-      list.appendChild(el('p', 'mc-empty', raw.length === 0 ? 'No words edited yet.' : 'No edited words match that filter.'));
+      list.appendChild(el('p', 'mc-empty', langFiltered.length === 0 ? 'No words edited yet.' : 'No edited words match that filter.'));
     } else {
       shown.forEach(({ info, word, override }) => {
         const isExpanded = !!exp && exp.lang === info.name && foldKey(exp.word) === foldKey(word);
-        const rawWord = rawWordsCache.get(info.name)?.find(x => foldKey(x.word) === foldKey(word));
+        const rawWord = rawWordFor(info, word);
         list.appendChild(buildWordOverrideRow(
           info, word, override, renderOverridesList, () => void openRow(info.name, word), isExpanded, rawWord,
         ));
@@ -716,10 +1144,19 @@ function buildEditWordSubsection(currentLang: string): HTMLElement {
     }
     pager.sync(pageIndex, filtered.length);
   }
-  filterI.addEventListener('input', () => { pageIndex = 0; renderOverridesList(); });
   renderOverridesList();
 
-  sub.append(ui.wrap, filterRow, list, pager.row);
+  // Language picker and Sort aligned on one row (both are single compact
+  // controls, and Sort's own options — Newest/Oldest/A–Z/etc. — narrow the
+  // same list the language picker scopes, so the two read as one control
+  // group); Part of Speech/Level chips on their own line below that, then
+  // Domains on a further line below that; then the search box immediately
+  // above the rows it can jump straight into via openWord — its own query
+  // text is what filters that list, rather than a second, separate filter
+  // box repeating it.
+  const topRow = el('div', 'mc-edit-top-row');
+  topRow.append(ui.langRow, sortWrap);
+  sub.append(topRow, chipsWrap, domainsWrap, ui.wrap, list, pager.row);
   return buildSubsection('words-edit', 'Edit an Existing Word',
     'Search a language\'s vocabulary — real words and ones you\'ve added above — to hide glosses you don\'t want to see, reorder the rest, or override the translation, part of speech, notes or domains. Click a word below — already edited, or one you just searched for — to edit it right there.',
     sub);
@@ -739,6 +1176,7 @@ function summarizeWordOverride(o: WordOverride): string {
   if (o.glossOrder) parts.push('gloss order changed');
   if (o.examples !== undefined) parts.push(o.examples.length ? `${o.examples.length} example${o.examples.length === 1 ? '' : 's'}` : 'examples cleared');
   if (o.difficulty !== undefined) parts.push(o.difficulty ? `difficulty → ${o.difficulty}` : 'difficulty hidden');
+  if (o.rank !== undefined) parts.push(`rank → #${o.rank}`);
   if (o.tags !== undefined) parts.push(o.tags.length ? `tags → ${o.tags.join(', ')}` : 'tags hidden');
   if (o.synonyms !== undefined) parts.push(o.synonyms.length ? `synonyms → ${o.synonyms.join(', ')}` : 'synonyms hidden');
   if (o.antonyms !== undefined) parts.push(o.antonyms.length ? `antonyms → ${o.antonyms.join(', ')}` : 'antonyms hidden');
@@ -758,24 +1196,64 @@ function buildWordOverrideRow(
   onToggle: () => void, expanded: boolean, rawWord: Word | undefined,
 ): HTMLElement {
   const wrap = el('div', 'mc-row-wrap');
-  const row = el('div', 'mc-row mc-row--clickable' + (expanded ? ' mc-row--expanded' : ''));
+  // .mc-row--overrides, not --wordlist: flag / word / changes / date / actions
+  // each their own column on one thinner row, with a faint divider between
+  // them (see the CSS) — table-like, rather than a title stacked over a
+  // second line the way Add-a-word's own rows still are.
+  const row = el('div', 'mc-row mc-row--overrides mc-row--clickable' + (expanded ? ' mc-row--expanded' : ''));
   row.addEventListener('click', onToggle);
 
-  const main = el('div', 'mc-row-main');
-  const title = el('span', 'mc-row-title');
-  title.appendChild(buildLangBadge([info.name]));
-  title.appendChild(document.createTextNode(` ${word}`));
-  main.appendChild(title);
-  const summary = override ? summarizeWordOverride(override) : '';
-  main.appendChild(el('span', 'mc-row-meta', summary || 'No changes yet'));
-  row.appendChild(main);
+  const badge = buildLangBadge([info.name]);
+  badge.classList.add('mc-row-badge');
+  row.appendChild(badge);
 
-  const delBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm', 'Remove');
+  const wordEl = el('span', 'mc-row-word', word);
+  wordEl.title = word;
+  row.appendChild(wordEl);
+
+  // Same override-first fallback as pos/rank below — the meaning shown here
+  // always matches what "Sort by Meaning" actually sorts on.
+  const effMeaning = override?.translation ?? rawWord?.translation ?? '';
+  const meaningEl = el('span', 'mc-row-meaning', effMeaning);
+  meaningEl.title = effMeaning;
+  row.appendChild(meaningEl);
+
+  // Effective pos/rank — override's own value if it set one, else the real
+  // word's, same fallback renderOverridesList's own sortGetters use so a
+  // word's Part of Speech/Level chip here always agrees with what its own
+  // filter chips do or don't match it against.
+  const effPos  = override?.pos !== undefined ? override.pos : (rawWord?.pos ?? null);
+  const effRank = override?.rank ?? rawWord?.rank ?? null;
+  const effBand = effRank != null ? bandForRank(effRank) : null;
+
+  const posEl = el('span', 'ml-word-pos mc-row-pos', effPos ? (POS_ABBREV[effPos] ?? effPos) : '');
+  if (effPos) posEl.dataset.pos = effPos; else posEl.hidden = true;
+  row.appendChild(posEl);
+
+  const bandEl = el('span', 'ml-word-band mc-row-band', effBand ?? '');
+  if (effBand) bandEl.dataset.band = effBand; else bandEl.hidden = true;
+  row.appendChild(bandEl);
+
+  const rankEl = el('span', 'ml-word-rank mc-row-rank', effRank != null ? `#${effRank}` : '');
+  if (effRank == null) rankEl.hidden = true;
+  row.appendChild(rankEl);
+
+  const summary = override ? summarizeWordOverride(override) : '';
+  const changesEl = el('span', 'mc-row-changes', summary || 'No changes yet');
+  changesEl.title = summary;
+  row.appendChild(changesEl);
+
+  const dateEl = el('span', 'mc-row-date', formatMCDate(override?.updatedAt));
+  dateEl.title = 'Last edited';
+  row.appendChild(dateEl);
+
+  const delBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm mc-row-actions', 'Remove');
   delBtn.type = 'button';
   delBtn.disabled = !override;
   delBtn.title = override ? 'Reset all overrides for this word' : 'Nothing to remove yet';
   delBtn.addEventListener('click', e => {
     e.stopPropagation();
+    if (Settings.getConfirmRemoveWordOverride() && !window.confirm(`Remove all overrides for "${word}"?`)) return;
     removeWordOverride(info.name, word);
     refresh();
   });
@@ -851,6 +1329,108 @@ function buildDisambiguatorField(defaultValue: string, overrideValue: string | u
   return { wrap, checkbox: note.checkbox, input: note.input };
 }
 
+interface FrequencyControl {
+  wrap: HTMLElement;
+  numberInput: HTMLInputElement;
+  cefrSelect: HTMLSelectElement;
+  /** null when the input is blank/invalid — "leave it to the default"
+   *  for the Add form, or (paired with the override checkbox below) "no
+   *  value to save" for the Edit form. */
+  getRank: () => number | null;
+}
+
+/**
+ * Rank entered directly, or picked from a CEFR level as a shortcut — either
+ * way the stored value is always just the plain rank number
+ * (Word.rank/UserWord.rank), same reasoning as Table's own Level pool
+ * selector translating a band pick into a rank range: CEFR bands are
+ * *display* buckets over the one real axis, not a second field to keep in
+ * sync with it. Picking a level fills the number in and resets itself,
+ * rather than "staying selected" — the number is what's actually saved, and
+ * a live band hint (below) already shows roughly which level that number
+ * falls in.
+ */
+function buildFrequencyControl(initialRank: number | null, placeholder: string): FrequencyControl {
+  const wrap = el('div', 'mc-freq-control');
+
+  const numberInput = document.createElement('input');
+  numberInput.type = 'number';
+  numberInput.min = '1';
+  numberInput.className = 'mc-input mc-freq-number';
+  numberInput.placeholder = placeholder;
+  if (initialRank != null) numberInput.value = String(initialRank);
+
+  const cefrSelect = document.createElement('select');
+  cefrSelect.className = 'mc-input mc-freq-cefr';
+  cefrSelect.appendChild(new Option('or pick a CEFR level…', ''));
+  BANDS.forEach(b => cefrSelect.appendChild(new Option(b, b)));
+
+  const hint = el('span', 'mc-freq-hint');
+  function syncHint(): void {
+    const n = Number(numberInput.value);
+    const band = numberInput.value.trim() && Number.isFinite(n) ? bandForRank(Math.round(n)) : null;
+    hint.textContent = band ? `~${band}` : '';
+  }
+  numberInput.addEventListener('input', syncHint);
+  syncHint();
+
+  cefrSelect.addEventListener('change', () => {
+    if (!cefrSelect.value) return;
+    numberInput.value = String(representativeRankForBand(cefrSelect.value as Band));
+    cefrSelect.value = '';
+    syncHint();
+  });
+
+  wrap.append(numberInput, cefrSelect, hint);
+  return {
+    wrap, numberInput, cefrSelect,
+    getRank: () => {
+      const n = Number(numberInput.value);
+      return numberInput.value.trim() && Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+    },
+  };
+}
+
+interface RankOverrideField {
+  wrap: HTMLElement;
+  checkbox: HTMLInputElement;
+  getRank: () => number | null;
+}
+
+/** "Frequency rank" field for the word editor — same default/Override
+ *  shell as buildDisambiguatorField, wrapping buildFrequencyControl instead
+ *  of a plain text input. */
+function buildRankOverrideField(defaultRank: number | null, overrideRank: number | undefined): RankOverrideField {
+  const wrap = el('div', 'mc-field mc-disambig-field');
+  wrap.appendChild(el('span', 'mc-field-label', 'Frequency rank'));
+
+  const inline = el('div', 'mc-disambig-inline');
+  const defaultBand = defaultRank != null ? bandForRank(defaultRank) : null;
+  inline.appendChild(el('span', 'mc-disambig-default',
+    defaultRank != null ? `Default: #${defaultRank}${defaultBand ? ` (~${defaultBand})` : ''}` : 'No default'));
+
+  const toggleLabel = el('label', 'mc-disambig-toggle');
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.className = 'mc-disambig-checkbox';
+  checkbox.checked = overrideRank !== undefined;
+  toggleLabel.append(checkbox, document.createTextNode('Override'));
+  inline.appendChild(toggleLabel);
+  wrap.appendChild(inline);
+
+  const control = buildFrequencyControl(overrideRank ?? defaultRank, 'e.g. 1200');
+  control.numberInput.disabled = !checkbox.checked;
+  control.cefrSelect.disabled = !checkbox.checked;
+  checkbox.addEventListener('change', () => {
+    control.numberInput.disabled = !checkbox.checked;
+    control.cefrSelect.disabled = !checkbox.checked;
+    if (checkbox.checked) control.numberInput.focus();
+  });
+  wrap.appendChild(control.wrap);
+
+  return { wrap, checkbox, getRank: control.getRank };
+}
+
 /**
  * Populates `container` with the full word editor — translation/pos/notes/
  * domains/etc. fields, plus the Glosses list (hide/reorder/add/remove) — for
@@ -875,12 +1455,13 @@ function renderWordEditorBody(lang: string, w: Word, container: HTMLElement, onC
   const synonymsI = textInput('comma-separated', (override?.synonyms ?? w.relations?.synonyms ?? []).join(', '));
   const antonymsI = textInput('comma-separated', (override?.antonyms ?? w.relations?.antonyms ?? []).join(', '));
   const disambig = buildDisambiguatorField(w.disambiguator ?? '', override?.disambiguator);
+  const rankField = buildRankOverrideField(w.rank ?? null, override?.rank);
   fieldsForm.append(
     field('Translation', transI), field('Part of speech', posI),
     field('Notes', notesI), field('Domains', domainsI),
     field('Difficulty (1=easiest, 5=hardest)', difficultyI), field('Tags', tagsI),
     field('Synonyms', synonymsI), field('Antonyms', antonymsI),
-    disambig.wrap,
+    disambig.wrap, rankField.wrap,
   );
   container.appendChild(fieldsForm);
   const examplesI = textArea(
@@ -932,6 +1513,14 @@ function renderWordEditorBody(lang: string, w: Word, container: HTMLElement, onC
     // the key is omitted from `fields` entirely rather than compared
     // against the default — setWordFields treats that as "clear it."
     if (disambig.checkbox.checked) fields.disambiguator = disambig.input.value.trim();
+    // Same checkbox-driven convention as disambiguator above — unchecked
+    // means "no override," omitted regardless of what the (disabled)
+    // control still shows. A checked box with a blank/invalid number
+    // (getRank() null) is left alone rather than saving a bogus value.
+    if (rankField.checkbox.checked) {
+      const r = rankField.getRank();
+      if (r != null) fields.rank = r;
+    }
     setWordFields(lang, w.word, fields);
     onChange();
   });
@@ -941,6 +1530,8 @@ function renderWordEditorBody(lang: string, w: Word, container: HTMLElement, onC
   // Always shown, even for a word with no real glosses at all (rank/domain
   // words sometimes have none) — "Add a gloss" below works regardless.
   container.appendChild(el('h5', 'mc-subsection-title', 'Glosses'));
+  container.appendChild(el('p', 'mc-gloss-list-hint',
+    'Check a sense to keep it visible in quizzes; uncheck to hide it without deleting it.'));
 
   const hiddenSet = new Set(override?.hiddenGlosses ?? []);
   const addedSet  = new Set(override?.addedGlosses ?? []);
@@ -969,6 +1560,20 @@ function renderWordEditorBody(lang: string, w: Word, container: HTMLElement, onC
       rankBadge.title = 'Position among this word’s senses — earlier senses are the ones shown first when a quiz caps how many it displays.';
       item.appendChild(rankBadge);
 
+      // Where this sense sat before glossOrder moved it — only for a real
+      // sense (an added one never had an "original" position to begin
+      // with) and only once it's actually moved, so a word nobody's
+      // reordered yet doesn't show a redundant "(was #1)" next to "#1" on
+      // every single row.
+      if (!isAdded) {
+        const originalIndex = w.glosses.indexOf(gloss);
+        if (originalIndex !== -1 && originalIndex !== i) {
+          const origNote = el('span', 'mc-gloss-original', `was #${originalIndex + 1}`);
+          origNote.title = `Originally sense #${originalIndex + 1} for this word, before reordering.`;
+          item.appendChild(origNote);
+        }
+      }
+
       if (isAdded) {
         // Nothing to hide — a sense the learner typed in themselves is
         // just deleted outright instead (the ✕ button below).
@@ -978,7 +1583,10 @@ function renderWordEditorBody(lang: string, w: Word, container: HTMLElement, onC
         checkbox.type = 'checkbox';
         checkbox.className = 'mc-gloss-checkbox';
         checkbox.checked = !hiddenSet.has(gloss);
-        checkbox.setAttribute('aria-label', `Show "${gloss}"`);
+        checkbox.setAttribute('aria-label', `Show "${gloss}" in quizzes`);
+        checkbox.title = checkbox.checked
+          ? `Visible in quizzes — uncheck to hide "${gloss}"`
+          : `Hidden from quizzes — check to show "${gloss}" again`;
         checkbox.addEventListener('change', () => {
           setGlossHidden(lang, w.word, gloss, !checkbox.checked);
           onChange();
@@ -1292,15 +1900,27 @@ interface WordSearchUIOptions {
   onSelect: (lang: string, w: Word) => void;
   /** Fires when the language changes, before the new vocabulary has loaded —
    *  lets the caller close whatever detail view was showing for the old
-   *  language's word (it's no longer reachable in the new one). The ✕ button
+   *  language's word (it's no longer reachable in the new one), and re-scope
+   *  anything the caller filters by the selected language. `lang` is the raw
+   *  select value, so it's ALL_LANGS in "All languages" mode. The ✕ button
    *  and Escape only clear the search text/results; they leave a currently
    *  open detail view alone — see its own collapse toggle instead. */
-  onLangChange: () => void;
+  onLangChange: (lang: string) => void;
+  /** Fires on every keystroke in the search box (and when it's cleared),
+   *  with the trimmed query — lets a caller narrow a list of its own by the
+   *  same text rather than needing a second, separate filter box. Optional:
+   *  the Pictures panel has no such list to narrow. */
+  onQueryChange?: (query: string) => void;
 }
 
 interface WordSearchUI {
-  /** Language picker + search box + results list, in that order. */
+  /** Search box + results list. Kept apart from `langRow` below so a caller
+   *  can lay the two out independently — e.g. My Content's word editor puts
+   *  the language picker up with its own Sort/filter toolbar and hides just
+   *  this part while a row is open (see buildEditWordSubsection). */
   wrap: HTMLElement;
+  /** The language picker alone. */
+  langRow: HTMLElement;
   getLang: () => string;
   /** Re-runs the current query — call after a change that should update a
    *  result's "✓ set" badge (the word may still be on screen in the list). */
@@ -1316,6 +1936,15 @@ interface WordSearchUI {
 }
 
 const RESULTS_LIMIT = 20;
+
+/** Sentinel `langSelect` value for "search every language at once" — never a
+ *  real language name (LANGUAGES only ever holds those), so it can't
+ *  collide. Each result in this mode carries its own real `.language`
+ *  (tagged on fetch, below); everywhere this module would otherwise use the
+ *  outer `lang` to call back into `opts`, it uses `w.language ?? lang`
+ *  instead, so a normal single-language search (where results never carry
+ *  `.language`) is completely unaffected. */
+const ALL_LANGS = '__all__';
 
 function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
   const wrap = el('div', 'mc-word-panel');
@@ -1334,6 +1963,7 @@ function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
 
   const langSelect = document.createElement('select');
   langSelect.className = 'mc-input mc-word-lang-select';
+  langSelect.appendChild(new Option('All languages', ALL_LANGS));
   for (const info of LANGUAGES) {
     const lopt = document.createElement('option');
     lopt.value = info.name;
@@ -1343,7 +1973,7 @@ function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
   langSelect.value = lang;
 
   const langRow = el('div', 'mc-word-lang-row');
-  langRow.append(el('span', 'mc-field-label', 'Language'), langSelect);
+  langRow.append(el('span', 'ml-band-label', 'Language'), langSelect);
 
   const searchInput = textInput(opts.placeholder);
   searchInput.disabled = true;
@@ -1371,7 +2001,7 @@ function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
     const w = currentMatches[i];
     if (!w) return;
     selectedKey = foldKey(w.word);
-    opts.onSelect(lang, w);
+    opts.onSelect(w.language ?? lang, w);
     // Repaint the active/kbd-focus classes in place rather than re-running
     // the whole search — the list of matches hasn't changed, just which one
     // is now open below.
@@ -1388,6 +2018,7 @@ function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
   }
 
   function renderResults(query: string): void {
+    opts.onQueryChange?.(query.trim());
     resultsList.innerHTML = '';
     kbdIndex = -1;
     clearBtn.hidden = !query.trim();
@@ -1395,7 +2026,7 @@ function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
     const q = foldKey(query);
     if (!q) { resultsList.hidden = true; countLabel.hidden = true; currentMatches = []; return; }
     const allMatches = words
-      .filter(w => opts.isEligible(lang, w))
+      .filter(w => opts.isEligible(w.language ?? lang, w))
       .filter(w => foldKey(w.word).includes(q) || foldKey(w.translation).includes(q));
     currentMatches = allMatches.slice(0, RESULTS_LIMIT);
 
@@ -1413,12 +2044,16 @@ function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
     }
     currentMatches.forEach((w, i) => {
       const li = el('li', 'mc-word-result');
+      // Only set (and so only shown) in All-languages mode — see loadLang's
+      // per-word tagging below — so a single-language search's rows are
+      // unchanged from before this existed.
+      if (w.language) li.appendChild(buildLangBadge([w.language]));
       const wordSpan = el('span', 'mc-word-result-word');
       fillHighlighted(wordSpan, w.word, query);
       const transSpan = el('span', 'mc-word-result-trans');
       fillHighlighted(transSpan, w.translation, query);
       li.append(wordSpan, transSpan);
-      if (opts.isOverridden(lang, w)) li.appendChild(el('span', 'mc-word-result-flag', '✓ set'));
+      if (opts.isOverridden(w.language ?? lang, w)) li.appendChild(el('span', 'mc-word-result-flag', '✓ set'));
       if (selectedKey && foldKey(w.word) === selectedKey) li.classList.add('mc-word-result--active');
       li.addEventListener('click', () => selectMatch(i));
       resultsList.appendChild(li);
@@ -1444,11 +2079,34 @@ function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
     resultsList.hidden = true;
     countLabel.hidden = true;
     clearBtn.hidden = true;
-    opts.onLangChange();
+    opts.onLangChange(requestedLang);
     searchInput.value = '';
+    // Clears the query text a caller's onQueryChange is tracking too — left
+    // unset, a query typed before switching languages would keep silently
+    // filtering whatever this caller narrows by its own text (see
+    // buildEditWordSubsection), even though the search box on screen now
+    // reads empty.
+    opts.onQueryChange?.('');
     searchInput.disabled = true;
-    searchInput.placeholder = 'Loading vocabulary…';
-    return opts.fetchWords(requestedLang).then(loaded => {
+    searchInput.placeholder = requestedLang === ALL_LANGS ? 'Loading every language…' : 'Loading vocabulary…';
+    // All-languages mode fetches every language with actual data up front
+    // and tags each word with its own — the same `.language` field
+    // multi-language Table/Conjugation sessions already use — rather than
+    // switching the fetch per keystroke, so a query never has to wait on N
+    // requests while typing. availableLanguages() skips one with no data
+    // (e.g. Chinese) up front; the per-language .catch is a second net in
+    // case that answer is stale, so one bad language can't fail the batch
+    // and dump every other language's error toast on screen at once.
+    const fetch = requestedLang === ALL_LANGS
+      ? availableLanguages().then(available => {
+          const targets = available ? LANGUAGES.filter(info => available.includes(info.name)) : LANGUAGES;
+          return Promise.all(targets.map(info =>
+            opts.fetchWords(info.name)
+              .then(ws => ws.map(w => ({ ...w, language: info.name })))
+              .catch(() => [] as Word[])));
+        }).then(lists => lists.flat())
+      : opts.fetchWords(requestedLang);
+    return fetch.then(loaded => {
       if (requestedLang !== langSelect.value) return; // superseded by a later change
       words = loaded;
       searchInput.disabled = false;
@@ -1495,10 +2153,10 @@ function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
     }
   });
 
-  wrap.append(langRow, searchRow, countLabel, resultsList);
+  wrap.append(searchRow, countLabel, resultsList);
   void loadLang();
 
-  return { wrap, getLang: () => lang, refreshResults: () => renderResults(searchInput.value.trim()), openWord };
+  return { wrap, langRow, getLang: () => lang, refreshResults: () => renderResults(searchInput.value.trim()), openWord };
 }
 
 // ── Pictures ─────────────────────────────────────────────────────────────────
@@ -1713,7 +2371,7 @@ function buildPictureSearchPanel(defaultLang: string, refresh: () => void): Pict
     onLangChange: () => { detail.innerHTML = ''; detail.hidden = true; },
   });
 
-  wrap.append(ui.wrap, detail);
+  wrap.append(ui.langRow, ui.wrap, detail);
 
   async function openWord(lang: string, word: string): Promise<void> {
     await ui.openWord(lang, word);

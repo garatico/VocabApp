@@ -21,7 +21,7 @@ const store = new Map<string, string>();
 };
 
 const {
-  getUserWords, addUserWord, removeUserWord, toWord,
+  getUserWords, addUserWord, removeUserWord, toWord, CUSTOM_WORD_RANK_BASE,
   getUserTriviaQuestions, addUserTriviaQuestion,
   getUserGuessBlankQuestions, addUserGuessBlankQuestion,
   getPictureOverrides, getPictureOverride, setPictureOverride, removePictureOverride, isImageOverride,
@@ -39,6 +39,7 @@ const baseWord = {
   word: 'perro', translation: 'dog', extraGlosses: [], pos: 'noun',
   domains: [], notes: '', examples: [], difficulty: null, tags: [],
   synonyms: [], antonyms: [], disambiguator: '', meaningDisambiguators: {},
+  rank: 5,
 };
 
 beforeEach(() => store.clear());
@@ -75,7 +76,36 @@ describe('user words', () => {
       extraGlosses: [], pos: null, domains: [], notes: '', examples: [],
       difficulty: null, tags: [], synonyms: [], antonyms: [],
       disambiguator: '', meaningDisambiguators: {},
+      // Backfilled from the id's own embedded timestamp (see newId/
+      // decodeIdTimestamp) — 'w-1''s middle segment, '1', is base-36 for 1.
+      createdAt: 1,
+      // Backfilled to CUSTOM_WORD_RANK_BASE + its own index (0, the only
+      // word in the store) — see normalizeUserWord's rankFallbackIndex.
+      rank: CUSTOM_WORD_RANK_BASE,
     }]);
+  });
+
+  it('backfills a missing rank per-word by stored position, not one shared fallback', () => {
+    const l = lang();
+    store.set(`uc_words_${l}`, JSON.stringify([
+      { id: 'w-1', word: 'perro', translation: 'dog' },
+      { id: 'w-2', word: 'gato', translation: 'cat' },
+    ]));
+    expect(getUserWords(l).map(w => w.rank)).toEqual([CUSTOM_WORD_RANK_BASE, CUSTOM_WORD_RANK_BASE + 1]);
+  });
+
+  it('addUserWord defaults rank to CUSTOM_WORD_RANK_BASE plus how many words already exist', () => {
+    const l = lang();
+    const first  = addUserWord(l, { ...baseWord, rank: undefined });
+    const second = addUserWord(l, { ...baseWord, word: 'gato', rank: undefined });
+    expect(first.rank).toBe(CUSTOM_WORD_RANK_BASE);
+    expect(second.rank).toBe(CUSTOM_WORD_RANK_BASE + 1);
+  });
+
+  it('addUserWord honors an explicit rank instead of defaulting', () => {
+    const l = lang();
+    const added = addUserWord(l, { ...baseWord, rank: 42 });
+    expect(added.rank).toBe(42);
   });
 
   it('returns nothing for a corrupt store rather than throwing', () => {
@@ -96,8 +126,9 @@ describe('toWord', () => {
     expect(w.glosses).toEqual(['dog', 'canine']);
   });
 
-  it('always ranks a custom word at 0, ahead of every real word', () => {
-    expect(toWord(baseWord).rank).toBe(0);
+  it('passes the UserWord\'s own rank through unchanged, placing it in a "Top N" pool like a real word', () => {
+    expect(toWord({ ...baseWord, rank: 42 }).rank).toBe(42);
+    expect(toWord({ ...baseWord, rank: CUSTOM_WORD_RANK_BASE }).rank).toBe(CUSTOM_WORD_RANK_BASE);
   });
 
   it('turns empty disambiguators into undefined, not empty strings/objects', () => {
@@ -227,19 +258,28 @@ describe('word overrides', () => {
   it('setWordFields sets and can clear a field by omitting it', () => {
     const l = lang();
     setWordFields(l, 'perro', { translation: 'doggo', notes: 'informal' });
-    expect(getWordOverride(l, 'perro')).toEqual({ translation: 'doggo', notes: 'informal' });
+    expect(getWordOverride(l, 'perro')).toEqual({ translation: 'doggo', notes: 'informal', updatedAt: expect.any(Number) });
 
     // Editing "notes" back to the real value means the caller stops passing
     // it — that un-overrides just that field, per setWordFields' own doc.
     setWordFields(l, 'perro', { translation: 'doggo' });
-    expect(getWordOverride(l, 'perro')).toEqual({ translation: 'doggo' });
+    expect(getWordOverride(l, 'perro')).toEqual({ translation: 'doggo', updatedAt: expect.any(Number) });
   });
 
   it('setWordFields does not disturb hiddenGlosses/glossOrder/addedGlosses set another way', () => {
     const l = lang();
     setGlossHidden(l, 'perro', 'canine', true);
     setWordFields(l, 'perro', { translation: 'doggo' });
-    expect(getWordOverride(l, 'perro')).toEqual({ translation: 'doggo', hiddenGlosses: ['canine'] });
+    expect(getWordOverride(l, 'perro')).toEqual({ translation: 'doggo', hiddenGlosses: ['canine'], updatedAt: expect.any(Number) });
+  });
+
+  it('setWordFields and mergeWordOverride-backed setters stamp updatedAt on every write', () => {
+    const l = lang();
+    setWordFields(l, 'perro', { translation: 'doggo' });
+    const first = getWordOverride(l, 'perro')?.updatedAt;
+    expect(first).toEqual(expect.any(Number));
+    setGlossHidden(l, 'perro', 'canine', true);
+    expect(getWordOverride(l, 'perro')?.updatedAt).toEqual(expect.any(Number));
   });
 
   it('setGlossHidden toggles membership without disturbing other hidden glosses', () => {
@@ -292,7 +332,10 @@ describe('word overrides', () => {
   it('migrates a legacy glossorder-only key into the word-override record', () => {
     const l = lang();
     store.set(`uc_glossorder_${l}`, JSON.stringify({ perro: ['b', 'a'] }));
-    expect(getWordOverrides(l)).toEqual({ perro: { glossOrder: ['b', 'a'] } });
+    // updatedAt: 0 — the migration writes straight to storage, bypassing
+    // mergeWordOverride's stamp, so it backfills like any other pre-existing
+    // override with no recoverable timestamp (see normalizeWordOverride).
+    expect(getWordOverrides(l)).toEqual({ perro: { glossOrder: ['b', 'a'], updatedAt: 0 } });
     expect(store.has(`uc_glossorder_${l}`)).toBe(false); // one-way
   });
 
@@ -300,7 +343,7 @@ describe('word overrides', () => {
     const l = lang();
     setWordFields(l, 'perro', { translation: 'doggo' });
     store.set(`uc_glossorder_${l}`, JSON.stringify({ perro: ['b', 'a'] }));
-    expect(getWordOverrides(l)).toEqual({ perro: { translation: 'doggo', glossOrder: ['b', 'a'] } });
+    expect(getWordOverrides(l)).toEqual({ perro: { translation: 'doggo', glossOrder: ['b', 'a'], updatedAt: expect.any(Number) } });
   });
 });
 
@@ -349,6 +392,16 @@ describe('applyWordOverride', () => {
     const l = lang();
     setWordFields(l, 'perro', { difficulty: null });
     expect(applyWordOverride(l, word).difficulty).toBeNull();
+  });
+
+  it('a rank override changes which "Top N" pool the word falls into', () => {
+    const l = lang();
+    setWordFields(l, 'perro', { rank: 9999 });
+    expect(applyWordOverride(l, word).rank).toBe(9999);
+  });
+
+  it('no rank override leaves the word\'s own rank untouched', () => {
+    expect(applyWordOverride(lang(), word).rank).toBe(5);
   });
 
   it('hides glosses before reordering, so glossOrder never has to name a hidden one', () => {
@@ -443,8 +496,10 @@ describe('applyUserContentImport', () => {
       version: 1, wordOverrides: { [l]: { gato: { translation: 'kitty' } } },
     }));
     expect(getWordOverrides(l)).toEqual({
-      perro: { translation: 'doggo' },
-      gato: { translation: 'kitty' },
+      perro: { translation: 'doggo', updatedAt: expect.any(Number) },
+      // Imported as-is, with no updatedAt of its own — backfills to 0, same
+      // as any other pre-existing override with no recoverable timestamp.
+      gato: { translation: 'kitty', updatedAt: 0 },
     });
   });
 
@@ -453,7 +508,7 @@ describe('applyUserContentImport', () => {
     applyUserContentImport(JSON.stringify({
       version: 1, glossOrders: { [l]: { perro: ['b', 'a'] } },
     }));
-    expect(getWordOverrides(l)).toEqual({ perro: { glossOrder: ['b', 'a'] } });
+    expect(getWordOverrides(l)).toEqual({ perro: { glossOrder: ['b', 'a'], updatedAt: 0 } });
   });
 
   it('imports trivia and guess-the-blank questions, skipping malformed entries', () => {

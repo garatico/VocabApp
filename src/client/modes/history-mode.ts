@@ -26,7 +26,7 @@ import {
   saveListFilterState, refreshFilterSelect,
 } from '../utils/word-lists.ts';
 import type { FilterScope } from '../filters/filter-scope.ts';
-import { readString } from '../utils/storage.ts';
+import { readString, readJson, writeJson, isStringArray } from '../utils/storage.ts';
 import { percent } from '../ui/quiz-summary.ts';
 import { buildLangBadge } from '../ui/lang-badge.ts';
 import type { SessionDirection } from '../utils/session-history.ts';
@@ -58,6 +58,75 @@ const TROUBLE_LIST_NAME = 'Words I Keep Missing';
 
 /** The list "Study these" collects due-for-review words into — see studyDueWords(). */
 const REVIEW_LIST_NAME = 'Due for Review';
+
+// ── Collapsible panels ────────────────────────────────────────────────────
+//
+// Due for Review / Words to Review / Recent Sessions each collapse
+// independently — persisted the same way My Content's own sections are
+// (a small JSON array of collapsed keys), so a learner who only cares about
+// Recent Sessions doesn't have to keep re-collapsing the other two on every
+// visit to this tab (it's rebuilt fresh every time — see this file's own
+// header comment).
+
+const HISTORY_COLLAPSED_KEY = 'vq_history_collapsed';
+
+function getCollapsedHistoryPanels(): Set<string> {
+  return new Set(readJson<string[]>(HISTORY_COLLAPSED_KEY, [], isStringArray));
+}
+
+function setCollapsedHistoryPanels(keys: Set<string>): void {
+  writeJson(HISTORY_COLLAPSED_KEY, [...keys]);
+}
+
+/**
+ * A clickable chevron+title header that shows/hides `body` in place. Any
+ * caller-added action button (e.g. "Study these N") should stop propagation
+ * on its own click so it doesn't also toggle the section.
+ */
+function buildHistoryPanelHead(key: string, title: string, body: HTMLElement): HTMLElement {
+  const head = document.createElement('div');
+  head.className = 'history-panel-head history-panel-head--collapsible';
+  head.setAttribute('role', 'button');
+  head.tabIndex = 0;
+
+  const chevron = document.createElement('span');
+  chevron.className = 'history-panel-chevron';
+  chevron.textContent = '▾';
+  chevron.setAttribute('aria-hidden', 'true');
+
+  const titleEl = document.createElement('h3');
+  titleEl.className = 'history-panel-title';
+  titleEl.textContent = title;
+
+  head.append(chevron, titleEl);
+
+  function applyState(collapsed: boolean): void {
+    body.hidden = collapsed;
+    head.classList.toggle('history-panel-head--collapsed', collapsed);
+    head.setAttribute('aria-expanded', String(!collapsed));
+  }
+  applyState(getCollapsedHistoryPanels().has(key));
+
+  function toggle(): void {
+    const collapsed = !body.hidden;
+    applyState(collapsed);
+    const keys = getCollapsedHistoryPanels();
+    if (collapsed) keys.add(key); else keys.delete(key);
+    setCollapsedHistoryPanels(keys);
+  }
+  head.addEventListener('click', toggle);
+  // Guarded to the header itself — Study These (a focusable descendant once
+  // one is added) already stops its own click from bubbling here, but a
+  // keydown Space/Enter on it still bubbles up before the browser's own
+  // "activate the focused button" handling runs, and without this guard
+  // that would toggle the section *and* click the button.
+  head.addEventListener('keydown', e => {
+    if (e.target !== head) return;
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  });
+
+  return head;
+}
 
 export function renderHistory(container: HTMLElement, lang: string): void {
   container.innerHTML = '';
@@ -108,22 +177,19 @@ export function renderHistory(container: HTMLElement, lang: string): void {
   function renderDueWords(): void {
     reviewPanel.innerHTML = '';
 
-    const head = document.createElement('div');
-    head.className = 'history-panel-head';
-    const title = document.createElement('h3');
-    title.className = 'history-panel-title';
-    title.textContent = 'Due for Review';
-    head.appendChild(title);
+    const body = document.createElement('div');
+    body.className = 'history-panel-body';
+    const head = buildHistoryPanelHead('review', 'Due for Review', body);
+    reviewPanel.append(head, body);
 
     const words = srsDueWords(currentLang);
 
     if (words.length === 0) {
-      reviewPanel.appendChild(head);
       const empty = document.createElement('p');
       empty.className = 'history-empty';
       empty.textContent = 'Nothing due right now — words land here on their own '
         + 'review schedule as you quiz them.';
-      reviewPanel.appendChild(empty);
+      body.appendChild(empty);
       return;
     }
 
@@ -133,9 +199,8 @@ export function renderHistory(container: HTMLElement, lang: string): void {
     studyBtn.textContent = `▶ Study these ${words.length}`;
     studyBtn.title = `Add ${words.length} word${words.length === 1 ? '' : 's'} to a `
       + `"${REVIEW_LIST_NAME}" list and start a focused Table quiz on them`;
-    studyBtn.addEventListener('click', () => studyDueWords(currentLang, words));
+    studyBtn.addEventListener('click', e => { e.stopPropagation(); studyDueWords(currentLang, words); });
     head.appendChild(studyBtn);
-    reviewPanel.appendChild(head);
 
     const list = document.createElement('ul');
     list.className = 'history-trouble-list';
@@ -157,7 +222,7 @@ export function renderHistory(container: HTMLElement, lang: string): void {
       li.append(wordSpan, transSpan);
       list.appendChild(li);
     });
-    reviewPanel.appendChild(list);
+    body.appendChild(list);
 
     if (!vocabMap) {
       const fetchedFor = currentLang;
@@ -195,22 +260,19 @@ export function renderHistory(container: HTMLElement, lang: string): void {
   function renderTroubleWords(): void {
     troublePanel.innerHTML = '';
 
-    const head = document.createElement('div');
-    head.className = 'history-panel-head';
-    const title = document.createElement('h3');
-    title.className = 'history-panel-title';
-    title.textContent = 'Words to Review';
-    head.appendChild(title);
+    const body = document.createElement('div');
+    body.className = 'history-panel-body';
+    const head = buildHistoryPanelHead('trouble', 'Words to Review', body);
+    troublePanel.append(head, body);
 
     const words = troubleWords(currentLang);
 
     if (words.length === 0) {
-      troublePanel.appendChild(head);
       const empty = document.createElement('p');
       empty.className = 'history-empty';
       empty.textContent = 'Nothing here yet — a word shows up once you’ve '
         + 'missed it a couple of times across quizzes.';
-      troublePanel.appendChild(empty);
+      body.appendChild(empty);
       return;
     }
 
@@ -220,9 +282,8 @@ export function renderHistory(container: HTMLElement, lang: string): void {
     studyBtn.textContent = `▶ Study these ${words.length}`;
     studyBtn.title = `Add ${words.length} word${words.length === 1 ? '' : 's'} to a `
       + `"${TROUBLE_LIST_NAME}" list and start a focused Table quiz on them`;
-    studyBtn.addEventListener('click', () => studyTroubleWords(currentLang, words));
+    studyBtn.addEventListener('click', e => { e.stopPropagation(); studyTroubleWords(currentLang, words); });
     head.appendChild(studyBtn);
-    troublePanel.appendChild(head);
 
     const list = document.createElement('ul');
     list.className = 'history-trouble-list';
@@ -249,7 +310,7 @@ export function renderHistory(container: HTMLElement, lang: string): void {
       li.append(wordSpan, transSpan, missSpan);
       list.appendChild(li);
     });
-    troublePanel.appendChild(list);
+    body.appendChild(list);
 
     // Vocab loads asynchronously; if it wasn't ready yet, fill in
     // translations once it lands — but only if the language selector hasn't
@@ -301,13 +362,10 @@ export function renderHistory(container: HTMLElement, lang: string): void {
   function renderSessionList(): void {
     sessionsPanel.innerHTML = '';
 
-    const head = document.createElement('div');
-    head.className = 'history-panel-head';
-    const title = document.createElement('h3');
-    title.className = 'history-panel-title';
-    title.textContent = 'Recent sessions';
-    head.appendChild(title);
-    sessionsPanel.appendChild(head);
+    const body = document.createElement('div');
+    body.className = 'history-panel-body';
+    const head = buildHistoryPanelHead('sessions', 'Recent Sessions', body);
+    sessionsPanel.append(head, body);
 
     const allSessions = getSessions(currentLang);
 
@@ -329,7 +387,7 @@ export function renderHistory(container: HTMLElement, lang: string): void {
       chip.addEventListener('click', () => { modeFilter = mode; render(); });
       filterRow.appendChild(chip);
     });
-    sessionsPanel.appendChild(filterRow);
+    body.appendChild(filterRow);
 
     const shown = (modeFilter ? allSessions.filter(s => s.mode === modeFilter) : allSessions)
       .slice()
@@ -339,7 +397,7 @@ export function renderHistory(container: HTMLElement, lang: string): void {
       const empty = document.createElement('p');
       empty.className = 'history-empty';
       empty.textContent = 'No sessions recorded yet — finish a quiz in this language and it will show up here.';
-      sessionsPanel.appendChild(empty);
+      body.appendChild(empty);
       return;
     }
 
@@ -363,7 +421,7 @@ export function renderHistory(container: HTMLElement, lang: string): void {
     const scroller = document.createElement('div');
     scroller.className = 'history-table-scroll';
     scroller.appendChild(table);
-    sessionsPanel.appendChild(scroller);
+    body.appendChild(scroller);
   }
 
   function buildSessionRow(s: SessionRecord): HTMLTableRowElement {
@@ -371,9 +429,10 @@ export function renderHistory(container: HTMLElement, lang: string): void {
 
     const dateTd = document.createElement('td');
     dateTd.className = 'history-session-date';
-    // No year — history is capped at 30 sessions (HISTORY_KEEP), recent
-    // enough that the year is never the useful part, and dropping it earns
-    // back real width in a column that's already tight on a phone screen.
+    // No year — history is capped at Settings.getMaxSessionsKept() (100 by
+    // default), recent enough that the year is never the useful part, and
+    // dropping it earns back real width in a column that's already tight on
+    // a phone screen.
     dateTd.textContent = new Date(s.at).toLocaleString(undefined, {
       month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
     });

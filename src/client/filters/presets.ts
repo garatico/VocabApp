@@ -436,7 +436,18 @@ export function describePreset(bundle: PresetBundle, mode?: FilterScope): string
 export function applyPreset(mode: FilterScope, name: string): boolean {
   const bundle = getPreset(mode, name);
   if (!bundle) return false;
+  applyBundle(mode, bundle);
+  return true;
+}
 
+/**
+ * Same effect as applyPreset, given a bundle directly rather than a saved
+ * preset's name — split out so a caller can apply a bundle that was never
+ * (or not yet) saved, e.g. preset-picker.ts's inline editor, which applies
+ * every tweak live to try it out without writing to storage until the
+ * learner explicitly saves it.
+ */
+export function applyBundle(mode: FilterScope, bundle: PresetBundle): void {
   // Language first — everything below (class/domain buckets, the list
   // filter's checkbox panel, the word pool) is read per the language active
   // at the moment it runs, so switching languages after applying the rest
@@ -476,6 +487,4 @@ export function applyPreset(mode: FilterScope, name: string): boolean {
     // survives a reload instead of reverting the next time app.ts restores it.
     writeString('vq_dir', bundle.direction);
   }
-
-  return true;
 }

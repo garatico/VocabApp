@@ -518,9 +518,11 @@
      All Words shows every part of speech, unlike the narrower per-band
      filtering elsewhere), "Article" used to spill onto a second row. A
      horizontal scrollbar was tried and rejected — this row should just fit —
-     so instead the row sits closer to the left edge (less left padding than
-     .ml-band-row below it now gets, a deliberate small mismatch) and chips
-     are sized tighter (below) to close the rest of the gap. */
+     so instead the row sits closer to the left edge and chips are sized
+     tighter (below) to close the rest of the gap. .ml-band-row below matches
+     this same left padding (it used to sit further right, misaligning the
+     two rows' chips even though .ml-band-label's own fixed min-width already
+     lines up the *labels*) rather than each row picking its own inset. */
   flex-wrap: nowrap;
   overflow-x: hidden;
   align-items: center;
@@ -1875,7 +1877,8 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.3rem;
-  padding: 0.35rem 0.85rem 0.1rem;
+  /* Left padding matches .ml-pos-row's — see that rule's own comment. */
+  padding: 0.35rem 0.85rem 0.1rem 0.4rem;
 }
 /* Type from .ui-label. */
 .ml-band-label {
@@ -2324,6 +2327,33 @@ button.ml-profile-editor-group-title {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.3rem 0.65rem;
+}
+/* Conjugation's own Tense/Regularity chips, denser than the live quiz
+   controls' — this editor is meant to be a compact inline summary of a
+   profile, not the primary screen, so the ~11-12 Spanish tense labels plus
+   a separate regularity row shouldn't cost as much vertical space as they
+   would drilling. .conj-tense-chip/.conj-reg-chip (conjugation.css) both
+   default to a bigger, `width: 100%` shape sized for their own single- or
+   two-column live containers, neither of which this editor opts into — so
+   without this, .conj-reg-chip's own width:100% forced one chip per line
+   inside a plain flex-wrap row, and the tense chips ran at full size too.
+   A multi-column auto-fill grid of shrunk chips replaces both, with a
+   max-height + scroll fallback if a language's tense set still overflows it. */
+.ml-profile-editor-tense-chips,
+.ml-profile-editor-reg-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 0.25rem;
+  max-height: 8.5rem;
+  overflow-y: auto;
+}
+.ml-profile-editor-tense-chips .conj-tense-chip,
+.ml-profile-editor-reg-chips .conj-reg-chip {
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 0.25rem 0.4rem;
+  min-height: 0;
+  border-radius: 6px;
 }
 .ml-profile-editor-words-sub {
   margin-top: 0.15rem;

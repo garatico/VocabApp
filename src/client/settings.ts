@@ -2,7 +2,7 @@ import { readString, writeString, remove as removeKey } from './utils/storage.ts
 import { applyTheme, type ThemeValue } from './ui/theme-toggle.ts';
 import { LANGUAGES, languageInfo, flagUrl } from './data/languages.ts';
 import { createFlagImg } from './ui/flag-icon.ts';
-import { clearHistory } from './utils/session-history.ts';
+import { clearHistory, HISTORY_KEEP } from './utils/session-history.ts';
 import {
   getGoals, setGoalTarget, hasLanguageGoal, clearLanguageGoal,
   getStreak, getBestStreak, getTodayProgress, getTodayMinutes, getStreakHistory,
@@ -338,6 +338,38 @@ export const Settings = {
    * Keep Missing First" ordering and trouble-word marking regardless.
    */
   getHistoryEnabled: (): boolean => get('history_enabled', 'true') === 'true',
+
+  /**
+   * How many of the most recent sessions, per language, saveSession()
+   * (session-history.ts) keeps before the oldest ones drop off the end of
+   * the Recent Sessions list. HISTORY_KEEP is the default — a learner who
+   * wants a longer (or shorter) trend than that can raise or lower it here.
+   */
+  getMaxSessionsKept: (): number => {
+    const n = Number(get('max_sessions_kept', String(HISTORY_KEEP)));
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : HISTORY_KEEP;
+  },
+
+  /**
+   * Whether the lightweight Testing Profiles popover (preset-picker.ts,
+   * opened from the "Profiles" button on Table/Picture/Conjugation) shows a
+   * "+" next to each profile to tweak its parameters inline. Off by
+   * default — the popover's plain Apply/Delete list is the simpler default,
+   * and this adds a fair amount of UI to it. Inline tweaks only ever apply
+   * live to the current session (see filters/presets.ts's applyBundle); they
+   * never overwrite the saved profile except through its own explicit
+   * "Save as new profile…" action.
+   */
+  getInlineProfileEditing: (): boolean => get('inline_profile_editing', 'false') === 'true',
+
+  /**
+   * Whether My Content's "Edit an Existing Word" list asks to confirm before
+   * removing a word's override (its Remove button resets every override on
+   * that word in one action, unlike undoing one field at a time). On by
+   * default — the same reasoning as any other one-click irreversible
+   * action; off lets a learner who's already sure skip the prompt every time.
+   */
+  getConfirmRemoveWordOverride: (): boolean => get('confirm_remove_word_override', 'true') === 'true',
 
   /**
    * Whether a filter (Lists, Class, Domain) can be shared across modes at
@@ -1039,6 +1071,29 @@ export function bindSettings(): void {
     set('history_enabled', btn.dataset.history ?? 'true');
   });
 
+  // Sessions to keep (see getMaxSessionsKept)
+  document.getElementById('settingMaxSessionsKept')?.addEventListener('change', e => {
+    const n = Number((e.target as HTMLInputElement).value);
+    if (Number.isFinite(n) && n > 0) set('max_sessions_kept', String(Math.floor(n)));
+  });
+
+  // Testing Profiles popover's inline "+" editor (see getInlineProfileEditing)
+  document.getElementById('settingInlineProfileEditing')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingInlineProfileEditing', btn);
+    set('inline_profile_editing', btn.dataset.enabled ?? 'false');
+  });
+
+  // My Content: confirm before removing a word override (see
+  // getConfirmRemoveWordOverride)
+  document.getElementById('settingConfirmRemoveWordOverride')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingConfirmRemoveWordOverride', btn);
+    set('confirm_remove_word_override', btn.dataset.enabled ?? 'true');
+  });
+
   // Clear history — every language's saved sessions and miss tallies.
   // Mastery and lists live in their own storage (word-lists.ts) and are
   // untouched.
@@ -1614,6 +1669,20 @@ function restoreSettingsUI(): void {
   const savedHistory = get('history_enabled', 'true');
   document.querySelectorAll<HTMLElement>('#settingHistory .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.history === savedHistory);
+  });
+  const maxSessionsInput = document.getElementById('settingMaxSessionsKept') as HTMLInputElement | null;
+  if (maxSessionsInput) maxSessionsInput.value = String(Settings.getMaxSessionsKept());
+
+  // Testing Profiles popover's inline "+" editor
+  const savedInlineProfileEditing = get('inline_profile_editing', 'false');
+  document.querySelectorAll<HTMLElement>('#settingInlineProfileEditing .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedInlineProfileEditing);
+  });
+
+  // My Content: confirm before removing a word override
+  const savedConfirmRemoveWordOverride = get('confirm_remove_word_override', 'true');
+  document.querySelectorAll<HTMLElement>('#settingConfirmRemoveWordOverride .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedConfirmRemoveWordOverride);
   });
 
   // Guess the Blank: guesses per question

@@ -188,7 +188,7 @@ export const es: Record<string, string> = {
   'settings.nav.chinese':   'Chino',
   'settings.nav.conj':      'Práctica de Conjugación',
   'settings.nav.general':   'General',
-  'settings.nav.multilang': 'Tabla Multilingüe',
+  'settings.nav.history':   'Historial de Sesiones',
   'settings.nav.table':     'Quiz de Tabla',
 
   // ── Settings — Table Quiz ───────────────────────────────────────────────
@@ -215,14 +215,6 @@ export const es: Record<string, string> = {
   'settings.table.pageSizeDesc':         'Cuántas palabras muestra una página de tabla antes de dividirse en páginas que recorres con las flechas — Todas pone todo en una sola página',
   'settings.table.questionGlosses':      'Significados de la pregunta',
   'settings.table.questionGlossesDesc':  'Cuántos significados en inglés se muestran en el cuadro de pregunta cuando una palabra tiene varios (p. ej. "to speak / to talk")',
-
-  // ── Settings — Multi-Language Table ─────────────────────────────────────
-  'settings.multilang.appearance':      'Apariencia del idioma',
-  'settings.multilang.appearanceDesc':  'Anula la bandera (modo Bandera) y el color de celda (modo Color) de cada idioma, definidos arriba',
-  'settings.multilang.color':           'Color',
-  'settings.multilang.flag':            'Bandera',
-  'settings.multilang.indicator':       'Indicador de idioma',
-  'settings.multilang.indicatorDesc':   'Cuando se combinan 2 o más idiomas en una tabla (el selector "+ Idiomas"), cómo se muestra el idioma de cada palabra — Desactivado deja las celdas normales, Color tiñe la celda, Bandera muestra una bandera tenue detrás de la palabra',
 
   // ── Settings — Picture Quiz ─────────────────────────────────────────────
   'settings.picture.allOffNote':  'Desactivar todas las categorías anteriores deja una palabra sin ningún elemento visual, omitida, tal como siempre ha sido.',
@@ -298,6 +290,12 @@ export const es: Record<string, string> = {
   // ── Settings — Appearance ─────────────────────────────────────────────────
   'settings.appearance.comingSoon':      'Próximamente',
   'settings.appearance.dark':            'Oscuro',
+  'settings.appearance.langAppearance':      'Apariencia del idioma',
+  'settings.appearance.langAppearanceDesc':  'Anula la bandera (modo Bandera) y el color de celda (modo Color) de cada idioma, definidos arriba',
+  'settings.appearance.langColor':           'Color',
+  'settings.appearance.langFlag':            'Bandera',
+  'settings.appearance.langIndicator':       'Indicador de idioma',
+  'settings.appearance.langIndicatorDesc':   'Cuando se combinan 2 o más idiomas en una tabla (el selector "+ Idiomas"), cómo se muestra el idioma de cada palabra — Desactivado deja las celdas normales, Color tiñe la celda, Bandera muestra una bandera tenue detrás de la palabra',
   'settings.appearance.light':           'Claro',
   'settings.appearance.system':          'Sistema',
   'settings.appearance.textSize':        'Tamaño de texto',
@@ -314,12 +312,16 @@ export const es: Record<string, string> = {
   'settings.general.kidModeDesc':       'Simplifica la app para un niño, o para cualquiera que la pruebe por primera vez — ver la sección General más abajo para los detalles exactos de lo que cambia.',
   'settings.general.kidModeSpecifics':      'Modo apto para niños — qué cambia',
   'settings.general.kidModeSpecificsDesc':  'El interruptor para esto está en la barra de herramientas a la derecha, siempre visible sin importar el Modo avanzado. Activarlo: desactiva el Modo avanzado y activa el filtro de palabras soeces — ambos se pueden volver a cambiar después. Oculta las pestañas Mi Contenido y Mis Listas, el botón Perfiles de Prueba, los filtros de Categoría Gramatical/Listas/Dominios, el selector de "+ Idiomas", el modo de tamaño Omitir Conocidas, y la sección de ajustes Tabla Multi-idioma — mientras esté activado. Los filtros de Categoría Gramatical/Listas/Dominios y "+ Idiomas" también dejan de aplicarse aunque ya estuvieran configurados, no solo desaparecen de la vista — lo mismo ocurre con Omitir Conocidas, que depende del filtro de Listas. Y ajusta cada modo a su opción más sencilla: Dirección de Tabla (Palabra→Significado) y Estilo de Quiz (Estándar), Quiz de Imágenes (Toca la Imagen), Vista de Conjugación (Cuadrícula) y Regularidad (todas), Dificultad de Trivia/Dificultad de Lectura (Fácil) y Longitud de Lectura (Corta), y Dificultad de Completa el Espacio (Fácil) — cada uno se puede volver a cambiar al desactivarlo, igual que el Modo avanzado y el filtro de palabras soeces. Pensado para un niño, o para cualquiera que pruebe la app por primera vez.',
-  'settings.general.clearHistory':      'Borrar historial',
-  'settings.general.clearHistoryBtn':   'Borrar Historial',
-  'settings.general.clearHistoryDesc':  'Elimina permanentemente cada sesión de quiz guardada y el conteo de "palabras que sigo fallando", en todos los idiomas. No afecta el dominio ni tus listas.',
-  'settings.general.sessionHistory':    'Historial de sesiones',
-  'settings.general.sessionHistoryDesc':'Desactivado detiene el registro de nuevas sesiones de quiz en la pestaña Historial. Las sesiones ya registradas no se ven afectadas, y esto no afecta el dominio, las listas ni las palabras que sigues fallando.',
   'settings.general.showAgain':         'Mostrar de nuevo',
   'settings.general.welcomeTip':        'Consejo de bienvenida',
   'settings.general.welcomeTipDesc':    'Volver a mostrar la sugerencia de inicio en la parte superior de la página',
+
+  // ── Settings — Session History ───────────────────────────────────────────
+  'settings.history.clearHistory':      'Borrar historial',
+  'settings.history.clearHistoryBtn':   'Borrar Historial',
+  'settings.history.clearHistoryDesc':  'Elimina permanentemente cada sesión de quiz guardada y el conteo de "palabras que sigo fallando", en todos los idiomas. No afecta el dominio ni tus listas.',
+  'settings.history.maxSessions':       'Sesiones a conservar',
+  'settings.history.maxSessionsDesc':   'Cuántas de tus sesiones de quiz más recientes, por idioma, se conservan en la lista de Sesiones Recientes de la pestaña Historial antes de que las más antiguas se descarten.',
+  'settings.history.sessionHistory':    'Historial de sesiones',
+  'settings.history.sessionHistoryDesc':'Desactivado detiene el registro de nuevas sesiones de quiz en la pestaña Historial. Las sesiones ya registradas no se ven afectadas, y esto no afecta el dominio, las listas ni las palabras que sigues fallando.',
 };

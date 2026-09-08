@@ -64,6 +64,36 @@
   font-style: italic;
 }
 
+/* ── Collapsible panel header — Due for Review / Words to Review /
+   Recent Sessions each collapse independently (see buildHistoryPanelHead in
+   history-mode.ts). Same chevron-rotate convention as My Content's own
+   collapsible sections (.mc-section-chevron). ── */
+.history-panel-head--collapsible {
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.history-panel-head--collapsible:hover {
+  background: var(--surface3, var(--surface));
+}
+.history-panel-chevron {
+  display: inline-block;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  transition: transform var(--transition-fast);
+}
+.history-panel-head--collapsed .history-panel-chevron {
+  transform: rotate(-90deg);
+}
+.history-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.history-panel-body[hidden] {
+  display: none;
+}
+
 /* ── Words to review ──────────────────────────────────────────── */
 .history-study-btn {
   font-size: 0.76rem;

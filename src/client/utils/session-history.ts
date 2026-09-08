@@ -3,7 +3,8 @@
  *
  * Two related records, both per language, both in localStorage:
  *
- *   sessions   one entry per finished quiz, capped at HISTORY_KEEP
+ *   sessions   one entry per finished quiz, capped at
+ *              Settings.getMaxSessionsKept() (HISTORY_KEEP by default)
  *   misses     per-word tally of how often a word has been missed
  *
  * Shared by recall and table mode rather than reimplemented in each, because
@@ -72,7 +73,9 @@ export interface SessionRecord {
 const SESSION_PREFIX = 'vq_history_';
 const MISS_PREFIX    = 'vq_misses_';
 
-/** Sessions retained per language. Enough for a trend, small enough for quota. */
+/** Sessions retained per language by default. Enough for a trend, small
+ *  enough for quota — see Settings.getMaxSessionsKept() for the actual,
+ *  learner-adjustable cap saveSession() applies. */
 export const HISTORY_KEEP = 100;
 
 /** A word must be missed at least this often to count as a persistent problem. */
@@ -97,7 +100,7 @@ export function saveSession(lang: string, entry: SessionRecord): SessionRecord[]
   // `prior` regardless of whether this write happens, so a session started
   // before the setting was flipped off still reports its own results.
   if (Settings.getHistoryEnabled()) {
-    const next = [...prior, entry].slice(-HISTORY_KEEP);
+    const next = [...prior, entry].slice(-Settings.getMaxSessionsKept());
     // A dropped write (quota) is fine — history is a nicety, never fail a session.
     writeJson(SESSION_PREFIX + lang.toLowerCase(), next);
     // entry.correct, not entry.total — the settings copy promises a

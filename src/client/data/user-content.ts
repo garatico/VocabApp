@@ -29,6 +29,17 @@ function newId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/** Recovers the creation time embedded in an id minted by `newId` above
+ *  (its middle, base-36-encoded `Date.now()` segment) — used to backfill
+ *  `createdAt` for a UserWord saved before that field existed, rather than
+ *  defaulting every pre-existing word to "just now" and losing their actual
+ *  relative order. Falls back to `Date.now()` only if the id doesn't match
+ *  the expected shape at all (hand-edited import, foreign id). */
+function decodeIdTimestamp(id: string): number {
+  const ms = parseInt(id.split('-')[1] ?? '', 36);
+  return Number.isFinite(ms) && ms > 0 ? ms : Date.now();
+}
+
 // ── Words ────────────────────────────────────────────────────────────────────
 
 export interface UserWord {
@@ -57,7 +68,31 @@ export interface UserWord {
    *  counterpart, keyed by gloss text (`translation`, or one of
    *  `extraGlosses`) — same reasoning as WordOverride.meaningDisambiguators. */
   meaningDisambiguators: Record<string, string>;
+  /** When this word was added — lets My Content sort "added" words by
+   *  newest/oldest. Optional only because a word saved before this field
+   *  existed has none in storage; normalizeUserWord backfills it from the
+   *  timestamp already embedded in `id` (see newId) rather than leaving it
+   *  undefined, so an old entry still sorts sensibly. */
+  createdAt?: number;
+  /**
+   * Curated frequency rank — same meaning as Word.rank, and read the same
+   * way by toWord() below, so a custom word takes its place in a "Top N"
+   * pool exactly like a real one instead of always being force-included
+   * (which is what a hardcoded `rank: 0` here used to do). Always a real
+   * number once normalized: addUserWord defaults an unspecified rank to
+   * CUSTOM_WORD_RANK_BASE-and-up, in add order, so an unranked custom word
+   * defaults to "less frequent than anything real" rather than "more
+   * frequent than everything" — an explicit rank (typed in, or picked via a
+   * CEFR level in the UI) overrides that placement either up or down.
+   */
+  rank: number;
 }
+
+/** Where an unranked custom word's default rank starts counting up from —
+ *  comfortably past any real vocabulary's size (the biggest language tops
+ *  out in the low thousands), so a custom word with no explicit rank always
+ *  sorts after every real word, in the order it was added. See UserWord.rank. */
+export const CUSTOM_WORD_RANK_BASE = 1_000_000;
 
 function isUserWord(v: unknown): v is UserWord {
   return isRecord(v) && typeof v.id === 'string' && typeof v.word === 'string' && typeof v.translation === 'string';
@@ -75,7 +110,15 @@ function isUserWordArray(v: unknown): v is UserWord[] {
  * read, rather than trusted — a `UserWord` handed to a caller is always
  * complete even if what was actually in storage wasn't.
  */
-function normalizeUserWord(w: UserWord): UserWord {
+/**
+ * `rankFallbackIndex` backfills a rank for a word saved before this field
+ * existed — CUSTOM_WORD_RANK_BASE plus this word's own position among this
+ * language's stored words, so a legacy word still lands after every real
+ * one, in the order it was originally added (the same rule addUserWord
+ * applies going forward), rather than every legacy word colliding on one
+ * fallback value.
+ */
+function normalizeUserWord(w: UserWord, rankFallbackIndex: number): UserWord {
   return {
     ...w,
     pos: w.pos ?? null,
@@ -89,6 +132,8 @@ function normalizeUserWord(w: UserWord): UserWord {
     tags: Array.isArray(w.tags) ? w.tags : [],
     synonyms: Array.isArray(w.synonyms) ? w.synonyms : [],
     antonyms: Array.isArray(w.antonyms) ? w.antonyms : [],
+    createdAt: typeof w.createdAt === 'number' ? w.createdAt : decodeIdTimestamp(w.id),
+    rank: typeof w.rank === 'number' ? w.rank : CUSTOM_WORD_RANK_BASE + rankFallbackIndex,
   };
 }
 
@@ -98,9 +143,20 @@ export function getUserWords(lang: string): UserWord[] {
   return readJson<UserWord[]>(wordsKey(lang), [], isUserWordArray).map(normalizeUserWord);
 }
 
-export function addUserWord(lang: string, w: Omit<UserWord, 'id'>): UserWord {
-  const entry = { ...w, id: newId('w') };
-  writeJson(wordsKey(lang), [...getUserWords(lang), entry]);
+/**
+ * `rank`, when omitted (or explicitly `null`, meaning "let it default"), is
+ * CUSTOM_WORD_RANK_BASE plus how many words this language already has — the
+ * next slot after the lowest-ranked word added so far, so a fresh custom
+ * word starts out less frequent than every real word and every one already
+ * added, without needing to know the real vocabulary's own size. An explicit
+ * number places it anywhere the caller chooses instead (e.g. My Content's
+ * own rank/CEFR picker).
+ */
+export function addUserWord(lang: string, w: Omit<UserWord, 'id' | 'createdAt' | 'rank'> & { rank?: number | null }): UserWord {
+  const existing = getUserWords(lang);
+  const rank = typeof w.rank === 'number' ? w.rank : CUSTOM_WORD_RANK_BASE + existing.length;
+  const entry: UserWord = { ...w, rank, id: newId('w'), createdAt: Date.now() };
+  writeJson(wordsKey(lang), [...existing, entry]);
   return entry;
 }
 
@@ -108,11 +164,10 @@ export function removeUserWord(lang: string, id: string): void {
   writeJson(wordsKey(lang), getUserWords(lang).filter(w => w.id !== id));
 }
 
-/** Adapt a UserWord into the shape every quiz mode already reads. `rank: 0`
- *  puts it at the very front of any "Top N" slice, since a word the learner
- *  typed in themselves is exactly the one they want quizzed on — sizing it
- *  into the pool the same way a rank-9999-and-sinking real word would is not
- *  what "add your own word" means. */
+/** Adapt a UserWord into the shape every quiz mode already reads. `rank`
+ *  places it in a "Top N" pool exactly like a real word — see UserWord.rank
+ *  and addUserWord's own default (lowest among added words, i.e. after
+ *  every real one) unless a rank/CEFR level was explicitly chosen for it. */
 export function toWord(uw: UserWord): Word {
   return {
     word:        uw.word,
@@ -131,7 +186,7 @@ export function toWord(uw: UserWord): Word {
     domains:     uw.domains,
     tags:        uw.tags,
     relations:   (uw.synonyms.length || uw.antonyms.length) ? { synonyms: uw.synonyms, antonyms: uw.antonyms } : undefined,
-    rank:        0,
+    rank:        uw.rank,
   };
 }
 
@@ -318,6 +373,10 @@ export interface WordOverride {
   addedGlosses?:  string[];
   examples?:      string[];
   difficulty?:    number | null;
+  /** See Word.rank in types.ts. Overrides which "Top N" pool position a real
+   *  word takes — absent means "use the real word's own rank," same
+   *  undefined-means-inherit convention as every other field here. */
+  rank?:          number;
   tags?:          string[];
   synonyms?:      string[];
   antonyms?:      string[];
@@ -334,9 +393,25 @@ export interface WordOverride {
    * learner only ever writes an entry for the senses that actually need one.
    */
   meaningDisambiguators?: Record<string, string>;
+  /** When this word's override was last written — stamped by every write
+   *  path below (mergeWordOverride, setWordFields) — lets My Content sort
+   *  "edited" words by newest/oldest. Absent only on an override saved
+   *  before this field existed; normalizeWordOverride below backfills it. */
+  updatedAt?: number;
 }
 
 function wordOverrideKey(lang: string): string { return `${P}wordoverride_${lang.toLowerCase()}`; }
+
+/** Same reasoning as normalizeUserWord: backfills a field added after this
+ *  feature's first version, so every caller sees a complete record. There's
+ *  no id to decode a real timestamp out of here (a word-override record is
+ *  keyed by the word's own text, not an id from newId), so an override
+ *  written before this field existed backfills to 0 — sorts as "oldest,"
+ *  which is honest (its real edit time is simply unknown) rather than a
+ *  fabricated "now" that would drift a little on every read. */
+function normalizeWordOverride(o: WordOverride): WordOverride {
+  return typeof o.updatedAt === 'number' ? o : { ...o, updatedAt: 0 };
+}
 
 function isWordOverrideRecord(v: unknown): v is Record<string, WordOverride> {
   return isRecord(v) && Object.values(v).every(isRecord);
@@ -368,7 +443,10 @@ function migrateLegacyGlossOrders(lang: string): void {
 
 export function getWordOverrides(lang: string): Record<string, WordOverride> {
   migrateLegacyGlossOrders(lang);
-  return readJson<Record<string, WordOverride>>(wordOverrideKey(lang), {}, isWordOverrideRecord);
+  const raw = readJson<Record<string, WordOverride>>(wordOverrideKey(lang), {}, isWordOverrideRecord);
+  const out: Record<string, WordOverride> = {};
+  for (const [word, o] of Object.entries(raw)) out[word] = normalizeWordOverride(o);
+  return out;
 }
 
 export function getWordOverride(lang: string, word: string): WordOverride | null {
@@ -381,7 +459,7 @@ export function getWordOverride(lang: string, word: string): WordOverride | null
 function mergeWordOverride(lang: string, word: string, patch: Partial<WordOverride>): void {
   const overrides = getWordOverrides(lang);
   const current = ownGet(overrides, wordKey(word)) ?? {};
-  writeJson(wordOverrideKey(lang), { ...overrides, [wordKey(word)]: { ...current, ...patch } });
+  writeJson(wordOverrideKey(lang), { ...overrides, [wordKey(word)]: { ...current, ...patch, updatedAt: Date.now() } });
 }
 
 /**
@@ -399,14 +477,15 @@ function mergeWordOverride(lang: string, word: string, patch: Partial<WordOverri
 export function setWordFields(
   lang: string, word: string,
   fields: Pick<WordOverride,
-    'translation' | 'pos' | 'notes' | 'domains' | 'examples' | 'difficulty' | 'tags' | 'synonyms' | 'antonyms' | 'disambiguator'>,
+    'translation' | 'pos' | 'notes' | 'domains' | 'examples' | 'difficulty' | 'rank' | 'tags' | 'synonyms' | 'antonyms' | 'disambiguator'>,
 ): void {
   const current = getWordOverride(lang, word) ?? {};
   const next: WordOverride = { ...current, ...fields };
-  (['translation', 'pos', 'notes', 'domains', 'examples', 'difficulty', 'tags', 'synonyms', 'antonyms', 'disambiguator'] as const)
+  (['translation', 'pos', 'notes', 'domains', 'examples', 'difficulty', 'rank', 'tags', 'synonyms', 'antonyms', 'disambiguator'] as const)
     .forEach(k => {
       if (!(k in fields)) delete next[k];
     });
+  next.updatedAt = Date.now();
   writeJson(wordOverrideKey(lang), { ...getWordOverrides(lang), [wordKey(word)]: next });
 }
 
@@ -501,6 +580,7 @@ export function applyWordOverride(lang: string, w: Word): Word {
     glosses:     o.glossOrder ? applyGlossOrder(visible, o.glossOrder) : visible,
     examples:    o.examples ?? w.examples,
     difficulty:  o.difficulty !== undefined ? o.difficulty : w.difficulty,
+    rank:        o.rank !== undefined ? o.rank : w.rank,
     tags:        o.tags ?? w.tags,
     relations:   (synonyms?.length || antonyms?.length) ? { synonyms, antonyms } : w.relations,
     disambiguator: o.disambiguator ?? w.disambiguator,

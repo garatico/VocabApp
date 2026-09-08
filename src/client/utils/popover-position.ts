@@ -16,20 +16,34 @@
  * Placement is: below the anchor if it fits, above if it does not, and if it
  * fits in neither — a short viewport with the anchor mid-screen — below, with
  * the top pinned into view rather than scrolled off it.
+ *
+ * Horizontally, the same "prefer the side with room" reasoning applies but
+ * used not to: only the vertical placement auto-flipped above/below, while
+ * horizontal only right-aligned when a caller explicitly opted in via
+ * `alignRight` — none did. So an anchor sitting in the right portion of the
+ * screen (e.g. a table's right-hand column) always opened left-aligned first
+ * and only got pulled back on-screen by the clamp below, landing flush
+ * against the edge rather than tucked neatly to the anchor's left. Now the
+ * left-aligned placement is tried first and only abandoned for right-aligned
+ * when it wouldn't fit — same shape as the vertical logic, and callers can
+ * still force one side via `alignRight`.
  */
 
 /** Distance kept between the popover and both the anchor and the screen edge. */
 const GAP = 4;
 
 export interface PopoverPlacement {
-  /** Align the popover's right edge with the anchor's, rather than its left. */
+  /** Force the popover's right edge to align with the anchor's, or its left
+   *  edge, rather than letting the horizontal placement auto-flip based on
+   *  available room (see this file's own header comment). Leave unset for
+   *  the common case. */
   alignRight?: boolean;
 }
 
 export function positionPopover(
   popover: HTMLElement,
   anchor: HTMLElement,
-  { alignRight = false }: PopoverPlacement = {},
+  { alignRight }: PopoverPlacement = {},
 ): void {
   // Measured, not assumed. The caller has appended it already.
   const box     = popover.getBoundingClientRect();
@@ -40,7 +54,13 @@ export function positionPopover(
   const vh      = document.documentElement.clientHeight;
 
   // ── Horizontal ──
-  let left = alignRight ? rect.right - box.width : rect.left;
+  // Same "prefer the side with room" reasoning as the vertical placement
+  // below: try left-aligned (the anchor's own left edge) first, and only
+  // fall back to right-aligned when that wouldn't fit — unless a caller
+  // forces one side explicitly via `alignRight`.
+  const fitsLeftAligned = rect.left + box.width + GAP <= vw;
+  const useRightAlign = alignRight ?? !fitsLeftAligned;
+  let left = useRightAlign ? rect.right - box.width : rect.left;
   // Right edge first, then left: on a viewport narrower than the popover the
   // left clamp has to win, or it is pushed off the near side instead of the far
   // one and the first thing you would read is missing.

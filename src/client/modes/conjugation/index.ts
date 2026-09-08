@@ -106,6 +106,26 @@ export function hiddenPronounSlots(tenseKey: string): Set<number> {
   return NO_YO_TENSES.has(tenseKey) ? new Set([0]) : new Set();
 }
 
+/**
+ * Pronoun slots a *specific verb* has no data for in a tense, on top of
+ * whatever hiddenPronounSlots already excludes for every verb sharing that
+ * tense (imperative's "yo"). A verb sourced without, say, a vosotros form
+ * used to leave that slot enabled and counted anyway — its expected answer
+ * was an empty string nothing typed could ever match, so a learner could
+ * fill in every real form and still never reach 100%. Shared by buildCard
+ * (which folds this into the same conj-row-tense-hidden/conj-row-no-form
+ * treatment as a tense-wide gap) and quizFormsTotal (which needs the count
+ * for pages not currently rendered).
+ */
+export function missingDataSlots(verb: Word, tenseKey: string, pronouns: readonly string[]): ReadonlySet<number> {
+  if (isSingleForm(tenseKey)) return EMPTY_SLOTS;
+  const answers = (verb.linguistic?.conjugations as Record<string, string[]> | null)?.[tenseKey] ?? null;
+  if (!Array.isArray(answers)) return EMPTY_SLOTS;
+  const missing = new Set<number>();
+  for (let i = 0; i < pronouns.length; i++) if (!answers[i]) missing.add(i);
+  return missing;
+}
+
 export function isSingleForm(key: string): boolean {
   return SINGLE_FORM_TENSES.has(key);
 }
@@ -592,24 +612,38 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   /**
    * Exact whole-quiz forms total, without rendering every page.
    *
-   * Forms-per-verb is constant within one language — buildCards' own
+   * Forms-per-verb used to be constant within one language — buildCards' own
    * tensesForVerb filter depends only on the verb's language, never on its
-   * data — so this is one pass per distinct language among `verbs`, not per
-   * verb-tense pair.
+   * data — so this cached one count per distinct language. That broke once a
+   * specific verb could have its own missing slots (see missingDataSlots):
+   * the per-language base count is still cached (formsPerTenseCard itself
+   * still only depends on tense/language/activeIdx), but each verb now also
+   * subtracts however many of its own slots are missing data — a per-verb
+   * pass, not per-language, though still O(verbs × tenses) arithmetic with
+   * no DOM involved.
    */
   function quizFormsTotal(tenses: string[], activeIdx: ReadonlySet<number>): number {
-    const perLang = new Map<string, number>();
+    const baseCache = new Map<string, number>(); // `${verbLang}:${tenseKey}` → formsPerTenseCard
     let total = 0;
     for (const verb of verbs) {
       const verbLang = verb.language ?? lang;
-      let forms = perLang.get(verbLang);
-      if (forms === undefined) {
-        const verbTenseDefs = TENSE_DEFS[verbLang] ?? TENSE_DEFS.spanish;
-        const tensesForVerb = tenses.filter(t => verbTenseDefs.some(d => d.key === t));
-        forms = tensesForVerb.reduce((sum, t) => sum + formsPerTenseCard(t, verbLang, activeIdx), 0);
-        perLang.set(verbLang, forms);
+      const verbTenseDefs = TENSE_DEFS[verbLang] ?? TENSE_DEFS.spanish;
+      const pronouns = PRONOUNS[verbLang] ?? PRONOUNS.spanish;
+      const tensesForVerb = tenses.filter(t => verbTenseDefs.some(d => d.key === t));
+      for (const t of tensesForVerb) {
+        const cacheKey = `${verbLang}:${t}`;
+        let base = baseCache.get(cacheKey);
+        if (base === undefined) {
+          base = formsPerTenseCard(t, verbLang, activeIdx);
+          baseCache.set(cacheKey, base);
+        }
+        const missing = missingDataSlots(verb, t, pronouns);
+        if (missing.size === 0) { total += base; continue; }
+        const tenseHidden = hiddenPronounSlots(t);
+        let missingCounted = 0;
+        missing.forEach(i => { if (activeIdx.has(i) && !tenseHidden.has(i)) missingCounted++; });
+        total += Math.max(0, base - missingCounted);
       }
-      total += forms;
     }
     return total;
   }
@@ -1820,10 +1854,18 @@ function buildCard({
     }
   }
 
+  /** hiddenPronounSlots(tenseKey) plus this verb's own missingDataSlots —
+   *  see that function's doc comment for why the two are folded together. */
+  function effectiveHiddenSlots(tenseKey: string): Set<number> {
+    const dataMissing = missingDataSlots(verb, tenseKey, pronouns);
+    if (dataMissing.size === 0) return hiddenPronounSlots(tenseKey);
+    return new Set([...hiddenPronounSlots(tenseKey), ...dataMissing]);
+  }
+
   function setSingleMode(single: boolean): void {
     // conj-row-tense-hidden, not conj-row-hidden — see VISIBLE_ROW. The pronoun
     // toggles own the other class and would undo this on their next pass.
-    const hiddenSlots = single ? EMPTY_SLOTS : hiddenPronounSlots(getTenseKey());
+    const hiddenSlots = single ? EMPTY_SLOTS : effectiveHiddenSlots(getTenseKey());
     pronounRows.forEach((row, i) => {
       row.classList.toggle('conj-row-tense-hidden', single || hiddenSlots.has(i));
       // Distinguishes "imperative has no yo" (row still takes its normal
@@ -1843,7 +1885,7 @@ function buildCard({
 
   function updateInputs(): void {
     const single = isSingleForm(getTenseKey());
-    const hiddenSlots = single ? EMPTY_SLOTS : hiddenPronounSlots(getTenseKey());
+    const hiddenSlots = single ? EMPTY_SLOTS : effectiveHiddenSlots(getTenseKey());
 
     inputs.forEach((inp, i) => {
       inp.value    = '';

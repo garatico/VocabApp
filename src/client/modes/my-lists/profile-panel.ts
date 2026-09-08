@@ -126,6 +126,28 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
     ctx.renderPanel();
   }
 
+  editor.append(...buildProfileEditorGroups(bundle, mode, ctx.lang, name, persist));
+  header.appendChild(editor);
+  ctx.panel.appendChild(header);
+}
+
+/**
+ * Every field control a profile bundle can have, grouped into the same
+ * three labelled cards (Word Pool / Filters / Quiz Behavior, plus
+ * Conjugation's own group where relevant) `renderProfilePanel` above always
+ * used to build inline. Pulled out so a second caller — preset-picker.ts's
+ * inline "+" editor — can render the identical controls wired to a
+ * different `onChange`: this module's own persist() (write-through to the
+ * saved preset) for the full My Lists editor, or an apply-live-without-
+ * saving callback for the lightweight picker's session-only tweaks. Neither
+ * caller is assumed here; `onChange` is the only way anything gets written.
+ */
+export function buildProfileEditorGroups(
+  bundle: PresetBundle, mode: FilterScope, ctxLang: string, name: string,
+  onChange: (next: PresetBundle) => void,
+): HTMLElement[] {
+  const persist = onChange;
+
   /**
    * The "Apply this filter" checkbox shared by the Part of Speech and
    * Domains sections — active/selected are independent, the same way the
@@ -227,7 +249,7 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
   LANGUAGES.forEach(({ name: langName, label }) => {
     const opt = document.createElement('option');
     opt.value = langName; opt.textContent = label;
-    opt.selected = (bundle.language ?? ctx.lang) === langName;
+    opt.selected = (bundle.language ?? ctxLang) === langName;
     langSelectEl.appendChild(opt);
   });
   langSelectEl.addEventListener('change', () => persist({ ...bundle, language: langSelectEl.value }));
@@ -237,7 +259,7 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
   // ── Extra languages ("+ Languages" merge, Table/Conjugation only) ──────────
   const extraRow = document.createElement('div');
   extraRow.className = 'ml-profile-editor-chips';
-  const primaryLang = bundle.language ?? ctx.lang;
+  const primaryLang = bundle.language ?? ctxLang;
   LANGUAGES.filter(l => l.name !== primaryLang).forEach(({ name: langName, label }) => {
     const chipLabel = document.createElement('label');
     chipLabel.className = 'ml-profile-editor-chip';
@@ -605,12 +627,10 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
     ...(dirSection   ? [dirSection]   : []),
   ];
 
-  editor.append(
+  return [
     group('wordpool', 'Word Pool', langSection, extraSection, wordsSection),
     group('filters', 'Filters', classSection, domainSection, listSection),
     ...(conjugationSection ? [conjugationSection] : []),
     ...(behaviorSections.length > 0 ? [group('quizbehavior', 'Quiz Behavior', ...behaviorSections)] : []),
-  );
-  header.appendChild(editor);
-  ctx.panel.appendChild(header);
+  ];
 }

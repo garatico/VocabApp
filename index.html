@@ -810,7 +810,6 @@
         <div class="settings-layout">
           <nav class="settings-nav" aria-label="Settings sections">
             <a class="settings-nav-link" href="#settings-sec-table"><span class="settings-nav-icon" aria-hidden="true">📋</span><span data-i18n="settings.nav.table">Table Quiz</span></a>
-            <a class="settings-nav-link" href="#settings-sec-multilang" data-kid-hide="true"><span class="settings-nav-icon" aria-hidden="true">🌐</span><span data-i18n="settings.nav.multilang">Multi-Language Table</span></a>
             <a class="settings-nav-link" href="#settings-sec-picture" data-advanced="true"><span class="settings-nav-icon" aria-hidden="true">🖼</span><span data-i18n="nav.pictureQuiz">Picture Quiz</span></a>
             <a class="settings-nav-link" href="#settings-sec-conj" data-advanced="true"><span class="settings-nav-icon" aria-hidden="true">🔀</span><span data-i18n="settings.nav.conj">Conjugation Practice</span></a>
             <a class="settings-nav-link" href="#settings-sec-streak"><span class="settings-nav-icon" aria-hidden="true">🔥</span><span data-i18n="settings.nav.streak">Streak &amp; Daily Goal</span></a>
@@ -819,6 +818,7 @@
             <a class="settings-nav-link" href="#settings-sec-filters"><span class="settings-nav-icon" aria-hidden="true">🔎</span><span data-i18n="filter.filtersTitle">Filters</span></a>
             <a class="settings-nav-link" href="#settings-sec-chinese"><span class="settings-nav-icon" aria-hidden="true">文</span><span data-i18n="settings.nav.chinese">Chinese</span></a>
             <a class="settings-nav-link" href="#settings-sec-appearance"><span class="settings-nav-icon" aria-hidden="true">🎨</span><span data-i18n="settings.nav.appearance">Appearance</span></a>
+            <a class="settings-nav-link" href="#settings-sec-history"><span class="settings-nav-icon" aria-hidden="true">🕘</span><span data-i18n="settings.nav.history">Session History</span></a>
             <a class="settings-nav-link" href="#settings-sec-general"><span class="settings-nav-icon" aria-hidden="true">⚙</span><span data-i18n="settings.nav.general">General</span></a>
           </nav>
         <div class="settings-wrap">
@@ -1077,39 +1077,6 @@
             </div>
 
             </div>
-            </div>
-
-            </div>
-          </div>
-
-          <div class="settings-section settings-section--multilang" id="settings-sec-multilang" data-kid-hide="true">
-            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyMultilang" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyMultilang">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-section-icon" aria-hidden="true">🌐</span>
-              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.multilang">Multi-Language Table</span>
-            </button>
-            <div id="settingsBodyMultilang" class="filter-body settings-section-body">
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.multilang.indicator">Language indicator</span>
-                <span class="settings-desc" data-i18n="settings.multilang.indicatorDesc">When 2+ languages are merged into one table (the "+ Languages" picker), how each word's language is shown — Off leaves cells plain, Color tints the cell, Flag shows a faint flag behind the word</span>
-              </div>
-              <div class="sort-order-toggle" id="settingLangIndicator">
-                <button type="button" class="sort-order-btn" data-indicator="off" data-i18n="common.off">Off</button>
-                <button type="button" class="sort-order-btn active" data-indicator="color" data-i18n="settings.multilang.color">Color</button>
-                <button type="button" class="sort-order-btn" data-indicator="flag" data-i18n="settings.multilang.flag">Flag</button>
-              </div>
-            </div>
-
-            <div class="settings-subsection" data-advanced="true">
-              <div class="settings-label">
-                <span data-i18n="settings.multilang.appearance">Language appearance</span>
-                <span class="settings-desc" data-i18n="settings.multilang.appearanceDesc">Override each language's flag (Flag mode) and cell color (Color mode) above</span>
-              </div>
-              <div class="lang-appearance-list" id="settingLangColors">
-                <!-- One row per language, built from LANGUAGES — see settings.ts -->
-              </div>
             </div>
 
             </div>
@@ -1563,6 +1530,28 @@
               </div>
             </div>
 
+            <div class="settings-row" data-kid-hide="true">
+              <div class="settings-label">
+                <span data-i18n="settings.appearance.langIndicator">Language indicator</span>
+                <span class="settings-desc" data-i18n="settings.appearance.langIndicatorDesc">When 2+ languages are merged into one table (the "+ Languages" picker), how each word's language is shown — Off leaves cells plain, Color tints the cell, Flag shows a faint flag behind the word</span>
+              </div>
+              <div class="sort-order-toggle" id="settingLangIndicator">
+                <button type="button" class="sort-order-btn" data-indicator="off" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-indicator="color" data-i18n="settings.appearance.langColor">Color</button>
+                <button type="button" class="sort-order-btn" data-indicator="flag" data-i18n="settings.appearance.langFlag">Flag</button>
+              </div>
+            </div>
+
+            <div class="settings-subsection" data-advanced="true" data-kid-hide="true">
+              <div class="settings-label">
+                <span data-i18n="settings.appearance.langAppearance">Language appearance</span>
+                <span class="settings-desc" data-i18n="settings.appearance.langAppearanceDesc">Override each language's flag (Flag mode) and cell color (Color mode) above</span>
+              </div>
+              <div class="lang-appearance-list" id="settingLangColors">
+                <!-- One row per language, built from LANGUAGES — see settings.ts -->
+              </div>
+            </div>
+
             </div>
           </div>
 
@@ -1577,7 +1566,7 @@
             <div class="settings-row settings-row--stack">
               <div class="settings-label">
                 <span data-i18n="settings.general.kidModeSpecifics">Kid-Friendly Mode — what it changes</span>
-                <span class="settings-desc" data-i18n="settings.general.kidModeSpecificsDesc">The toggle for this lives in the toolbar to the right, always visible regardless of Advanced mode. Turning it on: switches Advanced mode off and the swear-word filter on — both stay changeable afterward. Hides the My Content and My Lists tabs, the Testing Profiles button, the Part of Speech/Lists/Domains filter boxes, the "+ Languages" picker, the Skip Known size mode, and the Multi-Language Table settings section — for as long as this stays on. The Part of Speech/Lists/Domains filters and "+ Languages" also stop applying whatever they were previously set to, not just disappear from view — so does Skip Known, which relies on the Lists filter. And it sets each mode to its simplest option: Table's Direction (Word→Meaning) and Quiz Style (Standard), Picture Quiz (Click the Picture), Conjugation's View (Grid) and Regularity (all), Trivia's Difficulty/Reading Difficulty (Easy) and Reading Length (Short), and Guess the Blank's Difficulty (Easy) — each still changeable by turning this off, same as Advanced mode and the swear filter. Meant for a kid, or anyone trying the app for the first time.</span>
+                <span class="settings-desc" data-i18n="settings.general.kidModeSpecificsDesc">The toggle for this lives in the toolbar to the right, always visible regardless of Advanced mode. Turning it on: switches Advanced mode off and the swear-word filter on — both stay changeable afterward. Hides the My Content and My Lists tabs, the Testing Profiles button, the Part of Speech/Lists/Domains filter boxes, the "+ Languages" picker, the Skip Known size mode, and the Language indicator/Language appearance rows in Appearance — for as long as this stays on. The Part of Speech/Lists/Domains filters and "+ Languages" also stop applying whatever they were previously set to, not just disappear from view — so does Skip Known, which relies on the Lists filter. And it sets each mode to its simplest option: Table's Direction (Word→Meaning) and Quiz Style (Standard), Picture Quiz (Click the Picture), Conjugation's View (Grid) and Regularity (all), Trivia's Difficulty/Reading Difficulty (Easy) and Reading Length (Short), and Guess the Blank's Difficulty (Easy) — each still changeable by turning this off, same as Advanced mode and the swear filter. Meant for a kid, or anyone trying the app for the first time.</span>
               </div>
             </div>
 
@@ -1589,10 +1578,43 @@
               <button type="button" id="settingShowOnboarding" class="settings-action-btn" data-i18n="settings.general.showAgain">Show again</button>
             </div>
 
+            <div class="settings-row" data-advanced="true">
+              <div class="settings-label">
+                <span data-i18n="settings.general.inlineProfileEditing">Inline profile editing</span>
+                <span class="settings-desc" data-i18n="settings.general.inlineProfileEditingDesc">Adds a + next to each Testing Profile in the Profiles popover (Table/Picture/Conjugation), letting you tweak its parameters right there and try them out immediately — without saving over the profile unless you choose "Save as new profile…".</span>
+              </div>
+              <div class="sort-order-toggle" id="settingInlineProfileEditing">
+                <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row" data-advanced="true">
+              <div class="settings-label">
+                <span data-i18n="settings.general.confirmRemoveWordOverride">Confirm before removing a word edit</span>
+                <span class="settings-desc" data-i18n="settings.general.confirmRemoveWordOverrideDesc">My Content's "Edit an Existing Word" list asks before its Remove button resets every override on a word. Off skips the prompt.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingConfirmRemoveWordOverride">
+                <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            </div>
+          </div>
+
+          <div class="settings-section settings-section--history" id="settings-sec-history">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyHistory" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyHistory">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-section-icon" aria-hidden="true">🕘</span>
+              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.history">Session History</span>
+            </button>
+            <div id="settingsBodyHistory" class="filter-body settings-section-body">
+
             <div class="settings-row">
               <div class="settings-label">
-                <span data-i18n="settings.general.sessionHistory">Session history</span>
-                <span class="settings-desc" data-i18n="settings.general.sessionHistoryDesc">Off stops new quiz sessions from being logged to the History tab. Sessions already there are untouched, and this doesn't affect mastery, lists, or the words you keep missing.</span>
+                <span data-i18n="settings.history.sessionHistory">Session history</span>
+                <span class="settings-desc" data-i18n="settings.history.sessionHistoryDesc">Off stops new quiz sessions from being logged to the History tab. Sessions already there are untouched, and this doesn't affect mastery, lists, or the words you keep missing.</span>
               </div>
               <div class="sort-order-toggle" id="settingHistory">
                 <button type="button" class="sort-order-btn active" data-history="true" data-i18n="common.on">On</button>
@@ -1602,10 +1624,18 @@
 
             <div class="settings-row" data-advanced="true">
               <div class="settings-label">
-                <span data-i18n="settings.general.clearHistory">Clear history</span>
-                <span class="settings-desc" data-i18n="settings.general.clearHistoryDesc">Permanently deletes every saved quiz session and "words I keep missing" tally, in every language. Mastery and your lists are not affected.</span>
+                <span data-i18n="settings.history.maxSessions">Sessions to keep</span>
+                <span class="settings-desc" data-i18n="settings.history.maxSessionsDesc">How many of your most recent quiz sessions, per language, stay in the History tab's Recent Sessions list before the oldest ones drop off.</span>
               </div>
-              <button type="button" id="settingClearHistory" class="settings-action-btn settings-action-btn--danger" data-i18n="settings.general.clearHistoryBtn">Clear History</button>
+              <input type="number" id="settingMaxSessionsKept" class="ml-profile-editor-number" min="1" max="1000" placeholder="100">
+            </div>
+
+            <div class="settings-row" data-advanced="true">
+              <div class="settings-label">
+                <span data-i18n="settings.history.clearHistory">Clear history</span>
+                <span class="settings-desc" data-i18n="settings.history.clearHistoryDesc">Permanently deletes every saved quiz session and "words I keep missing" tally, in every language. Mastery and your lists are not affected.</span>
+              </div>
+              <button type="button" id="settingClearHistory" class="settings-action-btn settings-action-btn--danger" data-i18n="settings.history.clearHistoryBtn">Clear History</button>
             </div>
 
             </div>

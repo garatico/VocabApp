@@ -430,35 +430,183 @@
   padding: 0.28rem 0.6rem;
 }
 
-/* ── List of existing entries ── */
+/* ── Sort/filter toolbar above the Add-a-word / Edit-a-word lists ──
+   Sort, every Part-of-speech chip and every Level chip all sit as direct
+   children of one flex-wrap row (see buildMCListToolbar) rather than three
+   stacked sub-rows, so the browser can wrap at any chip boundary and keep
+   the line as full as it fits instead of bouncing a whole label+chips
+   group down together. The chips reuse .pos-chip (class-filter.css) — the
+   same pill badges My Lists' own Part of Speech/Level filters use — rather
+   than a plain dropdown, so filtering reads and behaves the same way in
+   both places; sizing matches .ml-pos-row/.ml-band-row's own tight chips
+   (my-lists.css) for the same reason those exist: fitting this many pills
+   on a line at all needs it. */
+.mc-list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.25rem;
+  margin-bottom: 0.5rem;
+}
+.mc-list-toolbar-select {
+  min-width: 7.5rem;
+  margin-right: 0.4rem;
+}
+.mc-toolbar-group-label {
+  margin-left: 0.15rem;
+}
+.mc-list-toolbar .pos-chip {
+  flex-shrink: 0;
+  font-size: 0.71rem;
+  padding: 0.15rem 0.35rem;
+}
+
+/* ── Frequency rank field (Add a New Word / Edit an Existing Word) ──
+   A number input plus a CEFR "quick pick" — picking a level just seeds the
+   number (see buildFrequencyControl), it isn't a persisted mode of its own. */
+.mc-freq-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.mc-freq-number {
+  width: 6rem;
+  flex: none;
+}
+.mc-freq-cefr {
+  flex: none;
+}
+.mc-freq-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  min-width: 2rem;
+}
+
+/* ── List of existing entries ──
+   Styled to match .ml-word-item (my-lists.css) — a dense grid row with a
+   border-bottom divider, rather than a bordered card per row — so My
+   Content's word lists read like the same table List mode uses instead of a
+   visually distinct widget. */
 .mc-list {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
 }
 .mc-empty {
   margin: 0;
+  padding: 0.5rem 0;
   font-size: 0.82rem;
   color: var(--text-muted);
   font-style: italic;
 }
+/* Base shape stays flex — Trivia/Guess-the-Blank/Picture rows below have
+   varying child counts (a thumbnail before the text, in Pictures' case)
+   that a fixed column template can't safely accommodate. Only the divider
+   styling is shared; the grid layout below is opt-in via .mc-row--wordlist. */
 .mc-row {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  padding: 0.5rem 0.65rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
+  gap: 0.6rem;
+  padding: 0.5rem 0.15rem;
+  border-bottom: 1px solid var(--border);
+}
+.mc-row-wrap:last-child .mc-row:not(.mc-row--expanded) {
+  border-bottom: none;
+}
+/* Add a New Word / Edit an Existing Word rows only — badge, word/meta, date
+   and actions each in their own named column so they line up row to row,
+   the same reasoning as .ml-word-item in my-lists.css. */
+.mc-row--wordlist {
+  display: grid;
+  grid-template-columns: [badge] auto [main] 1fr [date] auto [actions] auto;
+  column-gap: 0.6rem;
+}
+.mc-row-badge {
+  grid-column: badge;
+}
+.mc-row-actions {
+  grid-column: actions;
+}
+/* Edit an Existing Word's own rows: flag / word / changes-summary / date /
+   actions, all on one thinner row instead of a title stacked over a second
+   line — a faint vertical rule between each populated column reads as a
+   table, same idea as .ml-word-text/.ml-word-pos/.ml-word-rank's own
+   border-right in my-lists.css. */
+.mc-row--overrides {
+  display: grid;
+  grid-template-columns:
+    [badge] auto [word] minmax(60px, 120px) [meaning] minmax(70px, 140px)
+    [pos] auto [band] auto [rank] auto
+    /* minmax(0, 1fr), not a bare 1fr: a grid track's automatic minimum size
+       is its content's own min-content width, which for nowrap ellipsis
+       text (.mc-row-changes) is effectively "however long the full summary
+       text is" — the same overflow-hidden/ellipsis CSS that's supposed to
+       truncate it never gets the chance to, since the track just grows to
+       fit instead. Left as a bare 1fr, a long override summary pushed date/
+       actions out past the row's own width instead of the text itself
+       eliding — the actual cause of the date column being unreadable. */
+    [changes] minmax(0, 1fr) [date] auto [actions] auto;
+  column-gap: 0.6rem;
+  padding: 0.3rem 0.15rem;
+}
+/* Effective Part of Speech / CEFR Level / Frequency Rank for this row's word
+   — the override's own value if it set one, else the real word's (see
+   buildWordOverrideRow's effPos/effBand/effRank) — reusing my-lists.css's
+   own .ml-word-pos/.ml-word-band/.ml-word-rank pill styling (same
+   [data-pos]/[data-band] hue coding as everywhere else in the app) rather
+   than a third copy of that color system just for this row. Each hides
+   itself when there's nothing to show, same as .ml-word-rank already does.
+   The extra specificity on grid-column below isn't decorative: .ml-word-pos/
+   .ml-word-band/.ml-word-rank each set their own grid-column against
+   my-lists.css's own named grid lines (band lands in *its* "rank" column,
+   there being no rank column on a Smart List row) — same names this row's
+   grid happens to reuse, so band's placement would otherwise depend on
+   which stylesheet loads second rather than picking the column meant here. */
+.mc-row-pos,
+.mc-row-band,
+.mc-row-rank {
+  flex-shrink: 0;
+}
+.mc-row--overrides .mc-row-pos  { grid-column: pos;  }
+.mc-row--overrides .mc-row-band { grid-column: band; }
+.mc-row--overrides .mc-row-rank { grid-column: rank; }
+.mc-row-word,
+.mc-row-meaning,
+.mc-row-changes {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-right: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  padding-right: 0.6rem;
+}
+.mc-row-word {
+  grid-column: word;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+/* The word's current meaning/translation (override's own if it set one,
+   else the real word's — see buildWordOverrideRow's effMeaning) — plain
+   text, not a pill, since unlike pos/band/rank there's no fixed small
+   vocabulary to color-code here. */
+.mc-row-meaning {
+  grid-column: meaning;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+.mc-row-changes {
+  grid-column: changes;
+  font-size: 0.78rem;
+  color: var(--text-muted);
 }
 /* Overrides-list rows (Pictures, word edits) that reopen their editor on
    click — Remove stops propagation so it doesn't also trigger this. */
 .mc-row--clickable {
   cursor: pointer;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
+  transition: background var(--transition-fast);
 }
 .mc-row--clickable:hover {
-  border-color: var(--accent);
   background: var(--surface2);
 }
 /* Word rows (Add a New Word / Edit an Existing Word) that expand their
@@ -466,12 +614,11 @@
    Remove strip, unchanged and shared with every other .mc-row in this file)
    and, only while expanded, a sibling .mc-row-detail underneath it. Grouped
    in its own wrapper rather than nesting the detail inside .mc-row itself so
-   .mc-row's own flex-row layout (title/meta beside Remove) never has to
+   .mc-row's own grid layout (badge/word/date beside Remove) never has to
    change for the sake of this one caller. */
 .mc-row-wrap .mc-row--expanded {
-  border-color: var(--accent);
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
+  background: var(--surface2);
+  border-bottom-color: transparent;
 }
 /* Same body area a word's inline editor renders into (renderWordEditorBody)
    as My Lists' own .ml-word-detail — a sibling of the row itself, directly
@@ -479,36 +626,73 @@
 .mc-row-detail {
   padding: 0.75rem 0.85rem 0.9rem;
   border: 1px solid var(--accent);
-  border-top: none;
-  border-bottom-left-radius: var(--radius-sm);
-  border-bottom-right-radius: var(--radius-sm);
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.4rem;
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
 }
+/* Added/last-edited date — quiet, right-aligned before the actions column;
+   an em dash for a pre-existing entry with no recoverable timestamp (see
+   formatMCDate in my-content-mode.ts) rather than nothing rendering in its
+   place. */
+.mc-row-date {
+  grid-column: date;
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
 /* Once a list runs past one page, it scrolls in place rather than growing
-   the whole tab — see MC_LIST_PAGE_SIZE / buildListPager. */
+   the whole tab — see MC_LIST_PAGE_SIZE / buildListPager. A persistent,
+   always-visible scrollbar (rather than each platform's own default —
+   Windows' overlay scrollbar only appears on hover, and stays thin enough
+   that its thumb barely conveys how much is left below the fold) so a
+   learner can tell at a glance, without first hovering to find out, that
+   this box scrolls at all and roughly how far through it they are. */
 .mc-scroll-list {
   max-height: 480px;
   overflow-y: auto;
   padding-right: 0.2rem;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) var(--surface2);
 }
+.mc-scroll-list::-webkit-scrollbar {
+  width: 10px;
+}
+.mc-scroll-list::-webkit-scrollbar-track {
+  background: var(--surface2);
+  border-radius: 999px;
+}
+.mc-scroll-list::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 2px solid var(--surface2);
+}
+.mc-scroll-list::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+/* .table-pager/.pager-btn/.pager-status (table.css) and .pager-select
+   (controls-bar.css) do the actual pager styling — this just centers the
+   page-size select next to that nav group, the one piece Table mode's own
+   pager doesn't have (its page size comes from the WORDS control bar). */
 .mc-list-pager {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
   margin-top: 0.5rem;
 }
-.mc-list-pager-status {
-  font-size: 0.78rem;
-  color: var(--text-muted);
+.mc-list-pager-size {
+  min-width: 8rem;
 }
 .mc-row-main {
+  grid-column: main;
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  flex: 1;
   min-width: 0;
 }
 .mc-row-title {
@@ -552,19 +736,57 @@
   flex-direction: column;
   gap: 0.6rem;
 }
+/* `display: flex` above and the browser's own `[hidden] { display: none }`
+   are equal specificity, so without this the later (author) rule would win
+   and a hidden .mc-word-panel — Edit an Existing Word hides its search box
+   once a row is open, see buildEditWordSubsection — would keep rendering
+   anyway. Same fix as .mc-field[hidden] below for the same reason. */
+.mc-word-panel[hidden] {
+  display: none;
+}
+/* Same label styling and select sizing as the Sort/Part of speech/Level
+   toolbar above it (.ml-band-label, .mc-list-toolbar-select) — two controls
+   that size and align differently right next to each other reads as
+   unrelated, even though both are "choose from a fixed list" selects. */
 .mc-word-lang-row {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-}
-.mc-word-lang-row .mc-field-label {
-  flex: 0 0 auto;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-muted);
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
 }
 .mc-word-lang-select {
+  min-width: 7.5rem;
   max-width: 200px;
+}
+
+/* Edit an Existing Word: the language picker (.mc-word-lang-row) and Sort
+   (.mc-sort-control) next to it, on one row — both are single compact
+   controls (unlike Part of Speech/Level/Domains below, each of which is its
+   own full-width wrapping chip row), so they naturally sit side by side
+   without needing either one to flex or shrink. */
+.mc-edit-top-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 1rem;
+}
+.mc-edit-top-row .mc-word-lang-row {
+  margin-bottom: 0;
+}
+.mc-sort-control {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+/* Part of Speech/Level and Domains each get their own full-width line below
+   the language+Sort row above — .mc-list-toolbar is already a wrapping flex
+   row in its own right (shared with Add a New Word's own toolbar), this
+   just adds the vertical spacing between one such line and the next. */
+.mc-edit-filter-row {
+  margin-top: 0.5rem;
+}
+.mc-edit-filter-row:empty {
+  margin-top: 0;
 }
 
 /* Search box + clear (✕) button, so a query can be dismissed in one click
@@ -803,6 +1025,14 @@
   flex-direction: column;
   gap: 0.35rem;
 }
+/* Explains what the per-gloss checkbox actually does (setGlossHidden) — the
+   checkbox itself only ever carried an aria-label, nothing visible. */
+.mc-gloss-list-hint {
+  margin: -0.1rem 0 0.4rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
 .mc-gloss-item {
   display: flex;
   align-items: center;
@@ -821,6 +1051,21 @@
   font-weight: 600;
   color: var(--text-muted);
   text-align: right;
+}
+/* Where a reordered sense originally sat (see my-content-mode.ts's
+   originalIndex) — a small quiet tag, only shown once a sense has actually
+   moved, so it reads as "here's where this used to be" rather than
+   duplicating the rank badge on every row. */
+.mc-gloss-original {
+  flex-shrink: 0;
+  font-size: 0.66rem;
+  font-weight: 600;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: var(--surface2);
+  white-space: nowrap;
 }
 /* Unchecking hides the gloss from every quiz mode (see setGlossHidden) —
    struck through and dimmed here so a hidden gloss still reads as present,
