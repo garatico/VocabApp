@@ -24,6 +24,7 @@
     "typecheck:e2e": "tsc --noEmit -p config/tsconfig.e2e.json",
     "validate": "node scripts/validate.js",
     "export:vocab": "tsx scripts/export-static-vocab.ts",
+    "data:sync": "tsx scripts/sync-data.ts",
     "native:check": "tsx scripts/build-native.ts check",
     "build:web": "tsx scripts/build-native.ts web",
     "build:windows": "tsx scripts/build-native.ts windows",
