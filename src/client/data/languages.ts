@@ -124,6 +124,9 @@ const FLAG_OPTIONS: Record<string, { country: string; label: string }[]> = {
     { country: 'hk', label: 'Hong Kong' },
     { country: 'mo', label: 'Macau' },
   ],
+  japanese: [
+    { country: 'jp', label: 'Japan' },
+  ],
 };
 
 export const LANGUAGES: LanguageInfo[] = [
@@ -134,6 +137,7 @@ export const LANGUAGES: LanguageInfo[] = [
   { name: 'german',     label: 'German',     iso: 'de', hasConjugations: true,  capitalisesNouns: true,  romanizedScript: false, colorVar: '--lang-german-bg',     flagOptions: FLAG_OPTIONS['german'],     flagCountry: FLAG_OPTIONS['german'][0].country },
   { name: 'dutch',      label: 'Dutch',      iso: 'nl', hasConjugations: true,  capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-dutch-bg',      flagOptions: FLAG_OPTIONS['dutch'],      flagCountry: FLAG_OPTIONS['dutch'][0].country },
   { name: 'chinese',    label: 'Chinese',    iso: 'zh', hasConjugations: false, capitalisesNouns: false, romanizedScript: true,  colorVar: '--lang-chinese-bg',    flagOptions: FLAG_OPTIONS['chinese'],    flagCountry: FLAG_OPTIONS['chinese'][0].country },
+  { name: 'japanese',   label: 'Japanese',   iso: 'ja', hasConjugations: false, capitalisesNouns: false, romanizedScript: true,  colorVar: '--lang-japanese-bg',   flagOptions: FLAG_OPTIONS['japanese'],   flagCountry: FLAG_OPTIONS['japanese'][0].country },
 ];
 
 /** Language names in display order — the order of the dropdown. */

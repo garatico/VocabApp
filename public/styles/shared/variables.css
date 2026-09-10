@@ -108,6 +108,7 @@
   --lang-german-bg:     #9de8dc;
   --lang-dutch-bg:      #f5c088;
   --lang-chinese-bg:    #f0a8d0;
+  --lang-japanese-bg:   #f0a3a3;
 }
 
 /* ── Dark mode ──────────────────────────────────────────────── */
@@ -168,4 +169,5 @@ html.dark {
   --lang-german-bg:     #1a5548;
   --lang-dutch-bg:      #6b4415;
   --lang-chinese-bg:    #5c1f45;
+  --lang-japanese-bg:   #6b2020;
 }

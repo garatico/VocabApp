@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   capitalize, displayWord, extraMatchedGloss, chineseWordText, slotText, slotMatches,
-  primaryGlossForHint, DEFAULT_CHINESE_DISPLAY, type ChineseDisplay,
+  primaryGlossForHint, isFunctionWord, DEFAULT_CHINESE_DISPLAY, type ChineseDisplay,
 } from '../../src/client/utils/utils.js';
 import type { Word } from '../../src/client/types.js';
 
@@ -149,6 +149,68 @@ describe('slotText', () => {
   it('respects glossCount for the english slot', () => {
     const w = word({ word: 'x', glosses: ['a', 'b', 'c'] });
     expect(slotText(w, 'english', 'spanish', DEFAULT_CHINESE_DISPLAY, 2)).toBe('a / b');
+  });
+});
+
+describe('isFunctionWord', () => {
+  it('is true only when is_function_word is truthy', () => {
+    expect(isFunctionWord(word({ word: 'は', is_function_word: true }))).toBe(true);
+    expect(isFunctionWord(word({ word: '猫', is_function_word: false }))).toBe(false);
+    expect(isFunctionWord(word({ word: '猫' }))).toBe(false); // absent — same as false, not "unknown"
+  });
+});
+
+describe('function word marker (chineseWordText / slotText)', () => {
+  // は: topic marker, no real translation — the flagship case this
+  // feature exists for. わ is its romanized reading.
+  const wa = word({
+    word: 'は', translation: 'topic marker', glosses: ['topic marker'],
+    linguistic: { ipa: 'wa' }, is_function_word: true,
+  });
+  // 会社 ("company"): an ordinary headword, never bracketed regardless of
+  // the marker setting — the negative case that proves this isn't just
+  // bracketing every romanizedScript word.
+  const kaisha = word({
+    word: '会社', translation: 'company', glosses: ['company'],
+    linguistic: { ipa: 'kaisha' }, is_function_word: false,
+  });
+
+  it('"word" brackets the target-language slot, not the English side', () => {
+    const display: ChineseDisplay = { ...DEFAULT_CHINESE_DISPLAY, functionWordMarker: 'word' };
+    expect(chineseWordText(wa, 'japanese', display)).toBe('[は] (wa)');
+    expect(slotText(wa, 'english', 'japanese', display)).toBe('topic marker (wa)');
+  });
+
+  it('"meaning" (the default) brackets the English side, not the word', () => {
+    expect(chineseWordText(wa, 'japanese', DEFAULT_CHINESE_DISPLAY)).toBe('は (wa)');
+    expect(slotText(wa, 'english', 'japanese', DEFAULT_CHINESE_DISPLAY)).toBe('[topic marker] (wa)');
+  });
+
+  it('"both" brackets both sides', () => {
+    const display: ChineseDisplay = { ...DEFAULT_CHINESE_DISPLAY, functionWordMarker: 'both' };
+    expect(chineseWordText(wa, 'japanese', display)).toBe('[は] (wa)');
+    expect(slotText(wa, 'english', 'japanese', display)).toBe('[topic marker] (wa)');
+  });
+
+  it('"off" brackets neither side', () => {
+    const display: ChineseDisplay = { ...DEFAULT_CHINESE_DISPLAY, functionWordMarker: 'off' };
+    expect(chineseWordText(wa, 'japanese', display)).toBe('は (wa)');
+    expect(slotText(wa, 'english', 'japanese', display)).toBe('topic marker (wa)');
+  });
+
+  it('never brackets an ordinary headword, under any marker setting', () => {
+    for (const functionWordMarker of ['off', 'word', 'meaning', 'both'] as const) {
+      const display: ChineseDisplay = { ...DEFAULT_CHINESE_DISPLAY, functionWordMarker };
+      expect(chineseWordText(kaisha, 'japanese', display)).toBe('会社 (kaisha)');
+      expect(slotText(kaisha, 'english', 'japanese', display)).toBe('company (kaisha)');
+    }
+  });
+
+  it('word-side bracket wraps only the primary script, not the parenthetical', () => {
+    const display: ChineseDisplay = { ...DEFAULT_CHINESE_DISPLAY, functionWordMarker: 'word', chineseScript: 'pinyin' };
+    // pinyin/romaji primary now — the bracket should follow whichever
+    // script is primary, not stay pinned to the character form.
+    expect(chineseWordText(wa, 'japanese', display)).toBe('[wa] (は)');
   });
 });
 

@@ -283,10 +283,16 @@ export function removeTriviaQuestionOverride(lang: string, id: string): void {
 }
 
 /** The built-in bank's own questions for `lang`, with any saved override
- *  patched in — data/trivia-questions.ts itself untouched. */
-export function getBuiltinTriviaQuestionsWithOverrides(lang: string): TriviaQuestion[] {
+ *  patched in — data/trivia-questions.ts itself untouched.
+ *
+ *  Async because the "built-in bank" is now a server fetch (see
+ *  trivia-questions.ts's own header) rather than a bundled array — the
+ *  override-lookup/merge below it is still a pure, synchronous localStorage
+ *  read either way. */
+export async function getBuiltinTriviaQuestionsWithOverrides(lang: string): Promise<TriviaQuestion[]> {
   const overrides = getTriviaQuestionOverrides(lang);
-  return getBuiltinTriviaQuestions(lang).map(q => {
+  const builtin = await getBuiltinTriviaQuestions(lang);
+  return builtin.map(q => {
     const o = overrides[q.id];
     return o ? { ...q, ...o } : q;
   });
@@ -297,8 +303,8 @@ export function getBuiltinTriviaQuestionsWithOverrides(lang: string): TriviaQues
  *  two-layer merge trivia-mode.ts used to do inline, moved here so the My
  *  Content editor and the quiz itself can never drift apart on how the two
  *  layers combine. */
-export function getEffectiveTriviaQuestions(lang: string): TriviaQuestion[] {
-  return [...getBuiltinTriviaQuestionsWithOverrides(lang), ...getUserTriviaQuestions(lang)];
+export async function getEffectiveTriviaQuestions(lang: string): Promise<TriviaQuestion[]> {
+  return [...await getBuiltinTriviaQuestionsWithOverrides(lang), ...getUserTriviaQuestions(lang)];
 }
 
 // ── Guess the Blank questions ────────────────────────────────────────────────
@@ -380,16 +386,20 @@ export function removeGuessBlankQuestionOverride(lang: string, id: string): void
   writeJson(guessBlankOverrideKey(lang), next);
 }
 
-export function getBuiltinGuessBlankQuestionsWithOverrides(lang: string): GuessBlankQuestion[] {
+/** Async for the same reason as getBuiltinTriviaQuestionsWithOverrides
+ *  above — the built-in bank is a server fetch now, the override merge
+ *  underneath it is still a pure, synchronous localStorage read. */
+export async function getBuiltinGuessBlankQuestionsWithOverrides(lang: string): Promise<GuessBlankQuestion[]> {
   const overrides = getGuessBlankQuestionOverrides(lang);
-  return getBuiltinGuessBlankQuestions(lang).map(q => {
+  const builtin = await getBuiltinGuessBlankQuestions(lang);
+  return builtin.map(q => {
     const o = overrides[q.id];
     return o ? { ...q, ...o } : q;
   });
 }
 
-export function getEffectiveGuessBlankQuestions(lang: string): GuessBlankQuestion[] {
-  return [...getBuiltinGuessBlankQuestionsWithOverrides(lang), ...getUserGuessBlankQuestions(lang)];
+export async function getEffectiveGuessBlankQuestions(lang: string): Promise<GuessBlankQuestion[]> {
+  return [...await getBuiltinGuessBlankQuestionsWithOverrides(lang), ...getUserGuessBlankQuestions(lang)];
 }
 
 // ── Picture overrides ────────────────────────────────────────────────────────

@@ -58,6 +58,10 @@ export const POS_ABBREV: Record<string, string> = {
   verb: 'verb', noun: 'noun', adjective: 'adj',
   adverb: 'adv', pronoun: 'pron', preposition: 'prep',
   conjunction: 'conj', article: 'art',
+  // particle/suffix: Japanese-only so far (は/を/... and さん/的/...
+  // in HAND_CURATED_GRAMMAR_WORDS, VocabApp-Data's corpus.py) — no
+  // Latin-script language's spaCy tagging produces either.
+  particle: 'part', suffix: 'suf',
 };
 
 /** The chip row above the word list. The empty value is the "All" chip. */
@@ -71,4 +75,6 @@ export const POS_CHIPS: readonly { value: string; label: string }[] = [
   { value: 'preposition', label: 'Prepositions' },
   { value: 'conjunction', label: 'Conjunctions' },
   { value: 'article',     label: 'Articles'     },
+  { value: 'particle',    label: 'Particles'    },
+  { value: 'suffix',      label: 'Suffixes'     },
 ];

@@ -20,6 +20,7 @@ import {
 import { getSvgUrl } from './svg-loader.js';
 import { getAudioUrl } from './audio-loader.js';
 import { conjugate, type VerbForms } from './verb-rules.js';
+import { japaneseRomaji } from './japanese-romaji.js';
 import { logger } from './logger.js';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -51,6 +52,7 @@ interface DbRow {
   domains:               string | null;
   tags:                  string | null;
   disambiguator:         string | null;
+  is_function_word:      number;
 }
 
 /** Public word object served via the API. */
@@ -94,6 +96,18 @@ export interface Word {
    * hasDisambiguatorColumn below, checked at runtime instead of at boot.
    */
   disambiguator: string | null;
+  /**
+   * True for a "function word" — a grammatical particle/auxiliary/suffix
+   * (は/を/さん/... — see HAND_CURATED_GRAMMAR_WORDS in VocabApp-Data's
+   * corpus.py) whose `translation` is a functional description ("topic
+   * marker"), not a gloss. Unlike `disambiguator` above, this *is*
+   * pipeline-derived — still not in REQUIRED_WORD_COLUMNS, and still
+   * checked at runtime rather than at boot, because a database built
+   * before schemaVersion 5 is just as valid a database; every word on it
+   * is correctly "not a function word" by the same default this app uses
+   * for every language that hasn't been mined with this field yet.
+   */
+  is_function_word: boolean;
 }
 
 /** In-memory cache entry for a loaded language. */
@@ -199,6 +213,18 @@ export function supportsDisambiguator(): boolean {
   return hasDisambiguatorCol;
 }
 
+// Same pattern as hasDisambiguatorCol just above, for the same reason: a
+// database built before schemaVersion 5 doesn't have this column, and that
+// is still a completely valid database — every word on it just isn't a
+// function word as far as this app can tell, which is also the correct
+// answer for every language but Japanese even on a migrated database.
+let hasIsFunctionWordCol = false;
+
+function checkIsFunctionWordColumn(conn: Database.Database): void {
+  const cols = conn.prepare("PRAGMA table_info('words')").all() as { name: string }[];
+  hasIsFunctionWordCol = cols.some(c => c.name === 'is_function_word');
+}
+
 // Per-language in-memory cache
 const vocabCache = new Map<string, VocabData>();
 
@@ -286,6 +312,7 @@ function initializeDatabase(): void {
     logger.info('Connected to SQLite database');
     verifyDatabase(db, dbPath);
     checkDisambiguatorColumn(db);
+    checkIsFunctionWordColumn(db);
     dbFileMtimeMs = newestDbMtimeMs(dbPath);
   } catch (error) {
     logger.error('Database connection error:', error);
@@ -359,6 +386,7 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
         w.conjugation_class, w.future_stem, w.conjugation_overrides,
         w.emoji, w.rank, w.corpus_frequency,
         ${hasDisambiguatorCol ? 'w.disambiguator,' : 'NULL as disambiguator,'}
+        ${hasIsFunctionWordCol ? 'w.is_function_word,' : '0 as is_function_word,'}
         (SELECT json_group_array(gloss)
            FROM (SELECT gloss FROM word_glosses  WHERE word_id = w.id ORDER BY position)
         ) AS glosses,
@@ -414,7 +442,12 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
           gender:            row.gender          || null,
           plural:            row.plural          || null,
           register:          row.register        || null,
-          ipa:               row.ipa             || null,
+          // Japanese: row.ipa is a hiragana reading (see japaneseRomaji's
+          // own doc comment for why), converted to romaji here so the
+          // Chinese-oriented romanizedScript display code in utils.ts —
+          // which already treats linguistic.ipa as ready-to-show romanized
+          // text — works for Japanese unchanged.
+          ipa:               lang === 'japanese' ? japaneseRomaji(row.word, row.ipa || null) : (row.ipa || null),
           syllables:         row.syllables ? row.syllables.split('-') : null,
           conjugations,
           conjugation_class: row.conjugation_class || null,
@@ -428,6 +461,7 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
         domains: row.domains ? (parseJsonField<string[]>(row.domains, row.word, 'domains', []) ?? []) : [],
         tags:    row.tags    ? (parseJsonField<string[]>(row.tags,    row.word, 'tags',    []) ?? []).filter(Boolean) : [],
         disambiguator: row.disambiguator || null,
+        is_function_word: Boolean(row.is_function_word),
       };
     });
 
@@ -543,6 +577,7 @@ export function setDb(testDb: Database.Database): void {
   db = testDb;
   vocabCache.clear();
   checkDisambiguatorColumn(testDb);
+  checkIsFunctionWordColumn(testDb);
 }
 
 export function closeDatabase(): void {

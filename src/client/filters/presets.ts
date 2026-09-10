@@ -23,6 +23,7 @@ import { currentLangValue, currentExtraLanguages } from './filter-lang.ts';
 import { readJson, writeJson, writeString, isRecord } from '../utils/storage.ts';
 import { applyClassSelection, getClassFilterState, type ClassFilterState } from './class-filter.ts';
 import { applyDomainSelection, getDomainFilterState, type DomainFilterState } from './domain-filter.ts';
+import { getScriptTypeSelection, applyScriptTypeSelection } from './script-type-filter.ts';
 import {
   getListFilterState, saveListFilterState, refreshFilterSelect,
   type ListFilterState,
@@ -91,6 +92,15 @@ export interface PresetBundle {
   quizStyle?:      string;
   /** Conjugation-only — see ConjugationBundle. */
   conjugation?:    ConjugationBundle;
+  /**
+   * Script Type filter selection (Kanji/Katakana/Hiragana) — Japanese only,
+   * see script-type-filter.ts. Optional, added after v1 like extraLanguages/
+   * quickEditFields: absent on an older saved profile, in which case
+   * applying it leaves the Script Type filter exactly as it is. [] (present
+   * but empty) is a real, meaningful capture — "All" was selected — and is
+   * still applied, same as extraLanguages below.
+   */
+  scriptTypes?:    string[];
   /**
    * Which of this profile's own fields (by profile-panel.ts's own stable
    * section keys — 'language', 'words', 'tenseForms', etc., not the
@@ -277,6 +287,7 @@ export function captureCurrentBundle(mode: FilterScope = 'table'): PresetBundle 
     words:          captureWords(),
     quizStyle:      mode === 'table' ? currentQuizStyle() : undefined,
     conjugation:    mode === 'conjugation' ? captureConjugation() : undefined,
+    scriptTypes:    getScriptTypeSelection(),
   };
 }
 
@@ -317,6 +328,9 @@ function normalizeBundle(raw: PresetBundle): PresetBundle {
     words:          raw.words,
     quizStyle:      raw.quizStyle,
     conjugation:    raw.conjugation,
+    // Added after v1, same reasoning as extraLanguages above — absent (or
+    // malformed) on an older saved profile just means nothing's marked yet.
+    scriptTypes:    Array.isArray(raw.scriptTypes) ? raw.scriptTypes : undefined,
     // Added after v1, same reasoning as extraLanguages above — absent (or
     // malformed) on an older saved profile just means nothing's marked yet.
     quickEditFields: Array.isArray(raw.quickEditFields) ? raw.quickEditFields : undefined,
@@ -422,6 +436,9 @@ export function describePreset(bundle: PresetBundle, mode?: FilterScope): string
     const n = bundle.domains.selected.length;
     parts.push(`${n} domain${n === 1 ? '' : 's'}`);
   }
+  if (bundle.scriptTypes && bundle.scriptTypes.length > 0) {
+    parts.push(bundle.scriptTypes.join(', '));
+  }
   if (bundle.listFilter.active && bundle.listFilter.selected.length > 0) {
     const verb = bundle.listFilter.mode === 'focus' ? 'Focus' : 'Hide';
     const n = bundle.listFilter.selected.length;
@@ -488,6 +505,7 @@ export function applyBundle(mode: FilterScope, bundle: PresetBundle): void {
   if (bundle.words) applyWords(bundle.words);
   if (mode === 'table' && bundle.quizStyle) applyQuizStyle(bundle.quizStyle);
   if (mode === 'conjugation' && bundle.conjugation) applyConjugation(bundle.conjugation);
+  if (bundle.scriptTypes) applyScriptTypeSelection(bundle.scriptTypes);
 
   // Table-only — see PresetBundle.direction's own comment. Gated on mode,
   // not just on bundle.direction being set: an older Picture/Conjugation

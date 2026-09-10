@@ -1,13 +1,16 @@
 /**
  * Public API Routes
  *
- * GET /api/vocab/:language  — serve vocabulary
- * GET /api/languages        — languages with rows in the database
- * GET /api/health           — health check
+ * GET /api/vocab/:language       — serve vocabulary
+ * GET /api/trivia/:language      — serve trivia questions
+ * GET /api/guess-blank/:language — serve Guess the Blank questions
+ * GET /api/languages             — languages with rows in the database
+ * GET /api/health                — health check
  */
 
 import { Router }          from 'express';
 import { loadVocabFile, getSupportedLanguages } from '../lib/vocab-loader.js';
+import { loadTriviaQuestions, loadGuessBlankQuestions } from '../lib/content-loader.js';
 
 export function makePublicRoutes(nodeEnv: string): Router {
   const router = Router();
@@ -31,6 +34,41 @@ export function makePublicRoutes(nodeEnv: string): Router {
         metadata: { timestamp: new Date().toISOString(), cacheAge: vocab.cacheAge || 0 },
         data:     vocab.words,
       });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // GET /api/trivia/:language
+  //
+  // Same envelope/cache-control shape as /api/vocab/:language above. The
+  // underlying table is optional (see content-loader.ts) — a language, or a
+  // whole database, with no trivia rows yet returns `data: []`, not an error.
+  router.get('/trivia/:language', (req, res, next) => {
+    try {
+      const language = req.params['language'].toLowerCase();
+      const data = loadTriviaQuestions(language);
+
+      res.set('Cache-Control', `public, max-age=${vocabMaxAge}`);
+
+      res.json({ success: true, language, count: data.length, data });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // GET /api/guess-blank/:language
+  //
+  // Same shape as /api/trivia/:language above, for the guess_blank_questions
+  // table.
+  router.get('/guess-blank/:language', (req, res, next) => {
+    try {
+      const language = req.params['language'].toLowerCase();
+      const data = loadGuessBlankQuestions(language);
+
+      res.set('Cache-Control', `public, max-age=${vocabMaxAge}`);
+
+      res.json({ success: true, language, count: data.length, data });
     } catch (error) {
       next(error);
     }

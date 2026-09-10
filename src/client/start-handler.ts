@@ -10,6 +10,7 @@ import { startTableQuiz, getTableStyle, syncTableStyleUI } from './modes/table-c
 import { renderTableRecallMode }          from './modes/table-recall-mode.ts';
 import { filterWords }                    from './filters/word-filters.ts';
 import { applyDomainFilter }              from './filters/domain-filter.ts';
+import { applyScriptTypeFilter }          from './filters/script-type-filter.ts';
 import { hasVisual }                      from './data/visual-map.ts';
 import { shuffleInPlace }                from './utils/shuffle.ts';
 import { orderWords }                     from './utils/session-history.ts';
@@ -45,6 +46,7 @@ interface StartHandlerOptions {
   getSizeMode?:       () => string;
   getSelectedClasses?: () => string[];
   getSelectedDomains?: () => string[];
+  getSelectedScriptTypes?: () => string[];
   getSortOrder?:      () => string;
   getCols:            (opts: { max: number; fallback: number }) => number;
   getDirection?:      () => string;
@@ -63,6 +65,7 @@ export function bindStartHandler({
   getSizeMode,     // 'window' (literal top N) | 'fill' (always return N unknowns)
   getSelectedClasses,
   getSelectedDomains,
+  getSelectedScriptTypes,
   getSortOrder,
   getCols,
   getDirection,
@@ -147,6 +150,12 @@ export function bindStartHandler({
       const selectedDomains = getSelectedDomains ? getSelectedDomains() : [];
       list = applyDomainFilter(list, selectedDomains);
 
+      // Kanji/Katakana/Hiragana — Japanese only (see script-type-filter.ts);
+      // a no-op empty selection for every other language, same shape as
+      // the domain filter just above.
+      const selectedScriptTypes = getSelectedScriptTypes ? getSelectedScriptTypes() : [];
+      list = applyScriptTypeFilter(list, selectedScriptTypes);
+
       // ── "N New" fill mode: compensate for words hidden by list filter ─────────
       // When fill mode is active, pull additional words from beyond the current
       // size window (preserving all other active filters) until we reach the
@@ -170,6 +179,9 @@ export function bindStartHandler({
         // Apply domain filter
         extras = applyDomainFilter(extras, selectedDomains);
 
+        // Apply script type filter
+        extras = applyScriptTypeFilter(extras, selectedScriptTypes);
+
         // Apply POS class filter
         const selectedClasses = getSelectedClasses ? getSelectedClasses() : [];
         if (selectedClasses.length > 0) {
@@ -192,6 +204,7 @@ export function bindStartHandler({
                           && (examplesOnly ? (w.examples.length > 0) : true));
         extras = filterWords(extras);
         extras = applyDomainFilter(extras, selectedDomains);
+        extras = applyScriptTypeFilter(extras, selectedScriptTypes);
         list = [...list, ...extras.slice(0, requestedSize - list.length)];
       }
 
@@ -312,7 +325,7 @@ export function bindStartHandler({
         // Domain filtering (also real for trivia — see the same file's
         // `domains` field) is applied inside renderTriviaMode itself, since
         // there's no vocabulary `list` here for applyDomainFilter to narrow.
-        renderTriviaMode({
+        await renderTriviaMode({
           container: triviaWrap,
           lang: fullLang,
           subMode: (triviaSubMode ?? 'type') as 'type' | 'choice' | 'table',
@@ -331,7 +344,7 @@ export function bindStartHandler({
 
         // Draws its own hand-written clue bank rather than the vocabulary
         // `list` built above — see data/guess-blank-questions.ts.
-        renderGuessBlankMode({
+        await renderGuessBlankMode({
           container: guessBlankWrap,
           lang: fullLang,
           difficulty: difficulty as 'all' | 'easy' | 'medium' | 'hard',

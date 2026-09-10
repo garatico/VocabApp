@@ -42,6 +42,7 @@ import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
 import { languageInfo } from '../data/languages.ts';
 import { hintReveal, hintableLength } from '../utils/hint-reveal.ts';
+import { showLoading, hideLoading } from '../ui/ui.ts';
 
 export type TriviaSubMode = 'type' | 'choice' | 'table';
 
@@ -290,7 +291,7 @@ function renderFillInTable(bank: TriviaQuestion[], container: HTMLElement, lang:
   inputs[0]?.focus();
 }
 
-export function renderTriviaMode({
+export async function renderTriviaMode({
   container,
   lang = 'spanish',
   subMode = 'type',
@@ -299,15 +300,23 @@ export function renderTriviaMode({
   readingDifficulty = 'all',
   readingLength = 'all',
   fixedQueue,
-}: RenderTriviaModeOptions): void {
+}: RenderTriviaModeOptions): Promise<void> {
   container.innerHTML = '';
   clearSummary('trivia');
   setProgress(0, 0);
 
-  // The hand-written bank (any My Content overrides applied) plus every
-  // question a learner has added of their own — see
-  // user-content.ts's getEffectiveTriviaQuestions.
-  const allQuestions = getEffectiveTriviaQuestions(lang);
+  // The question bank (any My Content overrides applied) plus every
+  // question a learner has added of their own — see user-content.ts's
+  // getEffectiveTriviaQuestions. Skipped entirely when a fixedQueue was
+  // handed in (the "↺ Practice N" retry path already has its questions).
+  let allQuestions: TriviaQuestion[];
+  if (fixedQueue) {
+    allQuestions = fixedQueue;
+  } else {
+    showLoading('Loading trivia questions...');
+    allQuestions = await getEffectiveTriviaQuestions(lang);
+    hideLoading();
+  }
   const selectedDomains = getSelectedDomains();
   const bank = fixedQueue ?? allQuestions.filter(q =>
     (category === 'all' || q.category === category)
@@ -661,8 +670,8 @@ export function renderTriviaMode({
     );
     if (missedQuestions.length > 0) {
       document.querySelectorAll<HTMLButtonElement>('.summary-retry-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          renderTriviaMode({ container, lang, subMode, fixedQueue: missedQuestions });
+        btn.addEventListener('click', async () => {
+          await renderTriviaMode({ container, lang, subMode, fixedQueue: missedQuestions });
         });
       });
     }

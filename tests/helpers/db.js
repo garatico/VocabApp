@@ -72,6 +72,45 @@ ${columns},
       value      TEXT NOT NULL,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+    -- Trivia and Guess the Blank question banks: "concept + per-language
+    -- translations" (schema v3 of the sibling VocabApp-Data project) — a
+    -- question is authored once as a concept row and translated into any
+    -- number of languages independently, English included as an equal
+    -- rather than a hardcoded side-channel. Not in REQUIRED_WORD_COLUMNS/
+    -- REQUIRED_TABLES by design (see content-loader.ts) — these four exist
+    -- here so route tests have real rows to assert against, not because the
+    -- app requires them to boot.
+    CREATE TABLE trivia_questions (
+      id          TEXT PRIMARY KEY,
+      category    TEXT NOT NULL,
+      domains     TEXT,
+      difficulty  TEXT NOT NULL,
+      answer_type TEXT NOT NULL
+    );
+    CREATE TABLE trivia_translations (
+      question_id        TEXT NOT NULL REFERENCES trivia_questions(id) ON DELETE CASCADE,
+      language           TEXT NOT NULL,
+      reading_difficulty TEXT NOT NULL,
+      reading_length     TEXT NOT NULL,
+      question_text      TEXT NOT NULL,
+      answers            TEXT NOT NULL,
+      updated_at         TEXT DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (question_id, language)
+    );
+    CREATE TABLE guess_blank_questions (
+      id         TEXT PRIMARY KEY,
+      category   TEXT NOT NULL,
+      domains    TEXT,
+      difficulty TEXT NOT NULL
+    );
+    CREATE TABLE guess_blank_translations (
+      question_id TEXT NOT NULL REFERENCES guess_blank_questions(id) ON DELETE CASCADE,
+      language    TEXT NOT NULL,
+      clues       TEXT NOT NULL,
+      answer      TEXT NOT NULL,
+      updated_at  TEXT DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (question_id, language)
+    );
     CREATE INDEX idx_word_glosses_word_id  ON word_glosses(word_id);
     CREATE INDEX idx_word_examples_word_id ON word_examples(word_id);
     CREATE INDEX idx_word_tags_word_id     ON word_tags(word_id);
@@ -117,11 +156,118 @@ const SEED_WORDS = [
   },
 ];
 
+// Concept + per-language translations. Deliberately includes, beyond the
+// "one concept, several languages" happy path:
+//   - es-j1 / es-j-b1: spanish and english translations with CONTENT that
+//     differs (not just wording) between the two languages, so a test that
+//     fetches 'spanish' and checks the english-side fields actually proves
+//     the join didn't cross the two — matching text wouldn't prove that.
+//   - es-noeng1 / es-b-noeng: a concept with a translation in one language
+//     and NO 'english' row at all, proving loadTriviaQuestions/
+//     loadGuessBlankQuestions degrade gracefully (empty string/array, not a
+//     throw) rather than assuming every concept has been migrated with an
+//     English translation.
+const SEED_TRIVIA_QUESTIONS = [
+  { id: 'es-h1',     category: 'history',     domains: '["history"]',   difficulty: 'easy',   answer_type: 'year' },
+  { id: 'es-p1',     category: 'pop-culture', domains: '["art"]',       difficulty: 'medium', answer_type: 'person' },
+  { id: 'pt-h1',     category: 'history',     domains: '["geography"]', difficulty: 'easy',   answer_type: 'place' },
+  { id: 'es-j1',     category: 'history',     domains: '["geography"]', difficulty: 'easy',   answer_type: 'place' },
+  { id: 'es-noeng1', category: 'pop-culture', domains: null,             difficulty: 'hard',   answer_type: 'thing' },
+];
+
+const SEED_TRIVIA_TRANSLATIONS = [
+  { question_id: 'es-h1', language: 'spanish', reading_difficulty: 'easy', reading_length: 'short',
+    question_text: '¿En qué año llegó Cristóbal Colón a América?', answers: '["1492"]' },
+  { question_id: 'es-h1', language: 'english', reading_difficulty: 'easy', reading_length: 'short',
+    question_text: 'In what year did Christopher Columbus arrive in the Americas?', answers: '["1492"]' },
+
+  { question_id: 'es-p1', language: 'spanish', reading_difficulty: 'easy', reading_length: 'short',
+    question_text: '¿Quién pintó el cuadro "Guernica"?', answers: '["Pablo Picasso","Picasso"]' },
+  { question_id: 'es-p1', language: 'english', reading_difficulty: 'easy', reading_length: 'short',
+    question_text: 'Who painted "Guernica"?', answers: '["Pablo Picasso","Picasso"]' },
+
+  { question_id: 'pt-h1', language: 'portuguese', reading_difficulty: 'easy', reading_length: 'short',
+    question_text: 'Qual é a capital de Portugal?', answers: '["Lisboa"]' },
+  { question_id: 'pt-h1', language: 'english', reading_difficulty: 'easy', reading_length: 'short',
+    question_text: 'What is the capital of Portugal?', answers: '["Lisbon"]' },
+
+  // es-j1: spanish and english deliberately ask about DIFFERENT countries so
+  // a crossed join is unmistakable, not just differently-worded.
+  { question_id: 'es-j1', language: 'spanish', reading_difficulty: 'medium', reading_length: 'short',
+    question_text: '¿Cuál es la capital de Francia?', answers: '["París"]' },
+  { question_id: 'es-j1', language: 'english', reading_difficulty: 'medium', reading_length: 'short',
+    question_text: 'What is the capital of Germany?', answers: '["Berlin"]' },
+
+  // es-noeng1: spanish only, no 'english' row at all.
+  { question_id: 'es-noeng1', language: 'spanish', reading_difficulty: 'hard', reading_length: 'long',
+    question_text: '¿Qué instrumento tocaba Julio Iglesias antes de ser cantante?', answers: '["la guitarra"]' },
+];
+
+const SEED_GUESS_BLANK_QUESTIONS = [
+  { id: 'es-b1',      category: 'animal', domains: null, difficulty: 'medium' },
+  { id: 'es-b2',      category: 'object', domains: null, difficulty: 'medium' },
+  { id: 'pt-b1',      category: 'animal', domains: null, difficulty: 'easy' },
+  { id: 'es-j-b1',    category: 'animal', domains: null, difficulty: 'medium' },
+  { id: 'es-b-noeng', category: 'animal', domains: null, difficulty: 'hard' },
+];
+
+const SEED_GUESS_BLANK_TRANSLATIONS = [
+  { question_id: 'es-b1', language: 'spanish',
+    clues: '["Vivo en la selva y me gustan los plátanos.","Tengo brazos largos y trepo a los árboles."]', answer: 'el mono' },
+  { question_id: 'es-b1', language: 'english',
+    clues: '["I live in the jungle and I like bananas.","I have long arms and I climb trees."]', answer: 'the monkey' },
+
+  { question_id: 'es-b2', language: 'spanish',
+    clues: '["Me usas todos los días para ver la hora."]', answer: 'el reloj' },
+  { question_id: 'es-b2', language: 'english',
+    clues: '["You use me every day to see the time."]', answer: 'the clock' },
+
+  { question_id: 'pt-b1', language: 'portuguese',
+    clues: '["Sou um animal pequeno.","Eu digo \\"miau\\"."]', answer: 'o gato' },
+  { question_id: 'pt-b1', language: 'english',
+    clues: '["I\'m a small animal.","I say \\"meow\\"."]', answer: 'the cat' },
+
+  // es-j-b1: spanish and english describe DIFFERENT animals so a crossed
+  // join is unmistakable.
+  { question_id: 'es-j-b1', language: 'spanish',
+    clues: '["Vivo en el mar y tengo ocho brazos."]', answer: 'el pulpo' },
+  { question_id: 'es-j-b1', language: 'english',
+    clues: '["I live in the ocean and I have eight arms."]', answer: 'the octopus' },
+
+  // es-b-noeng: spanish only, no 'english' row at all.
+  { question_id: 'es-b-noeng', language: 'spanish',
+    clues: '["Soy un pájaro que no puede volar y vivo en la Antártida."]', answer: 'el pingüino' },
+];
+
+function seedContentTables(db) {
+  const insertTriviaQuestion = db.prepare(`
+    INSERT INTO trivia_questions (id, category, domains, difficulty, answer_type)
+    VALUES (:id, :category, :domains, :difficulty, :answer_type)
+  `);
+  const insertTriviaTranslation = db.prepare(`
+    INSERT INTO trivia_translations (question_id, language, reading_difficulty, reading_length, question_text, answers)
+    VALUES (:question_id, :language, :reading_difficulty, :reading_length, :question_text, :answers)
+  `);
+  const insertGuessBlankQuestion = db.prepare(`
+    INSERT INTO guess_blank_questions (id, category, domains, difficulty)
+    VALUES (:id, :category, :domains, :difficulty)
+  `);
+  const insertGuessBlankTranslation = db.prepare(`
+    INSERT INTO guess_blank_translations (question_id, language, clues, answer)
+    VALUES (:question_id, :language, :clues, :answer)
+  `);
+  for (const q of SEED_TRIVIA_QUESTIONS) insertTriviaQuestion.run(q);
+  for (const t of SEED_TRIVIA_TRANSLATIONS) insertTriviaTranslation.run(t);
+  for (const q of SEED_GUESS_BLANK_QUESTIONS) insertGuessBlankQuestion.run(q);
+  for (const t of SEED_GUESS_BLANK_TRANSLATIONS) insertGuessBlankTranslation.run(t);
+}
+
 export function createTestDb() {
   const db = new Database(':memory:');
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.exec(SCHEMA);
+  seedContentTables(db);
 
   const insertWord = db.prepare(`
     INSERT INTO words (word, translation, language, pos, difficulty, notes,

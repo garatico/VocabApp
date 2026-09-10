@@ -151,9 +151,18 @@ export const es: Record<string, string> = {
   'filter.lists':         'Listas',
   'filter.noListsYet':    'Aún no hay listas — crea una en Mis Listas',
   'filter.nouns':         'Sustantivos',
+  'filter.particles':     'Partículas',
   'filter.partOfSpeech':  'Parte del Discurso',
   'filter.prepositions':  'Preposiciones',
   'filter.pronouns':      'Pronombres',
+  'filter.scriptHiragana':   'Hiragana',
+  'filter.scriptHiraganaTip':'Palabras escritas completamente en hiragana',
+  'filter.scriptKanji':      'Kanji',
+  'filter.scriptKanjiTip':   'Palabras que contienen al menos un carácter kanji',
+  'filter.scriptKatakana':   'Katakana',
+  'filter.scriptKatakanaTip':'Palabras escritas completamente en katakana (mayormente préstamos)',
+  'filter.scriptType':    'Tipo de Escritura',
+  'filter.suffixes':      'Sufijos',
   'filter.verbs':         'Verbos',
 
   // ── Word order (Order dropdown, Table/Recall/Conjugation) ──────────────────
@@ -185,7 +194,7 @@ export const es: Record<string, string> = {
   // ── Settings — nav ──────────────────────────────────────────────────────
   'settings.nav.answers':   'Corrección de Respuestas',
   'settings.nav.appearance':'Apariencia',
-  'settings.nav.chinese':   'Chino',
+  'settings.nav.script':    'Escritura',
   'settings.nav.conj':      'Práctica de Conjugación',
   'settings.nav.general':   'General',
   'settings.nav.history':   'Historial de Sesiones',
@@ -277,15 +286,20 @@ export const es: Record<string, string> = {
   'settings.filters.swear':             'Filtrar palabrotas',
   'settings.filters.swearDesc':         'Activado elimina las palabras marcadas como vulgares en la base de datos, más una lista curada por idioma (ver data/swear-words.ts) para lo que no esté marcado. No es un filtro exhaustivo.',
 
-  // ── Settings — Chinese ────────────────────────────────────────────────────
-  'settings.chinese.characters':          'Caracteres',
-  'settings.chinese.pinyin':              'Pinyin',
-  'settings.chinese.script':              'La palabra china se muestra como',
-  'settings.chinese.scriptDesc':          'Qué escritura es la principal para la palabra china — se muestra por defecto, y se exige por defecto cuando una dirección pide escribirla. Pinyin evita necesitar un IME para escribir hanzi',
-  'settings.chinese.showBoth':            'Mostrar ambas escrituras (palabra)',
-  'settings.chinese.showBothDesc':        'Anotar la palabra china con su otra escritura entre paréntesis, p. ej. 的 (de), y aceptar cualquiera de las dos escrituras como respuesta escrita',
-  'settings.chinese.showPinyinGloss':     'Mostrar pinyin (significado)',
-  'settings.chinese.showPinyinGlossDesc': 'Mostrar también la lectura en pinyin entre paréntesis junto al significado en inglés, p. ej. already (le)',
+  // ── Settings — Script display (non-Latin-script languages: Chinese, Japanese) ──
+  'settings.script.characters':          'Caracteres',
+  'settings.script.romanized':           'Romanizado',
+  'settings.script.primary':             'La palabra se muestra como',
+  'settings.script.primaryDesc':         'Para un idioma con escritura no latina (chino, japonés): qué escritura es la principal — se muestra por defecto, y se exige por defecto cuando una dirección pide escribirla. La forma romanizada evita necesitar un IME para escribir los caracteres',
+  'settings.script.showBoth':            'Mostrar ambas escrituras (palabra)',
+  'settings.script.showBothDesc':        'Anotar la palabra con su otra escritura entre paréntesis, p. ej. 的 (de) o 会社 (kaisha), y aceptar cualquiera de las dos escrituras como respuesta escrita',
+  'settings.script.showRomanizedGloss':     'Mostrar romanización (significado)',
+  'settings.script.showRomanizedGlossDesc': 'Mostrar también la lectura romanizada entre paréntesis junto al significado en inglés, p. ej. already (le) o company (kaisha)',
+  'settings.script.functionMarker':         'Corchetes de palabra gramatical',
+  'settings.script.functionMarkerDesc':     'Poner entre corchetes una palabra gramatical — una partícula/sufijo sin traducción real, p. ej. は "marcador de tema" — para distinguirla del vocabulario ordinario. Palabra pone los corchetes en la palabra en el idioma de destino, Significado los pone en el lado en inglés',
+  'settings.script.markerWord':             'Palabra',
+  'settings.script.markerMeaning':          'Significado',
+  'settings.script.markerBoth':             'Ambos',
 
   // ── Settings — Appearance ─────────────────────────────────────────────────
   'settings.appearance.comingSoon':      'Próximamente',

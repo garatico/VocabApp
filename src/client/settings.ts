@@ -9,7 +9,7 @@ import {
   getGoalHitsForDate, parseHitKey,
   type GoalType,
 } from './utils/streak.ts';
-import type { ChineseScript, ChineseDisplay } from './utils/utils.ts';
+import type { ChineseScript, ChineseDisplay, FunctionWordMarker } from './utils/utils.ts';
 
 /**
  * settings.ts — persistent quiz preferences.
@@ -258,12 +258,20 @@ export const Settings = {
    */
   getShowPinyinGloss: (): boolean => get('show_pinyin_gloss', 'true') === 'true',
 
-  /** Bundles the three Chinese-display settings above for `slotText`/`slotMatches`. */
+  /**
+   * Where a function-word marker shows — see FunctionWordMarker in
+   * utils.ts. Default 'meaning': bracket the English side ("[topic
+   * marker]"), not the word a learner is about to type.
+   */
+  getFunctionWordMarker: (): FunctionWordMarker => get('function_word_marker', 'meaning') as FunctionWordMarker,
+
+  /** Bundles the Chinese-display settings above for `slotText`/`slotMatches`. */
   getChineseDisplay(): ChineseDisplay {
     return {
       chineseScript:   this.getChineseScript(),
       showBothScripts: this.getShowBothScripts(),
       showPinyinGloss: this.getShowPinyinGloss(),
+      functionWordMarker: this.getFunctionWordMarker(),
     };
   },
 
@@ -639,6 +647,34 @@ function activateToggle(groupId: string, btn: HTMLButtonElement): void {
 }
 
 /**
+ * Wire up a toggle group that exists in more than one place in the DOM —
+ * today, only Script Display's three controls, which appear both under
+ * Settings and in Table mode's filter panel. Clicking a button in any one
+ * `groupIds` container calls `onChange` with that button's `data-${attr}`
+ * value, then activates the matching button in *every* listed container —
+ * including the one just clicked — so all copies read the same state
+ * without each needing its own separate click handler.
+ */
+function bindMirroredToggle(
+  groupIds: string[],
+  attr: string,
+  onChange: (value: string | undefined) => void,
+): void {
+  groupIds.forEach(id => {
+    document.getElementById(id)?.addEventListener('click', e => {
+      const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+      if (!btn) return;
+      const value = btn.dataset[attr];
+      onChange(value);
+      const selector = groupIds.map(gid => `#${gid} .sort-order-btn`).join(', ');
+      document.querySelectorAll<HTMLElement>(selector).forEach(b => {
+        b.classList.toggle('active', b.dataset[attr] === value);
+      });
+    });
+  });
+}
+
+/**
  * Set (or clear) autocomplete="off" on a quiz input per the Autofill setting.
  * Every mode's answer box is built through here rather than hardcoding the
  * attribute itself, so flipping the setting changes all of them the same way.
@@ -920,29 +956,21 @@ export function bindSettings(): void {
     set('typo_tolerance', btn.dataset.typo ?? 'normal');
   });
 
-  // Chinese word slot's primary script (characters / pinyin)
-  document.getElementById('settingChineseScript')?.addEventListener('click', e => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
-    activateToggle('settingChineseScript', btn);
-    set('chinese_script', btn.dataset.chineseScript ?? 'characters');
-  });
-
-  // Show both scripts next to a displayed Chinese word, and accept either as an answer
-  document.getElementById('settingShowPinyin')?.addEventListener('click', e => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
-    activateToggle('settingShowPinyin', btn);
-    set('show_pinyin', btn.dataset.showPinyin ?? 'true');
-  });
-
-  // Show pinyin next to the English gloss
-  document.getElementById('settingShowPinyinGloss')?.addEventListener('click', e => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
-    activateToggle('settingShowPinyinGloss', btn);
-    set('show_pinyin_gloss', btn.dataset.showPinyinGloss ?? 'true');
-  });
+  // Script display (Chinese/Japanese): each setting has two copies of its
+  // toggle group — one under Settings, one in Table mode's own filter panel
+  // (shown only for a romanizedScript language — see
+  // syncScriptDisplayAvailability in app.ts). Wiring both container ids to
+  // the same handler and repainting both via bindMirroredToggle is what
+  // keeps clicking either copy update the other, rather than the two
+  // silently disagreeing until the next page load.
+  bindMirroredToggle(['settingChineseScript', 'filterChineseScript'], 'chineseScript',
+    value => set('chinese_script', value ?? 'characters'));
+  bindMirroredToggle(['settingShowPinyin', 'filterShowPinyin'], 'showPinyin',
+    value => set('show_pinyin', value ?? 'true'));
+  bindMirroredToggle(['settingShowPinyinGloss', 'filterShowPinyinGloss'], 'showPinyinGloss',
+    value => set('show_pinyin_gloss', value ?? 'true'));
+  bindMirroredToggle(['settingFunctionWordMarker', 'filterFunctionWordMarker'], 'functionMarker',
+    value => set('function_word_marker', value ?? 'meaning'));
 
   // Browser autofill. Every mode's inputs are rebuilt fresh on Start Quiz, so
   // there's no persistent input to apply this to live; the setting just
@@ -1611,22 +1639,29 @@ function restoreSettingsUI(): void {
     b.classList.toggle('active', b.dataset.typo === savedTypo);
   });
 
-  // Chinese word slot's primary script
+  // Script display (Chinese/Japanese): two copies of the same controls —
+  // one under Settings, one in Table mode's own filter panel (shown only
+  // for a romanizedScript language — see syncScriptDisplayAvailability in
+  // app.ts). Both read/write the same localStorage keys; painting both
+  // container ids here is what keeps them showing the same state.
   const savedChineseScript = get('chinese_script', 'characters');
-  document.querySelectorAll<HTMLElement>('#settingChineseScript .sort-order-btn').forEach(b => {
+  document.querySelectorAll<HTMLElement>('#settingChineseScript .sort-order-btn, #filterChineseScript .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.chineseScript === savedChineseScript);
   });
 
-  // Show both scripts (word)
   const savedShowPinyin = get('show_pinyin', 'true');
-  document.querySelectorAll<HTMLElement>('#settingShowPinyin .sort-order-btn').forEach(b => {
+  document.querySelectorAll<HTMLElement>('#settingShowPinyin .sort-order-btn, #filterShowPinyin .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.showPinyin === savedShowPinyin);
   });
 
-  // Show pinyin (gloss)
   const savedShowPinyinGloss = get('show_pinyin_gloss', 'true');
-  document.querySelectorAll<HTMLElement>('#settingShowPinyinGloss .sort-order-btn').forEach(b => {
+  document.querySelectorAll<HTMLElement>('#settingShowPinyinGloss .sort-order-btn, #filterShowPinyinGloss .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.showPinyinGloss === savedShowPinyinGloss);
+  });
+
+  const savedFunctionMarker = get('function_word_marker', 'meaning');
+  document.querySelectorAll<HTMLElement>('#settingFunctionWordMarker .sort-order-btn, #filterFunctionWordMarker .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.functionMarker === savedFunctionMarker);
   });
 
   // Browser autofill

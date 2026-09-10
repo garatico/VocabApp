@@ -31,8 +31,8 @@ import {
   getUserWords, addUserWord, removeUserWord, toWord, type UserWord,
   getUserTriviaQuestions, addUserTriviaQuestion, removeUserTriviaQuestion, updateUserTriviaQuestion,
   getUserGuessBlankQuestions, addUserGuessBlankQuestion, removeUserGuessBlankQuestion, updateUserGuessBlankQuestion,
-  getBuiltinTriviaQuestionsWithOverrides, getTriviaQuestionOverride, setTriviaQuestionOverride, removeTriviaQuestionOverride,
-  getBuiltinGuessBlankQuestionsWithOverrides, getGuessBlankQuestionOverride, setGuessBlankQuestionOverride, removeGuessBlankQuestionOverride,
+  getTriviaQuestionOverride, setTriviaQuestionOverride, removeTriviaQuestionOverride,
+  getGuessBlankQuestionOverride, setGuessBlankQuestionOverride, removeGuessBlankQuestionOverride,
   getPictureOverrides, getPictureOverride, setPictureOverride, removePictureOverride,
   isImageOverride,
   getWordOverrides, getWordOverride, type WordOverride,
@@ -40,8 +40,8 @@ import {
   addGlossOverride, removeAddedGloss, setGlossMeaningNote,
   downloadUserContent, applyUserContentImport,
 } from '../data/user-content.ts';
-import type { TriviaQuestion, TriviaCategory, TriviaDifficulty, ReadingDifficulty, ReadingLength, AnswerType } from '../data/trivia-questions.ts';
-import type { GuessBlankQuestion, BlankCategory, BlankDifficulty } from '../data/guess-blank-questions.ts';
+import { getTriviaQuestions, type TriviaQuestion, type TriviaCategory, type TriviaDifficulty, type ReadingDifficulty, type ReadingLength, type AnswerType } from '../data/trivia-questions.ts';
+import { getGuessBlankQuestions, type GuessBlankQuestion, type BlankCategory, type BlankDifficulty } from '../data/guess-blank-questions.ts';
 import { LANGUAGES, type LanguageInfo } from '../data/languages.ts';
 import { BANDS, type Band, representativeRankForBand, bandForRank } from '../data/bands.ts';
 import { POS_CHIPS, POS_ABBREV } from './my-lists/types.ts';
@@ -1882,6 +1882,15 @@ function buildEditTriviaSubsection(currentLang: string): { el: HTMLElement; refr
   let searchQuery = '';
   const sortState: TriviaListState = { sort: 'question', dir: 'asc', category: new Set(), difficulty: new Set(), domains: new Set() };
 
+  // The built-in bank itself (override-free) is now a server fetch — see
+  // trivia-questions.ts's own getTriviaQuestions — so it's cached here per
+  // language exactly the way buildEditWordSubsection's ensureWords/
+  // rawWordsCache above cache the vocabulary fetch: a language whose bank
+  // isn't loaded yet just contributes nothing to collectEntries() below
+  // until the fetch resolves and re-renders the list, rather than every
+  // sort/filter/search keystroke needing to become async itself.
+  const builtinCache = new Map<string, TriviaQuestion[]>();
+
   const list = el('div', 'mc-list mc-scroll-list');
   const pager = buildListPager(i => { pageIndex = i; renderList(); }, () => { pageIndex = 0; renderList(); }, myContentInitialPageSize());
 
@@ -1943,9 +1952,23 @@ function buildEditTriviaSubsection(currentLang: string): { el: HTMLElement; refr
   function collectEntries(): TriviaEntry[] {
     const langs = searchLang === ALL_LANGS ? LANGUAGES : LANGUAGES.filter(l => l.name === searchLang);
     const entries: TriviaEntry[] = [];
+
+    // Same "kick off the missing fetches, re-render once they land" shape
+    // as buildEditWordSubsection's own ensureWords/stillLoading above — a
+    // language not yet in builtinCache just contributes no builtin rows on
+    // *this* call.
+    const stillLoading = langs.filter(info => !builtinCache.has(info.name));
+    if (stillLoading.length > 0) {
+      void Promise.all(stillLoading.map(info =>
+        getTriviaQuestions(info.name).then(qs => builtinCache.set(info.name, qs)),
+      )).then(renderList);
+    }
+
     for (const info of langs) {
-      for (const q of getBuiltinTriviaQuestionsWithOverrides(info.name)) {
-        entries.push({ info, q, origin: 'builtin', overridden: !!getTriviaQuestionOverride(info.name, q.id) });
+      const builtin = builtinCache.get(info.name) ?? [];
+      for (const q0 of builtin) {
+        const o = getTriviaQuestionOverride(info.name, q0.id);
+        entries.push({ info, q: o ? { ...q0, ...o } : q0, origin: 'builtin', overridden: !!o });
       }
       for (const q of getUserTriviaQuestions(info.name)) entries.push({ info, q, origin: 'user', overridden: false });
     }
@@ -2234,6 +2257,11 @@ function buildEditGuessBlankSubsection(currentLang: string): { el: HTMLElement; 
   let searchQuery = '';
   const sortState: BlankListState = { sort: 'answer', dir: 'asc', category: new Set(), difficulty: new Set() };
 
+  // Same "server fetch, cached per language, kicked off lazily" shape as
+  // buildEditTriviaSubsection's own builtinCache above, for
+  // guess-blank-questions.ts's getGuessBlankQuestions.
+  const builtinCache = new Map<string, GuessBlankQuestion[]>();
+
   const list = el('div', 'mc-list mc-scroll-list');
   const pager = buildListPager(i => { pageIndex = i; renderList(); }, () => { pageIndex = 0; renderList(); }, myContentInitialPageSize());
 
@@ -2292,9 +2320,21 @@ function buildEditGuessBlankSubsection(currentLang: string): { el: HTMLElement; 
   function collectEntries(): GuessBlankEntry[] {
     const langs = searchLang === ALL_LANGS ? LANGUAGES : LANGUAGES.filter(l => l.name === searchLang);
     const entries: GuessBlankEntry[] = [];
+
+    // Same "kick off the missing fetches, re-render once they land" shape
+    // as buildEditTriviaSubsection's own collectEntries above.
+    const stillLoading = langs.filter(info => !builtinCache.has(info.name));
+    if (stillLoading.length > 0) {
+      void Promise.all(stillLoading.map(info =>
+        getGuessBlankQuestions(info.name).then(qs => builtinCache.set(info.name, qs)),
+      )).then(renderList);
+    }
+
     for (const info of langs) {
-      for (const q of getBuiltinGuessBlankQuestionsWithOverrides(info.name)) {
-        entries.push({ info, q, origin: 'builtin', overridden: !!getGuessBlankQuestionOverride(info.name, q.id) });
+      const builtin = builtinCache.get(info.name) ?? [];
+      for (const q0 of builtin) {
+        const o = getGuessBlankQuestionOverride(info.name, q0.id);
+        entries.push({ info, q: o ? { ...q0, ...o } : q0, origin: 'builtin', overridden: !!o });
       }
       for (const q of getUserGuessBlankQuestions(info.name)) entries.push({ info, q, origin: 'user', overridden: false });
     }
@@ -2497,6 +2537,32 @@ interface WordSearchUI {
 
 const RESULTS_LIMIT = 20;
 
+/**
+ * Relevance tier for one word against an already-folded query — lower sorts
+ * first. Without this, `renderResults` below just filtered `words` in
+ * whatever order the API returned it and sliced to RESULTS_LIMIT, so an
+ * exact match could be truncated away entirely by thousands of weaker
+ * substring matches ranked earlier in that array.
+ *
+ * This matters most for a short accented word like Portuguese "à": foldKey
+ * strips diacritics for lenient matching, so searching "à" folds to "a" —
+ * which is a substring of nearly every word's own spelling *or* English
+ * translation ("that", "day", "man"...). Every one of those outranked the
+ * exact word "à" itself under the old unsorted, capped list, so it could
+ * never appear no matter how the results scrolled — indistinguishable from
+ * the word not existing, even though the search box, the list, and the
+ * editor beneath it were all otherwise working exactly as designed.
+ */
+function matchTier(w: Word, q: string): number {
+  const wf = foldKey(w.word);
+  if (wf === q) return 0;
+  if (wf.startsWith(q)) return 1;
+  if (foldKey(w.translation) === q) return 2;
+  if (wf.includes(q)) return 3;
+  if (foldKey(w.translation).startsWith(q)) return 4;
+  return 5; // translation match, substring only
+}
+
 /** Sentinel `langSelect` value for "search every language at once" — never a
  *  real language name (LANGUAGES only ever holds those), so it can't
  *  collide. Each result in this mode carries its own real `.language`
@@ -2587,7 +2653,13 @@ function buildWordSearchUI(opts: WordSearchUIOptions): WordSearchUI {
     if (!q) { resultsList.hidden = true; countLabel.hidden = true; currentMatches = []; return; }
     const allMatches = words
       .filter(w => opts.isEligible(w.language ?? lang, w))
-      .filter(w => foldKey(w.word).includes(q) || foldKey(w.translation).includes(q));
+      .filter(w => foldKey(w.word).includes(q) || foldKey(w.translation).includes(q))
+      // Best matches first — see matchTier's own comment for why this is
+      // what makes a short accented word like "à" reachable at all once its
+      // fold-key ("a") also substring-matches thousands of other words.
+      .map((w, i) => ({ w, tier: matchTier(w, q), i }))
+      .sort((a, b) => a.tier - b.tier || a.i - b.i)
+      .map(({ w }) => w);
     currentMatches = allMatches.slice(0, RESULTS_LIMIT);
 
     if (currentMatches.length === 0) {

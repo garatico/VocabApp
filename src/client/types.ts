@@ -92,6 +92,19 @@ export interface Word {
    */
   meaningDisambiguators?: Record<string, string> | null;
   /**
+   * True for a "function word" — a grammatical particle/auxiliary/suffix
+   * (は/を/さん/... — see HAND_CURATED_GRAMMAR_WORDS in VocabApp-Data's
+   * corpus.py) whose `translation` is a functional description ("topic
+   * marker"), not a gloss the way an ordinary headword's is. Unlike
+   * `disambiguator` above, this is pipeline-derived, not admin-curated —
+   * but still optional here for the same reason: the DB column backing it
+   * may not exist on an older database (see vocab-loader.ts's
+   * checkIsFunctionWordColumn), in which case the server always sends
+   * `false` rather than omitting the field, so treat a missing value the
+   * same as `false` rather than as "unknown".
+   */
+  is_function_word?: boolean;
+  /**
    * Which language this word belongs to. Absent on every normal single-language
    * load — the language is implied by which array you fetched. Only set when a
    * word is merged into a multi-language list (see table-mode's Compare

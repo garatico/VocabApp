@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   isCorrect, isReverseCorrect, isCorrectStrict, isReverseCorrectStrict,
-  getPosLabel, getGlosses, buildGlossDisplay,
+  getGlosses, buildGlossDisplay,
 } from '../../src/client/utils/utils.js';
 import type { Word } from '../../src/client/types.js';
 
@@ -143,13 +143,6 @@ describe('strict variants (diacritics significant)', () => {
 });
 
 describe('display helpers', () => {
-  it('getPosLabel abbreviates known parts of speech', () => {
-    expect(getPosLabel(word({ pos: 'adjective' }))).toBe('adj');
-    expect(getPosLabel(word({ pos: 'verb' }))).toBe('verb');
-    expect(getPosLabel(word({ pos: 'gerund' }))).toBe('gerund'); // unknown → passthrough
-    expect(getPosLabel(word({}))).toBe('');
-  });
-
   it('getGlosses strips parentheticals from glosses and answers', () => {
     expect(getGlosses(word({ glosses: ['the (fem. sing.)'] }))).toEqual(['the']);
     expect(getGlosses(word({ answers: 'of|from' }))).toEqual(['of', 'from']);

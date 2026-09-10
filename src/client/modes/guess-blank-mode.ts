@@ -27,6 +27,7 @@ import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
 import { languageInfo } from '../data/languages.ts';
 import { hintReveal, hintableLength } from '../utils/hint-reveal.ts';
+import { showLoading, hideLoading } from '../ui/ui.ts';
 
 interface RenderGuessBlankModeOptions {
   container:   HTMLElement;
@@ -100,20 +101,28 @@ const DIFFICULTY_LABELS: Record<BlankDifficulty, string> = {
   easy: 'Easy', medium: 'Medium', hard: 'Hard',
 };
 
-export function renderGuessBlankMode({
+export async function renderGuessBlankMode({
   container,
   lang = 'spanish',
   difficulty = 'all',
   fixedQueue,
-}: RenderGuessBlankModeOptions): void {
+}: RenderGuessBlankModeOptions): Promise<void> {
   container.innerHTML = '';
   clearSummary('guessBlank');
   setProgress(0, 0);
 
-  // The hand-written bank (any My Content overrides applied) plus every
-  // question a learner has added of their own — see
-  // user-content.ts's getEffectiveGuessBlankQuestions.
-  const allQuestions = getEffectiveGuessBlankQuestions(lang);
+  // The question bank (any My Content overrides applied) plus every
+  // question a learner has added of their own — see user-content.ts's
+  // getEffectiveGuessBlankQuestions. Skipped entirely when a fixedQueue was
+  // handed in (the "↺ Practice N" retry path already has its questions).
+  let allQuestions: GuessBlankQuestion[];
+  if (fixedQueue) {
+    allQuestions = fixedQueue;
+  } else {
+    showLoading('Loading Guess the Blank questions...');
+    allQuestions = await getEffectiveGuessBlankQuestions(lang);
+    hideLoading();
+  }
   const bank = fixedQueue ?? (difficulty === 'all' ? allQuestions : allQuestions.filter(q => q.difficulty === difficulty));
 
   if (bank.length === 0) {
@@ -442,8 +451,8 @@ export function renderGuessBlankMode({
     );
     if (missedQuestions.length > 0) {
       document.querySelectorAll<HTMLButtonElement>('.summary-retry-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          renderGuessBlankMode({ container, lang, fixedQueue: missedQuestions });
+        btn.addEventListener('click', async () => {
+          await renderGuessBlankMode({ container, lang, fixedQueue: missedQuestions });
         });
       });
     }

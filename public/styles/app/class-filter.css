@@ -23,7 +23,9 @@
    three ids are aliases of it, the same way .filter-box is. */
 #classFilter,
 #listFilter,
-#domainFilterWrap {
+#domainFilterWrap,
+#scriptFilterWrap,
+#scriptTypeFilterWrap {
   background: color-mix(in srgb, var(--surface2) 45%, var(--surface));
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -36,10 +38,70 @@
    around it stayed at 0.5rem. */
 #classFilter,
 #listFilter,
-#domainFilterWrap {
+#domainFilterWrap,
+#scriptFilterWrap,
+#scriptTypeFilterWrap {
   margin-top: 0.5rem;
 }
 #classFilter { margin-top: 0.5rem; }
+
+/* Script Type reuses .pos-chip's exact look (see below) but its own body
+   needs the same wrap-row layout #classFilterBody has — #classFilterBody's
+   rule is written for that one id specifically, so this repeats it rather
+   than widening that selector for an id that isn't POS chips. */
+#scriptTypeFilterBody {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.45rem 0.65rem;
+}
+#scriptTypeFilterBody.filter-body--collapsed { display: none; }
+.pos-chip[data-script="kanji"]    { --pos-hue: 217; }  /* blue   — same as verb, arbitrary but distinct from the other two */
+.pos-chip[data-script="katakana"] { --pos-hue:  20; }  /* orange */
+.pos-chip[data-script="hiragana"] { --pos-hue: 340; }  /* pink   */
+
+/* ── Script Display's compact rows (mirrors Settings' .settings-row
+   content but at the filter panel's density — a short label with the
+   fuller explanation in its title attribute instead of an always-visible
+   paragraph, same convention filter.hideTip/filter.focusTip already use
+   on the List filter's Hide/Focus buttons). ── */
+#scriptFilterBody.script-toggle-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.45rem 0.65rem;
+}
+#scriptFilterBody.script-toggle-body.filter-body--collapsed { display: none; }
+.script-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.script-toggle-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Settings' identical copy of this control (settings.css's
+   @media (max-width: 599px) block) stacks the label above the toggle and
+   makes the toggle full-width on narrow screens; this filter-panel copy had
+   no equivalent, so it could overflow/squeeze, especially the 4-button
+   Function-word brackets row. */
+@media (max-width: 599px) {
+  .script-toggle-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+  .script-toggle-row .sort-order-toggle { width: 100%; }
+  .script-toggle-row .sort-order-btn    { flex: 1; }
+}
+
 .filter-box {
   padding: 0.4rem 0.6rem 0.5rem;
 }
@@ -90,6 +152,45 @@
 }
 
 .filter-body--collapsed { display: none; }
+
+/* Collapsed, every filter box should read as the same size and be spaced
+   the same as Part of Speech (#classFilter, styled above) — the template.
+   Each box's own layout puts its padding/margins in different places for
+   its *expanded* content (List and Domains keep a header margin-bottom
+   that only makes sense above visible body content; Script Display and
+   Script Type put all their padding on the body itself, which disappears
+   with it when collapsed), so left alone their collapsed heights and
+   insets drift apart. Scoped to the collapsed state via :has() so none of
+   those expanded layouts change. */
+#listFilter:has(#listFilterBody.filter-body--collapsed),
+#domainFilterWrap:has(#domainFilterBody.filter-body--collapsed),
+#scriptFilterWrap:has(#scriptFilterBody.filter-body--collapsed),
+#scriptTypeFilterWrap:has(#scriptTypeFilterBody.filter-body--collapsed) {
+  padding: 0.45rem 0.65rem;
+}
+#listFilter:has(#listFilterBody.filter-body--collapsed) .list-filter-header,
+#domainFilterWrap:has(#domainFilterBody.filter-body--collapsed) #domainFilterHeader {
+  margin-bottom: 0;
+}
+/* Part of Speech, List and Domains all wrap their header button in a flex
+   row (that's what makes their collapsed heights agree above); Script
+   Display and Script Type don't have one — the button is the wrap's only
+   visible child once its body is hidden — so without a flex context here
+   too, the button's inline line-height leaves it a couple pixels off. */
+#scriptFilterWrap:has(#scriptFilterBody.filter-body--collapsed),
+#scriptTypeFilterWrap:has(#scriptTypeFilterBody.filter-body--collapsed) {
+  display: flex;
+  align-items: center;
+}
+/* Part of Speech, List and Domains also carry a .filter-header-controls
+   (On/Off + chain-link) beside their label, which is taller than the
+   collapse button alone and so sets the collapsed row's height. Script
+   Display and Script Type have no such controls, so without a matching
+   min-height their collapsed row comes out shorter than the other three. */
+#scriptFilterWrap:has(#scriptFilterBody.filter-body--collapsed) .filter-collapse-btn,
+#scriptTypeFilterWrap:has(#scriptTypeFilterBody.filter-body--collapsed) .filter-collapse-btn {
+  min-height: 1.6rem;
+}
 
 /* The POS chips live in their own row so the header can sit above them */
 #classFilterBody {

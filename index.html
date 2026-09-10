@@ -518,6 +518,8 @@
             <button type="button" class="pos-chip" data-pos="preposition" data-i18n="filter.prepositions">Prepositions</button>
             <button type="button" class="pos-chip" data-pos="conjunction" data-i18n="filter.conjunctions">Conjunctions</button>
             <button type="button" class="pos-chip" data-pos="article" data-i18n="filter.articles">Articles</button>
+            <button type="button" class="pos-chip" data-pos="particle" data-i18n="filter.particles">Particles</button>
+            <button type="button" class="pos-chip" data-pos="suffix" data-i18n="filter.suffixes">Suffixes</button>
           </div>
         </div>
 
@@ -577,6 +579,71 @@
           </div>
         </div>
 
+        <!-- Only shown for a language with a non-Latin script (Chinese,
+             Japanese) — see syncScriptDisplayAvailability() in app.ts.
+             Mirrors the same controls (and localStorage keys) under
+             Settings → Script Display; kept in sync from both ends by
+             settings.ts so either entry point works. -->
+        <div id="scriptFilterWrap" class="class-filter-wrap" data-kid-hide="true" hidden>
+          <button type="button" class="filter-collapse-btn" data-collapse="scriptFilterBody" data-default-open="true" aria-expanded="true" aria-controls="scriptFilterBody">
+            <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
+            <span class="filter-section-label" data-i18n="settings.nav.script">Script Display</span>
+          </button>
+          <div id="scriptFilterBody" class="filter-body script-toggle-body">
+
+            <div class="script-toggle-row" title="For a language with a non-Latin script (Chinese, Japanese): which script is primary — shown by default, and required by default when a direction asks you to type it. The romanized form sidesteps needing an IME to type characters" data-i18n-title="settings.script.primaryDesc">
+              <span class="script-toggle-label" data-i18n="settings.script.primary">Word shown as</span>
+              <div class="sort-order-toggle" id="filterChineseScript">
+                <button type="button" class="sort-order-btn active" data-chinese-script="characters" data-i18n="settings.script.characters">Characters</button>
+                <button type="button" class="sort-order-btn" data-chinese-script="pinyin" data-i18n="settings.script.romanized">Romanized</button>
+              </div>
+            </div>
+
+            <div class="script-toggle-row" title="Annotate the word with its other script in parentheses, e.g. 的 (de) or 会社 (kaisha), and accept either script as a typed answer" data-i18n-title="settings.script.showBothDesc">
+              <span class="script-toggle-label" data-i18n="settings.script.showBoth">Show both scripts (word)</span>
+              <div class="sort-order-toggle" id="filterShowPinyin">
+                <button type="button" class="sort-order-btn" data-show-pinyin="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-show-pinyin="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="script-toggle-row" title="Also show the romanized reading in parentheses next to the English meaning, e.g. already (le) or company (kaisha)" data-i18n-title="settings.script.showRomanizedGlossDesc">
+              <span class="script-toggle-label" data-i18n="settings.script.showRomanizedGloss">Show romanization (meaning)</span>
+              <div class="sort-order-toggle" id="filterShowPinyinGloss">
+                <button type="button" class="sort-order-btn" data-show-pinyin-gloss="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-show-pinyin-gloss="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="script-toggle-row" title="Bracket a function word — a grammatical particle/suffix with no real translation, e.g. は 'topic marker' — to mark it apart from ordinary vocabulary. Word brackets the target-language slot, Meaning brackets the English side" data-i18n-title="settings.script.functionMarkerDesc">
+              <span class="script-toggle-label" data-i18n="settings.script.functionMarker">Function-word brackets</span>
+              <div class="sort-order-toggle" id="filterFunctionWordMarker">
+                <button type="button" class="sort-order-btn" data-function-marker="off" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-function-marker="word" data-i18n="settings.script.markerWord">Word</button>
+                <button type="button" class="sort-order-btn active" data-function-marker="meaning" data-i18n="settings.script.markerMeaning">Meaning</button>
+                <button type="button" class="sort-order-btn" data-function-marker="both" data-i18n="settings.script.markerBoth">Both</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Japanese only — Chinese has no kana, so there's no three-way
+             split to filter by. See syncScriptTypeAvailability() in
+             app.ts. Chips are fixed (not discovered from data, unlike
+             Domains) since there are always exactly these three. -->
+        <div id="scriptTypeFilterWrap" class="class-filter-wrap" data-kid-hide="true" hidden>
+          <button type="button" class="filter-collapse-btn" data-collapse="scriptTypeFilterBody" aria-expanded="false" aria-controls="scriptTypeFilterBody">
+            <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
+            <span class="filter-section-label" data-i18n="filter.scriptType">Script Type</span>
+          </button>
+          <div id="scriptTypeFilterBody" class="filter-body" role="group">
+            <button type="button" class="pos-chip pos-chip-all active" data-i18n="controls.all">All</button>
+            <button type="button" class="pos-chip" data-script="kanji" title="Words containing at least one kanji character" data-i18n-title="filter.scriptKanjiTip" data-i18n="filter.scriptKanji">Kanji</button>
+            <button type="button" class="pos-chip" data-script="katakana" title="Words written entirely in katakana (mostly loanwords)" data-i18n-title="filter.scriptKatakanaTip" data-i18n="filter.scriptKatakana">Katakana</button>
+            <button type="button" class="pos-chip" data-script="hiragana" title="Words written entirely in hiragana" data-i18n-title="filter.scriptHiraganaTip" data-i18n="filter.scriptHiragana">Hiragana</button>
+          </div>
+        </div>
 
       </div>
 
@@ -816,7 +883,7 @@
             <a class="settings-nav-link" href="#settings-sec-guessblank"><span class="settings-nav-icon" aria-hidden="true">🔍</span><span data-i18n="nav.guessBlank">Guess the Blank</span></a>
             <a class="settings-nav-link" href="#settings-sec-answers"><span class="settings-nav-icon" aria-hidden="true">✅</span><span data-i18n="settings.nav.answers">Answer Checking</span></a>
             <a class="settings-nav-link" href="#settings-sec-filters"><span class="settings-nav-icon" aria-hidden="true">🔎</span><span data-i18n="filter.filtersTitle">Filters</span></a>
-            <a class="settings-nav-link" href="#settings-sec-chinese"><span class="settings-nav-icon" aria-hidden="true">文</span><span data-i18n="settings.nav.chinese">Chinese</span></a>
+            <a class="settings-nav-link" href="#settings-sec-chinese"><span class="settings-nav-icon" aria-hidden="true">文</span><span data-i18n="settings.nav.script">Script Display</span></a>
             <a class="settings-nav-link" href="#settings-sec-appearance"><span class="settings-nav-icon" aria-hidden="true">🎨</span><span data-i18n="settings.nav.appearance">Appearance</span></a>
             <a class="settings-nav-link" href="#settings-sec-history"><span class="settings-nav-icon" aria-hidden="true">🕘</span><span data-i18n="settings.nav.history">Session History</span></a>
             <a class="settings-nav-link" href="#settings-sec-general"><span class="settings-nav-icon" aria-hidden="true">⚙</span><span data-i18n="settings.nav.general">General</span></a>
@@ -1460,25 +1527,25 @@
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyChinese" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyChinese">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">文</span>
-              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.chinese">Chinese</span>
+              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.script">Script Display</span>
             </button>
             <div id="settingsBodyChinese" class="filter-body settings-section-body">
 
             <div class="settings-row">
               <div class="settings-label">
-                <span data-i18n="settings.chinese.script">Chinese word shown as</span>
-                <span class="settings-desc" data-i18n="settings.chinese.scriptDesc">Which script is primary for the Chinese word — shown by default, and required by default when a direction asks you to type it. Pinyin sidesteps needing an IME to type hanzi</span>
+                <span data-i18n="settings.script.primary">Word shown as</span>
+                <span class="settings-desc" data-i18n="settings.script.primaryDesc">For a language with a non-Latin script (Chinese, Japanese): which script is primary — shown by default, and required by default when a direction asks you to type it. The romanized form sidesteps needing an IME to type characters</span>
               </div>
               <div class="sort-order-toggle" id="settingChineseScript">
-                <button type="button" class="sort-order-btn active" data-chinese-script="characters" data-i18n="settings.chinese.characters">Characters</button>
-                <button type="button" class="sort-order-btn" data-chinese-script="pinyin" data-i18n="settings.chinese.pinyin">Pinyin</button>
+                <button type="button" class="sort-order-btn active" data-chinese-script="characters" data-i18n="settings.script.characters">Characters</button>
+                <button type="button" class="sort-order-btn" data-chinese-script="pinyin" data-i18n="settings.script.romanized">Romanized</button>
               </div>
             </div>
 
             <div class="settings-row">
               <div class="settings-label">
-                <span data-i18n="settings.chinese.showBoth">Show both scripts (word)</span>
-                <span class="settings-desc" data-i18n="settings.chinese.showBothDesc">Annotate the Chinese word with its other script in parentheses, e.g. 的 (de), and accept either script as a typed answer</span>
+                <span data-i18n="settings.script.showBoth">Show both scripts (word)</span>
+                <span class="settings-desc" data-i18n="settings.script.showBothDesc">Annotate the word with its other script in parentheses, e.g. 的 (de) or 会社 (kaisha), and accept either script as a typed answer</span>
               </div>
               <div class="sort-order-toggle" id="settingShowPinyin">
                 <button type="button" class="sort-order-btn" data-show-pinyin="false" data-i18n="common.off">Off</button>
@@ -1488,12 +1555,25 @@
 
             <div class="settings-row">
               <div class="settings-label">
-                <span data-i18n="settings.chinese.showPinyinGloss">Show pinyin (meaning)</span>
-                <span class="settings-desc" data-i18n="settings.chinese.showPinyinGlossDesc">Also show the pinyin reading in parentheses next to the English meaning, e.g. already (le)</span>
+                <span data-i18n="settings.script.showRomanizedGloss">Show romanization (meaning)</span>
+                <span class="settings-desc" data-i18n="settings.script.showRomanizedGlossDesc">Also show the romanized reading in parentheses next to the English meaning, e.g. already (le) or company (kaisha)</span>
               </div>
               <div class="sort-order-toggle" id="settingShowPinyinGloss">
                 <button type="button" class="sort-order-btn" data-show-pinyin-gloss="false" data-i18n="common.off">Off</button>
                 <button type="button" class="sort-order-btn active" data-show-pinyin-gloss="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.script.functionMarker">Function-word brackets</span>
+                <span class="settings-desc" data-i18n="settings.script.functionMarkerDesc">Bracket a function word — a grammatical particle/suffix with no real translation, e.g. は "topic marker" — to mark it apart from ordinary vocabulary. Word brackets the target-language slot, Meaning brackets the English side</span>
+              </div>
+              <div class="sort-order-toggle" id="settingFunctionWordMarker">
+                <button type="button" class="sort-order-btn" data-function-marker="off" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-function-marker="word" data-i18n="settings.script.markerWord">Word</button>
+                <button type="button" class="sort-order-btn active" data-function-marker="meaning" data-i18n="settings.script.markerMeaning">Meaning</button>
+                <button type="button" class="sort-order-btn" data-function-marker="both" data-i18n="settings.script.markerBoth">Both</button>
               </div>
             </div>
 

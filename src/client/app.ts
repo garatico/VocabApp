@@ -6,6 +6,7 @@ import { bindStartHandler }                    from './start-handler.ts';
 import { bindClassFilter, getSelectedClasses, syncUI as syncClassFilterUI } from './filters/class-filter.ts';
 import { initSectionCollapse }                from './filters/section-collapse.ts';
 import { bindDomainFilter, getSelectedDomains, updateDomainFilter, reloadDomainFilter } from './filters/domain-filter.ts';
+import { bindScriptTypeFilter, getSelectedScriptTypes } from './filters/script-type-filter.ts';
 import { bindUIState, bindModeSwitch, getCurrentMode } from './ui/ui-state.ts';
 import { buildFilterUI, initListFilter, syncListFilterUI, filterWords } from './filters/word-filters.ts';
 import { estimateConjugationSize } from './modes/conjugation/verb-filters.ts';
@@ -23,7 +24,7 @@ import { getTriviaQuestions }                    from './data/trivia-questions.t
 import { getUserTriviaQuestions }                from './data/user-content.ts';
 import { renderMyContent }                       from './modes/my-content-mode.ts';
 import { LANGUAGES, isoCode, supportsConjugation,
-         conjugationUnavailableReason }          from './data/languages.ts';
+         conjugationUnavailableReason, languageInfo } from './data/languages.ts';
 import { availableLanguages, isPackagedApp }     from './data/vocab-source.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
 import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, setOnKidFriendlyModeChange, refreshStreakReadouts } from './settings.ts';
@@ -268,6 +269,8 @@ async function markEmptyLanguages(): Promise<void> {
     // The saved language has no data; we fell back to the first one.
     S.set('vq_lang', langSelect.value);
     syncConjugationAvailability();
+    syncScriptDisplayAvailability();
+    syncScriptTypeAvailability();
     void loadAndBuildFilters(langSelect.value);
   }
 }
@@ -292,6 +295,35 @@ function syncConjugationAvailability(): void {
   if (!available && document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === 'conjugation') {
     document.querySelector<HTMLElement>('.mode-tab[data-mode="table"]')?.click();
   }
+}
+
+/**
+ * Table mode's Script Display filter (word shown as characters vs.
+ * romanized, etc. — index.html's #scriptFilterWrap) only means anything
+ * for a `romanizedScript` language (Chinese, Japanese): every other
+ * language's word IS its Latin-alphabet spelling, so there's no second
+ * script to choose between. Shown/hidden here rather than always present
+ * and merely inert, matching how the rest of this file treats a filter
+ * that doesn't apply to the current language.
+ */
+function syncScriptDisplayAvailability(): void {
+  const lang = langSelect?.value ?? 'spanish';
+  const wrap = document.getElementById('scriptFilterWrap');
+  if (!wrap) return;
+  wrap.hidden = !languageInfo(lang).romanizedScript;
+}
+
+/**
+ * The Kanji/Katakana/Hiragana filter (index.html's #scriptTypeFilterWrap,
+ * see script-type-filter.ts) only means anything for Japanese specifically
+ * — unlike Script Display above, which applies to any romanizedScript
+ * language, Chinese has no kana and so no three-way split to filter by.
+ */
+function syncScriptTypeAvailability(): void {
+  const lang = langSelect?.value ?? 'spanish';
+  const wrap = document.getElementById('scriptTypeFilterWrap');
+  if (!wrap) return;
+  wrap.hidden = lang !== 'japanese';
 }
 
 /**
@@ -572,7 +604,7 @@ async function loadAndBuildFilters(lang: string): Promise<void> {
   // through, rather than after each of that function's call sites — a
   // caller that forgets to ask for it is no longer possible, whereas asking
   // each caller to remember already left more than one that didn't.
-  if (getCurrentMode() === 'trivia') updateTriviaDomainFilter();
+  if (getCurrentMode() === 'trivia') await updateTriviaDomainFilter();
 
   refreshConjEstimate();
 }
@@ -586,10 +618,11 @@ async function loadAndBuildFilters(lang: string): Promise<void> {
  * mode, and from onActivate.trivia below for the one path that doesn't go
  * through loadAndBuildFilters — activating the tab without a language change.
  */
-function updateTriviaDomainFilter(): void {
+async function updateTriviaDomainFilter(): Promise<void> {
   const lang = langSelect?.value ?? 'spanish';
   const domainCounts = new Map<string, number>();
-  for (const q of [...getTriviaQuestions(lang), ...getUserTriviaQuestions(lang)]) {
+  const builtin = await getTriviaQuestions(lang);
+  for (const q of [...builtin, ...getUserTriviaQuestions(lang)]) {
     for (const d of q.domains ?? []) {
       domainCounts.set(d, (domainCounts.get(d) ?? 0) + 1);
     }
@@ -715,6 +748,7 @@ bindStartHandler({
   },
   getSelectedClasses,
   getSelectedDomains,
+  getSelectedScriptTypes,
   getSortOrder: () => {
     const active = document.querySelector<HTMLElement>('#sortOrderToggle .sort-order-btn.active');
     return active?.dataset.order ?? 'frequency';
@@ -747,6 +781,8 @@ bindStartHandler({
 langSelect?.addEventListener('change', () => {
   S.set('vq_lang', langSelect.value);
   syncConjugationAvailability();
+  syncScriptDisplayAvailability();
+  syncScriptTypeAvailability();
   updateLangPickerButton();
   void loadAndBuildFilters(langSelect.value);
   refreshFilterSelect(langSelect.value);
@@ -828,6 +864,9 @@ sizeCustomInput?.addEventListener('input', () => {
 });
 
 document.getElementById('classFilter')
+  ?.addEventListener('change', () => loadAndBuildFilters(langSelect?.value ?? 'spanish'));
+
+document.getElementById('scriptTypeFilterWrap')
   ?.addEventListener('change', () => loadAndBuildFilters(langSelect?.value ?? 'spanish'));
 
 // Size mode toggle (Top N vs N New)
@@ -1067,11 +1106,14 @@ void (async function init(): Promise<void> {
   buildLanguageOptions(); // must precede restoreSettings — it sets .value
   restoreSettings();
   syncConjugationAvailability();
+  syncScriptDisplayAvailability();
+  syncScriptTypeAvailability();
   syncKidFriendlyLocks();
   setOnKidFriendlyModeChange(syncKidFriendlyLocks);
   bindUIState();
   bindClassFilter();
   bindDomainFilter();
+  bindScriptTypeFilter();
   initSectionCollapse();
   bindTableControls();
   bindSettings();

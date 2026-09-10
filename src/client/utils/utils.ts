@@ -15,6 +15,18 @@ export type ChineseScript = 'characters' | 'pinyin';
  * rather than read from `Settings` directly so this stays pure and testable
  * — callers pass `Settings.getChineseDisplay()`.
  */
+/**
+ * Where a function-word marker (bracketing は as, say, "[wa]" or "[は]")
+ * shows, if at all — see isFunctionWord. A separate choice per side rather
+ * than one on/off switch: a learner about to *type* the word slot doesn't
+ * need it visually flagged as unusual (and might not want brackets sitting
+ * in an input they're focused on), but reading the English side benefits
+ * from knowing "topic marker" isn't a literal word-for-word translation —
+ * so the two sides can reasonably want different answers, which is why
+ * this isn't just a boolean.
+ */
+export type FunctionWordMarker = 'off' | 'word' | 'meaning' | 'both';
+
 export interface ChineseDisplay {
   /** Which script is primary — see `ChineseScript`. */
   chineseScript:   ChineseScript;
@@ -26,12 +38,18 @@ export interface ChineseDisplay {
   showBothScripts: boolean;
   /** Annotate the English gloss with the pinyin reading, e.g. "already (le)". */
   showPinyinGloss: boolean;
+  /** See `FunctionWordMarker`. */
+  functionWordMarker: FunctionWordMarker;
 }
 
 export const DEFAULT_CHINESE_DISPLAY: ChineseDisplay = {
   chineseScript:   'characters',
   showBothScripts: true,
   showPinyinGloss: true,
+  // Bracket the English side ("[topic marker]"), not the target word — a
+  // learner typing the word doesn't need it called out as unusual, but the
+  // English side needs to be visibly not a real translation.
+  functionWordMarker: 'meaning',
 };
 
 /** "spanish" -> "Spanish". Language codes and other plain-ASCII labels only. */
@@ -259,27 +277,56 @@ export function matchesAnswer(
 export type QuizSlot = 'word' | 'english';
 
 /**
+ * True for a "function word" — a hand-curated grammatical particle,
+ * auxiliary, or suffix (は/を/さん/... — see HAND_CURATED_GRAMMAR_WORDS in
+ * VocabApp-Data's corpus.py) rather than an ordinary translatable word.
+ * Unlike a real headword, these have no word-to-word English translation
+ * — their `translation` is a functional description ("topic marker"), not
+ * a gloss. Backed by the `is_function_word` DB column (schemaVersion 5,
+ * pipeline-derived) via vocab-loader.ts, not guessed here from `pos` —
+ * a future language could legitimately have a real headword tagged
+ * 'particle' or 'suffix' without being one of these hand-curated
+ * exceptions, so the data has to say so explicitly.
+ */
+export function isFunctionWord(entry: Word): boolean {
+  return Boolean(entry.is_function_word);
+}
+
+function bracketed(text: string): string {
+  return `[${text}]`;
+}
+
+/**
  * The word slot's own text: for a `romanizedScript` language, the primary
  * script named by `display.chineseScript`, annotated with the other one in
  * parentheses when `display.showBothScripts` is on (e.g. "的 (de)", or
  * "de (的)" when pinyin is primary) — falling back to the other script, or
  * to `entry.word`, if the primary one is missing rather than showing blank
- * text. Every other language just returns `entry.word` untouched.
+ * text. Every other language just returns `entry.word` untouched. Either
+ * way, a function word (see isFunctionWord) gets bracketed here only when
+ * `display.functionWordMarker` is 'word' or 'both' — see FunctionWordMarker
+ * for why the two sides are independently configurable.
  */
 export function chineseWordText(entry: Word, lang: string | null | undefined, display: ChineseDisplay): string {
-  if (!lang || !languageInfo(lang).romanizedScript) return entry.word;
+  const mark = isFunctionWord(entry)
+    && (display.functionWordMarker === 'word' || display.functionWordMarker === 'both');
+  const wrap = (t: string) => mark ? bracketed(t) : t;
+  if (!lang || !languageInfo(lang).romanizedScript) return wrap(entry.word);
   const pinyin = entry.linguistic?.ipa || null;
   const primary   = display.chineseScript === 'pinyin' ? (pinyin ?? entry.word) : entry.word;
   const secondary = display.chineseScript === 'pinyin' ? entry.word : pinyin;
-  if (!display.showBothScripts || !secondary || secondary === primary) return primary;
-  return `${primary} (${secondary})`;
+  if (!display.showBothScripts || !secondary || secondary === primary) return wrap(primary);
+  return `${wrap(primary)} (${secondary})`;
 }
 
 /**
  * The prompt or revealed-answer text for one slot of a quiz row. `glossCount`
  * only matters for the 'english' slot — see buildGlossDisplay. For a
  * `romanizedScript` language, an 'english' slot also gets the pinyin reading
- * appended when `display.showPinyinGloss` is on, e.g. "already (le)".
+ * appended when `display.showPinyinGloss` is on, e.g. "already (le)". A
+ * function word (see isFunctionWord) gets its gloss bracketed first, when
+ * `display.functionWordMarker` is 'meaning' or 'both' — before the pinyin
+ * annotation, e.g. "[topic marker] (wa)" rather than "[topic marker (wa)]".
  */
 export function slotText(
   entry: Word,
@@ -289,7 +336,11 @@ export function slotText(
   glossCount = Infinity,
 ): string {
   if (slot === 'word') return chineseWordText(entry, lang, display);
-  const base = buildGlossDisplay(entry, glossCount);
+  let base = buildGlossDisplay(entry, glossCount);
+  if (isFunctionWord(entry)
+      && (display.functionWordMarker === 'meaning' || display.functionWordMarker === 'both')) {
+    base = bracketed(base);
+  }
   if (!display.showPinyinGloss || !lang || !languageInfo(lang).romanizedScript) return base;
   const pinyin = entry.linguistic?.ipa;
   return pinyin ? `${base} (${pinyin})` : base;
@@ -335,22 +386,6 @@ export function getDisplay(entry: Word): { prompt: string; hint: string | null }
  */
 export function displayWord(entry: Word, show = true): string {
   return show && entry.disambiguator ? `${entry.word} (${entry.disambiguator})` : entry.word;
-}
-
-/** Return a short label for the part of speech badge. */
-export function getPosLabel(entry: Word): string {
-  const map: Record<string, string> = {
-    verb:         'verb',
-    noun:         'noun',
-    adjective:    'adj',
-    adverb:       'adv',
-    pronoun:      'pron',
-    preposition:  'prep',
-    conjunction:  'conj',
-    article:      'art',
-    interjection: 'interj',
-  };
-  return map[entry.pos ?? ''] ?? entry.pos ?? '';
 }
 
 /** Return the accepted glosses for display, with parentheticals stripped. */

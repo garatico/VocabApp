@@ -34,7 +34,7 @@ function apply(btn: HTMLElement, body: HTMLElement, open: boolean): void {
  * clicking near a setting could collapse the whole section out from under it.
  * Settings sections still toggle via their own header button.
  */
-const BLOCK_SELECTOR = '#classFilter, #listFilter, #domainFilterWrap, .filter-box';
+const BLOCK_SELECTOR = '#classFilter, #listFilter, #domainFilterWrap, #scriptFilterWrap, #scriptTypeFilterWrap, .filter-box';
 
 /** Controls inside a section that must keep their own click behaviour. */
 const INTERACTIVE = 'button, input, select, textarea, a, label';

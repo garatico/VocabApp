@@ -64,20 +64,32 @@ function buildSection(lang: string, s: LangStat): HTMLElement {
   const nouns = s.posBreakdown?.noun || 0;
   const verbs = s.posBreakdown?.verb || 0;
 
-  const posOrder = ['noun','verb','adjective','adverb','pronoun','preposition','conjunction','article','interjection','other'];
+  const posOrder = ['noun','verb','adjective','adverb','pronoun','preposition','conjunction','article','particle','suffix','interjection','other'];
+
+  function posRow(label: string, n: number): string {
+    const pct = s.total ? Math.round((n / s.total) * 100) : 0;
+    return (
+      '<div class="pos-row">' +
+        '<span class="pos-name">' + esc(label) + '</span>' +
+        '<span class="pos-count">' + n.toLocaleString() + '</span>' +
+        coverageBar(pct) +
+      '</div>'
+    );
+  }
+
   const posRows = posOrder
     .filter(pos => (s.posBreakdown?.[pos] || 0) > 0)
-    .map(pos => {
-      const n   = s.posBreakdown[pos];
-      const pct = s.total ? Math.round((n / s.total) * 100) : 0;
-      return (
-        '<div class="pos-row">' +
-          '<span class="pos-name">' + esc(pos) + '</span>' +
-          '<span class="pos-count">' + n.toLocaleString() + '</span>' +
-          coverageBar(pct) +
-        '</div>'
-      );
-    }).join('');
+    .map(pos => posRow(pos, s.posBreakdown[pos]))
+    .join('');
+
+  // Anything in posBreakdown that isn't one of the known posOrder buckets —
+  // a POS value the pipeline started producing after this list was last
+  // updated — would otherwise be silently dropped: the displayed rows would
+  // sum to less than s.total with no indication anything was missing. Render
+  // the leftover as its own 'other' row instead, so nothing vanishes quietly.
+  const knownSum = posOrder.reduce((sum, pos) => sum + (s.posBreakdown?.[pos] || 0), 0);
+  const otherCount = s.total - knownSum;
+  const otherRow = otherCount > 0 ? posRow('other', otherCount) : '';
 
   const SKIP = new Set(['general', 'essential']);
   const specific   = (s.topDomains || []).filter(d => !SKIP.has(d.domain));
@@ -138,7 +150,7 @@ function buildSection(lang: string, s: LangStat): HTMLElement {
 
       '<div class="stat-subsection">' +
         '<div class="stat-subsection-title">Part of Speech</div>' +
-        '<div class="pos-breakdown">' + (posRows || '<span class="stat-empty">No data</span>') + '</div>' +
+        '<div class="pos-breakdown">' + (posRows + otherRow || '<span class="stat-empty">No data</span>') + '</div>' +
       '</div>' +
 
       '<div class="stat-subsection">' +
