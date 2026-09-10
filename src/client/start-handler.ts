@@ -307,9 +307,8 @@ export function bindStartHandler({
         triviaWrap.innerHTML = '';
         const triviaSubModeEl = document.getElementById('triviaSubMode');
         const triviaSubMode = (triviaSubModeEl?.querySelector('.conj-toggle-btn.active') as HTMLElement | null)?.dataset.mode ?? 'type';
-        const triviaCategoryEl = document.getElementById('triviaCategory');
-        const triviaCategory = (triviaCategoryEl?.querySelector('.conj-toggle-btn.active') as HTMLElement | null)
-          ?.dataset.category ?? 'all';
+        const triviaCategoryEl = document.getElementById('triviaCategory') as HTMLSelectElement | null;
+        const triviaCategory = triviaCategoryEl?.value ?? 'all';
         const triviaDifficultyEl = document.getElementById('triviaDifficulty');
         const triviaDifficulty = (triviaDifficultyEl?.querySelector('.conj-toggle-btn.active') as HTMLElement | null)
           ?.dataset.difficulty ?? 'all';

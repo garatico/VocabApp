@@ -251,13 +251,13 @@
             </div>
 
             <!-- Trivia only — see data/trivia-questions.ts's category field. -->
-            <div class="control-group control-group--chip" id="triviaCategoryGroup" style="display:none">
-              <label data-i18n="controls.category">Category</label>
-              <div class="conj-display-toggle" id="triviaCategory">
-                <button class="conj-toggle-btn active" data-category="all" data-i18n="controls.all">All</button>
-                <button class="conj-toggle-btn" data-category="history" data-i18n="controls.history">History</button>
-                <button class="conj-toggle-btn" data-category="pop-culture" data-i18n="controls.popCulture">Pop Culture</button>
-              </div>
+            <div class="control-group" id="triviaCategoryGroup" style="display:none">
+              <label for="triviaCategory" data-i18n="controls.category">Category</label>
+              <select id="triviaCategory">
+                <option value="all" selected data-i18n="controls.all">All</option>
+                <option value="history" data-i18n="controls.history">History</option>
+                <option value="pop-culture" data-i18n="controls.popCulture">Pop Culture</option>
+              </select>
             </div>
           </div>
 
