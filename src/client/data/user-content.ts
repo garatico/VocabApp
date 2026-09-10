@@ -660,6 +660,31 @@ export function removeAddedGloss(lang: string, word: string, gloss: string): voi
   mergeWordOverride(lang, word, { addedGlosses: added.filter(g => g !== gloss) });
 }
 
+/** Renames a gloss the learner added — a real sense can't be edited this way
+ *  (its text comes from the dictionary; hide/reorder is all that applies),
+ *  but a typed-in one is the learner's own text and can be fixed after the
+ *  fact rather than deleted and retyped. Carries over glossOrder/the per-sense
+ *  meaning note, both keyed by gloss text, so the edit doesn't silently drop
+ *  either. Silently ignored if the new text is blank or the gloss isn't
+ *  actually one of this word's added ones. */
+export function editAddedGloss(lang: string, word: string, oldGloss: string, newGloss: string): void {
+  const trimmed = newGloss.trim();
+  if (!trimmed || trimmed === oldGloss) return;
+  const current = getWordOverride(lang, word);
+  const added = current?.addedGlosses;
+  if (!added || !added.includes(oldGloss)) return;
+
+  const patch: Partial<WordOverride> = { addedGlosses: added.map(g => g === oldGloss ? trimmed : g) };
+  if (current?.glossOrder?.includes(oldGloss)) {
+    patch.glossOrder = current.glossOrder.map(g => g === oldGloss ? trimmed : g);
+  }
+  if (current?.meaningDisambiguators && oldGloss in current.meaningDisambiguators) {
+    const { [oldGloss]: note, ...rest } = current.meaningDisambiguators;
+    patch.meaningDisambiguators = { ...rest, [trimmed]: note };
+  }
+  mergeWordOverride(lang, word, patch);
+}
+
 export function removeWordOverride(lang: string, word: string): void {
   const overrides = { ...getWordOverrides(lang) };
   delete overrides[wordKey(word)];

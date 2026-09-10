@@ -176,9 +176,15 @@
    row (that's what makes their collapsed heights agree above); Script
    Display and Script Type don't have one — the button is the wrap's only
    visible child once its body is hidden — so without a flex context here
-   too, the button's inline line-height leaves it a couple pixels off. */
-#scriptFilterWrap:has(#scriptFilterBody.filter-body--collapsed),
-#scriptTypeFilterWrap:has(#scriptTypeFilterBody.filter-body--collapsed) {
+   too, the button's inline line-height leaves it a couple pixels off.
+   :not([hidden]) matters here: #scriptFilterWrap/#scriptTypeFilterWrap
+   carry the `hidden` attribute for a non-matching language, and an id
+   selector setting `display` outranks the UA `[hidden] { display: none }`
+   rule — without this guard, a *collapsed* section reappeared for every
+   language once its `filter-body--collapsed` class was set, because this
+   rule forced `display: flex` back on regardless of `hidden`. */
+#scriptFilterWrap:not([hidden]):has(#scriptFilterBody.filter-body--collapsed),
+#scriptTypeFilterWrap:not([hidden]):has(#scriptTypeFilterBody.filter-body--collapsed) {
   display: flex;
   align-items: center;
 }

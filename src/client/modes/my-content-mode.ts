@@ -37,7 +37,7 @@ import {
   isImageOverride,
   getWordOverrides, getWordOverride, type WordOverride,
   setWordFields, setGlossHidden, setGlossOrderOverride, removeWordOverride, applyGlossOrder,
-  addGlossOverride, removeAddedGloss, setGlossMeaningNote,
+  addGlossOverride, removeAddedGloss, editAddedGloss, setGlossMeaningNote,
   downloadUserContent, applyUserContentImport,
 } from '../data/user-content.ts';
 import { getTriviaQuestions, type TriviaQuestion, type TriviaCategory, type TriviaDifficulty, type ReadingDifficulty, type ReadingLength, type AnswerType } from '../data/trivia-questions.ts';
@@ -712,8 +712,50 @@ function buildSubsection(key: string, title: string, description: string, body: 
   }, key, title, description, body);
 }
 
+// ── Cross-tab navigation: "Edit in My Content" ──────────────────────────────
+//
+// Table mode's word-info popover can send a learner straight to a word's
+// editor in the "Edit an Existing Word" subsection below, the same one a
+// manual search there opens. There's no direct call from that popover into
+// this module's render function (the tab switch it triggers goes through
+// app.ts's onActivate, which calls renderMyContent with no word to focus) —
+// so the target is stashed here instead and picked up the next time
+// renderMyContent runs, which openWordInMyContentEditor forces immediately
+// by switching the language (if needed) and clicking the tab.
+let pendingFocusWord: { lang: string; word: string } | null = null;
+
+/** Switches to My Content, expands the Words section and its "Edit an
+ *  Existing Word" subsection, and opens `word`'s editor row — the entry
+ *  point Table mode's word-info popover uses. Switches the global language
+ *  picker to the word's own language first when it differs, the same way
+ *  presets.ts's applyBundle does, since My Content's word editor otherwise
+ *  defaults to whatever language was already selected. */
+export function openWordInMyContentEditor(lang: string, word: string): void {
+  pendingFocusWord = { lang, word };
+  const langSelect = document.getElementById('langSelect') as HTMLSelectElement | null;
+  if (langSelect && langSelect.value !== lang) {
+    langSelect.value = lang;
+    langSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  document.querySelector<HTMLButtonElement>('.mode-tab[data-mode="myContent"]')?.click();
+}
+
 export function renderMyContent(container: HTMLElement, lang: string): void {
   container.innerHTML = '';
+
+  const focusWord = pendingFocusWord && pendingFocusWord.lang === lang ? pendingFocusWord : null;
+  pendingFocusWord = null;
+  if (focusWord) {
+    // Force both levels open regardless of whatever was collapsed before —
+    // same effect as clicking their headers, and it sticks the same way a
+    // manual click would (see buildCollapsible), which is fine: a learner
+    // who got sent here to edit a word almost certainly wants this
+    // subsection open on their next visit too.
+    const keys = getCollapsedSections();
+    keys.delete('words');
+    keys.delete('words-edit');
+    setCollapsedSections(keys);
+  }
 
   const wrap = el('div', 'mc-wrap');
 
@@ -763,7 +805,7 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
 
   wrap.appendChild(buildSection('words', 'Words',
     'Add a brand-new word, or search real vocabulary (and words you\'ve added) to hide glosses, reorder them, or override the translation, part of speech, notes or domains.',
-    buildWordsSection(lang, selectedLangs)));
+    buildWordsSection(lang, selectedLangs, focusWord ?? undefined)));
 
   wrap.appendChild(buildSection('trivia', 'Trivia Questions',
     'Added to the Trivia tab\'s question bank, and included in its Difficulty/Reading/Domain filters. Fill in the question and answer for whichever languages you\'re writing it in — each becomes its own entry in that language\'s bank.',
@@ -789,10 +831,12 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
 // section rather than two, since both are fundamentally "change what a word
 // looks like in this browser."
 
-function buildWordsSection(currentLang: string, selectedLangs: Set<string>): HTMLElement {
+function buildWordsSection(
+  currentLang: string, selectedLangs: Set<string>, focusWord?: { lang: string; word: string },
+): HTMLElement {
   const wrap = el('div', 'mc-subsections');
   wrap.appendChild(buildAddWordSubsection(currentLang, selectedLangs));
-  wrap.appendChild(buildEditWordSubsection(currentLang));
+  wrap.appendChild(buildEditWordSubsection(currentLang, focusWord));
   return wrap;
 }
 
@@ -981,14 +1025,18 @@ function buildWordRow(
  * would also tear down the search panel next to it, closing the search and
  * losing the query every time an edit is made.
  */
-function buildEditWordSubsection(currentLang: string): HTMLElement {
+function buildEditWordSubsection(currentLang: string, focusWord?: { lang: string; word: string }): HTMLElement {
   const sub = el('div', 'mc-subsection-fields');
 
   // Single-open-row state, like My Lists' own ctx.expandedWord — persists
   // across renderOverridesList() calls so editing a field doesn't collapse
   // the row you're actively working on. Object rather than a string key so
   // there's no folded-text (un)parsing to get wrong.
-  let expanded: { lang: string; word: string } | null = null;
+  //
+  // Pre-seeded from focusWord when this subsection was opened via
+  // openWordInMyContentEditor — same effect as if the learner had searched
+  // for and clicked that word themselves.
+  let expanded: { lang: string; word: string } | null = focusWord ? { ...focusWord } : null;
   let pageIndex = 0;
   const sortState: MCListState = { sort: 'date', dir: 'desc', pos: new Set(), band: new Set(), domains: new Set() };
   // Three separately-rebuilt containers rather than one shared bar: Sort
@@ -1004,7 +1052,7 @@ function buildEditWordSubsection(currentLang: string): HTMLElement {
   // search text the one search box above it currently holds — see
   // onLangChange/onQueryChange below — rather than a second, separate filter
   // box repeating what that search box already lets you type.
-  let searchLang = currentLang;
+  let searchLang = focusWord?.lang ?? currentLang;
   let searchQuery = '';
 
   // Raw (override-free) vocabulary per language, fetched lazily and cached
@@ -1042,15 +1090,29 @@ function buildEditWordSubsection(currentLang: string): HTMLElement {
   // point `const ui = buildWordSearchUI(...)` below wouldn't exist yet, so
   // renderOverridesList reads this instead and gets a safe `null` for that
   // one call. Reassigned once, right after, for every call after that.
+  // buildWordSearchUI's loadLang() fires onLangChange once, synchronously,
+  // from inside the constructor call below (its own initial fetch) — before
+  // this function even returns. Left alone, that call's `expanded = null`
+  // would immediately undo the focusWord seed above. Skipped exactly once
+  // rather than compared against focusWord's identity, since after this
+  // first call onLangChange is only ever reacting to an actual language
+  // switch, which should clear `expanded` same as always.
+  let suppressNextExpandedClear = !!focusWord;
   let searchPanel: HTMLElement | null = null;
   const ui = buildWordSearchUI({
-    defaultLang: currentLang,
+    defaultLang: searchLang,
     placeholder: 'Search for a word to edit…',
     fetchWords: loadRawWords,
     isEligible: () => true,
     isOverridden: (lang, w) => !!getWordOverride(lang, w.word),
     onSelect: (lang, w) => { void openRow(lang, w.word); },
-    onLangChange: lang => { searchLang = lang; expanded = null; pageIndex = 0; renderOverridesList(); },
+    onLangChange: lang => {
+      searchLang = lang;
+      if (suppressNextExpandedClear) suppressNextExpandedClear = false;
+      else expanded = null;
+      pageIndex = 0;
+      renderOverridesList();
+    },
     onQueryChange: query => { searchQuery = query; pageIndex = 0; renderOverridesList(); },
   });
   searchPanel = ui.wrap;
@@ -1161,6 +1223,15 @@ function buildEditWordSubsection(currentLang: string): HTMLElement {
     pager.sync(pageIndex, filtered.length);
   }
   renderOverridesList();
+  if (focusWord) {
+    // Deferred: this subsection isn't attached to the document yet at this
+    // point in renderMyContent's build (it's still an in-memory element
+    // getting passed up through buildWordsSection/buildSection) — scrolling
+    // it now would be a no-op. By the next tick it's in the tree.
+    setTimeout(() => {
+      list.querySelector('.mc-row--expanded')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
+  }
 
   // Language picker and Sort aligned on one row (both are single compact
   // controls, and Sort's own options — Newest/Oldest/A–Z/etc. — narrow the
@@ -1609,7 +1680,8 @@ function renderWordEditorBody(lang: string, w: Word, container: HTMLElement, onC
         });
         item.appendChild(checkbox);
       }
-      item.appendChild(el('span', 'mc-gloss-item-text', gloss));
+      const textSpan = el('span', 'mc-gloss-item-text', gloss);
+      item.appendChild(textSpan);
 
       // Per-sense meaning disambiguator — independent of every other
       // gloss's, and independent of the word disambiguator field above
@@ -1665,6 +1737,38 @@ function renderWordEditorBody(lang: string, w: Word, container: HTMLElement, onC
       controls.append(upBtn, downBtn);
 
       if (isAdded) {
+        // A learner-typed sense can be fixed in place instead of deleted and
+        // retyped — turns the text span into an input; Enter/blur commits,
+        // Escape (and a blank result) discards. Real senses don't get this:
+        // their text is the dictionary's, not the learner's to rewrite.
+        const editBtn = el('button', 'mc-gloss-move-btn mc-gloss-edit-btn', '✎');
+        editBtn.type = 'button';
+        editBtn.setAttribute('aria-label', `Edit "${gloss}"`);
+        editBtn.addEventListener('click', () => {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'mc-gloss-edit-input';
+          input.value = gloss;
+          input.setAttribute('aria-label', `New text for "${gloss}"`);
+          textSpan.replaceWith(input);
+          input.focus();
+          input.select();
+          let committed = false;
+          const commit = () => {
+            if (committed) return;
+            committed = true;
+            const value = input.value.trim();
+            if (value && value !== gloss) editAddedGloss(lang, w.word, gloss, value);
+            onChange();
+          };
+          input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); commit(); }
+            else if (e.key === 'Escape') { e.preventDefault(); committed = true; onChange(); }
+          });
+          input.addEventListener('blur', commit);
+        });
+        controls.appendChild(editBtn);
+
         const delBtn = el('button', 'mc-gloss-move-btn mc-gloss-remove-btn', '✕');
         delBtn.type = 'button';
         delBtn.setAttribute('aria-label', `Remove "${gloss}"`);

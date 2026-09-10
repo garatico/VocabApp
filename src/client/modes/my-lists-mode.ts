@@ -32,7 +32,7 @@
  */
 
 import { getListNames, getTotalListedCount, refreshFilterSelect } from '../utils/word-lists.ts';
-import { createContext } from './my-lists/context.ts';
+import { createContext, BROWSE_ALL_LIST } from './my-lists/context.ts';
 import { createSidebar } from './my-lists/sidebar.ts';
 import { renderPanel } from './my-lists/panel.ts';
 import { migrateMastery } from './my-lists/mastery.ts';
@@ -52,6 +52,32 @@ function updateBadge(): void {
   refreshFilterSelect(gl);
 }
 
+// ── Cross-tab navigation: "Show in Browse All Words" ────────────────────────
+//
+// Table mode's word-info popover can send a learner straight to a word in
+// Browse All Words. There's no direct call from that popover into this
+// module's render function (the tab switch it triggers goes through
+// app.ts's onActivate, which calls renderMyLists with no word to focus) —
+// so the target is stashed here instead and picked up the next time
+// renderMyLists runs, which openWordInBrowseAllWords forces immediately by
+// switching the language (if needed) and clicking the tab.
+let pendingFocusWord: { lang: string; word: string } | null = null;
+
+/** Switches to My Lists → Browse All Words, filtered and expanded on one
+ *  word — the entry point Table mode's word-info popover uses. Switches the
+ *  global language picker to the word's own language first when it
+ *  differs, the same way presets.ts's applyBundle does, since this pane
+ *  always follows that picker rather than taking a language of its own. */
+export function openWordInBrowseAllWords(lang: string, word: string): void {
+  pendingFocusWord = { lang, word };
+  const langSelect = document.getElementById('langSelect') as HTMLSelectElement | null;
+  if (langSelect && langSelect.value !== lang) {
+    langSelect.value = lang;
+    langSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  document.querySelector<HTMLButtonElement>('.mode-tab[data-mode="mylists"]')?.click();
+}
+
 export function renderMyLists(container: HTMLElement): void {
   container.innerHTML = '';
 
@@ -66,7 +92,14 @@ export function renderMyLists(container: HTMLElement): void {
   panel.className = 'ml-panel';
 
   const ctx = createContext(lang, listNav, panel);
-  ctx.selectedList = getListNames(lang)[0] ?? '';
+  const focus = pendingFocusWord && pendingFocusWord.lang === lang ? pendingFocusWord : null;
+  pendingFocusWord = null;
+  if (focus) {
+    ctx.selectedList = BROWSE_ALL_LIST;
+    ctx.focusWord = focus.word;
+  } else {
+    ctx.selectedList = getListNames(lang)[0] ?? '';
+  }
 
   const sidebar = createSidebar(ctx);
 

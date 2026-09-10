@@ -53,6 +53,13 @@ export interface ListsCtx {
   sortMode: SortMode;
   /** The one word whose detail row is open, or null. */
   expandedWord: string | null;
+  /** One-shot: the exact word text Browse All Words should pre-filter to
+   *  and expand the next time it opens (set by an outside entry point, e.g.
+   *  Table mode's "Show in Browse All Words" — see my-lists-mode.ts's
+   *  openWordInBrowseAllWords). browse-panel.ts's renderBrowsePanel reads
+   *  and clears it on render so a later, unrelated visit doesn't inherit
+   *  it. */
+  focusWord: string | null;
   hideMastered: boolean;
   /** Empty means "no filter", not "nothing matches". */
   readonly selectedPos: Set<string>;
@@ -90,6 +97,7 @@ export function createContext(
     selectedProfile: null,
     sortMode:      'alpha-asc',
     expandedWord:  null,
+    focusWord:     null,
     hideMastered:  false,
     selectedPos:   new Set<string>(),
     selectedBands: new Set<string>(),

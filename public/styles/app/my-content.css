@@ -1090,6 +1090,18 @@
   color: var(--text);
   overflow-wrap: anywhere;
 }
+/* Replaces .mc-gloss-item-text in place while editing an added gloss —
+   same flex slot, sized like the other inline inputs on this row. */
+.mc-gloss-edit-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.88rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+}
 /* Per-sense meaning disambiguator — a compact .mc-disambig-inline (see
    above), independent of the word disambiguator field up in .mc-form. Sized
    down from that one's own defaults since it sits inline in a gloss row

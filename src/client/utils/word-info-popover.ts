@@ -19,6 +19,8 @@ import { buildWordDetailContent } from './word-tooltip.ts';
 import { buildGlossDisplay } from './utils.ts';
 import { openListPicker } from './list-picker.ts';
 import { positionPopover } from './popover-position.ts';
+import { openWordInBrowseAllWords } from '../modes/my-lists-mode.ts';
+import { openWordInMyContentEditor } from '../modes/my-content-mode.ts';
 
 export interface WordInfoPopoverOptions {
   anchorEl: HTMLElement;
@@ -109,6 +111,34 @@ export function openWordInfoPopover({
   copyGlossBtn.title       = !revealed ? 'Solve this word first' : '';
   copyGlossBtn.addEventListener('click', () => { void navigator.clipboard?.writeText(buildGlossDisplay(word)); });
   actions.appendChild(copyGlossBtn);
+
+  // Both jump to a full-detail view of this word elsewhere in the app —
+  // gated on `revealed` the same as the two copy actions above, since
+  // either one would otherwise show the word/translation before it's been
+  // solved, same leak the copy buttons guard against.
+  const browseBtn = document.createElement('button');
+  browseBtn.type        = 'button';
+  browseBtn.className   = 'word-info-action-btn';
+  browseBtn.textContent = '🔍 Show in Browse All Words';
+  browseBtn.disabled    = !revealed;
+  browseBtn.title       = !revealed ? 'Solve this word first' : '';
+  browseBtn.addEventListener('click', () => {
+    close();
+    openWordInBrowseAllWords(lang, word.word);
+  });
+  actions.appendChild(browseBtn);
+
+  const editBtn = document.createElement('button');
+  editBtn.type        = 'button';
+  editBtn.className   = 'word-info-action-btn';
+  editBtn.textContent = '✎ Edit in My Content';
+  editBtn.disabled    = !revealed;
+  editBtn.title       = !revealed ? 'Solve this word first' : '';
+  editBtn.addEventListener('click', () => {
+    close();
+    openWordInMyContentEditor(lang, word.word);
+  });
+  actions.appendChild(editBtn);
 
   popover.appendChild(actions);
 

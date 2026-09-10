@@ -101,6 +101,17 @@ export function renderBrowsePanel(ctx: ListsCtx): void {
   filterInp.title = 'Accent-insensitive — searches word, translation and glosses';
   filterInp.value = readString(FILTER_KEY) ?? '';
 
+  // A pending "jump to this word" target (see context.ts's focusWord) wins
+  // over whatever filter/expansion was left from a previous visit — it's
+  // one-shot, so it's cleared the moment it's read here.
+  const scrollToFocusWord = ctx.focusWord !== null;
+  if (ctx.focusWord !== null) {
+    filterInp.value = ctx.focusWord;
+    writeString(FILTER_KEY, ctx.focusWord);
+    ctx.expandedWord = ctx.focusWord;
+    ctx.focusWord = null;
+  }
+
   const sortLabel = document.createElement('span');
   sortLabel.className = 'ui-label ml-toolbar-label'; sortLabel.textContent = 'Sort';
   const sortSel = document.createElement('select');
@@ -479,6 +490,14 @@ export function renderBrowsePanel(ctx: ListsCtx): void {
   // ── Go ─────────────────────────────────────────────────────────────────
 
   render();
+  if (scrollToFocusWord) {
+    // Deferred to the next tick so the freshly-built list is actually in
+    // the document by the time this runs (same reasoning as My Content's
+    // own openWordInMyContentEditor scroll).
+    setTimeout(() => {
+      listEl.querySelector('.ml-word-item--expanded')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
+  }
 
   fetchVocab(ctx.lang).then(entries => {
     allWords = entries;
