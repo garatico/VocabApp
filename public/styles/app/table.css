@@ -559,6 +559,31 @@
   user-select: none;
 }
 
+/* ── Gender indicator dot ──
+   Appended straight to .word-cell (not .spanish-word) by
+   dom.ts's applyGenderContainer, so it can sit in the cell's own bottom-left
+   corner — the components.css base rule is inline/in-flow instead, for
+   contexts (Picture Quiz, the word tooltip) with no such corner to speak
+   of. Placed a few px right of the "known" star above rather than on top of
+   it: a word can be both known and gendered at once, and this is the same
+   corner both markers want. */
+#tableWrap .word-cell > .gender-dot {
+  position: absolute;
+  bottom: 3px;
+  left: 15px;
+  width: 7px;
+  height: 7px;
+  min-width: 0;
+  margin-right: 0;
+}
+
+/* 'box-bg' style needs this boosted specificity to actually win: the plain
+   `.gender-box-bg--*` class in components.css loses to
+   `#tableWrap td:has(.spanish-word)` above (line ~289), which every word
+   cell matches regardless. */
+#tableWrap td.word-cell.gender-box-bg--masculine { background: var(--gender-color-masculine); color: #1a1916; }
+#tableWrap td.word-cell.gender-box-bg--feminine  { background: var(--gender-color-feminine);  color: #1a1916; }
+
 /* ── Compare/Multi-language indicator ──
    Applied only when 2+ languages are active in table mode — a word's
    `.language` differing from the table's primary language gets a

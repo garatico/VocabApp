@@ -53,6 +53,7 @@ interface DbRow {
   tags:                  string | null;
   disambiguator:         string | null;
   is_function_word:      number;
+  grammatical_number:    string | null;
 }
 
 /** Public word object served via the API. */
@@ -72,6 +73,7 @@ export interface Word {
     reflexive:         boolean;
     gender:            string | null;
     plural:            string | null;
+    grammatical_number: string | null;
     register:          string | null;
     ipa:               string | null;
     syllables:         string[] | null;
@@ -225,6 +227,18 @@ function checkIsFunctionWordColumn(conn: Database.Database): void {
   hasIsFunctionWordCol = cols.some(c => c.name === 'is_function_word');
 }
 
+// Same pattern again, for schemaVersion 8's `grammatical_number`: a database
+// built before it exists is still valid, every word on it just has no
+// grammar hint to show — the correct answer for every word anyway, since the
+// column is only ever set on a handful of curated article rows even on a
+// current database.
+let hasGrammaticalNumberCol = false;
+
+function checkGrammaticalNumberColumn(conn: Database.Database): void {
+  const cols = conn.prepare("PRAGMA table_info('words')").all() as { name: string }[];
+  hasGrammaticalNumberCol = cols.some(c => c.name === 'grammatical_number');
+}
+
 // Per-language in-memory cache
 const vocabCache = new Map<string, VocabData>();
 
@@ -313,6 +327,7 @@ function initializeDatabase(): void {
     verifyDatabase(db, dbPath);
     checkDisambiguatorColumn(db);
     checkIsFunctionWordColumn(db);
+    checkGrammaticalNumberColumn(db);
     dbFileMtimeMs = newestDbMtimeMs(dbPath);
   } catch (error) {
     logger.error('Database connection error:', error);
@@ -387,6 +402,7 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
         w.emoji, w.rank, w.corpus_frequency,
         ${hasDisambiguatorCol ? 'w.disambiguator,' : 'NULL as disambiguator,'}
         ${hasIsFunctionWordCol ? 'w.is_function_word,' : '0 as is_function_word,'}
+        ${hasGrammaticalNumberCol ? 'w.grammatical_number,' : 'NULL as grammatical_number,'}
         (SELECT json_group_array(gloss)
            FROM (SELECT gloss FROM word_glosses  WHERE word_id = w.id ORDER BY position)
         ) AS glosses,
@@ -441,6 +457,7 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
           reflexive:         Boolean(row.reflexive),
           gender:            row.gender          || null,
           plural:            row.plural          || null,
+          grammatical_number: row.grammatical_number || null,
           register:          row.register        || null,
           // Japanese: row.ipa is a hiragana reading (see japaneseRomaji's
           // own doc comment for why), converted to romaji here so the
@@ -578,6 +595,7 @@ export function setDb(testDb: Database.Database): void {
   vocabCache.clear();
   checkDisambiguatorColumn(testDb);
   checkIsFunctionWordColumn(testDb);
+  checkGrammaticalNumberColumn(testDb);
 }
 
 export function closeDatabase(): void {

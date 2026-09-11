@@ -1,5 +1,6 @@
 import type { Word } from '../types.js';
 import { languageInfo } from '../data/languages.js';
+import { stripDiacritics } from './match.js';
 
 /**
  * For a `romanizedScript` language (Chinese): which script is the word slot's
@@ -62,12 +63,7 @@ export function capitalize(s: string): string {
  * trim whitespace, collapse internal spaces, lowercase, strip accents.
  */
 function normalise(str = ''): string {
-  return str
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')  // strip diacritics
-    .replace(/\s+/g, ' ');
+  return stripDiacritics(str.trim().toLowerCase()).replace(/\s+/g, ' ');
 }
 
 /**
@@ -374,18 +370,137 @@ export function getDisplay(entry: Word): { prompt: string; hint: string | null }
 }
 
 /**
- * The word's own text, with its cosmetic sense annotation appended in
- * parentheses when it has one — e.g. "haber (auxiliary)" vs "tener
- * (possession)", both otherwise glossed just "have". Never used for
- * matching, only wherever a word is shown as a resolved answer: this reads
- * `entry.word`, not `entry.glosses`, so it can't touch isCorrect/getGlosses.
+ * Short grammatical hint for a closed-class word whose own gender/number IS
+ * the word — Spanish "un"/"una"/"unos"/"unas" would otherwise all gloss to
+ * "a"/"some" with nothing telling them apart. Gated on
+ * `linguistic.grammatical_number` alone, never on `linguistic.gender`: the
+ * pipeline (VocabApp-Data's curated.enrich_determiners) only ever sets
+ * `grammatical_number` on the curated article/determiner rows, never on the
+ * thousands of ordinary nouns that also carry a `gender` — so this never
+ * fires for a plain noun card, only for the handful of words it's meant for.
  *
- * `show` gates the annotation itself (default on) — threaded through rather
- * than read from `Settings` directly, same as `ChineseDisplay` above, so
- * this stays pure and testable; callers pass `Settings.getShowDisambiguator()`.
+ * Spelled out ("masculine, singular") by default; `abbreviate` switches to
+ * "masc., sing." — threaded in rather than read from `Settings` directly,
+ * same reason as `show` on displayWord below. Callers pass
+ * `Settings.getAbbreviateGrammarHint()`.
  */
-export function displayWord(entry: Word, show = true): string {
-  return show && entry.disambiguator ? `${entry.word} (${entry.disambiguator})` : entry.word;
+export function grammarHint(entry: Word, abbreviate = false): string | null {
+  const number = entry.linguistic?.grammatical_number;
+  if (!number) return null;
+  const gender = entry.linguistic?.gender;
+  const genderText = abbreviate
+    ? (gender === 'masculine' ? 'masc.' : gender === 'feminine' ? 'fem.' : null)
+    : (gender === 'masculine' ? 'masculine' : gender === 'feminine' ? 'feminine' : null);
+  const numberText = abbreviate
+    ? (number === 'singular' ? 'sing.' : 'pl.')
+    : (number === 'singular' ? 'singular' : 'plural');
+  return genderText ? `${genderText}, ${numberText}` : numberText;
+}
+
+/**
+ * Definite article table for languages whose gender data this app actually
+ * has: Spanish/French/Italian/Portuguese/German. Deliberately excludes
+ * Dutch — its curated data only ever carries 'common'/'neuter' (see
+ * VocabApp-Data's curated JSONL survey), never 'masculine'/'feminine', so a
+ * masc/fem table would just never match — and Japanese/Chinese, which have
+ * no grammatical gender at all. German's third gender ('neuter') is out of
+ * scope for the same reason `genderDotClass` below only ever returns
+ * masculine/feminine: this feature is a binary (blue/pink) indicator, not a
+ * three-way one, so a neuter noun simply shows nothing rather than a
+ * half-supported third state.
+ */
+const DEFINITE_ARTICLES: Record<string, { masculine: string; feminine: string; elide?: boolean; italianLo?: boolean }> = {
+  spanish:    { masculine: 'el',  feminine: 'la' },
+  french:     { masculine: 'le',  feminine: 'la', elide: true },
+  italian:    { masculine: 'il',  feminine: 'la', elide: true, italianLo: true },
+  portuguese: { masculine: 'o',   feminine: 'a' },
+  german:     { masculine: 'der', feminine: 'die' },
+};
+
+const VOWEL_SOUND = /^[aeiouàâäéèêëîïôöùûüAEIOUÀÂÄÉÈÊËÎÏÔÖÙÛÜ]/;
+// Italian "lo" instead of "il" before z, gn, ps, x, y, or s+consonant —
+// il zaino/lo zaino is wrong, lo zaino is right. Deliberately only the
+// well-known closed set of triggers, not a full phonotactic model.
+const ITALIAN_LO_TRIGGER = /^(z|gn|ps|x|y|s[bcdfgjklmnpqrstvz])/i;
+
+/**
+ * The definite article ("el"/"la"/"le"/"o"/"a"/"der"/"die"...) for a noun
+ * with a known masculine/feminine gender, or null when it doesn't apply —
+ * no gender, a non-noun (a determiner's own gender is a different feature,
+ * see grammarHint above; an adjective's agreement isn't what this teaches),
+ * or a language this table doesn't cover. `lang` is the active quiz
+ * language, same `entry.language ?? lang` pattern as everywhere else in
+ * this codebase (`entry.language` is absent on a normal single-language
+ * load — see types.ts).
+ */
+export function genderArticle(entry: Word, lang: string): string | null {
+  if (entry.pos !== 'noun') return null;
+  const gender = entry.linguistic?.gender;
+  if (gender !== 'masculine' && gender !== 'feminine') return null;
+  const table = DEFINITE_ARTICLES[entry.language ?? lang];
+  if (!table) return null;
+
+  if (table.elide && VOWEL_SOUND.test(entry.word)) return "l'";
+  if (table.italianLo && gender === 'masculine' && ITALIAN_LO_TRIGGER.test(entry.word)) return 'lo';
+  return gender === 'masculine' ? table.masculine : table.feminine;
+}
+
+/**
+ * 'masculine'/'feminine' for a noun with a known binary gender, or null —
+ * same pos/gender gate as genderArticle above, but language-independent: a
+ * colored indicator needs no article text, so it applies to any noun with a
+ * known gender regardless of language, not just the five genderArticle
+ * covers. Feeds both the colored-dot and colored-background indicator
+ * styles (utils/dom.ts's renderWordWithGender) — a bare gender key rather
+ * than a baked-in CSS class, since which class it becomes depends on which
+ * style is active.
+ */
+export function genderKey(entry: Word): 'masculine' | 'feminine' | null {
+  if (entry.pos !== 'noun') return null;
+  const gender = entry.linguistic?.gender;
+  return gender === 'masculine' ? 'masculine' : gender === 'feminine' ? 'feminine' : null;
+}
+
+/**
+ * The word's own text (with its definite article prepended when
+ * `showGenderArticle` applies) and its parenthetical annotation, kept
+ * separate rather than joined into one string — DOM callers that want to
+ * style the word and the annotation differently (utils/dom.ts's
+ * renderWordWithGender, for a colored-background indicator that must wrap
+ * only the word, not the "(...)" note) need them apart; `displayWord` below
+ * is the plain-string version for callers that don't.
+ *
+ * `show` gates the disambiguator half only (default on); `abbreviate`
+ * controls the grammar hint's own wording; `showGenderArticle` (+ `lang`,
+ * needed to resolve genderArticle) prepends the noun's definite article —
+ * "la casa" instead of "casa". All threaded through rather than read from
+ * `Settings` directly, same as `ChineseDisplay` elsewhere in this file, so
+ * this stays pure and testable. The grammar hint always shows when present
+ * regardless of `show`: it disambiguates which word this is, not a cosmetic
+ * sense note.
+ */
+export function wordAndAnnotation(
+  entry: Word, show = true, abbreviate = false, showGenderArticle = false, lang = '',
+): { base: string; annotation: string | null } {
+  const article = showGenderArticle ? genderArticle(entry, entry.language ?? lang) : null;
+  const base    = article ? `${article} ${entry.word}` : entry.word;
+  const hint      = grammarHint(entry, abbreviate);
+  const disambig  = show ? entry.disambiguator : null;
+  const annotation = hint && disambig ? `${hint}; ${disambig}` : (hint || disambig || null);
+  return { base, annotation };
+}
+
+/**
+ * `wordAndAnnotation` above, joined into one string: "la casa (home)". Never
+ * used for matching, only wherever a word is shown as a resolved answer:
+ * this reads `entry.word`, not `entry.glosses`, so it can't touch
+ * isCorrect/getGlosses. The natural choice for a text-only context like an
+ * `<input>`'s value, where a colored-background indicator has no plain-text
+ * form anyway (see renderWordWithGender's own doc comment).
+ */
+export function displayWord(entry: Word, show = true, abbreviate = false, showGenderArticle = false, lang = ''): string {
+  const { base, annotation } = wordAndAnnotation(entry, show, abbreviate, showGenderArticle, lang);
+  return annotation ? `${base} (${annotation})` : base;
 }
 
 /** Return the accepted glosses for display, with parentheticals stripped. */

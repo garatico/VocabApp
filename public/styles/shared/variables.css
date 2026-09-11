@@ -65,6 +65,13 @@
   --hinted-revealed: #c2410c;
   --hinted-missed:   #7c3aed;
 
+  /* Grammatical gender indicator — a dot next to a noun with a known
+     masculine/feminine gender (see utils/dom.ts's addGenderIndicator).
+     Conventional newborn blue/pink, overridable per Settings
+     (applyGenderColors) same as the Table mode colors above. */
+  --gender-color-masculine: #89cff0;
+  --gender-color-feminine:  #f4c2c2;
+
   /* Motion */
   --transition-fast:   0.15s ease;
   --transition-normal: 0.3s ease;
@@ -148,6 +155,9 @@ html.dark {
   --hinted-correct:  #2dd4bf;
   --hinted-revealed: #fb923c;
   --hinted-missed:   #c4b5fd;
+
+  --gender-color-masculine: #89cff0;
+  --gender-color-feminine:  #f4c2c2;
 
   --ml-accent-smart:       #a58ce0;
   --ml-accent-smart-light: #2a2140;

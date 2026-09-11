@@ -298,6 +298,76 @@ describe('copyStateForTest (the chain button\'s payload mover)', () => {
   });
 });
 
+describe('updateClassFilter', () => {
+  beforeEach(() => buildClassFilterFixture());
+
+  it('hides a chip for a POS with zero words in this language', async () => {
+    const { bindClassFilter, updateClassFilter } = await load();
+    bindClassFilter();
+    updateClassFilter([{ pos: 'verb', count: 500 }, { pos: 'noun', count: 800 }]);
+    expect(chip('verb').hidden).toBe(false);
+    expect(chip('noun').hidden).toBe(false);
+    expect(chip('adjective').hidden).toBe(true);
+    expect(chip('adverb').hidden).toBe(true);
+  });
+
+  it('treats an explicit zero count the same as an absent one', async () => {
+    const { bindClassFilter, updateClassFilter } = await load();
+    bindClassFilter();
+    updateClassFilter([{ pos: 'verb', count: 500 }, { pos: 'adjective', count: 0 }]);
+    expect(chip('adjective').hidden).toBe(true);
+  });
+
+  it('re-shows a previously-hidden chip once its POS has words again', async () => {
+    const { bindClassFilter, updateClassFilter } = await load();
+    bindClassFilter();
+    updateClassFilter([{ pos: 'verb', count: 500 }]);
+    expect(chip('noun').hidden).toBe(true);
+    updateClassFilter([{ pos: 'verb', count: 500 }, { pos: 'noun', count: 12 }]);
+    expect(chip('noun').hidden).toBe(false);
+  });
+
+  it('never hides the "All" chip', async () => {
+    const { bindClassFilter, updateClassFilter } = await load();
+    bindClassFilter();
+    updateClassFilter([]);
+    expect(allChip().hidden).toBe(false);
+  });
+
+  it('prunes a selection whose POS this language no longer has, falling back to "All"', async () => {
+    const { bindClassFilter, getSelectedClasses, updateClassFilter } = await load();
+    bindClassFilter();
+    click(chip('adjective'));
+    expect(getSelectedClasses()).toEqual(['adjective']);
+    updateClassFilter([{ pos: 'verb', count: 500 }, { pos: 'noun', count: 800 }]);
+    expect(getSelectedClasses()).toEqual([]);
+    expect(allChip().classList.contains('active')).toBe(true);
+  });
+
+  it('keeps the rest of a multi-POS selection when only one no longer applies', async () => {
+    const { bindClassFilter, getSelectedClasses, updateClassFilter } = await load();
+    bindClassFilter();
+    click(chip('verb'));
+    click(chip('adjective'));
+    updateClassFilter([{ pos: 'verb', count: 500 }, { pos: 'noun', count: 800 }]);
+    expect(getSelectedClasses()).toEqual(['verb']);
+  });
+
+  it('leaves selection untouched when every selected POS still applies', async () => {
+    const { bindClassFilter, getSelectedClasses, updateClassFilter } = await load();
+    bindClassFilter();
+    click(chip('verb'));
+    updateClassFilter([{ pos: 'verb', count: 500 }, { pos: 'noun', count: 800 }]);
+    expect(getSelectedClasses()).toEqual(['verb']);
+  });
+
+  it('does nothing when #classFilter is missing', async () => {
+    document.body.innerHTML = '';
+    const { updateClassFilter } = await load();
+    expect(() => updateClassFilter([{ pos: 'verb', count: 5 }])).not.toThrow();
+  });
+});
+
 describe('chaining integration (real filter-header + filter-state)', () => {
   beforeEach(() => buildClassFilterFixture());
 

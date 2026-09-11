@@ -8,7 +8,8 @@
  */
 
 import type { Word } from '../types.js';
-import { buildGlossDisplay, displayWord } from './utils.js';
+import { buildGlossDisplay, displayWord, wordAndAnnotation, genderKey } from './utils.js';
+import { renderWordWithGender, applyGenderContainer } from './dom.js';
 import { PRONOUNS as LANG_PRONOUNS, TENSE_DEFS } from '../modes/conjugation/data.js';
 import { logger } from './logger.js';
 import { languageInfo, LANGUAGES, flagUrl } from '../data/languages.js';
@@ -433,7 +434,20 @@ export function buildWordDetailContent(
 
   const heading = document.createElement('div');
   heading.className   = 'tt-word';
-  heading.textContent = (hideWordWhenUnrevealed && !revealed) ? '???' : displayWord(word, Settings.getShowDisambiguator());
+  const hidden = hideWordWhenUnrevealed && !revealed;
+  // Gated on !hidden too — a gender indicator would leak the answer just as
+  // much as the word text itself does while the quiz still has it hidden.
+  const gKey = !hidden ? genderKey(word) : null;
+  const indicatorStyle = Settings.getGenderIndicatorStyle();
+  if (hidden) {
+    heading.textContent = '???';
+  } else {
+    const { base, annotation } = wordAndAnnotation(
+      word, Settings.getShowDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang,
+    );
+    renderWordWithGender(heading, base, annotation, gKey, indicatorStyle);
+  }
+  applyGenderContainer(heading, gKey, indicatorStyle);
   wrap.appendChild(heading);
   wrap.appendChild(buildMetaRow(word));
 
@@ -478,7 +492,18 @@ function populateTooltip(word: Word, revealed: boolean, lang: string, hideWordWh
   // disambiguator here (word side); buildGlosses below carries its own,
   // independent per-gloss meaningDisambiguators — the two can differ, so
   // both show.
-  heading.textContent = (hideWordWhenUnrevealed && !revealed) ? '???' : displayWord(word, Settings.getShowDisambiguator());
+  const hidden = hideWordWhenUnrevealed && !revealed;
+  const gKey = !hidden ? genderKey(word) : null;
+  const indicatorStyle = Settings.getGenderIndicatorStyle();
+  if (hidden) {
+    heading.textContent = '???';
+  } else {
+    const { base, annotation } = wordAndAnnotation(
+      word, Settings.getShowDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang,
+    );
+    renderWordWithGender(heading, base, annotation, gKey, indicatorStyle);
+  }
+  applyGenderContainer(heading, gKey, indicatorStyle);
   tt.appendChild(heading);
   tt.appendChild(buildMetaRow(word));
 

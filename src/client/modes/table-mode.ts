@@ -1,7 +1,7 @@
 import type { Word } from '../types.ts';
 import {
   slotText, slotMatches, extraMatchedGloss, displayWord, glossWithMeaningNote, DEFAULT_CHINESE_DISPLAY,
-  primaryGlossForHint, chosenGlosses,
+  primaryGlossForHint, chosenGlosses, grammarHint, genderArticle, genderKey,
   type QuizSlot, type ChineseDisplay,
 } from '../utils/utils.ts';
 import { attachTooltips }        from '../utils/word-tooltip.ts';
@@ -11,7 +11,7 @@ import { openWordInfoPopover }   from '../utils/word-info-popover.ts';
 import { Settings, applyAutofillAttr } from '../settings.ts';
 import { missCount }             from '../utils/session-history.ts';
 import { flagUrl }               from '../data/languages.ts';
-import { setWordWithDisambiguator, enableInputWheelScroll } from '../utils/dom.ts';
+import { renderWordWithGender, applyGenderContainer, enableInputWheelScroll } from '../utils/dom.ts';
 import { hintPrefix, hintableLength } from '../utils/hint-reveal.ts';
 
 export type DirectionPair = 'target-en' | 'en-target';
@@ -96,7 +96,9 @@ export function revealTextFor(
   // being revealed, target-en direction) rather than in slotText itself
   // keeps it from leaking into an en-target *prompt*, where labelParts
   // below is the one that shows it instead (same slot, opposite role).
-  return answerSlot === 'english' ? displayWord({ ...entry, word: base }, Settings.getShowDisambiguator()) : base;
+  return answerSlot === 'english'
+    ? displayWord({ ...entry, word: base }, Settings.getShowDisambiguator(), Settings.getAbbreviateGrammarHint())
+    : base;
 }
 
 /**
@@ -154,10 +156,20 @@ export function renderTableMode({
    * target-en direction never reaches here with promptSlot === 'english'
    * (the gloss is the answer there instead — see revealTextFor above).
    */
-  function labelParts(entry: Word, dir: DirectionPair): { text: string; showDisambiguator: boolean } {
+  function labelParts(entry: Word, dir: DirectionPair): { text: string; showDisambiguator: boolean; wordIsPrompt: boolean } {
     const [promptSlot] = slotsFor(dir);
     const text = slotText(entry, promptSlot, entry.language ?? lang, chineseDisplay, Settings.getQuestionGlossCount());
-    return { text, showDisambiguator: promptSlot === 'english' && Settings.getShowDisambiguator() };
+    return {
+      text,
+      showDisambiguator: promptSlot === 'english' && Settings.getShowDisambiguator(),
+      // Whether the word itself (rather than the English gloss) is the
+      // visible prompt — the opposite condition from showDisambiguator,
+      // which annotates the *English* prompt instead. Gates the gender
+      // article/color features below, each against its own Settings getter
+      // rather than baked in here, since a learner can turn either on
+      // independently of the other.
+      wordIsPrompt: promptSlot === 'word',
+    };
   }
 
   /**
@@ -171,7 +183,17 @@ export function renderTableMode({
   function revealText(entry: Word, dir: DirectionPair, typedInput?: string): string {
     const base = revealTextFor(entry, dir, entry.language ?? lang, chineseDisplay);
     const [, answerSlot] = slotsFor(dir);
-    if (answerSlot !== 'english' || !typedInput || !Settings.getExpandGlossOnMatch()) return base;
+    if (answerSlot !== 'english') {
+      // The target word is what's being revealed here (en-target direction)
+      // — display-only prefix, applied on top of revealTextFor's bare
+      // result rather than inside it, since that function is also used by
+      // hintText/scoring callers that must never see it (a letter hint
+      // starting "l", "a", " "... would be a different, wrong feature).
+      return Settings.getShowGenderArticle()
+        ? displayWord({ ...entry, word: base }, false, false, true, entry.language ?? lang)
+        : base;
+    }
+    if (!typedInput || !Settings.getExpandGlossOnMatch()) return base;
     const extra = extraMatchedGloss(typedInput, entry, Settings.getAnswerGlossCount(), matchMode);
     return extra ? `${base} / ${glossWithMeaningNote(extra, entry)}` : base;
   }
@@ -346,8 +368,31 @@ export function renderTableMode({
         tdWord.appendChild(selectCb);
 
         const wordDiv = document.createElement('div');
-        const { text: labelTextValue, showDisambiguator } = labelParts(w, dir);
-        setWordWithDisambiguator(wordDiv, labelTextValue, w.disambiguator, showDisambiguator);
+        const { text: labelTextValue, showDisambiguator, wordIsPrompt } = labelParts(w, dir);
+        // Same gate as the disambiguator: both only make sense when the
+        // visible label is the side that needs disambiguating (see
+        // labelParts above) — the grammar hint is exactly what lets a
+        // learner told "a" pick "un" over "una"/"unos"/"unas".
+        const hint = showDisambiguator ? grammarHint(w, Settings.getAbbreviateGrammarHint()) : null;
+        const disambig = showDisambiguator ? w.disambiguator : null;
+        const annotation = hint && disambig ? `${hint}; ${disambig}` : (hint || disambig);
+        // The article TEXT only makes sense when the word actually shown is
+        // the target-language spelling (wordIsPrompt) — "la house" would be
+        // nonsense.
+        const article = wordIsPrompt && Settings.getShowGenderArticle() ? genderArticle(w, wordLang) : null;
+        const wordText = article ? `${article} ${labelTextValue}` : labelTextValue;
+        // The gender INDICATOR (dot/background), unlike the article text
+        // above, needs no target spelling — it's happy to decorate the
+        // English prompt too ("house" with a pink dot, in en-target
+        // direction). That's the "Meaning side" case: it hints the target
+        // noun's gender before typing, the same way grammarHint already
+        // hints an article's gender/number on the English side, without
+        // revealing the word's actual spelling. So this is gated on the
+        // word qualifying at all, not on wordIsPrompt.
+        const gKey = genderKey(w);
+        const indicatorStyle = Settings.getGenderIndicatorStyle();
+        renderWordWithGender(wordDiv, wordText, annotation, gKey, indicatorStyle);
+        applyGenderContainer(tdWord, gKey, indicatorStyle);
         wordDiv.classList.add('spanish-word');
         wordDiv.dataset.wordJson = JSON.stringify(w);
         // Read by attachTooltips below: in en-target direction the visible

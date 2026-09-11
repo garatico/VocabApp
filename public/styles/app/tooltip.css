@@ -80,15 +80,20 @@
 /* Colour by part of speech / CEFR level — same hues as the .pos-chip filter
    row (class-filter.css) and My Lists' word badges (my-lists.css), so a word
    reads the same way whether you're looking at a filter, a list row or its
-   hover card. */
-.tt-pos[data-pos="verb"]        { --pos-hue: 217; }
-.tt-pos[data-pos="noun"]        { --pos-hue: 142; }
-.tt-pos[data-pos="adjective"]   { --pos-hue:  32; }
-.tt-pos[data-pos="adverb"]      { --pos-hue: 280; }
-.tt-pos[data-pos="pronoun"]     { --pos-hue: 340; }
-.tt-pos[data-pos="preposition"] { --pos-hue: 195; }
-.tt-pos[data-pos="conjunction"] { --pos-hue:  20; }
-.tt-pos[data-pos="article"]     { --pos-hue: 260; }
+   hover card. Each hue reads through a --pos-hue-<pos> custom property so a
+   Settings override (settings.ts's applyPosColors) reaches this badge too —
+   see class-filter.css's own comment on why there are three copies of this
+   list. */
+.tt-pos[data-pos="verb"]        { --pos-hue: var(--pos-hue-verb,        217); }
+.tt-pos[data-pos="noun"]        { --pos-hue: var(--pos-hue-noun,        142); }
+.tt-pos[data-pos="adjective"]   { --pos-hue: var(--pos-hue-adjective,    32); }
+.tt-pos[data-pos="adverb"]      { --pos-hue: var(--pos-hue-adverb,      280); }
+.tt-pos[data-pos="pronoun"]     { --pos-hue: var(--pos-hue-pronoun,     340); }
+.tt-pos[data-pos="preposition"] { --pos-hue: var(--pos-hue-preposition, 195); }
+.tt-pos[data-pos="conjunction"] { --pos-hue: var(--pos-hue-conjunction,  20); }
+.tt-pos[data-pos="article"]     { --pos-hue: var(--pos-hue-article,     260); }
+.tt-pos[data-pos="particle"]    { --pos-hue: var(--pos-hue-particle,     85); }
+.tt-pos[data-pos="suffix"]      { --pos-hue: var(--pos-hue-suffix,      165); }
 .tt-pos[data-pos] {
   background: hsl(var(--pos-hue) 60% 50% / 0.16);
   color:      hsl(var(--pos-hue) 60% 34%);

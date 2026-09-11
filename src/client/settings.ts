@@ -10,6 +10,7 @@ import {
   type GoalType,
 } from './utils/streak.ts';
 import type { ChineseScript, ChineseDisplay, FunctionWordMarker } from './utils/utils.ts';
+import type { GenderIndicatorStyle } from './utils/dom.ts';
 
 /**
  * settings.ts — persistent quiz preferences.
@@ -225,6 +226,48 @@ export const Settings = {
    * that function stays pure and testable.
    */
   getShowDisambiguator: (): boolean => get('show_disambiguator', 'true') === 'true',
+
+  /**
+   * Whether the grammar hint on a closed-class word ("un (masc., sing.)")
+   * abbreviates gender/number or spells them out ("un (masculine,
+   * singular)"). Off (spelled out) by default — this only ever appears on a
+   * handful of article/determiner cards, so there's no clutter to save
+   * abbreviating against, and spelled out is unambiguous to a learner who
+   * hasn't seen "sing./pl." shorthand before. Same threading rule as
+   * getShowDisambiguator above: passed into grammarHint()/displayWord()
+   * rather than read inside them.
+   */
+  getAbbreviateGrammarHint: (): boolean => get('abbreviate_grammar_hint', 'false') === 'true',
+
+  /**
+   * Whether a noun with a known masculine/feminine gender is prefixed with
+   * its definite article — "la casa" instead of "casa" — see utils.ts's
+   * genderArticle/displayWord. Off by default: unlike the article-hint
+   * feature above, this touches every gendered noun in the language (12k+
+   * for Spanish), not a handful of determiner cards, so it's opt-in rather
+   * than sprung on existing sessions.
+   */
+  getShowGenderArticle: (): boolean => get('show_gender_article', 'false') === 'true',
+
+  /**
+   * How that same noun's gender is shown visually (color from getGenderColor
+   * below), independent of getShowGenderArticle — a learner can turn on
+   * either, both, or neither:
+   *   'off'     — no visual indicator (default)
+   *   'dot'     — a small corner dot (see utils/dom.ts's applyGenderContainer)
+   *   'word-bg' — a colored pill behind just the word (renderWordWithGender)
+   *   'box-bg'  — the whole cell/box background (applyGenderContainer)
+   */
+  getGenderIndicatorStyle: (): GenderIndicatorStyle => get('gender_indicator_style', 'off') as GenderIndicatorStyle,
+
+  /**
+   * A full-color (#rrggbb) override for the masculine or feminine gender
+   * dot, or null to use variables.css's default (a conventional baby
+   * blue/pink). Same "full color, not just a hue" reasoning as
+   * getTableColor below — this is a specific, meaningful color a learner
+   * would want to pick precisely.
+   */
+  getGenderColor: (key: 'masculine' | 'feminine'): string | null => readString(P + 'gender_color_' + key),
 
   // ── All quizzes ────────────────────────────────────────────────────────────
   getMatchMode: (): MatchMode => get('match_mode', 'fuzzy') as MatchMode,
@@ -503,6 +546,12 @@ export const Settings = {
     const v = readString(P + 'person_hue_' + i);
     return v === null ? null : Number(v);
   },
+  /** A per-part-of-speech hue override, or null to use the CSS default
+   *  (class-filter.css's `.pos-chip[data-pos="…"]` — see POS_COLOR_DEFS). */
+  getPosHue: (key: string): number | null => {
+    const v = readString(P + 'pos_hue_' + key);
+    return v === null ? null : Number(v);
+  },
 
   /** A full-color (#rrggbb) override for one of Table mode's 7 semantic
    *  states (TABLE_COLOR_DEFS's own keys), or null to use its built-in
@@ -563,6 +612,29 @@ const PERSON_COLOR_DEFS: readonly [i: number, label: string, defaultHue: number]
 ];
 
 /**
+ * The part-of-speech hue each `.pos-chip`/`.ml-word-pos`/`.tt-pos` badge
+ * derives its color from — same hue-only scheme as TENSE_COLOR_DEFS above
+ * (saturation/lightness are derived by the CSS itself, in
+ * class-filter.css/my-lists.css/tooltip.css — see each file's own comment on
+ * why the same `[data-pos]` list is duplicated three times), just keyed by
+ * POS name instead of tense name. Defaults here must match the CSS's own
+ * `var(--pos-hue-<key>, <default>)` fallback exactly, or a swatch would show
+ * a hue the page isn't actually rendering until first touched.
+ */
+const POS_COLOR_DEFS: readonly [key: string, label: string, defaultHue: number][] = [
+  ['verb',        'Verb',        217],
+  ['noun',        'Noun',        142],
+  ['adjective',   'Adjective',    32],
+  ['adverb',      'Adverb',      280],
+  ['pronoun',     'Pronoun',     340],
+  ['preposition', 'Preposition', 195],
+  ['conjunction', 'Conjunction',  20],
+  ['article',     'Article',     260],
+  ['particle',    'Particle',     85],
+  ['suffix',      'Suffix',      165],
+];
+
+/**
  * Table mode's 7 semantic state colors — key (storage suffix and
  * --table-color-<key> custom property, hyphens not underscores to match
  * table.css's own naming), label, and the existing token each falls back
@@ -574,6 +646,17 @@ const PERSON_COLOR_DEFS: readonly [i: number, label: string, defaultHue: number]
  * colors (green/red/yellow/...) a learner would want to pick precisely,
  * not just nudge the hue of.
  */
+/**
+ * The two gender-dot colors — key (storage suffix and
+ * --gender-color-<key> custom property), label, and the CSS default each
+ * falls back to (variables.css's baby blue/pink). Same "full color, not a
+ * hue" reasoning as TABLE_COLOR_DEFS below.
+ */
+const GENDER_COLOR_DEFS: readonly [key: 'masculine' | 'feminine', label: string, fallbackVar: string][] = [
+  ['masculine', 'Masculine', '--gender-color-masculine'],
+  ['feminine',  'Feminine',  '--gender-color-feminine'],
+];
+
 const TABLE_COLOR_DEFS: readonly [key: string, label: string, fallbackVar: string][] = [
   ['correct',         'Correct',                     '--correct'],
   ['revealed',        'Revealed (?? button)',         '--warning'],
@@ -605,6 +688,20 @@ export function applyTenseColors(): void {
 }
 
 /**
+ * Apply any saved part-of-speech hue overrides as inline :root properties —
+ * same mechanism as applyTenseColors above, feeding the --pos-hue-<key>
+ * custom property that class-filter.css/my-lists.css/tooltip.css's
+ * `[data-pos]` rules all read through.
+ */
+export function applyPosColors(): void {
+  for (const [key] of POS_COLOR_DEFS) {
+    const hue = Settings.getPosHue(key);
+    if (hue !== null) document.documentElement.style.setProperty('--pos-hue-' + key, String(hue));
+    else document.documentElement.style.removeProperty('--pos-hue-' + key);
+  }
+}
+
+/**
  * Apply any saved Table mode color overrides as inline :root properties —
  * table.css's own rules already fall through to each state's built-in token
  * when --table-color-<key> is unset, so this only ever needs to set or clear
@@ -615,6 +712,20 @@ export function applyTableColors(): void {
     const hex = Settings.getTableColor(key);
     if (hex) document.documentElement.style.setProperty('--table-color-' + key, hex);
     else document.documentElement.style.removeProperty('--table-color-' + key);
+  }
+}
+
+/**
+ * Apply any saved gender-dot color overrides as inline :root properties —
+ * variables.css's --gender-color-masculine/-feminine already supply the
+ * default (a conventional baby blue/pink), so this only ever needs to set
+ * or clear the override, same mechanism as applyTableColors above.
+ */
+export function applyGenderColors(): void {
+  for (const key of ['masculine', 'feminine'] as const) {
+    const hex = Settings.getGenderColor(key);
+    if (hex) document.documentElement.style.setProperty('--gender-color-' + key, hex);
+    else document.documentElement.style.removeProperty('--gender-color-' + key);
   }
 }
 
@@ -940,6 +1051,30 @@ export function bindSettings(): void {
     set('show_disambiguator', btn.dataset.show ?? 'true');
   });
 
+  // Grammar hint abbreviation — "masc., sing." vs "masculine, singular"
+  document.getElementById('settingAbbreviateGrammarHint')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingAbbreviateGrammarHint', btn);
+    set('abbreviate_grammar_hint', btn.dataset.show ?? 'false');
+  });
+
+  // Gender article — "la casa" instead of "casa"
+  document.getElementById('settingShowGenderArticle')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingShowGenderArticle', btn);
+    set('show_gender_article', btn.dataset.show ?? 'false');
+  });
+
+  // Gender indicator style (Off / Dot / Word background / Box background)
+  document.getElementById('settingGenderIndicatorStyle')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingGenderIndicatorStyle', btn);
+    set('gender_indicator_style', (btn.dataset.style ?? 'off') as GenderIndicatorStyle);
+  });
+
   // Match mode
   document.getElementById('settingMatch')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
@@ -1203,12 +1338,28 @@ export function bindSettings(): void {
     buildConjColorRows();
   });
 
+  buildPosColorRows();
+  applyPosColors();
+  document.getElementById('settingResetPosColors')?.addEventListener('click', () => {
+    for (const [key] of POS_COLOR_DEFS) removeKey(P + 'pos_hue_' + key);
+    applyPosColors();
+    buildPosColorRows();
+  });
+
   buildTableColorRows();
   applyTableColors();
   document.getElementById('settingResetTableColors')?.addEventListener('click', () => {
     for (const [key] of TABLE_COLOR_DEFS) removeKey(P + 'table_color_' + key);
     applyTableColors();
     buildTableColorRows();
+  });
+
+  buildGenderColorRows();
+  applyGenderColors();
+  document.getElementById('settingResetGenderColors')?.addEventListener('click', () => {
+    for (const [key] of GENDER_COLOR_DEFS) removeKey(P + 'gender_color_' + key);
+    applyGenderColors();
+    buildGenderColorRows();
   });
 
   restoreSettingsUI();
@@ -1458,6 +1609,20 @@ function buildConjColorRows(): void {
   }
 }
 
+/** One row per part of speech — built from POS_COLOR_DEFS, same shape as
+ *  buildConjColorRows above. */
+function buildPosColorRows(): void {
+  const list = document.getElementById('settingPosColors');
+  if (!list) return;
+  list.innerHTML = '';
+  for (const [key, label, defaultHue] of POS_COLOR_DEFS) {
+    list.appendChild(buildColorSwatchRow(
+      label, Settings.getPosHue(key) ?? defaultHue,
+      hue => { set('pos_hue_' + key, String(hue)); applyPosColors(); },
+    ));
+  }
+}
+
 function buildColorSwatchRow(label: string, currentHue: number, onPick: (hue: number) => void): HTMLElement {
   const row = document.createElement('label');
   row.className = 'conj-color-row';
@@ -1493,6 +1658,24 @@ function buildTableColorRows(): void {
     list.appendChild(buildHexColorSwatchRow(label, current, hex => {
       set('table_color_' + key, hex);
       applyTableColors();
+    }));
+  }
+}
+
+/**
+ * One row per gender — built from GENDER_COLOR_DEFS, same layout/reasoning
+ * as buildTableColorRows above.
+ */
+function buildGenderColorRows(): void {
+  const list = document.getElementById('settingGenderColors');
+  if (!list) return;
+  list.innerHTML = '';
+  for (const [key, label, fallbackVar] of GENDER_COLOR_DEFS) {
+    const current = Settings.getGenderColor(key)
+      ?? rgbToHex(getComputedStyle(document.documentElement).getPropertyValue(fallbackVar));
+    list.appendChild(buildHexColorSwatchRow(label, current, hex => {
+      set('gender_color_' + key, hex);
+      applyGenderColors();
     }));
   }
 }
@@ -1625,6 +1808,18 @@ function restoreSettingsUI(): void {
   const savedShowDisambiguator = get('show_disambiguator', 'true');
   document.querySelectorAll<HTMLElement>('#settingShowDisambiguator .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.show === savedShowDisambiguator);
+  });
+  const savedAbbreviateGrammarHint = get('abbreviate_grammar_hint', 'false');
+  document.querySelectorAll<HTMLElement>('#settingAbbreviateGrammarHint .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedAbbreviateGrammarHint);
+  });
+  const savedShowGenderArticle = get('show_gender_article', 'false');
+  document.querySelectorAll<HTMLElement>('#settingShowGenderArticle .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedShowGenderArticle);
+  });
+  const savedGenderIndicatorStyle = Settings.getGenderIndicatorStyle();
+  document.querySelectorAll<HTMLElement>('#settingGenderIndicatorStyle .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.style === savedGenderIndicatorStyle);
   });
 
   // Match

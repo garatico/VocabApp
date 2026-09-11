@@ -1696,7 +1696,7 @@ function buildCard({
 
   function updateHeader(): void {
     const mode = getDisplayMode();
-    targetEl.textContent  = displayWord(verb, Settings.getShowDisambiguator());
+    targetEl.textContent  = displayWord(verb, Settings.getShowDisambiguator(), Settings.getAbbreviateGrammarHint());
     englishEl.textContent = buildGlossDisplay(verb);
     // In Full Conjugation the view header carries the verb, so the card's copy
     // stays hidden whatever the target/english toggle says.

@@ -186,7 +186,7 @@ export function renderTableRecallMode({
    */
   function displayTranslation(w: Word): string {
     const base = buildGlossDisplay(w, Settings.getAnswerGlossCount());
-    return displayWord({ ...w, word: base }, Settings.getShowDisambiguator());
+    return displayWord({ ...w, word: base }, Settings.getShowDisambiguator(), Settings.getAbbreviateGrammarHint());
   }
 
   // ── Layout ───────────────────────────────────────────────────────────────

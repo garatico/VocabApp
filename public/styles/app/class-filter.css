@@ -247,16 +247,27 @@
    by every .pos-chip in the app: My Lists' own POS/Level rows, the main
    controls bar's Part of Speech and Level chips, and the quiz sidebars that
    reuse the same markup — one set of hues instead of each place inventing
-   its own. My Lists' word-row POS badges (.ml-word-pos) mirror the same
-   hues in my-lists.css. */
-.pos-chip[data-pos="verb"]        { --pos-hue: 217; }  /* blue    */
-.pos-chip[data-pos="noun"]        { --pos-hue: 142; }  /* green   */
-.pos-chip[data-pos="adjective"]   { --pos-hue:  32; }  /* amber   */
-.pos-chip[data-pos="adverb"]      { --pos-hue: 280; }  /* violet  */
-.pos-chip[data-pos="pronoun"]     { --pos-hue: 340; }  /* pink    */
-.pos-chip[data-pos="preposition"] { --pos-hue: 195; }  /* cyan    */
-.pos-chip[data-pos="conjunction"] { --pos-hue:  20; }  /* orange  */
-.pos-chip[data-pos="article"]     { --pos-hue: 260; }  /* indigo  */
+   its own. My Lists' word-row POS badges (.ml-word-pos) and the word
+   tooltip's own badge (.tt-pos) mirror the same hues/rules in my-lists.css
+   and tooltip.css respectively — three copies of the same `[data-pos]` list,
+   kept in step by hand (a POS added to one and not the others is exactly
+   the class of bug this project's data-requirements split elsewhere warns
+   about, so if you add a POS here, add it there too).
+   Each hue reads through a `--pos-hue-<pos>` custom property (settings.ts's
+   POS_COLOR_DEFS/applyPosColors, same "just a hue, saturation/lightness
+   derived below" scheme as conjugation.css's --tense-hue-<key>) with the
+   value here as its fallback, so a Settings override just works with no
+   stylesheet change needed. */
+.pos-chip[data-pos="verb"]        { --pos-hue: var(--pos-hue-verb,        217); }  /* blue      */
+.pos-chip[data-pos="noun"]        { --pos-hue: var(--pos-hue-noun,        142); }  /* green     */
+.pos-chip[data-pos="adjective"]   { --pos-hue: var(--pos-hue-adjective,    32); }  /* amber     */
+.pos-chip[data-pos="adverb"]      { --pos-hue: var(--pos-hue-adverb,      280); }  /* violet    */
+.pos-chip[data-pos="pronoun"]     { --pos-hue: var(--pos-hue-pronoun,     340); }  /* pink      */
+.pos-chip[data-pos="preposition"] { --pos-hue: var(--pos-hue-preposition, 195); }  /* cyan      */
+.pos-chip[data-pos="conjunction"] { --pos-hue: var(--pos-hue-conjunction,  20); }  /* orange    */
+.pos-chip[data-pos="article"]     { --pos-hue: var(--pos-hue-article,     260); }  /* indigo    */
+.pos-chip[data-pos="particle"]    { --pos-hue: var(--pos-hue-particle,     85); }  /* chartreuse */
+.pos-chip[data-pos="suffix"]      { --pos-hue: var(--pos-hue-suffix,      165); }  /* teal      */
 
 /* CEFR bands: green (easiest) through red (hardest) — a familiar traffic-
    light reading of difficulty rather than an arbitrary per-level colour. */

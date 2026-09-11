@@ -468,3 +468,43 @@
   background: var(--surface2);
   white-space: nowrap;
 }
+
+/* Grammatical gender indicators — a noun with a known masculine/feminine
+   gender, one of three mutually-exclusive styles a learner picks in
+   Settings (see utils/dom.ts's renderWordWithGender/applyGenderContainer).
+   Colors are custom properties (variables.css) rather than hard-coded here
+   so a Settings color override (applyGenderColors) repaints everything
+   already on screen without touching these rules. This is the *inline*
+   layout for the dot — table.css overrides it to an absolutely-positioned
+   corner dot for table mode's cells specifically. */
+.gender-dot {
+  display: inline-block;
+  width: 0.6em;
+  height: 0.6em;
+  min-width: 0.6em;
+  border-radius: 50%;
+  margin-right: 0.4em;
+  vertical-align: middle;
+}
+.gender-dot--masculine { background: var(--gender-color-masculine); }
+.gender-dot--feminine  { background: var(--gender-color-feminine); }
+
+/* 'word-bg' style — a colored pill behind just the word text (not any
+   annotation that follows it), built by wrapping the word in this span
+   rather than coloring the whole line. Text color is fixed rather than
+   inherited: --gender-color-* is a pastel (baby blue/pink) that stays the
+   same across light and dark themes, so the text on top of it needs to as
+   well — inheriting dark mode's near-white --text would be unreadable. */
+.gender-word-bg {
+  padding: 0.05em 0.45em;
+  border-radius: 999px;
+  color: #1a1916;
+}
+.gender-word-bg--masculine { background: var(--gender-color-masculine); }
+.gender-word-bg--feminine  { background: var(--gender-color-feminine); }
+
+/* 'box-bg' style — the entire container's background, for a caller that
+   applies it to the outer cell/box rather than the word itself. Same fixed
+   text color as .gender-word-bg above, and for the same reason. */
+.gender-box-bg--masculine { background: var(--gender-color-masculine); color: #1a1916; }
+.gender-box-bg--feminine  { background: var(--gender-color-feminine); color: #1a1916; }

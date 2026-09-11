@@ -244,7 +244,7 @@ export function renderConjOneAtATime({
     nextBtn.disabled = i >= queue.length - 1 && results.some(r => r === null);
     giveUpBtn.disabled = finished;
 
-    verbEl.textContent = displayWord(item.verb, Settings.getShowDisambiguator());
+    verbEl.textContent = displayWord(item.verb, Settings.getShowDisambiguator(), Settings.getAbbreviateGrammarHint());
     tenseEl.textContent = item.tenseLabel;
     pronounEl.textContent = item.slot === 'single' ? '' : item.pronoun;
     pronounEl.style.visibility = item.slot === 'single' ? 'hidden' : 'visible';

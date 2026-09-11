@@ -13,6 +13,17 @@ export interface WordLinguistic {
   reflexive:           boolean;
   gender:              string | null;
   plural:              string | null;
+  /**
+   * This word's OWN grammatical number ('singular' | 'plural'), for the
+   * closed-class determiners where that fact IS the word — Spanish
+   * "un"/"una" (singular) vs "unos"/"unas" (plural), all four otherwise
+   * glossing to "a"/"some". NOT the plural inflection of a noun (that's
+   * `plural` above) — set only on the handful of article/quantifier rows
+   * VocabApp-Data's curated.enrich_determiners covers (spa/fra/ita/por), so
+   * it stays null for every ordinary noun/verb/adjective even though most of
+   * those also carry a `gender`. See utils/utils.ts's grammarHint().
+   */
+  grammatical_number?: string | null;
   register:            string | null;
   ipa:                 string | null;
   syllables:           string[] | null;

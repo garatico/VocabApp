@@ -3,7 +3,7 @@
 import { bindTableControls, resolveDirection, syncTableStyleUI } from './modes/table-controls.ts';
 import { initPWA } from './utils/pwa.ts';
 import { bindStartHandler }                    from './start-handler.ts';
-import { bindClassFilter, getSelectedClasses, syncUI as syncClassFilterUI } from './filters/class-filter.ts';
+import { bindClassFilter, getSelectedClasses, syncUI as syncClassFilterUI, updateClassFilter } from './filters/class-filter.ts';
 import { initSectionCollapse }                from './filters/section-collapse.ts';
 import { bindDomainFilter, getSelectedDomains, updateDomainFilter, reloadDomainFilter } from './filters/domain-filter.ts';
 import { bindScriptTypeFilter, getSelectedScriptTypes } from './filters/script-type-filter.ts';
@@ -271,6 +271,7 @@ async function markEmptyLanguages(): Promise<void> {
     syncConjugationAvailability();
     syncScriptDisplayAvailability();
     syncScriptTypeAvailability();
+    syncScriptDisplaySettingsAvailability();
     void loadAndBuildFilters(langSelect.value);
   }
 }
@@ -324,6 +325,26 @@ function syncScriptTypeAvailability(): void {
   const wrap = document.getElementById('scriptTypeFilterWrap');
   if (!wrap) return;
   wrap.hidden = lang !== 'japanese';
+}
+
+/**
+ * Same reasoning as syncScriptDisplayAvailability above, one level out: the
+ * Settings page's whole "Script Display" section (Word shown as / Show both
+ * scripts / Show romanization / Function-word brackets) only means anything
+ * for a romanizedScript language too. Unlike Advanced Mode's gate — for
+ * settings most people never need — this is a settings *always* relevant to
+ * a Chinese/Japanese learner and never relevant to anyone else, so hiding it
+ * behind a mode switch would hide it from the exact people who'd use it;
+ * hidden/shown by language instead, matching how the rest of this file
+ * treats a control that doesn't apply to the current language.
+ */
+function syncScriptDisplaySettingsAvailability(): void {
+  const lang       = langSelect?.value ?? 'spanish';
+  const available  = languageInfo(lang).romanizedScript;
+  const section    = document.getElementById('settings-sec-chinese');
+  const navLink    = document.querySelector<HTMLElement>('a[href="#settings-sec-chinese"]');
+  if (section) section.hidden = !available;
+  if (navLink) navLink.hidden = !available;
 }
 
 /**
@@ -596,6 +617,16 @@ async function loadAndBuildFilters(lang: string): Promise<void> {
     .sort((a, b) => b.count - a.count);
   updateDomainFilter(sortedCounts);
 
+  // Same idea, one language-independent field: how many words of each part
+  // of speech this language's data actually has, so a chip that can only
+  // ever narrow to zero results (Particle/Suffix outside Japanese/Chinese)
+  // hides itself instead of sitting there as a dead end.
+  const posCounts = new Map<string, number>();
+  for (const w of sorted) {
+    if (w.pos) posCounts.set(w.pos, (posCounts.get(w.pos) ?? 0) + 1);
+  }
+  updateClassFilter([...posCounts.entries()].map(([pos, count]) => ({ pos, count })));
+
   // Trivia doesn't draw from `sorted`/`list` at all — its Domains pills come
   // from the trivia question bank instead (updateTriviaDomainFilter), so the
   // vocabulary-count repaint above would be wrong there. Checked once, here,
@@ -782,6 +813,7 @@ langSelect?.addEventListener('change', () => {
   syncConjugationAvailability();
   syncScriptDisplayAvailability();
   syncScriptTypeAvailability();
+  syncScriptDisplaySettingsAvailability();
   updateLangPickerButton();
   void loadAndBuildFilters(langSelect.value);
   refreshFilterSelect(langSelect.value);
@@ -1104,6 +1136,7 @@ void (async function init(): Promise<void> {
   syncConjugationAvailability();
   syncScriptDisplayAvailability();
   syncScriptTypeAvailability();
+  syncScriptDisplaySettingsAvailability();
   syncKidFriendlyLocks();
   setOnKidFriendlyModeChange(syncKidFriendlyLocks);
   bindUIState();

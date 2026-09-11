@@ -8,6 +8,8 @@
 
 import { foldKey } from './match.ts';
 
+export type GenderIndicatorStyle = 'off' | 'dot' | 'word-bg' | 'box-bg';
+
 export function mustGet<T extends HTMLElement = HTMLElement>(id: string): T {
   const el = document.getElementById(id);
   if (!el) throw new Error(`Required DOM element #${id} not found. Check that the HTML template includes this element.`);
@@ -51,15 +53,74 @@ export function fillHighlighted(el: HTMLElement, text: string, query: string): v
  * its children out as a column (table.css's `.spanish-word`) for the two
  * text nodes this produces to actually stack rather than run inline.
  */
-export function setWordWithDisambiguator(
-  el: HTMLElement, base: string, disambiguator: string | null | undefined, show = true,
+/**
+ * Fill `el` with `base` — wrapped in a colored pill span when `style` is
+ * 'word-bg' and `key` is set, plain text otherwise — followed by
+ * `annotation` (when present) in parentheses inside a `.word-disambiguator`
+ * span. The DOM-node counterpart to utils.ts's `wordAndAnnotation`/
+ * `displayWord`, for callers whose element can style the parenthetical
+ * smaller and the pill precisely around just the word (an `<input>`'s value
+ * can't hold either, so revealed-answer inputs still use plain
+ * `displayWord()` text). `el` must lay its children out as a column
+ * (table.css's `.spanish-word`) for the word and the annotation to actually
+ * stack rather than run inline.
+ *
+ * 'dot' and 'box-bg' aren't handled here — they decorate the surrounding
+ * *container* (which may be a wider element than the word itself, e.g.
+ * table-mode's whole cell), not the word text, so they go through
+ * `applyGenderContainer` below instead. Color for all three styles comes
+ * from CSS (`--gender-color-masculine`/`-feminine` in variables.css,
+ * overridable per Settings.getGenderColor/applyGenderColors) via class, not
+ * an inline style, so a Settings color change repaints everything already
+ * on screen without re-rendering anything.
+ */
+export function renderWordWithGender(
+  el: HTMLElement, base: string, annotation: string | null | undefined,
+  key: 'masculine' | 'feminine' | null, style: GenderIndicatorStyle,
 ): void {
-  el.textContent = base;
-  if (show && disambiguator) {
+  el.textContent = '';
+  if (key && style === 'word-bg') {
+    const span = document.createElement('span');
+    span.className = `gender-word-bg gender-word-bg--${key}`;
+    span.textContent = base;
+    el.appendChild(span);
+  } else {
+    el.appendChild(document.createTextNode(base));
+  }
+  if (annotation) {
     const span = document.createElement('span');
     span.className = 'word-disambiguator';
-    span.textContent = `(${disambiguator})`;
+    span.textContent = `(${annotation})`;
     el.appendChild(span);
+  }
+}
+
+/**
+ * Apply (or clear) the 'dot'/'box-bg' gender indicator styles on
+ * `container` — 'dot' appends a small absolutely-positioned corner dot
+ * (table.css places table mode's in the cell's bottom-left, next to the
+ * existing "known" star — see that file's own comments; elsewhere it stays
+ * inline via components.css's base `.gender-dot` rule), 'box-bg' colors the
+ * container's entire background. Always clears both first, so switching
+ * styles (or re-rendering a word whose gender indicator should no longer
+ * show) never leaves a stale dot or background behind on a reused element.
+ * 'word-bg' and 'off' are no-ops here — see `renderWordWithGender` above for
+ * the word-level style.
+ */
+export function applyGenderContainer(
+  container: HTMLElement, key: 'masculine' | 'feminine' | null, style: GenderIndicatorStyle,
+): void {
+  container.classList.remove('gender-box-bg--masculine', 'gender-box-bg--feminine');
+  container.querySelector(':scope > .gender-dot')?.remove();
+
+  if (!key) return;
+  if (style === 'box-bg') {
+    container.classList.add(`gender-box-bg--${key}`);
+  } else if (style === 'dot') {
+    const dot = document.createElement('span');
+    dot.className = `gender-dot gender-dot--${key}`;
+    dot.title = key === 'masculine' ? 'Masculine' : 'Feminine';
+    container.appendChild(dot);
   }
 }
 

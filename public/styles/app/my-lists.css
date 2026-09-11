@@ -899,15 +899,20 @@
    One hue per part of speech, derived the same way the conjugation tense
    chips derive theirs — see the --tense-hue block in conjugation.css. These
    were four sets of fixed light-mode hexes, so in dark mode the badges stayed
-   pale blue and green on a dark row. */
-.ml-word-pos[data-pos="verb"]        { --pos-hue: 217; }  /* blue    */
-.ml-word-pos[data-pos="noun"]        { --pos-hue: 142; }  /* green   */
-.ml-word-pos[data-pos="adjective"]   { --pos-hue:  32; }  /* amber   */
-.ml-word-pos[data-pos="adverb"]      { --pos-hue: 280; }  /* violet  */
-.ml-word-pos[data-pos="pronoun"]     { --pos-hue: 340; }  /* pink    */
-.ml-word-pos[data-pos="preposition"] { --pos-hue: 195; }  /* cyan    */
-.ml-word-pos[data-pos="conjunction"] { --pos-hue:  20; }  /* orange  */
-.ml-word-pos[data-pos="article"]     { --pos-hue: 260; }  /* indigo  */
+   pale blue and green on a dark row. Mirrors class-filter.css's .pos-chip
+   rules (see that file's own comment on why there are three copies) — each
+   hue reads through a --pos-hue-<pos> custom property so a Settings
+   override (settings.ts's applyPosColors) reaches this badge too. */
+.ml-word-pos[data-pos="verb"]        { --pos-hue: var(--pos-hue-verb,        217); }  /* blue      */
+.ml-word-pos[data-pos="noun"]        { --pos-hue: var(--pos-hue-noun,        142); }  /* green     */
+.ml-word-pos[data-pos="adjective"]   { --pos-hue: var(--pos-hue-adjective,    32); }  /* amber     */
+.ml-word-pos[data-pos="adverb"]      { --pos-hue: var(--pos-hue-adverb,      280); }  /* violet    */
+.ml-word-pos[data-pos="pronoun"]     { --pos-hue: var(--pos-hue-pronoun,     340); }  /* pink      */
+.ml-word-pos[data-pos="preposition"] { --pos-hue: var(--pos-hue-preposition, 195); }  /* cyan      */
+.ml-word-pos[data-pos="conjunction"] { --pos-hue: var(--pos-hue-conjunction,  20); }  /* orange    */
+.ml-word-pos[data-pos="article"]     { --pos-hue: var(--pos-hue-article,     260); }  /* indigo    */
+.ml-word-pos[data-pos="particle"]    { --pos-hue: var(--pos-hue-particle,     85); }  /* chartreuse */
+.ml-word-pos[data-pos="suffix"]      { --pos-hue: var(--pos-hue-suffix,      165); }  /* teal      */
 
 .ml-word-pos[data-pos] {
   color:        hsl(var(--pos-hue) 60% 34%);

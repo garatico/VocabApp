@@ -72,6 +72,37 @@ function notifyChange(): void {
     ?.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+/**
+ * Called after vocabulary loads (or the language changes) with live
+ * per-language POS counts. Hides any chip for a part of speech this
+ * language's data has zero of — e.g. Particle/Suffix outside Japanese/
+ * Chinese, which don't have a grammatical category those two POS values
+ * were invented for (see VocabApp-Data's HAND_CURATED_GRAMMAR_WORDS) — a
+ * chip that can only ever narrow the pool to nothing is worse than no chip.
+ * Mirrors updateDomainFilter's own reasoning in domain-filter.ts.
+ */
+export function updateClassFilter(counts: { pos: string; count: number }[]): void {
+  const container = document.getElementById('classFilter');
+  if (!container) return;
+
+  const present = new Set(counts.filter(c => c.count > 0).map(c => c.pos));
+  container.querySelectorAll<HTMLButtonElement>('.pos-chip[data-pos]').forEach(btn => {
+    btn.hidden = !present.has(btn.dataset.pos ?? '');
+  });
+
+  // A hidden chip might still be selected from a session before this
+  // language's data lost (or never had) that POS — same "prune what no
+  // longer applies" step updateDomainFilter takes for domains, so a stale
+  // selection can't silently narrow the pool to empty with no visible chip
+  // left to explain why.
+  const state  = getState();
+  const pruned = state.selected.filter(pos => present.has(pos));
+  if (pruned.length !== state.selected.length) {
+    saveState({ ...state, selected: pruned });
+    syncUI();
+  }
+}
+
 export function syncUI(): void {
   const container = document.getElementById('classFilter');
   if (!container) return;

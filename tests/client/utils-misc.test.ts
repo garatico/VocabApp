@@ -8,7 +8,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   capitalize, displayWord, extraMatchedGloss, chineseWordText, slotText, slotMatches,
-  primaryGlossForHint, isFunctionWord, DEFAULT_CHINESE_DISPLAY, type ChineseDisplay,
+  primaryGlossForHint, isFunctionWord, grammarHint, genderArticle, genderKey, wordAndAnnotation,
+  DEFAULT_CHINESE_DISPLAY, type ChineseDisplay,
 } from '../../src/client/utils/utils.js';
 import type { Word } from '../../src/client/types.js';
 
@@ -35,6 +36,173 @@ describe('displayWord', () => {
 
   it('appends the disambiguator in parentheses', () => {
     expect(displayWord(word({ word: 'haber', disambiguator: 'auxiliary' }))).toBe('haber (auxiliary)');
+  });
+
+  it('appends the grammar hint, spelled out by default, for a closed-class determiner', () => {
+    const un = word({ word: 'un', linguistic: { gender: 'masculine', grammatical_number: 'singular' } });
+    expect(displayWord(un)).toBe('un (masculine, singular)');
+  });
+
+  it('abbreviates the grammar hint when asked', () => {
+    const un = word({ word: 'un', linguistic: { gender: 'masculine', grammatical_number: 'singular' } });
+    expect(displayWord(un, true, true)).toBe('un (masc., sing.)');
+  });
+
+  it('never shows a grammar hint for an ordinary noun, even with a gender', () => {
+    const casa = word({ word: 'casa', linguistic: { gender: 'feminine', plural: 'casas' } });
+    expect(displayWord(casa)).toBe('casa');
+  });
+
+  it('joins grammar hint and disambiguator when both apply', () => {
+    const w = word({
+      word: 'un', disambiguator: 'numeral', linguistic: { gender: 'masculine', grammatical_number: 'singular' },
+    });
+    expect(displayWord(w)).toBe('un (masculine, singular; numeral)');
+  });
+
+  it('still shows the grammar hint when show=false hides the disambiguator', () => {
+    const w = word({
+      word: 'un', disambiguator: 'numeral', linguistic: { gender: 'masculine', grammatical_number: 'singular' },
+    });
+    expect(displayWord(w, false)).toBe('un (masculine, singular)');
+  });
+});
+
+describe('grammarHint', () => {
+  it('is null with no grammatical_number, even alongside a gender', () => {
+    expect(grammarHint(word({ linguistic: { gender: 'feminine' } }))).toBeNull();
+  });
+
+  it('spells gender and number out by default', () => {
+    expect(grammarHint(word({ linguistic: { gender: 'feminine', grammatical_number: 'plural' } }))).toBe('feminine, plural');
+  });
+
+  it('omits the gender half for a genderless plural determiner (French "les")', () => {
+    expect(grammarHint(word({ linguistic: { grammatical_number: 'plural' } }))).toBe('plural');
+  });
+
+  it('abbreviates both halves when asked', () => {
+    expect(grammarHint(word({ linguistic: { gender: 'feminine', grammatical_number: 'plural' } }), true)).toBe('fem., pl.');
+  });
+
+  it('abbreviates a genderless determiner to just the number', () => {
+    expect(grammarHint(word({ linguistic: { grammatical_number: 'singular' } }), true)).toBe('sing.');
+  });
+});
+
+describe('genderArticle', () => {
+  const noun = (w: string, gender: string, over: Record<string, unknown> = {}) =>
+    word({ word: w, pos: 'noun', linguistic: { gender }, ...over });
+
+  it('returns "el"/"la" for Spanish', () => {
+    expect(genderArticle(noun('perro', 'masculine'), 'spanish')).toBe('el');
+    expect(genderArticle(noun('casa', 'feminine'), 'spanish')).toBe('la');
+  });
+
+  it('returns "o"/"a" for Portuguese, no elision', () => {
+    expect(genderArticle(noun('amigo', 'masculine'), 'portuguese')).toBe('o');
+    expect(genderArticle(noun('árvore', 'feminine'), 'portuguese')).toBe('a');
+  });
+
+  it('returns "der"/"die" for German (neuter is out of scope)', () => {
+    expect(genderArticle(noun('Mann', 'masculine'), 'german')).toBe('der');
+    expect(genderArticle(noun('Frau', 'feminine'), 'german')).toBe('die');
+    expect(genderArticle(noun('Haus', 'neuter'), 'german')).toBeNull();
+  });
+
+  it('elides French "le"/"la" to "l\'" before a vowel sound', () => {
+    expect(genderArticle(noun('chat', 'masculine'), 'french')).toBe('le');
+    expect(genderArticle(noun('amour', 'masculine'), 'french')).toBe("l'");
+    expect(genderArticle(noun('femme', 'feminine'), 'french')).toBe('la');
+    expect(genderArticle(noun('île', 'feminine'), 'french')).toBe("l'");
+  });
+
+  it('picks Italian "il"/"lo"/"l\'" for masculine by the word\'s own shape', () => {
+    expect(genderArticle(noun('libro', 'masculine'), 'italian')).toBe('il');
+    expect(genderArticle(noun('zaino', 'masculine'), 'italian')).toBe('lo');
+    expect(genderArticle(noun('studente', 'masculine'), 'italian')).toBe('lo');
+    expect(genderArticle(noun('amico', 'masculine'), 'italian')).toBe("l'");
+  });
+
+  it('Italian feminine only ever elides, never takes "lo"', () => {
+    expect(genderArticle(noun('casa', 'feminine'), 'italian')).toBe('la');
+    expect(genderArticle(noun('amica', 'feminine'), 'italian')).toBe("l'");
+  });
+
+  it('is null for a non-noun even with a gender set', () => {
+    expect(genderArticle(word({ word: 'bonito', pos: 'adjective', linguistic: { gender: 'masculine' } }), 'spanish')).toBeNull();
+  });
+
+  it('is null with no gender', () => {
+    expect(genderArticle(word({ word: 'coche', pos: 'noun', linguistic: {} }), 'spanish')).toBeNull();
+  });
+
+  it('is null for Dutch — the data only ever carries common/neuter, never masculine/feminine', () => {
+    expect(genderArticle(noun('huis', 'neuter'), 'dutch')).toBeNull();
+  });
+
+  it('is null for a language with no grammatical gender at all', () => {
+    expect(genderArticle(noun('猫', 'masculine'), 'japanese')).toBeNull();
+  });
+
+  it('resolves the language from entry.language over the passed-in lang', () => {
+    // Spanish never elides, French does — a vowel-initial word tells the two
+    // apart even though both languages' feminine article happens to be "la".
+    expect(genderArticle(noun('amigo', 'masculine', { language: 'spanish' }), 'french')).toBe('el');
+  });
+});
+
+describe('genderKey', () => {
+  it('returns the masculine/feminine key for a noun', () => {
+    expect(genderKey(word({ pos: 'noun', linguistic: { gender: 'masculine' } }))).toBe('masculine');
+    expect(genderKey(word({ pos: 'noun', linguistic: { gender: 'feminine' } }))).toBe('feminine');
+  });
+
+  it('is null for a non-noun', () => {
+    expect(genderKey(word({ pos: 'adjective', linguistic: { gender: 'masculine' } }))).toBeNull();
+  });
+
+  it('is null for neuter/common — binary indicator only', () => {
+    expect(genderKey(word({ pos: 'noun', linguistic: { gender: 'neuter' } }))).toBeNull();
+    expect(genderKey(word({ pos: 'noun', linguistic: { gender: 'common' } }))).toBeNull();
+  });
+
+  it('is language-independent, unlike genderArticle', () => {
+    expect(genderKey(word({ pos: 'noun', linguistic: { gender: 'feminine' } }))).toBe('feminine');
+  });
+});
+
+describe('displayWord gender article', () => {
+  const noun = (w: string, gender: string) => word({ word: w, pos: 'noun', linguistic: { gender } });
+
+  it('prefixes the definite article when asked', () => {
+    expect(displayWord(noun('casa', 'feminine'), true, false, true, 'spanish')).toBe('la casa');
+  });
+
+  it('does not prefix by default', () => {
+    expect(displayWord(noun('casa', 'feminine'), true, false, false, 'spanish')).toBe('casa');
+  });
+
+  it('combines with a disambiguator', () => {
+    const w = word({ word: 'casa', pos: 'noun', disambiguator: 'home', linguistic: { gender: 'feminine' } });
+    expect(displayWord(w, true, false, true, 'spanish')).toBe('la casa (home)');
+  });
+});
+
+describe('wordAndAnnotation', () => {
+  it('separates the (possibly article-prefixed) word from its annotation', () => {
+    const w = word({ word: 'casa', pos: 'noun', disambiguator: 'home', linguistic: { gender: 'feminine' } });
+    expect(wordAndAnnotation(w, true, false, true, 'spanish')).toEqual({ base: 'la casa', annotation: 'home' });
+  });
+
+  it('annotation is null, not empty, when there is none', () => {
+    expect(wordAndAnnotation(word({ word: 'perro' }))).toEqual({ base: 'perro', annotation: null });
+  });
+
+  it('agrees with displayWord on the combined string', () => {
+    const w = word({ word: 'un', disambiguator: 'numeral', linguistic: { gender: 'masculine', grammatical_number: 'singular' } });
+    const { base, annotation } = wordAndAnnotation(w);
+    expect(`${base} (${annotation})`).toBe(displayWord(w));
   });
 });
 
