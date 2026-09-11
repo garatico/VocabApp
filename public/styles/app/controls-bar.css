@@ -445,30 +445,6 @@
   .pager-status { font-size: 0.66rem; }
 }
 
-/* ── Recall timer group ────────────────────────────────────────
-   Lives in the controls bar next to Start Quiz, shown only in
-   recall mode (see ui-state.ts). Compact so it does not push the
-   Start button onto a second row. */
-#recallTimerGroup .size-row {
-  gap: 0.35rem;
-  flex-wrap: nowrap;
-}
-#recallTimerSelect {
-  min-width: 108px;
-}
-#recallTimerCustom {
-  width: 78px;
-}
-#recallHardStop .sort-order-btn {
-  font-size: 0.7rem;
-  padding: 0.25rem 0.5rem;
-  white-space: nowrap;
-}
-
-@media (max-width: 900px) {
-  #recallTimerGroup .size-row { flex-wrap: wrap; }
-}
-
 /* ── Inline "Order" label ──────────────────────────────────────
    Sits beside the in-quiz order dropdowns in table and recall, so
    they read the same as the labelled one in conjugation. */

@@ -12,14 +12,20 @@
  * The environment arrives from `createApp`, not from `process.env`. It used to
  * be read here directly, which meant `createApp({ nodeEnv })` produced an app
  * whose CORS policy was whatever the ambient env happened to say.
+ *
+ * The production allow-list itself is the one exception: it's read straight
+ * from CORS_ORIGINS (comma-separated), same as ADMIN_SECRET/DATA_DIR read
+ * process.env directly elsewhere. Without it, allowing a real deployed
+ * frontend meant editing this file and redeploying just to add a domain.
  */
 
 import { Request, Response, NextFunction } from 'express';
 
-/** Exact origins allowed in production. Add the deployed URL here. */
+/** Exact origins always allowed in production, regardless of CORS_ORIGINS. */
 const ALLOWED_ORIGINS = new Set([
   'http://localhost:3000',
   'http://127.0.0.1:3000',
+  ...(process.env['CORS_ORIGINS']?.split(',').map(o => o.trim()).filter(Boolean) ?? []),
 ]);
 
 /** Hostnames allowed in development (any port). */

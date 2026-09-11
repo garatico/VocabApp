@@ -559,11 +559,26 @@ export { CONCEPTS };
  * applied to words that pass this test rather than to the vocabulary at
  * large. Otherwise "Top 100" hands picture mode 100 words and it quizzes
  * however many of them happen to have an image.
+ *
+ * Checks the word's own `emoji`/`svg_url` fields first — populated
+ * server-side from the database (vocab-loader.ts's `emoji` column,
+ * svg-loader.ts's own CONCEPTS map) — before falling back to this file's
+ * client-side maps. Those maps only cover the six Latin-script languages;
+ * Chinese and Japanese have no entries here at all, so without this a word's
+ * own curated emoji was invisible to this check and picture mode's size
+ * window silently filtered every word in both languages down to zero, even
+ * though the renderer (picture-mode.ts) already knew to use
+ * `w.emoji`/`w.svg_url` once a word reached it.
  */
-export function hasVisual(lang: string, word: string): boolean {
+export function hasVisual(
+  lang: string,
+  entry: { word: string; emoji?: string | null; svg_url?: string | null },
+): boolean {
   return Boolean(
-    getFallbackImageUrl(lang, word)
-    || getFallbackSvgUrl(lang, word)
-    || getFallbackEmoji(lang, word),
+    entry.emoji
+    || entry.svg_url
+    || getFallbackImageUrl(lang, entry.word)
+    || getFallbackSvgUrl(lang, entry.word)
+    || getFallbackEmoji(lang, entry.word),
   );
 }

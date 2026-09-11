@@ -135,7 +135,7 @@ export function bindStartHandler({
       // photo, SVG or emoji, so "Top 100" was producing however many of the
       // top 100 happened to be illustrated rather than 100 pictures.
       const visualsOnly = modeAtStart === 'picture';
-      if (visualsOnly) list = list.filter(w => hasVisual(fullLang, w.word));
+      if (visualsOnly) list = list.filter(w => hasVisual(fullLang, w));
 
       // Same problem again: Sentence Scramble needs a word with at least one
       // example sentence to scramble, so "Top 100" would otherwise silently
@@ -170,7 +170,7 @@ export function bindStartHandler({
         // Candidates: words ranked beyond the current window
         let extras: Word[] = allWords.filter(w => !baseWordSet.has(w.word));
         if (verbsOnly)     extras = extras.filter(isDrillableVerb);
-        if (visualsOnly)   extras = extras.filter(w => hasVisual(fullLang, w.word));
+        if (visualsOnly)   extras = extras.filter(w => hasVisual(fullLang, w));
         if (examplesOnly)  extras = extras.filter(w => w.examples.length > 0);
 
         // Apply list filter (same as applied to the base list above)
@@ -200,7 +200,7 @@ export function bindStartHandler({
         const have     = new Set(list.map(w => w.word));
         let extras     = allWords.filter(w => !have.has(w.word)
                           && (verbsOnly  ? isDrillableVerb(w)        : true)
-                          && (visualsOnly ? hasVisual(fullLang, w.word) : true)
+                          && (visualsOnly ? hasVisual(fullLang, w) : true)
                           && (examplesOnly ? (w.examples.length > 0) : true));
         extras = filterWords(extras);
         extras = applyDomainFilter(extras, selectedDomains);
@@ -299,7 +299,7 @@ export function bindStartHandler({
           // Click mode needs 3 decoys per question and the quiz set may be
           // smaller than that. Decoys are never scored, so they come from
           // every illustrated word in the language rather than the quiz set.
-          distractorWords: (getAllWords ? getAllWords() : []).filter(w => hasVisual(fullLang, w.word)),
+          distractorWords: (getAllWords ? getAllWords() : []).filter(w => hasVisual(fullLang, w)),
         });
       }
 

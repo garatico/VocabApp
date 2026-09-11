@@ -739,13 +739,6 @@ export function applyFontSize(size: FontSize = Settings.getFontSize()): void {
   if (size === 'xl')    document.documentElement.classList.add('font-xl');
 }
 
-const FONT_TO_RS: Record<FontSize, number> = {
-  xs: 1.0, small: 1.15, medium: 1.32, large: 1.48, xl: 1.65,
-};
-export function getFontScaleForRecall(): number {
-  return FONT_TO_RS[Settings.getFontSize()] ?? 1.32;
-}
-
 // ── Bind settings UI ─────────────────────────────────────────────────────────
 
 /** The three filters' chain buttons — shared between bindSettings() and

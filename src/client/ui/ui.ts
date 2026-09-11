@@ -1,5 +1,9 @@
 /**
- * ui.ts — Loading spinners, toast notifications, error handling.
+ * ui.ts — Loading spinners, error handling.
+ *
+ * Toast notifications live in ui/toast.ts instead — this file used to carry
+ * its own showToast/showSuccess/showWarning/showInfo, but nothing ever called
+ * them once toast.ts existed as the generic, reusable version.
  */
 
 import { logger } from '../utils/logger.js';
@@ -23,30 +27,6 @@ export function hideLoading(): void {
     setTimeout(() => { spinner.style.display = 'none'; }, 300);
   }
 }
-
-// ── Toast notifications ───────────────────────────────────────────────────────
-
-type ToastType = 'success' | 'error' | 'warning' | 'info';
-
-export function showToast(message: string, type: ToastType = 'success', duration = 3000): HTMLElement {
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  const icons: Record<ToastType, string> = { success: '✓', error: '✕', warning: '⚠', info: 'ⓘ' };
-  toast.innerHTML = `<span>${icons[type]}</span><span>${message}</span>`;
-  document.body.appendChild(toast);
-  if (duration > 0) {
-    setTimeout(() => {
-      toast.style.animation = 'slideUp 0.3s ease reverse';
-      setTimeout(() => { toast.parentNode?.removeChild(toast); }, 300);
-    }, duration);
-  }
-  return toast;
-}
-
-export function showSuccess(message: string): HTMLElement { return showToast(message, 'success', 3000); }
-export function showError(message: string): HTMLElement   { return showToast(message, 'error',   4000); }
-export function showWarning(message: string): HTMLElement { return showToast(message, 'warning', 3000); }
-export function showInfo(message: string): HTMLElement    { return showToast(message, 'info',    3000); }
 
 // ── Error messages ────────────────────────────────────────────────────────────
 

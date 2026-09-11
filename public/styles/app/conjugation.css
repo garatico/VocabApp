@@ -542,10 +542,6 @@
 .conj-set-pill[data-reg="ortho"]     { color: var(--text-muted); }
 .conj-set-pill[data-reg="irregular"] { color: var(--danger, #b4453c); }
 
-@media (max-width: 599px) {
-}
-
-
 /* ═══════════════════════════════════════════════════════════════
    Merged Tense + Forms box
    Two halves of one question — which conjugations am I drilling —

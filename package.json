@@ -8,10 +8,10 @@
   "scripts": {
     "start": "tsx src/server/index.ts",
     "dev": "concurrently -n \"api,vite\" -c \"cyan,magenta\" \"npm run dev:api\" \"npm run dev:fe\"",
-    "dev:api": "cross-env NODE_ENV=development tsx watch src/server/index.ts",
+    "dev:api": "cross-env NODE_ENV=development PORT=3000 tsx watch src/server/index.ts",
     "prepare": "husky",
     "dev:fe": "vite",
-    "dev:admin": "cross-env NODE_ENV=development tsx src/server/index.ts",
+    "dev:admin": "cross-env NODE_ENV=development PORT=3000 tsx src/server/index.ts",
     "build": "vite build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

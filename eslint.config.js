@@ -15,7 +15,7 @@ const tsServerConfig = tseslint.config({
     },
   },
   rules: {
-    '@typescript-eslint/no-unused-vars':        ['warn', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
+    '@typescript-eslint/no-unused-vars':        ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
     '@typescript-eslint/no-explicit-any':        'warn',
     '@typescript-eslint/no-floating-promises':   'error',
     '@typescript-eslint/no-non-null-assertion':  'warn',
@@ -38,7 +38,7 @@ const tsClientConfig = tseslint.config({
     },
   },
   rules: {
-    '@typescript-eslint/no-unused-vars':        ['warn', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
+    '@typescript-eslint/no-unused-vars':        ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
     '@typescript-eslint/no-explicit-any':        'warn',
     '@typescript-eslint/no-floating-promises':   'error',
     '@typescript-eslint/no-non-null-assertion':  'warn',

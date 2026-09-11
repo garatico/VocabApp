@@ -839,7 +839,10 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     cancelBtn.type = 'button'; cancelBtn.className = 'ml-icon-btn'; cancelBtn.textContent = '✕';
     function confirmCreate(): void {
       const name = inp.value.trim(); if (!name) { li.remove(); return; }
-      createList(ctx.lang, name); ctx.selectedList = name; ctx.updateBadge(); render();
+      if (!createList(ctx.lang, name)) {
+        alert(`A list named "${name}" already exists.`); return;
+      }
+      ctx.selectedList = name; ctx.updateBadge(); render();
     }
     okBtn.addEventListener('click', confirmCreate);
     cancelBtn.addEventListener('click', () => li.remove());

@@ -2,8 +2,8 @@
 /**
  * validate.js
  *
- * Pre-flight check run before the server starts (or manually via npm run validate).
- * Catches the two failure modes we've seen in this project:
+ * Pre-commit check (see .husky/pre-commit), also runnable manually via
+ * npm run validate. Catches the two failure modes we've seen in this project:
  *   1. Truncated files (file ends mid-token, no closing brace, etc.)
  *   2. Null-byte corruption (file padded with \x00 after real content)
  *

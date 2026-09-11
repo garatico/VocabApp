@@ -122,9 +122,7 @@
 .picture-give-up-btn,
 .pm-giveup-btn,
 .recall-giveup-btn,
-#tableReset,
-#resetBtn,
-#quizGiveUp {
+#tableReset {
   background: var(--danger-light) !important;
   color: var(--danger) !important;
   border: 1px solid var(--danger-border) !important;
@@ -142,9 +140,7 @@
 .picture-give-up-btn:hover:not(:disabled),
 .pm-giveup-btn:hover:not(:disabled),
 .recall-giveup-btn:hover:not(:disabled),
-#tableReset:hover:not(:disabled),
-#resetBtn:hover:not(:disabled),
-#quizGiveUp:hover:not(:disabled) {
+#tableReset:hover:not(:disabled) {
   background: var(--danger-hover) !important;
 }
 
@@ -153,9 +149,7 @@
 .picture-give-up-btn:disabled,
 .pm-giveup-btn:disabled,
 .recall-giveup-btn:disabled,
-#tableReset:disabled,
-#resetBtn:disabled,
-#quizGiveUp:disabled {
+#tableReset:disabled {
   opacity: 0.4;
   cursor: default;
 }
@@ -238,7 +232,6 @@
    ──────────────────────────────────────────────────────────────── */
 .ui-empty-slot,
 #tableWrap:empty,
-#recallWrap:empty,
 #pictureWrap:empty,
 #conjugationWrap:empty {
   display: flex;
@@ -253,7 +246,6 @@
 
 .ui-empty-slot::before,
 #tableWrap:empty::before,
-#recallWrap:empty::before,
 #pictureWrap:empty::before,
 #conjugationWrap:empty::before {
   content: var(--empty-text, 'Select your settings above and hit Start Quiz');

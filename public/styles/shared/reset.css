@@ -18,7 +18,7 @@ html {
 ::-webkit-scrollbar               { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track         { background: transparent; }
 ::-webkit-scrollbar-thumb         { background: var(--border-strong); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover   { background: var(--text-muted); }
+::-webkit-scrollbar-thumb:hover   { background: var(--accent); }
 ::-webkit-scrollbar-corner        { background: transparent; }
 
 body {
@@ -45,16 +45,6 @@ main {
   background: var(--accent-light);
   color: var(--accent);
 }
-
-/* ── Scrollbars ── */
-html {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) transparent;
-}
-::-webkit-scrollbar          { width: 6px; height: 6px; }
-::-webkit-scrollbar-track    { background: transparent; }
-::-webkit-scrollbar-thumb    { background: var(--border-strong); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
 /* ── Unified focus ring ── */
 :focus-visible {
