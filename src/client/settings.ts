@@ -2188,6 +2188,7 @@ function restoreSettingsUI(): void {
   renderGoalSection();
   refreshStreakReadouts();
   bindGlossary();
+  bindSettingsSearch();
 }
 
 // ── Glossary — search, category filter, A→Z/Grouped sort ──────────────────
@@ -2275,6 +2276,132 @@ function bindGlossary(): void {
   // learner clicks something.
   reorder(sortToggle.querySelector<HTMLElement>('.sort-order-btn.active')?.dataset.sort);
   applyFilters();
+}
+
+// ── Settings search — filters every section's rows by label/description ───
+//
+// Rows/groups/sections stay in the DOM the whole time, same approach as
+// bindGlossary() above — only visibility and the collapsed-state toggle,
+// never a rebuild. A row also counts as a match when its *group* or
+// *section* heading matches (not just its own text) — typing "colors"
+// surfaces a whole Table Colors group even though none of its individual
+// rows say "colors" themselves.
+//
+// A group/section the search force-opens is restored to whatever it was
+// before the search (collapsed or not) once the query is cleared, rather
+// than left open — searching shouldn't permanently change anyone's collapse
+// preferences, only reveal what already matches.
+
+interface SettingsSearchRow {
+  row: HTMLElement;
+  text: string;
+  label: HTMLElement;
+  groupBody: HTMLElement | null;
+  sectionBody: HTMLElement;
+}
+
+function bindSettingsSearch(): void {
+  const input = document.getElementById('settingsSearch') as HTMLInputElement | null;
+  const empty = document.getElementById('settingsSearchEmpty');
+  const sections = Array.from(document.querySelectorAll<HTMLElement>('.settings-section'));
+  if (!input || sections.length === 0) return;
+
+  const rows: SettingsSearchRow[] = [];
+  const groupHeading  = new Map<HTMLElement, string>();
+  const sectionTitle  = new Map<HTMLElement, string>();
+  const bodyOfSection = new Map<HTMLElement, HTMLElement>();
+
+  for (const section of sections) {
+    const sectionBtn  = section.querySelector<HTMLButtonElement>(':scope > .settings-collapse-btn');
+    const sectionBody = section.querySelector<HTMLElement>(':scope > .settings-section-body');
+    if (!sectionBtn || !sectionBody) continue;
+    bodyOfSection.set(section, sectionBody);
+    sectionTitle.set(sectionBody, foldKey(sectionBtn.querySelector('.settings-section-title')?.textContent ?? ''));
+
+    sectionBody.querySelectorAll<HTMLButtonElement>('.settings-group-collapse-btn').forEach(btn => {
+      const groupId = btn.dataset.collapse;
+      const body = groupId ? document.getElementById(groupId) : null;
+      if (!body) return;
+      groupHeading.set(body, foldKey(btn.querySelector('.settings-group-heading')?.textContent ?? ''));
+    });
+
+    sectionBody.querySelectorAll<HTMLElement>('.settings-row').forEach(row => {
+      const label = row.querySelector<HTMLElement>('.settings-label > span:first-child');
+      if (!label) return; // a readout-only row or similar has nothing to search by — leave it always visible
+      const desc = row.querySelector<HTMLElement>('.settings-desc');
+      const text = foldKey(`${label.textContent ?? ''} ${desc?.textContent ?? ''}`);
+      const groupBody = row.closest<HTMLElement>('.filter-body[id^="settingsGroup"]');
+      rows.push({ row, text, label, groupBody, sectionBody });
+    });
+  }
+
+  const navLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('.settings-nav-link'));
+  const linkFor = (section: HTMLElement) => navLinks.find(l => l.getAttribute('href') === `#${section.id}`);
+
+  // Only ever holds groups/sections *this* search opened — checked against
+  // their live collapsed state before adding, so something already open on
+  // its own (or left open by the user) is never in here and never touched.
+  const forcedOpen: HTMLElement[] = [];
+
+  function forceOpen(body: HTMLElement): void {
+    if (!body.classList.contains('filter-body--collapsed')) return;
+    body.classList.remove('filter-body--collapsed');
+    document.querySelector(`[data-collapse="${body.id}"]`)?.setAttribute('aria-expanded', 'true');
+    forcedOpen.push(body);
+  }
+
+  function revertForcedOpen(): void {
+    for (const body of forcedOpen) {
+      body.classList.add('filter-body--collapsed');
+      document.querySelector(`[data-collapse="${body.id}"]`)?.setAttribute('aria-expanded', 'false');
+    }
+    forcedOpen.length = 0;
+  }
+
+  function applySearch(): void {
+    revertForcedOpen();
+    const raw = input!.value;
+    const q = foldKey(raw.trim());
+
+    if (!q) {
+      rows.forEach(r => { r.row.hidden = false; fillHighlighted(r.label, r.label.textContent ?? '', ''); });
+      sections.forEach(s => { s.hidden = false; });
+      navLinks.forEach(l => { l.hidden = false; });
+      if (empty) empty.hidden = true;
+      return;
+    }
+
+    const sectionMatched = new Set<HTMLElement>();
+    const groupMatched   = new Set<HTMLElement>();
+
+    for (const r of rows) {
+      const groupText = r.groupBody ? groupHeading.get(r.groupBody) ?? '' : '';
+      const secText    = sectionTitle.get(r.sectionBody) ?? '';
+      const match = r.text.includes(q) || groupText.includes(q) || secText.includes(q);
+      r.row.hidden = !match;
+      if (!match) continue;
+      sectionMatched.add(r.sectionBody);
+      if (r.groupBody) groupMatched.add(r.groupBody);
+      fillHighlighted(r.label, r.label.textContent ?? '', raw);
+    }
+
+    groupMatched.forEach(forceOpen);
+    sectionMatched.forEach(forceOpen);
+
+    let anyMatch = false;
+    for (const section of sections) {
+      const sectionBody = bodyOfSection.get(section);
+      const matched = sectionBody ? sectionMatched.has(sectionBody) : false;
+      section.hidden = !matched;
+      if (matched) anyMatch = true;
+      const link = linkFor(section);
+      if (link) link.hidden = !matched;
+    }
+
+    if (empty) empty.hidden = anyMatch;
+  }
+
+  input.addEventListener('input', applySearch);
 }
 
 /**

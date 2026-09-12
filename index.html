@@ -910,6 +910,9 @@
       <section id="settingsArea" hidden>
         <div class="settings-layout">
           <nav class="settings-nav" aria-label="Settings sections">
+            <div class="settings-nav-search">
+              <input type="search" id="settingsSearch" class="settings-search-input" data-i18n-placeholder="settings.search.placeholder" placeholder="Search settings…" aria-label="Search settings" data-i18n-aria-label="settings.search.placeholder">
+            </div>
             <a class="settings-nav-link" href="#settings-sec-table"><span class="settings-nav-icon" aria-hidden="true">📋</span><span data-i18n="settings.nav.table">Table Quiz</span></a>
             <a class="settings-nav-link" href="#settings-sec-picture"><span class="settings-nav-icon" aria-hidden="true">🖼</span><span data-i18n="nav.pictureQuiz">Picture Quiz</span></a>
             <a class="settings-nav-link" href="#settings-sec-conj"><span class="settings-nav-icon" aria-hidden="true">🔀</span><span data-i18n="settings.nav.conj">Conjugation Practice</span></a>
@@ -924,6 +927,8 @@
             <a class="settings-nav-link" href="#settings-sec-general"><span class="settings-nav-icon" aria-hidden="true">⚙</span><span data-i18n="settings.nav.general">General</span></a>
           </nav>
         <div class="settings-wrap">
+
+          <p id="settingsSearchEmpty" class="settings-search-empty" hidden data-i18n="settings.search.empty">No settings match your search.</p>
 
           <div class="settings-section settings-section--table" id="settings-sec-table">
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyTable" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyTable">
@@ -1029,7 +1034,7 @@
             </div>
 
             <div class="settings-group">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupHints" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupHints">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupHints" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupHints">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading" data-i18n="settings.table.groupHints">Hints &amp; Glosses</span>
             </button>
@@ -1111,7 +1116,7 @@
             </div>
 
             <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupHintTracking" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupHintTracking">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupHintTracking" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupHintTracking">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading">Hint Outcome Tracking</span>
             </button>
@@ -1154,7 +1159,7 @@
             </div>
 
             <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupCellInfo" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupCellInfo">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupCellInfo" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupCellInfo">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading" data-i18n="settings.table.groupCellInfo">Cell Info</span>
             </button>
@@ -1270,7 +1275,7 @@
             </div>
 
             <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTableColors" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupTableColors">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTableColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupTableColors">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading">Table Colors</span>
             </button>
@@ -1286,7 +1291,7 @@
             </div>
 
             <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupGenderColors" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupGenderColors">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupGenderColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupGenderColors">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading" data-i18n="settings.appearance.genderColors">Gender Colors</span>
             </button>
@@ -1305,7 +1310,7 @@
           </div>
 
           <div class="settings-section settings-section--picture" id="settings-sec-picture">
-            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyPicture" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyPicture">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyPicture" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyPicture">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">🖼</span>
               <span class="filter-section-label settings-section-title" data-i18n="nav.pictureQuiz">Picture Quiz</span>
@@ -1364,7 +1369,7 @@
           </div>
 
           <div class="settings-section settings-section--conj" id="settings-sec-conj">
-            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyConj" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyConj">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyConj" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyConj">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">🔀</span>
               <span class="filter-section-label settings-section-title" data-i18n="settings.nav.conj">Conjugation Practice</span>
@@ -1406,7 +1411,7 @@
             </div>
 
             <div class="settings-group">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupConjHints" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupConjHints">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupConjHints" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupConjHints">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading">Hints</span>
             </button>
@@ -1441,7 +1446,7 @@
             </div>
 
             <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTenseColors" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupTenseColors">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTenseColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupTenseColors">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading" data-i18n="settings.conj.tenseColors">Tense Colors</span>
             </button>
@@ -1457,7 +1462,7 @@
             </div>
 
             <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupFormColors" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupFormColors">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupFormColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupFormColors">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading" data-i18n="settings.conj.personColors">Form Colors</span>
             </button>
@@ -1476,7 +1481,7 @@
           </div>
 
           <div class="settings-section settings-section--streak" id="settings-sec-streak">
-            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyStreak" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyStreak">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyStreak" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyStreak">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">🔥</span>
               <span class="filter-section-label settings-section-title" data-i18n="settings.nav.streak">Streak &amp; Daily Goal</span>
@@ -1586,7 +1591,7 @@
           </div>
 
           <div class="settings-section settings-section--guessblank" id="settings-sec-guessblank">
-            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyGuessBlank" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyGuessBlank">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyGuessBlank" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyGuessBlank">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">🔍</span>
               <span class="filter-section-label settings-section-title" data-i18n="nav.guessBlank">Guess the Blank</span>
@@ -1610,7 +1615,7 @@
           </div>
 
           <div class="settings-section settings-section--answers" id="settings-sec-answers">
-            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyAnswers" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyAnswers">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyAnswers" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyAnswers">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">✅</span>
               <span class="filter-section-label settings-section-title" data-i18n="settings.nav.answers">Answer Checking</span>
@@ -1652,7 +1657,7 @@
             </div>
 
             <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAnswersAdvanced" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupAnswersAdvanced">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAnswersAdvanced" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupAnswersAdvanced">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading">Browser Behavior</span>
             </button>
@@ -1676,7 +1681,7 @@
           </div>
 
           <div class="settings-section settings-section--filters" id="settings-sec-filters">
-            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyFilters" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyFilters">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyFilters" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyFilters">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">🔎</span>
               <span class="filter-section-label settings-section-title" data-i18n="filter.filtersTitle">Filters</span>
@@ -1705,7 +1710,7 @@
             </div>
 
             <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupFiltersBehavior" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupFiltersBehavior">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupFiltersBehavior" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupFiltersBehavior">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading" data-i18n="settings.filters.groupBehavior">Behavior</span>
             </button>
@@ -1726,7 +1731,7 @@
             </div>
 
             <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupFiltersVisibility" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupFiltersVisibility">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupFiltersVisibility" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupFiltersVisibility">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading" data-i18n="settings.filters.groupVisibility">Visibility per Mode</span>
             </button>
@@ -1775,7 +1780,7 @@
           </div>
 
           <div class="settings-section settings-section--chinese" id="settings-sec-chinese">
-            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyChinese" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyChinese">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyChinese" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyChinese">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">文</span>
               <span class="filter-section-label settings-section-title" data-i18n="settings.nav.script">Script Display</span>
@@ -1832,7 +1837,7 @@
           </div>
 
           <div class="settings-section settings-section--appearance" id="settings-sec-appearance">
-            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyAppearance" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyAppearance">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyAppearance" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyAppearance">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">🎨</span>
               <span class="filter-section-label settings-section-title" data-i18n="settings.nav.appearance">Appearance</span>
@@ -1876,7 +1881,7 @@
             </div>
 
             <div class="settings-group" data-advanced="true" data-kid-hide="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupLangAppearance" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupLangAppearance">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupLangAppearance" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupLangAppearance">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading" data-i18n="settings.appearance.langAppearance">Language appearance</span>
             </button>
@@ -1891,7 +1896,7 @@
             </div>
 
             <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupPosColors" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupPosColors">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupPosColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupPosColors">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading" data-i18n="settings.appearance.posColors">Part of Speech Colors</span>
             </button>
@@ -1910,7 +1915,7 @@
           </div>
 
           <div class="settings-section settings-section--history" id="settings-sec-history">
-            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyHistory" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyHistory">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyHistory" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyHistory">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">🕘</span>
               <span class="filter-section-label settings-section-title" data-i18n="settings.nav.history">Session History</span>
@@ -1958,7 +1963,7 @@
           </div>
 
           <div class="settings-section settings-section--glossary" id="settings-sec-glossary">
-            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyGlossary" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyGlossary">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyGlossary" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyGlossary">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">📖</span>
               <span class="filter-section-label settings-section-title" data-i18n="settings.nav.glossary">Glossary</span>
@@ -2113,7 +2118,7 @@
           </div>
 
           <div class="settings-section settings-section--general" id="settings-sec-general">
-            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyGeneral" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyGeneral">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyGeneral" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyGeneral">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon" aria-hidden="true">⚙</span>
               <span class="filter-section-label settings-section-title" data-i18n="settings.nav.general">General</span>
@@ -2146,7 +2151,7 @@
             </div>
 
             <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupGeneralAdvanced" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupGeneralAdvanced">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupGeneralAdvanced" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupGeneralAdvanced">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading">Profile Editing &amp; Content</span>
             </button>

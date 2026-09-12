@@ -191,6 +191,10 @@ export const es: Record<string, string> = {
   'table.stopwatchTip':    'Tiempo dedicado a este quiz',
   'table.wordOrder':       'Orden de las palabras',
 
+  // ── Settings — search ────────────────────────────────────────────────────
+  'settings.search.placeholder': 'Buscar ajustes…',
+  'settings.search.empty':       'Ningún ajuste coincide con tu búsqueda.',
+
   // ── Settings — nav ──────────────────────────────────────────────────────
   'settings.nav.answers':   'Corrección de Respuestas',
   'settings.nav.appearance':'Apariencia',
