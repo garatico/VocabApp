@@ -16,7 +16,7 @@ import type { ListsCtx } from './context.ts';
 import { enumerateFilterableLists, type FilterableListRow } from '../../utils/word-lists.ts';
 import { buildLangBadge } from '../../ui/lang-badge.ts';
 import {
-  getPreset, savePreset, describePreset,
+  getPreset, savePreset, describePreset, applyBundle,
   type PresetBundle, type WordsBundle, type ConjugationBundle,
 } from '../../filters/presets.ts';
 import { SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
@@ -24,6 +24,7 @@ import { POS_CHIPS } from './types.ts';
 import { LANGUAGES } from '../../data/languages.ts';
 import { readString, writeString } from '../../utils/storage.ts';
 import { unionTenseDefs } from '../conjugation/controls.ts';
+import { showToast } from '../../ui/toast.ts';
 
 /** A profile with no `words` yet (saved before that field existed, or a
  *  brand-new BLANK_BUNDLE profile) starts editing from the app's own
@@ -108,6 +109,24 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
   title.className = 'ml-panel-title';
   title.textContent = name;
   titleGroup.append(modeTag, title);
+
+  // Editing a profile here only ever writes to storage (see persist() below)
+  // — it has no effect on a session already in progress on the mode's own
+  // tab. Without an explicit way to push it there, "load this profile" reads
+  // as something this panel should already be doing, when the only thing
+  // that ever applies a profile live is the mode's own Testing Profiles
+  // popover — easy to miss, since nothing here says so.
+  const applyBtn = document.createElement('button');
+  applyBtn.type      = 'button';
+  applyBtn.className = 'ml-export-btn';
+  applyBtn.textContent = `→ Apply to ${SCOPE_LABELS[mode]}`;
+  applyBtn.title = `Load this profile's language, words and filters into the live ${SCOPE_LABELS[mode]} controls, the same as picking it from that tab's own Testing Profiles button`;
+  applyBtn.addEventListener('click', () => {
+    applyBundle(mode, bundle);
+    showToast(`Applied "${name}" to ${SCOPE_LABELS[mode]}`, 'success');
+  });
+  titleGroup.appendChild(applyBtn);
+
   header.appendChild(titleGroup);
 
   const desc = document.createElement('p');
