@@ -88,6 +88,7 @@ export function renderWordWithGender(
     el.appendChild(document.createTextNode(base));
   }
   if (annotation) {
+    el.appendChild(document.createTextNode(' '));
     const span = document.createElement('span');
     span.className = 'word-disambiguator';
     span.textContent = `(${annotation})`;

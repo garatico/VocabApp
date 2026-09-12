@@ -1114,9 +1114,20 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.table.disambiguator">Sense disambiguator</span>
-                <span class="settings-desc" data-i18n="settings.table.disambiguatorDesc">The "(permanent)"-style clarifier shown after a word that has one, wherever the word itself is displayed</span>
+                <span class="settings-desc" data-i18n="settings.table.disambiguatorDesc">The "(permanent)"-style clarifier shown after a word that has one, on the Meaning → Word prompt and once an answer is revealed</span>
               </div>
               <div class="sort-order-toggle" id="settingShowDisambiguator">
+                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.wordDisambiguator">Sense disambiguator on hover/click</span>
+                <span class="settings-desc" data-i18n="settings.table.wordDisambiguatorDesc">Same clarifier, but on the word's hover tooltip and click-to-open info card — turn off so hovering a word before you've solved it doesn't give away which sense it is</span>
+              </div>
+              <div class="sort-order-toggle" id="settingShowWordDisambiguator">
                 <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
                 <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
               </div>

@@ -228,6 +228,21 @@ export const Settings = {
   getShowDisambiguator: (): boolean => get('show_disambiguator', 'true') === 'true',
 
   /**
+   * Same clarifier as getShowDisambiguator above, but for the word's hover
+   * tooltip/click-to-open info popover specifically (word-tooltip.ts's
+   * populateTooltip/buildWordDetailContent) — independent, because that
+   * heading shows regardless of whether the row has been answered yet. In
+   * Table mode's Word → Meaning direction the word is the visible prompt, so
+   * hovering it mid-quiz leaked the same "(permanent)"-style note that tells
+   * you which specific English sense to type — a hint, not a footnote, at
+   * that point. getShowDisambiguator still governs every other appearance
+   * (the Meaning → Word prompt's own clarifier, and the revealed answer),
+   * where showing it isn't a leak. On by default, matching this setting's
+   * pre-split behavior.
+   */
+  getShowWordDisambiguator: (): boolean => get('show_word_disambiguator', 'true') === 'true',
+
+  /**
    * Whether the grammar hint on a closed-class word ("un (masc., sing.)")
    * abbreviates gender/number or spells them out ("un (masculine,
    * singular)"). Off (spelled out) by default — this only ever appears on a
@@ -1044,6 +1059,15 @@ export function bindSettings(): void {
     set('show_disambiguator', btn.dataset.show ?? 'true');
   });
 
+  // Sense disambiguator on hover/click — same clarifier, but for the word's
+  // tooltip/info-popover heading specifically (see getShowWordDisambiguator).
+  document.getElementById('settingShowWordDisambiguator')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingShowWordDisambiguator', btn);
+    set('show_word_disambiguator', btn.dataset.show ?? 'true');
+  });
+
   // Grammar hint abbreviation — "masc., sing." vs "masculine, singular"
   document.getElementById('settingAbbreviateGrammarHint')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
@@ -1801,6 +1825,10 @@ function restoreSettingsUI(): void {
   const savedShowDisambiguator = get('show_disambiguator', 'true');
   document.querySelectorAll<HTMLElement>('#settingShowDisambiguator .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.show === savedShowDisambiguator);
+  });
+  const savedShowWordDisambiguator = get('show_word_disambiguator', 'true');
+  document.querySelectorAll<HTMLElement>('#settingShowWordDisambiguator .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedShowWordDisambiguator);
   });
   const savedAbbreviateGrammarHint = get('abbreviate_grammar_hint', 'false');
   document.querySelectorAll<HTMLElement>('#settingAbbreviateGrammarHint .sort-order-btn').forEach(b => {
