@@ -950,3 +950,31 @@
 
   .table-pager .pager-status { display: none; }
 }
+
+/* ── Compact row density — Settings › Table Quiz › Layout › Row density.
+   #tableWrap's own font-size drives most of a row's height through em units
+   further down (.reveal-btn/.known-btn's sizing, table-mode.css's letter-
+   spacing) — shrinking it here shrinks those for free. .spanish-word and
+   the answer <input> size themselves in rem instead (so the Appearance
+   font-size setting can scale them independently of the table's monospace
+   base), so they need their own override alongside it. Higher specificity
+   than every rule above, including the mobile breakpoint's, so Compact wins
+   regardless of viewport without needing to out-order any of them. */
+body.table-compact-rows #tableWrap {
+  font-size: 1.05rem;
+}
+body.table-compact-rows #tableWrap td {
+  padding: 3px 6px;
+}
+body.table-compact-rows #tableWrap .spanish-word {
+  font-size: 1.05rem;
+  min-height: 0;
+}
+body.table-compact-rows #tableWrap input[type="text"] {
+  font-size: 0.92rem;
+  padding: 1px 4px;
+  /* Overrides responsive.css's own per-breakpoint min-height (42-46px,
+     sized for touch) — Compact is an explicit "I want more rows on
+     screen" choice, so it wins here regardless of viewport. */
+  min-height: 0;
+}

@@ -40,7 +40,7 @@ body.kid-friendly-mode [data-kid-hide="true"] {
    looks/behaves for me" toggles, not any one section's own settings. A
    third column in .settings-layout, after settings-nav and settings-wrap,
    rather than a bar above the whole layout — settings-wrap caps out at
-   620px, so `margin-left: auto` pushes this into the empty gutter that
+   960px, so `margin-left: auto` pushes this into the empty gutter that
    leaves on a wide viewport, and .settings-layout's own `align-items:
    flex-start` lines its top up with settings-nav/settings-wrap's — i.e.
    level with "Table Quiz", the first section — for free. ── */
@@ -65,6 +65,15 @@ body.kid-friendly-mode [data-kid-hide="true"] {
   text-transform: uppercase;
   color: var(--text-muted);
   white-space: nowrap;
+}
+
+/* App language — a dropdown rather than a button row (like Theme's above
+   it), since it already has two disabled "coming soon" options and will
+   only grow — a row of toggle buttons doesn't scale the way a <select>'s
+   own scrollable option list does, and it costs far less horizontal space
+   in this right-aligned toolbar. */
+.settings-toolbar-select {
+  min-width: 8rem;
 }
 
 .settings-nav {
@@ -105,7 +114,7 @@ body.kid-friendly-mode [data-kid-hide="true"] {
   gap: 0.9rem;
   min-width: 0;
   flex: 1 1 auto;
-  max-width: 620px;
+  max-width: 960px;
 }
 
 /* ── Section — a distinct card per group, each with its own faint accent
@@ -513,6 +522,70 @@ body.kid-friendly-mode [data-kid-hide="true"] {
   background: var(--danger-light);
   border-color: var(--danger);
   color: var(--danger);
+}
+
+/* ── Sense disambiguator — one row, four independent toggles (All, Word,
+   Meaning, Hover) instead of a separate settings-row each. A wrapping flex
+   row rather than a fixed-column grid, so it reads fine whether it's next
+   to a two-line description (this one) or, on a narrower settings-wrap, has
+   already dropped to one item per line. ── */
+.disambiguator-toggle-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.5rem;
+}
+.disambiguator-toggle-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.disambiguator-toggle-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* ── Glossary — search, category filter chips, and A→Z/Grouped sort ── */
+.glossary-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.glossary-search {
+  flex: 1 1 220px;
+  min-width: 160px;
+  font-family: 'Sora', sans-serif;
+  font-size: 0.88rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.7rem;
+}
+.glossary-search:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.glossary-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.glossary-empty {
+  font-style: italic;
+}
+/* A term/definition hidden by search or the category filter — kept in the
+   DOM (rather than removed) so re-matching it needs no re-render, only this
+   toggled off again. */
+.glossary-term[hidden] { display: none; }
+.glossary-term mark {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-radius: 3px;
+  padding: 0 0.1em;
 }
 
 /* ── Responsive ── */

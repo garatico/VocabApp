@@ -920,6 +920,17 @@
 
             <div class="settings-row">
               <div class="settings-label">
+                <span data-i18n="settings.table.rowDensity">Row density</span>
+                <span class="settings-desc" data-i18n="settings.table.rowDensityDesc">How much vertical space each word row takes up. Compact shrinks the word, input and cell padding so more rows fit on screen at once, without changing anything about how the quiz itself works.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingTableRowDensity">
+                <button type="button" class="sort-order-btn active" data-density="comfortable" data-i18n="settings.table.densityComfortable">Comfortable</button>
+                <button type="button" class="sort-order-btn" data-density="compact" data-i18n="settings.table.densityCompact">Compact</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
                 <span data-i18n="settings.table.pageSize">Words per page</span>
                 <span class="settings-desc" data-i18n="settings.table.pageSizeDesc">How many words a table page shows before it splits into pages you step through with the arrows — All puts everything on one page</span>
               </div>
@@ -1112,36 +1123,40 @@
               </div>
             </div>
 
-            <div class="settings-row">
+            <div class="settings-row settings-row--stack">
               <div class="settings-label">
-                <span data-i18n="settings.table.disambiguatorWord">Sense disambiguator — word side</span>
-                <span class="settings-desc" data-i18n="settings.table.disambiguatorWordDesc">A sense disambiguator is a short curated note distinguishing a word from another word that shares its translation (see the Glossary section for the full definition). This copy shows it next to the word's own spelling, once that's a settled, already-answered value on screen — a Meaning → Word answer after it's revealed, and Picture Quiz's own word label. Off by default, since this is new.</span>
+                <span data-i18n="settings.table.disambiguator">Sense disambiguator</span>
+                <span class="settings-desc" data-i18n="settings.table.disambiguatorDesc">A short curated note distinguishing a word from another word that shares its translation (see the Glossary section for the full definition). Each toggle below controls one place it can show, independently of the others — All is a shortcut that switches every one of them on or off together, and reads as blank whenever they're not all set the same way.</span>
               </div>
-              <div class="sort-order-toggle" id="settingShowDisambiguatorWord">
-                <button type="button" class="sort-order-btn" data-show="true" data-i18n="common.on">On</button>
-                <button type="button" class="sort-order-btn active" data-show="false" data-i18n="common.off">Off</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.table.disambiguatorMeaning">Sense disambiguator — meaning side</span>
-                <span class="settings-desc" data-i18n="settings.table.disambiguatorMeaningDesc">Same note, shown next to the English meaning instead of the word — on the Meaning → Word prompt (where it's what tells two words apart before you type, since they'd otherwise show the identical English prompt) and on a Word → Meaning answer once it's revealed.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingShowDisambiguatorMeaning">
-                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
-                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.table.disambiguatorHover">Sense disambiguator — hovering tooltip</span>
-                <span class="settings-desc" data-i18n="settings.table.disambiguatorHoverDesc">Same note again, but only on the info card that opens when you hover or click a word — independent of the other two, since that card shows regardless of whether you've solved the row yet. Turn off so hovering a word mid-quiz doesn't give away which sense it is before you've answered.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingShowDisambiguatorHover">
-                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
-                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
+              <div class="disambiguator-toggle-grid">
+                <div class="disambiguator-toggle-item">
+                  <span class="disambiguator-toggle-label" data-i18n="settings.table.disambiguatorAll">All</span>
+                  <div class="sort-order-toggle" id="settingShowDisambiguatorAll">
+                    <button type="button" class="sort-order-btn" data-show="true" data-i18n="common.on">On</button>
+                    <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
+                  </div>
+                </div>
+                <div class="disambiguator-toggle-item">
+                  <span class="disambiguator-toggle-label" title="Next to the word's own spelling, once that's a settled, already-answered value on screen" data-i18n="settings.table.disambiguatorWordShort" data-i18n-title="settings.table.disambiguatorWordShortDesc">Word side</span>
+                  <div class="sort-order-toggle" id="settingShowDisambiguatorWord">
+                    <button type="button" class="sort-order-btn" data-show="true" data-i18n="common.on">On</button>
+                    <button type="button" class="sort-order-btn active" data-show="false" data-i18n="common.off">Off</button>
+                  </div>
+                </div>
+                <div class="disambiguator-toggle-item">
+                  <span class="disambiguator-toggle-label" title="Next to the English meaning — the Meaning → Word prompt, and a Word → Meaning answer once revealed" data-i18n="settings.table.disambiguatorMeaningShort" data-i18n-title="settings.table.disambiguatorMeaningShortDesc">Meaning side</span>
+                  <div class="sort-order-toggle" id="settingShowDisambiguatorMeaning">
+                    <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
+                    <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
+                  </div>
+                </div>
+                <div class="disambiguator-toggle-item">
+                  <span class="disambiguator-toggle-label" title="On the info card that opens when you hover or click a word, regardless of whether you've solved it yet" data-i18n="settings.table.disambiguatorHoverShort" data-i18n-title="settings.table.disambiguatorHoverShortDesc">Hover tooltip</span>
+                  <div class="sort-order-toggle" id="settingShowDisambiguatorHover">
+                    <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
+                    <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1858,123 +1873,146 @@
 
             <p class="settings-desc" data-i18n="settings.glossary.intro">Terms used throughout these settings and the quiz screens, defined on their own — every setting above should also make sense without needing this page, but it's here for whichever one doesn't.</p>
 
-            <div class="settings-row settings-row--stack">
+            <div class="glossary-controls">
+              <input type="search" id="glossarySearch" class="glossary-search" data-i18n-placeholder="settings.glossary.searchPlaceholder" placeholder="Search terms…">
+              <div class="sort-order-toggle" id="glossarySort">
+                <button type="button" class="sort-order-btn active" data-sort="az" data-i18n="settings.glossary.sortAZ">A → Z</button>
+                <button type="button" class="sort-order-btn" data-sort="default" data-i18n="settings.glossary.sortGrouped">Grouped</button>
+              </div>
+            </div>
+            <div class="glossary-filter-chips" id="glossaryFilterChips">
+              <button type="button" class="pos-chip active" data-category="all" data-i18n="settings.glossary.filterAll">All</button>
+              <button type="button" class="pos-chip" data-category="table" data-i18n="settings.glossary.filterTable">Table Quiz</button>
+              <button type="button" class="pos-chip" data-category="conjugation" data-i18n="settings.glossary.filterConjugation">Conjugation</button>
+              <button type="button" class="pos-chip" data-category="words" data-i18n="settings.glossary.filterWords">Words &amp; Filters</button>
+              <button type="button" class="pos-chip" data-category="mylists" data-i18n="settings.glossary.filterMyLists">My Lists</button>
+              <button type="button" class="pos-chip" data-category="script" data-i18n="settings.glossary.filterScript">Script &amp; Language</button>
+              <button type="button" class="pos-chip" data-category="progress" data-i18n="settings.glossary.filterProgress">Progress</button>
+              <button type="button" class="pos-chip" data-category="general" data-i18n="settings.glossary.filterGeneral">General</button>
+            </div>
+            <p class="settings-desc glossary-empty" id="glossaryEmpty" hidden data-i18n="settings.glossary.noMatches">No terms match.</p>
+
+            <div id="glossaryList">
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="table">
               <div class="settings-label">
                 <span data-i18n="settings.glossary.disambiguator">Sense disambiguator</span>
-                <span class="settings-desc" data-i18n="settings.glossary.disambiguatorDesc">A short curated note on a word that shares its translation with another word, telling the two apart — Spanish "ser" and "estar" both mean "be", so "ser" carries the note "permanent" and "estar" carries "temporary". Table Quiz has three independent switches for where it shows: next to the word, next to the meaning, and on the hover/click info card.</span>
+                <span class="settings-desc" data-i18n="settings.glossary.disambiguatorDesc">A short curated note on a word that shares its translation with another word, telling the two apart — Spanish "ser" and "estar" both mean "be", so "ser" carries the note "permanent" and "estar" carries "temporary". Table Quiz has independent switches for where it shows: next to the word, next to the meaning, and on the hover/click info card.</span>
               </div>
             </div>
 
-            <div class="settings-row settings-row--stack">
+            <div class="settings-row settings-row--stack glossary-term" data-category="table">
               <div class="settings-label">
                 <span data-i18n="settings.glossary.grammarHint">Grammar hint</span>
                 <span class="settings-desc" data-i18n="settings.glossary.grammarHintDesc">A short gender/number note automatically shown on a word whose own translation depends on the noun it modifies — an article or determiner like "a", "this", or "some". Lets you tell Spanish "un" from "una" apart before typing, without giving away the noun itself.</span>
               </div>
             </div>
 
-            <div class="settings-row settings-row--stack">
+            <div class="settings-row settings-row--stack glossary-term" data-category="table">
               <div class="settings-label">
                 <span data-i18n="settings.glossary.gloss">Gloss (or "sense")</span>
                 <span class="settings-desc" data-i18n="settings.glossary.glossDesc">One accepted English translation of a word. A word can have several — English "bank" glosses to both "riverbank" and "financial institution" — and the Question/Answer glosses settings control how many show at once.</span>
               </div>
             </div>
 
-            <div class="settings-row settings-row--stack">
+            <div class="settings-row settings-row--stack glossary-term" data-category="table">
               <div class="settings-label">
                 <span data-i18n="settings.glossary.genderIndicator">Gender indicator</span>
                 <span class="settings-desc" data-i18n="settings.glossary.genderIndicatorDesc">A visual marker — a small corner dot, a colored pill behind the word, or the whole cell tinted — showing whether a noun is grammatically masculine or feminine. Independent of the gender article below; a learner can use either, both, or neither.</span>
               </div>
             </div>
 
-            <div class="settings-row settings-row--stack">
+            <div class="settings-row settings-row--stack glossary-term" data-category="table">
               <div class="settings-label">
                 <span data-i18n="settings.glossary.genderArticle">Gender article</span>
                 <span class="settings-desc" data-i18n="settings.glossary.genderArticleDesc">The definite article prefixed to a noun once its gender is known, so it reads "la casa" instead of just "casa" — "the" has no gender in English, but most other languages this app teaches mark it on every noun.</span>
               </div>
             </div>
 
-            <div class="settings-row settings-row--stack">
-              <div class="settings-label">
-                <span data-i18n="settings.glossary.regularity">Regularity (Conjugation)</span>
-                <span class="settings-desc" data-i18n="settings.glossary.regularityDesc">How far a verb's conjugation strays from the standard pattern for its ending. Regular follows it exactly. Spelling-change needs a predictable spelling adjustment to keep its sound (Spanish "buscar" → "busqué"). Stem-change shifts a vowel in the stem ("pensar" → "pienso"). Irregular fits no pattern at all and has to be memorized.</span>
-              </div>
-            </div>
-
-            <div class="settings-row settings-row--stack">
-              <div class="settings-label">
-                <span data-i18n="settings.glossary.band">CEFR level (Band)</span>
-                <span class="settings-desc" data-i18n="settings.glossary.bandDesc">A1 through C2, the standard scale for language proficiency (the Common European Framework of Reference), used here to group words by how advanced they are rather than by raw frequency rank — the Level pool mode picks words this way instead of "Top N".</span>
-              </div>
-            </div>
-
-            <div class="settings-row settings-row--stack">
-              <div class="settings-label">
-                <span data-i18n="settings.glossary.domain">Domain</span>
-                <span class="settings-desc" data-i18n="settings.glossary.domainDesc">A topic category a word belongs to — food, travel, business, and so on — used to narrow a quiz to vocabulary from a specific theme rather than by frequency or level.</span>
-              </div>
-            </div>
-
-            <div class="settings-row settings-row--stack">
+            <div class="settings-row settings-row--stack glossary-term" data-category="table">
               <div class="settings-label">
                 <span data-i18n="settings.glossary.hintReveal">Hint vs. Reveal</span>
                 <span class="settings-desc" data-i18n="settings.glossary.hintRevealDesc">Two separate, independently-switchable buttons next to an answer box. Hint uncovers one more letter of the answer with each click, up to one letter short of the full word. Reveal fills in the whole answer at once, and counts the word as missed.</span>
               </div>
             </div>
 
-            <div class="settings-row settings-row--stack">
-              <div class="settings-label">
-                <span data-i18n="settings.glossary.rank">Rank</span>
-                <span class="settings-desc" data-i18n="settings.glossary.rankDesc">A word's position in frequency order for its language — rank 1 is the single most common word in that language. "Top 500" means ranks 1 through 500.</span>
-              </div>
-            </div>
-
-            <div class="settings-row settings-row--stack">
+            <div class="settings-row settings-row--stack glossary-term" data-category="table">
               <div class="settings-label">
                 <span data-i18n="settings.glossary.direction">Direction</span>
                 <span class="settings-desc" data-i18n="settings.glossary.directionDesc">Which side of a word pair a Table quiz shows you and which side it asks you to produce. Word → Meaning shows the word and asks for its translation. Meaning → Word shows the translation and asks for the word. Mixed picks one of the two at random for each word.</span>
               </div>
             </div>
 
-            <div class="settings-row settings-row--stack">
+            <div class="settings-row settings-row--stack glossary-term" data-category="table">
               <div class="settings-label">
                 <span data-i18n="settings.glossary.quizStyle">Quiz Style</span>
                 <span class="settings-desc" data-i18n="settings.glossary.quizStyleDesc">How much of a Table quiz row stays visible before you answer it. Standard shows an editable answer box next to every word from the start. Recall hides the translation until you answer or reveal it. Double Recall hides both the word and the translation until then.</span>
               </div>
             </div>
 
-            <div class="settings-row settings-row--stack">
+            <div class="settings-row settings-row--stack glossary-term" data-category="conjugation">
               <div class="settings-label">
-                <span data-i18n="settings.glossary.testingProfile">Testing Profile</span>
-                <span class="settings-desc" data-i18n="settings.glossary.testingProfileDesc">A saved combination of language, word count, and filter/quiz settings that can be reapplied later in one click, from that mode's own Testing Profiles button. Edited from My Lists' Testing Profiles section, which also has its own "Apply" button to push changes into the live quiz screen.</span>
+                <span data-i18n="settings.glossary.regularity">Regularity (Conjugation)</span>
+                <span class="settings-desc" data-i18n="settings.glossary.regularityDesc">How far a verb's conjugation strays from the standard pattern for its ending. Regular follows it exactly. Spelling-change needs a predictable spelling adjustment to keep its sound (Spanish "buscar" → "busqué"). Stem-change shifts a vowel in the stem ("pensar" → "pienso"). Irregular fits no pattern at all and has to be memorized.</span>
               </div>
             </div>
 
-            <div class="settings-row settings-row--stack">
+            <div class="settings-row settings-row--stack glossary-term" data-category="words">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.band">CEFR level (Band)</span>
+                <span class="settings-desc" data-i18n="settings.glossary.bandDesc">A1 through C2, the standard scale for language proficiency (the Common European Framework of Reference), used here to group words by how advanced they are rather than by raw frequency rank — the Level pool mode picks words this way instead of "Top N".</span>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="words">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.domain">Domain</span>
+                <span class="settings-desc" data-i18n="settings.glossary.domainDesc">A topic category a word belongs to — food, travel, business, and so on — used to narrow a quiz to vocabulary from a specific theme rather than by frequency or level.</span>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="words">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.rank">Rank</span>
+                <span class="settings-desc" data-i18n="settings.glossary.rankDesc">A word's position in frequency order for its language — rank 1 is the single most common word in that language. "Top 500" means ranks 1 through 500.</span>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="mylists">
               <div class="settings-label">
                 <span data-i18n="settings.glossary.smartList">Smart List</span>
                 <span class="settings-desc" data-i18n="settings.glossary.smartListDesc">A saved search rule — "every B1 verb about food", say — rather than a fixed set of words picked by hand. A Smart List's contents update automatically as the underlying vocabulary or your progress changes.</span>
               </div>
             </div>
 
-            <div class="settings-row settings-row--stack">
+            <div class="settings-row settings-row--stack glossary-term" data-category="script">
               <div class="settings-label">
                 <span data-i18n="settings.glossary.functionWord">Function word</span>
                 <span class="settings-desc" data-i18n="settings.glossary.functionWordDesc">A grammatical particle with no real standalone translation — Japanese は ("topic marker") rather than an ordinary noun or verb. Marked apart from regular vocabulary since "translating" it word-for-word wouldn't mean anything on its own.</span>
               </div>
             </div>
 
-            <div class="settings-row settings-row--stack">
+            <div class="settings-row settings-row--stack glossary-term" data-category="script">
               <div class="settings-label">
                 <span data-i18n="settings.glossary.romanizedScript">Script type / Romanized script</span>
                 <span class="settings-desc" data-i18n="settings.glossary.romanizedScriptDesc">For a language with a non-Latin writing system (Chinese, Japanese): the native script (Hanzi, Kanji, Hiragana, Katakana) versus its Latin-letter transliteration (Pinyin for Chinese, Romaji for Japanese) — typing the romanized form sidesteps needing an IME.</span>
               </div>
             </div>
 
-            <div class="settings-row settings-row--stack">
+            <div class="settings-row settings-row--stack glossary-term" data-category="general">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.testingProfile">Testing Profile</span>
+                <span class="settings-desc" data-i18n="settings.glossary.testingProfileDesc">A saved combination of language, word count, and filter/quiz settings that can be reapplied later in one click, from that mode's own Testing Profiles button. Edited from My Lists' Testing Profiles section, which also has its own "Apply" button to push changes into the live quiz screen.</span>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="progress">
               <div class="settings-label">
                 <span data-i18n="settings.glossary.mastered">Mastered</span>
                 <span class="settings-desc" data-i18n="settings.glossary.masteredDesc">A word you've answered correctly enough times in Table or Picture Quiz to be marked as learned in My Lists. Tracked separately per language — mastering a word in Spanish has no effect on the same word's status in another language.</span>
               </div>
+            </div>
+
             </div>
 
             </div>
@@ -2095,12 +2133,12 @@
           </div>
           <div class="settings-toolbar-item">
             <span class="settings-toolbar-label" data-i18n="settings.appearance.uiLanguage" title="The language of the app's own interface — menus, labels and buttons — separate from the language you're studying" data-i18n-title="settings.appearance.uiLanguageDesc">App language</span>
-            <div class="sort-order-toggle" id="settingUILanguage">
-              <button type="button" class="sort-order-btn active" data-ui-lang="english">English</button>
-              <button type="button" class="sort-order-btn" data-ui-lang="spanish">Español</button>
-              <button type="button" class="sort-order-btn" data-ui-lang="french" disabled title="Coming soon" data-i18n-title="settings.appearance.comingSoon">Français</button>
-              <button type="button" class="sort-order-btn" data-ui-lang="portuguese" disabled title="Coming soon" data-i18n-title="settings.appearance.comingSoon">Português</button>
-            </div>
+            <select class="settings-toolbar-select" id="settingUILanguage">
+              <option value="english" selected>English</option>
+              <option value="spanish">Español</option>
+              <option value="french" disabled title="Coming soon" data-i18n-title="settings.appearance.comingSoon">Français</option>
+              <option value="portuguese" disabled title="Coming soon" data-i18n-title="settings.appearance.comingSoon">Português</option>
+            </select>
           </div>
         </div>
         </div>

@@ -11,6 +11,8 @@ import {
 } from './utils/streak.ts';
 import type { ChineseScript, ChineseDisplay, FunctionWordMarker } from './utils/utils.ts';
 import type { GenderIndicatorStyle } from './utils/dom.ts';
+import { fillHighlighted } from './utils/dom.ts';
+import { foldKey } from './utils/match.ts';
 
 /**
  * settings.ts — persistent quiz preferences.
@@ -213,6 +215,15 @@ export const Settings = {
 
   /** The frequency-rank corner badge, across every Table quiz style. */
   getTableShowRank: (): boolean => get('table_show_rank', 'true') === 'true',
+
+  /**
+   * Row density — Comfortable (default) is the table's original sizing;
+   * Compact shrinks it (see table.css's `body.table-compact-rows` block) so
+   * more rows fit on screen at once. Applied as a body class rather than
+   * read per-render, same as Kid-Friendly/Advanced mode, since it's a pure
+   * CSS change with nothing for table-mode.ts itself to compute differently.
+   */
+  getTableCompactRows: (): boolean => get('table_compact_rows', 'false') === 'true',
 
   /** The list star and "missed before" count badge, across every Table quiz style. */
   getTableShowWordMarkers: (): boolean => get('table_show_word_markers', 'true') === 'true',
@@ -780,6 +791,34 @@ function activateToggle(groupId: string, btn: HTMLButtonElement): void {
   btn.classList.add('active');
 }
 
+/** The Sense disambiguator row's three independent sub-toggles — shared
+ *  between the click-binding block and syncDisambiguatorAll below, so
+ *  adding a fourth surface later means updating this list once. */
+const DISAMBIGUATOR_TOGGLES = [
+  { id: 'settingShowDisambiguatorWord',    key: 'show_disambiguator_word',    fallback: 'false' },
+  { id: 'settingShowDisambiguatorMeaning', key: 'show_disambiguator_meaning', fallback: 'true' },
+  { id: 'settingShowDisambiguatorHover',   key: 'show_disambiguator_hover',   fallback: 'true' },
+] as const;
+
+/**
+ * All reads "On"/"Off" only when the three sub-toggles currently agree;
+ * otherwise neither of its own buttons lights up. A plain two-state control
+ * can't represent "mixed" any other way, and forcing one to look chosen
+ * when the three disagree would just be wrong — this runs after every
+ * sub-toggle click, and once at startup, to keep All an honest summary
+ * rather than a fourth independent value that can drift from the rest.
+ */
+function syncDisambiguatorAll(): void {
+  const allGroup = document.getElementById('settingShowDisambiguatorAll');
+  if (!allGroup) return;
+  const values = DISAMBIGUATOR_TOGGLES.map(t => get(t.key, t.fallback));
+  const allOn  = values.every(v => v === 'true');
+  const allOff = values.every(v => v === 'false');
+  allGroup.querySelectorAll<HTMLElement>('.sort-order-btn').forEach(b => {
+    b.classList.toggle('active', (allOn && b.dataset.show === 'true') || (allOff && b.dataset.show === 'false'));
+  });
+}
+
 /**
  * Wire up a toggle group that exists in more than one place in the DOM —
  * today, only Script Display's three controls, which appear both under
@@ -913,11 +952,9 @@ export function bindSettings(): void {
   });
 
   // App interface language
-  document.getElementById('settingUILanguage')?.addEventListener('click', e => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn || btn.disabled) return;
-    activateToggle('settingUILanguage', btn);
-    set('ui_language', (btn.dataset.uiLang ?? 'english') as UILanguage);
+  (document.getElementById('settingUILanguage') as HTMLSelectElement | null)?.addEventListener('change', e => {
+    const select = e.target as HTMLSelectElement;
+    set('ui_language', (select.value || 'english') as UILanguage);
     onUILanguageChange?.();
   });
 
@@ -927,6 +964,16 @@ export function bindSettings(): void {
     if (!btn) return;
     activateToggle('settingCols', btn);
     set('table_cols', btn.dataset.cols ?? '2');
+  });
+
+  // Row density — Comfortable (default) vs Compact (see getTableCompactRows)
+  document.getElementById('settingTableRowDensity')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingTableRowDensity', btn);
+    const compact = btn.dataset.density === 'compact';
+    set('table_compact_rows', String(compact));
+    document.body.classList.toggle('table-compact-rows', compact);
   });
 
   // Words per page (table mode)
@@ -1066,28 +1113,29 @@ export function bindSettings(): void {
     set('table_show_word_markers', btn.dataset.show ?? 'true');
   });
 
-  // Sense disambiguator — word side (see getShowWordSideDisambiguator)
-  document.getElementById('settingShowDisambiguatorWord')?.addEventListener('click', e => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
-    activateToggle('settingShowDisambiguatorWord', btn);
-    set('show_disambiguator_word', btn.dataset.show ?? 'false');
+  // Sense disambiguator — Word/Meaning/Hover toggle independently; All is a
+  // shortcut that sets the three of them together (see syncDisambiguatorAll
+  // for how All's own display reflects whether they currently agree).
+  DISAMBIGUATOR_TOGGLES.forEach(({ id, key, fallback }) => {
+    document.getElementById(id)?.addEventListener('click', e => {
+      const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+      if (!btn) return;
+      activateToggle(id, btn);
+      set(key, btn.dataset.show ?? fallback);
+      syncDisambiguatorAll();
+    });
   });
 
-  // Sense disambiguator — meaning side (see getShowMeaningSideDisambiguator)
-  document.getElementById('settingShowDisambiguatorMeaning')?.addEventListener('click', e => {
+  document.getElementById('settingShowDisambiguatorAll')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
-    activateToggle('settingShowDisambiguatorMeaning', btn);
-    set('show_disambiguator_meaning', btn.dataset.show ?? 'true');
-  });
-
-  // Sense disambiguator — hovering tooltip (see getShowDisambiguatorOnHover)
-  document.getElementById('settingShowDisambiguatorHover')?.addEventListener('click', e => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
-    activateToggle('settingShowDisambiguatorHover', btn);
-    set('show_disambiguator_hover', btn.dataset.show ?? 'true');
+    if (!btn?.dataset.show) return;
+    activateToggle('settingShowDisambiguatorAll', btn);
+    DISAMBIGUATOR_TOGGLES.forEach(({ id, key }) => {
+      set(key, btn.dataset.show!);
+      document.querySelectorAll<HTMLElement>(`#${id} .sort-order-btn`).forEach(b => {
+        b.classList.toggle('active', b.dataset.show === btn.dataset.show);
+      });
+    });
   });
 
   // Grammar hint abbreviation — "masc., sing." vs "masculine, singular"
@@ -1747,16 +1795,21 @@ function restoreSettingsUI(): void {
   });
 
   // App interface language
-  const savedUILang = get('ui_language', 'english');
-  document.querySelectorAll<HTMLElement>('#settingUILanguage .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.uiLang === savedUILang);
-  });
+  const uiLangSelect = document.getElementById('settingUILanguage') as HTMLSelectElement | null;
+  if (uiLangSelect) uiLangSelect.value = get('ui_language', 'english');
 
   // Cols
   const savedCols = get('table_cols', '2');
   document.querySelectorAll<HTMLElement>('#settingCols .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.cols === savedCols);
   });
+
+  // Row density
+  const savedCompactRows = Settings.getTableCompactRows();
+  document.querySelectorAll<HTMLElement>('#settingTableRowDensity .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', (b.dataset.density === 'compact') === savedCompactRows);
+  });
+  document.body.classList.toggle('table-compact-rows', savedCompactRows);
 
   // Words per page
   const savedPageSize = get('table_page_size', '100');
@@ -1844,18 +1897,13 @@ function restoreSettingsUI(): void {
   document.querySelectorAll<HTMLElement>('#settingTableShowMarkers .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.show === savedShowMarkers);
   });
-  const savedShowDisambiguatorWord = get('show_disambiguator_word', 'false');
-  document.querySelectorAll<HTMLElement>('#settingShowDisambiguatorWord .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.show === savedShowDisambiguatorWord);
+  DISAMBIGUATOR_TOGGLES.forEach(({ id, key, fallback }) => {
+    const saved = get(key, fallback);
+    document.querySelectorAll<HTMLElement>(`#${id} .sort-order-btn`).forEach(b => {
+      b.classList.toggle('active', b.dataset.show === saved);
+    });
   });
-  const savedShowDisambiguatorMeaning = get('show_disambiguator_meaning', 'true');
-  document.querySelectorAll<HTMLElement>('#settingShowDisambiguatorMeaning .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.show === savedShowDisambiguatorMeaning);
-  });
-  const savedShowDisambiguatorHover = get('show_disambiguator_hover', 'true');
-  document.querySelectorAll<HTMLElement>('#settingShowDisambiguatorHover .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.show === savedShowDisambiguatorHover);
-  });
+  syncDisambiguatorAll();
   const savedAbbreviateGrammarHint = get('abbreviate_grammar_hint', 'false');
   document.querySelectorAll<HTMLElement>('#settingAbbreviateGrammarHint .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.show === savedAbbreviateGrammarHint);
@@ -2012,6 +2060,94 @@ function restoreSettingsUI(): void {
 
   renderGoalSection();
   refreshStreakReadouts();
+  bindGlossary();
+}
+
+// ── Glossary — search, category filter, A→Z/Grouped sort ──────────────────
+
+/**
+ * Wires the Glossary section's search box, category filter chips, and sort
+ * toggle. Rows stay in the DOM the whole time (search/filter only toggle
+ * `hidden`) so re-matching a term after narrowing needs no re-render — only
+ * the sort toggle actually moves nodes, and only between two fixed orders:
+ * the original grouped-by-topic markup order (captured once, here) and an
+ * alphabetical one computed fresh from whatever's currently on screen (so a
+ * UI-language switch re-sorts by the newly-displayed term text, not stale
+ * English).
+ */
+function bindGlossary(): void {
+  const search = document.getElementById('glossarySearch') as HTMLInputElement | null;
+  const list   = document.getElementById('glossaryList');
+  const empty  = document.getElementById('glossaryEmpty');
+  const sortToggle   = document.getElementById('glossarySort');
+  const filterChips  = document.getElementById('glossaryFilterChips');
+  if (!search || !list || !sortToggle || !filterChips) return;
+
+  const rows = Array.from(list.querySelectorAll<HTMLElement>('.glossary-term'));
+  if (rows.length === 0) return;
+  const groupedOrder = rows.slice();
+
+  const termSpan = (row: HTMLElement): HTMLElement =>
+    row.querySelector<HTMLElement>('.settings-label > span:first-child')!;
+  const descSpan = (row: HTMLElement): HTMLElement | null =>
+    row.querySelector<HTMLElement>('.settings-desc');
+
+  let activeCategory = 'all';
+
+  function applyFilters(): void {
+    const q = foldKey(search!.value);
+    let anyVisible = false;
+    for (const row of rows) {
+      const term = termSpan(row);
+      const desc = descSpan(row);
+      const matchesCategory = activeCategory === 'all' || row.dataset.category === activeCategory;
+      const matchesSearch = !q
+        || foldKey(term.textContent ?? '').includes(q)
+        || foldKey(desc?.textContent ?? '').includes(q);
+      const visible = matchesCategory && matchesSearch;
+      row.hidden = !visible;
+      if (visible) anyVisible = true;
+      // Re-highlight from the term's own full text every time — textContent
+      // already flattens whatever <mark> a previous search wrapped it in,
+      // so this is safe to call unconditionally rather than needing a
+      // separately-cached "original" copy.
+      fillHighlighted(term, term.textContent ?? '', search!.value);
+    }
+    if (empty) empty.hidden = anyVisible;
+  }
+
+  search.addEventListener('input', applyFilters);
+
+  filterChips.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.pos-chip');
+    if (!btn?.dataset.category) return;
+    filterChips.querySelectorAll('.pos-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    activeCategory = btn.dataset.category;
+    applyFilters();
+  });
+
+  function reorder(sortKey: string | undefined): void {
+    const ordered = sortKey === 'az'
+      ? rows.slice().sort((a, b) => foldKey(termSpan(a).textContent ?? '').localeCompare(foldKey(termSpan(b).textContent ?? '')))
+      : groupedOrder;
+    ordered.forEach(row => list!.appendChild(row));
+  }
+
+  sortToggle.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn?.dataset.sort) return;
+    sortToggle.querySelectorAll('.sort-order-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    reorder(btn.dataset.sort);
+  });
+
+  // The markup's own default-active button (A → Z) is a claim about order,
+  // not just which button looks pressed — apply it now rather than leaving
+  // the grouped markup order on screen under an "A → Z" label until the
+  // learner clicks something.
+  reorder(sortToggle.querySelector<HTMLElement>('.sort-order-btn.active')?.dataset.sort);
+  applyFilters();
 }
 
 /**
