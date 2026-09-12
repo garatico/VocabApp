@@ -186,7 +186,7 @@ export function renderTableRecallMode({
    */
   function displayTranslation(w: Word): string {
     const base = buildGlossDisplay(w, Settings.getAnswerGlossCount());
-    return displayWord({ ...w, word: base }, Settings.getShowDisambiguator(), Settings.getAbbreviateGrammarHint());
+    return displayWord({ ...w, word: base }, Settings.getShowMeaningSideDisambiguator(), Settings.getAbbreviateGrammarHint());
   }
 
   // ── Layout ───────────────────────────────────────────────────────────────
@@ -331,12 +331,15 @@ export function renderTableRecallMode({
     return chineseWordText(w, w.language ?? lang, chineseDisplay);
   }
 
-  // No disambiguator here — recalling "estar" correctly needs no further
-  // clarification; see displayTranslation above, which carries it instead.
+  // Word-side disambiguator only — see displayTranslation above, which
+  // carries the meaning-side one instead (its own independent setting).
   function paintWordCell(w: Word, state: AnswerState): void {
     const ref = cellRefs.get(cellKey(w));
     if (!ref) return;
-    ref.wordDiv.textContent = wordHintTarget(w);
+    ref.wordDiv.textContent = displayWord(
+      { ...w, word: wordHintTarget(w) },
+      Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint(),
+    );
     ref.wordDiv.classList.remove('correct', 'peeked', 'incorrect');
     ref.wordDiv.classList.add(state);
     if (isInAnyList(w.language ?? lang, w.word)) ref.tdWord.classList.add('word-cell--known');

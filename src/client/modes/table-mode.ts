@@ -97,7 +97,7 @@ export function revealTextFor(
   // keeps it from leaking into an en-target *prompt*, where labelParts
   // below is the one that shows it instead (same slot, opposite role).
   return answerSlot === 'english'
-    ? displayWord({ ...entry, word: base }, Settings.getShowDisambiguator(), Settings.getAbbreviateGrammarHint())
+    ? displayWord({ ...entry, word: base }, Settings.getShowMeaningSideDisambiguator(), Settings.getAbbreviateGrammarHint())
     : base;
 }
 
@@ -161,7 +161,7 @@ export function renderTableMode({
     const text = slotText(entry, promptSlot, entry.language ?? lang, chineseDisplay, Settings.getQuestionGlossCount());
     return {
       text,
-      showDisambiguator: promptSlot === 'english' && Settings.getShowDisambiguator(),
+      showDisambiguator: promptSlot === 'english' && Settings.getShowMeaningSideDisambiguator(),
       // Whether the word itself (rather than the English gloss) is the
       // visible prompt — the opposite condition from showDisambiguator,
       // which annotates the *English* prompt instead. Gates the gender
@@ -185,13 +185,15 @@ export function renderTableMode({
     const [, answerSlot] = slotsFor(dir);
     if (answerSlot !== 'english') {
       // The target word is what's being revealed here (en-target direction)
-      // — display-only prefix, applied on top of revealTextFor's bare
-      // result rather than inside it, since that function is also used by
-      // hintText/scoring callers that must never see it (a letter hint
-      // starting "l", "a", " "... would be a different, wrong feature).
-      return Settings.getShowGenderArticle()
-        ? displayWord({ ...entry, word: base }, false, false, true, entry.language ?? lang)
-        : base;
+      // — display-only prefix/annotation, applied on top of revealTextFor's
+      // bare result rather than inside it, since that function is also used
+      // by hintText/scoring callers that must never see either (a letter
+      // hint starting "l", "a", " "... would be a different, wrong feature).
+      return displayWord(
+        { ...entry, word: base },
+        Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint(),
+        Settings.getShowGenderArticle(), entry.language ?? lang,
+      );
     }
     if (!typedInput || !Settings.getExpandGlossOnMatch()) return base;
     const extra = extraMatchedGloss(typedInput, entry, Settings.getAnswerGlossCount(), matchMode);

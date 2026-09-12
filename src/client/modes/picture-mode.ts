@@ -650,7 +650,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
 
     inp.addEventListener('input', () => {
       if (wordIsCorrect(inp.value, word)) {
-        inp.value    = displayWord(word, Settings.getShowDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang);
+        inp.value    = displayWord(word, Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang);
         inp.disabled = true;
         card.classList.add('correct');
         inp.classList.add('correct');
@@ -680,7 +680,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
     const typedCorrect = cards.filter(({ inp }) => inp.classList.contains('correct')).length;
     cards.forEach(({ card, inp, word }) => {
       if (!inp.disabled) {
-        inp.value    = displayWord(word, Settings.getShowDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang);
+        inp.value    = displayWord(word, Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang);
         inp.disabled = true;
         card.classList.add('revealed');
         inp.classList.add('revealed');
@@ -889,7 +889,7 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
     state.value = inp.value;
     if (wordIsCorrect(inp.value, word)) {
       state.correct = true;
-      state.value   = displayWord(word, Settings.getShowDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang);
+      state.value   = displayWord(word, Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang);
       renderCurrent();
       // Auto-advance to next unanswered after a short delay
       const nextUnanswered = (() => {
@@ -930,9 +930,9 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
 
   giveUpBtn.addEventListener('click', () => {
     states.forEach((s, i) => {
-      if (!s.correct) { s.revealed = true; s.value = displayWord(words[i], Settings.getShowDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang); }
+      if (!s.correct) { s.revealed = true; s.value = displayWord(words[i], Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang); }
     });
-    states[idx].value = displayWord(words[idx], Settings.getShowDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang);
+    states[idx].value = displayWord(words[idx], Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang);
     renderCurrent();
   });
 
@@ -1055,7 +1055,7 @@ function renderClickMode(
 
     syncNav();
     const { base, annotation } = wordAndAnnotation(
-      word, Settings.getShowDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang,
+      word, Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang,
     );
     const gKey = genderKey(word);
     const indicatorStyle = Settings.getGenderIndicatorStyle();
@@ -1088,7 +1088,7 @@ function renderClickMode(
           syncProgress();
         } else {
           card.classList.add('pm-wrong');
-          feedback.textContent = `✗  That's "${opt.word}" — the answer was "${displayWord(word, Settings.getShowDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang)}"`;
+          feedback.textContent = `✗  That's "${opt.word}" — the answer was "${displayWord(word, Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang)}"`;
           feedback.classList.add('bad');
           clickGrid.querySelectorAll<HTMLElement>(`.pm-click-card[data-word="${CSS.escape(word.word)}"]`)
             .forEach(c => c.classList.add('pm-reveal'));
@@ -1114,7 +1114,7 @@ function renderClickMode(
         clickGrid.querySelectorAll<HTMLElement>(
           `.pm-click-card[data-word="${CSS.escape(word.word)}"]`)
           .forEach(c => c.classList.add('pm-reveal'));
-        feedback.textContent = `✗  You picked "${prior.chosen}" — the answer was "${displayWord(word, Settings.getShowDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang)}"`;
+        feedback.textContent = `✗  You picked "${prior.chosen}" — the answer was "${displayWord(word, Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang)}"`;
         feedback.classList.add('bad');
       } else {
         feedback.textContent = '✓ Correct!';

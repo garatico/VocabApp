@@ -218,29 +218,44 @@ export const Settings = {
   getTableShowWordMarkers: (): boolean => get('table_show_word_markers', 'true') === 'true',
 
   /**
-   * The "(permanent)"-style sense clarifier appended after a word that has
-   * one — see utils.ts's displayWord(). On by default, since that's what
-   * every session already saw before this setting existed. Threaded through
-   * as a parameter everywhere displayWord() is called, same as
-   * getChineseDisplay(), rather than read inside displayWord() itself, so
-   * that function stays pure and testable.
+   * A sense disambiguator is a short curated note (e.g. "permanent") on a
+   * word that shares its translation with another word, so the two can be
+   * told apart — see the Glossary settings section for the full definition.
+   * This getter controls it specifically on the WORD side: next to the
+   * target-language spelling once it's the settled, already-answered value
+   * on screen (a Meaning → Word answer once revealed, and Picture Quiz's own
+   * word label/reveals, which always show the word itself). Off by default —
+   * this is new: the word-side reveal used to hard-code the disambiguator
+   * hidden regardless of any setting, so nothing changes for an existing
+   * session unless this is turned on. See getShowMeaningSideDisambiguator
+   * and getShowDisambiguatorOnHover for the other two surfaces.
    */
-  getShowDisambiguator: (): boolean => get('show_disambiguator', 'true') === 'true',
+  getShowWordSideDisambiguator: (): boolean => get('show_disambiguator_word', 'false') === 'true',
 
   /**
-   * Same clarifier as getShowDisambiguator above, but for the word's hover
-   * tooltip/click-to-open info popover specifically (word-tooltip.ts's
-   * populateTooltip/buildWordDetailContent) — independent, because that
+   * Same disambiguator as getShowWordSideDisambiguator above, but on the
+   * MEANING side: next to the English gloss, both on the Meaning → Word
+   * prompt (necessary there — two words sharing a translation would
+   * otherwise show the identical prompt with no way to tell which one to
+   * type) and on a Word → Meaning answer once revealed. On by default, since
+   * that's what every session already saw before this three-way split
+   * existed. Threaded through as a parameter everywhere displayWord() is
+   * called, same as getChineseDisplay(), rather than read inside
+   * displayWord() itself, so that function stays pure and testable.
+   */
+  getShowMeaningSideDisambiguator: (): boolean => get('show_disambiguator_meaning', 'true') === 'true',
+
+  /**
+   * Same disambiguator again, but for the word's hover tooltip/click-to-open
+   * info popover specifically (word-tooltip.ts's populateTooltip/
+   * buildWordDetailContent) — independent of the two above, because that
    * heading shows regardless of whether the row has been answered yet. In
    * Table mode's Word → Meaning direction the word is the visible prompt, so
-   * hovering it mid-quiz leaked the same "(permanent)"-style note that tells
-   * you which specific English sense to type — a hint, not a footnote, at
-   * that point. getShowDisambiguator still governs every other appearance
-   * (the Meaning → Word prompt's own clarifier, and the revealed answer),
-   * where showing it isn't a leak. On by default, matching this setting's
-   * pre-split behavior.
+   * hovering it mid-quiz leaked the same note that tells you which specific
+   * English sense to type — a hint, not a footnote, at that point. On by
+   * default, matching this setting's pre-split behavior.
    */
-  getShowWordDisambiguator: (): boolean => get('show_word_disambiguator', 'true') === 'true',
+  getShowDisambiguatorOnHover: (): boolean => get('show_disambiguator_hover', 'true') === 'true',
 
   /**
    * Whether the grammar hint on a closed-class word ("un (masc., sing.)")
@@ -248,8 +263,8 @@ export const Settings = {
    * singular)"). Off (spelled out) by default — this only ever appears on a
    * handful of article/determiner cards, so there's no clutter to save
    * abbreviating against, and spelled out is unambiguous to a learner who
-   * hasn't seen "sing./pl." shorthand before. Same threading rule as
-   * getShowDisambiguator above: passed into grammarHint()/displayWord()
+   * hasn't seen "sing./pl." shorthand before. Same threading rule as the
+   * disambiguator getters above: passed into grammarHint()/displayWord()
    * rather than read inside them.
    */
   getAbbreviateGrammarHint: (): boolean => get('abbreviate_grammar_hint', 'false') === 'true',
@@ -1051,21 +1066,28 @@ export function bindSettings(): void {
     set('table_show_word_markers', btn.dataset.show ?? 'true');
   });
 
-  // Sense disambiguator — the "(permanent)"-style clarifier after a word
-  document.getElementById('settingShowDisambiguator')?.addEventListener('click', e => {
+  // Sense disambiguator — word side (see getShowWordSideDisambiguator)
+  document.getElementById('settingShowDisambiguatorWord')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
     if (!btn) return;
-    activateToggle('settingShowDisambiguator', btn);
-    set('show_disambiguator', btn.dataset.show ?? 'true');
+    activateToggle('settingShowDisambiguatorWord', btn);
+    set('show_disambiguator_word', btn.dataset.show ?? 'false');
   });
 
-  // Sense disambiguator on hover/click — same clarifier, but for the word's
-  // tooltip/info-popover heading specifically (see getShowWordDisambiguator).
-  document.getElementById('settingShowWordDisambiguator')?.addEventListener('click', e => {
+  // Sense disambiguator — meaning side (see getShowMeaningSideDisambiguator)
+  document.getElementById('settingShowDisambiguatorMeaning')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
     if (!btn) return;
-    activateToggle('settingShowWordDisambiguator', btn);
-    set('show_word_disambiguator', btn.dataset.show ?? 'true');
+    activateToggle('settingShowDisambiguatorMeaning', btn);
+    set('show_disambiguator_meaning', btn.dataset.show ?? 'true');
+  });
+
+  // Sense disambiguator — hovering tooltip (see getShowDisambiguatorOnHover)
+  document.getElementById('settingShowDisambiguatorHover')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingShowDisambiguatorHover', btn);
+    set('show_disambiguator_hover', btn.dataset.show ?? 'true');
   });
 
   // Grammar hint abbreviation — "masc., sing." vs "masculine, singular"
@@ -1822,13 +1844,17 @@ function restoreSettingsUI(): void {
   document.querySelectorAll<HTMLElement>('#settingTableShowMarkers .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.show === savedShowMarkers);
   });
-  const savedShowDisambiguator = get('show_disambiguator', 'true');
-  document.querySelectorAll<HTMLElement>('#settingShowDisambiguator .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.show === savedShowDisambiguator);
+  const savedShowDisambiguatorWord = get('show_disambiguator_word', 'false');
+  document.querySelectorAll<HTMLElement>('#settingShowDisambiguatorWord .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedShowDisambiguatorWord);
   });
-  const savedShowWordDisambiguator = get('show_word_disambiguator', 'true');
-  document.querySelectorAll<HTMLElement>('#settingShowWordDisambiguator .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.show === savedShowWordDisambiguator);
+  const savedShowDisambiguatorMeaning = get('show_disambiguator_meaning', 'true');
+  document.querySelectorAll<HTMLElement>('#settingShowDisambiguatorMeaning .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedShowDisambiguatorMeaning);
+  });
+  const savedShowDisambiguatorHover = get('show_disambiguator_hover', 'true');
+  document.querySelectorAll<HTMLElement>('#settingShowDisambiguatorHover .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedShowDisambiguatorHover);
   });
   const savedAbbreviateGrammarHint = get('abbreviate_grammar_hint', 'false');
   document.querySelectorAll<HTMLElement>('#settingAbbreviateGrammarHint .sort-order-btn').forEach(b => {

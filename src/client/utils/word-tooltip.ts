@@ -443,7 +443,7 @@ export function buildWordDetailContent(
     heading.textContent = '???';
   } else {
     const { base, annotation } = wordAndAnnotation(
-      word, Settings.getShowWordDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang,
+      word, Settings.getShowDisambiguatorOnHover(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang,
     );
     renderWordWithGender(heading, base, annotation, gKey, indicatorStyle);
   }
@@ -499,7 +499,7 @@ function populateTooltip(word: Word, revealed: boolean, lang: string, hideWordWh
     heading.textContent = '???';
   } else {
     const { base, annotation } = wordAndAnnotation(
-      word, Settings.getShowWordDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang,
+      word, Settings.getShowDisambiguatorOnHover(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang,
     );
     renderWordWithGender(heading, base, annotation, gKey, indicatorStyle);
   }
