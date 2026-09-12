@@ -58,9 +58,18 @@ export function bindModeSwitch({
       if (el) el.hidden = mode !== areaMode;
     }
 
-    // Hide the entire controls card for modes that don't use it
-    const controlsEl = document.getElementById('controls');
-    if (controlsEl) controlsEl.hidden = mode === 'mylists' || mode === 'settings' || mode === 'history' || mode === 'chat' || mode === 'myContent';
+    // Modes with no filter/quiz-setup form of their own — only #controlsBody
+    // (the form itself) hides for these, not #controls as a whole: the
+    // corner it anchors (#controlsCorner — streak counter, Testing Profiles,
+    // keyboard shortcuts) needs to stay in the same place on every tab
+    // rather than disappearing along with a form these tabs never had.
+    const noControls = mode === 'mylists' || mode === 'settings' || mode === 'history' || mode === 'chat' || mode === 'myContent';
+    const controlsEl   = document.getElementById('controls');
+    const controlsBody = document.getElementById('controlsBody');
+    if (controlsBody) controlsBody.hidden = noControls;
+    // Nothing to collapse/expand on a tab with no form to begin with.
+    const controlsCollapseBtn = document.getElementById('controlsCollapseBtn');
+    if (controlsCollapseBtn) controlsCollapseBtn.hidden = noControls;
 
     const classFilter         = document.getElementById('classFilter');
     const listFilter          = document.getElementById('listFilter');
@@ -109,16 +118,17 @@ export function bindModeSwitch({
     if (wordsSizeGroup)      wordsSizeGroup.style.display      = (noWordList || mode === 'conjugation') ? 'none' : '';
     // Same reasoning as the filters above: a saved Profile bundles exactly
     // those filters plus Direction, so it has nothing to apply on a tab that
-    // doesn't show them (and currentScope() has no bucket for either mode).
-    if (presetsBtn)           presetsBtn.style.display          = noWordList ? 'none' : '';
-    // #controls reserves 8rem on the right for the ? button and the Profiles
-    // pill beside it (controls-bar.css). Profiles is hidden on exactly these
-    // same modes (line above) and has nothing to reserve room for there, so
-    // give that space back to controls-top — Trivia's own row of filter
-    // groups (Answer Style/Category/Difficulty/Reading Difficulty/Reading
-    // Length) is wide enough that the wasted 8rem was enough on its own to
-    // wrap it onto a second line.
-    if (controlsEl) controlsEl.classList.toggle('controls--no-profiles', noWordList);
+    // doesn't show them (and currentScope() has no bucket for either mode) —
+    // and none at all on a tab with no filter form to begin with.
+    if (presetsBtn)           presetsBtn.style.display          = (noWordList || noControls) ? 'none' : '';
+    // #controls-top reserves room on the right for #controlsCorner (streak
+    // counter, Testing Profiles, shortcuts — controls-bar.css). Profiles is
+    // the one member of that corner whose width actually varies with mode
+    // (line above), so give back the difference when it's hidden — Trivia's
+    // own row of filter groups (Answer Style/Category/Difficulty/Reading
+    // Difficulty/Reading Length) is wide enough that the wasted space was
+    // enough on its own to wrap it onto a second line.
+    if (controlsEl) controlsEl.classList.toggle('controls--no-profiles', noWordList || noControls);
     if (conjSizeSelectGroup) conjSizeSelectGroup.style.display = mode === 'conjugation' ? '' : 'none';
     if (directionGroup)      directionGroup.style.display      = mode === 'table'       ? ''     : 'none';
     // Compare (two or more languages merged into one quiz) is supported by

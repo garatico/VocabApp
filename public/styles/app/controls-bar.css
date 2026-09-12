@@ -68,13 +68,16 @@
   letter-spacing: 0.07em;
 }
 
-/* Reserve space on the right for the shortcuts button and the Profiles
-   pill beside it (see shortcuts.css — both live in this corner). */
-#controls { position: relative; padding-right: 8rem; }
+/* Reserve space on the right for #controlsCorner — the streak counter,
+   Testing Profiles and the shortcuts button, all three now laid out by that
+   flex row itself (see streak-widget.css's .controls-corner) rather than
+   each with its own hand-placed `right: Nrem`. */
+#controls { position: relative; padding-right: 11rem; }
 /* Trivia and Guess the Blank hide the Profiles pill (ui-state.ts) — nothing
-   there to reserve room for beyond the ? button, so give that space back
-   to controls-top instead of leaving it wasted down the whole card. */
-#controls.controls--no-profiles { padding-right: 3rem; }
+   there to reserve room for beyond the streak counter and the ? button, so
+   give that space back to controls-top instead of leaving it wasted down
+   the whole card. */
+#controls.controls--no-profiles { padding-right: 6rem; }
 /* Same idea, opposite corner: the collapse-controls trigger (shortcuts.css)
    is one 30px button, not a whole cluster, so it needs far less room than
    the right side's reservation above. */

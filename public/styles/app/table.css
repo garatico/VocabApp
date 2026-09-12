@@ -219,7 +219,7 @@
 #tableWrap tr:last-child { border-bottom: none; }
 
 #tableWrap td {
-  padding: 8px 10px;
+  padding: 6px 10px;
   vertical-align: middle;
   /* within-pair separator: subtle */
   border-right: 1px solid var(--border);
@@ -311,7 +311,7 @@
   width: 100%;
   font-family: 'DM Mono', monospace;
   font-size: 1.25rem;
-  padding: 3px 5px;
+  padding: 2px 5px;
   box-sizing: border-box;
   background: var(--surface);
   border: 1px solid var(--border-strong);
@@ -637,28 +637,58 @@
   gap: 0.75rem;
 }
 .table-nav-side { display: flex; align-items: center; }
-/* gap, not each child's own margin, so the relocated Practice/Export
-   buttons (.quiz-summary--inline, see summary.css) space themselves the
-   same way the Jump buttons already do without needing their own copy. */
-.table-nav-side--end {
-  justify-content: flex-start;
+/* Jump to Top/Bottom centred, everything else (Practice/Export, the
+   Standard-style action buttons, the timer) flush right — a 1fr/auto/1fr
+   grid so the centred group sits at the true middle of this side's own
+   width rather than merely wherever it lands once the right cluster claims
+   its own space. The empty first column is deliberate, not wasted — it's
+   what makes the second column actually centred instead of just
+   left-leaning into whatever room the third column didn't take.
+   `#tableJumpTop`/`#tableJumpBottom` in the selector isn't scoping (this
+   class never appears outside them) — it's there so this reliably outranks
+   the bare `.table-nav-side { display: flex }` rule further down (same
+   specificity otherwise, and that one loads later, so it was winning the
+   tie and silently turning this back into a flex row). */
+#tableJumpTop .table-nav-side--end,
+#tableJumpBottom .table-nav-side--end {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 0.75rem;
-  /* Never wrap onto a second line — scroll sideways instead on a viewport too
-     narrow for everything at once. min-width: 0 is what actually lets this
-     shrink below its content's natural width inside the 1fr grid track above;
-     without it grid's own default (min-width: auto) would rather grow the
-     track than let this scroll. */
-  flex-wrap: nowrap;
-  overflow-x: auto;
+  column-gap: 0.75rem;
   min-width: 0;
 }
+.tnav-center {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.tnav-right-cluster {
+  grid-column: 3;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  /* No gap here — .tnav-group's own margin/padding below draws the exact
+     midpoint-divider spacing instead, and a gap on top of that would double
+     the space on one side of each line. */
+  min-width: 0;
+  /* Never wrap onto a second line — scroll sideways instead on a viewport
+     too narrow for everything at once. min-width: 0 above is what actually
+     lets this shrink below its content's natural width inside its 1fr grid
+     track; without it grid's own default (min-width: auto) would rather
+     grow the track than let this scroll. */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
 
-/* One of these per logical cluster (Jump/Summary/Controls/Timer — see
-   index.html) inside .table-nav-side--end, each internally its own tight
+/* One of these per logical cluster (Summary/Controls/Timer — see
+   index.html) inside .tnav-right-cluster, each internally its own tight
    flex row, with a rule (not the parent's gap) drawing the seam between
    them — a plain `gap` alone reads as one long undifferentiated row of
-   buttons once there are this many. */
+   buttons once there are this many. margin-left mirrors the padding-left on
+   the far side of the border so the line sits at the true midpoint between
+   the two groups (equal to the parent's own `gap` above) rather than
+   hugging whichever group's padding supplied it. */
 .tnav-group {
   display: flex;
   align-items: center;
@@ -666,6 +696,7 @@
   flex-shrink: 0;
 }
 .tnav-group + .tnav-group {
+  margin-left: 0.75rem;
   padding-left: 0.75rem;
   border-left: 1px solid var(--border);
 }
@@ -1008,7 +1039,7 @@ body.table-compact-rows #tableWrap {
   font-size: 1rem;
 }
 body.table-compact-rows #tableWrap td {
-  padding: 2px 6px;
+  padding: 1px 6px;
 }
 body.table-compact-rows #tableWrap .spanish-word {
   font-size: 1rem;
@@ -1025,7 +1056,7 @@ body.table-compact-rows #tableWrap .spanish-word {
 }
 body.table-compact-rows #tableWrap input[type="text"] {
   font-size: 0.92rem;
-  padding: 1px 4px;
+  padding: 0 4px;
   /* Overrides responsive.css's own per-breakpoint min-height (42-46px,
      sized for touch) — Compact is an explicit "I want more rows on
      screen" choice, so it wins here regardless of viewport. */
@@ -1096,14 +1127,17 @@ body.table-ultra-compact-rows #tableWrap {
   font-size: 0.85rem;
 }
 body.table-ultra-compact-rows #tableWrap td {
-  padding: 1px 4px;
+  padding: 0 4px;
 }
 body.table-ultra-compact-rows #tableWrap .spanish-word {
   font-size: 0.85rem;
   min-height: 0;
   /* Tighter than Compact's own — see that block's identical comment for
-     why this exists at all. Shrunk to match the smaller badges below. */
-  padding: 8px 0 7px;
+     why this exists at all. Shrunk to match the smaller badges below —
+     still just enough clearance for the rank badge above and the star/
+     missed-count badges below (verify with the known+trouble test rig
+     whenever either changes: no more than ~1-2px of overlap risk to spare). */
+  padding: 7px 0 6px;
 }
 body.table-ultra-compact-rows #tableWrap input[type="text"] {
   font-size: 0.78rem;

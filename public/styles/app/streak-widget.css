@@ -1,21 +1,20 @@
 /* ================================================================
-   STREAK WIDGET — persistent 🔥 counter + keyboard-shortcuts trigger,
-   top-right corner, every tab. See src/client/ui/streak-widget.ts.
+   STREAK WIDGET + CORNER — the 🔥 counter, Testing Profiles and keyboard-
+   shortcuts trigger, anchored together in #controls' own top-right corner.
+   See src/client/ui/streak-widget.ts.
 ================================================================ */
 
-/* Fixed rather than living inside #controls (like #shortcutsBtn used to):
-   #controls is hidden entirely on several tabs (My Lists/Settings/History/
-   My Content/AI Chat — ui-state.ts), so anything anchored to it disappears
-   right along with it. */
-.app-corner-bar {
-  position: fixed;
-  top: 0.6rem;
-  /* Lines up with main's own right edge (max-width: 1600px, centered — see
-     reset.css) instead of the raw viewport edge, so this doesn't float off
-     in empty space on an ultra-wide monitor. Below that width the two edges
-     coincide, so this just reduces to the same 0.6rem inset. */
-  right: max(0.6rem, calc((100vw - 1600px) / 2 + 0.6rem));
-  z-index: 50;
+/* One flex row anchored to #controls' corner instead of each button in it
+   carrying its own hand-placed `right: Nrem` (controls-bar.css reserves the
+   width this needs via #controls' own padding-right). #controls is never
+   hidden as a whole any more — only #controlsBody is, per mode (see
+   ui-state.ts) — so this corner stays in the same place on every tab,
+   including the ones with no filter form of their own. */
+.controls-corner {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.6rem;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -31,15 +30,15 @@
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.3rem 0.65rem;
+  height: 30px;
+  padding: 0 0.6rem;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 999px;
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--text);
-  box-shadow: var(--shadow);
   cursor: pointer;
   flex-shrink: 0;
   transition: background var(--transition-fast), border-color var(--transition-fast);
@@ -50,7 +49,7 @@
 }
 
 .streak-widget-emoji {
-  font-size: 1rem;
+  font-size: 0.92rem;
   line-height: 1;
 }
 
@@ -59,10 +58,10 @@
 }
 
 @media (max-width: 767px) {
-  .app-corner-bar { top: 0.45rem; gap: 0.4rem; }
   .streak-widget {
-    font-size: 0.78rem;
-    padding: 0.25rem 0.55rem;
+    height: 36px;
+    font-size: 0.74rem;
+    padding: 0 0.55rem;
   }
 }
 

@@ -1,9 +1,10 @@
 /**
- * streak-widget.ts — the small 🔥 counter fixed in the top-right corner of
- * every tab, beside #shortcutsBtn (index.html's #appCornerBar). Unlike
- * #controls (which the two used to live inside), this sits outside it
- * specifically so it stays visible on tabs where #controls is hidden
- * entirely — My Lists/Settings/History/My Content/AI Chat (ui-state.ts).
+ * streak-widget.ts — the small 🔥 counter anchored in #controls' own
+ * top-right corner (index.html's #controlsCorner), beside Testing Profiles
+ * and #shortcutsBtn. That corner stays put on every tab — ui-state.ts hides
+ * only #controlsBody (the filter/quiz-setup form) per mode, never #controls
+ * itself — so this doesn't need any positioning of its own beyond being a
+ * flex child there (see streak-widget.css's .controls-corner).
  *
  * Settings > Streak & Daily Goal controls whether it shows at all
  * (getShowStreakWidget) and how the emoji and count are arranged

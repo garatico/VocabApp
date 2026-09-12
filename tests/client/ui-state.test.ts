@@ -17,7 +17,7 @@ if (!Element.prototype.scrollIntoView) {
 }
 
 const GROUP_IDS = [
-  'controls', 'classFilter', 'listFilter', 'domainFilterWrap', 'wordsSizeGroup',
+  'controls', 'controlsBody', 'controlsCollapseBtn', 'classFilter', 'listFilter', 'domainFilterWrap', 'wordsSizeGroup',
   'conjSizeSelectGroup', 'directionGroup', 'recallTimerGroup', 'sortOrderGroup',
   'conjDisplayGroup', 'conjViewGroup', 'conjModeControls', 'conjRandomTableSizeGroup',
   'conjMatchStyleGroup', 'pictureStyleGroup', 'triviaStyleGroup', 'triviaCategoryGroup',
@@ -141,23 +141,31 @@ describe('bindModeSwitch — area visibility', () => {
 });
 
 describe('bindModeSwitch — #controls visibility', () => {
+  // #controls itself (and the corner it anchors — streak counter, Testing
+  // Profiles, keyboard shortcuts) stays visible on every tab now; only the
+  // filter/quiz-setup form (#controlsBody) and the button that collapses it
+  // hide on tabs with no such form.
   it.each(['mylists', 'settings', 'history', 'chat', 'myContent'])(
-    'hides the whole controls card on %s',
-    mode => {
-      const { tableArea, pictureArea, conjugationArea } = buildFixture();
-      bindModeSwitch({ tableArea, pictureArea, conjugationArea });
-      tabs[mode].click();
-      expect(groups.controls.hidden).toBe(true);
-    },
-  );
-
-  it.each(['table', 'picture', 'conjugation', 'trivia', 'guessBlank'])(
-    'shows the controls card on %s',
+    'hides the filter form but keeps #controls itself visible on %s',
     mode => {
       const { tableArea, pictureArea, conjugationArea } = buildFixture();
       bindModeSwitch({ tableArea, pictureArea, conjugationArea });
       tabs[mode].click();
       expect(groups.controls.hidden).toBe(false);
+      expect(groups.controlsBody.hidden).toBe(true);
+      expect(groups.controlsCollapseBtn.hidden).toBe(true);
+    },
+  );
+
+  it.each(['table', 'picture', 'conjugation', 'trivia', 'guessBlank'])(
+    'shows the controls card and its filter form on %s',
+    mode => {
+      const { tableArea, pictureArea, conjugationArea } = buildFixture();
+      bindModeSwitch({ tableArea, pictureArea, conjugationArea });
+      tabs[mode].click();
+      expect(groups.controls.hidden).toBe(false);
+      expect(groups.controlsBody.hidden).toBe(false);
+      expect(groups.controlsCollapseBtn.hidden).toBe(false);
     },
   );
 });
@@ -283,6 +291,17 @@ describe('bindModeSwitch — presetsBtn / controls--no-profiles', () => {
     expect(groups.presetsBtn.style.display).toBe('');
     expect(groups.controls.classList.contains('controls--no-profiles')).toBe(false);
   });
+
+  it.each(['mylists', 'settings', 'history', 'chat', 'myContent'])(
+    'hides Profiles and reclaims its space on %s too — no filter form there to apply one to',
+    mode => {
+      const { tableArea, pictureArea, conjugationArea } = buildFixture();
+      bindModeSwitch({ tableArea, pictureArea, conjugationArea });
+      tabs[mode].click();
+      expect(groups.presetsBtn.style.display).toBe('none');
+      expect(groups.controls.classList.contains('controls--no-profiles')).toBe(true);
+    },
+  );
 });
 
 describe('bindModeSwitch — recallTimerGroup', () => {
