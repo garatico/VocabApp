@@ -16,7 +16,13 @@
  *
  * Output: public/data/vocab-<language>.json plus an index.json manifest.
  * Vite copies public/ into dist/, so the files land at /data/ in every build.
+ *
+ * Loads .env before touching vocab-loader.js, the same as sync-data.ts and
+ * index.ts — without it, DATA_DIR is never read and this silently exports
+ * whatever is in the local data/ copy instead of the pipeline's live one.
  */
+
+import 'dotenv/config';
 
 import fs   from 'node:fs';
 import path from 'node:path';
