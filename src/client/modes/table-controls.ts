@@ -81,14 +81,14 @@ export function syncTableStyleUI(): void {
   // under whatever's on screen, which reads as the quiz being ended.
   const tableWrap = document.getElementById('tableWrap');
   if (tableWrap && tableWrap.children.length > 0) return;
-  ['tableControls', 'tableJumpTop', 'tableJumpBottom'].forEach(id => {
+  // #tableControls now lives inside #tableJumpTop (see index.html) rather
+  // than beside #tableScoreTop, so hiding tableJumpTop already takes it
+  // with it — #tableScoreTop stays visible for every style regardless
+  // (Recall/Double Recall share it too).
+  ['tableJumpTop', 'tableJumpBottom'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = showStandardOnly ? '' : 'none';
   });
-  // #tableScoreTop stays visible for every style (Recall/Double Recall share
-  // it too) — only the divider that splits it from Standard's own button row
-  // needs to hide alongside that row.
-  document.querySelector('.controls-divider')?.classList.toggle('controls-divider--hidden', !showStandardOnly);
 }
 
 // ── Pagination state ──────────────────────────────────────────────────────────
@@ -686,7 +686,6 @@ export function startTableQuiz({
   quizLang         = lang;
   resolvedDirection = direction;
   onQuizComplete   = onComplete ?? null;
-  sessionState     = new Map();
   pageIndex        = 0;
   getStopwatch().start();
   syncTimerToggleIcon();
@@ -698,6 +697,14 @@ export function startTableQuiz({
   lastMissedWords   = [];
   lastMissedResults = [];
   clearSummary('table');
+  // Reset last, right before the render that reads it — setPrestartControlsEnabled
+  // above calls syncBulkAddButton -> getSelectedWords -> syncSessionState(),
+  // which reads whatever is *currently* rendered in #tableWrap. On a Retry
+  // that's still the just-given-up quiz's DOM (renderCurrentPage() below is
+  // what clears it), so resetting sessionState any earlier than this let
+  // that stale read quietly restore the old answers into the "fresh" map a
+  // moment before it renders, undoing the very reset this line performs.
+  sessionState = new Map();
   renderCurrentPage();
 }
 

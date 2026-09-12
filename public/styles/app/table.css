@@ -112,57 +112,31 @@
   box-shadow: var(--shadow);
 }
 
-/* Left group (live score pills, #tableScoreTop) | centered divider | right
-   group (action buttons + timer, #tableControls) — a 1fr/auto/1fr grid puts
-   the divider at the row's true horizontal center regardless of how much
-   either side holds, and keeps both sides vertically centered against each
-   other via align-items.
-   #tableScoreTop and the divider sit OUTSIDE #tableControls deliberately —
-   table-controls.ts's syncTableStyleUI() hides #tableControls (Standard
-   style's own buttons) for Recall/Double Recall, but the score pills are
-   shared with those styles too (table-recall-mode.ts writes into the same
-   #tableScoreTop), so nesting them inside the element that gets hidden
-   would silently break their progress display for every style but Standard. */
+/* Just the live score pills (#tableScoreTop) now — the action buttons/timer
+   (#tableControls) moved down into #tableJumpTop's own end column, next to
+   Jump to Top/Bottom, freeing this row to give the pills the full width
+   instead of splitting it with a divider (there was nothing else compact
+   enough here to warrant a 1fr/auto/1fr split once the buttons left). */
 .controls-line {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--border);
 }
+/* Nothing to show before a quiz starts (buildScorePills() returns '' until
+   then) — collapse the row rather than leaving an empty bordered strip. */
+.controls-line:has(#tableScoreTop:empty) { display: none; }
 
-#tableControls {
+/* Shrunk from #tableControls' own default sizing — this now shares a row
+   with Order/Jump to Top/Jump to Bottom/Practice/Export instead of having
+   the controls-line row to itself, so it needs to give up some width. */
+.controls-row--compact {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  justify-self: end;
+  gap: 0.35rem;
 }
-
-/* A vertical rule between the live score pills and the action buttons/timer —
-   hidden until there's actually a score to divide from (buildScorePills()
-   returns '' before a quiz starts, leaving #tableScoreTop empty) or until
-   Recall/Double Recall hides #tableControls (syncTableStyleUI toggles this
-   class alongside that, since neither style has anything on the right to
-   divide the score pills from). */
-.controls-divider {
-  align-self: stretch;
-  width: 1px;
-  background: var(--border);
-}
-#tableScoreTop:empty + .controls-divider,
-.controls-divider--hidden {
-  display: none;
-}
-/* With the divider hidden (nothing to split), #tableControls is the only
-   other grid item (or is itself hidden) — let #tableScoreTop re-flow to
-   fill the row naturally rather than sitting pinned to a 1fr column's width. */
-#tableScoreTop:empty + .controls-divider + #tableControls,
-.controls-line:has(.controls-divider--hidden) #tableScoreTop {
-  grid-column: 1 / -1;
+.controls-row--compact button {
+  font-size: 0.76rem;
+  padding: 0.28rem 0.55rem;
 }
 
 /* The timer's own start/pause + reset controls, grouped visually with the
@@ -645,7 +619,16 @@
 /* gap, not each child's own margin, so the relocated Practice/Export
    buttons (.quiz-summary--inline, see summary.css) space themselves the
    same way the Jump buttons already do without needing their own copy. */
-.table-nav-side--end { justify-content: flex-end; gap: 0.5rem; }
+.table-nav-side--end {
+  justify-content: flex-end;
+  gap: 0.5rem;
+  /* Practice/Export and, now, the Standard-style action buttons/timer
+     (#tableControls, moved here from their own row — see table.css's
+     .controls-row--compact) can outgrow one line at narrower widths;
+     wrapping keeps them all reachable instead of overflowing the column. */
+  flex-wrap: wrap;
+  row-gap: 0.35rem;
+}
 
 .table-pager {
   display: flex;
