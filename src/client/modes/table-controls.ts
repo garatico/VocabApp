@@ -260,7 +260,7 @@ function syncBulkAddButton(): void {
   if (!btn) return;
   const count = getSelectedWords().length;
   btn.disabled = count === 0;
-  btn.textContent = count > 0 ? `+ Add ${count} to list(s)` : '+ Add to list(s)';
+  btn.textContent = count > 0 ? `+ Add ${count} to List(s)` : '+ Add to List(s)';
 }
 
 // ── Pagination helpers ────────────────────────────────────────────────────────

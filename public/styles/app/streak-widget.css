@@ -70,9 +70,9 @@
    (list-picker.css) — a plain readout, not a form, so it needs none of
    that shell's own row/item styling, just its box/shadow/z-index. */
 .streak-popover {
-  min-width: 200px;
-  max-width: min(280px, calc(100vw - 8px));
-  padding: 0.7rem 0.8rem;
+  min-width: 220px;
+  max-width: min(300px, calc(100vw - 8px));
+  padding: 1.1rem 1.25rem;
   font-family: 'Sora', sans-serif;
   font-size: 0.82rem;
   color: var(--text);

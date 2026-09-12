@@ -637,48 +637,64 @@
   gap: 0.75rem;
 }
 .table-nav-side { display: flex; align-items: center; }
-/* Jump to Top/Bottom centred, everything else (Practice/Export, the
-   Standard-style action buttons, the timer) flush right — a 1fr/auto/1fr
-   grid so the centred group sits at the true middle of this side's own
-   width rather than merely wherever it lands once the right cluster claims
-   its own space. The empty first column is deliberate, not wasted — it's
-   what makes the second column actually centred instead of just
-   left-leaning into whatever room the third column didn't take.
+/* Jump to Top/Bottom roughly centred, everything else (Practice/Export,
+   the Standard-style action buttons, the timer) flush right and, in any
+   realistic window, at its full natural size — never wrapping or
+   scrolling, whatever the width.
+   True centring (equal space reserved on both sides, e.g. a 1fr/auto/1fr
+   grid) was tried first, but reserving a mirror of the right cluster's own
+   width for the empty left column caps the cluster at *half* the row's
+   width forever, on any viewport — comfortably enough for two Jump
+   buttons, nowhere near enough for Select Page…Retry plus the timer
+   (roughly 700px of content that no realistic single/double monitor width
+   turns into two 700px+ halves once Order's own column is subtracted), so
+   the cluster needed to wrap or scroll *permanently*, not just on a narrow
+   window — worse than either problem it was meant to fix.
+   Flexed the other way instead, with lopsided shrink priority rather than
+   a hard `flex-shrink: 0` on the cluster: .tnav-right-cluster's shrink
+   factor is 100x lower than .tnav-center's, so on an ordinary window
+   .tnav-center (flex: 1, so it also *grows* to fill whatever's left) just
+   centres Jump in the leftover space after the cluster takes what it
+   needs — dead-on when there's slack to spare, closer to Order when there
+   isn't. Only once .tnav-center has already given up essentially all its
+   own space does the cluster start shrinking too, rather than the row
+   overflowing into a scrollbar or a wider page — a graceful last resort
+   (tighter buttons) instead of either of those.
    `#tableJumpTop`/`#tableJumpBottom` in the selector isn't scoping (this
    class never appears outside them) — it's there so this reliably outranks
    the bare `.table-nav-side { display: flex }` rule further down (same
    specificity otherwise, and that one loads later, so it was winning the
-   tie and silently turning this back into a flex row). */
+   tie and silently turning this back into an undifferentiated flex row). */
 #tableJumpTop .table-nav-side--end,
 #tableJumpBottom .table-nav-side--end {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  column-gap: 0.75rem;
-  min-width: 0;
-}
-.tnav-center {
-  grid-column: 2;
   display: flex;
   align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  /* Belt-and-braces for a window too narrow to fit the cluster even after
+     .tnav-center gives up all its own space (see above) — clip rather than
+     let the last sliver of it push this row, then the page, wider still,
+     which is the one thing this whole layout must never do. Only ever
+     trims a few px off the row's own trailing edge on a genuinely cramped
+     window; every realistic desktop width has room to spare. */
+  overflow-x: clip;
+}
+.tnav-center {
+  flex: 1 1 0%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 0.5rem;
 }
 .tnav-right-cluster {
-  grid-column: 3;
-  justify-self: end;
+  flex: 0 0.01 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
   /* No gap here — .tnav-group's own margin/padding below draws the exact
      midpoint-divider spacing instead, and a gap on top of that would double
      the space on one side of each line. */
-  min-width: 0;
-  /* Never wrap onto a second line — scroll sideways instead on a viewport
-     too narrow for everything at once. min-width: 0 above is what actually
-     lets this shrink below its content's natural width inside its 1fr grid
-     track; without it grid's own default (min-width: auto) would rather
-     grow the track than let this scroll. */
-  flex-wrap: nowrap;
-  overflow-x: auto;
 }
 
 /* One of these per logical cluster (Summary/Controls/Timer — see
