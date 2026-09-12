@@ -132,12 +132,8 @@ export function renderTableRecallMode({
 
   const indicatorMode = Settings.getLangIndicator();
   container.classList.toggle('lang-indicator-flag', indicatorMode === 'flag');
-  // Ultra Compact overrides rank/markers/gender off outright — see
-  // getTableRowDensity's own doc comment and table-mode.ts's identical use
-  // of this flag. Their individual settings stay untouched in storage.
-  const ultraCompact = Settings.getTableRowDensity() === 'ultra';
-  container.classList.toggle('hide-rank', ultraCompact || !Settings.getTableShowRank());
-  container.classList.toggle('hide-word-markers', ultraCompact || !Settings.getTableShowWordMarkers());
+  container.classList.toggle('hide-rank', !Settings.getTableShowRank());
+  container.classList.toggle('hide-word-markers', !Settings.getTableShowWordMarkers());
 
   let wordOrder: WordOrder =
     (readString('vq_table_order') as WordOrder | null) ?? 'rank';
@@ -467,7 +463,7 @@ export function renderTableRecallMode({
         // has nothing to wrap yet and picks up once paintWordCell/
         // paintWordHint actually put text in the cell.
         const gKey = genderKey(w);
-        const indicatorStyle = ultraCompact ? 'off' : Settings.getGenderIndicatorStyle();
+        const indicatorStyle = Settings.getGenderIndicatorStyle();
         const showGenderAtStart = shouldShowGenderIndicator(
           Settings.getGenderIndicatorVisibility(), { hinted: false, revealed: false },
         );
@@ -843,7 +839,9 @@ export function renderTableRecallMode({
         (hintProgressBar as HTMLElement).style.width = hintProgressPct + '%';
       }
       if (stats) {
-        stats.textContent = total > 0 ? `${done} / ${total}` : '';
+        // Same "N / M  ·  P%" shape as Standard style's own renderProgress.
+        const donePct = total > 0 ? Math.round((done / total) * 100) : 0;
+        stats.textContent = total > 0 ? `${done} / ${total}  ·  ${donePct}%` : '';
         stats.classList.toggle('progress-label--done', total > 0 && done === total);
       }
       if (score) score.innerHTML = scoreHtml;
@@ -939,15 +937,16 @@ export function renderTableRecallMode({
     recordSession();
     updateProgress();
 
+    // Correct/revealed/missed counts deliberately live only in the score
+    // pills updateProgress() just redrew above (see table-controls.ts's own
+    // buildSummaryHtml, which this mirrors) — this strip carries only the
+    // final percentage, not a second copy of the same three numbers.
     let correct = 0, revealed = 0, missed = 0;
     sorted.forEach(w => {
       const s = rowState(w);
       if (s === 'correct') correct++; else if (s === 'revealed') revealed++; else if (s === 'missed') missed++;
     });
     showSummary('table',
-      summaryChip('correct', `✓ ${correct} correct`) +
-      (revealed ? summaryChip('missed', `◐ ${revealed} revealed`) : '') +
-      (missed ? summaryChip('missed', `✗ ${missed} missed`) : '') +
       summaryChip('pct', `${percent(correct, sorted.length)}%`),
       sorted.length > 0 && revealed === 0 && missed === 0,
     );

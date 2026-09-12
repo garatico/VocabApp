@@ -75,6 +75,10 @@
    there to reserve room for beyond the ? button, so give that space back
    to controls-top instead of leaving it wasted down the whole card. */
 #controls.controls--no-profiles { padding-right: 3rem; }
+/* Same idea, opposite corner: the collapse-controls trigger (shortcuts.css)
+   is one 30px button, not a whole cluster, so it needs far less room than
+   the right side's reservation above. */
+#controls { padding-left: 3rem; }
 
 /* Start Quiz's own row — deliberately outside #controls-top's wrapping flex
    flow. #controls-top holds every mode-conditional control group (Direction,
@@ -318,6 +322,12 @@
   #controls     { padding-right: 1rem; }
   #controls-top { padding-right: 7.5rem; }
 
+  /* Same reasoning, left side, for the collapse-controls trigger — its own
+     2.5rem still covers one 30px button plus its 0.6rem offset; there's
+     nothing else sharing this corner to add room for. */
+  #controls     { padding-left: 1rem; }
+  #controls-top { padding-left: 2.5rem; }
+
   /* Nothing in the card may be wider than the card. Without this a single
      stubborn row (Direction, or the Words size-row) makes the whole page
      scroll sideways, and every heading appears to start off the left edge. */
@@ -423,11 +433,13 @@
 
 @media (max-width: 480px) {
   #controls     { padding: 0.5rem 0.6rem 0.55rem; }
-  #controls-top { padding-right: 0; }
+  #controls-top { padding-right: 0; padding-left: 0; }
   /* Profiles drops to an icon-only 36px pill at this width (shortcuts.css) —
-     less to clear than the labeled version above 480px. */
+     less to clear than the labeled version above 480px. Same first-child
+     move on the left for the collapse-controls trigger, which never
+     shrinks — it's always just the one 30px circle. */
   #controls-top > .control-group:first-child,
-  #controls-top > .control-stack:first-child { padding-right: 5.5rem; }
+  #controls-top > .control-stack:first-child { padding-right: 5.5rem; padding-left: 2.5rem; }
   .size-row { width: 100%; }
 }
 

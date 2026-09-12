@@ -1035,13 +1035,13 @@ body.table-compact-rows #tableWrap .table-word--trouble::before {
 
 /* ── Ultra Compact row density — Settings › Table Quiz › Layout › Row
    density. Builds on Compact's rules above (a row gets both body classes —
-   see applyTableRowDensity in settings.ts) but goes shorter still, because
-   table-mode.ts/table-recall-mode.ts force the rank badge, list-star/
-   missed-count markers, and gender indicator off while it's active — with
-   none of those left to clear, .spanish-word needs none of Compact's own
-   reserved top/bottom padding. Same specificity as the Compact rules above
-   (one body class each), so source order is what makes these win — must
-   stay below them in this file. */
+   see applyTableRowDensity in settings.ts) but goes shorter still. The
+   frequency-rank badge, list-star/missed-count markers, and gender
+   indicator still show whenever their own settings say so — same idea as
+   Compact's own badges just below, shrunk and given a tighter reserved
+   band to match this smaller row, rather than forced off. Same specificity
+   as the Compact rules above (one body class each), so source order is
+   what makes these win — must stay below them in this file. */
 body.table-ultra-compact-rows #tableWrap {
   font-size: 0.95rem;
 }
@@ -1051,10 +1051,41 @@ body.table-ultra-compact-rows #tableWrap td {
 body.table-ultra-compact-rows #tableWrap .spanish-word {
   font-size: 0.95rem;
   min-height: 0;
-  padding: 0;
+  /* Tighter than Compact's own — see that block's identical comment for
+     why this exists at all. Shrunk to match the smaller badges below. */
+  padding: 10px 0 9px;
 }
 body.table-ultra-compact-rows #tableWrap input[type="text"] {
   font-size: 0.82rem;
   padding: 0 3px;
   min-height: 0;
+}
+body.table-ultra-compact-rows #tableWrap .table-word-rank {
+  top: 0;
+  left: 1px;
+  font-size: 0.55rem;
+  padding: 0 0.15em;
+}
+body.table-ultra-compact-rows #tableWrap .row-select-cb {
+  top: 0;
+  right: 1px;
+  width: 8px;
+  height: 8px;
+}
+body.table-ultra-compact-rows #tableWrap .word-cell--known::after {
+  bottom: 0;
+  left: 1px;
+  font-size: 0.5rem;
+}
+body.table-ultra-compact-rows #tableWrap .word-cell > .gender-dot {
+  bottom: 1px;
+  left: 8px;
+  width: 5px;
+  height: 5px;
+}
+body.table-ultra-compact-rows #tableWrap .table-word--trouble::before {
+  bottom: 0;
+  right: 1px;
+  font-size: 0.48rem;
+  padding: 0 0.25em;
 }

@@ -223,15 +223,11 @@ export const Settings = {
    * Compact shrinks it (see table.css's `body.table-compact-rows` block,
    * applied as a body class same as Kid-Friendly/Advanced mode) so more rows
    * fit on screen. Ultra Compact shrinks it further still (`body.table-
-   * ultra-compact-rows`) — it can go tighter than Compact specifically
-   * because table-mode.ts/table-recall-mode.ts both read this getter too,
-   * and force the frequency-rank badge, list-star/missed-count markers, and
-   * gender indicator off while it's active regardless of their own
-   * individual settings — see those settings' own getters, which stay
-   * unread and untouched so switching back to Compact/Comfortable restores
-   * whatever they were set to. Without that override there'd be no clear
-   * row left to shrink into; corner badges sized for Compact's row would
-   * collide the same way they did before Compact got its own clearance.
+   * ultra-compact-rows`) — the frequency-rank badge, list-star/missed-count
+   * markers, and gender indicator still show at whatever their own settings
+   * already say; each density level just gives their corner badges
+   * correspondingly less clearance to fit into (a smaller badge at a
+   * smaller offset), rather than forcing them off outright.
    */
   getTableRowDensity: (): TableRowDensity => get('table_row_density', 'comfortable') as TableRowDensity,
 

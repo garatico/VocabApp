@@ -315,15 +315,8 @@ export function renderTableMode({
     // a word carrying `.language` either way, so this is a no-op there.
     const indicatorMode = Settings.getLangIndicator();
     container.classList.toggle('lang-indicator-flag', indicatorMode === 'flag');
-    // Ultra Compact needs the room these three normally take, so it
-    // overrides them off outright rather than needing its own copy of
-    // Compact's badge-clearance padding — see getTableRowDensity's own doc
-    // comment. Their individual settings are still read as the fallback
-    // (and stay untouched in storage), so switching density back down
-    // restores whatever they were already set to.
-    const ultraCompact = Settings.getTableRowDensity() === 'ultra';
-    container.classList.toggle('hide-rank', ultraCompact || !Settings.getTableShowRank());
-    container.classList.toggle('hide-word-markers', ultraCompact || !Settings.getTableShowWordMarkers());
+    container.classList.toggle('hide-rank', !Settings.getTableShowRank());
+    container.classList.toggle('hide-word-markers', !Settings.getTableShowWordMarkers());
 
     for (let i = 0; i < words.length; i += pairsPerRow) {
       const tr = document.createElement('tr');
@@ -409,7 +402,7 @@ export function renderTableMode({
         // revealing the word's actual spelling. So this is gated on the
         // word qualifying at all, not on wordIsPrompt.
         const gKey = genderKey(w);
-        const indicatorStyle = ultraCompact ? 'off' : Settings.getGenderIndicatorStyle();
+        const indicatorStyle = Settings.getGenderIndicatorStyle();
         wordDiv.classList.add('spanish-word');
         wordDiv.dataset.wordJson = JSON.stringify(w);
         // Read by attachTooltips below: in en-target direction the visible
