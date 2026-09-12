@@ -478,13 +478,27 @@
 
 /* ── Bulk-select checkbox — table-controls.ts's "Add N to list(s)" ──
    Mirrors the rank badge's own corner-overlay treatment (top-left), just the
-   opposite corner, so neither ever needs to make room for the other. */
-.row-select-cb {
+   opposite corner, so neither ever needs to make room for the other.
+   Em-sized against #tableWrap's own font-size (24px/16px/13.6px at
+   Comfortable/Compact/Ultra — see the density blocks below) rather than a
+   flat px, so it scales with the row instead of needing its own hand-tuned
+   number per density the way it used to. `#tableWrap` in the selector isn't
+   scoping (it was already only ever used there) — it's there to outrank
+   buttons.css's own `input[type="checkbox"] { width: 18px; height: 18px }`,
+   which ties this rule's specificity otherwise and made the winner a coin
+   flip decided by file load order rather than by which one is more specific
+   to this checkbox. `font-size: inherit` is load-bearing, not decorative —
+   form controls don't inherit font-size from their surroundings by default
+   (a UA-stylesheet quirk shared by input/button/select/textarea), so the
+   `em` below would otherwise size against the browser's ~13px form-control
+   default instead of this row's actual, density-driven font-size. */
+#tableWrap .row-select-cb {
   position: absolute;
   top: 4px;
   right: 5px;
-  width: 13px;
-  height: 13px;
+  font-size: inherit;
+  width: 0.72em;
+  height: 0.72em;
   margin: 0;
   cursor: pointer;
   accent-color: var(--accent);
@@ -536,7 +550,7 @@
      bottom-right (this used to collide with that one there). */
   bottom: 3px;
   left: 5px;
-  font-size: 0.42em;
+  font-size: 0.56em;
   line-height: 1;
   color: var(--accent);
   pointer-events: none;
@@ -606,12 +620,19 @@
   pointer-events: none;
 }
 
-/* ── Navigation row: page selection centred, jump button on the right ──
-   A 3-column grid keeps the pager centred whether or not the jump button is
-   there, and both sit on one line with identical spacing to the table. */
+/* ── Navigation row: order controls on the left, everything else packed
+   into the remaining width on the right ──
+   Used to be a 1fr/auto/1fr grid, splitting the row 50/50 regardless of how
+   little the order side actually needed — Order/Word/Meaning claimed maybe a
+   third of its half, leaving the other half dead space, while the jump/
+   summary/action/timer cluster was squeezed into its own half and wrapped
+   onto a second line. `auto auto 1fr` instead: the order side and pager take
+   only what they need, and the end side gets whatever's left, which is
+   usually enough for everything to fit on one line — see .table-nav-side--end
+   below for what happens on the rare narrower viewport where it still isn't. */
 .table-nav {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: auto auto 1fr;
   align-items: center;
   gap: 0.75rem;
 }
@@ -620,14 +641,41 @@
    buttons (.quiz-summary--inline, see summary.css) space themselves the
    same way the Jump buttons already do without needing their own copy. */
 .table-nav-side--end {
-  justify-content: flex-end;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.75rem;
+  /* Never wrap onto a second line — scroll sideways instead on a viewport too
+     narrow for everything at once. min-width: 0 is what actually lets this
+     shrink below its content's natural width inside the 1fr grid track above;
+     without it grid's own default (min-width: auto) would rather grow the
+     track than let this scroll. */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  min-width: 0;
+}
+
+/* One of these per logical cluster (Jump/Summary/Controls/Timer — see
+   index.html) inside .table-nav-side--end, each internally its own tight
+   flex row, with a rule (not the parent's gap) drawing the seam between
+   them — a plain `gap` alone reads as one long undifferentiated row of
+   buttons once there are this many. */
+.tnav-group {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
-  /* Practice/Export and, now, the Standard-style action buttons/timer
-     (#tableControls, moved here from their own row — see table.css's
-     .controls-row--compact) can outgrow one line at narrower widths;
-     wrapping keeps them all reachable instead of overflowing the column. */
-  flex-wrap: wrap;
-  row-gap: 0.35rem;
+  flex-shrink: 0;
+}
+.tnav-group + .tnav-group {
+  padding-left: 0.75rem;
+  border-left: 1px solid var(--border);
+}
+
+/* Shrunk to match .controls-row--compact's own button scale (table.css) —
+   sized for a whole page of controls on their own row, these read oversize
+   now that they share one packed line with everything else. */
+.table-nav-side--end .jump-btn {
+  padding: 0.28rem 0.6rem;
+  font-size: 0.76rem;
 }
 
 .table-pager {
@@ -832,7 +880,7 @@
   bottom: 3px;
   right: 5px;
   font-family: 'DM Mono', monospace;
-  font-size: 0.48em;
+  font-size: 0.58em;
   font-weight: 700;
   line-height: 1;
   /* Was white-on-amber (~2:1 contrast, fails WCAG AA). Red also reads more
@@ -997,33 +1045,41 @@ body.table-compact-rows #tableWrap input.recall-input[type="text"] {
    Same four corners as components.css/table.css's own rules, just tighter:
    rank (top-left), bulk-select checkbox (top-right), known-list star and
    gender dot (bottom-left), missed-before count (bottom-right). */
+/* left shifted from 1px to 4px, and the star below to match (with the
+   gender dot further right again to keep its own gap) — same reasoning as
+   Ultra Compact's identical shift just below: a known-list word cell carries
+   a 3px inset accent bar down its left edge (table.css ~line 533) that sat
+   right under both badges at 1px. Sizes are `em` now, not `rem` — relative
+   to this tier's own #tableWrap font-size (1rem here, 0.85rem for Ultra),
+   so a size bump to the shared em multiplier above scales every density
+   together instead of needing three hand-tuned numbers kept in step by hand. */
 body.table-compact-rows #tableWrap .table-word-rank {
   top: 0;
-  left: 1px;
-  font-size: 0.52rem;
+  left: 4px;
+  font-size: 0.62em;
   padding: 0 0.15em;
 }
 body.table-compact-rows #tableWrap .row-select-cb {
   top: 0;
   right: 1px;
-  width: 8px;
-  height: 8px;
+  width: 0.72em;
+  height: 0.72em;
 }
 body.table-compact-rows #tableWrap .word-cell--known::after {
   bottom: 0;
-  left: 1px;
-  font-size: 0.5rem;
+  left: 4px;
+  font-size: 0.56em;
 }
 body.table-compact-rows #tableWrap .word-cell > .gender-dot {
   bottom: 1px;
-  left: 9px;
+  left: 12px;
   width: 5px;
   height: 5px;
 }
 body.table-compact-rows #tableWrap .table-word--trouble::before {
   bottom: 0;
   right: 1px;
-  font-size: 0.48rem;
+  font-size: 0.58em;
   padding: 0 0.25em;
 }
 
@@ -1066,29 +1122,29 @@ body.table-ultra-compact-rows #tableWrap input.recall-input[type="text"] {
 body.table-ultra-compact-rows #tableWrap .table-word-rank {
   top: 0;
   left: 4px;
-  font-size: 0.48rem;
+  font-size: 0.62em;
   padding: 0 0.1em;
 }
 body.table-ultra-compact-rows #tableWrap .row-select-cb {
   top: 0;
   right: 1px;
-  width: 8px;
-  height: 8px;
+  width: 0.72em;
+  height: 0.72em;
 }
 body.table-ultra-compact-rows #tableWrap .word-cell--known::after {
   bottom: 0;
   left: 4px;
-  font-size: 0.46rem;
+  font-size: 0.56em;
 }
 body.table-ultra-compact-rows #tableWrap .word-cell > .gender-dot {
   bottom: 0;
-  left: 9px;
+  left: 10px;
   width: 4px;
   height: 4px;
 }
 body.table-ultra-compact-rows #tableWrap .table-word--trouble::before {
   bottom: 0;
   right: 1px;
-  font-size: 0.44rem;
+  font-size: 0.58em;
   padding: 0 0.2em;
 }

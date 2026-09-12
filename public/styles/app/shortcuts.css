@@ -2,11 +2,12 @@
    SHORTCUTS OVERLAY — keyboard shortcut reference modal.
 ================================================================ */
 
-/* ── Trigger button (beside theme toggle) ── */
+/* ── Trigger button — a flex child of #appCornerBar (streak-widget.css),
+   not positioned against #controls any more: #controls disappears entirely
+   on several tabs (see ui-state.ts) and this needs to stay reachable on
+   all of them, same reasoning as the streak counter beside it. ── */
 #shortcutsBtn {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.6rem;        /* occupies the slot the theme toggle previously held */
+  flex-shrink: 0;
   width: 30px;
   height: 30px;
   padding: 0;
@@ -20,7 +21,6 @@
   cursor: pointer;
   transition: background var(--transition-fast), color var(--transition-fast),
               border-color var(--transition-fast);
-  z-index: 2;
 }
 #shortcutsBtn:hover {
   background: var(--surface2);
@@ -236,8 +236,6 @@ kbd {
   #shortcutsBtn {
     width: 36px;
     height: 36px;
-    top: 0.45rem;
-    right: 0.5rem;
   }
   #presetsBtn {
     top: 0.45rem;

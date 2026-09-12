@@ -1,14 +1,13 @@
 /* ================================================================
-   STREAK WIDGET — persistent 🔥 counter, top-right corner, every tab.
-   See src/client/ui/streak-widget.ts.
+   STREAK WIDGET — persistent 🔥 counter + keyboard-shortcuts trigger,
+   top-right corner, every tab. See src/client/ui/streak-widget.ts.
 ================================================================ */
 
-/* Same `[hidden]`-vs-class-`display` cascade tie this codebase hits
-   elsewhere (see my-content.css/conjugation.css) — same specificity as the
-   browser's own `[hidden] { display: none }`, and this file loads later, so
-   without this the element stays visually flex even once JS sets `hidden`. */
-.streak-widget[hidden] { display: none; }
-.streak-widget {
+/* Fixed rather than living inside #controls (like #shortcutsBtn used to):
+   #controls is hidden entirely on several tabs (My Lists/Settings/History/
+   My Content/AI Chat — ui-state.ts), so anything anchored to it disappears
+   right along with it. */
+.app-corner-bar {
   position: fixed;
   top: 0.6rem;
   /* Lines up with main's own right edge (max-width: 1600px, centered — see
@@ -19,15 +18,35 @@
   z-index: 50;
   display: flex;
   align-items: center;
+  gap: 0.5rem;
+}
+
+/* Same `[hidden]`-vs-class-`display` cascade tie this codebase hits
+   elsewhere (see my-content.css/conjugation.css) — `[hidden]` and this
+   class rule have equal specificity, so without a rule scoped to `[hidden]`
+   itself the later-loaded one (this file) would keep the element visually
+   flex even once JS sets `hidden`. */
+.streak-widget[hidden] { display: none; }
+.streak-widget {
+  display: flex;
+  align-items: center;
   gap: 0.3rem;
   padding: 0.3rem 0.65rem;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 999px;
+  font-family: inherit;
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--text);
   box-shadow: var(--shadow);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.streak-widget:hover {
+  background: var(--surface);
+  border-color: var(--accent);
 }
 
 .streak-widget-emoji {
@@ -40,9 +59,61 @@
 }
 
 @media (max-width: 767px) {
+  .app-corner-bar { top: 0.45rem; gap: 0.4rem; }
   .streak-widget {
-    top: 0.45rem;
     font-size: 0.78rem;
     padding: 0.25rem 0.55rem;
   }
+}
+
+/* ── Streak details popover ──
+   Same .list-picker-popover shell as word-info-popover.ts/move-popover.ts
+   (list-picker.css) — a plain readout, not a form, so it needs none of
+   that shell's own row/item styling, just its box/shadow/z-index. */
+.streak-popover {
+  min-width: 200px;
+  max-width: min(280px, calc(100vw - 8px));
+  padding: 0.7rem 0.8rem;
+  font-family: 'Sora', sans-serif;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.streak-popover-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.3rem 0;
+}
+.streak-popover-row + .streak-popover-row {
+  border-top: 1px solid var(--border);
+}
+
+.streak-popover-label {
+  color: var(--text-muted);
+}
+
+.streak-popover-value {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.streak-popover-settings-btn {
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.streak-popover-settings-btn:hover {
+  background: var(--accent);
+  color: #fff;
 }
