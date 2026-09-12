@@ -22,7 +22,7 @@ import {
   saveSession, recordOutcome, orderWords, getWordOrderLabels,
   type WordOrder, type WordOrderSortBy,
 } from '../utils/session-history.ts';
-import { buildScorePills, scorePct, buildProgressStatsText } from '../ui/score-pills.ts';
+import { buildScorePills, scorePct, buildProgressStatsHtml } from '../ui/score-pills.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
 import type { Word } from '../types.js';
 
@@ -189,7 +189,7 @@ export function resolveDirection(): TableDirection {
 /**
  * The end-of-quiz strip. Correct/missed counts, and the final percentage,
  * live only in the progress bar and its label right above this (see
- * buildProgressStatsText) — empty (nothing to show) whenever there's
+ * buildProgressStatsHtml) — empty (nothing to show) whenever there's
  * nothing missed to retry or export, rather than a strip that exists solely
  * to repeat a percentage the bar already carries.
  */
@@ -396,10 +396,10 @@ function renderProgress(): void {
 
   // The label now lives inside the bar, so it carries the percentage too —
   // there used to be a separate summary block that appeared solely to say
-  // "100%" once you finished. See buildProgressStatsText's own doc comment
+  // "100%" once you finished. See buildProgressStatsHtml's own doc comment
   // for what replaces that redundant 100% once the quiz is actually done.
-  const statsText  = buildProgressStatsText(
-    { correct, revealed, missed, answered, total }, Settings.getProgressBarBreakdown(),
+  const statsHtml  = buildProgressStatsHtml(
+    { correct, revealed, missed, answered, total }, Settings.getProgressBarPercentMode(),
   );
   const scoreHtml  = buildScorePills({ correct, revealed, missed, left, total })
     + buildHintOutcomePills({ hintedCorrect, hintedRevealed, hintedMissed, hintedInProgress });
@@ -441,7 +441,7 @@ function renderProgress(): void {
       hintProgressBar.style.width = hintProgressPct + '%';
     }
     if (stats) {
-      stats.textContent = statsText;
+      stats.innerHTML = statsHtml;
       stats.classList.toggle('progress-label--done', total > 0 && answered === total);
     }
     if (score) score.innerHTML = scoreHtml;

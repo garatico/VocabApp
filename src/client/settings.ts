@@ -13,6 +13,7 @@ import type { ChineseScript, ChineseDisplay, FunctionWordMarker } from './utils/
 import type { GenderIndicatorStyle, GenderIndicatorVisibility } from './utils/dom.ts';
 import { fillHighlighted } from './utils/dom.ts';
 import { foldKey } from './utils/match.ts';
+import type { ProgressBarPercentMode } from './ui/score-pills.ts';
 
 /**
  * settings.ts — persistent quiz preferences.
@@ -221,11 +222,12 @@ export const Settings = {
   /**
    * Once a Table quiz is fully answered, its progress bar's own label
    * switches from a now-meaningless "100%" to something that's actually
-   * still useful — see ui/score-pills.ts's buildProgressStatsText. Off
-   * (default) shows just the percent correct; on, a fuller breakdown of
-   * correct/revealed/missed percentages.
+   * still useful — see ui/score-pills.ts's buildProgressStatsHtml.
+   * 'correct' (default) shows just the percent correct; 'missed' shows just
+   * the percent missed; 'all' shows a fuller correct/revealed/missed
+   * breakdown.
    */
-  getProgressBarBreakdown: (): boolean => get('progress_bar_breakdown', 'false') === 'true',
+  getProgressBarPercentMode: (): ProgressBarPercentMode => get('progress_bar_percent_mode', 'correct') as ProgressBarPercentMode,
 
   /**
    * Row density — Comfortable (default) is the table's original sizing.
@@ -990,12 +992,12 @@ export function bindSettings(): void {
     onUILanguageChange?.();
   });
 
-  // Progress bar percentage — Correct only vs full breakdown, once complete
-  document.getElementById('settingProgressBarBreakdown')?.addEventListener('click', e => {
+  // Progress bar percentage — Correct / Missed / All, once complete
+  document.getElementById('settingProgressBarPercentMode')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
-    activateToggle('settingProgressBarBreakdown', btn);
-    set('progress_bar_breakdown', btn.dataset.show ?? 'false');
+    if (!btn?.dataset.mode) return;
+    activateToggle('settingProgressBarPercentMode', btn);
+    set('progress_bar_percent_mode', btn.dataset.mode as ProgressBarPercentMode);
   });
 
   // Column count
@@ -1847,9 +1849,9 @@ function restoreSettingsUI(): void {
   if (uiLangSelect) uiLangSelect.value = get('ui_language', 'english');
 
   // Progress bar percentage
-  const savedProgressBreakdown = get('progress_bar_breakdown', 'false');
-  document.querySelectorAll<HTMLElement>('#settingProgressBarBreakdown .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.show === savedProgressBreakdown);
+  const savedProgressPercentMode = Settings.getProgressBarPercentMode();
+  document.querySelectorAll<HTMLElement>('#settingProgressBarPercentMode .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === savedProgressPercentMode);
   });
 
   // Cols

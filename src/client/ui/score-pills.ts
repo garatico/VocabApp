@@ -32,22 +32,37 @@ export function scorePct(n: number, total: number): number {
   return total > 0 ? Math.round((n / total) * 10000) / 100 : 0;
 }
 
+/** Settings.getProgressBarPercentMode() — which percentage(s) the progress
+ *  bar's own label shows once a quiz is fully answered. See
+ *  buildProgressStatsHtml below. */
+export type ProgressBarPercentMode = 'correct' | 'missed' | 'all';
+
+/** One colored chip inside the progress bar's own label — not `.score-pill`
+ *  (that's the row of pills under the bar; this needs to sit inline in a
+ *  single-line label, so its own smaller, borderless shape). */
+function progressPctChip(kind: 'correct' | 'revealed' | 'missed', pct: number, label: string): string {
+  return `<span class="progress-pct progress-pct--${kind}">${pct}% ${label}</span>`;
+}
+
 /**
- * The progress bar's own text label — "N / M · P%" (completion) while still
- * in progress. Once complete, a bare completion percentage is always 100
- * and says nothing a learner doesn't already know from the full bar, so it
- * switches to either "N / M · X% correct" (default) or, with the Settings
- * breakdown option on, "N / M · X% correct, Y% revealed, Z% missed" (a
- * category with nothing in it is omitted) — shared by Table's Standard and
- * Recall/Double Recall styles so the two can't quietly disagree about what
- * "done" looks like. Replaces this app's old separate end-of-quiz summary
- * chip, which existed solely to say the same "100%" the bar already showed.
+ * The progress bar's own label — "N / M · P%" (completion) while still in
+ * progress. Once complete, a bare completion percentage is always 100 and
+ * says nothing a learner doesn't already know from the full bar, so it
+ * switches instead to whichever percentage(s) Settings.getProgressBarPercentMode()
+ * picks: just percent correct (default), just percent missed, or a full
+ * correct/revealed/missed breakdown (a category with nothing in it is
+ * omitted from "all") — shared by Table's Standard and Recall/Double Recall
+ * styles so the two can't quietly disagree about what "done" looks like.
+ * Replaces this app's old separate end-of-quiz summary chip, which existed
+ * solely to say the same "100%" the bar already showed. Returns HTML (each
+ * percentage in its own colored chip) — the caller must set it via
+ * `innerHTML`, not `textContent`.
  */
-export function buildProgressStatsText(
+export function buildProgressStatsHtml(
   { correct, revealed, missed, answered, total }: {
     correct: number; revealed: number; missed: number; answered: number; total: number;
   },
-  breakdown: boolean,
+  mode: ProgressBarPercentMode,
 ): string {
   if (total <= 0) return '';
   if (answered < total) {
@@ -55,9 +70,10 @@ export function buildProgressStatsText(
     return `${answered} / ${total}  ·  ${donePct}%`;
   }
   const pct = (n: number): number => Math.round((n / total) * 100);
-  if (!breakdown) return `${answered} / ${total}  ·  ${pct(correct)}% correct`;
-  const parts = [`${pct(correct)}% correct`];
-  if (revealed > 0) parts.push(`${pct(revealed)}% revealed`);
-  if (missed > 0) parts.push(`${pct(missed)}% missed`);
-  return `${answered} / ${total}  ·  ${parts.join(', ')}`;
+  if (mode === 'correct') return `${answered} / ${total}  ·  ${progressPctChip('correct', pct(correct), 'Correct')}`;
+  if (mode === 'missed')  return `${answered} / ${total}  ·  ${progressPctChip('missed', pct(missed), 'Missed')}`;
+  const chips = [progressPctChip('correct', pct(correct), 'Correct')];
+  if (revealed > 0) chips.push(progressPctChip('revealed', pct(revealed), 'Revealed'));
+  if (missed > 0) chips.push(progressPctChip('missed', pct(missed), 'Missed'));
+  return `${answered} / ${total}  ·  ${chips.join(', ')}`;
 }

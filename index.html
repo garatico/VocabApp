@@ -684,8 +684,6 @@
             <span id="tableStatsTop" class="progress-label"></span>
           </div>
         </div>
-        <div id="tableSummaryTop" class="quiz-summary" style="display:none"></div>
-
         <div class="controls-line" id="tableControlsLine">
           <div id="tableScoreTop" class="quiz-score"></div>
           <span class="controls-divider" aria-hidden="true"></span>
@@ -722,6 +720,7 @@
           <div class="table-nav-side table-nav-side--end">
             <button type="button" class="jump-btn" data-jump="top" data-i18n="table.jumpToTop">&#x2191; Jump to Top</button>
             <button type="button" class="jump-btn" data-jump="bottom" data-i18n="table.jumpToBottom">&#x2193; Jump to Bottom</button>
+            <div id="tableSummaryTop" class="quiz-summary quiz-summary--inline" style="display:none"></div>
           </div>
         </div>
         </div>
@@ -738,11 +737,11 @@
           </div>
           <div class="table-nav-side table-nav-side--end">
             <button type="button" class="jump-btn" data-jump="top" data-i18n="table.jumpToTop">&#x2191; Jump to Top</button>
+            <div id="tableSummary" class="quiz-summary quiz-summary--inline" style="display:none"></div>
           </div>
         </div>
 
         <div id="tableFeedback" class="feedback"></div>
-        <div id="tableSummary" class="quiz-summary" style="display:none"></div>
 
         <div class="progressWrap">
           <div class="progress">
@@ -948,12 +947,13 @@
 
             <div class="settings-row">
               <div class="settings-label">
-                <span data-i18n="settings.table.progressBarBreakdown">Progress bar percentage</span>
-                <span class="settings-desc" data-i18n="settings.table.progressBarBreakdownDesc">Once a quiz is fully answered, its progress bar's own label switches from a now-meaningless "100%" to something still useful. Off shows just the percent correct. On shows a fuller breakdown — percent correct, percent revealed, percent missed.</span>
+                <span data-i18n="settings.table.progressBarPercentMode">Progress bar percentage</span>
+                <span class="settings-desc" data-i18n="settings.table.progressBarPercentModeDesc">Once a quiz is fully answered, its progress bar's own label switches from a now-meaningless "100%" to something still useful. Correct (default) shows just the percent correct. Missed shows just the percent missed. All shows a fuller breakdown — percent correct, percent revealed, percent missed.</span>
               </div>
-              <div class="sort-order-toggle" id="settingProgressBarBreakdown">
-                <button type="button" class="sort-order-btn active" data-show="false" data-i18n="common.off">Off</button>
-                <button type="button" class="sort-order-btn" data-show="true" data-i18n="common.on">On</button>
+              <div class="sort-order-toggle" id="settingProgressBarPercentMode">
+                <button type="button" class="sort-order-btn active" data-mode="correct" data-i18n="settings.table.progressBarPercentCorrect">Correct</button>
+                <button type="button" class="sort-order-btn" data-mode="missed" data-i18n="settings.table.progressBarPercentMissed">Missed</button>
+                <button type="button" class="sort-order-btn" data-mode="all" data-i18n="settings.table.progressBarPercentAll">All</button>
               </div>
             </div>
 

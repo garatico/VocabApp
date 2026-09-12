@@ -63,6 +63,22 @@
   mix-blend-mode: normal;
 }
 
+/* ── In-bar percentage chip(s) — Settings › Table Quiz › Progress bar
+   percentage. Only ever rendered once the label is in its --done state
+   (mix-blend-mode: normal above), so an opaque background here always
+   reads as intended regardless of what's under it. */
+.progress-pct {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05em 0.45em;
+  border-radius: 3px;
+  font-weight: 700;
+  color: #fff;
+}
+.progress-pct--correct  { background: var(--correct); }
+.progress-pct--revealed { background: color-mix(in srgb, var(--warning) 85%, var(--text) 15%); }
+.progress-pct--missed   { background: var(--danger); }
+
 @media (max-width: 599px) {
   .progress-label { font-size: 0.62rem; }
 }

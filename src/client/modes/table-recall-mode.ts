@@ -78,7 +78,7 @@ import {
 import { readString, writeString } from '../utils/storage.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
 import { clearSummary } from '../ui/quiz-summary.ts';
-import { buildScorePills, scorePct, buildProgressStatsText } from '../ui/score-pills.ts';
+import { buildScorePills, scorePct, buildProgressStatsHtml } from '../ui/score-pills.ts';
 import { rowKey } from './table-mode.ts';
 import { buildHintOutcomePills } from './table-controls.ts';
 import { pageSlice, pageCountFor } from './table-controls.ts';
@@ -840,9 +840,9 @@ export function renderTableRecallMode({
       }
       if (stats) {
         // Same label shape as Standard style's own renderProgress — see
-        // buildProgressStatsText's doc comment.
-        stats.textContent = buildProgressStatsText(
-          { correct, revealed, missed, answered: done, total }, Settings.getProgressBarBreakdown(),
+        // buildProgressStatsHtml's doc comment.
+        stats.innerHTML = buildProgressStatsHtml(
+          { correct, revealed, missed, answered: done, total }, Settings.getProgressBarPercentMode(),
         );
         stats.classList.toggle('progress-label--done', total > 0 && done === total);
       }
@@ -941,7 +941,7 @@ export function renderTableRecallMode({
 
     // Correct/revealed/missed counts, and the final percentage, now live
     // only in the score pills and progress-bar label updateProgress() just
-    // redrew above (see buildProgressStatsText) — this style has no retry/
+    // redrew above (see buildProgressStatsHtml) — this style has no retry/
     // export action of its own (unlike Standard's buildSummaryHtml), so
     // there's nothing left for this strip to show.
     clearSummary('table');

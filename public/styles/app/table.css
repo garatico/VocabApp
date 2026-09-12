@@ -642,7 +642,10 @@
   gap: 0.75rem;
 }
 .table-nav-side { display: flex; align-items: center; }
-.table-nav-side--end { justify-content: flex-end; }
+/* gap, not each child's own margin, so the relocated Practice/Export
+   buttons (.quiz-summary--inline, see summary.css) space themselves the
+   same way the Jump buttons already do without needing their own copy. */
+.table-nav-side--end { justify-content: flex-end; gap: 0.5rem; }
 
 .table-pager {
   display: flex;
@@ -971,13 +974,13 @@
    than every rule above, including the mobile breakpoint's, so Compact wins
    regardless of viewport without needing to out-order any of them. */
 body.table-compact-rows #tableWrap {
-  font-size: 1.05rem;
+  font-size: 1rem;
 }
 body.table-compact-rows #tableWrap td {
-  padding: 3px 6px;
+  padding: 2px 6px;
 }
 body.table-compact-rows #tableWrap .spanish-word {
-  font-size: 1.05rem;
+  font-size: 1rem;
   min-height: 0;
   /* The corner badges below (rank/checkbox above, star/gender-dot/missed-
      count below) are positioned absolute against .word-cell, not against
@@ -987,7 +990,7 @@ body.table-compact-rows #tableWrap .spanish-word {
      rendering right on top of the word's own glyphs. This padding is sized
      to match the shrunk badge footprint just below, reserving their band
      rather than trying to squeeze everything into the same few pixels. */
-  padding: 12px 0 11px;
+  padding: 9px 0 8px;
 }
 body.table-compact-rows #tableWrap input[type="text"] {
   font-size: 0.92rem;
@@ -1012,33 +1015,33 @@ body.table-compact-rows #tableWrap input.recall-input[type="text"] {
    rank (top-left), bulk-select checkbox (top-right), known-list star and
    gender dot (bottom-left), missed-before count (bottom-right). */
 body.table-compact-rows #tableWrap .table-word-rank {
-  top: 1px;
-  left: 2px;
-  font-size: 0.62rem;
-  padding: 0 0.2em;
+  top: 0;
+  left: 1px;
+  font-size: 0.52rem;
+  padding: 0 0.15em;
 }
 body.table-compact-rows #tableWrap .row-select-cb {
-  top: 1px;
-  right: 2px;
-  width: 10px;
-  height: 10px;
+  top: 0;
+  right: 1px;
+  width: 8px;
+  height: 8px;
 }
 body.table-compact-rows #tableWrap .word-cell--known::after {
-  bottom: 1px;
-  left: 2px;
-  font-size: 0.6rem;
+  bottom: 0;
+  left: 1px;
+  font-size: 0.5rem;
 }
 body.table-compact-rows #tableWrap .word-cell > .gender-dot {
-  bottom: 2px;
-  left: 11px;
-  width: 6px;
-  height: 6px;
+  bottom: 1px;
+  left: 9px;
+  width: 5px;
+  height: 5px;
 }
 body.table-compact-rows #tableWrap .table-word--trouble::before {
-  bottom: 1px;
-  right: 2px;
-  font-size: 0.58rem;
-  padding: 0 0.3em;
+  bottom: 0;
+  right: 1px;
+  font-size: 0.48rem;
+  padding: 0 0.25em;
 }
 
 /* ── Ultra Compact row density — Settings › Table Quiz › Layout › Row
@@ -1051,55 +1054,55 @@ body.table-compact-rows #tableWrap .table-word--trouble::before {
    as the Compact rules above (one body class each), so source order is
    what makes these win — must stay below them in this file. */
 body.table-ultra-compact-rows #tableWrap {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
 }
 body.table-ultra-compact-rows #tableWrap td {
-  padding: 2px 5px;
+  padding: 1px 4px;
 }
 body.table-ultra-compact-rows #tableWrap .spanish-word {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   min-height: 0;
   /* Tighter than Compact's own — see that block's identical comment for
      why this exists at all. Shrunk to match the smaller badges below. */
-  padding: 10px 0 9px;
+  padding: 8px 0 7px;
 }
 body.table-ultra-compact-rows #tableWrap input[type="text"] {
-  font-size: 0.82rem;
-  padding: 0 3px;
+  font-size: 0.78rem;
+  padding: 0 2px;
   min-height: 0;
 }
 /* Same reasoning as Compact's own identical override just above — one
    prominent shared field, not a per-row cell. */
 body.table-ultra-compact-rows #tableWrap input.recall-input[type="text"] {
-  padding: 5px 7px;
-  min-height: 26px;
+  padding: 4px 6px;
+  min-height: 24px;
 }
 body.table-ultra-compact-rows #tableWrap .table-word-rank {
   top: 0;
   left: 1px;
-  font-size: 0.55rem;
-  padding: 0 0.15em;
+  font-size: 0.42rem;
+  padding: 0 0.1em;
 }
 body.table-ultra-compact-rows #tableWrap .row-select-cb {
   top: 0;
   right: 1px;
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 body.table-ultra-compact-rows #tableWrap .word-cell--known::after {
   bottom: 0;
   left: 1px;
-  font-size: 0.5rem;
+  font-size: 0.4rem;
 }
 body.table-ultra-compact-rows #tableWrap .word-cell > .gender-dot {
-  bottom: 1px;
-  left: 8px;
-  width: 5px;
-  height: 5px;
+  bottom: 0;
+  left: 6px;
+  width: 4px;
+  height: 4px;
 }
 body.table-ultra-compact-rows #tableWrap .table-word--trouble::before {
   bottom: 0;
   right: 1px;
-  font-size: 0.48rem;
-  padding: 0 0.25em;
+  font-size: 0.38rem;
+  padding: 0 0.2em;
 }

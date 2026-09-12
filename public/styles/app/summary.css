@@ -34,6 +34,24 @@
   flex-wrap: wrap;
 }
 
+/* Table mode's own two slots (tableSummaryTop/tableSummary) sit inline in
+   the Jump to Top/Bottom row instead of as their own full-width bar — see
+   index.html. Table's buildSummaryHtml only ever puts Practice/Export
+   buttons in these now (the percentage moved into the progress bar's own
+   label — see score-pills.ts's buildProgressStatsText), so there's no
+   pill/text content left here that needs the boxed treatment; empty and
+   `display:none` (via quiz-summary.ts's clearSummary) whenever there's
+   nothing to retry or export. */
+.quiz-summary--inline {
+  padding: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+  margin-top: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
 /* Stat pills */
 .summary-correct,
 .summary-missed {
