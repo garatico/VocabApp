@@ -1060,32 +1060,35 @@ body.table-ultra-compact-rows #tableWrap input.recall-input[type="text"] {
   padding: 4px 6px;
   min-height: 24px;
 }
+/* left shifted from 1px to 4px, and the star below to match — a known-list
+   word cell (word-cell--known, table.css ~line 524) carries a 3px inset
+   accent bar down its left edge, and at 1px both badges sat underneath it. */
 body.table-ultra-compact-rows #tableWrap .table-word-rank {
   top: 0;
-  left: 1px;
-  font-size: 0.42rem;
+  left: 4px;
+  font-size: 0.48rem;
   padding: 0 0.1em;
 }
 body.table-ultra-compact-rows #tableWrap .row-select-cb {
   top: 0;
   right: 1px;
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 body.table-ultra-compact-rows #tableWrap .word-cell--known::after {
   bottom: 0;
-  left: 1px;
-  font-size: 0.4rem;
+  left: 4px;
+  font-size: 0.46rem;
 }
 body.table-ultra-compact-rows #tableWrap .word-cell > .gender-dot {
   bottom: 0;
-  left: 6px;
+  left: 9px;
   width: 4px;
   height: 4px;
 }
 body.table-ultra-compact-rows #tableWrap .table-word--trouble::before {
   bottom: 0;
   right: 1px;
-  font-size: 0.38rem;
+  font-size: 0.44rem;
   padding: 0 0.2em;
 }
