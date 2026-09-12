@@ -8,7 +8,7 @@
  */
 
 import type { Word } from '../types.js';
-import { buildGlossDisplay, displayWord, wordAndAnnotation, genderKey } from './utils.js';
+import { buildGlossDisplay, wordAndAnnotation, genderKey } from './utils.js';
 import { renderWordWithGender, applyGenderContainer } from './dom.js';
 import { PRONOUNS as LANG_PRONOUNS, TENSE_DEFS } from '../modes/conjugation/data.js';
 import { logger } from './logger.js';

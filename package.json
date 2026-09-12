@@ -68,6 +68,9 @@
   "engines": {
     "node": ">=20"
   },
+  "overrides": {
+    "qs": "^6.16.0"
+  },
   "lint-staged": {
     "*.{ts,js}": "eslint"
   }
