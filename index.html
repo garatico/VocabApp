@@ -29,6 +29,7 @@
 <link rel="stylesheet" href="/styles/app/buttons.css"/>
 <link rel="stylesheet" href="/styles/app/selects.css"/>
 <link rel="stylesheet" href="/styles/app/mode-tabs.css"/>
+<link rel="stylesheet" href="/styles/app/streak-widget.css"/>
 <link rel="stylesheet" href="/styles/app/controls-bar.css"/>
 <link rel="stylesheet" href="/styles/app/class-filter.css"/>
 <link rel="stylesheet" href="/styles/app/domain-filter.css"/>
@@ -75,6 +76,13 @@
   </div>
 
   <main>
+
+      <!-- Streak counter — see src/client/ui/streak-widget.ts. Fixed rather
+           than living inside #controls like #shortcutsBtn, since #controls
+           is hidden entirely on My Lists/Settings/History/My Content/AI
+           Chat (ui-state.ts) and this needs to show on every tab. Settings
+           > Streak & Daily Goal controls whether it shows and how it reads. -->
+      <div id="streakWidget" class="streak-widget" title="Current streak" hidden></div>
 
       <!-- Mode Tabs -->
       <div class="mode-tabs" role="tablist" aria-label="Quiz mode">
@@ -1481,6 +1489,29 @@
                 <span data-i18n="settings.streak.today">Today's progress</span>
               </div>
               <div class="settings-readout" id="streakTodayReadout">0 words</div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.showWidget">Streak counter</span>
+                <span class="settings-desc" data-i18n="settings.streak.showWidgetDesc">A small 🔥 counter in the top-right corner, visible on every tab.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingShowStreakWidget">
+                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.widgetFormat">Streak counter format</span>
+                <span class="settings-desc" data-i18n="settings.streak.widgetFormatDesc">How the top-right streak counter arranges the fire emoji and the day count.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingStreakWidgetFormat">
+                <button type="button" class="sort-order-btn active" data-format="emoji-number" data-i18n="settings.streak.widgetFormatEmojiFirst">🔥 N</button>
+                <button type="button" class="sort-order-btn" data-format="number-emoji" data-i18n="settings.streak.widgetFormatNumberFirst">N 🔥</button>
+                <button type="button" class="sort-order-btn" data-format="number-only" data-i18n="settings.streak.widgetFormatNumberOnly">N</button>
+              </div>
             </div>
 
             <div class="settings-row">

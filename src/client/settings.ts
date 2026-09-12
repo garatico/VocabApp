@@ -14,6 +14,7 @@ import type { GenderIndicatorStyle, GenderIndicatorVisibility } from './utils/do
 import { fillHighlighted } from './utils/dom.ts';
 import { foldKey } from './utils/match.ts';
 import type { ProgressBarPercentMode } from './ui/score-pills.ts';
+import type { StreakWidgetFormat } from './ui/streak-widget.ts';
 
 /**
  * settings.ts — persistent quiz preferences.
@@ -529,6 +530,15 @@ export const Settings = {
    */
   getAdvancedMode: (): boolean => get('advanced_mode', 'false') === 'true',
 
+  /** The top-right 🔥 streak counter (see ui/streak-widget.ts) — shown on
+   *  every tab, unlike #shortcutsBtn which lives inside #controls and is
+   *  hidden on several of them. On by default. */
+  getShowStreakWidget: (): boolean => get('show_streak_widget', 'true') === 'true',
+
+  /** Where the fire emoji sits relative to the day count in that counter,
+   *  or 'number-only' to drop the emoji entirely. */
+  getStreakWidgetFormat: (): StreakWidgetFormat => get('streak_widget_format', 'emoji-number') as StreakWidgetFormat,
+
   // ── Appearance ────────────────────────────────────────────────────────────
   getFontSize: (): FontSize => get('font_size', 'medium') as FontSize,
 
@@ -907,6 +917,14 @@ export function setOnPageSizeChange(fn: () => void): void {
   onPageSizeChange = fn;
 }
 
+/** Notified when either streak-widget setting changes, so the top-right
+ *  counter updates immediately rather than only on next page load. */
+const onStreakWidgetChangeListeners: (() => void)[] = [];
+
+export function setOnStreakWidgetChange(fn: () => void): void {
+  onStreakWidgetChangeListeners.push(fn);
+}
+
 /**
  * Notified when the "Show timer" toggle changes, so a quiz already on screen
  * shows/hides the clock immediately rather than only on next visit.
@@ -1013,6 +1031,24 @@ export function bindSettings(): void {
     if (!btn) return;
     activateToggle('settingProgressBarHintBreakdown', btn);
     set('progress_bar_hint_breakdown', btn.dataset.show ?? 'false');
+  });
+
+  // Streak counter — shown/hidden
+  document.getElementById('settingShowStreakWidget')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingShowStreakWidget', btn);
+    set('show_streak_widget', btn.dataset.show ?? 'true');
+    onStreakWidgetChangeListeners.forEach(fn => fn());
+  });
+
+  // Streak counter — emoji/number arrangement
+  document.getElementById('settingStreakWidgetFormat')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn?.dataset.format) return;
+    activateToggle('settingStreakWidgetFormat', btn);
+    set('streak_widget_format', btn.dataset.format as StreakWidgetFormat);
+    onStreakWidgetChangeListeners.forEach(fn => fn());
   });
 
   // Column count
@@ -1873,6 +1909,16 @@ function restoreSettingsUI(): void {
   const savedProgressHintBreakdown = String(Settings.getProgressBarShowHintBreakdown());
   document.querySelectorAll<HTMLElement>('#settingProgressBarHintBreakdown .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.show === savedProgressHintBreakdown);
+  });
+
+  // Streak counter — shown/hidden and format
+  const savedShowStreakWidget = String(Settings.getShowStreakWidget());
+  document.querySelectorAll<HTMLElement>('#settingShowStreakWidget .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedShowStreakWidget);
+  });
+  const savedStreakWidgetFormat = Settings.getStreakWidgetFormat();
+  document.querySelectorAll<HTMLElement>('#settingStreakWidgetFormat .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.format === savedStreakWidgetFormat);
   });
 
   // Cols

@@ -30,6 +30,7 @@ import { refreshFilterSelect }                  from './utils/word-lists.ts';
 import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, setOnKidFriendlyModeChange, refreshStreakReadouts } from './settings.ts';
 import { onActivity } from './utils/streak.ts';
 import { showToast } from './ui/toast.ts';
+import { initStreakWidget } from './ui/streak-widget.ts';
 import { applyTranslations } from './i18n/index.ts';
 import { initShortcuts }                         from './ui/shortcuts-overlay.ts';
 import { openLanguagePicker, languagePickerLabel } from './ui/language-picker.ts';
@@ -1155,6 +1156,7 @@ void (async function init(): Promise<void> {
   initSectionCollapse();
   bindTableControls();
   bindSettings();
+  initStreakWidget();
   initShortcuts();
   initReloadButton();
   initListFilter(langSelect?.value ?? 'spanish');

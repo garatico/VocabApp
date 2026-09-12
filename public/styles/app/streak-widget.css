@@ -1,0 +1,48 @@
+/* ================================================================
+   STREAK WIDGET — persistent 🔥 counter, top-right corner, every tab.
+   See src/client/ui/streak-widget.ts.
+================================================================ */
+
+/* Same `[hidden]`-vs-class-`display` cascade tie this codebase hits
+   elsewhere (see my-content.css/conjugation.css) — same specificity as the
+   browser's own `[hidden] { display: none }`, and this file loads later, so
+   without this the element stays visually flex even once JS sets `hidden`. */
+.streak-widget[hidden] { display: none; }
+.streak-widget {
+  position: fixed;
+  top: 0.6rem;
+  /* Lines up with main's own right edge (max-width: 1600px, centered — see
+     reset.css) instead of the raw viewport edge, so this doesn't float off
+     in empty space on an ultra-wide monitor. Below that width the two edges
+     coincide, so this just reduces to the same 0.6rem inset. */
+  right: max(0.6rem, calc((100vw - 1600px) / 2 + 0.6rem));
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.65rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.streak-widget-emoji {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.streak-widget-count {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 767px) {
+  .streak-widget {
+    top: 0.45rem;
+    font-size: 0.78rem;
+    padding: 0.25rem 0.55rem;
+  }
+}
