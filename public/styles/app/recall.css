@@ -18,7 +18,12 @@
   padding: 0.32rem 0.9rem;
 }
 
-.recall-input-row { display: flex; gap: 0.6rem; align-items: center; }
+/* Equal top/bottom margin, set here rather than left to whatever
+   .tr-top-row above and the pager/grid below happened to contribute —
+   those used to add up to different totals on each side (0.6rem above,
+   0.5rem below only when the pager was hidden), reading as the input
+   sitting closer to the grid than to its own controls row. */
+.recall-input-row { display: flex; gap: 0.6rem; align-items: center; margin: 0.5rem 0; }
 
 .recall-input {
   font-family: 'DM Mono', monospace;

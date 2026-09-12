@@ -219,6 +219,15 @@ export const Settings = {
   getTableShowRank: (): boolean => get('table_show_rank', 'true') === 'true',
 
   /**
+   * Once a Table quiz is fully answered, its progress bar's own label
+   * switches from a now-meaningless "100%" to something that's actually
+   * still useful — see ui/score-pills.ts's buildProgressStatsText. Off
+   * (default) shows just the percent correct; on, a fuller breakdown of
+   * correct/revealed/missed percentages.
+   */
+  getProgressBarBreakdown: (): boolean => get('progress_bar_breakdown', 'false') === 'true',
+
+  /**
    * Row density — Comfortable (default) is the table's original sizing.
    * Compact shrinks it (see table.css's `body.table-compact-rows` block,
    * applied as a body class same as Kid-Friendly/Advanced mode) so more rows
@@ -979,6 +988,14 @@ export function bindSettings(): void {
     const select = e.target as HTMLSelectElement;
     set('ui_language', (select.value || 'english') as UILanguage);
     onUILanguageChange?.();
+  });
+
+  // Progress bar percentage — Correct only vs full breakdown, once complete
+  document.getElementById('settingProgressBarBreakdown')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingProgressBarBreakdown', btn);
+    set('progress_bar_breakdown', btn.dataset.show ?? 'false');
   });
 
   // Column count
@@ -1828,6 +1845,12 @@ function restoreSettingsUI(): void {
   // App interface language
   const uiLangSelect = document.getElementById('settingUILanguage') as HTMLSelectElement | null;
   if (uiLangSelect) uiLangSelect.value = get('ui_language', 'english');
+
+  // Progress bar percentage
+  const savedProgressBreakdown = get('progress_bar_breakdown', 'false');
+  document.querySelectorAll<HTMLElement>('#settingProgressBarBreakdown .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedProgressBreakdown);
+  });
 
   // Cols
   const savedCols = get('table_cols', '2');

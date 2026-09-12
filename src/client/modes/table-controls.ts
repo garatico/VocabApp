@@ -16,13 +16,13 @@ import { Settings, setOnPageSizeChange, setOnShowTimerChange } from '../settings
 // disagreeing progress models got here in the first place.
 import { markMastered } from './my-lists-mode.ts';
 import { logger } from '../utils/logger.ts';
-import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summary.ts';
+import { showSummary, clearSummary } from '../ui/quiz-summary.ts';
 import { readString, writeString } from '../utils/storage.ts';
 import {
   saveSession, recordOutcome, orderWords, getWordOrderLabels,
   type WordOrder, type WordOrderSortBy,
 } from '../utils/session-history.ts';
-import { buildScorePills, scorePct }     from '../ui/score-pills.ts';
+import { buildScorePills, scorePct, buildProgressStatsText } from '../ui/score-pills.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
 import type { Word } from '../types.js';
 
@@ -187,24 +187,17 @@ export function resolveDirection(): TableDirection {
 // ── Summaries ─────────────────────────────────────────────────────────────────
 
 /**
- * The end-of-quiz strip. Correct/missed counts deliberately live only in the
- * live score block under the progress bar — this strip carries the actions and
- * the final percentage.
+ * The end-of-quiz strip. Correct/missed counts, and the final percentage,
+ * live only in the progress bar and its label right above this (see
+ * buildProgressStatsText) — empty (nothing to show) whenever there's
+ * nothing missed to retry or export, rather than a strip that exists solely
+ * to repeat a percentage the bar already carries.
  */
 function buildSummaryHtml(results: CheckResult[]): string {
-  const correct = results.filter(r => r.ok).length;
-  const missed  = results.filter(r => !r.ok && r.word && r.expected);
-
-  let html = '';
-
-  if (missed.length > 0) {
-    html +=
-      `<button class="summary-retry-btn">↺ Practice ${missed.length}</button>` +
-      `<button class="summary-export-btn">↓ Export</button>`;
-  }
-
-  html += summaryChip('pct', `${percent(correct, results.length)}%`);
-  return html;
+  const missed = results.filter(r => !r.ok && r.word && r.expected);
+  if (missed.length === 0) return '';
+  return `<button class="summary-retry-btn">↺ Practice ${missed.length}</button>` +
+    `<button class="summary-export-btn">↓ Export</button>`;
 }
 
 // ── State snapshot ────────────────────────────────────────────────────────────
@@ -403,9 +396,11 @@ function renderProgress(): void {
 
   // The label now lives inside the bar, so it carries the percentage too —
   // there used to be a separate summary block that appeared solely to say
-  // "100%" once you finished.
-  const donePct    = total > 0 ? Math.round((answered / total) * 100) : 0;
-  const statsText  = total > 0 ? `${answered} / ${total}  ·  ${donePct}%` : '';
+  // "100%" once you finished. See buildProgressStatsText's own doc comment
+  // for what replaces that redundant 100% once the quiz is actually done.
+  const statsText  = buildProgressStatsText(
+    { correct, revealed, missed, answered, total }, Settings.getProgressBarBreakdown(),
+  );
   const scoreHtml  = buildScorePills({ correct, revealed, missed, left, total })
     + buildHintOutcomePills({ hintedCorrect, hintedRevealed, hintedMissed, hintedInProgress });
 
@@ -806,7 +801,9 @@ function performGiveUp(): void {
   });
 
   const allCorrect = results.every(r => r.ok);
-  showSummary('table', buildSummaryHtml(results), allCorrect);
+  const summaryHtml = buildSummaryHtml(results);
+  if (summaryHtml) showSummary('table', summaryHtml, allCorrect);
+  else clearSummary('table');
   wireSummaryButtons();
 }
 

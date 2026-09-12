@@ -28,19 +28,23 @@
   border-color: var(--accent);
 }
 
-/* ── Collapse-controls trigger — mirrors #shortcutsBtn's own circle, but in
-   the opposite (top-left) corner, since every other corner button here acts
-   on the controls rather than hiding them. Its arrow rotation comes from
-   .filter-collapse-arrow (class-filter.css) for free — this only overrides
-   position/shape, not the collapse behavior itself (section-collapse.ts). */
+/* ── Collapse-controls trigger — opposite (top-left) corner from
+   #shortcutsBtn, since every other corner button here acts on the controls
+   rather than hiding them. Square rather than a circle, and smaller, so it
+   reads as a distinct kind of control (a section collapse toggle, matching
+   filter-collapse-btn's own square-ish footprint elsewhere) rather than
+   another circular icon button like its neighbors. Its arrow rotation
+   comes from .filter-collapse-arrow (class-filter.css) for free — this
+   only overrides position/shape, not the collapse behavior itself
+   (section-collapse.ts). */
 #controlsCollapseBtn.controls-collapse-btn {
   position: absolute;
   top: 0.5rem;
   left: 0.6rem;
-  width: 30px;
-  height: 30px;
+  width: 22px;
+  height: 22px;
   padding: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text-muted);
@@ -55,7 +59,7 @@
   border-color: var(--accent);
 }
 #controlsCollapseBtn.controls-collapse-btn .filter-collapse-arrow {
-  font-size: 0.95rem;
+  font-size: 0.8rem;
 }
 
 /* Collapsed: #controlsBody (everything but the corner buttons) is display:

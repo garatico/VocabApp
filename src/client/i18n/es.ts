@@ -249,6 +249,8 @@ export const es: Record<string, string> = {
   'settings.table.densityComfortable':   'Cómoda',
   'settings.table.densityCompact':       'Compacta',
   'settings.table.densityUltra':         'Ultra Compacta',
+  'settings.table.progressBarBreakdown':     'Porcentaje de la barra de progreso',
+  'settings.table.progressBarBreakdownDesc': 'Una vez que un quiz está completamente respondido, la etiqueta de su barra de progreso cambia de un "100%" ya sin sentido a algo todavía útil. Desactivado muestra solo el porcentaje correcto. Activado muestra un desglose más completo — porcentaje correcto, porcentaje revelado, porcentaje fallado.',
   'settings.table.questionGlosses':      'Significados de la pregunta',
   'settings.table.questionGlossesDesc':  'Cuántos significados en inglés se muestran en el cuadro de pregunta cuando una palabra tiene varios (p. ej. "to speak / to talk")',
 

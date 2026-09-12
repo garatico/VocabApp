@@ -77,8 +77,8 @@ import {
 } from '../utils/session-history.ts';
 import { readString, writeString } from '../utils/storage.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
-import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summary.ts';
-import { buildScorePills, scorePct } from '../ui/score-pills.ts';
+import { clearSummary } from '../ui/quiz-summary.ts';
+import { buildScorePills, scorePct, buildProgressStatsText } from '../ui/score-pills.ts';
 import { rowKey } from './table-mode.ts';
 import { buildHintOutcomePills } from './table-controls.ts';
 import { pageSlice, pageCountFor } from './table-controls.ts';
@@ -839,9 +839,11 @@ export function renderTableRecallMode({
         (hintProgressBar as HTMLElement).style.width = hintProgressPct + '%';
       }
       if (stats) {
-        // Same "N / M  ·  P%" shape as Standard style's own renderProgress.
-        const donePct = total > 0 ? Math.round((done / total) * 100) : 0;
-        stats.textContent = total > 0 ? `${done} / ${total}  ·  ${donePct}%` : '';
+        // Same label shape as Standard style's own renderProgress — see
+        // buildProgressStatsText's doc comment.
+        stats.textContent = buildProgressStatsText(
+          { correct, revealed, missed, answered: done, total }, Settings.getProgressBarBreakdown(),
+        );
         stats.classList.toggle('progress-label--done', total > 0 && done === total);
       }
       if (score) score.innerHTML = scoreHtml;
@@ -937,19 +939,12 @@ export function renderTableRecallMode({
     recordSession();
     updateProgress();
 
-    // Correct/revealed/missed counts deliberately live only in the score
-    // pills updateProgress() just redrew above (see table-controls.ts's own
-    // buildSummaryHtml, which this mirrors) — this strip carries only the
-    // final percentage, not a second copy of the same three numbers.
-    let correct = 0, revealed = 0, missed = 0;
-    sorted.forEach(w => {
-      const s = rowState(w);
-      if (s === 'correct') correct++; else if (s === 'revealed') revealed++; else if (s === 'missed') missed++;
-    });
-    showSummary('table',
-      summaryChip('pct', `${percent(correct, sorted.length)}%`),
-      sorted.length > 0 && revealed === 0 && missed === 0,
-    );
+    // Correct/revealed/missed counts, and the final percentage, now live
+    // only in the score pills and progress-bar label updateProgress() just
+    // redrew above (see buildProgressStatsText) — this style has no retry/
+    // export action of its own (unlike Standard's buildSummaryHtml), so
+    // there's nothing left for this strip to show.
+    clearSummary('table');
   }
 
   giveUpBtn.addEventListener('click', finish);
