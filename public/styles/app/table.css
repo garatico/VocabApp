@@ -272,6 +272,17 @@
   letter-spacing: -0.025em;
   line-height: 1.25;
 }
+/* Standard style puts .spanish-word straight in the <td>, where the cell's
+   own centering is enough. Recall/Double Recall wrap it in .input-row
+   instead (so 'double' style's per-side hint/reveal buttons can sit beside
+   it) — a flex row with no `justify-content: center` of its own left the
+   word hugging the start edge instead, sized to its own content rather
+   than the row. Stretching it to fill that row lets its own centering
+   above actually center within the full width, matching Standard. */
+#tableWrap .input-row .spanish-word {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 
 /* Sense clarifier, e.g. "be (permanent)" — this cell only ever carries one
    when it's the *given* side (the prompt, nothing left to guess about it),
@@ -1020,4 +1031,30 @@ body.table-compact-rows #tableWrap .table-word--trouble::before {
   right: 2px;
   font-size: 0.58rem;
   padding: 0 0.3em;
+}
+
+/* ── Ultra Compact row density — Settings › Table Quiz › Layout › Row
+   density. Builds on Compact's rules above (a row gets both body classes —
+   see applyTableRowDensity in settings.ts) but goes shorter still, because
+   table-mode.ts/table-recall-mode.ts force the rank badge, list-star/
+   missed-count markers, and gender indicator off while it's active — with
+   none of those left to clear, .spanish-word needs none of Compact's own
+   reserved top/bottom padding. Same specificity as the Compact rules above
+   (one body class each), so source order is what makes these win — must
+   stay below them in this file. */
+body.table-ultra-compact-rows #tableWrap {
+  font-size: 0.95rem;
+}
+body.table-ultra-compact-rows #tableWrap td {
+  padding: 2px 5px;
+}
+body.table-ultra-compact-rows #tableWrap .spanish-word {
+  font-size: 0.95rem;
+  min-height: 0;
+  padding: 0;
+}
+body.table-ultra-compact-rows #tableWrap input[type="text"] {
+  font-size: 0.82rem;
+  padding: 0 3px;
+  min-height: 0;
 }

@@ -132,8 +132,12 @@ export function renderTableRecallMode({
 
   const indicatorMode = Settings.getLangIndicator();
   container.classList.toggle('lang-indicator-flag', indicatorMode === 'flag');
-  container.classList.toggle('hide-rank', !Settings.getTableShowRank());
-  container.classList.toggle('hide-word-markers', !Settings.getTableShowWordMarkers());
+  // Ultra Compact overrides rank/markers/gender off outright — see
+  // getTableRowDensity's own doc comment and table-mode.ts's identical use
+  // of this flag. Their individual settings stay untouched in storage.
+  const ultraCompact = Settings.getTableRowDensity() === 'ultra';
+  container.classList.toggle('hide-rank', ultraCompact || !Settings.getTableShowRank());
+  container.classList.toggle('hide-word-markers', ultraCompact || !Settings.getTableShowWordMarkers());
 
   let wordOrder: WordOrder =
     (readString('vq_table_order') as WordOrder | null) ?? 'rank';
@@ -463,7 +467,7 @@ export function renderTableRecallMode({
         // has nothing to wrap yet and picks up once paintWordCell/
         // paintWordHint actually put text in the cell.
         const gKey = genderKey(w);
-        const indicatorStyle = Settings.getGenderIndicatorStyle();
+        const indicatorStyle = ultraCompact ? 'off' : Settings.getGenderIndicatorStyle();
         const showGenderAtStart = shouldShowGenderIndicator(
           Settings.getGenderIndicatorVisibility(), { hinted: false, revealed: false },
         );

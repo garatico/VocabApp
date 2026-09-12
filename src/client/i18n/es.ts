@@ -245,9 +245,10 @@ export const es: Record<string, string> = {
   'settings.table.pageSize':             'Palabras por página',
   'settings.table.pageSizeDesc':         'Cuántas palabras muestra una página de tabla antes de dividirse en páginas que recorres con las flechas — Todas pone todo en una sola página',
   'settings.table.rowDensity':           'Densidad de filas',
-  'settings.table.rowDensityDesc':       'Cuánto espacio vertical ocupa cada fila de palabra. Compacta reduce la palabra, el campo de respuesta y el relleno de la celda para que quepan más filas en pantalla a la vez, sin cambiar nada de cómo funciona el quiz.',
+  'settings.table.rowDensityDesc':       'Cuánto espacio vertical ocupa cada fila de palabra. Compacta reduce la palabra, el campo de respuesta y el relleno de la celda para que quepan más filas en pantalla a la vez, sin cambiar nada de cómo funciona el quiz. Ultra Compacta la reduce todavía más — lo suficiente como para necesitar el espacio que normalmente ocupan el rango de frecuencia, los marcadores de lista/fallos y el indicador de género, así que los desactiva a los tres mientras esté activa, sin importar sus propios ajustes de abajo y en Apariencia. Al desactivar Ultra Compacta se restaura lo que ya tenían configurado.',
   'settings.table.densityComfortable':   'Cómoda',
   'settings.table.densityCompact':       'Compacta',
+  'settings.table.densityUltra':         'Ultra Compacta',
   'settings.table.questionGlosses':      'Significados de la pregunta',
   'settings.table.questionGlossesDesc':  'Cuántos significados en inglés se muestran en el cuadro de pregunta cuando una palabra tiene varios (p. ej. "to speak / to talk")',
 

@@ -93,6 +93,18 @@
       </div>
 
       <div id="controls">
+        <!-- Collapses everything below (#controlsBody) down to just this
+             corner strip, so a quiz already in progress can have the full
+             screen without the language/word/filter controls above it
+             taking up room. Reuses section-collapse.ts's own data-collapse
+             contract (see filter-collapse-btn elsewhere) rather than a
+             bespoke toggle, so state persists and the arrow rotation comes
+             free — controls-collapse-btn just repositions/reshapes it into
+             this corner instead of an inline text-label button. Starts open:
+             this is the very first thing a new visitor sees. -->
+        <button type="button" id="controlsCollapseBtn" class="filter-collapse-btn controls-collapse-btn" data-collapse="controlsBody" data-default-open="true" aria-expanded="true" aria-controls="controlsBody" aria-label="Collapse quiz controls" title="Collapse quiz controls">
+          <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
+        </button>
         <button id="shortcutsBtn" aria-label="Keyboard shortcuts (?)">?</button>
         <!-- Packaged desktop builds have no browser chrome at all — no
              reload button, no F5 shortcut past what Tauri's WebView passes
@@ -109,6 +121,8 @@
              ui-state.ts. Full CRUD (rename/delete beyond save-here) lives in
              My Lists — see my-lists/profiles-panel.ts. -->
         <button type="button" id="presetsBtn" data-kid-hide="true" aria-label="Testing Profiles" title="Testing Profiles" data-i18n-aria-label="controls.profiles" data-i18n-title="controls.profiles" data-i18n="controls.profiles">Profiles</button>
+
+        <div id="controlsBody" class="filter-body">
         <div id="controls-top">
           <!-- Language and the multi-language picker share one column —
                the picker is a secondary row under Language(s) rather than
@@ -645,6 +659,7 @@
           </div>
         </div>
 
+        </div>
       </div>
 
       <!-- Onboarding tip — shown on first visit, dismissable, re-triggerable from Settings -->
@@ -922,11 +937,12 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.table.rowDensity">Row density</span>
-                <span class="settings-desc" data-i18n="settings.table.rowDensityDesc">How much vertical space each word row takes up. Compact shrinks the word, input and cell padding so more rows fit on screen at once, without changing anything about how the quiz itself works.</span>
+                <span class="settings-desc" data-i18n="settings.table.rowDensityDesc">How much vertical space each word row takes up. Compact shrinks the word, input and cell padding so more rows fit on screen at once, without changing anything about how the quiz itself works. Ultra Compact shrinks it further still — enough to need the room the frequency rank, list-star/missed-count markers, and gender indicator normally take, so it overrides all three off while active, regardless of their own settings below and in Appearance. Turning Ultra Compact back off restores whatever those were already set to.</span>
               </div>
               <div class="sort-order-toggle" id="settingTableRowDensity">
                 <button type="button" class="sort-order-btn active" data-density="comfortable" data-i18n="settings.table.densityComfortable">Comfortable</button>
                 <button type="button" class="sort-order-btn" data-density="compact" data-i18n="settings.table.densityCompact">Compact</button>
+                <button type="button" class="sort-order-btn" data-density="ultra" data-i18n="settings.table.densityUltra">Ultra Compact</button>
               </div>
             </div>
 

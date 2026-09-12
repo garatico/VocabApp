@@ -28,6 +28,45 @@
   border-color: var(--accent);
 }
 
+/* ── Collapse-controls trigger — mirrors #shortcutsBtn's own circle, but in
+   the opposite (top-left) corner, since every other corner button here acts
+   on the controls rather than hiding them. Its arrow rotation comes from
+   .filter-collapse-arrow (class-filter.css) for free — this only overrides
+   position/shape, not the collapse behavior itself (section-collapse.ts). */
+#controlsCollapseBtn.controls-collapse-btn {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.6rem;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast),
+              border-color var(--transition-fast);
+  z-index: 2;
+  justify-content: center;
+}
+#controlsCollapseBtn.controls-collapse-btn:hover {
+  background: var(--surface2);
+  border-color: var(--accent);
+}
+#controlsCollapseBtn.controls-collapse-btn .filter-collapse-arrow {
+  font-size: 0.95rem;
+}
+
+/* Collapsed: #controlsBody (everything but the corner buttons) is display:
+   none via .filter-body--collapsed, which would otherwise let #controls
+   shrink to zero height — every corner button is position:absolute and so
+   contributes nothing to its own height. */
+#controls:has(#controlsBody.filter-body--collapsed) {
+  min-height: 2.6rem;
+  padding-bottom: 0;
+}
+
 /* ── Reload button — packaged desktop builds only (see index.html's own
    comment); same circular shape as #shortcutsBtn, far enough left that
    #presetsBtn's pill (up to ~4.4rem wide, starting at right: 2.75rem) never

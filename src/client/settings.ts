@@ -76,6 +76,8 @@ function setHiddenFilterModes(legacyKey: string, modes: Set<string>): void {
  *  placeholders disabled until translated. */
 export type UILanguage = 'english' | 'spanish';
 
+export type TableRowDensity = 'comfortable' | 'compact' | 'ultra';
+
 /** Grid class for each mode. 'close' needs none — it is the base behaviour. */
 export const CONJ_DESELECTED_CLASS: Record<ConjDeselected, string> = {
   close:  '',
@@ -217,13 +219,21 @@ export const Settings = {
   getTableShowRank: (): boolean => get('table_show_rank', 'true') === 'true',
 
   /**
-   * Row density — Comfortable (default) is the table's original sizing;
-   * Compact shrinks it (see table.css's `body.table-compact-rows` block) so
-   * more rows fit on screen at once. Applied as a body class rather than
-   * read per-render, same as Kid-Friendly/Advanced mode, since it's a pure
-   * CSS change with nothing for table-mode.ts itself to compute differently.
+   * Row density — Comfortable (default) is the table's original sizing.
+   * Compact shrinks it (see table.css's `body.table-compact-rows` block,
+   * applied as a body class same as Kid-Friendly/Advanced mode) so more rows
+   * fit on screen. Ultra Compact shrinks it further still (`body.table-
+   * ultra-compact-rows`) — it can go tighter than Compact specifically
+   * because table-mode.ts/table-recall-mode.ts both read this getter too,
+   * and force the frequency-rank badge, list-star/missed-count markers, and
+   * gender indicator off while it's active regardless of their own
+   * individual settings — see those settings' own getters, which stay
+   * unread and untouched so switching back to Compact/Comfortable restores
+   * whatever they were set to. Without that override there'd be no clear
+   * row left to shrink into; corner badges sized for Compact's row would
+   * collide the same way they did before Compact got its own clearance.
    */
-  getTableCompactRows: (): boolean => get('table_compact_rows', 'false') === 'true',
+  getTableRowDensity: (): TableRowDensity => get('table_row_density', 'comfortable') as TableRowDensity,
 
   /** The list star and "missed before" count badge, across every Table quiz style. */
   getTableShowWordMarkers: (): boolean => get('table_show_word_markers', 'true') === 'true',
@@ -800,6 +810,14 @@ function activateToggle(groupId: string, btn: HTMLButtonElement): void {
   btn.classList.add('active');
 }
 
+/** Table row density's two body classes — Ultra Compact carries both (its
+ *  own CSS block in table.css builds on Compact's rather than repeating
+ *  it), Compact carries only the first, Comfortable neither. */
+function applyTableRowDensity(density: TableRowDensity): void {
+  document.body.classList.toggle('table-compact-rows', density === 'compact' || density === 'ultra');
+  document.body.classList.toggle('table-ultra-compact-rows', density === 'ultra');
+}
+
 /** The Sense disambiguator row's three independent sub-toggles — shared
  *  between the click-binding block and syncDisambiguatorAll below, so
  *  adding a fourth surface later means updating this list once. */
@@ -975,14 +993,14 @@ export function bindSettings(): void {
     set('table_cols', btn.dataset.cols ?? '2');
   });
 
-  // Row density — Comfortable (default) vs Compact (see getTableCompactRows)
+  // Row density — Comfortable / Compact / Ultra Compact (see getTableRowDensity)
   document.getElementById('settingTableRowDensity')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
+    if (!btn?.dataset.density) return;
     activateToggle('settingTableRowDensity', btn);
-    const compact = btn.dataset.density === 'compact';
-    set('table_compact_rows', String(compact));
-    document.body.classList.toggle('table-compact-rows', compact);
+    const density = btn.dataset.density as TableRowDensity;
+    set('table_row_density', density);
+    applyTableRowDensity(density);
   });
 
   // Words per page (table mode)
@@ -1822,11 +1840,11 @@ function restoreSettingsUI(): void {
   });
 
   // Row density
-  const savedCompactRows = Settings.getTableCompactRows();
+  const savedDensity = Settings.getTableRowDensity();
   document.querySelectorAll<HTMLElement>('#settingTableRowDensity .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', (b.dataset.density === 'compact') === savedCompactRows);
+    b.classList.toggle('active', b.dataset.density === savedDensity);
   });
-  document.body.classList.toggle('table-compact-rows', savedCompactRows);
+  applyTableRowDensity(savedDensity);
 
   // Words per page
   const savedPageSize = get('table_page_size', '100');

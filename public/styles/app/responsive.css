@@ -27,7 +27,7 @@
   #controls-top { flex-wrap: wrap; gap: 0.5rem; }
 
   #tableWrap { font-size: 1.2rem; }
-  #tableWrap input[type="text"] { font-size: 1.1rem; min-height: 42px; }
+  #tableWrap input[type="text"] { font-size: 1.1rem; min-height: 36px; }
 }
 
 /* ── Small desktop (768px – 1023px) ── */
@@ -37,11 +37,11 @@
   #controls-top { gap: 0.6rem; }
 
   #tableWrap { font-size: 1.35rem; }
-  #tableWrap input[type="text"] { font-size: 1.2rem; min-height: 44px; }
+  #tableWrap input[type="text"] { font-size: 1.2rem; min-height: 34px; }
 }
 
 /* ── Large desktop (1024px+) ── */
 @media (min-width: 1024px) {
   #tableWrap { font-size: 1.5rem; }
-  #tableWrap input[type="text"] { font-size: 1.25rem; min-height: 46px; }
+  #tableWrap input[type="text"] { font-size: 1.25rem; min-height: 36px; }
 }
