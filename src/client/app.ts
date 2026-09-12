@@ -888,10 +888,19 @@ conjRandomTableSizeCustomEl?.addEventListener('input', () => {
   S.set('vq_conj_random_table_size_custom', conjRandomTableSizeCustomEl.value);
 });
 
+// loadAndBuildFilters() re-sorts the whole vocabulary, rebuilds the filter
+// checkboxes, and recounts every domain/part-of-speech across the full list —
+// firing it on every keystroke (e.g. typing "500" fires it three times) made
+// the custom word-count field visibly lag, worst on the Tauri build's
+// webview. Debounced so it only runs once typing pauses.
 const sizeCustomInput = document.getElementById('sizeCustom') as HTMLInputElement | null;
+let sizeCustomDebounce: ReturnType<typeof setTimeout> | undefined;
 sizeCustomInput?.addEventListener('input', () => {
   S.set('vq_size_custom', sizeCustomInput.value);
-  void loadAndBuildFilters(langSelect?.value ?? 'spanish');
+  clearTimeout(sizeCustomDebounce);
+  sizeCustomDebounce = setTimeout(() => {
+    void loadAndBuildFilters(langSelect?.value ?? 'spanish');
+  }, 300);
 });
 
 document.getElementById('classFilter')
