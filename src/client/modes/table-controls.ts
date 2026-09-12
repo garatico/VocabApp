@@ -399,7 +399,8 @@ function renderProgress(): void {
   // "100%" once you finished. See buildProgressStatsHtml's own doc comment
   // for what replaces that redundant 100% once the quiz is actually done.
   const statsHtml  = buildProgressStatsHtml(
-    { correct, revealed, missed, answered, total }, Settings.getProgressBarPercentMode(),
+    { correct, revealed, missed, answered, total, hintedCorrect, hintedRevealed, hintedMissed },
+    Settings.getProgressBarPercentMode(), Settings.getProgressBarShowHintBreakdown(),
   );
   const scoreHtml  = buildScorePills({ correct, revealed, missed, left, total })
     + buildHintOutcomePills({ hintedCorrect, hintedRevealed, hintedMissed, hintedInProgress });

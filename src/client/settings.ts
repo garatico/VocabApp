@@ -229,6 +229,13 @@ export const Settings = {
    */
   getProgressBarPercentMode: (): ProgressBarPercentMode => get('progress_bar_percent_mode', 'correct') as ProgressBarPercentMode,
 
+  /** Adds Hinted → Solved / Hinted → Revealed / Hinted → Missed percentage
+   *  chips (of the hint-outcome pills already shown below the bar — see
+   *  buildHintOutcomePills) alongside whichever chips getProgressBarPercentMode
+   *  picks. Off by default since most learners never look past the plain
+   *  correct/missed split. */
+  getProgressBarShowHintBreakdown: (): boolean => get('progress_bar_hint_breakdown', 'false') === 'true',
+
   /**
    * Row density — Comfortable (default) is the table's original sizing.
    * Compact shrinks it (see table.css's `body.table-compact-rows` block,
@@ -998,6 +1005,14 @@ export function bindSettings(): void {
     if (!btn?.dataset.mode) return;
     activateToggle('settingProgressBarPercentMode', btn);
     set('progress_bar_percent_mode', btn.dataset.mode as ProgressBarPercentMode);
+  });
+
+  // Progress bar hint breakdown — adds Hinted -> Solved/Revealed/Missed chips
+  document.getElementById('settingProgressBarHintBreakdown')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingProgressBarHintBreakdown', btn);
+    set('progress_bar_hint_breakdown', btn.dataset.show ?? 'false');
   });
 
   // Column count
@@ -1852,6 +1867,12 @@ function restoreSettingsUI(): void {
   const savedProgressPercentMode = Settings.getProgressBarPercentMode();
   document.querySelectorAll<HTMLElement>('#settingProgressBarPercentMode .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.mode === savedProgressPercentMode);
+  });
+
+  // Progress bar hint breakdown
+  const savedProgressHintBreakdown = String(Settings.getProgressBarShowHintBreakdown());
+  document.querySelectorAll<HTMLElement>('#settingProgressBarHintBreakdown .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedProgressHintBreakdown);
   });
 
   // Cols

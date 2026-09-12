@@ -4,7 +4,7 @@
  * math, no DOM.
  */
 import { describe, it, expect } from 'vitest';
-import { buildScorePills, scorePct } from '../../src/client/ui/score-pills.js';
+import { buildScorePills, scorePct, buildProgressStatsHtml } from '../../src/client/ui/score-pills.js';
 
 describe('buildScorePills', () => {
   it('returns nothing for a zero-word quiz', () => {
@@ -40,5 +40,43 @@ describe('scorePct', () => {
 
   it('is 0 when n is 0', () => {
     expect(scorePct(0, 10)).toBe(0);
+  });
+});
+
+describe('buildProgressStatsHtml', () => {
+  const base = { correct: 6, revealed: 2, missed: 2, answered: 10, total: 10 };
+
+  it('returns nothing for a zero-word quiz', () => {
+    expect(buildProgressStatsHtml({ ...base, total: 0 }, 'correct')).toBe('');
+  });
+
+  it('shows a plain completion percentage while still in progress', () => {
+    expect(buildProgressStatsHtml({ ...base, answered: 5 }, 'correct')).toBe('5 / 10  ·  50%');
+  });
+
+  it('does not add hint chips when showHintBreakdown is omitted', () => {
+    const html = buildProgressStatsHtml(
+      { ...base, hintedCorrect: 3, hintedRevealed: 1, hintedMissed: 1 }, 'all',
+    );
+    expect(html).not.toContain('Hinted');
+  });
+
+  it('adds only the non-zero hint-outcome chips when showHintBreakdown is on', () => {
+    const html = buildProgressStatsHtml(
+      { ...base, hintedCorrect: 3, hintedRevealed: 0, hintedMissed: 1 }, 'correct', true,
+    );
+    expect(html).toContain('30% Hinted → Solved');
+    expect(html).not.toContain('Hinted → Revealed');
+    expect(html).toContain('10% Hinted → Missed');
+  });
+
+  it('appends hint chips after the mode-selected chips regardless of mode', () => {
+    const html = buildProgressStatsHtml(
+      { ...base, hintedCorrect: 1 }, 'missed', true,
+    );
+    const missedIdx = html.indexOf('Missed<');
+    const hintIdx   = html.indexOf('Hinted → Solved');
+    expect(missedIdx).toBeGreaterThan(-1);
+    expect(hintIdx).toBeGreaterThan(missedIdx);
   });
 });

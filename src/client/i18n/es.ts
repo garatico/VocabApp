@@ -254,6 +254,8 @@ export const es: Record<string, string> = {
   'settings.table.progressBarPercentCorrect':  'Correcto',
   'settings.table.progressBarPercentMissed':   'Fallado',
   'settings.table.progressBarPercentAll':      'Todo',
+  'settings.table.progressBarHintBreakdown':     'Desglose de pistas en la barra de progreso',
+  'settings.table.progressBarHintBreakdownDesc': 'También muestra los porcentajes de Pista → Resuelto / Pista → Revelado / Pista → Fallado en la etiqueta de la barra de progreso una vez que un quiz está completamente respondido.',
   'settings.table.questionGlosses':      'Significados de la pregunta',
   'settings.table.questionGlossesDesc':  'Cuántos significados en inglés se muestran en el cuadro de pregunta cuando una palabra tiene varios (p. ej. "to speak / to talk")',
 

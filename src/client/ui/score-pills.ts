@@ -40,7 +40,8 @@ export type ProgressBarPercentMode = 'correct' | 'missed' | 'all';
 /** One colored chip inside the progress bar's own label — not `.score-pill`
  *  (that's the row of pills under the bar; this needs to sit inline in a
  *  single-line label, so its own smaller, borderless shape). */
-function progressPctChip(kind: 'correct' | 'revealed' | 'missed', pct: number, label: string): string {
+type ProgressPctKind = 'correct' | 'revealed' | 'missed' | 'hinted-correct' | 'hinted-revealed' | 'hinted-missed';
+function progressPctChip(kind: ProgressPctKind, pct: number, label: string): string {
   return `<span class="progress-pct progress-pct--${kind}">${pct}% ${label}</span>`;
 }
 
@@ -57,12 +58,20 @@ function progressPctChip(kind: 'correct' | 'revealed' | 'missed', pct: number, l
  * solely to say the same "100%" the bar already showed. Returns HTML (each
  * percentage in its own colored chip) — the caller must set it via
  * `innerHTML`, not `textContent`.
+ *
+ * When `showHintBreakdown` is on (Settings.getProgressBarShowHintBreakdown),
+ * Hinted → Solved / Hinted → Revealed / Hinted → Missed chips are appended
+ * after whatever `mode` picked — these are subsets of correct/revealed/missed
+ * (a word can be both "correct" and "hinted → solved"), not an alternative to
+ * them, so they're additive regardless of which mode is active.
  */
 export function buildProgressStatsHtml(
-  { correct, revealed, missed, answered, total }: {
+  { correct, revealed, missed, answered, total, hintedCorrect = 0, hintedRevealed = 0, hintedMissed = 0 }: {
     correct: number; revealed: number; missed: number; answered: number; total: number;
+    hintedCorrect?: number; hintedRevealed?: number; hintedMissed?: number;
   },
   mode: ProgressBarPercentMode,
+  showHintBreakdown = false,
 ): string {
   if (total <= 0) return '';
   if (answered < total) {
@@ -70,10 +79,17 @@ export function buildProgressStatsHtml(
     return `${answered} / ${total}  ·  ${donePct}%`;
   }
   const pct = (n: number): number => Math.round((n / total) * 100);
-  if (mode === 'correct') return `${answered} / ${total}  ·  ${progressPctChip('correct', pct(correct), 'Correct')}`;
-  if (mode === 'missed')  return `${answered} / ${total}  ·  ${progressPctChip('missed', pct(missed), 'Missed')}`;
+  const hintChips: string[] = [];
+  if (showHintBreakdown) {
+    if (hintedCorrect > 0)  hintChips.push(progressPctChip('hinted-correct', pct(hintedCorrect), 'Hinted → Solved'));
+    if (hintedRevealed > 0) hintChips.push(progressPctChip('hinted-revealed', pct(hintedRevealed), 'Hinted → Revealed'));
+    if (hintedMissed > 0)   hintChips.push(progressPctChip('hinted-missed', pct(hintedMissed), 'Hinted → Missed'));
+  }
+  const withHints = (chips: string[]): string => [...chips, ...hintChips].join(', ');
+  if (mode === 'correct') return `${answered} / ${total}  ·  ${withHints([progressPctChip('correct', pct(correct), 'Correct')])}`;
+  if (mode === 'missed')  return `${answered} / ${total}  ·  ${withHints([progressPctChip('missed', pct(missed), 'Missed')])}`;
   const chips = [progressPctChip('correct', pct(correct), 'Correct')];
   if (revealed > 0) chips.push(progressPctChip('revealed', pct(revealed), 'Revealed'));
   if (missed > 0) chips.push(progressPctChip('missed', pct(missed), 'Missed'));
-  return `${answered} / ${total}  ·  ${chips.join(', ')}`;
+  return `${answered} / ${total}  ·  ${withHints(chips)}`;
 }

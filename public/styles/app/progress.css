@@ -78,6 +78,12 @@
 .progress-pct--correct  { background: var(--correct); }
 .progress-pct--revealed { background: color-mix(in srgb, var(--warning) 85%, var(--text) 15%); }
 .progress-pct--missed   { background: var(--danger); }
+/* Hint-outcome variants (Table mode only — see Settings › Progress bar hint
+   breakdown) — same color chain as the hint-outcome score pills so a chip
+   here and its matching pill below the bar always agree. */
+.progress-pct--hinted-correct  { background: var(--table-color-hinted-correct, var(--hinted-correct)); }
+.progress-pct--hinted-revealed { background: var(--table-color-hinted-revealed, var(--hinted-revealed)); }
+.progress-pct--hinted-missed   { background: var(--table-color-hinted-missed, var(--hinted-missed)); }
 
 @media (max-width: 599px) {
   .progress-label { font-size: 0.62rem; }

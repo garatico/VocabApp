@@ -842,7 +842,8 @@ export function renderTableRecallMode({
         // Same label shape as Standard style's own renderProgress — see
         // buildProgressStatsHtml's doc comment.
         stats.innerHTML = buildProgressStatsHtml(
-          { correct, revealed, missed, answered: done, total }, Settings.getProgressBarPercentMode(),
+          { correct, revealed, missed, answered: done, total, hintedCorrect, hintedRevealed, hintedMissed },
+          Settings.getProgressBarPercentMode(), Settings.getProgressBarShowHintBreakdown(),
         );
         stats.classList.toggle('progress-label--done', total > 0 && done === total);
       }
