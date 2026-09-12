@@ -915,6 +915,7 @@
                 <button type="button" class="sort-order-btn" data-cols="1">1</button>
                 <button type="button" class="sort-order-btn active" data-cols="2">2</button>
                 <button type="button" class="sort-order-btn" data-cols="3">3</button>
+                <button type="button" class="sort-order-btn" data-cols="4">4</button>
               </div>
             </div>
 
@@ -1192,6 +1193,18 @@
                 <button type="button" class="sort-order-btn" data-style="dot" data-i18n="settings.table.genderStyleDot">Dot</button>
                 <button type="button" class="sort-order-btn" data-style="word-bg" data-i18n="settings.table.genderStyleWordBg">Word background</button>
                 <button type="button" class="sort-order-btn" data-style="box-bg" data-i18n="settings.table.genderStyleBoxBg">Box background</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.genderVisibility">Gender indicator timing</span>
+                <span class="settings-desc" data-i18n="settings.table.genderVisibilityDesc">When the indicator above is allowed to show. Always shows it from the start, as a mild hint. Once hinted waits until you've used that row's Hint button or resolved it. Only when revealed waits until the row is fully solved, peeked, or given up on.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingGenderIndicatorVisibility">
+                <button type="button" class="sort-order-btn active" data-visibility="always" data-i18n="settings.table.genderVisibilityAlways">Always</button>
+                <button type="button" class="sort-order-btn" data-visibility="hinted" data-i18n="settings.table.genderVisibilityHinted">Once hinted</button>
+                <button type="button" class="sort-order-btn" data-visibility="revealed" data-i18n="settings.table.genderVisibilityRevealed">Only when revealed</button>
               </div>
             </div>
 

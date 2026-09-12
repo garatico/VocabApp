@@ -969,6 +969,15 @@ body.table-compact-rows #tableWrap td {
 body.table-compact-rows #tableWrap .spanish-word {
   font-size: 1.05rem;
   min-height: 0;
+  /* The corner badges below (rank/checkbox above, star/gender-dot/missed-
+     count below) are positioned absolute against .word-cell, not against
+     this centered flex box — at Comfortable's height there was enough
+     clearance above and below the centered word that the two never met;
+     Compact's much shorter row closed that gap, so the badges started
+     rendering right on top of the word's own glyphs. This padding is sized
+     to match the shrunk badge footprint just below, reserving their band
+     rather than trying to squeeze everything into the same few pixels. */
+  padding: 12px 0 11px;
 }
 body.table-compact-rows #tableWrap input[type="text"] {
   font-size: 0.92rem;
@@ -977,4 +986,38 @@ body.table-compact-rows #tableWrap input[type="text"] {
      sized for touch) — Compact is an explicit "I want more rows on
      screen" choice, so it wins here regardless of viewport. */
   min-height: 0;
+}
+
+/* Corner badges, shrunk to match — see .spanish-word's own comment above.
+   Same four corners as components.css/table.css's own rules, just tighter:
+   rank (top-left), bulk-select checkbox (top-right), known-list star and
+   gender dot (bottom-left), missed-before count (bottom-right). */
+body.table-compact-rows #tableWrap .table-word-rank {
+  top: 1px;
+  left: 2px;
+  font-size: 0.62rem;
+  padding: 0 0.2em;
+}
+body.table-compact-rows #tableWrap .row-select-cb {
+  top: 1px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+}
+body.table-compact-rows #tableWrap .word-cell--known::after {
+  bottom: 1px;
+  left: 2px;
+  font-size: 0.6rem;
+}
+body.table-compact-rows #tableWrap .word-cell > .gender-dot {
+  bottom: 2px;
+  left: 11px;
+  width: 6px;
+  height: 6px;
+}
+body.table-compact-rows #tableWrap .table-word--trouble::before {
+  bottom: 1px;
+  right: 2px;
+  font-size: 0.58rem;
+  padding: 0 0.3em;
 }

@@ -11,7 +11,7 @@ import { openWordInfoPopover }   from '../utils/word-info-popover.ts';
 import { Settings, applyAutofillAttr } from '../settings.ts';
 import { missCount }             from '../utils/session-history.ts';
 import { flagUrl }               from '../data/languages.ts';
-import { renderWordWithGender, applyGenderContainer, enableInputWheelScroll } from '../utils/dom.ts';
+import { renderWordWithGender, applyGenderContainer, enableInputWheelScroll, shouldShowGenderIndicator } from '../utils/dom.ts';
 import { hintPrefix, hintableLength } from '../utils/hint-reveal.ts';
 
 export type DirectionPair = 'target-en' | 'en-target';
@@ -138,6 +138,15 @@ export function renderTableMode({
 
   // Only shake inputs when a manageable number are affected
   const SHAKE_THRESHOLD = 30;
+
+  // Each row's own gender-indicator re-sync, keyed by its answer input —
+  // giveUp()/checkAll() below process every input generically (not through
+  // the per-row closures buildTable() creates them in), so this is how they
+  // reach back into a specific row's own wordDiv/tdWord/gKey/indicatorStyle
+  // to re-run the same visibility decision once that row resolves. Rebuilt
+  // fresh on every buildTable() call (a paginated re-render), same as the
+  // DOM itself.
+  const genderSyncFns = new Map<HTMLInputElement, () => void>();
 
   function entryDir(_entry: Word): DirectionPair {
     if (direction === 'mixed') return Math.random() < 0.5 ? 'target-en' : 'en-target';
@@ -297,6 +306,7 @@ export function renderTableMode({
 
   function buildTable(): void {
     container.innerHTML = '';
+    genderSyncFns.clear();
     const table       = document.createElement('table');
     const pairsPerRow = cols;
 
@@ -393,8 +403,6 @@ export function renderTableMode({
         // word qualifying at all, not on wordIsPrompt.
         const gKey = genderKey(w);
         const indicatorStyle = Settings.getGenderIndicatorStyle();
-        renderWordWithGender(wordDiv, wordText, annotation, gKey, indicatorStyle);
-        applyGenderContainer(tdWord, gKey, indicatorStyle);
         wordDiv.classList.add('spanish-word');
         wordDiv.dataset.wordJson = JSON.stringify(w);
         // Read by attachTooltips below: in en-target direction the visible
@@ -454,6 +462,24 @@ export function renderTableMode({
           if (snap.stateClass) inp.classList.add(snap.stateClass);
         }
 
+        // ── Gender indicator (dot/word-bg/box-bg) ──────────────────────────────
+        // Whether it's showing yet depends on Settings.getGenderIndicatorVisibility()
+        // and this row's own hinted/disabled state, so it's re-run (not just
+        // rendered once here) at every point below that state can change —
+        // the input's own 'input' handler, the Hint button, doFullReveal, and
+        // giveUp()/checkAll() below via genderSyncFns.
+        function syncGenderIndicator(): void {
+          const hinted   = Number(inp.dataset.hints ?? '0') > 0;
+          const revealed = inp.disabled;
+          const show = shouldShowGenderIndicator(
+            Settings.getGenderIndicatorVisibility(), { hinted, revealed },
+          );
+          renderWordWithGender(wordDiv, wordText, annotation, show ? gKey : null, indicatorStyle);
+          applyGenderContainer(tdWord, show ? gKey : null, indicatorStyle);
+        }
+        syncGenderIndicator();
+        genderSyncFns.set(inp, syncGenderIndicator);
+
         // Its active/inactive class already reflects real list membership —
         // read fresh inside buildKnownBtn, not from the snapshot.
         const knownBtn = buildKnownBtn(w, tdWord);
@@ -480,6 +506,7 @@ export function renderTableMode({
             inp.value    = revealText(w, dir, typed);
             inp.disabled = true;
             inp.classList.add('correct');
+            syncGenderIndicator();
 
             if (isInAnyList(wordLang, w.word)) {
               knownBtn.classList.add('known-btn--active');
@@ -526,6 +553,7 @@ export function renderTableMode({
           inp.value    = revealText(w, dir);
           inp.disabled = true;
           inp.classList.add('peeked');
+          syncGenderIndicator();
           if (isInAnyList(wordLang, w.word)) {
             knownBtn.classList.add('known-btn--active');
             tdWord.classList.add('word-cell--known');
@@ -583,6 +611,7 @@ export function renderTableMode({
             inp.value         = hintPrefix(answer, shown);
             inp.dataset.hints = String(shown);
             inp.classList.add('hinted');
+            syncGenderIndicator();
             inp.focus();
             syncHintButton();
             updateProgress();
@@ -638,6 +667,7 @@ export function renderTableMode({
         inp.value    = revealed;
         inp.disabled = true;
         inp.classList.add('correct');
+        genderSyncFns.get(inp)?.();
       } else {
         inp.classList.add('incorrect');
       }
@@ -681,6 +711,7 @@ export function renderTableMode({
       inp.disabled = true;
       inp.classList.remove('correct');
       inp.classList.add('incorrect');
+      genderSyncFns.get(inp)?.();
       if (doShake) shake(inp);
       results.push({ word: inp.dataset.word, ok: false, expected: revealed });
     });

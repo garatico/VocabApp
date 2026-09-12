@@ -126,6 +126,33 @@ export function applyGenderContainer(
 }
 
 /**
+ * When the gender indicator (dot/word-bg/box-bg — not the article text,
+ * which has its own separate setting) is allowed to show, relative to
+ * whether a row has been hinted or resolved yet:
+ *   'always'   — regardless of state (the only option before this existed) —
+ *                a mild hint, same spirit as showing the meaning-side prompt
+ *                clarifier before you've answered.
+ *   'hinted'   — only once a Hint's been used on the row, or it's resolved —
+ *                untouched rows show nothing.
+ *   'revealed' — only once the row is fully resolved (typed correctly,
+ *                peeked, or given up on) — never before, not even mid-hint.
+ */
+export type GenderIndicatorVisibility = 'always' | 'hinted' | 'revealed';
+
+/** Pure decision, shared by every mode that renders a gender indicator, so
+ *  Table/Recall/Double Recall can never quietly disagree about what a given
+ *  visibility setting means for a row that's been hinted, resolved, both, or
+ *  neither. */
+export function shouldShowGenderIndicator(
+  visibility: GenderIndicatorVisibility,
+  state: { hinted: boolean; revealed: boolean },
+): boolean {
+  if (visibility === 'revealed') return state.revealed;
+  if (visibility === 'hinted') return state.hinted || state.revealed;
+  return true;
+}
+
+/**
  * Let the mouse wheel scroll a text input horizontally. A revealed answer
  * carrying a disambiguator (e.g. "be / is (permanent)") can run wider than
  * the cell — a disabled <input> ignores focus and arrow keys, so without

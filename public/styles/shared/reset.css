@@ -28,14 +28,14 @@ body {
   min-height: 100vh;
   /* safe-area-inset: respect notches, home indicators, and rounded corners */
   padding: calc(0.75rem + env(safe-area-inset-top))
-           calc(1rem   + env(safe-area-inset-right))
+           calc(0.65rem + env(safe-area-inset-right))
            calc(2rem   + env(safe-area-inset-bottom))
-           calc(1rem   + env(safe-area-inset-left));
+           calc(0.65rem + env(safe-area-inset-left));
   line-height: 1.5;
 }
 
 main {
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
   position: relative;
 }

@@ -61,12 +61,15 @@
  * different skin, not a third thing worth its own history bucket.
  */
 import type { Word } from '../types.ts';
-import { matchesAnswer, buildGlossDisplay, chineseWordText, displayWord, primaryGlossForHint, chosenGlosses } from '../utils/utils.ts';
+import { matchesAnswer, buildGlossDisplay, chineseWordText, displayWord, wordAndAnnotation, genderKey, primaryGlossForHint, chosenGlosses } from '../utils/utils.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker } from '../utils/list-picker.ts';
 import { Settings, applyAutofillAttr } from '../settings.ts';
 import { languageInfo, flagUrl } from '../data/languages.ts';
-import { enableInputWheelScroll } from '../utils/dom.ts';
+import {
+  enableInputWheelScroll, renderWordWithGender, applyGenderContainer, shouldShowGenderIndicator,
+  type GenderIndicatorStyle,
+} from '../utils/dom.ts';
 import { hintReveal, hintableLength } from '../utils/hint-reveal.ts';
 import {
   saveSession, recordOutcome, missCount, orderWords, getWordOrderLabels,
@@ -101,6 +104,11 @@ interface CellRefs {
   transRevealBtn: HTMLButtonElement | null;
   wordHintBtn:   HTMLButtonElement | null;
   transHintBtn:  HTMLButtonElement | null;
+  // Gender indicator (dot/word-bg/box-bg) — computed once per row at build
+  // time (cheap, pure) and reused by paintWordCell/paintWordHint below,
+  // rather than every call site re-deriving them from `w` itself.
+  gKey:           'masculine' | 'feminine' | null;
+  indicatorStyle: GenderIndicatorStyle;
 }
 
 export function renderTableRecallMode({
@@ -336,10 +344,16 @@ export function renderTableRecallMode({
   function paintWordCell(w: Word, state: AnswerState): void {
     const ref = cellRefs.get(cellKey(w));
     if (!ref) return;
-    ref.wordDiv.textContent = displayWord(
+    const { base, annotation } = wordAndAnnotation(
       { ...w, word: wordHintTarget(w) },
       Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint(),
     );
+    // paintWordCell only ever runs once a row is resolved (typed correctly,
+    // peeked, or given up on) — 'revealed' is always true here, same as
+    // Standard style's own reveal path.
+    const show = shouldShowGenderIndicator(Settings.getGenderIndicatorVisibility(), { hinted: true, revealed: true });
+    renderWordWithGender(ref.wordDiv, base, annotation, show ? ref.gKey : null, ref.indicatorStyle);
+    applyGenderContainer(ref.tdWord, show ? ref.gKey : null, ref.indicatorStyle);
     ref.wordDiv.classList.remove('correct', 'peeked', 'incorrect');
     ref.wordDiv.classList.add(state);
     if (isInAnyList(w.language ?? lang, w.word)) ref.tdWord.classList.add('word-cell--known');
@@ -381,7 +395,10 @@ export function renderTableRecallMode({
   function paintWordHint(w: Word, shown: number): void {
     const ref = cellRefs.get(cellKey(w));
     if (!ref || wordState.has(cellKey(w))) return;
-    ref.wordDiv.textContent = hintReveal(wordHintTarget(w), shown);
+    const masked = hintReveal(wordHintTarget(w), shown);
+    const show = shouldShowGenderIndicator(Settings.getGenderIndicatorVisibility(), { hinted: true, revealed: false });
+    renderWordWithGender(ref.wordDiv, masked, null, show ? ref.gKey : null, ref.indicatorStyle);
+    applyGenderContainer(ref.tdWord, show ? ref.gKey : null, ref.indicatorStyle);
     ref.wordDiv.classList.add('hinted');
   }
 
@@ -439,6 +456,18 @@ export function renderTableRecallMode({
         const wordDiv = document.createElement('div');
         wordDiv.className = 'spanish-word';
         wordRowDiv.appendChild(wordDiv);
+
+        // Gender indicator — every cell here starts blank (see file header),
+        // so 'dot'/'box-bg' (container-level, no text needed) can show from
+        // the very start when the visibility setting allows it; 'word-bg'
+        // has nothing to wrap yet and picks up once paintWordCell/
+        // paintWordHint actually put text in the cell.
+        const gKey = genderKey(w);
+        const indicatorStyle = Settings.getGenderIndicatorStyle();
+        const showGenderAtStart = shouldShowGenderIndicator(
+          Settings.getGenderIndicatorVisibility(), { hinted: false, revealed: false },
+        );
+        applyGenderContainer(tdWord, showGenderAtStart ? gKey : null, indicatorStyle);
 
         // Per-side hint + reveal — 'double' style only. 'recall' style has
         // no separate translation question, so there's nothing to peek (or
@@ -508,7 +537,7 @@ export function renderTableRecallMode({
         inputRowDiv.appendChild(knownBtn);
         tdInput.appendChild(inputRowDiv);
 
-        cellRefs.set(key, { tdWord, wordDiv, inputEl, wordRevealBtn, transRevealBtn, wordHintBtn, transHintBtn });
+        cellRefs.set(key, { tdWord, wordDiv, inputEl, wordRevealBtn, transRevealBtn, wordHintBtn, transHintBtn, gKey, indicatorStyle });
 
         if (wordState.has(key))       paintWordCell(w, wordState.get(key)!);
         else if (wordHints.get(key))  paintWordHint(w, wordHints.get(key)!);

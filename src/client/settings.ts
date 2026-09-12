@@ -10,7 +10,7 @@ import {
   type GoalType,
 } from './utils/streak.ts';
 import type { ChineseScript, ChineseDisplay, FunctionWordMarker } from './utils/utils.ts';
-import type { GenderIndicatorStyle } from './utils/dom.ts';
+import type { GenderIndicatorStyle, GenderIndicatorVisibility } from './utils/dom.ts';
 import { fillHighlighted } from './utils/dom.ts';
 import { foldKey } from './utils/match.ts';
 
@@ -300,6 +300,15 @@ export const Settings = {
    *   'box-bg'  — the whole cell/box background (applyGenderContainer)
    */
   getGenderIndicatorStyle: (): GenderIndicatorStyle => get('gender_indicator_style', 'off') as GenderIndicatorStyle,
+
+  /**
+   * When the indicator above is actually allowed to show, relative to
+   * whether the row's been hinted or resolved yet — see
+   * utils/dom.ts's shouldShowGenderIndicator for what each value means.
+   * 'always' by default, matching this setting's pre-existing behavior.
+   */
+  getGenderIndicatorVisibility: (): GenderIndicatorVisibility =>
+    get('gender_indicator_visibility', 'always') as GenderIndicatorVisibility,
 
   /**
    * A full-color (#rrggbb) override for the masculine or feminine gender
@@ -1162,6 +1171,14 @@ export function bindSettings(): void {
     set('gender_indicator_style', (btn.dataset.style ?? 'off') as GenderIndicatorStyle);
   });
 
+  // Gender indicator visibility (Always / Once hinted / Only when revealed)
+  document.getElementById('settingGenderIndicatorVisibility')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingGenderIndicatorVisibility', btn);
+    set('gender_indicator_visibility', (btn.dataset.visibility ?? 'always') as GenderIndicatorVisibility);
+  });
+
   // Match mode
   document.getElementById('settingMatch')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
@@ -1915,6 +1932,10 @@ function restoreSettingsUI(): void {
   const savedGenderIndicatorStyle = Settings.getGenderIndicatorStyle();
   document.querySelectorAll<HTMLElement>('#settingGenderIndicatorStyle .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.style === savedGenderIndicatorStyle);
+  });
+  const savedGenderIndicatorVisibility = Settings.getGenderIndicatorVisibility();
+  document.querySelectorAll<HTMLElement>('#settingGenderIndicatorVisibility .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.visibility === savedGenderIndicatorVisibility);
   });
 
   // Match
