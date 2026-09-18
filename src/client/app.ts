@@ -27,10 +27,11 @@ import { LANGUAGES, isoCode, supportsConjugation,
          conjugationUnavailableReason, languageInfo } from './data/languages.ts';
 import { availableLanguages, isPackagedApp }     from './data/vocab-source.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
-import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, setOnKidFriendlyModeChange, refreshStreakReadouts } from './settings.ts';
+import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, setOnSimpleModeChange, refreshStreakReadouts } from './settings.ts';
 import { onActivity } from './utils/streak.ts';
 import { showToast } from './ui/toast.ts';
 import { initStreakWidget } from './ui/streak-widget.ts';
+import { initDiceButton } from './ui/dice-widget.ts';
 import { applyTranslations } from './i18n/index.ts';
 import { initShortcuts }                         from './ui/shortcuts-overlay.ts';
 import { openLanguagePicker, languagePickerLabel } from './ui/language-picker.ts';
@@ -141,10 +142,10 @@ function updateLangPickerButton(): void {
  * it.
  */
 function getExtraLanguages(): string[] {
-  // Kid-Friendly Mode hides the "+ Languages" picker (data-kid-hide) but
-  // must also stop an already-picked extra language from silently still
-  // merging in — same reasoning as class-filter.ts's getSelectedClasses().
-  if (Settings.getKidFriendlyMode()) return [];
+  // Simple Mode hides the "+ Languages" picker (data-simple-hide) but must
+  // also stop an already-picked extra language from silently still merging
+  // in — same reasoning as class-filter.ts's getSelectedClasses().
+  if (Settings.getSimpleMode()) return [];
   const activeMode = document.querySelector('.mode-tab.active')?.getAttribute('data-mode');
   if (!activeMode || !MULTI_LANG_MODES.has(activeMode)) return [];
   const primary = langSelect?.value;
@@ -349,22 +350,22 @@ function syncScriptDisplaySettingsAvailability(): void {
 }
 
 /**
- * Kid-Friendly Mode hides My Content and My Lists entirely for as long as
- * it's on — unlike the mode's other two effects (Advanced mode off, swear
- * filter on), which are one-time defaults the learner can still change back,
- * these are meant to be out of reach the whole time this is on, not just
+ * Simple Mode hides My Content and My Lists entirely for as long as it's
+ * on — unlike the mode's other two effects (Advanced mode off, swear filter
+ * on), which are one-time defaults the learner can still change back, these
+ * are meant to be out of reach the whole time this is on, not just
  * disabled-but-visible the way syncConjugationAvailability() above handles a
  * language that can't do Conjugation (where the tab staying visible-but-dead
- * is the point — a kid poking around shouldn't find a tab that hints at
+ * is the point — a newcomer poking around shouldn't find a tab that hints at
  * something to unlock). My Lists is included because it's fundamentally
  * about creating/organizing lists to filter by, and the POS/Lists/Domains
  * filter boxes those lists would feed into are themselves hidden and
- * disarmed under Kid-Friendly Mode (see class-filter.ts/domain-filter.ts/
- * word-filters.ts's own getKidFriendlyMode() checks) — nothing left for the
- * tab to do.
+ * disarmed under Simple Mode (see class-filter.ts/domain-filter.ts/
+ * word-filters.ts's own getSimpleMode() checks) — nothing left for the tab
+ * to do.
  */
-function syncKidFriendlyLocks(): void {
-  const on = Settings.getKidFriendlyMode();
+function syncSimpleModeLocks(): void {
+  const on = Settings.getSimpleMode();
   (['myContent', 'mylists'] as const).forEach(mode => {
     const tab = document.querySelector<HTMLButtonElement>(`.mode-tab[data-mode="${mode}"]`);
     if (!tab) return;
@@ -1147,8 +1148,8 @@ void (async function init(): Promise<void> {
   syncScriptDisplayAvailability();
   syncScriptTypeAvailability();
   syncScriptDisplaySettingsAvailability();
-  syncKidFriendlyLocks();
-  setOnKidFriendlyModeChange(syncKidFriendlyLocks);
+  syncSimpleModeLocks();
+  setOnSimpleModeChange(syncSimpleModeLocks);
   bindUIState();
   bindClassFilter();
   bindDomainFilter();
@@ -1157,6 +1158,7 @@ void (async function init(): Promise<void> {
   bindTableControls();
   bindSettings();
   initStreakWidget();
+  initDiceButton();
   initShortcuts();
   initReloadButton();
   initListFilter(langSelect?.value ?? 'spanish');

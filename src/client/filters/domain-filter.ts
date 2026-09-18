@@ -385,8 +385,8 @@ function currentPersistedState(): DomainFilterState {
 /** Selected domains, or [] when the filter is switched off. */
 export function getSelectedDomains(): string[] {
   // See class-filter.ts's getSelectedClasses() for why this is checked here
-  // rather than cleared once, at the moment Kid-Friendly Mode is toggled on.
-  if (Settings.getKidFriendlyMode()) return [];
+  // rather than cleared once, at the moment Simple Mode is toggled on.
+  if (Settings.getSimpleMode()) return [];
   if (Settings.getHideDomainsFilter(getCurrentMode())) return [];
   const state = currentPersistedState();
   return state.active ? state.selected : [];

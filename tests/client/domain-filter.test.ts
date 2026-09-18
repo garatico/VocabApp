@@ -96,6 +96,10 @@ if (!Element.prototype.scrollIntoView) {
 beforeEach(() => {
   vi.resetModules();
   localStorage.clear();
+  // Simple Mode defaults on app-wide and disarms this filter entirely — off
+  // here so the tests below exercise the filter itself, not that guard
+  // (which has its own dedicated test below).
+  localStorage.setItem('s_simple_mode', 'false');
   document.body.innerHTML = '';
   setMode('table');
   setLang('spanish');
@@ -317,12 +321,12 @@ describe('with the filter box in the DOM', () => {
   });
 
   describe('getSelectedDomains / getDomainFilterState', () => {
-    it('is empty while Kid-Friendly Mode is on, regardless of selection', async () => {
+    it('is empty while Simple Mode is on, regardless of selection', async () => {
       const { bindDomainFilter, updateDomainFilter, getSelectedDomains } = await load();
       bindDomainFilter();
       updateDomainFilter(COUNTS);
       clickPill('Food');
-      localStorage.setItem('s_kid_friendly_mode', 'true');
+      localStorage.setItem('s_simple_mode', 'true');
       expect(getSelectedDomains()).toEqual([]);
     });
 

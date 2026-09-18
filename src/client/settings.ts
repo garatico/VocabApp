@@ -6,9 +6,10 @@ import { clearHistory, HISTORY_KEEP } from './utils/session-history.ts';
 import {
   getGoals, setGoalTarget, hasLanguageGoal, clearLanguageGoal,
   getStreak, getBestStreak, getTodayProgress, getTodayMinutes, getStreakHistory,
-  getGoalHitsForDate, parseHitKey,
+  getGoalHitsForDate, parseHitKey, getDailyLangStats,
   type GoalType,
 } from './utils/streak.ts';
+import { positionPopover } from './utils/popover-position.ts';
 import type { ChineseScript, ChineseDisplay, FunctionWordMarker } from './utils/utils.ts';
 import type { GenderIndicatorStyle, GenderIndicatorVisibility } from './utils/dom.ts';
 import { fillHighlighted } from './utils/dom.ts';
@@ -409,13 +410,36 @@ export const Settings = {
   getSwearFilterEnabled: (): boolean => get('swear_filter_enabled', 'false') === 'true',
 
   /**
-   * Whole-app toggle for a kid, or anyone trying the app for the first time.
-   * Turning it on is a one-time nudge (not a permanent lock) for Advanced
-   * mode and the swear filter — see the click handler in bindSettings() —
-   * and, unlike those two, actively locks My Content against edits for as
-   * long as it stays on (see app.ts's syncKidFriendlyLocks()).
+   * Whole-app toggle for a newcomer, or anyone who'd rather not see every
+   * knob at once — formerly "Kid Friendly Mode", renamed since its opposite
+   * ("Advanced Mode") would otherwise collide with the unrelated, already-
+   * existing getAdvancedMode() below (which only controls how much of the
+   * Settings *page itself* shows). Defaults ON for anyone who's never
+   * touched it — a one-time read of the old `kid_friendly_mode` key keeps an
+   * existing user's explicit choice (on or off) rather than silently
+   * flipping it when the default changes. Turning it on is a one-time nudge
+   * (not a permanent lock) for Advanced mode and the swear filter — see the
+   * click handler in bindSettings() — and, unlike those two, actively locks
+   * My Content against edits for as long as it stays on (see app.ts's
+   * syncSimpleModeLocks()).
    */
-  getKidFriendlyMode: (): boolean => get('kid_friendly_mode', 'false') === 'true',
+  getSimpleMode: (): boolean => {
+    const raw = readString(P + 'simple_mode');
+    if (raw !== null) return raw === 'true';
+    const legacy = readString(P + 'kid_friendly_mode');
+    return legacy !== null ? legacy === 'true' : true;
+  },
+  setSimpleMode: (on: boolean): void => set('simple_mode', String(on)),
+
+  /**
+   * Whether the sidebar's Testing Profiles section also shows a "Visual
+   * Profiles" sub-section (saved display-preference bundles — see
+   * filters/visual-profiles.ts) right below it. Off by default: most
+   * learners never need this, and Testing Profiles' own list shouldn't grow
+   * a second kind of entry under it unasked for.
+   */
+  getShowVisualProfiles: (): boolean => get('show_visual_profiles', 'false') === 'true',
+  setShowVisualProfiles: (on: boolean): void => set('show_visual_profiles', String(on)),
 
   /**
    * Which visual categories Picture Quiz is allowed to draw from — Wikipedia
@@ -499,6 +523,16 @@ export const Settings = {
   getConfirmRemoveWordOverride: (): boolean => get('confirm_remove_word_override', 'true') === 'true',
 
   /**
+   * Off (default): a word's expanded editor renders inline, under its row in
+   * My Content's own scrolling list, same as it always has. On: it renders
+   * as a full-viewport overlay instead — for a learner who finds the many
+   * fields (translation, notes, domains, glosses, examples, synonyms...)
+   * cramped inside that list's own scroll box, at the cost of losing sight
+   * of the row list while editing.
+   */
+  getFullViewportWordEditor: (): boolean => get('full_viewport_word_editor', 'false') === 'true',
+
+  /**
    * Starting page size for My Content's "Edit an Existing Trivia Question"
    * and "Edit an Existing Guess the Blank Question" lists (buildListPager's
    * own 5/10/15 options) — read only until a list's own Per Page control has
@@ -541,6 +575,9 @@ export const Settings = {
 
   // ── Appearance ────────────────────────────────────────────────────────────
   getFontSize: (): FontSize => get('font_size', 'medium') as FontSize,
+  /** Storage only — call applyFontSize() (exported below) separately to
+   *  actually repaint, same two-step split its own click handler uses. */
+  setFontSize: (size: FontSize): void => set('font_size', size),
 
   /** See UILanguage — defaults to 'english', which needs no translation lookup. */
   getUILanguage: (): UILanguage => get('ui_language', 'english') as UILanguage,
@@ -941,13 +978,13 @@ export function setOnShowTimerChange(fn: () => void): void {
   onShowTimerChangeListeners.push(fn);
 }
 
-/** Notified when Kid-Friendly Mode changes, so app.ts can lock/unlock My
- *  Content immediately rather than only on next visit. A list for the same
- *  reason as onShowTimerChangeListeners above. */
-const onKidFriendlyModeChangeListeners: (() => void)[] = [];
+/** Notified when Simple Mode changes, so app.ts can lock/unlock My Content
+ *  immediately rather than only on next visit. A list for the same reason
+ *  as onShowTimerChangeListeners above. */
+const onSimpleModeChangeListeners: (() => void)[] = [];
 
-export function setOnKidFriendlyModeChange(fn: () => void): void {
-  onKidFriendlyModeChangeListeners.push(fn);
+export function setOnSimpleModeChange(fn: () => void): void {
+  onSimpleModeChangeListeners.push(fn);
 }
 
 /**
@@ -1370,24 +1407,24 @@ export function bindSettings(): void {
     });
   });
 
-  // Kid-Friendly Mode — a one-time nudge for Advanced mode/the swear filter
-  // and every quiz-mode control below (the learner can still change any of
-  // them back while it's on — this only sets them, it doesn't lock them),
-  // plus an ongoing lock on My Content (app.ts, via
-  // setOnKidFriendlyModeChange). The controls this simplifies are hidden by
-  // settings.css's `body.kid-friendly-mode [data-kid-hide]` rule; forcing
-  // their *value* here (real clicks on the real buttons, so each control's
-  // own existing handler does the actual work — same technique
-  // presets.ts's applyWords()/applyConjugation() already use) is what keeps
-  // a hidden toggle from silently leaving whatever was picked before kid
-  // mode went on.
-  document.getElementById('settingKidMode')?.addEventListener('click', e => {
+  // Simple Mode — a one-time nudge for Advanced mode/the swear filter and
+  // every quiz-mode control below (the learner can still change any of them
+  // back while it's on — this only sets them, it doesn't lock them), plus
+  // an ongoing lock on My Content (app.ts, via setOnSimpleModeChange). The
+  // controls this simplifies are hidden by settings.css's
+  // `body.simple-mode [data-simple-hide]` rule; forcing their *value* here
+  // (real clicks on the real buttons, so each control's own existing
+  // handler does the actual work — same technique presets.ts's
+  // applyWords()/applyConjugation() already use) is what keeps a hidden
+  // toggle from silently leaving whatever was picked before Simple Mode
+  // went on.
+  document.getElementById('settingSimpleMode')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
     if (!btn) return;
-    activateToggle('settingKidMode', btn);
-    const on = btn.dataset.kidMode === 'true';
-    set('kid_friendly_mode', String(on));
-    document.body.classList.toggle('kid-friendly-mode', on);
+    activateToggle('settingSimpleMode', btn);
+    const on = btn.dataset.simpleMode === 'true';
+    Settings.setSimpleMode(on);
+    document.body.classList.toggle('simple-mode', on);
 
     if (on) {
       set('advanced_mode', 'false');
@@ -1410,14 +1447,14 @@ export function bindSettings(): void {
       document.querySelector<HTMLButtonElement>('#guessBlankDifficulty .conj-toggle-btn[data-difficulty="easy"]')?.click();
       document.querySelector<HTMLButtonElement>('#conjViewToggle .conj-toggle-btn[data-view="grid"]')?.click();
       document.getElementById('conjRegAll')?.click();
-      // Skip Known relies on the Lists filter, which Kid-Friendly Mode
-      // disarms outright (see word-filters.ts's own getKidFriendlyMode()
-      // check) — leaving Skip Known selectable would offer a control that
-      // silently does nothing.
+      // Skip Known relies on the Lists filter, which Simple Mode disarms
+      // outright (see word-filters.ts's own getSimpleMode() check) —
+      // leaving Skip Known selectable would offer a control that silently
+      // does nothing.
       document.querySelector<HTMLButtonElement>('#sizeModeToggle .sort-order-btn[data-mode="window"]')?.click();
     }
 
-    onKidFriendlyModeChangeListeners.forEach(fn => fn());
+    onSimpleModeChangeListeners.forEach(fn => fn());
   });
 
   // Advanced mode — shows/hides every [data-advanced] row and section
@@ -1459,6 +1496,22 @@ export function bindSettings(): void {
     if (!btn) return;
     activateToggle('settingConfirmRemoveWordOverride', btn);
     set('confirm_remove_word_override', btn.dataset.enabled ?? 'true');
+  });
+
+  // Visual Profiles sub-section under Testing Profiles (see getShowVisualProfiles)
+  document.getElementById('settingShowVisualProfiles')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingShowVisualProfiles', btn);
+    Settings.setShowVisualProfiles(btn.dataset.enabled === 'true');
+  });
+
+  // My Content: full-viewport word editor (see getFullViewportWordEditor)
+  document.getElementById('settingFullViewportWordEditor')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingFullViewportWordEditor', btn);
+    set('full_viewport_word_editor', btn.dataset.enabled ?? 'false');
   });
 
   // My Content: starting page size for the Trivia/Guess the Blank edit lists
@@ -2134,12 +2187,13 @@ function restoreSettingsUI(): void {
   });
   document.body.classList.toggle('advanced-mode', savedAdvanced === 'true');
 
-  // Kid-Friendly Mode
-  const savedKidMode = get('kid_friendly_mode', 'false');
-  document.querySelectorAll<HTMLElement>('#settingKidMode .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.kidMode === savedKidMode);
+  // Simple Mode (formerly "Kid-Friendly Mode") — on by default; see
+  // Settings.getSimpleMode()'s own migration-from-the-old-key note.
+  const savedSimpleMode = String(Settings.getSimpleMode());
+  document.querySelectorAll<HTMLElement>('#settingSimpleMode .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.simpleMode === savedSimpleMode);
   });
-  document.body.classList.toggle('kid-friendly-mode', savedKidMode === 'true');
+  document.body.classList.toggle('simple-mode', savedSimpleMode === 'true');
 
   // Session history
   const savedHistory = get('history_enabled', 'true');
@@ -2159,6 +2213,18 @@ function restoreSettingsUI(): void {
   const savedConfirmRemoveWordOverride = get('confirm_remove_word_override', 'true');
   document.querySelectorAll<HTMLElement>('#settingConfirmRemoveWordOverride .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.enabled === savedConfirmRemoveWordOverride);
+  });
+
+  // Visual Profiles sub-section under Testing Profiles
+  const savedShowVisualProfiles = get('show_visual_profiles', 'false');
+  document.querySelectorAll<HTMLElement>('#settingShowVisualProfiles .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedShowVisualProfiles);
+  });
+
+  // My Content: full-viewport word editor
+  const savedFullViewportWordEditor = get('full_viewport_word_editor', 'false');
+  document.querySelectorAll<HTMLElement>('#settingFullViewportWordEditor .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedFullViewportWordEditor);
   });
 
   // My Content: Trivia/Guess the Blank edit list page size
@@ -2465,12 +2531,95 @@ function describeDayHits(dateStr: string): string {
     .join(' · ');
 }
 
+// ── Day tooltip — styled hover breakdown, not the OS default ────────────────
+//
+// One shared element, built lazily and repositioned per cell rather than one
+// per day — a month can have up to 31, and only one is ever shown at a time.
+
+let dayTooltipEl: HTMLElement | null = null;
+
+function ensureDayTooltip(): HTMLElement {
+  if (!dayTooltipEl) {
+    dayTooltipEl = document.createElement('div');
+    dayTooltipEl.className = 'settings-calendar-tooltip';
+    dayTooltipEl.hidden = true;
+    document.body.appendChild(dayTooltipEl);
+  }
+  return dayTooltipEl;
+}
+
+function hideDayTooltip(): void {
+  if (dayTooltipEl) dayTooltipEl.hidden = true;
+}
+
+/** Rebuilt fresh on every hover from the same two sources the calendar dots
+ *  already draw on (getGoalHitsForDate, getDailyLangStats) — a goals clause
+ *  when any were hit, then one row per language with recorded activity, in
+ *  the same per-language colour the dots use. A day with neither (recorded
+ *  active before per-language tracking existed, or with no goals set) says
+ *  so plainly rather than showing an empty box. */
+function showDayTooltip(anchor: HTMLElement, dateStr: string, dateLabel: string): void {
+  const tip = ensureDayTooltip();
+  tip.innerHTML = '';
+  tip.hidden = false;
+
+  const title = document.createElement('div');
+  title.className = 'settings-calendar-tooltip-title';
+  title.textContent = dateLabel;
+  tip.appendChild(title);
+
+  const hits = describeDayHits(dateStr);
+  if (hits) {
+    const goalsRow = document.createElement('div');
+    goalsRow.className = 'settings-calendar-tooltip-goals';
+    goalsRow.textContent = `🎯 ${hits}`;
+    tip.appendChild(goalsRow);
+  }
+
+  const byLang = getDailyLangStats(dateStr);
+  if (byLang.length > 0) {
+    byLang
+      .sort((a, b) => b.words - a.words)
+      .forEach(({ lang, words, minutes }) => {
+        const row = document.createElement('div');
+        row.className = 'settings-calendar-tooltip-row';
+        const dot = document.createElement('span');
+        dot.className = 'settings-calendar-dot';
+        dot.style.background = scopeColorVar(lang);
+        row.appendChild(dot);
+        const label = document.createElement('span');
+        label.className = 'settings-calendar-tooltip-lang';
+        label.textContent = scopeLabel(lang);
+        row.appendChild(label);
+        const stats = document.createElement('span');
+        stats.className = 'settings-calendar-tooltip-stats';
+        stats.textContent = minutes > 0
+          ? `${words} word${words === 1 ? '' : 's'} · ${minutes} min`
+          : `${words} word${words === 1 ? '' : 's'}`;
+        row.appendChild(stats);
+        tip.appendChild(row);
+      });
+  } else if (!hits) {
+    const empty = document.createElement('div');
+    empty.className = 'settings-calendar-tooltip-empty';
+    empty.textContent = 'No detailed stats recorded for this day.';
+    tip.appendChild(empty);
+  }
+
+  positionPopover(tip, anchor);
+}
+
 function renderStreakCalendar(): void {
   const label = document.getElementById('streakCalLabel');
   const grid  = document.getElementById('streakCalGrid');
   const next  = document.getElementById('streakCalNext') as HTMLButtonElement | null;
   const legend = document.getElementById('streakCalLegend');
   if (!label || !grid) return;
+  // Rebuilding the grid below removes every cell a tooltip might currently
+  // be anchored to — removal doesn't reliably fire mouseleave, so a stale
+  // tooltip from before a month-navigation click could otherwise be left
+  // floating with nothing pointing at it.
+  hideDayTooltip();
 
   const base = new Date();
   base.setDate(1);
@@ -2519,8 +2668,19 @@ function renderStreakCalendar(): void {
           dots.appendChild(dot);
         });
         cell.appendChild(dots);
-        cell.title = describeDayHits(dateStr);
       }
+
+      // A styled hover breakdown, not the OS default `title` tooltip — goal
+      // hits (known for every past day via GOAL_HISTORY_KEY) plus a
+      // per-language word/minute breakdown (getDailyLangStats, recorded
+      // going forward from whenever that store shipped — an active day from
+      // before then just has none to show).
+      const dateLabel = cellDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+      cell.addEventListener('mouseenter', () => showDayTooltip(cell, dateStr, dateLabel));
+      cell.addEventListener('mouseleave', hideDayTooltip);
+      cell.addEventListener('focus', () => showDayTooltip(cell, dateStr, dateLabel));
+      cell.addEventListener('blur', hideDayTooltip);
+      cell.tabIndex = 0;
     }
     if (dateStr === todayStr) cell.classList.add('settings-calendar-day--today');
     grid.appendChild(cell);

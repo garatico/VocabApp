@@ -115,6 +115,17 @@ function lines(s: string): string[] {
 
 const WORD_DIFFICULTY_OPTIONS = ['', '1', '2', '3', '4', '5'] as const;
 
+// The full set of classifications a word can be assigned in My Content, for
+// every language — not narrowed per-language the way the live filter's own
+// POS chips are (class-filter.ts's updateClassFilter hides a chip with zero
+// matches so the filter row stays uncluttered), since narrowing here would
+// block the exact thing this list exists for: assigning a language's first
+// word of a POS it doesn't have any of yet. Built from the same canonical
+// set the rest of the app already agrees on (POS_CHIPS), plus 'phrase' and
+// 'other' for words added before those existed — dropping them would leave
+// already-saved values with nothing selected in this dropdown.
+const WORD_POS_OPTIONS = ['', ...POS_CHIPS.map(c => c.value).filter(Boolean), 'phrase', 'other'];
+
 function textArea(placeholder = '', value = ''): HTMLTextAreaElement {
   const t = document.createElement('textarea');
   t.className = 'mc-input mc-textarea';
@@ -845,7 +856,7 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>)
 
   const form = el('div', 'mc-form');
   const transI = textInput('e.g. cat');
-  const posI = selectInput(['', 'noun', 'verb', 'adjective', 'adverb', 'phrase', 'other']);
+  const posI = selectInput(WORD_POS_OPTIONS);
   const domainsI = textInput('e.g. animals, home (comma-separated)');
   const notesI = textInput('optional notes');
   const disambiguatorI = textInput('e.g. auxiliary — shown as "word (auxiliary)"');
@@ -928,6 +939,11 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>)
 
   function renderAddedList(): void {
     list.innerHTML = '';
+    // A full-viewport editor overlay (see mountWordEditorDetail) lives on
+    // document.body, outside `list` — clearing list.innerHTML above doesn't
+    // touch it, so a stale one from the pre-rebuild state has to go here.
+    document.getElementById('mcEditorOverlay')?.remove();
+    list.classList.toggle('mc-scroll-list--has-expanded', expandedKey !== null);
     const allEntries = LANGUAGES.flatMap(info => getUserWords(info.name).map(w => ({ info, w })));
 
     toolbar.innerHTML = '';
@@ -949,7 +965,11 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>)
     } else {
       shown.forEach(({ info, w }) => {
         const key = rowKey(info.name, w.id);
-        list.appendChild(buildWordRow(info, w, renderAddedList, expandedKey === key, () => {
+        const refreshRow: MCRowRefreshFn = opts => {
+          if (opts?.close) expandedKey = null;
+          renderAddedList();
+        };
+        list.appendChild(buildWordRow(info, w, refreshRow, expandedKey === key, () => {
           expandedKey = expandedKey === key ? null : key;
           renderAddedList();
         }));
@@ -975,8 +995,42 @@ function buildAddWordSubsection(currentLang: string, selectedLangs: Set<string>)
  * (translation, pos, glosses, ...) are edited exactly the same way, rather
  * than needing a second, parallel edit mechanism just for these.
  */
+/** Passed down into renderWordEditorBody's Save/Save-and-Close buttons —
+ *  `close: true` additionally collapses the row that's currently open,
+ *  which only the caller's `expanded`/`expandedKey` closure can do. */
+export type MCRowRefreshFn = (opts?: { close?: boolean }) => void;
+
+/**
+ * Mounts an expanded word editor's detail panel — inline under its row
+ * (Settings.getFullViewportWordEditor() off, the default) or as a
+ * full-viewport overlay over everything (on), for a learner who finds the
+ * many fields cramped inside My Content's own scrolling list. Callers must
+ * remove any existing `#mcEditorOverlay` themselves before rebuilding their
+ * row list (see renderOverridesList/renderAddedList) — single-open-row
+ * state means at most one row calls this per render pass, but a stale
+ * overlay from the *previous* pass would otherwise linger since it lives
+ * outside `wrap`, on `document.body`.
+ */
+function mountWordEditorDetail(wrap: HTMLElement, detailEl: HTMLElement, onClose: () => void): void {
+  if (!Settings.getFullViewportWordEditor()) {
+    wrap.appendChild(detailEl);
+    return;
+  }
+  const overlay = el('div', 'mc-editor-overlay');
+  overlay.id = 'mcEditorOverlay';
+  const header = el('div', 'mc-editor-overlay-header');
+  const backBtn = el('button', 'mc-editor-overlay-back', '← Back');
+  backBtn.type = 'button';
+  backBtn.addEventListener('click', () => { overlay.remove(); onClose(); });
+  header.appendChild(backBtn);
+  const body = el('div', 'mc-editor-overlay-body');
+  body.appendChild(detailEl);
+  overlay.append(header, body);
+  document.body.appendChild(overlay);
+}
+
 function buildWordRow(
-  info: LanguageInfo, w: UserWord, refresh: () => void, expanded: boolean, onToggle: () => void,
+  info: LanguageInfo, w: UserWord, refresh: MCRowRefreshFn, expanded: boolean, onToggle: () => void,
 ): HTMLElement {
   const wrap = el('div', 'mc-row-wrap');
   const row = el('div', 'mc-row mc-row--wordlist mc-row--clickable' + (expanded ? ' mc-row--expanded' : ''));
@@ -1011,7 +1065,7 @@ function buildWordRow(
   if (expanded) {
     const detailEl = el('div', 'mc-row-detail');
     renderWordEditorBody(info.name, toWord(w), detailEl, refresh);
-    wrap.appendChild(detailEl);
+    mountWordEditorDetail(wrap, detailEl, onToggle);
   }
   return wrap;
 }
@@ -1119,6 +1173,11 @@ function buildEditWordSubsection(currentLang: string, focusWord?: { lang: string
 
   function renderOverridesList(): void {
     list.innerHTML = '';
+    // A full-viewport editor overlay (see mountWordEditorDetail) lives on
+    // document.body, outside `list` — clearing list.innerHTML above doesn't
+    // touch it, so a stale one from the pre-rebuild state has to go here.
+    document.getElementById('mcEditorOverlay')?.remove();
+    list.classList.toggle('mc-scroll-list--has-expanded', expanded !== null);
     // The search box + results have nothing left to do once a row is open —
     // the learner has what they wanted, and the results list would just sit
     // there above the editor they're now looking at. Reappears the moment
@@ -1215,8 +1274,12 @@ function buildEditWordSubsection(currentLang: string, focusWord?: { lang: string
       shown.forEach(({ info, word, override }) => {
         const isExpanded = !!exp && exp.lang === info.name && foldKey(exp.word) === foldKey(word);
         const rawWord = rawWordFor(info, word);
+        const refreshRow: MCRowRefreshFn = opts => {
+          if (opts?.close) expanded = null;
+          renderOverridesList();
+        };
         list.appendChild(buildWordOverrideRow(
-          info, word, override, renderOverridesList, () => void openRow(info.name, word), isExpanded, rawWord,
+          info, word, override, refreshRow, () => void openRow(info.name, word), isExpanded, rawWord,
         ));
       });
     }
@@ -1279,7 +1342,7 @@ function summarizeWordOverride(o: WordOverride): string {
  *  word opened via search that has no override yet; `rawWord` is undefined
  *  only in the brief window before its language's vocabulary has loaded. */
 function buildWordOverrideRow(
-  info: LanguageInfo, word: string, override: WordOverride | null, refresh: () => void,
+  info: LanguageInfo, word: string, override: WordOverride | null, refresh: MCRowRefreshFn,
   onToggle: () => void, expanded: boolean, rawWord: Word | undefined,
 ): HTMLElement {
   const wrap = el('div', 'mc-row-wrap');
@@ -1351,12 +1414,10 @@ function buildWordOverrideRow(
     const detailEl = el('div', 'mc-row-detail');
     if (rawWord) renderWordEditorBody(info.name, rawWord, detailEl, refresh);
     else detailEl.appendChild(el('p', 'mc-empty', 'Loading…'));
-    wrap.appendChild(detailEl);
+    mountWordEditorDetail(wrap, detailEl, onToggle);
   }
   return wrap;
 }
-
-const WORD_POS_OPTIONS = ['', 'noun', 'verb', 'adjective', 'adverb', 'phrase', 'other'];
 
 interface OverridableNote {
   wrap:     HTMLElement;
@@ -1527,7 +1588,7 @@ function buildRankOverrideField(defaultRank: number | null, overrideRank: number
  * the row from current override state after every edit, so there's nothing
  * to manually patch in place here — same as My Lists' own row expansion.
  */
-function renderWordEditorBody(lang: string, w: Word, container: HTMLElement, onChange: () => void): void {
+function renderWordEditorBody(lang: string, w: Word, container: HTMLElement, onChange: MCRowRefreshFn): void {
   container.innerHTML = '';
   const override = getWordOverride(lang, w.word);
 
@@ -1535,7 +1596,7 @@ function renderWordEditorBody(lang: string, w: Word, container: HTMLElement, onC
   const fieldsForm = el('div', 'mc-form');
   const transI   = textInput('Translation', override?.translation ?? w.translation);
   const posI     = selectInput(WORD_POS_OPTIONS, override?.pos ?? w.pos ?? '');
-  const notesI   = textInput('Notes', override?.notes ?? w.notes);
+  const notesI   = textArea('Notes', override?.notes ?? w.notes);
   const domainsI = textInput('e.g. animals, home (comma-separated)', (override?.domains ?? w.domains).join(', '));
   const difficultyI = selectInput(WORD_DIFFICULTY_OPTIONS, String((override?.difficulty ?? w.difficulty) ?? ''));
   const tagsI     = textInput('comma-separated', (override?.tags ?? w.tags).join(', '));
@@ -1543,23 +1604,12 @@ function renderWordEditorBody(lang: string, w: Word, container: HTMLElement, onC
   const antonymsI = textInput('comma-separated', (override?.antonyms ?? w.relations?.antonyms ?? []).join(', '));
   const disambig = buildDisambiguatorField(w.disambiguator ?? '', override?.disambiguator);
   const rankField = buildRankOverrideField(w.rank ?? null, override?.rank);
-  fieldsForm.append(
-    field('Translation', transI), field('Part of speech', posI),
-    field('Notes', notesI), field('Domains', domainsI),
-    field('Difficulty (1=easiest, 5=hardest)', difficultyI), field('Tags', tagsI),
-    field('Synonyms', synonymsI), field('Antonyms', antonymsI),
-    disambig.wrap, rankField.wrap,
-  );
-  container.appendChild(fieldsForm);
   const examplesI = textArea(
     'one example sentence per line',
     (override?.examples ?? w.examples).join('\n'),
   );
-  container.appendChild(field('Example sentences', examplesI));
 
-  const saveBtn = el('button', 'mc-btn mc-btn--sm', 'Save changes');
-  saveBtn.type = 'button';
-  saveBtn.addEventListener('click', () => {
+  function collectAndSaveFields(): void {
     // Only a field whose new value actually differs from the word's real
     // one becomes part of the override — editing a field back to its
     // original value and saving un-overrides just that field, since
@@ -1609,9 +1659,46 @@ function renderWordEditorBody(lang: string, w: Word, container: HTMLElement, onC
       if (r != null) fields.rank = r;
     }
     setWordFields(lang, w.word, fields);
+  }
+
+  // Save/Save-and-Close/Reset live at the top, not the bottom — the fields
+  // and glosses they act on can run long enough that the buttons used to
+  // scroll out of view before a learner reached them.
+  const saveRow = el('div', 'mc-save-row');
+  const saveBtn = el('button', 'mc-btn mc-btn--sm', 'Save');
+  saveBtn.type = 'button';
+  saveBtn.addEventListener('click', () => {
+    collectAndSaveFields();
     onChange();
   });
-  container.appendChild(saveBtn);
+  const saveCloseBtn = el('button', 'mc-btn mc-btn--secondary mc-btn--sm', 'Save and Close');
+  saveCloseBtn.type = 'button';
+  saveCloseBtn.addEventListener('click', () => {
+    collectAndSaveFields();
+    onChange({ close: true });
+  });
+  saveRow.append(saveBtn, saveCloseBtn);
+  if (override) {
+    const resetBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm', 'Reset all overrides for this word');
+    resetBtn.type = 'button';
+    resetBtn.addEventListener('click', () => { removeWordOverride(lang, w.word); onChange(); });
+    saveRow.appendChild(resetBtn);
+  }
+  container.appendChild(saveRow);
+
+  fieldsForm.append(
+    field('Translation', transI), field('Part of speech', posI),
+    field('Domains', domainsI),
+    field('Difficulty (1=easiest, 5=hardest)', difficultyI), field('Tags', tagsI),
+    field('Synonyms', synonymsI), field('Antonyms', antonymsI),
+    disambig.wrap, rankField.wrap,
+  );
+  container.appendChild(fieldsForm);
+  // Notes and Example sentences are both full-width textareas, outside the
+  // small-fields grid above — a multi-line note cramped into that grid's
+  // narrow columns was hard to read back once it ran past one line.
+  container.appendChild(field('Notes', notesI));
+  container.appendChild(field('Example sentences', examplesI));
 
   // ── Glosses: hide/reorder real senses, add and remove new ones ──────────
   // Always shown, even for a word with no real glosses at all (rank/domain
@@ -1619,6 +1706,28 @@ function renderWordEditorBody(lang: string, w: Word, container: HTMLElement, onC
   container.appendChild(el('h5', 'mc-subsection-title', 'Glosses'));
   container.appendChild(el('p', 'mc-gloss-list-hint',
     'Check a sense to keep it visible in quizzes; uncheck to hide it without deleting it.'));
+
+  // Add-a-new-sense sits above the existing list, not below it — with a
+  // long list of senses, the input used to scroll out of view below all of
+  // them.
+  const addGlossRow = el('div', 'mc-gloss-add-row');
+  const newGlossI = textInput('Add a new sense, e.g. "to talk"');
+  newGlossI.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (!newGlossI.value.trim()) return;
+    addGlossOverride(lang, w.word, newGlossI.value);
+    onChange();
+  });
+  const addGlossBtn = el('button', 'mc-btn mc-btn--sm', 'Add gloss');
+  addGlossBtn.type = 'button';
+  addGlossBtn.addEventListener('click', () => {
+    if (!newGlossI.value.trim()) return;
+    addGlossOverride(lang, w.word, newGlossI.value);
+    onChange();
+  });
+  addGlossRow.append(newGlossI, addGlossBtn);
+  container.appendChild(addGlossRow);
 
   const hiddenSet = new Set(override?.hiddenGlosses ?? []);
   const addedSet  = new Set(override?.addedGlosses ?? []);
@@ -1784,32 +1893,6 @@ function renderWordEditorBody(lang: string, w: Word, container: HTMLElement, onC
     });
   }
   container.appendChild(glossList);
-
-  const addGlossRow = el('div', 'mc-gloss-add-row');
-  const newGlossI = textInput('Add a new sense, e.g. "to talk"');
-  newGlossI.addEventListener('keydown', e => {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    if (!newGlossI.value.trim()) return;
-    addGlossOverride(lang, w.word, newGlossI.value);
-    onChange();
-  });
-  const addGlossBtn = el('button', 'mc-btn mc-btn--sm', 'Add gloss');
-  addGlossBtn.type = 'button';
-  addGlossBtn.addEventListener('click', () => {
-    if (!newGlossI.value.trim()) return;
-    addGlossOverride(lang, w.word, newGlossI.value);
-    onChange();
-  });
-  addGlossRow.append(newGlossI, addGlossBtn);
-  container.appendChild(addGlossRow);
-
-  if (override) {
-    const resetBtn = el('button', 'mc-btn mc-btn--danger mc-btn--sm', 'Reset all overrides for this word');
-    resetBtn.type = 'button';
-    resetBtn.addEventListener('click', () => { removeWordOverride(lang, w.word); onChange(); });
-    container.appendChild(resetBtn);
-  }
 }
 
 // ── Trivia questions ─────────────────────────────────────────────────────────

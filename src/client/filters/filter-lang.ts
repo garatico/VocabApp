@@ -37,8 +37,8 @@ export function setExtraLanguages(langs: Set<string>): void {
  */
 export function currentExtraLanguages(): string[] {
   // See app.ts's getExtraLanguages() — this is the second independent reader
-  // (word-lists.ts/presets.ts) that needs the same Kid-Friendly Mode guard.
-  if (Settings.getKidFriendlyMode()) return [];
+  // (word-lists.ts/presets.ts) that needs the same Simple Mode guard.
+  if (Settings.getSimpleMode()) return [];
   const activeMode = document.querySelector('.mode-tab.active')?.getAttribute('data-mode');
   if (!activeMode || !MULTI_LANG_MODES.has(activeMode)) return [];
   const primary = currentLangValue();

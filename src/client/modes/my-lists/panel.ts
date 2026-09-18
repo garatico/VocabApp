@@ -11,8 +11,10 @@
  * A smart list takes a different route entirely — see smart-panel.ts.
  */
 
-import { getList, saveListFilterState, refreshFilterSelect } from '../../utils/word-lists.ts';
-import type { FilterScope } from '../../filters/filter-scope.ts';
+import {
+  getList, saveListFilterState, refreshFilterSelect, getListMeta, setListMeta, metaFolders,
+} from '../../utils/word-lists.ts';
+import { FILTER_SCOPES, SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
 import { BROWSE_ALL_LIST, type ListsCtx } from './context.ts';
 import { renderBrowsePanel } from './browse-panel.ts';
 import { cachedVocab, cachedVocabMap, fetchVocab } from './vocab-cache.ts';
@@ -28,6 +30,8 @@ import { exportList } from './export-list.ts';
 import { closePopover, clickedOutsidePopover } from './move-popover.ts';
 import { BANDS, POS_CHIPS, type ExportFormat, type SortMode, type VocabEntry } from './types.ts';
 import { buildLangBadge } from '../../ui/lang-badge.ts';
+import { buildChipDropdown, buildChecklistDropdown, closeAllChipDropdowns } from './chip-dropdown.ts';
+import { getFolderRegistry, addFolder } from './folders.ts';
 
 /**
  * The outside-click listener is captured on the document, so it has to be
@@ -203,83 +207,75 @@ export function renderPanel(ctx: ListsCtx): void {
   controlsGroup.appendChild(sortLabel); controlsGroup.appendChild(sortSel);
   controlsGroup.appendChild(hideMasteredBtn);
 
-  // ── POS chips ──────────────────────────────────────────────────────────────
+  // ── Part of Speech / Level / Folders / Hide from — dropdowns, one row ───────
+  // POS and Level keep the exact chip markup/colouring they always had (see
+  // chip-dropdown.ts) — just collapsed behind a summary button instead of
+  // always expanded, with Folder/Hide-from moved in next to them (they used
+  // to live in the sidebar's own per-card "⚙ Settings" panel).
 
-  const posRow = document.createElement('div');
-  posRow.className = 'ml-pos-row';
-  const posLabel = document.createElement('span');
-  posLabel.className = 'ml-band-label'; posLabel.textContent = 'Part of Speech';
-  posRow.appendChild(posLabel);
-  const posChipBtns = new Map<string, HTMLButtonElement>();
-  POS_CHIPS.forEach(({ value, label }) => {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'pos-chip' + (value === '' ? ' pos-chip-all active' : '');
-    chip.textContent = label;
-    if (value) { chip.dataset.pos = value; posChipBtns.set(value, chip); }
-    chip.addEventListener('click', () => {
-      if (value === '') ctx.selectedPos.clear();
-      else {
-        if (ctx.selectedPos.has(value)) ctx.selectedPos.delete(value);
-        else ctx.selectedPos.add(value);
-      }
-      posRow.querySelectorAll<HTMLButtonElement>('.pos-chip').forEach(c => {
-        c.classList.toggle('active',
-          c.dataset.pos ? ctx.selectedPos.has(c.dataset.pos) : ctx.selectedPos.size === 0);
-      });
-      add.refresh(); wordList.render();
-    });
-    posRow.appendChild(chip);
-  });
+  const filterDropdownsRow = document.createElement('div');
+  filterDropdownsRow.className = 'ml-filter-dropdowns-row';
 
-  // ── CEFR level chips ───────────────────────────────────────────────────────
-  // band is populated for every word server-side (derived from rank), so this
-  // filter works across the whole vocabulary rather than a curated subset.
-
-  const bandRow = document.createElement('div');
-  bandRow.className = 'ml-band-row';
-  const bandLabel = document.createElement('span');
-  bandLabel.className = 'ml-band-label';
-  bandLabel.textContent = 'Level';
-  bandRow.appendChild(bandLabel);
-
-  const bandChipBtns = new Map<string, HTMLButtonElement>();
-  const bandAllChip = document.createElement('button');
-  bandAllChip.type = 'button';
-  bandAllChip.className = 'pos-chip pos-chip-all active';
-  bandAllChip.textContent = 'All';
-  bandAllChip.addEventListener('click', () => {
-    ctx.selectedBands.clear(); syncBandChips();
+  const posDropdown = buildChipDropdown('Part of Speech', 'pos', POS_CHIPS.filter(c => c.value), ctx.selectedPos, () => {
     add.refresh(); wordList.render();
   });
-  bandRow.appendChild(bandAllChip);
+  const posChipBtns = posDropdown.chips;
 
-  BANDS.forEach(band => {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'pos-chip ml-band-chip';
-    chip.dataset.band = band;
-    chip.textContent = band;
-    bandChipBtns.set(band, chip);
-    chip.addEventListener('click', () => {
-      if (ctx.selectedBands.has(band)) ctx.selectedBands.delete(band);
-      else ctx.selectedBands.add(band);
-      syncBandChips();
-      add.refresh(); wordList.render();
+  const bandDropdown = buildChipDropdown(
+    'Level', 'band', BANDS.map(b => ({ value: b, label: b })), ctx.selectedBands,
+    () => { add.refresh(); wordList.render(); },
+  );
+
+  const singleFolderScope = `single_${ctx.lang}`;
+  function buildFolderFooter(scope: string, onAdd: (name: string) => void): HTMLElement {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ml-chip-dropdown-new-folder';
+    btn.textContent = '+ new folder…';
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const name = window.prompt('New folder name:');
+      if (!name?.trim()) return;
+      addFolder(scope, name.trim());
+      onAdd(name.trim());
     });
-    bandRow.appendChild(chip);
-  });
-
-  function syncBandChips(): void {
-    bandAllChip.classList.toggle('active', ctx.selectedBands.size === 0);
-    bandChipBtns.forEach((btn, band) =>
-      btn.classList.toggle('active', ctx.selectedBands.has(band)));
+    return btn;
   }
+
+  const folderSelected = new Set(metaFolders(getListMeta(ctx.lang, ctx.selectedList)));
+  const folderDropdown = buildChecklistDropdown(
+    'Folders',
+    getFolderRegistry(singleFolderScope).map(f => ({ value: f, label: f })),
+    folderSelected,
+    () => {
+      const meta = getListMeta(ctx.lang, ctx.selectedList);
+      setListMeta(ctx.lang, ctx.selectedList, { ...meta, folders: [...folderSelected], folder: undefined });
+      ctx.renderSidebar(false);
+    },
+    buildFolderFooter(singleFolderScope, name => {
+      folderSelected.add(name);
+      const meta = getListMeta(ctx.lang, ctx.selectedList);
+      setListMeta(ctx.lang, ctx.selectedList, { ...meta, folders: [...folderSelected], folder: undefined });
+      ctx.renderSidebar(false);
+      renderPanel(ctx); // rebuild so the new folder shows as a selectable option
+    }),
+  );
+
+  const hiddenSelected = new Set(getListMeta(ctx.lang, ctx.selectedList).hiddenModes ?? []);
+  const hideFromDropdown = buildChecklistDropdown(
+    'Hide from', FILTER_SCOPES.map(s => ({ value: s, label: SCOPE_LABELS[s] })), hiddenSelected,
+    () => {
+      const meta = getListMeta(ctx.lang, ctx.selectedList);
+      setListMeta(ctx.lang, ctx.selectedList, { ...meta, hiddenModes: [...hiddenSelected] as FilterScope[] });
+      ctx.renderSidebar(false);
+    },
+  );
+
+  filterDropdownsRow.append(posDropdown.wrap, bandDropdown.wrap, folderDropdown.wrap, hideFromDropdown.wrap);
 
   panelHeader.appendChild(titleGroup);
   panelHeader.appendChild(statsRow);
-  panelHeader.appendChild(posRow);
-  panelHeader.appendChild(bandRow);
+  panelHeader.appendChild(filterDropdownsRow);
   ctx.panel.appendChild(panelHeader);
 
   // ── Vocabulary ─────────────────────────────────────────────────────────────
@@ -351,6 +347,7 @@ export function renderPanel(ctx: ListsCtx): void {
   outsideClickHandler = (e: MouseEvent) => {
     if (!addSection.contains(e.target as Node)) add.results.hidden = true;
     if (clickedOutsidePopover(e.target as Node)) closePopover();
+    if (!(e.target as HTMLElement).closest('.ml-chip-dropdown')) closeAllChipDropdowns();
   };
   document.addEventListener('click', outsideClickHandler, true);
 

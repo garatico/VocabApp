@@ -34,7 +34,7 @@
 .ml-left-pane {
   display: flex;
   flex-direction: column;
-  width: 336px;
+  width: 440px;
   flex-shrink: 0;
   border-right: 1px solid var(--border);
   overflow: hidden;
@@ -145,6 +145,12 @@
   transition: background var(--transition-fast);
   border-left: 2px solid transparent;
 }
+/* Same `[hidden]`-vs-class-`display` cascade tie this codebase hits
+   elsewhere (see my-content.css/conjugation.css/streak-widget.css) —
+   `[hidden]` and the rule above have equal specificity, so without this a
+   folder- or section-collapsed row (sidebar.ts's renderSection()) would
+   keep rendering flex despite JS setting `row.hidden = true`. */
+.ml-list-item[hidden] { display: none; }
 .ml-list-item:hover { background: var(--surface2); }
 .ml-list-item.active {
   background: var(--accent-light);
@@ -1190,6 +1196,26 @@ html.dark .ml-word-band[data-band] {
   border-color: var(--accent);
 }
 
+/* Jump to this word's editor on My Content — same shell as .ml-move-btn,
+   just its own glyph. */
+.ml-edit-btn {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-sm);
+  line-height: 1.2;
+  transition: color var(--transition-fast), background var(--transition-fast),
+              border-color var(--transition-fast);
+}
+.ml-edit-btn:hover {
+  color: var(--accent);
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+
 .ml-move-popover {
   position: absolute;
   z-index: 100;
@@ -1621,6 +1647,7 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
   .ml-word-actions { opacity: 1; gap: 0.25rem; }
   .ml-mastery-btn  { width: 28px; height: 28px; font-size: 0.8rem; }
   .ml-move-btn     { font-size: 1rem; padding: 0.2rem 0.4rem; }
+  .ml-edit-btn     { font-size: 1rem; padding: 0.2rem 0.4rem; }
   .ml-remove-btn   { opacity: 1; font-size: 1.1rem; padding: 0.1rem 0.4rem; }
 
   /* Title group: allow wrapping so quiz/export buttons don't overflow */
@@ -1862,7 +1889,7 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
     flex-wrap: wrap;
     padding: 0.5rem 0.6rem;
   }
-  .ml-left-pane { width: 240px; }
+  .ml-left-pane { width: 260px; }
 }
 
 @media (max-width: 767px) {
@@ -1898,6 +1925,92 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
   min-width: 108px;
 }
 .ml-band-chip { font-family: 'DM Mono', monospace; letter-spacing: 0.02em; }
+
+/* ═══════════════════════════════════════════════════════════════
+   Filter dropdowns — Part of Speech / Level / Folders / Hide from
+   (panel.ts, multi-panel.ts, browse-panel.ts; see chip-dropdown.ts)
+   ═══════════════════════════════════════════════════════════════ */
+.ml-filter-dropdowns-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.35rem 0.85rem 0.5rem 0.4rem;
+}
+.ml-chip-dropdown {
+  position: relative;
+}
+.ml-chip-dropdown-toggle {
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  background: var(--surface2);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ml-chip-dropdown-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ml-chip-dropdown-panel {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 0.3rem);
+  left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 2rem));
+  padding: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md, 0 4px 16px rgba(0,0,0,0.25));
+}
+/* Same `[hidden]`-vs-class-`display` cascade tie this codebase hits
+   elsewhere (see my-content.css/streak-widget.css/sidebar's own
+   .ml-list-item[hidden]) — `[hidden]` and the rule above have equal
+   specificity, so without this the panel kept rendering flex despite JS
+   setting `panel.hidden = true` on outside click. */
+.ml-chip-dropdown-panel[hidden] { display: none; }
+.ml-chip-dropdown-panel--checklist {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+.ml-chip-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.3rem;
+  font-size: 0.78rem;
+  color: var(--text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ml-chip-dropdown-item:hover {
+  background: var(--surface2);
+  border-radius: var(--radius-sm, 4px);
+}
+.ml-chip-dropdown-new-folder {
+  margin-top: 0.3rem;
+  padding: 0.25rem 0.4rem;
+  font-size: 0.74rem;
+  background: none;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm, 4px);
+  color: var(--text-muted);
+  cursor: pointer;
+  align-self: flex-start;
+}
+.ml-chip-dropdown-new-folder:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 
 /* ═══════════════════════════════════════════════════════════════
    Multi-select
@@ -2053,6 +2166,94 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
 }
 /* The very first section head has nothing above it to separate from. */
 .ml-single-head { margin-top: 0; border-top: none; }
+
+/* Collapse/expand toggle wrapping the head's own label (see sidebar.ts's
+   renderSection()) — plain button reset so it reads as the same label text
+   it's wrapping, not a button, plus the disclosure caret. */
+.ml-section-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+.ml-section-caret {
+  display: inline-block;
+  font-size: 0.7em;
+  width: 0.8em;
+}
+
+/* A folder within a section (see sidebar.ts's renderSection()/
+   renderProfilesNav()) — one level deeper than a section head, so smaller
+   and unindented-but-muted rather than repeating the section's own bold
+   uppercase treatment. */
+.ml-folder-head {
+  padding: 0.3rem 0.65rem 0.15rem 1.1rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.ml-folder-row {
+  padding-left: 0.5rem;
+  border-left: 2px solid var(--border);
+  margin-left: 0.65rem;
+}
+
+/* ── Per-card settings panel (Folder, Hide from, language lock) — toggled by
+   the "⚙" button, same expand-in-place shape as My Content's own row
+   editors rather than a popover. */
+.ml-settings-panel {
+  padding: 0.5rem 0.65rem 0.6rem;
+  border-top: 1px dashed var(--border);
+  margin-top: 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  cursor: default;
+}
+.ml-settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+}
+.ml-settings-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.ml-settings-folder-input {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  min-width: 0;
+  flex: 1;
+}
+.ml-settings-row--hide {
+  flex-wrap: wrap;
+}
+.ml-settings-hide-item {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-weight: 400;
+  color: var(--text);
+  white-space: nowrap;
+}
+
 .ml-smart-hint {
   font-size: 0.7rem;
   font-style: italic;

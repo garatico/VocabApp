@@ -121,6 +121,10 @@
                > Streak & Daily Goal controls whether it shows and how it
                reads; clicking it opens a details popover. -->
           <button type="button" id="streakWidget" class="streak-widget" title="Streak details" hidden></button>
+          <!-- Roll the Dice — a random word from the current language, shown
+               in the same word-info popover clicking a word elsewhere opens.
+               See src/client/ui/dice-widget.ts. -->
+          <button type="button" id="diceBtn" class="dice-widget" aria-label="Random word" title="Roll the dice — show a random word">🎲</button>
           <!-- Packaged desktop builds have no browser chrome at all — no
                reload button, no F5 shortcut past what Tauri's WebView passes
                through — so a stuck screen (a bad quiz-start error, a hung
@@ -135,7 +139,7 @@
                tabs with no filter box to apply — see ui-state.ts. Full CRUD
                (rename/delete beyond save-here) lives in My Lists — see
                my-lists/profiles-panel.ts. -->
-          <button type="button" id="presetsBtn" data-kid-hide="true" aria-label="Testing Profiles" title="Testing Profiles" data-i18n-aria-label="controls.profiles" data-i18n-title="controls.profiles" data-i18n="controls.profiles">Profiles</button>
+          <button type="button" id="presetsBtn" data-simple-hide="true" aria-label="Testing Profiles" title="Testing Profiles" data-i18n-aria-label="controls.profiles" data-i18n-title="controls.profiles" data-i18n="controls.profiles">Profiles</button>
           <button id="shortcutsBtn" aria-label="Keyboard shortcuts (?)">?</button>
         </div>
 
@@ -165,7 +169,7 @@
                  /lists still land in the right language. Hidden on every
                  other tab — see ui-state.ts. Opens a checkbox popover —
                  language-picker.ts. -->
-            <div class="control-group" id="compareGroup" data-kid-hide="true">
+            <div class="control-group" id="compareGroup" data-simple-hide="true">
               <button type="button" id="langPickerBtn" class="lang-picker-btn" data-i18n="controls.addLanguages">+ Languages</button>
             </div>
           </div>
@@ -187,7 +191,7 @@
                 <option value="custom">Custom...</option>
               </select>
               <input type="number" id="sizeCustom" class="custom-count-input" min="1" max="9999" step="1" placeholder="e.g. 750" data-i18n-placeholder="controls.egCustom" style="display:none;"/>
-              <div class="sort-order-toggle chip-toggle" id="sizeModeToggle" data-kid-hide="true" title="By rank: the words ranked 1–N, whatever their status. Skip known: N words that aren't on any of your lists, digging further down the frequency list as needed." data-i18n-title="controls.sizeModeTip">
+              <div class="sort-order-toggle chip-toggle" id="sizeModeToggle" data-simple-hide="true" title="By rank: the words ranked 1–N, whatever their status. Skip known: N words that aren't on any of your lists, digging further down the frequency list as needed." data-i18n-title="controls.sizeModeTip">
                 <button type="button" class="sort-order-btn active" data-mode="window" title="Take the words ranked 1–N in frequency order" data-i18n-title="controls.byRankTip" data-i18n="controls.byRank">By Rank</button>
                 <button type="button" class="sort-order-btn" data-mode="fill" title="Always return N words you haven't listed yet, pulling deeper if needed" data-i18n-title="controls.skipKnownTip" data-i18n="controls.skipKnown">Skip Known</button>
               </div>
@@ -255,7 +259,7 @@
                  keeps — see ui-state.ts's hasOwnOrder check), always visible
                  rather than a collapsible filter box, since it's a core setup
                  choice for this mode, not an incidental narrowing filter. -->
-            <div class="control-group control-group--chip" id="pictureStyleGroup" data-kid-hide="true" style="display:none">
+            <div class="control-group control-group--chip" id="pictureStyleGroup" data-simple-hide="true" style="display:none">
               <label data-i18n="controls.quizStyle">Quiz Style</label>
               <div class="conj-display-toggle" id="pictureSubMode">
                 <button class="conj-toggle-btn active" data-mode="type" data-i18n="controls.typeWord">Type the Word</button>
@@ -294,7 +298,7 @@
 
           <div class="control-stack control-stack--inline-labels">
             <!-- Trivia only — see data/trivia-questions.ts's difficulty field. -->
-            <div class="control-group control-group--chip" id="triviaDifficultyGroup" data-kid-hide="true" style="display:none">
+            <div class="control-group control-group--chip" id="triviaDifficultyGroup" data-simple-hide="true" style="display:none">
               <label data-i18n="controls.difficulty">Trivia Difficulty</label>
               <div class="conj-display-toggle" id="triviaDifficulty">
                 <button class="conj-toggle-btn active" data-difficulty="all" data-i18n="controls.all">All</button>
@@ -307,7 +311,7 @@
             <!-- Trivia only — how hard the question's own wording is, independent
                  of how obscure the fact is (see data/trivia-questions.ts's
                  readingDifficulty field). -->
-            <div class="control-group control-group--chip" id="triviaReadingDifficultyGroup" data-kid-hide="true" style="display:none">
+            <div class="control-group control-group--chip" id="triviaReadingDifficultyGroup" data-simple-hide="true" style="display:none">
               <label>Reading Difficulty</label>
               <div class="conj-display-toggle" id="triviaReadingDifficulty">
                 <button class="conj-toggle-btn active" data-reading-difficulty="all" data-i18n="controls.all">All</button>
@@ -321,7 +325,7 @@
           <div class="control-stack control-stack--inline-labels">
             <!-- Trivia only — one short clause vs. a multi-sentence prompt (see
                  data/trivia-questions.ts's readingLength field). -->
-            <div class="control-group control-group--chip" id="triviaReadingLengthGroup" data-kid-hide="true" style="display:none">
+            <div class="control-group control-group--chip" id="triviaReadingLengthGroup" data-simple-hide="true" style="display:none">
               <label>Reading Length</label>
               <div class="conj-display-toggle" id="triviaReadingLength">
                 <button class="conj-toggle-btn active" data-reading-length="all" data-i18n="controls.all">All</button>
@@ -337,7 +341,7 @@
                select instead of sitting a row higher (control-group--chip's
                label has no row of its own the way Language(s)'s does). -->
           <div class="control-stack control-stack--inline-labels">
-            <div class="control-group control-group--chip" id="guessBlankDifficultyGroup" data-kid-hide="true" style="display:none">
+            <div class="control-group control-group--chip" id="guessBlankDifficultyGroup" data-simple-hide="true" style="display:none">
               <label data-i18n="controls.difficulty">Difficulty</label>
               <div class="conj-display-toggle" id="guessBlankDifficulty">
                 <button class="conj-toggle-btn active" data-difficulty="all" data-i18n="controls.all">All</button>
@@ -362,7 +366,7 @@
                Language(s)/Words do — without it Quiz Style's chips sat one
                row higher than Words' own chips instead of lining up. -->
           <div class="control-stack control-stack--inline-labels">
-            <div class="control-group control-group--chip" id="tableStyleGroup" data-kid-hide="true" style="display:none">
+            <div class="control-group control-group--chip" id="tableStyleGroup" data-simple-hide="true" style="display:none">
               <label data-i18n="controls.quizStyle">Quiz Style</label>
               <div class="conj-display-toggle" id="tableStyleToggle">
                 <button class="conj-toggle-btn active" data-style="standard" data-i18n="controls.standard">Standard</button>
@@ -371,7 +375,7 @@
               </div>
             </div>
 
-            <div class="control-group control-group--chip" id="directionGroup" data-kid-hide="true">
+            <div class="control-group control-group--chip" id="directionGroup" data-simple-hide="true">
               <label data-i18n="controls.direction">Direction</label>
               <div class="conj-display-toggle" id="directionToggle">
                 <button class="conj-toggle-btn active" data-direction="target-en" data-i18n="controls.wordToMeaning">Word &#x2192; Meaning</button>
@@ -387,7 +391,7 @@
                folded into this pair) since it only ever appears alongside
                View, never in the same relationship Display has to it. -->
           <div class="control-stack control-stack--inline-labels">
-            <div class="control-group control-group--chip" id="conjViewGroup" data-kid-hide="true" style="display:none">
+            <div class="control-group control-group--chip" id="conjViewGroup" data-simple-hide="true" style="display:none">
               <label data-i18n="controls.view">View</label>
               <div class="conj-display-toggle" id="conjViewToggle">
                 <button class="conj-toggle-btn active" data-view="grid" title="Every verb, one card per tense" data-i18n-title="controls.gridTip" data-i18n="controls.grid">Grid</button>
@@ -496,7 +500,7 @@
               <!-- Which kinds of verb to drill. The buckets match the pill on
                    each card, which is the same grouping of the 26 raw
                    conjugation classes. -->
-              <div class="conj-tf-side conj-tf-side--narrow" id="conjRegularityRow" data-kid-hide="true">
+              <div class="conj-tf-side conj-tf-side--narrow" id="conjRegularityRow" data-simple-hide="true">
                 <div class="conj-tf-header">
                   <span class="filter-section-label" data-i18n="conj.regularity">Regularity</span>
                   <button type="button" id="conjRegAll" data-i18n="controls.all">All</button>
@@ -526,7 +530,7 @@
           </div>
         </div>
 
-        <div id="classFilter" class="class-filter-wrap" data-kid-hide="true">
+        <div id="classFilter" class="class-filter-wrap" data-simple-hide="true">
           <button type="button" class="filter-collapse-btn" data-collapse="classFilterBody" aria-expanded="false" aria-controls="classFilterBody">
             <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
             <span class="filter-section-label" data-i18n="filter.partOfSpeech">Part of Speech</span>
@@ -554,7 +558,7 @@
           </div>
         </div>
 
-        <div id="listFilter" data-kid-hide="true">
+        <div id="listFilter" data-simple-hide="true">
           <div class="list-filter-wrap">
             <div class="list-filter-header">
               <button type="button" class="filter-collapse-btn" data-collapse="listFilterBody" aria-expanded="false" aria-controls="listFilterBody">
@@ -590,7 +594,7 @@
           </div>
         </div>
 
-        <div id="domainFilterWrap" data-kid-hide="true">
+        <div id="domainFilterWrap" data-simple-hide="true">
           <div id="domainFilterHeader">
             <button type="button" class="filter-collapse-btn" data-collapse="domainFilterBody" aria-expanded="false" aria-controls="domainFilterBody">
               <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
@@ -615,7 +619,7 @@
              Mirrors the same controls (and localStorage keys) under
              Settings → Script Display; kept in sync from both ends by
              settings.ts so either entry point works. -->
-        <div id="scriptFilterWrap" class="class-filter-wrap" data-kid-hide="true" hidden>
+        <div id="scriptFilterWrap" class="class-filter-wrap" data-simple-hide="true" hidden>
           <button type="button" class="filter-collapse-btn" data-collapse="scriptFilterBody" data-default-open="true" aria-expanded="true" aria-controls="scriptFilterBody">
             <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
             <span class="filter-section-label" data-i18n="settings.nav.script">Script Display</span>
@@ -663,7 +667,7 @@
              split to filter by. See syncScriptTypeAvailability() in
              app.ts. Chips are fixed (not discovered from data, unlike
              Domains) since there are always exactly these three. -->
-        <div id="scriptTypeFilterWrap" class="class-filter-wrap" data-kid-hide="true" hidden>
+        <div id="scriptTypeFilterWrap" class="class-filter-wrap" data-simple-hide="true" hidden>
           <button type="button" class="filter-collapse-btn" data-collapse="scriptTypeFilterBody" aria-expanded="false" aria-controls="scriptTypeFilterBody">
             <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
             <span class="filter-section-label" data-i18n="filter.scriptType">Script Type</span>
@@ -1865,7 +1869,7 @@
               </div>
             </div>
 
-            <div class="settings-row" data-kid-hide="true">
+            <div class="settings-row" data-simple-hide="true">
               <div class="settings-label">
                 <span data-i18n="settings.appearance.langIndicator">Language indicator</span>
                 <span class="settings-desc" data-i18n="settings.appearance.langIndicatorDesc">When 2+ languages are merged into one table (the "+ Languages" picker), how each word's language is shown — Off leaves cells plain, Color tints the cell, Flag shows a faint flag behind the word</span>
@@ -1880,7 +1884,7 @@
             </div>
             </div>
 
-            <div class="settings-group" data-advanced="true" data-kid-hide="true">
+            <div class="settings-group" data-advanced="true" data-simple-hide="true">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupLangAppearance" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupLangAppearance">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading" data-i18n="settings.appearance.langAppearance">Language appearance</span>
@@ -2134,8 +2138,8 @@
 
             <div class="settings-row settings-row--stack">
               <div class="settings-label">
-                <span data-i18n="settings.general.kidModeSpecifics">Kid-Friendly Mode — what it changes</span>
-                <span class="settings-desc" data-i18n="settings.general.kidModeSpecificsDesc">The toggle for this lives in the toolbar to the right, always visible regardless of Advanced mode. Turning it on: switches Advanced mode off and the swear-word filter on — both stay changeable afterward. Hides the My Content and My Lists tabs, the Testing Profiles button, the Part of Speech/Lists/Domains filter boxes, the "+ Languages" picker, the Skip Known size mode, and the Language indicator/Language appearance rows in Appearance — for as long as this stays on. The Part of Speech/Lists/Domains filters and "+ Languages" also stop applying whatever they were previously set to, not just disappear from view — so does Skip Known, which relies on the Lists filter. And it sets each mode to its simplest option: Table's Direction (Word→Meaning) and Quiz Style (Standard), Picture Quiz (Click the Picture), Conjugation's View (Grid) and Regularity (all), Trivia's Difficulty/Reading Difficulty (Easy) and Reading Length (Short), and Guess the Blank's Difficulty (Easy) — each still changeable by turning this off, same as Advanced mode and the swear filter. Meant for a kid, or anyone trying the app for the first time.</span>
+                <span data-i18n="settings.general.kidModeSpecifics">Simple Mode — what it changes</span>
+                <span class="settings-desc" data-i18n="settings.general.kidModeSpecificsDesc">The toggle for this lives in the toolbar to the right, always visible regardless of Advanced mode, and it's on by default. Turning it on: switches Advanced mode off and the swear-word filter on — both stay changeable afterward. Hides the My Content and My Lists tabs, the Testing Profiles button, the Part of Speech/Lists/Domains filter boxes, the "+ Languages" picker, the Skip Known size mode, and the Language indicator/Language appearance rows in Appearance — for as long as this stays on. The Part of Speech/Lists/Domains filters and "+ Languages" also stop applying whatever they were previously set to, not just disappear from view — so does Skip Known, which relies on the Lists filter. And it sets each mode to its simplest option: Table's Direction (Word→Meaning) and Quiz Style (Standard), Picture Quiz (Click the Picture), Conjugation's View (Grid) and Regularity (all), Trivia's Difficulty/Reading Difficulty (Easy) and Reading Length (Short), and Guess the Blank's Difficulty (Easy) — each still changeable by turning this off, same as Advanced mode and the swear filter.</span>
               </div>
             </div>
 
@@ -2170,12 +2174,34 @@
 
             <div class="settings-row">
               <div class="settings-label">
+                <span>Visual Profiles</span>
+                <span class="settings-desc">Shows a "Visual Profiles" sub-section under Testing Profiles in My Lists' sidebar — saved bundles of display preferences (Theme, Font Size) you can switch between, separate from what a Testing Profile quizzes on.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingShowVisualProfiles">
+                <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
                 <span data-i18n="settings.general.confirmRemoveWordOverride">Confirm before removing a word edit</span>
                 <span class="settings-desc" data-i18n="settings.general.confirmRemoveWordOverrideDesc">My Content's "Edit an Existing Word" list asks before its Remove button resets every override on a word. Off skips the prompt.</span>
               </div>
               <div class="sort-order-toggle" id="settingConfirmRemoveWordOverride">
                 <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
                 <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Full-viewport word editor</span>
+                <span class="settings-desc">On: a word's expanded editor in My Content takes over the whole viewport instead of expanding inline in the list, with a back arrow to return. Off (default): it expands inline, same as before.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingFullViewportWordEditor">
+                <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-enabled="true" data-i18n="common.on">On</button>
               </div>
             </div>
 
@@ -2209,14 +2235,14 @@
              settings-wrap's capped width on a wide viewport. -->
         <div class="settings-toolbar">
           <div class="settings-toolbar-item">
-            <span class="settings-toolbar-label" data-i18n="settings.general.kidMode" title="Simplifies the app for a kid, or anyone trying it for the first time — see the General section below for exactly what this changes." data-i18n-title="settings.general.kidModeDesc">Kid-Friendly Mode</span>
-            <div class="sort-order-toggle" id="settingKidMode">
-              <button type="button" class="sort-order-btn" data-kid-mode="true" data-i18n="common.on">On</button>
-              <button type="button" class="sort-order-btn active" data-kid-mode="false" data-i18n="common.off">Off</button>
+            <span class="settings-toolbar-label" data-i18n="settings.general.kidMode" title="Simplifies the whole app for a newcomer — every tab, not just this Settings page. See the General section below for exactly what this changes." data-i18n-title="settings.general.kidModeDesc">Simple Mode (App)</span>
+            <div class="sort-order-toggle" id="settingSimpleMode">
+              <button type="button" class="sort-order-btn active" data-simple-mode="true" data-i18n="common.on">On</button>
+              <button type="button" class="sort-order-btn" data-simple-mode="false" data-i18n="common.off">Off</button>
             </div>
           </div>
           <div class="settings-toolbar-item">
-            <span class="settings-toolbar-label" data-i18n="settings.general.advancedMode" title="On shows every setting, including ones most people never need to touch. Off keeps this panel to the settings people actually change." data-i18n-title="settings.general.advancedModeDesc">Advanced mode</span>
+            <span class="settings-toolbar-label" data-i18n="settings.general.advancedMode" title="Only changes this Settings page, not the rest of the app (see Simple Mode above for that). On shows every setting here, including ones most people never need to touch. Off keeps this page to the settings people actually change." data-i18n-title="settings.general.advancedModeDesc">Advanced Settings (Page)</span>
             <div class="sort-order-toggle" id="settingAdvancedMode">
               <button type="button" class="sort-order-btn" data-advanced-mode="true" data-i18n="common.on">On</button>
               <button type="button" class="sort-order-btn active" data-advanced-mode="false" data-i18n="common.off">Off</button>

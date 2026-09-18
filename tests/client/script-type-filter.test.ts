@@ -66,6 +66,10 @@ async function load() {
 beforeEach(() => {
   vi.resetModules();
   localStorage.clear();
+  // Simple Mode defaults on app-wide and disarms this filter entirely — off
+  // here so the tests below exercise the filter itself, not that guard
+  // (which has its own dedicated tests further down).
+  localStorage.setItem('s_simple_mode', 'false');
   document.body.innerHTML = '';
   setLang('japanese');
 });
@@ -167,11 +171,11 @@ describe('clicking a chip', () => {
 describe('getSelectedScriptTypes', () => {
   beforeEach(() => buildFixture());
 
-  it('is empty while Kid-Friendly Mode is on, regardless of selection', async () => {
+  it('is empty while Simple Mode is on, regardless of selection', async () => {
     const { bindScriptTypeFilter, getSelectedScriptTypes } = await load();
     bindScriptTypeFilter();
     click(chip('kanji'));
-    localStorage.setItem('s_kid_friendly_mode', 'true');
+    localStorage.setItem('s_simple_mode', 'true');
     expect(getSelectedScriptTypes()).toEqual([]);
   });
 });
@@ -179,11 +183,11 @@ describe('getSelectedScriptTypes', () => {
 describe('getScriptTypeSelection (raw, for presets)', () => {
   beforeEach(() => buildFixture());
 
-  it('returns the real selection even while Kid-Friendly Mode is on', async () => {
+  it('returns the real selection even while Simple Mode is on', async () => {
     const { bindScriptTypeFilter, getScriptTypeSelection } = await load();
     bindScriptTypeFilter();
     click(chip('kanji'));
-    localStorage.setItem('s_kid_friendly_mode', 'true');
+    localStorage.setItem('s_simple_mode', 'true');
     expect(getScriptTypeSelection()).toEqual(['kanji']);
   });
 });

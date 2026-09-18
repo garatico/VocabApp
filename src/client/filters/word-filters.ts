@@ -91,9 +91,9 @@ export function filterWords(words: Word[]): Word[] {
 
   let out = words;
 
-  // See class-filter.ts's getSelectedClasses() for why Kid-Friendly Mode is
+  // See class-filter.ts's getSelectedClasses() for why Simple Mode is
   // checked here rather than cleared once, at the moment it's toggled on.
-  if (!Settings.getKidFriendlyMode()
+  if (!Settings.getSimpleMode()
       && !Settings.getHideListsFilter(getCurrentMode()) && state.active && state.selected.length > 0) {
     // A selected entry may name a list in a language other than `lang` (a
     // "+ Languages" extra, merged into a Compare/multi-language table) or a

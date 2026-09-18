@@ -42,6 +42,20 @@ export default defineConfig({
     },
   },
 
+  // `vite preview` (serving the built dist/ bundle) needs the same proxy as
+  // `vite dev` — without it, /api/* falls through to Vite's own static
+  // resolution and gets the SPA's index.html back with a 200, which is what
+  // produced the admin panel's "Unexpected token '<'" JSON-parse error.
+  preview: {
+    proxy: {
+      '/api':    { target: 'http://localhost:3000', changeOrigin: true },
+      '/svgs':   { target: 'http://localhost:3000', changeOrigin: true },
+      '/images': { target: 'http://localhost:3000', changeOrigin: true },
+      '/emoji':  { target: 'http://localhost:3000', changeOrigin: true },
+      '/audio':  { target: 'http://localhost:3000', changeOrigin: true },
+    },
+  },
+
   // The AI Chat tab's model runs off the UI thread in webllm-worker.ts — the
   // first Worker in this codebase. Built as ESM to match what WebLLM's own
   // worker helper (CreateWebWorkerMLCEngine) expects.

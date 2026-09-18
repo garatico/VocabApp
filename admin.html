@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="/styles/admin/edit-form.css">
   <link rel="stylesheet" href="/styles/admin/panels.css">
   <link rel="stylesheet" href="/styles/admin/conjugation.css">
+  <link rel="stylesheet" href="/styles/admin/table-view.css">
 </head>
 <body>
   <div class="container">
@@ -38,6 +39,7 @@
 
     <div class="tabs">
       <button class="tab-btn active" data-tab="editor">Word Editor</button>
+      <button class="tab-btn" data-tab="tableview">Table View</button>
       <button class="tab-btn" data-tab="dbadmin">DB Admin</button>
       <button class="tab-btn" data-tab="statistics">Statistics</button>
       <button class="tab-btn" data-tab="conjugation">Conjugation</button>
@@ -313,6 +315,60 @@
 
       </div><!-- /editor-layout -->
     </div><!-- /editor tab -->
+
+    <!-- ═══════════════════ TABLE VIEW TAB ═══════════════════ -->
+    <div id="tableview" class="tab-content">
+
+      <!-- Status bar -->
+      <div class="status-bar" id="tableStatusMessage"></div>
+
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <span class="filter-label">Language</span>
+        <select id="tableLangSelect">
+          <option value="spanish">Spanish</option>
+        </select>
+
+        <div class="filter-divider"></div>
+
+        <input type="text" id="tableSearchInput" placeholder="Search word, translation…" style="flex:1;min-width:180px;">
+        <button id="tableSearchBtn">Search</button>
+
+        <div class="filter-divider"></div>
+
+        <span class="filter-label">Per page</span>
+        <select id="tablePageSize">
+          <option value="25">25</option>
+          <option value="50" selected>50</option>
+          <option value="100">100</option>
+          <option value="200">200</option>
+        </select>
+
+        <button id="tableSaveAllBtn" disabled>💾 Save All Changes (<span id="tableDirtyCount">0</span>)</button>
+      </div>
+
+      <div class="table-view-pager">
+        <button id="tablePrevBtn" class="secondary">← Prev</button>
+        <span id="tablePageLabel">Page 1 of 1</span>
+        <button id="tableNextBtn" class="secondary">Next →</button>
+      </div>
+
+      <div class="table-view-scroll">
+        <!-- Columns, header labels (sortable + resizable) and the per-column
+             filter row are all built by admin-table.ts from its own COLUMNS
+             list — see initTable()'s buildColgroup/buildHeaderRow/buildFilterRow. -->
+        <table class="table-view-grid" id="tableViewGrid">
+          <colgroup id="tableViewColgroup"></colgroup>
+          <thead>
+            <tr id="tableViewHeadRow"></tr>
+            <tr id="tableViewFilterRow" class="table-view-filter-row"></tr>
+          </thead>
+          <tbody id="tableViewBody">
+            <tr><td colspan="17" class="table-view-empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div><!-- /tableview tab -->
 
     <!-- ═══════════════════ DB ADMIN TAB ═══════════════════ -->
     <div id="dbadmin" class="tab-content">

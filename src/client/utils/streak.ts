@@ -29,6 +29,7 @@ const GOAL_KEY          = 'vq_daily_goal';         // bare = global; `${GOAL_KEY
 const PROGRESS_KEY      = 'vq_daily_progress';     // same global/per-language split as GOAL_KEY
 const HISTORY_KEY       = 'vq_streak_history';
 const GOAL_HISTORY_KEY  = 'vq_streak_goal_history'; // date -> which "scope␟type" goals were hit that day
+const DAILY_LANG_KEY    = 'vq_streak_daily_lang';   // date -> language -> {words, seconds} — see recordDailyLangStats
 // ~13 months of daily entries — comfortably covers a year-view calendar with
 // headroom, and stays a trivial size (a few KB of JSON) even for a learner
 // who's used the app every day for over a year.
@@ -73,8 +74,9 @@ function recordHistoryDate(dateStr: string): void {
   const hist = getStreakHistory();
   if (hist[hist.length - 1] === dateStr) return;   // already recorded today
   writeJson(HISTORY_KEY, [...hist, dateStr].slice(-HISTORY_CAP));
-  // Keep the per-day goal-hit map in step with the same cap — a date that
-  // fell off the activity history shouldn't linger on in this second store.
+  // Keep the per-day goal-hit map (and the per-day/per-language stats map
+  // below) in step with the same cap — a date that fell off the activity
+  // history shouldn't linger on in either second store.
   if (hist.length >= HISTORY_CAP) {
     const evicted = hist[0];
     const map = readJson<Record<string, string[]>>(GOAL_HISTORY_KEY, {}, isRecord);
@@ -82,7 +84,55 @@ function recordHistoryDate(dateStr: string): void {
       delete map[evicted];
       writeJson(GOAL_HISTORY_KEY, map);
     }
+    const dailyLang = readJson<Record<string, unknown>>(DAILY_LANG_KEY, {}, isRecord);
+    if (evicted in dailyLang) {
+      delete dailyLang[evicted];
+      writeJson(DAILY_LANG_KEY, dailyLang);
+    }
   }
+}
+
+// ── Per-day, per-language stats (for the calendar's hover breakdown) ───────
+//
+// getTodayProgress/getTodayMinutes above are live counters that reset at
+// midnight — exactly what a "today" readout needs, but useless for a
+// calendar day that isn't today. This is the separate, append-only history
+// that makes a *past* day's per-language breakdown possible: every
+// recordActivity() call also tallies onto today's entry here, capped and
+// evicted in lockstep with getStreakHistory() (see recordHistoryDate above).
+// Days recorded before this existed simply have no entry — same "no data
+// rather than a guess" convention as GOAL_HISTORY_KEY's own rollout.
+
+interface DailyLangTally { words: number; seconds: number }
+type DailyLangStore = Record<string, Record<string, DailyLangTally>>;
+
+function isDailyLangTally(v: unknown): v is DailyLangTally {
+  return isRecord(v) && typeof v['words'] === 'number' && typeof v['seconds'] === 'number';
+}
+function isDailyLangStore(v: unknown): v is DailyLangStore {
+  return isRecord(v) && Object.values(v).every(byLang => isRecord(byLang) && Object.values(byLang).every(isDailyLangTally));
+}
+
+function recordDailyLangStats(dateStr: string, lang: string, wordsCorrect: number, seconds: number): void {
+  if (wordsCorrect <= 0 && seconds <= 0) return;
+  const store = readJson<DailyLangStore>(DAILY_LANG_KEY, {}, isDailyLangStore);
+  const day = store[dateStr] ?? {};
+  const cur = day[lang] ?? { words: 0, seconds: 0 };
+  day[lang] = { words: cur.words + Math.max(0, wordsCorrect), seconds: cur.seconds + Math.max(0, seconds) };
+  store[dateStr] = day;
+  writeJson(DAILY_LANG_KEY, store);
+}
+
+export interface DailyLangStat { lang: string; words: number; minutes: number }
+
+/** Every language with recorded activity on `dateStr`, oldest-recorded
+ *  fields aside — empty for a day with no entry (either genuinely inactive,
+ *  or predating this store). */
+export function getDailyLangStats(dateStr: string): DailyLangStat[] {
+  const store = readJson<DailyLangStore>(DAILY_LANG_KEY, {}, isDailyLangStore);
+  const day = store[dateStr];
+  if (!day) return [];
+  return Object.entries(day).map(([lang, t]) => ({ lang, words: t.words, minutes: Math.floor(t.seconds / 60) }));
 }
 
 // ── Goals ─────────────────────────────────────────────────────────────────
@@ -178,6 +228,22 @@ export function getTodayProgress(lang?: string): number {
 /** Minutes practiced so far today, rounded down — same date/lang scoping as getTodayProgress. */
 export function getTodayMinutes(lang?: string): number {
   return Math.floor(readProgress(lang).secondsDone / 60);
+}
+
+export interface LanguageProgress { lang: string; words: number; minutes: number }
+
+/**
+ * Today's per-language progress, one entry per language in `languages` that
+ * has done anything today. Takes the caller's language list rather than
+ * importing data/languages.ts itself — this module is a low-level storage
+ * util with no existing dependency on the app's language catalog, and each
+ * language's progress already lives under its own key (progressKey(lang)),
+ * so there's nothing here to look up beyond what the caller already knows.
+ */
+export function getTodayProgressByLanguage(languages: string[]): LanguageProgress[] {
+  return languages
+    .map(lang => ({ lang, words: getTodayProgress(lang), minutes: getTodayMinutes(lang) }))
+    .filter(p => p.words > 0 || p.minutes > 0);
 }
 
 function writeProgress(lang: string | undefined, wordsCorrect: number, seconds: number): DailyProgress {
@@ -321,6 +387,7 @@ export function recordActivity(lang: string, wordsCorrect: number, seconds: numb
   const nextGlobal = writeProgress(undefined, wordsCorrect, seconds);
   const prevLang   = readProgress(lang);
   const nextLang   = writeProgress(lang, wordsCorrect, seconds);
+  recordDailyLangStats(now, lang, wordsCorrect, seconds);
 
   // ── Daily goals — global scope and this session's language, each checked
   //    against their own (own-or-inherited) targets and own progress. When

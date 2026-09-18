@@ -22,6 +22,16 @@ export async function apiCall(endpoint: string, method = 'GET', data: unknown = 
     throw new Error(msg);
   }
 
+  // A 200 with a non-JSON body (almost always an HTML page) means this
+  // request never reached the Express API at all — e.g. a static-only
+  // preview/host serving the SPA's index.html for every unmatched path.
+  // Left unchecked, response.json() throws an opaque "Unexpected token '<'"
+  // SyntaxError that reads like a data bug rather than a wiring one.
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    throw new Error('Server returned a non-JSON response — is the Express backend running behind this page?');
+  }
+
   return response.json();
 }
 

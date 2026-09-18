@@ -30,7 +30,7 @@ import { foldKey as norm } from '../../utils/match.ts';
 import type { ListsCtx } from './context.ts';
 import { cachedVocab, fetchVocab } from './vocab-cache.ts';
 import { getMastered } from './mastery.ts';
-import { buildMasteryControls, appendCountChip, appendMasteredChip, buildWordDetail } from './row-shared.ts';
+import { buildMasteryControls, appendCountChip, appendMasteredChip, buildWordDetail, buildEditInMyContentButton } from './row-shared.ts';
 import { buildAudioButton } from '../../ui/audio-play-button.ts';
 import { buildLangBadge } from '../../ui/lang-badge.ts';
 import { logger } from '../../utils/logger.ts';
@@ -39,6 +39,7 @@ import { readString, writeString } from '../../utils/storage.ts';
 import { fillHighlighted } from '../../utils/dom.ts';
 import { openMovePopover, closePopover, clickedOutsidePopover } from './move-popover.ts';
 import { BANDS, POS_ABBREV, POS_CHIPS, type VocabEntry } from './types.ts';
+import { buildChipDropdown, closeAllChipDropdowns } from './chip-dropdown.ts';
 
 /** Words per page — matches Table mode's own default page size, so a
  *  learner already used to that number doesn't have to learn a new one. */
@@ -132,76 +133,23 @@ export function renderBrowsePanel(ctx: ListsCtx): void {
 
   controlsGroup.append(filterLabel, filterInp, sortLabel, sortSel);
 
-  // ── POS chips (shared with the ordinary list view — see ctx.selectedPos) ──
+  // ── Part of Speech / Level — dropdowns, shared with the ordinary list view
+  //    (see ctx.selectedPos/ctx.selectedBands). Same chip markup/colouring as
+  //    before, just collapsed behind a summary button — see chip-dropdown.ts.
 
-  const posRow = document.createElement('div');
-  posRow.className = 'ml-pos-row';
-  const posLabel = document.createElement('span');
-  posLabel.className = 'ml-band-label'; posLabel.textContent = 'Part of Speech';
-  posRow.appendChild(posLabel);
-  const posChipBtns = new Map<string, HTMLButtonElement>();
-  POS_CHIPS.forEach(({ value, label }) => {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'pos-chip'
-      + (value === '' ? ' pos-chip-all' : '')
-      + ((value === '' ? ctx.selectedPos.size === 0 : ctx.selectedPos.has(value)) ? ' active' : '');
-    chip.textContent = label;
-    if (value) { chip.dataset.pos = value; posChipBtns.set(value, chip); }
-    chip.addEventListener('click', () => {
-      if (value === '') ctx.selectedPos.clear();
-      else {
-        if (ctx.selectedPos.has(value)) ctx.selectedPos.delete(value);
-        else ctx.selectedPos.add(value);
-      }
-      posRow.querySelectorAll<HTMLButtonElement>('.pos-chip').forEach(c => {
-        c.classList.toggle('active',
-          c.dataset.pos ? ctx.selectedPos.has(c.dataset.pos) : ctx.selectedPos.size === 0);
-      });
-      render(true);
-    });
-    posRow.appendChild(chip);
-  });
+  const filterDropdownsRow = document.createElement('div');
+  filterDropdownsRow.className = 'ml-filter-dropdowns-row';
 
-  // ── CEFR level chips (shared — see ctx.selectedBands). Populated for every
-  // word server-side, so this works across the whole vocabulary. ──
+  const posDropdown = buildChipDropdown(
+    'Part of Speech', 'pos', POS_CHIPS.filter(c => c.value), ctx.selectedPos, () => render(true),
+  );
+  const posChipBtns = posDropdown.chips;
+  const bandDropdown = buildChipDropdown(
+    'Level', 'band', BANDS.map(b => ({ value: b, label: b })), ctx.selectedBands, () => render(true),
+  );
 
-  const bandRow = document.createElement('div');
-  bandRow.className = 'ml-band-row';
-  const bandLabel = document.createElement('span');
-  bandLabel.className = 'ml-band-label'; bandLabel.textContent = 'Level';
-  bandRow.appendChild(bandLabel);
-
-  const bandChipBtns = new Map<string, HTMLButtonElement>();
-  const bandAllChip = document.createElement('button');
-  bandAllChip.type = 'button';
-  bandAllChip.className = 'pos-chip pos-chip-all' + (ctx.selectedBands.size === 0 ? ' active' : '');
-  bandAllChip.textContent = 'All';
-  bandAllChip.addEventListener('click', () => { ctx.selectedBands.clear(); syncBandChips(); render(true); });
-  bandRow.appendChild(bandAllChip);
-
-  BANDS.forEach(band => {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'pos-chip ml-band-chip' + (ctx.selectedBands.has(band) ? ' active' : '');
-    chip.dataset.band = band;
-    chip.textContent = band;
-    bandChipBtns.set(band, chip);
-    chip.addEventListener('click', () => {
-      if (ctx.selectedBands.has(band)) ctx.selectedBands.delete(band);
-      else ctx.selectedBands.add(band);
-      syncBandChips();
-      render(true);
-    });
-    bandRow.appendChild(chip);
-  });
-
-  function syncBandChips(): void {
-    bandAllChip.classList.toggle('active', ctx.selectedBands.size === 0);
-    bandChipBtns.forEach((btn, band) => btn.classList.toggle('active', ctx.selectedBands.has(band)));
-  }
-
-  header.append(controlsGroup, posRow, bandRow);
+  filterDropdownsRow.append(posDropdown.wrap, bandDropdown.wrap);
+  header.append(controlsGroup, filterDropdownsRow);
   ctx.panel.appendChild(header);
 
   filterInp.addEventListener('input', () => {
@@ -456,7 +404,9 @@ export function renderBrowsePanel(ctx: ListsCtx): void {
       openMovePopover(ctx, addBtn, [entry.word], () => { /* nothing else to redraw here */ }, { copyOnly: true });
     });
 
-    actionsDiv.append(quizBadge, masteryBtn, addBtn);
+    const editBtn = buildEditInMyContentButton(ctx.lang, entry.word);
+
+    actionsDiv.append(quizBadge, masteryBtn, editBtn, addBtn);
 
     li.appendChild(wordSpan);
     if (audioBtn) li.appendChild(audioBtn);
@@ -484,6 +434,7 @@ export function renderBrowsePanel(ctx: ListsCtx): void {
   if (outsideClickHandler) document.removeEventListener('click', outsideClickHandler, true);
   outsideClickHandler = (e: MouseEvent) => {
     if (clickedOutsidePopover(e.target as Node)) closePopover();
+    if (!(e.target as HTMLElement).closest('.ml-chip-dropdown')) closeAllChipDropdowns();
   };
   document.addEventListener('click', outsideClickHandler, true);
 

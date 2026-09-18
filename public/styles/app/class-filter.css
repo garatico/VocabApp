@@ -446,6 +446,18 @@ html.dark .pos-chip[data-band]:not(.active):hover {
   border-top: 1px dashed color-mix(in srgb, var(--ml-accent-smart, var(--border-strong)) 45%, transparent);
 }
 
+/* A folder within one of the groups above (see addRowsGroupedByFolder in
+   word-lists.ts) — lighter-weight than a group label since it's one more
+   level of nesting, not a different kind of list. */
+.list-filter-folder-label {
+  flex-basis: 100%;
+  margin-top: 0.2rem;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+
 /* Each list item: pill-shaped checkbox label */
 .list-filter-item {
   display: inline-flex;

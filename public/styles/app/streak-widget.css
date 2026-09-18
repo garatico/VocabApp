@@ -65,6 +65,35 @@
   }
 }
 
+/* ── Dice button (Roll the Dice) — same pill shell as the streak widget,
+   just an icon-only square instead of an emoji+count pair. */
+.dice-widget {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.dice-widget:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+}
+@media (max-width: 767px) {
+  .dice-widget {
+    width: 36px;
+    height: 36px;
+  }
+}
+
 /* ── Streak details popover ──
    Same .list-picker-popover shell as word-info-popover.ts/move-popover.ts
    (list-picker.css) — a plain readout, not a form, so it needs none of
@@ -96,6 +125,11 @@
 .streak-popover-value {
   font-weight: 700;
   white-space: nowrap;
+}
+
+.streak-popover-divider {
+  margin-top: 0.4rem;
+  border-top: 1px solid var(--border);
 }
 
 .streak-popover-settings-btn {

@@ -21,7 +21,7 @@ import { buildLangBadge } from '../ui/lang-badge.ts';
 // smart-lists.ts imports getAllListedWords from this module — both directions
 // only reach across the cycle from inside function bodies (never at module
 // top-level), which ES modules resolve fine; nothing here runs at import time.
-import { getSmartNames } from '../modes/my-lists/smart-lists.ts';
+import { getSmartNames, getSmartLists } from '../modes/my-lists/smart-lists.ts';
 
 const LISTS_PREFIX         = 'vq_lists_';
 const OLD_PREFIX           = 'vq_known_';
@@ -31,6 +31,76 @@ const MULTI_LISTS_KEY      = 'vq_lists_multi';
 const ADDED_DATES_PREFIX   = 'vq_list_added_';
 
 type ListStore = Record<string, string[]>;
+
+// ── List metadata: folder + hidden-from-mode ────────────────────────────────
+//
+// A separate, additive store per language (global for cross-language lists),
+// same pattern as AddedDates below — the existing ListStore/MultiListStore
+// stay bare word arrays / entry lists, untouched, while this tracks the two
+// per-list settings that have nothing to do with membership. Smart lists
+// carry the same two fields directly on their own SmartRule instead (already
+// an object per rule, so no separate store needed there), and Testing
+// Profiles carry them on PresetBundle — see presets.ts.
+
+export interface ListMeta {
+  /** Every folder this list belongs to — a list can sit in more than one,
+   *  the way a label works rather than a single-parent directory; absent/
+   *  empty means ungrouped, shown before any folder in the sidebar. `folder`
+   *  (singular) is the pre-multi-folder shape, read once and folded into
+   *  this on the way in — see readListMeta below. */
+  folders?: string[];
+  /** @deprecated superseded by `folders`; kept only so a value written
+   *  before that existed still reads back as something. */
+  folder?: string;
+  /** Modes this list is excluded from as a filter option — still addable-to
+   *  via the star button/list picker regardless, since that's membership,
+   *  not filtering. */
+  hiddenModes?: FilterScope[];
+}
+
+/** `meta.folders` if the caller already migrated, otherwise `[meta.folder]`
+ *  folded in — the one place every reader of a list's folders should go
+ *  through, so the legacy singular field only ever needs handling once. */
+export function metaFolders(meta: ListMeta): string[] {
+  if (meta.folders) return meta.folders;
+  return meta.folder ? [meta.folder] : [];
+}
+
+type ListMetaStore = Record<string, ListMeta>;
+
+function isListMeta(v: unknown): v is ListMeta {
+  return isRecord(v);
+}
+function isListMetaStore(v: unknown): v is ListMetaStore {
+  return isRecord(v) && Object.values(v).every(isListMeta);
+}
+
+const LIST_META_PREFIX = 'vq_lists_meta_';
+function metaKey(lang: string): string { return LIST_META_PREFIX + lang.toLowerCase(); }
+function loadMeta(lang: string): ListMetaStore { return readJson<ListMetaStore>(metaKey(lang), {}, isListMetaStore); }
+function saveMeta(lang: string, store: ListMetaStore): void { writeJson(metaKey(lang), store); }
+
+export function getListMeta(lang: string, listName: string): ListMeta {
+  return loadMeta(lang)[listName] ?? {};
+}
+export function setListMeta(lang: string, listName: string, meta: ListMeta): void {
+  const store = loadMeta(lang);
+  store[listName] = meta;
+  saveMeta(lang, store);
+}
+
+const MULTI_META_KEY = 'vq_lists_multi_meta';
+function loadMultiMeta(): ListMetaStore { return readJson<ListMetaStore>(MULTI_META_KEY, {}, isListMetaStore); }
+function saveMultiMeta(store: ListMetaStore): void { writeJson(MULTI_META_KEY, store); }
+
+export function getMultiListMeta(listName: string): ListMeta {
+  return loadMultiMeta()[listName] ?? {};
+}
+export function setMultiListMeta(listName: string, meta: ListMeta): void {
+  const store = loadMultiMeta();
+  store[listName] = meta;
+  saveMultiMeta(store);
+}
 
 // ── Cross-language lists ────────────────────────────────────────────────────
 //
@@ -155,6 +225,9 @@ export function deleteMultiList(listName: string): void {
 
   const dates = loadMultiAddedDates();
   if (dates[listName]) { delete dates[listName]; saveMultiAddedDates(dates); }
+
+  const meta = loadMultiMeta();
+  if (meta[listName]) { delete meta[listName]; saveMultiMeta(meta); }
 }
 
 export function renameMultiList(oldName: string, newName: string): boolean {
@@ -170,6 +243,13 @@ export function renameMultiList(oldName: string, newName: string): boolean {
   }
   delete store[oldName];
   saveMultiStore(store);
+
+  const meta = loadMultiMeta();
+  if (meta[oldName]) {
+    meta[newName] = meta[oldName];
+    delete meta[oldName];
+    saveMultiMeta(meta);
+  }
   return true;
 }
 
@@ -490,6 +570,9 @@ export function deleteList(lang: string, listName: string): void {
 
   const dates = loadAddedDates(lang);
   if (dates[listName]) { delete dates[listName]; saveAddedDates(lang, dates); }
+
+  const meta = loadMeta(lang);
+  if (meta[listName]) { delete meta[listName]; saveMeta(lang, meta); }
 }
 
 export function renameList(lang: string, oldName: string, newName: string): boolean {
@@ -504,6 +587,13 @@ export function renameList(lang: string, oldName: string, newName: string): bool
     dates[newName] = dates[oldName];
     delete dates[oldName];
     saveAddedDates(lang, dates);
+  }
+
+  const meta = loadMeta(lang);
+  if (meta[oldName]) {
+    meta[newName] = meta[oldName];
+    delete meta[oldName];
+    saveMeta(lang, meta);
   }
   return true;
 }
@@ -533,6 +623,8 @@ export interface FilterableListRow {
   badgeLangs:  string[];
   count:       number | null;
   group:       'single' | 'multi' | 'smart';
+  /** Empty = ungrouped. A list can belong to more than one. */
+  folders:     string[];
 }
 
 /**
@@ -543,32 +635,50 @@ export interface FilterableListRow {
  * and a Testing Profile's own list section (profile-panel.ts) can't drift —
  * profile-panel.ts used to only call getListNames() directly and so never
  * offered Cross-Language or smart lists at all.
+ *
+ * `scope` gates each row on its own hiddenModes/hiddenModes — a list hidden
+ * from the current mode simply isn't offered as something to filter by here
+ * (it's still addable-to via the star button/list picker regardless, since
+ * that's membership, not filtering). Defaults to the mode on screen, same as
+ * getListFilterState's own default.
  */
-export function enumerateFilterableLists(lang: string, extraLangs: string[] = []): FilterableListRow[] {
+export function enumerateFilterableLists(
+  lang: string, extraLangs: string[] = [], scope: FilterScope = currentScope(),
+): FilterableListRow[] {
   const activeLangs = [lang, ...extraLangs.filter(l => l !== lang)];
   const rows: FilterableListRow[] = [];
 
   activeLangs.forEach(l => {
     for (const name of getListNames(l)) {
+      const meta = getListMeta(l, name);
+      if (meta.hiddenModes?.includes(scope)) continue;
       rows.push({
         qualified: qualifyListName(l, name), displayName: name,
         badgeLangs: [l], count: getListCount(l, name), group: 'single',
+        folders: metaFolders(meta),
       });
     }
   });
 
   for (const name of getMultiListNames()) {
+    const meta = getMultiListMeta(name);
+    if (meta.hiddenModes?.includes(scope)) continue;
     rows.push({
       qualified: qualifyMultiListName(name), displayName: name,
       badgeLangs: getMultiListLanguages(name), count: getMultiListCount(name), group: 'multi',
+      folders: metaFolders(meta),
     });
   }
 
   activeLangs.forEach(l => {
+    const rules = getSmartLists(l);
     for (const name of getSmartNames(l)) {
+      const rule = rules[name];
+      if (rule.hiddenModes?.includes(scope)) continue;
       rows.push({
         qualified: qualifySmartListName(l, name), displayName: name,
         badgeLangs: [l], count: null, group: 'smart',
+        folders: rule.folders ?? [],
       });
     }
   });
@@ -633,6 +743,11 @@ export function refreshFilterSelect(lang: string): void {
         s.selected = s.selected.filter(n => n !== row.qualified);
       }
       saveListFilterState(lang, s);
+      // A list in more than one folder gets a checkbox per folder (see
+      // addRowsGroupedByFolder) — all referring to the same underlying
+      // selection, so every copy needs to agree the moment one of them
+      // changes, not just on the next unrelated re-render.
+      refreshFilterSelect(lang);
     });
 
     const nameSpan = document.createElement('span');
@@ -650,6 +765,26 @@ export function refreshFilterSelect(lang: string): void {
     container.appendChild(label);
   }
 
+  // Folder-grouped within a kind: ungrouped rows first (unchanged from
+  // before folders existed), then each named folder as its own small
+  // sub-label — same idea as the Cross-Language/Smart Lists headers below,
+  // one level deeper. A list's folders are purely an organizing label here,
+  // not a second filter dimension, so this only changes how rows are laid
+  // out, never which ones are offered. A list in more than one folder is
+  // offered once per folder — same "appears everywhere it's labeled" model
+  // as the sidebar's own folder groups.
+  function addRowsGroupedByFolder(kindRows: FilterableListRow[]): void {
+    kindRows.filter(r => r.folders.length === 0).forEach(addRow);
+    const folders = [...new Set(kindRows.flatMap(r => r.folders))].sort();
+    folders.forEach(folder => {
+      const folderLabel = document.createElement('span');
+      folderLabel.className = 'list-filter-folder-label';
+      folderLabel.textContent = `📁 ${folder}`;
+      container.appendChild(folderLabel);
+      kindRows.filter(r => r.folders.includes(folder)).forEach(addRow);
+    });
+  }
+
   if (rows.length === 0) {
     const empty       = document.createElement('span');
     empty.className   = 'list-filter-empty';
@@ -662,7 +797,7 @@ export function refreshFilterSelect(lang: string): void {
     // this used to do) said nothing the pill itself didn't, at the cost of a
     // blank-looking row per language. Cross-Language and Smart Lists each
     // get their own header since those behave differently from a plain list.
-    rows.filter(r => r.group === 'single').forEach(addRow);
+    addRowsGroupedByFolder(rows.filter(r => r.group === 'single'));
 
     const multiRows = rows.filter(r => r.group === 'multi');
     if (multiRows.length > 0) {
@@ -670,7 +805,7 @@ export function refreshFilterSelect(lang: string): void {
       groupLabel.className = 'list-filter-group-label list-filter-group-label--multi';
       groupLabel.textContent = 'Cross-Language';
       container.appendChild(groupLabel);
-      multiRows.forEach(addRow);
+      addRowsGroupedByFolder(multiRows);
     }
 
     const smartRows = rows.filter(r => r.group === 'smart');
@@ -679,7 +814,7 @@ export function refreshFilterSelect(lang: string): void {
       groupLabel.className = 'list-filter-group-label list-filter-group-label--smart';
       groupLabel.textContent = 'Smart Lists';
       container.appendChild(groupLabel);
-      smartRows.forEach(addRow);
+      addRowsGroupedByFolder(smartRows);
     }
   }
 

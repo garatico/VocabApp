@@ -17,6 +17,7 @@ import { getAllListedWords } from '../../utils/word-lists.ts';
 import { getMastered } from './mastery.ts';
 import { srsDueWords } from '../../utils/srs.ts';
 import type { VocabEntry } from './types.ts';
+import type { FilterScope } from '../../filters/filter-scope.ts';
 
 export interface SmartRule {
   bands:    string[];               // empty = any level
@@ -48,12 +49,20 @@ export interface SmartRule {
    * limit/sort so they can never be pushed out by `limit`.
    */
   manualWords: string[];
+  /** Every folder this smart list belongs to — same multi-membership
+   *  convention as word-lists.ts's ListMeta.folders. */
+  folders?: string[];
+  /** @deprecated superseded by `folders`; kept only so a value written
+   *  before that existed still reads back as something. */
+  folder?: string;
+  /** Modes this smart list is excluded from as a filter option. */
+  hiddenModes?: FilterScope[];
 }
 
 export const DEFAULT_SMART_RULE: SmartRule = {
   bands: [], pos: [], domains: [], mastered: 'no', listed: 'no', due: 'any',
   wordStartsWith: '', meaningContains: '', limit: 100, sort: 'rank',
-  manualWords: [],
+  manualWords: [], folders: [], hiddenModes: [],
 };
 
 import { readJson, writeJson, isRecord } from '../../utils/storage.ts';
@@ -80,7 +89,15 @@ function smartKey(lang: string): string { return SMART_PREFIX + lang.toLowerCase
 export function getSmartLists(lang: string): Record<string, SmartRule> {
   const raw = readJson<Record<string, Partial<SmartRule>>>(smartKey(lang), {}, isRecord);
   const out: Record<string, SmartRule> = {};
-  for (const [name, rule] of Object.entries(raw)) out[name] = { ...DEFAULT_SMART_RULE, ...rule };
+  for (const [name, rule] of Object.entries(raw)) {
+    const merged = { ...DEFAULT_SMART_RULE, ...rule };
+    // Migrate the old singular `folder` the same way it's never written
+    // again after this: a rule saved before `folders` existed has no
+    // `folders` of its own, so DEFAULT_SMART_RULE's `[]` would otherwise
+    // silently drop its one folder on every read.
+    if (!rule.folders && rule.folder) merged.folders = [rule.folder];
+    out[name] = merged;
+  }
   return out;
 }
 

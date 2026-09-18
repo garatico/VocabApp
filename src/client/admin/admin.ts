@@ -9,6 +9,7 @@ import { loadMeta, initEditor } from './admin-editor.js';
 import { loadStatistics, initStats } from './admin-stats.js';
 import { initDbAdmin } from './admin-db.js';
 import { initConjugation } from './admin-conjugation.js';
+import { initTable } from './admin-table.js';
 import { logger } from '../utils/logger.js';
 import { readString, writeString } from '../utils/storage.ts';
 
@@ -50,6 +51,7 @@ initEditor();
 initStats();
 initDbAdmin();
 initConjugation();
+initTable();
 
 // Pre-load data for the default visible tabs
 void loadMeta();

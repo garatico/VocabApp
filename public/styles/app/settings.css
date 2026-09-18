@@ -17,15 +17,16 @@ body:not(.advanced-mode) [data-advanced="true"] {
   display: none;
 }
 
-/* ── Kid-Friendly Mode — hides the controls settings.ts's kid-mode click
-   handler also forces to their simplest value (Direction, Table's Quiz
-   Style, Picture's sub-mode, Conjugation's View, Trivia's Difficulty/
-   Reading toggles, Guess the Blank's Difficulty, Regularity, Testing
-   Profiles, the POS/Lists/Domains filter boxes). `!important` because most
-   of these elements' visibility is also driven by ui-state.ts's own inline
-   `style.display` toggling per active mode — a plain class rule loses to an
-   inline style regardless of selector specificity. */
-body.kid-friendly-mode [data-kid-hide="true"] {
+/* ── Simple Mode (formerly "Kid-Friendly Mode") — hides the controls
+   settings.ts's Simple Mode click handler also forces to their simplest
+   value (Direction, Table's Quiz Style, Picture's sub-mode, Conjugation's
+   View, Trivia's Difficulty/Reading toggles, Guess the Blank's Difficulty,
+   Regularity, Testing Profiles, the POS/Lists/Domains filter boxes).
+   `!important` because most of these elements' visibility is also driven by
+   ui-state.ts's own inline `style.display` toggling per active mode — a
+   plain class rule loses to an inline style regardless of selector
+   specificity. */
+body.simple-mode [data-simple-hide="true"] {
   display: none !important;
 }
 
@@ -358,6 +359,51 @@ body.kid-friendly-mode [data-kid-hide="true"] {
 .settings-calendar-legend-item .settings-calendar-dot {
   width: 7px;
   height: 7px;
+}
+
+/* ── Day tooltip — styled hover/focus breakdown (settings.ts's
+   showDayTooltip), positioned via popover-position.ts same as the app's
+   other floating panels. Absolute + a high z-index since it's appended to
+   document.body, outside the calendar's own stacking context. */
+.settings-calendar-tooltip {
+  position: absolute;
+  z-index: 9999;
+  min-width: 160px;
+  max-width: min(260px, calc(100vw - 8px));
+  padding: 0.6rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md, 0 4px 16px rgba(0,0,0,0.25));
+  font-size: 0.76rem;
+  pointer-events: none;
+}
+.settings-calendar-tooltip-title {
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.3rem;
+}
+.settings-calendar-tooltip-goals {
+  color: var(--warning, var(--text));
+  margin-bottom: 0.3rem;
+}
+.settings-calendar-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.15rem 0;
+}
+.settings-calendar-tooltip-lang {
+  color: var(--text);
+  flex: 1;
+}
+.settings-calendar-tooltip-stats {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.settings-calendar-tooltip-empty {
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 /* ── Group — wraps a heading + its rows in a shaded band, so a subsection

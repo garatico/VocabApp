@@ -45,6 +45,10 @@ beforeEach(() => {
   store = new FakeStorage();
   language = 'spanish';
   (globalThis as Record<string, unknown>).localStorage = store;
+  // Simple Mode defaults on app-wide (settings.ts's getSimpleMode()) and
+  // disarms every filter these tests exercise — off here so filter
+  // narrowing behaves the way it does for a learner who's turned it off.
+  store.setItem('s_simple_mode', 'false');
   stubDom();
 });
 

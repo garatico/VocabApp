@@ -114,6 +114,21 @@ export interface PresetBundle {
    * back to only offering "Whole profile".
    */
   quickEditFields?: string[];
+  /**
+   * When true (and `language` is set), this profile is hidden from the
+   * sidebar's Testing Profiles list whenever the sidebar's current language
+   * doesn't match `language` — it stays saved and reapplying it directly
+   * still works, it just doesn't show up while browsing a different
+   * language. `language` alone (without this) is only a default pool
+   * source, same as before this existed — it doesn't restrict visibility.
+   */
+  languageLocked?: boolean;
+  /** Every folder this profile belongs to — same multi-membership
+   *  convention as word-lists.ts's ListMeta.folders. */
+  folders?: string[];
+  /** @deprecated superseded by `folders`; kept only so a value written
+   *  before that existed still reads back as something. */
+  folder?: string;
 }
 
 const KEY_PREFIX = 'vq_presets_';
@@ -334,6 +349,11 @@ function normalizeBundle(raw: PresetBundle): PresetBundle {
     // Added after v1, same reasoning as extraLanguages above — absent (or
     // malformed) on an older saved profile just means nothing's marked yet.
     quickEditFields: Array.isArray(raw.quickEditFields) ? raw.quickEditFields : undefined,
+    languageLocked:  raw.languageLocked,
+    // A bundle saved before `folders` existed has only the old singular
+    // `folder` — folded in here, the one place every stored bundle passes
+    // through, so nothing downstream has to know the old shape existed.
+    folders: raw.folders ?? (raw.folder ? [raw.folder] : []),
   };
 }
 

@@ -23,9 +23,12 @@
 
 import {
   getMultiList, getMultiListLanguages, removeFromMultiList, addToMultiList, isInMultiList,
-  getMultiAddedDate,
+  getMultiAddedDate, getMultiListMeta, setMultiListMeta, metaFolders,
   type MultiListEntry,
 } from '../../utils/word-lists.ts';
+import { FILTER_SCOPES, SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
+import { buildChipDropdown, buildChecklistDropdown, closeAllChipDropdowns } from './chip-dropdown.ts';
+import { getFolderRegistry, addFolder } from './folders.ts';
 import { foldKey as norm } from '../../utils/match.ts';
 import type { ListsCtx } from './context.ts';
 import { fetchVocab, cachedVocabMap } from './vocab-cache.ts';
@@ -37,7 +40,7 @@ import { LANGUAGES } from '../../data/languages.ts';
 import {
   POS_ABBREV, POS_CHIPS, BANDS, type SortMode, type VocabEntry,
 } from './types.ts';
-import { buildMasteryControls, appendCountChip, appendMasteredChip, buildWordDetail } from './row-shared.ts';
+import { buildMasteryControls, appendCountChip, appendMasteredChip, buildWordDetail, buildEditInMyContentButton } from './row-shared.ts';
 import { buildAudioButton } from '../../ui/audio-play-button.ts';
 import { fillHighlighted } from '../../utils/dom.ts';
 
@@ -49,6 +52,11 @@ const SORT_OPTIONS: readonly [SortMode, string][] = [
   ['added-desc',  'Recently added'],
   ['added-asc',   'Oldest first'],
 ];
+
+/** Closes the Part of Speech/Level/Folders/Hide-from dropdowns on an outside
+ *  click — same "remove before the next render installs its replacement"
+ *  reasoning as panel.ts's own outsideClickHandler. */
+let outsideClickHandler: ((e: MouseEvent) => void) | null = null;
 
 /** A stable, unique key for an entry — word alone can repeat across languages. */
 function entryKey(e: MultiListEntry): string {
@@ -135,64 +143,68 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
   });
   controlsGroup.append(filterLabel, filterInp, sortLabel, sortSel, hideMasteredBtn);
 
-  // ── POS chips ──────────────────────────────────────────────────────────────
+  // ── Part of Speech / Level / Folders / Hide from — dropdowns, one row ───────
+  // Same chip-dropdown treatment as panel.ts — see that file's own comment.
 
-  const posRow = document.createElement('div');
-  posRow.className = 'ml-pos-row';
-  const posLabel = document.createElement('span');
-  posLabel.className = 'ml-band-label'; posLabel.textContent = 'Part of Speech';
-  posRow.appendChild(posLabel);
-  POS_CHIPS.forEach(({ value, label }) => {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'pos-chip' + (value === '' ? ' pos-chip-all active' : '');
-    chip.textContent = label;
-    if (value) chip.dataset.pos = value;
-    chip.addEventListener('click', () => {
-      if (value === '') selectedPos.clear();
-      else { if (selectedPos.has(value)) selectedPos.delete(value); else selectedPos.add(value); }
-      posRow.querySelectorAll<HTMLButtonElement>('.pos-chip').forEach(c => {
-        c.classList.toggle('active', c.dataset.pos ? selectedPos.has(c.dataset.pos) : selectedPos.size === 0);
-      });
-      renderRows();
+  const filterDropdownsRow = document.createElement('div');
+  filterDropdownsRow.className = 'ml-filter-dropdowns-row';
+
+  const posDropdown = buildChipDropdown(
+    'Part of Speech', 'pos', POS_CHIPS.filter(c => c.value), selectedPos, renderRows,
+  );
+  const bandDropdown = buildChipDropdown(
+    'Level', 'band', BANDS.map(b => ({ value: b, label: b })), selectedBands, renderRows,
+  );
+
+  const multiFolderScope = 'multi';
+  function buildFolderFooter(scope: string, onAdd: (name: string) => void): HTMLElement {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ml-chip-dropdown-new-folder';
+    btn.textContent = '+ new folder…';
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const name = window.prompt('New folder name:');
+      if (!name?.trim()) return;
+      addFolder(scope, name.trim());
+      onAdd(name.trim());
     });
-    posRow.appendChild(chip);
-  });
-
-  // ── CEFR level chips ───────────────────────────────────────────────────────
-
-  const bandRow = document.createElement('div');
-  bandRow.className = 'ml-band-row';
-  const bandLabel = document.createElement('span');
-  bandLabel.className = 'ml-band-label'; bandLabel.textContent = 'Level';
-  bandRow.appendChild(bandLabel);
-  const bandAllChip = document.createElement('button');
-  bandAllChip.type = 'button';
-  bandAllChip.className = 'pos-chip pos-chip-all active';
-  bandAllChip.textContent = 'All';
-  bandAllChip.addEventListener('click', () => { selectedBands.clear(); syncBandChips(); renderRows(); });
-  bandRow.appendChild(bandAllChip);
-  const bandChipBtns = new Map<string, HTMLButtonElement>();
-  BANDS.forEach(band => {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'pos-chip ml-band-chip';
-    chip.dataset.band = band; chip.textContent = band;
-    bandChipBtns.set(band, chip);
-    chip.addEventListener('click', () => {
-      if (selectedBands.has(band)) selectedBands.delete(band); else selectedBands.add(band);
-      syncBandChips(); renderRows();
-    });
-    bandRow.appendChild(chip);
-  });
-  function syncBandChips(): void {
-    bandAllChip.classList.toggle('active', selectedBands.size === 0);
-    bandChipBtns.forEach((btn, band) => btn.classList.toggle('active', selectedBands.has(band)));
+    return btn;
   }
 
+  const folderSelected = new Set(metaFolders(getMultiListMeta(listName)));
+  const folderDropdown = buildChecklistDropdown(
+    'Folders',
+    getFolderRegistry(multiFolderScope).map(f => ({ value: f, label: f })),
+    folderSelected,
+    () => {
+      const meta = getMultiListMeta(listName);
+      setMultiListMeta(listName, { ...meta, folders: [...folderSelected], folder: undefined });
+      ctx.renderSidebar(false);
+    },
+    buildFolderFooter(multiFolderScope, name => {
+      folderSelected.add(name);
+      const meta = getMultiListMeta(listName);
+      setMultiListMeta(listName, { ...meta, folders: [...folderSelected], folder: undefined });
+      ctx.renderSidebar(false);
+      renderMultiPanel(ctx, listName); // rebuild so the new folder is selectable
+    }),
+  );
+
+  const hiddenSelected = new Set(getMultiListMeta(listName).hiddenModes ?? []);
+  const hideFromDropdown = buildChecklistDropdown(
+    'Hide from', FILTER_SCOPES.map(s => ({ value: s, label: SCOPE_LABELS[s] })), hiddenSelected,
+    () => {
+      const meta = getMultiListMeta(listName);
+      setMultiListMeta(listName, { ...meta, hiddenModes: [...hiddenSelected] as FilterScope[] });
+      ctx.renderSidebar(false);
+    },
+  );
+
+  filterDropdownsRow.append(posDropdown.wrap, bandDropdown.wrap, folderDropdown.wrap, hideFromDropdown.wrap);
+
   header.appendChild(statsRow);
-  header.appendChild(posRow);
-  header.appendChild(bandRow);
+  header.appendChild(filterDropdownsRow);
   ctx.panel.appendChild(header);
 
   // ── Add Vocabulary ─────────────────────────────────────────────────────────
@@ -405,7 +417,7 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
       const pos = cachedVocabMap(e.language)?.get(e.word)?.pos;
       if (pos) counts[pos] = (counts[pos] ?? 0) + 1;
     }
-    posRow.querySelectorAll<HTMLButtonElement>('.pos-chip[data-pos]').forEach(btn => {
+    posDropdown.wrap.querySelectorAll<HTMLButtonElement>('.pos-chip[data-pos]').forEach(btn => {
       const pos = btn.dataset.pos ?? '';
       const chipDef = POS_CHIPS.find(c => c.value === pos);
       btn.textContent = `${chipDef?.label ?? pos} (${counts[pos] ?? 0})`;
@@ -512,7 +524,9 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
       });
     });
 
-    actionsDiv.append(quizBadge, masteryBtn, removeBtn);
+    const editBtn = buildEditInMyContentButton(entry.language, entry.word);
+
+    actionsDiv.append(quizBadge, masteryBtn, editBtn, removeBtn);
     li.append(buildLangBadge([entry.language]), check, wordSpan);
     if (audioBtn) li.appendChild(audioBtn);
     li.append(posSpan, rankBadge, transSpan, actionsDiv);
@@ -539,4 +553,10 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
   // per-language by vocab-cache.ts for every other mode that already uses it.
   const distinctLangs = getMultiListLanguages(listName);
   Promise.all(distinctLangs.map(fetchVocab)).then(() => renderRows()).catch(logger.error);
+
+  if (outsideClickHandler) document.removeEventListener('click', outsideClickHandler, true);
+  outsideClickHandler = (e: MouseEvent) => {
+    if (!(e.target as HTMLElement).closest('.ml-chip-dropdown')) closeAllChipDropdowns();
+  };
+  document.addEventListener('click', outsideClickHandler, true);
 }

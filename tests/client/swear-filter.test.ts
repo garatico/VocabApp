@@ -39,6 +39,9 @@ beforeEach(() => {
   store = new FakeStorage();
   language = 'spanish';
   (globalThis as Record<string, unknown>).localStorage = store;
+  // Simple Mode defaults on app-wide and disarms the list filter this suite
+  // composes with — off here so the composition being tested actually runs.
+  store.setItem('s_simple_mode', 'false');
   stubDom();
 });
 

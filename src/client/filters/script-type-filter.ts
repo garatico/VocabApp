@@ -88,15 +88,15 @@ export function bindScriptTypeFilter(): void {
 
 /**
  * Selected script types, or [] when "All" is active — same "empty means
- * do not narrow" convention as getSelectedClasses(). Kid-Friendly Mode
- * hides this filter's box (index.html's data-kid-hide) but that's a CSS
+ * do not narrow" convention as getSelectedClasses(). Simple Mode hides
+ * this filter's box (index.html's data-simple-hide) but that's a CSS
  * rule, not a functional one — checked here too, same reasoning
  * class-filter.ts's getSelectedClasses() gives for the identical guard:
  * a hidden box must not go on narrowing the pool with whatever was
  * selected before it was hidden.
  */
 export function getSelectedScriptTypes(): string[] {
-  if (Settings.getKidFriendlyMode()) return [];
+  if (Settings.getSimpleMode()) return [];
   return getSelected();
 }
 

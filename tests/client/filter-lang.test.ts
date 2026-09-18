@@ -42,6 +42,10 @@ async function load() {
 beforeEach(() => {
   vi.resetModules();
   store.clear();
+  // Simple Mode defaults on app-wide and zeroes out currentExtraLanguages()
+  // entirely — off here so the tests below exercise the real logic, not
+  // that guard (which has its own dedicated test further down).
+  store.set('s_simple_mode', 'false');
   langValue = undefined;
   activeMode = null;
   stubDom();
@@ -117,12 +121,12 @@ describe('currentExtraLanguages', () => {
     expect(currentExtraLanguages()).toEqual(['french']);
   });
 
-  it('is empty while Kid-Friendly Mode is on, regardless of the selection', async () => {
+  it('is empty while Simple Mode is on, regardless of the selection', async () => {
     const { currentExtraLanguages, setExtraLanguages } = await load();
     activeMode = 'table';
     langValue = 'spanish';
     setExtraLanguages(new Set(['french', 'italian']));
-    store.set('s_kid_friendly_mode', 'true');
+    store.set('s_simple_mode', 'true');
     expect(currentExtraLanguages()).toEqual([]);
   });
 

@@ -9,6 +9,7 @@
 import { getMasteryLevel, setMasteryLevel, MASTERY_LEVELS, getMasteredDate } from './mastery.ts';
 import { quizStrength, wordTally } from '../../utils/session-history.ts';
 import { buildConjSection, buildNonFiniteSection } from '../../utils/word-tooltip.ts';
+import { openWordInMyContentEditor } from '../my-content-mode.ts';
 import type { VocabEntry } from './types.ts';
 
 /** Compact fill-level glyphs for the mastery scale, 0..MAX_MASTERY_LEVEL. */
@@ -61,6 +62,26 @@ export function buildMasteryControls(lang: string, word: string, onChange: () =>
   }
 
   return { masteryBtn, quizBadge };
+}
+
+/**
+ * A button that jumps straight to this word's editor on the My Content tab
+ * (openWordInMyContentEditor already handles switching languages and tabs)
+ * — the same action word-info-popover.ts's own "Edit in My Content" offers
+ * from Table mode, now reachable from a list row too rather than only from
+ * mid-quiz.
+ */
+export function buildEditInMyContentButton(lang: string, word: string): HTMLButtonElement {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'ml-edit-btn';
+  btn.title = 'Edit in My Content';
+  btn.textContent = '✎';
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    openWordInMyContentEditor(lang, word);
+  });
+  return btn;
 }
 
 /**

@@ -42,6 +42,9 @@ beforeEach(() => {
   store = new FakeStorage();
   language = 'spanish';
   (globalThis as Record<string, unknown>).localStorage = store;
+  // Simple Mode defaults on app-wide and disarms the filters these chaining
+  // tests drive — off here so the chain logic under test actually runs.
+  store.setItem('s_simple_mode', 'false');
   stubDom();
 });
 

@@ -30,7 +30,7 @@ import { showUndo } from './undo-toast.ts';
 import {
   POS_ABBREV, POS_CHIPS, WORD_CHUNK, type VocabEntry,
 } from './types.ts';
-import { buildMasteryControls, appendCountChip, appendMasteredChip, buildWordDetail } from './row-shared.ts';
+import { buildMasteryControls, appendCountChip, appendMasteredChip, buildWordDetail, buildEditInMyContentButton } from './row-shared.ts';
 import { buildAudioButton } from '../../ui/audio-play-button.ts';
 import { fillHighlighted } from '../../utils/dom.ts';
 
@@ -493,8 +493,11 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
       });
     });
 
+    const editBtn = buildEditInMyContentButton(ctx.lang, word);
+
     actionsDiv.appendChild(quizBadge);
-    actionsDiv.appendChild(masteryBtn); actionsDiv.appendChild(moveBtn); actionsDiv.appendChild(removeBtn);
+    actionsDiv.appendChild(masteryBtn); actionsDiv.appendChild(editBtn);
+    actionsDiv.appendChild(moveBtn); actionsDiv.appendChild(removeBtn);
     li.appendChild(check); li.appendChild(wordSpan);
     if (audioBtn) li.appendChild(audioBtn);
     li.appendChild(posSpan);

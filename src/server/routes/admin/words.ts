@@ -31,6 +31,72 @@ function replaceExamples(db: Database.Database, wordId: number, examples: string
   examples.map(e => e.trim()).filter(Boolean).forEach((e, i) => ins.run(wordId, e, i));
 }
 
+/**
+ * The full `words` row UPDATE, shared by the single-word PATCH endpoint and
+ * the batch endpoint below — batch used to only touch translation/pos/notes/
+ * domains/ipa, a much narrower set than a single word's own PATCH, which
+ * meant a caller editing several fields on several words at once (the admin
+ * table view) had no single call that could actually save all of them.
+ */
+function applyWordUpdate(db: Database.Database, wordId: number, word: string, data: WordUpdateBody): void {
+  const setClauses: string[] = ['updated_at = CURRENT_TIMESTAMP'];
+  const params: unknown[]    = [];
+
+  if ('translation' in data) { setClauses.push('translation = ?');      params.push(data.translation ?? null); }
+  if ('pos'         in data) { setClauses.push('pos = ?');              params.push(data.pos         ?? null); }
+  if ('notes'       in data) { setClauses.push('notes = ?');            params.push(data.notes       ?? null); }
+  if ('emoji'       in data) { setClauses.push('emoji = ?');            params.push(data.emoji       ?? null); }
+  if ('difficulty'  in data) { setClauses.push('difficulty = ?');       params.push(data.difficulty  ?? null); }
+  if ('disambiguator' in data) {
+    if (supportsDisambiguator()) {
+      setClauses.push('disambiguator = ?'); params.push(data.disambiguator ?? null);
+    } else {
+      // Column doesn't exist on this database yet — dropped rather than
+      // thrown, so the rest of this word's edit still saves. See
+      // supportsDisambiguator's own comment in vocab-loader.ts.
+      logger.warn(`Ignoring disambiguator update for '${word}' — no disambiguator column on this database yet`);
+    }
+  }
+  if ('domains'     in data) {
+    setClauses.push('domains = ?');
+    params.push(data.domains != null ? JSON.stringify(data.domains) : null);
+  }
+
+  if (data.linguistic) {
+    const ling = data.linguistic;
+    if ('ipa'        in ling) { setClauses.push('ipa = ?');        params.push(ling.ipa        ?? null); }
+    if ('gender'     in ling) { setClauses.push('gender = ?');     params.push(ling.gender     ?? null); }
+    if ('plural'     in ling) { setClauses.push('plural = ?');     params.push(ling.plural     ?? null); }
+    if ('infinitive' in ling) { setClauses.push('infinitive = ?'); params.push(ling.infinitive ?? null); }
+    if ('register'   in ling) { setClauses.push('register = ?');   params.push(ling.register   ?? null); }
+    if ('syllables'  in ling) {
+      const sv = ling.syllables != null
+        ? (Array.isArray(ling.syllables) ? ling.syllables.join('-') : String(ling.syllables))
+        : null;
+      setClauses.push('syllables = ?');
+      params.push(sv);
+    }
+    if ('reflexive' in ling) {
+      setClauses.push('reflexive = ?');
+      params.push(ling.reflexive != null ? (ling.reflexive ? 1 : 0) : null);
+    }
+  }
+
+  if (data.frequency) {
+    const freq = data.frequency;
+    if ('rank'             in freq) { setClauses.push('rank = ?');             params.push(freq.rank             ?? null); }
+    if ('corpus_frequency' in freq) { setClauses.push('corpus_frequency = ?'); params.push(freq.corpus_frequency ?? null); }
+  }
+
+  if (setClauses.length > 1) {
+    db.prepare(`UPDATE words SET ${setClauses.join(', ')} WHERE id = ?`)
+      .run(...params, wordId);
+  }
+
+  if (Array.isArray(data.glosses))  replaceGlosses(db, wordId, data.glosses);
+  if (Array.isArray(data.examples)) replaceExamples(db, wordId, data.examples);
+}
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface DbWordRow {
@@ -247,64 +313,7 @@ router.post('/vocab/:word', (req, res) => {
 
     const wordId = wordRow.id;
 
-    db.transaction(() => {
-      const setClauses: string[] = ['updated_at = CURRENT_TIMESTAMP'];
-      const params: unknown[]    = [];
-
-      if ('translation' in body) { setClauses.push('translation = ?');      params.push(body.translation ?? null); }
-      if ('pos'         in body) { setClauses.push('pos = ?');              params.push(body.pos         ?? null); }
-      if ('notes'       in body) { setClauses.push('notes = ?');            params.push(body.notes       ?? null); }
-      if ('emoji'       in body) { setClauses.push('emoji = ?');            params.push(body.emoji       ?? null); }
-      if ('difficulty'  in body) { setClauses.push('difficulty = ?');       params.push(body.difficulty  ?? null); }
-      if ('disambiguator' in body) {
-        if (supportsDisambiguator()) {
-          setClauses.push('disambiguator = ?'); params.push(body.disambiguator ?? null);
-        } else {
-          // Column doesn't exist on this database yet — dropped rather than
-          // thrown, so the rest of this word's edit still saves. See
-          // supportsDisambiguator's own comment in vocab-loader.ts.
-          logger.warn(`Ignoring disambiguator update for '${req.params['word']}' — no disambiguator column on this database yet`);
-        }
-      }
-      if ('domains'     in body) {
-        setClauses.push('domains = ?');
-        params.push(body.domains != null ? JSON.stringify(body.domains) : null);
-      }
-
-      if (body.linguistic) {
-        const ling = body.linguistic;
-        if ('ipa'        in ling) { setClauses.push('ipa = ?');        params.push(ling.ipa        ?? null); }
-        if ('gender'     in ling) { setClauses.push('gender = ?');     params.push(ling.gender     ?? null); }
-        if ('plural'     in ling) { setClauses.push('plural = ?');     params.push(ling.plural     ?? null); }
-        if ('infinitive' in ling) { setClauses.push('infinitive = ?'); params.push(ling.infinitive ?? null); }
-        if ('register'   in ling) { setClauses.push('register = ?');   params.push(ling.register   ?? null); }
-        if ('syllables'  in ling) {
-          const sv = ling.syllables != null
-            ? (Array.isArray(ling.syllables) ? ling.syllables.join('-') : String(ling.syllables))
-            : null;
-          setClauses.push('syllables = ?');
-          params.push(sv);
-        }
-        if ('reflexive' in ling) {
-          setClauses.push('reflexive = ?');
-          params.push(ling.reflexive != null ? (ling.reflexive ? 1 : 0) : null);
-        }
-      }
-
-      if (body.frequency) {
-        const freq = body.frequency;
-        if ('rank'             in freq) { setClauses.push('rank = ?');             params.push(freq.rank             ?? null); }
-        if ('corpus_frequency' in freq) { setClauses.push('corpus_frequency = ?'); params.push(freq.corpus_frequency ?? null); }
-      }
-
-      if (setClauses.length > 1) {
-        db.prepare(`UPDATE words SET ${setClauses.join(', ')} WHERE id = ?`)
-          .run(...params, wordId);
-      }
-
-      if (Array.isArray(body.glosses))  replaceGlosses(db, wordId, body.glosses);
-      if (Array.isArray(body.examples)) replaceExamples(db, wordId, body.examples);
-    })();
+    db.transaction(() => applyWordUpdate(db, wordId, req.params['word'], body))();
 
     clearCache(lang);
     const updated = db.prepare(WORD_SELECT + ' WHERE w.id = ?').get(wordId) as DbWordRow;
@@ -332,30 +341,8 @@ router.post('/vocab', (req, res) => {
         if (!word || !data) continue;
         const row = db.prepare('SELECT id FROM words WHERE word = ? AND language = ?').get(word, lang) as { id: number } | undefined;
         if (!row) continue;
-        const wordId = row.id;
 
-        const setClauses: string[] = ['updated_at = CURRENT_TIMESTAMP'];
-        const params: unknown[]    = [];
-
-        if ('translation' in data) { setClauses.push('translation = ?'); params.push(data.translation ?? null); }
-        if ('pos'         in data) { setClauses.push('pos = ?');         params.push(data.pos         ?? null); }
-        if ('notes'       in data) { setClauses.push('notes = ?');       params.push(data.notes       ?? null); }
-        if ('domains'     in data) {
-          setClauses.push('domains = ?');
-          params.push(data.domains != null ? JSON.stringify(data.domains) : null);
-        }
-        if (data.linguistic && 'ipa' in data.linguistic) {
-          setClauses.push('ipa = ?');
-          params.push(data.linguistic.ipa ?? null);
-        }
-
-        if (setClauses.length > 1) {
-          db.prepare(`UPDATE words SET ${setClauses.join(', ')} WHERE id = ?`)
-            .run(...params, wordId);
-        }
-
-        if (Array.isArray(data.glosses))  replaceGlosses(db, wordId, data.glosses);
-        if (Array.isArray(data.examples)) replaceExamples(db, wordId, data.examples);
+        applyWordUpdate(db, row.id, word, data);
         updated++;
       }
     })();

@@ -13,9 +13,10 @@
  * shortcut into that section rather than making a learner hunt for it.
  */
 
-import { getStreak, getBestStreak, getTodayProgress, getTodayMinutes, onActivity } from '../utils/streak.ts';
+import { getStreak, getBestStreak, getTodayProgress, getTodayMinutes, getTodayProgressByLanguage, onActivity } from '../utils/streak.ts';
 import { Settings, setOnStreakWidgetChange } from '../settings.ts';
 import { positionPopover } from '../utils/popover-position.ts';
+import { LANGUAGES } from '../data/languages.ts';
 
 export type StreakWidgetFormat = 'emoji-number' | 'number-emoji' | 'number-only';
 
@@ -79,6 +80,24 @@ function openStreakPopover(anchorEl: HTMLElement): void {
     'Today',
     minutes > 0 ? `${words} word${words === 1 ? '' : 's'} · ${minutes} min` : `${words} word${words === 1 ? '' : 's'}`,
   ));
+
+  // Per-language breakdown — only for languages with any activity today,
+  // so a learner studying one language doesn't see four zeroed-out rows.
+  const byLanguage = getTodayProgressByLanguage(LANGUAGES.map(l => l.name));
+  if (byLanguage.length > 0) {
+    const divider = document.createElement('div');
+    divider.className = 'streak-popover-divider';
+    popover.appendChild(divider);
+    byLanguage.forEach(({ lang, words: langWords, minutes: langMinutes }) => {
+      const label = LANGUAGES.find(l => l.name === lang)?.label ?? lang;
+      popover.appendChild(popoverRow(
+        label,
+        langMinutes > 0
+          ? `${langWords} word${langWords === 1 ? '' : 's'} · ${langMinutes} min`
+          : `${langWords} word${langWords === 1 ? '' : 's'}`,
+      ));
+    });
+  }
 
   const settingsBtn = document.createElement('button');
   settingsBtn.type        = 'button';

@@ -205,7 +205,18 @@ export function openPresetPicker({ anchorEl, mode, onApply }: PresetPickerOption
     updateBtn.disabled    = !isDirty;
     updateBtn.addEventListener('click', () => {
       if (!liveBundle) return;
-      savePreset(mode, name, liveBundle);
+      // folder/languageLocked/quickEditFields are sidebar-managed metadata
+      // captureCurrentBundle() has no way to know about (there's no live
+      // filter control for any of them) — carried forward from the existing
+      // profile rather than silently dropped, same reasoning quickEditFields
+      // already documented for itself before folder/languageLocked existed.
+      const existing = getPreset(mode, name);
+      savePreset(mode, name, {
+        ...liveBundle,
+        folder: existing?.folder,
+        languageLocked: existing?.languageLocked,
+        quickEditFields: existing?.quickEditFields,
+      });
       closeEditor();
       render();
       reposition();

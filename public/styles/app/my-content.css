@@ -430,6 +430,12 @@
   padding: 0.28rem 0.6rem;
 }
 
+.mc-save-row {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.4rem 0;
+}
+
 /* ── Sort/filter toolbar above the Add-a-word / Edit-a-word lists ──
    Sort, every Part-of-speech chip and every Level chip all sit as direct
    children of one flex-wrap row (see buildMCListToolbar) rather than three
@@ -632,6 +638,53 @@
   flex-direction: column;
   gap: 0.7rem;
 }
+
+/* ── Full-viewport word editor (Settings' "Full-viewport word editor") ──
+   Same .mc-row-detail content as the inline case above, just remounted into
+   a fixed overlay over the whole page instead of expanding under its row —
+   see mountWordEditorDetail() in my-content-mode.ts. */
+.mc-editor-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.mc-editor-overlay-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.6rem 0.9rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.mc-editor-overlay-back {
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.4rem 0.75rem;
+  background: var(--surface2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+}
+.mc-editor-overlay-back:hover {
+  background: var(--surface);
+}
+.mc-editor-overlay-body {
+  flex: 1;
+  padding: 0.9rem 1rem 2rem;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+}
+.mc-editor-overlay-body .mc-row-detail {
+  border: none;
+  padding: 0;
+  margin-bottom: 0;
+}
 /* Added/last-edited date — quiet, right-aligned before the actions column;
    an em dash for a pre-existing entry with no recoverable timestamp (see
    formatMCDate in my-content-mode.ts) rather than nothing rendering in its
@@ -657,6 +710,16 @@
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) var(--surface2);
+}
+/* A word's expanded editor (.mc-row-detail) has a lot more fields than any
+   other row in this list — translation/pos/notes/domains plus glosses,
+   examples, synonyms, antonyms — so the list's normal cap leaves most of it
+   scrolling inside its own cramped box. Relaxed only while a row is open
+   (see renderOverridesList/renderAddedList's own class toggle), not
+   permanently, so a long *list* of rows still scrolls at the same height as
+   always once nothing is expanded. */
+.mc-scroll-list--has-expanded {
+  max-height: 760px;
 }
 .mc-scroll-list::-webkit-scrollbar {
   width: 10px;
