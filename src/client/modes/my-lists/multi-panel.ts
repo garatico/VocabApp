@@ -193,7 +193,7 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
 
   const hiddenSelected = new Set(getMultiListMeta(listName).hiddenModes ?? []);
   const hideFromDropdown = buildChecklistDropdown(
-    'Hide from', FILTER_SCOPES.map(s => ({ value: s, label: SCOPE_LABELS[s] })), hiddenSelected,
+    'Hide From', FILTER_SCOPES.map(s => ({ value: s, label: SCOPE_LABELS[s] })), hiddenSelected,
     () => {
       const meta = getMultiListMeta(listName);
       setMultiListMeta(listName, { ...meta, hiddenModes: [...hiddenSelected] as FilterScope[] });

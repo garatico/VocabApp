@@ -247,6 +247,13 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     const headLabel = document.createElement('span');
     headLabel.textContent = label;
     head.appendChild(headLabel);
+
+    // Both buttons share one flex group so `justify-content: space-between`
+    // on the head (label vs. actions) doesn't also spread the two buttons
+    // apart from *each other* — they used to end up on opposite ends of the
+    // row instead of side by side.
+    const btnGroup = document.createElement('span');
+    btnGroup.className = 'ml-section-head-btns';
     // "+ Folder" before "+ New" — creating an (initially empty) folder to
     // drop things into reads as the more structural action of the two.
     if (folderScope) {
@@ -259,15 +266,16 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
         if (!addFolder(folderScope, name)) { alert(`A folder named "${name.trim()}" already exists.`); return; }
         render();
       });
-      head.appendChild(folderBtn);
+      btnGroup.appendChild(folderBtn);
     }
     if (onNew) {
       const addBtn = document.createElement('button');
       addBtn.type = 'button'; addBtn.className = 'ml-new-list-btn';
       addBtn.title = newTitle ?? 'Create new'; addBtn.textContent = '+ New';
       addBtn.addEventListener('click', onNew);
-      head.appendChild(addBtn);
+      btnGroup.appendChild(addBtn);
     }
+    if (btnGroup.children.length > 0) head.appendChild(btnGroup);
     return head;
   }
 
@@ -360,7 +368,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     row.className = 'ml-settings-row ml-settings-row--hide';
     const label = document.createElement('span');
     label.className = 'ml-settings-label';
-    label.textContent = 'Hide from';
+    label.textContent = 'Hide From';
     row.appendChild(label);
     FILTER_SCOPES.forEach(scope => {
       const cbLabel = document.createElement('label');
@@ -877,9 +885,31 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     }
 
     modes.forEach(mode => {
+      // Folder sub-grouping, scoped to this mode — a "Vocabulary" folder in
+      // Table shouldn't merge with a same-named one in Picture Quiz. Handled
+      // locally rather than through renderSection()'s generic folder pass
+      // (which has no notion of a mode boundary), so profile rows never get
+      // `data-folder` — see buildProfileRow below. A profile in more than
+      // one folder is listed under each (same "appears everywhere it's
+      // labeled" model the live Lists filter box uses).
+      const profileFolderScope = `profiles_${mode}`;
+
       const modeHead = document.createElement('li');
       modeHead.className = 'ml-profile-mode-head';
-      modeHead.textContent = SCOPE_LABELS[mode];
+      const modeLabel = document.createElement('span');
+      modeLabel.textContent = SCOPE_LABELS[mode];
+      modeHead.appendChild(modeLabel);
+      const modeFolderBtn = document.createElement('button');
+      modeFolderBtn.type = 'button'; modeFolderBtn.className = 'ml-new-list-btn ml-new-folder-btn';
+      modeFolderBtn.title = `Create a new folder for ${SCOPE_LABELS[mode]} profiles`;
+      modeFolderBtn.textContent = '+ Folder';
+      modeFolderBtn.addEventListener('click', () => {
+        const name = window.prompt('New folder name:');
+        if (!name?.trim()) return;
+        if (!addFolder(profileFolderScope, name)) { alert(`A folder named "${name.trim()}" already exists.`); return; }
+        render();
+      });
+      modeHead.appendChild(modeFolderBtn);
       ctx.listNav.appendChild(modeHead);
 
       const names = listPresets(mode);
@@ -894,14 +924,6 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
         return !(bundle?.languageLocked && bundle.language && bundle.language !== ctx.lang);
       });
 
-      // Folder sub-grouping, scoped to this mode — a "Vocabulary" folder in
-      // Table shouldn't merge with a same-named one in Picture Quiz. Handled
-      // locally rather than through renderSection()'s generic folder pass
-      // (which has no notion of a mode boundary), so profile rows never get
-      // `data-folder` — see buildProfileRow below. A profile in more than
-      // one folder is listed under each (same "appears everywhere it's
-      // labeled" model the live Lists filter box uses).
-      const profileFolderScope = `profiles_${mode}`;
       const byFolder = new Map<string, string[]>();
       visibleNames.forEach(name => {
         const bundle = getPreset(mode, name);
@@ -910,7 +932,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
         instances.forEach(folder => byFolder.set(folder, [...(byFolder.get(folder) ?? []), name]));
       });
 
-      function buildProfileRow(name: string): void {
+      function buildProfileRow(name: string, target: HTMLElement = ctx.listNav): void {
         const bundle = getPreset(mode, name);
         const selected = ctx.selectedProfile?.mode === mode && ctx.selectedProfile.name === name;
         const li = document.createElement('li');
@@ -991,48 +1013,29 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
           ctx.selectedProfile = { mode, name };
           closePopover(); render();
         });
-        ctx.listNav.appendChild(li);
+        target.appendChild(li);
       }
 
-      (byFolder.get('') ?? []).forEach(buildProfileRow);
-      // Registered-but-empty folders (this mode's "+ new…" from inside a
-      // profile's own settings panel — see buildFoldersRow) are unioned in
-      // here so a freshly-created one still shows up with nothing in it yet.
+      (byFolder.get('') ?? []).forEach(name => buildProfileRow(name));
+      // Registered-but-empty folders (this mode's "+ Folder" above, or the
+      // "+ new…" from inside a profile's own settings panel — see
+      // buildFoldersRow) are unioned in here so a freshly-created one still
+      // shows up with nothing in it yet.
       const allModeFolders = new Set([...byFolder.keys(), ...getFolderRegistry(profileFolderScope)]);
       [...allModeFolders].filter(Boolean).sort().forEach(folder => {
         const folderId = `profiles:${mode}:${folder}`;
-        const folderHead = document.createElement('li');
-        folderHead.className = 'ml-folder-head';
-        const folderCollapsed = isFolderCollapsed('profiles', folderId);
-        const arrow = document.createElement('span');
-        arrow.className = 'ml-section-caret';
-        arrow.textContent = folderCollapsed ? '▸' : '▾';
-        const toggle = document.createElement('button');
-        toggle.type = 'button';
-        toggle.className = 'ml-section-toggle-btn';
-        toggle.append(arrow, document.createTextNode(folder));
-        toggle.addEventListener('click', e => {
-          e.stopPropagation();
-          setFolderCollapsed('profiles', folderId, !isFolderCollapsed('profiles', folderId));
-          render();
-        });
-        folderHead.appendChild(toggle);
-        ctx.listNav.appendChild(folderHead);
+        const group = buildFolderGroup('profiles', folderId, folder);
+        const folderBody = group.querySelector<HTMLUListElement>('.ml-folder-body')!;
+        ctx.listNav.appendChild(group);
+
         const namesInFolder = byFolder.get(folder) ?? [];
         if (namesInFolder.length === 0) {
           const empty = document.createElement('li');
           empty.className = 'ml-list-empty';
           empty.textContent = 'No profiles in this folder yet.';
-          empty.hidden = folderCollapsed;
-          ctx.listNav.appendChild(empty);
+          folderBody.appendChild(empty);
         }
-        namesInFolder.forEach(name => {
-          buildProfileRow(name);
-          if (folderCollapsed) {
-            const last = ctx.listNav.lastElementChild as HTMLElement | null;
-            if (last) last.hidden = true;
-          }
-        });
+        namesInFolder.forEach(name => buildProfileRow(name, folderBody));
       });
     });
   }
@@ -1200,15 +1203,65 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   // ── Top-level render ─────────────────────────────────────────────────────────
 
   /**
+   * Builds one collapsible folder box: a header bar (caret + 📁 + name) atop
+   * a nested `<ul>` that owns everything inside it. Toggling it is a single
+   * `hidden` flip on that `<ul>` rather than one per row — see the perf note
+   * on renderSection() below, which this exists to serve twice over (its own
+   * generic folder pass, and renderProfilesNav's bespoke per-mode one).
+   */
+  function buildFolderGroup(sectionId: SidebarSectionId, folderKey: string, label: string): HTMLLIElement {
+    const collapsed = isFolderCollapsed(sectionId, folderKey);
+    const group = document.createElement('li');
+    group.className = 'ml-folder-group';
+
+    const head = document.createElement('div');
+    head.className = 'ml-folder-head';
+    const arrow = document.createElement('span');
+    arrow.className = 'ml-section-caret';
+    arrow.textContent = collapsed ? '▸' : '▾';
+    const icon = document.createElement('span');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '📁';
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'ml-section-toggle-btn';
+    toggle.append(arrow, icon, document.createTextNode(' ' + label));
+    head.appendChild(toggle);
+
+    const body = document.createElement('ul');
+    body.className = 'ml-folder-body';
+    body.hidden = collapsed;
+
+    toggle.addEventListener('click', e => {
+      e.stopPropagation();
+      const next = !isFolderCollapsed(sectionId, folderKey);
+      setFolderCollapsed(sectionId, folderKey, next);
+      arrow.textContent = next ? '▸' : '▾';
+      body.hidden = next;
+    });
+
+    group.append(head, body);
+    return group;
+  }
+
+  /**
    * Runs one of the four render*Nav functions below, then retroactively
    * turns whatever it just appended to ctx.listNav into a collapsible
    * section — the head (always the first element appended) gets a caret
    * toggle wrapped around its existing label, and every row after it
-   * (empty-state hint included) gets `hidden` while collapsed. Done here,
-   * once, rather than inside each render*Nav function, since this is the one
-   * place that already knows exactly which of listNav's freshly-appended
-   * children belong to which section — those functions themselves just
-   * keep calling `ctx.listNav.appendChild(...)` exactly as before.
+   * (empty-state hint included) moves into one nested `<ul>` that owns the
+   * section's collapsed state. Done here, once, rather than inside each
+   * render*Nav function, since this is the one place that already knows
+   * exactly which of listNav's freshly-appended children belong to which
+   * section — those functions themselves just keep calling
+   * `ctx.listNav.appendChild(...)` exactly as before.
+   *
+   * Collapsing used to walk every row in the section (and every row in every
+   * folder inside it) setting `.hidden` one at a time, then call a full
+   * render() on top — the visible lag the user reported on a section with
+   * more than a handful of cards. Nesting rows inside one real `<ul>` per
+   * section (and one more per folder) turns that into a single `hidden`
+   * flip on the container, with no re-render at all.
    */
   function renderSection(id: SidebarSectionId, fn: () => void): void {
     const before = ctx.listNav.children.length;
@@ -1229,68 +1282,49 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     toggleBtn.appendChild(arrow);
     if (labelSpan) toggleBtn.appendChild(labelSpan);
     head.insertBefore(toggleBtn, head.firstChild);
+
+    const body = document.createElement('ul');
+    body.className = 'ml-section-body';
+    body.hidden = collapsed;
+    rows.forEach(row => body.appendChild(row));
+    head.insertAdjacentElement('afterend', body);
+
     toggleBtn.addEventListener('click', e => {
       e.stopPropagation();
-      setSectionCollapsed(id, !isSectionCollapsed(id));
-      render();
+      const next = !isSectionCollapsed(id);
+      setSectionCollapsed(id, next);
+      arrow.textContent = next ? '▸' : '▾';
+      body.hidden = next;
     });
 
     // Testing Profiles manages its own folder sub-grouping (renderProfilesNav)
     // scoped per mode — a "Vocabulary" folder in Table and one in Picture
     // Quiz must never merge, which this generic pass (with no notion of a
-    // mode boundary) can't express. Its rows carry no data-folder for
-    // exactly this reason, so the section-collapse toggle below is the only
-    // thing this generic pass should still do for it.
-    if (id === 'profiles') {
-      if (collapsed) rows.forEach(row => { row.hidden = true; });
-      return;
-    }
+    // mode boundary) can't express. Its rows are already nested into their
+    // own folder boxes by the time they arrive here (see buildFolderGroup
+    // above), so there's nothing left for this pass to do.
+    if (id === 'profiles') return;
 
     // Folder sub-grouping: a row's data-folder (set by the render*Nav
     // function that built it — '' means ungrouped) determines whether it
-    // gets regrouped under a collapsible folder sub-header. Ungrouped rows
-    // stay in place at the top, exactly where they'd render without folders
-    // existing at all.
-    const folders = [...new Set(rows.map(r => r.dataset.folder || '').filter(Boolean))].sort();
-    folders.forEach(folder => {
-      const folderRows = rows.filter(r => (r.dataset.folder || '') === folder);
-      if (folderRows.length === 0) return;
-      const folderCollapsed = isFolderCollapsed(id, folder);
-
-      const subHead = document.createElement('li');
-      subHead.className = 'ml-folder-head';
-      const subArrow = document.createElement('span');
-      subArrow.className = 'ml-section-caret';
-      subArrow.textContent = folderCollapsed ? '▸' : '▾';
-      const subToggle = document.createElement('button');
-      subToggle.type = 'button';
-      subToggle.className = 'ml-section-toggle-btn';
-      subToggle.append(subArrow, document.createTextNode(folder));
-      subToggle.addEventListener('click', e => {
-        e.stopPropagation();
-        setFolderCollapsed(id, folder, !isFolderCollapsed(id, folder));
-        render();
-      });
-      subHead.appendChild(subToggle);
-      subHead.hidden = collapsed;
-
-      // Regroups this folder's rows to be contiguous (they may be
-      // interleaved with other folders/ungrouped rows in the order
-      // render*Nav happened to build them in) with their own sub-header
-      // directly above — insertBefore/after *move* existing nodes rather
-      // than cloning them, so click handlers/state already on each row
-      // survive the reshuffle.
-      ctx.listNav.insertBefore(subHead, folderRows[0]);
-      let cursor: ChildNode = subHead;
-      folderRows.forEach(row => {
-        cursor.after(row);
-        cursor = row;
-        row.classList.add('ml-folder-row');
-        row.hidden = collapsed || folderCollapsed;
-      });
+    // gets moved into its own collapsible folder box, keyed by first
+    // appearance so a folder's rows land in the same relative order they
+    // would without folders existing at all. Ungrouped rows are already
+    // sitting directly in `body`, right where they belong.
+    const folderBodies = new Map<string, HTMLUListElement>();
+    rows.forEach(row => {
+      const folder = row.dataset.folder || '';
+      if (!folder) return;
+      let folderBody = folderBodies.get(folder);
+      if (!folderBody) {
+        const group = buildFolderGroup(id, folder, folder);
+        folderBody = group.querySelector<HTMLUListElement>('.ml-folder-body')!;
+        body.insertBefore(group, row);
+        folderBodies.set(folder, folderBody);
+      }
+      row.classList.add('ml-folder-row');
+      folderBody.appendChild(row);
     });
-
-    rows.filter(r => !r.dataset.folder).forEach(row => { row.hidden = collapsed; });
   }
 
   function render(rerenderPanel = true): void {

@@ -263,7 +263,7 @@ export function renderPanel(ctx: ListsCtx): void {
 
   const hiddenSelected = new Set(getListMeta(ctx.lang, ctx.selectedList).hiddenModes ?? []);
   const hideFromDropdown = buildChecklistDropdown(
-    'Hide from', FILTER_SCOPES.map(s => ({ value: s, label: SCOPE_LABELS[s] })), hiddenSelected,
+    'Hide From', FILTER_SCOPES.map(s => ({ value: s, label: SCOPE_LABELS[s] })), hiddenSelected,
     () => {
       const meta = getListMeta(ctx.lang, ctx.selectedList);
       setListMeta(ctx.lang, ctx.selectedList, { ...meta, hiddenModes: [...hiddenSelected] as FilterScope[] });

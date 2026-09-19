@@ -2,8 +2,21 @@
    MY LISTS — tab panel (right-aligned in the mode-tab bar)
 ================================================================ */
 
-/* ── Push My Lists tab to the far right ─────────────────────── */
+/* ── Push My Lists tab (and everything after it) to the far right ────── */
 .mode-tab[data-mode="mylists"] {
+  margin-left: auto;
+}
+/* Simple Mode hides My Lists and My Content entirely (app.ts's
+   syncSimpleModeLocks) — without this, hiding the tab that carries the
+   margin-left:auto above removed it from layout along with it, so History/
+   Settings collapsed back in against Conjugation instead of staying pushed
+   to the right. Whichever of the three is first still visible inherits the
+   push, keyed off the exact `mylists`→`myContent`→`history` DOM order in
+   index.html. */
+.mode-tab[data-mode="mylists"][hidden] + .mode-tab[data-mode="myContent"] {
+  margin-left: auto;
+}
+.mode-tab[data-mode="mylists"][hidden] + .mode-tab[data-mode="myContent"][hidden] + .mode-tab[data-mode="history"] {
   margin-left: auto;
 }
 
@@ -2128,6 +2141,10 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
    Smart lists — saved queries, not stored word sets
    ═══════════════════════════════════════════════════════════════ */
 .ml-profile-mode-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
   padding: 0.4rem 0.85rem 0.15rem;
   font-size: 0.62rem;
   font-weight: 700;
@@ -2135,6 +2152,13 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
   letter-spacing: 0.05em;
   color: var(--ml-accent-profile);
 }
+.ml-profile-mode-head .ml-new-list-btn {
+  text-transform: none;
+  letter-spacing: normal;
+  border-color: var(--ml-accent-profile);
+  color: var(--ml-accent-profile);
+}
+.ml-profile-mode-head .ml-new-list-btn:hover { background: var(--ml-accent-profile); color: #fff; }
 
 .ml-profile-mode-tag {
   font-size: 0.64rem;
@@ -2167,6 +2191,18 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
 /* The very first section head has nothing above it to separate from. */
 .ml-single-head { margin-top: 0; border-top: none; }
 
+/* "+ Folder" and "+ New" (sidebar.ts's sectionHead()) share one flex group
+   so the head's own `justify-content: space-between` (label vs. actions)
+   only ever pushes *that* pair apart — without this they were themselves
+   two separate flex children of the head, so space-between spread all three
+   (label, +Folder, +New) evenly across the row instead of keeping the two
+   buttons next to each other. */
+.ml-section-head-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 /* Collapse/expand toggle wrapping the head's own label (see sidebar.ts's
    renderSection()) — plain button reset so it reads as the same label text
    it's wrapping, not a button, plus the disclosure caret. */
@@ -2190,20 +2226,50 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
   width: 0.8em;
 }
 
-/* A folder within a section (see sidebar.ts's renderSection()/
-   renderProfilesNav()) — one level deeper than a section head, so smaller
-   and unindented-but-muted rather than repeating the section's own bold
-   uppercase treatment. */
+/* A section's rows, all nested inside one real <ul> (sidebar.ts's
+   renderSection()) so collapsing the section is a single `hidden` flip on
+   this element instead of one per row. */
+.ml-section-body {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ml-section-body[hidden] { display: none; }
+
+/* A folder within a section (see sidebar.ts's buildFolderGroup(), used by
+   both renderSection()'s generic pass and renderProfilesNav()'s bespoke
+   per-mode one) — a visually distinct box so a folder reads as its own
+   container the individual list cards sit *inside*, not just another card
+   among them. Dashed border (vs. the solid one on `.ml-list-item--full`)
+   and a muted fill keep it from being confused with an actual list, even
+   though the same list can render inside more than one such box at once
+   (once per folder it belongs to — see metaFolders()/renderSingleNav() etc). */
+.ml-folder-group {
+  margin: 0.3rem 0.55rem 0.35rem;
+  padding: 0.05rem 0 0.35rem;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface2);
+}
 .ml-folder-head {
-  padding: 0.3rem 0.65rem 0.15rem 1.1rem;
+  display: flex;
+  align-items: center;
+  padding: 0.3rem 0.6rem 0.15rem;
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-muted);
 }
-.ml-folder-row {
-  padding-left: 0.5rem;
-  border-left: 2px solid var(--border);
-  margin-left: 0.65rem;
+.ml-folder-body {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.15rem;
+}
+.ml-folder-body[hidden] { display: none; }
+/* Rows inside a folder box already have the box's own border/padding for
+   separation, so their individual card margins are trimmed down from the
+   ungrouped default — otherwise the folder box read as mostly empty space. */
+.ml-folder-body .ml-list-item--full {
+  margin: 0.16rem 0.15rem;
 }
 
 /* ── Per-card settings panel (Folder, Hide from, language lock) — toggled by
