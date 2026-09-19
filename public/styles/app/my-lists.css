@@ -2254,10 +2254,25 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
 .ml-folder-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
   padding: 0.3rem 0.6rem 0.15rem;
   font-size: 0.68rem;
   font-weight: 700;
   color: var(--text-muted);
+}
+/* Bulk "Hide From" for every list currently in this folder at once (see
+   sidebar.ts's bulkHideFromFor) — the same dropdown control panel.ts/
+   multi-panel.ts use per-list, just shrunk to fit the folder header's
+   smaller, muted row instead of the full-size filter row it normally sits
+   in. Testing Profiles folders never pass one (a profile already belongs to
+   exactly one mode), so this simply doesn't render there. */
+.ml-folder-hide-from .ml-chip-dropdown-toggle {
+  font-size: 0.66rem;
+  font-weight: 600;
+  padding: 0.12rem 0.45rem;
+  text-transform: none;
+  letter-spacing: normal;
 }
 .ml-folder-body {
   list-style: none;

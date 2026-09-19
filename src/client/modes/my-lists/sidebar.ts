@@ -22,9 +22,10 @@ import {
   getListNames, getList, createList, deleteList, renameList, addToList,
   getMultiListNames, getMultiList, getMultiListLanguages, getMultiListCount,
   createMultiList, deleteMultiList, renameMultiList, addToMultiList,
-  getListMeta, getMultiListMeta, metaFolders,
+  getListMeta, setListMeta, getMultiListMeta, setMultiListMeta, metaFolders,
 } from '../../utils/word-lists.ts';
 import { getFolderRegistry, addFolder } from './folders.ts';
+import { buildChecklistDropdown, closeAllChipDropdowns } from './chip-dropdown.ts';
 import { readString, writeString } from '../../utils/storage.ts';
 import { logger } from '../../utils/logger.ts';
 import { BROWSE_ALL_LIST, type ListsCtx } from './context.ts';
@@ -52,6 +53,14 @@ import {
 } from '../../filters/visual-profiles.ts';
 
 const PROFILE_MODES: FilterScope[] = ['table', 'picture', 'conjugation'];
+
+// createSidebar() runs fresh on every visit to My Lists (see my-lists-mode.ts's
+// renderMyLists, called from app.ts's mode-activation dispatcher) — a plain
+// `document.addEventListener` in its body would add one more listener per
+// visit with nothing ever removing the previous ones. Removed-then-reassigned
+// each call instead, same convention as the equivalent handler in
+// panel.ts/multi-panel.ts/browse-panel.ts.
+let outsideClickHandler: ((e: MouseEvent) => void) | null = null;
 
 // ── Collapsible sections ──────────────────────────────────────────────────
 //
@@ -181,6 +190,18 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   leftPane.appendChild(header);
   leftPane.appendChild(restoreInput);
   leftPane.appendChild(ctx.listNav);
+
+  // Closes a folder's "Hide From" dropdown (see buildFolderGroup) on an
+  // outside click — same convention as the same dropdown family in
+  // panel.ts/multi-panel.ts/browse-panel.ts. closeAllChipDropdowns()
+  // re-queries the DOM live, so this needs no updating as render() rebuilds
+  // which dropdowns currently exist — it only needs registering once per
+  // createSidebar() call (see the module-level outsideClickHandler note above).
+  if (outsideClickHandler) document.removeEventListener('click', outsideClickHandler, true);
+  outsideClickHandler = (e: MouseEvent) => {
+    if (!(e.target as HTMLElement).closest('.ml-chip-dropdown')) closeAllChipDropdowns();
+  };
+  document.addEventListener('click', outsideClickHandler, true);
 
   // ── Keyboard navigation ──────────────────────────────────────────────────────
   //
@@ -1016,7 +1037,8 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
         target.appendChild(li);
       }
 
-      (byFolder.get('') ?? []).forEach(name => buildProfileRow(name));
+      // Folders first (see renderSection()'s own folders-before-ungrouped
+      // ordering), then whatever hasn't been filed into one.
       // Registered-but-empty folders (this mode's "+ Folder" above, or the
       // "+ new…" from inside a profile's own settings panel — see
       // buildFoldersRow) are unioned in here so a freshly-created one still
@@ -1037,6 +1059,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
         }
         namesInFolder.forEach(name => buildProfileRow(name, folderBody));
       });
+      (byFolder.get('') ?? []).forEach(name => buildProfileRow(name));
     });
   }
 
@@ -1202,14 +1225,55 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
 
   // ── Top-level render ─────────────────────────────────────────────────────────
 
+  /** Bulk "Hide From" access for every member of one folder, at once — see
+   *  buildFolderGroup's `bulkHideFrom` param. `get` reads the *union* of every
+   *  member's own `hiddenModes` (a mode shows checked if any member already
+   *  hides from it) since members can disagree; `set` overwrites every
+   *  member's `hiddenModes` to match, which is the point — one action instead
+   *  of opening each list's own Hide From dropdown in turn. */
+  interface BulkHideFrom { get(): FilterScope[]; set(modes: FilterScope[]): void; }
+
+  function bulkHideFromFor(sectionId: SidebarSectionId, folder: string): BulkHideFrom | undefined {
+    if (sectionId === 'single') {
+      const names = getListNames(ctx.lang).filter(n => metaFolders(getListMeta(ctx.lang, n)).includes(folder));
+      return {
+        get: () => [...new Set(names.flatMap(n => getListMeta(ctx.lang, n).hiddenModes ?? []))],
+        set: modes => names.forEach(n => setListMeta(ctx.lang, n, { ...getListMeta(ctx.lang, n), hiddenModes: modes })),
+      };
+    }
+    if (sectionId === 'smart') {
+      const rules = getSmartLists(ctx.lang);
+      const names = getSmartNames(ctx.lang).filter(n => (rules[n].folders ?? []).includes(folder));
+      return {
+        get: () => [...new Set(names.flatMap(n => rules[n].hiddenModes ?? []))],
+        set: modes => names.forEach(n => saveSmartRule(ctx.lang, n, { ...getSmartLists(ctx.lang)[n], hiddenModes: modes })),
+      };
+    }
+    if (sectionId === 'multi') {
+      const names = getMultiListNames().filter(n => metaFolders(getMultiListMeta(n)).includes(folder));
+      return {
+        get: () => [...new Set(names.flatMap(n => getMultiListMeta(n).hiddenModes ?? []))],
+        set: modes => names.forEach(n => setMultiListMeta(n, { ...getMultiListMeta(n), hiddenModes: modes })),
+      };
+    }
+    // Testing Profiles has no Hide-From-mode concept — a profile already
+    // belongs to exactly one mode, so "hide this profile from mode X" isn't
+    // a meaningful action the way it is for a list that can be offered
+    // across several modes.
+    return undefined;
+  }
+
   /**
-   * Builds one collapsible folder box: a header bar (caret + 📁 + name) atop
-   * a nested `<ul>` that owns everything inside it. Toggling it is a single
+   * Builds one collapsible folder box: a header bar (caret + 📁 + name, plus
+   * a bulk "Hide From" dropdown when `bulkHideFrom` applies) atop a nested
+   * `<ul>` that owns everything inside it. Toggling collapse is a single
    * `hidden` flip on that `<ul>` rather than one per row — see the perf note
    * on renderSection() below, which this exists to serve twice over (its own
    * generic folder pass, and renderProfilesNav's bespoke per-mode one).
    */
-  function buildFolderGroup(sectionId: SidebarSectionId, folderKey: string, label: string): HTMLLIElement {
+  function buildFolderGroup(
+    sectionId: SidebarSectionId, folderKey: string, label: string, bulkHideFrom?: BulkHideFrom,
+  ): HTMLLIElement {
     const collapsed = isFolderCollapsed(sectionId, folderKey);
     const group = document.createElement('li');
     group.className = 'ml-folder-group';
@@ -1239,6 +1303,16 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       arrow.textContent = next ? '▸' : '▾';
       body.hidden = next;
     });
+
+    if (bulkHideFrom) {
+      const selected = new Set(bulkHideFrom.get());
+      const dropdown = buildChecklistDropdown(
+        'Hide From', FILTER_SCOPES.map(s => ({ value: s, label: SCOPE_LABELS[s] })), selected,
+        () => bulkHideFrom!.set([...selected] as FilterScope[]),
+      );
+      dropdown.wrap.classList.add('ml-folder-hide-from');
+      head.appendChild(dropdown.wrap);
+    }
 
     group.append(head, body);
     return group;
@@ -1286,7 +1360,6 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     const body = document.createElement('ul');
     body.className = 'ml-section-body';
     body.hidden = collapsed;
-    rows.forEach(row => body.appendChild(row));
     head.insertAdjacentElement('afterend', body);
 
     toggleBtn.addEventListener('click', e => {
@@ -1301,30 +1374,30 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     // scoped per mode — a "Vocabulary" folder in Table and one in Picture
     // Quiz must never merge, which this generic pass (with no notion of a
     // mode boundary) can't express. Its rows are already nested into their
-    // own folder boxes by the time they arrive here (see buildFolderGroup
-    // above), so there's nothing left for this pass to do.
-    if (id === 'profiles') return;
+    // own folder boxes (and already ordered folders-first) by the time they
+    // arrive here (see buildFolderGroup above), so there's nothing left for
+    // this pass to do beyond moving them into the section body.
+    if (id === 'profiles') {
+      rows.forEach(row => body.appendChild(row));
+      return;
+    }
 
-    // Folder sub-grouping: a row's data-folder (set by the render*Nav
-    // function that built it — '' means ungrouped) determines whether it
-    // gets moved into its own collapsible folder box, keyed by first
-    // appearance so a folder's rows land in the same relative order they
-    // would without folders existing at all. Ungrouped rows are already
-    // sitting directly in `body`, right where they belong.
-    const folderBodies = new Map<string, HTMLUListElement>();
-    rows.forEach(row => {
-      const folder = row.dataset.folder || '';
-      if (!folder) return;
-      let folderBody = folderBodies.get(folder);
-      if (!folderBody) {
-        const group = buildFolderGroup(id, folder, folder);
-        folderBody = group.querySelector<HTMLUListElement>('.ml-folder-body')!;
-        body.insertBefore(group, row);
-        folderBodies.set(folder, folderBody);
-      }
-      row.classList.add('ml-folder-row');
-      folderBody.appendChild(row);
+    // Folders first (alphabetical), each holding its own rows in their
+    // original order, then every ungrouped row after — a learner sees the
+    // structure (what's been organized into folders) before the flat list of
+    // whatever hasn't been, rather than folders scattered wherever their
+    // first row happened to fall.
+    const folderNames = [...new Set(rows.map(r => r.dataset.folder || '').filter(Boolean))].sort();
+    folderNames.forEach(folder => {
+      const group = buildFolderGroup(id, folder, folder, bulkHideFromFor(id, folder));
+      const folderBody = group.querySelector<HTMLUListElement>('.ml-folder-body')!;
+      body.appendChild(group);
+      rows.filter(r => (r.dataset.folder || '') === folder).forEach(row => {
+        row.classList.add('ml-folder-row');
+        folderBody.appendChild(row);
+      });
     });
+    rows.filter(r => !r.dataset.folder).forEach(row => body.appendChild(row));
   }
 
   function render(rerenderPanel = true): void {

@@ -12,6 +12,7 @@ import { initConjugation } from './admin-conjugation.js';
 import { initTable } from './admin-table.js';
 import { logger } from '../utils/logger.js';
 import { readString, writeString } from '../utils/storage.ts';
+import { isPackagedApp } from '../data/vocab-source.ts';
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
@@ -44,6 +45,19 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     if (tabId) document.getElementById(tabId)?.classList.add('active');
   });
 });
+
+// ── Packaged-build warning ───────────────────────────────────────────────────
+//
+// A Tauri/Capacitor build ships no Express process at all (see vocab-source.ts's
+// isPackagedApp doc comment) — every tab below would otherwise fail its first
+// request with admin-api.ts's generic "is the Express backend running?" error,
+// which reads like something's broken rather than "this page can't work here."
+// Tabs still initialise normally: a learner who opened this from a real server
+// gets the ordinary per-request error, and nothing here should assume the
+// packaged case is the only reason a fetch could fail.
+if (isPackagedApp()) {
+  document.getElementById('packagedWarning')?.removeAttribute('hidden');
+}
 
 // ── Initialise all modules ────────────────────────────────────────────────────
 

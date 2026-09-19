@@ -2599,10 +2599,18 @@ function showDayTooltip(anchor: HTMLElement, dateStr: string, dateLabel: string)
         row.appendChild(stats);
         tip.appendChild(row);
       });
-  } else if (!hits) {
+  } else {
+    // Shown even on a day that *did* hit a goal above — the per-language
+    // breakdown (DAILY_LANG_KEY) only started recording once this feature
+    // shipped, so a day from before then genuinely has none to show. Without
+    // this, that day's tooltip was just the title (plus a goals row, if any)
+    // and nothing else — reading as "the breakdown isn't working" rather
+    // than "there's nothing from before this existed."
     const empty = document.createElement('div');
     empty.className = 'settings-calendar-tooltip-empty';
-    empty.textContent = 'No detailed stats recorded for this day.';
+    empty.textContent = hits
+      ? 'No per-language breakdown recorded for this day.'
+      : 'No detailed stats recorded for this day.';
     tip.appendChild(empty);
   }
 
