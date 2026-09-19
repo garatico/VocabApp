@@ -21,13 +21,21 @@
  * language's translation plus a second join against that same concept's
  * 'english' translation, instead of a flat per-language SELECT.
  *
- * Existence is checked fresh on every call rather than cached: these tables
- * are small (a full `sqlite_master` scan is cheap) and this way there's no
- * second cache-invalidation lifecycle to hook into vocab-loader.ts's own
- * reload/clearCache path for what is, at most, a few hundred rows.
+ * The per-language *result* (the built TriviaQuestion[]/GuessBlankQuestion[])
+ * is cached in memory, same idea as vocab-loader.ts's vocabCache — without
+ * it, every request re-ran the join query, re-parsed every row's JSON
+ * columns, and even re-checked `tableExists` via two sqlite_master queries,
+ * unconditionally. `clearContentCache()` is called from admin/db.ts's
+ * /cache/clear and /db/reload alongside vocab-loader's own clearCache/
+ * reloadDb, rather than imported the other way around, since this module
+ * already depends on vocab-loader.ts (via getDb) and a reverse import would
+ * make that a cycle. Existence is still (re-)checked once per cache miss,
+ * not cached separately — cheap, and it self-heals if a table appears after
+ * a later db/reload.
  */
 
-import { getDb } from './vocab-loader.js';
+import type Database from 'better-sqlite3';
+import { getDb }  from './vocab-loader.js';
 import { logger } from './logger.js';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -114,10 +122,35 @@ function parseJsonField<T>(raw: string | null, id: string, field: string, fallba
 }
 
 function tableExists(name: string): boolean {
-  const row = getDb()
+  const row = db()
     .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name = ?")
     .get(name) as { name: string } | undefined;
   return row !== undefined;
+}
+
+const triviaCache     = new Map<string, TriviaQuestion[]>();
+const guessBlankCache = new Map<string, GuessBlankQuestion[]>();
+
+/** Drop both caches — called alongside vocab-loader's clearCache/reloadDb. */
+export function clearContentCache(): void {
+  triviaCache.clear();
+  guessBlankCache.clear();
+}
+
+// Belt-and-braces alongside the explicit clearContentCache() calls above:
+// if the underlying connection itself has changed (vocab-loader's reloadDb,
+// or setDb — the test helper that swaps in a fresh in-memory database per
+// test) the cache is dropped automatically, even if some future caller of
+// setDb forgets to also call clearContentCache. Cheap (a reference compare)
+// on every call.
+let lastDb: Database.Database | null = null;
+function db(): Database.Database {
+  const conn = getDb();
+  if (conn !== lastDb) {
+    lastDb = conn;
+    clearContentCache();
+  }
+  return conn;
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────
@@ -127,9 +160,19 @@ function tableExists(name: string): boolean {
  *  concept has a translation for this language — both ordinary, non-error
  *  states. */
 export function loadTriviaQuestions(language: string): TriviaQuestion[] {
+  // Must run before the cache check below: this is what notices a changed
+  // connection (setDb/reloadDb) and drops stale entries — checking the
+  // cache first could return a cached-under-the-old-connection result
+  // without this ever running.
+  db();
+
+  const lang = language.toLowerCase();
+  const cached = triviaCache.get(lang);
+  if (cached) return cached;
+
   if (!tableExists('trivia_questions') || !tableExists('trivia_translations')) return [];
 
-  const rows = getDb()
+  const rows = db()
     .prepare(`
       SELECT q.id              AS id,
              q.category        AS category,
@@ -147,9 +190,9 @@ export function loadTriviaQuestions(language: string): TriviaQuestion[] {
       LEFT JOIN trivia_translations e ON e.question_id = q.id AND e.language = 'english'
       ORDER BY q.id
     `)
-    .all(language.toLowerCase()) as TriviaRow[];
+    .all(lang) as TriviaRow[];
 
-  return rows.map((row): TriviaQuestion => {
+  const questions = rows.map((row): TriviaQuestion => {
     const hasEnglish = row.question_en !== null && row.question_en !== undefined;
     if (!hasEnglish) {
       logger.warn(
@@ -173,14 +216,23 @@ export function loadTriviaQuestions(language: string): TriviaQuestion[] {
         : [],
     };
   });
+  triviaCache.set(lang, questions);
+  return questions;
 }
 
 /** All Guess the Blank questions for `language` — same "missing table or
  *  empty is fine" contract as loadTriviaQuestions above. */
 export function loadGuessBlankQuestions(language: string): GuessBlankQuestion[] {
+  // See loadTriviaQuestions's identical guard above.
+  db();
+
+  const lang = language.toLowerCase();
+  const cached = guessBlankCache.get(lang);
+  if (cached) return cached;
+
   if (!tableExists('guess_blank_questions') || !tableExists('guess_blank_translations')) return [];
 
-  const rows = getDb()
+  const rows = db()
     .prepare(`
       SELECT q.id           AS id,
              q.category     AS category,
@@ -194,9 +246,9 @@ export function loadGuessBlankQuestions(language: string): GuessBlankQuestion[] 
       LEFT JOIN guess_blank_translations e ON e.question_id = q.id AND e.language = 'english'
       ORDER BY q.id
     `)
-    .all(language.toLowerCase()) as GuessBlankRow[];
+    .all(lang) as GuessBlankRow[];
 
-  return rows.map((row): GuessBlankQuestion => {
+  const questions = rows.map((row): GuessBlankQuestion => {
     const hasEnglish = row.answer_en !== null && row.answer_en !== undefined;
     if (!hasEnglish) {
       logger.warn(
@@ -216,6 +268,8 @@ export function loadGuessBlankQuestions(language: string): GuessBlankQuestion[] 
       answerEn:     row.answer_en ?? '',
     };
   });
+  guessBlankCache.set(lang, questions);
+  return questions;
 }
 
-export default { loadTriviaQuestions, loadGuessBlankQuestions };
+export default { loadTriviaQuestions, loadGuessBlankQuestions, clearContentCache };

@@ -26,7 +26,7 @@ import 'dotenv/config';
 
 import fs   from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { loadVocabFile, getSupportedLanguages, closeDatabase }
   from '../src/server/lib/vocab-loader.js';
@@ -39,6 +39,32 @@ interface IndexEntry {
   words:    number;
   file:     string;
   bytes:    number;
+}
+
+/**
+ * The exact envelope written to public/data/vocab-<language>.json — pulled
+ * out of main() below so a test can call it directly against an injected
+ * test DB (see tests/export-static-vocab.test.js) without main()'s file
+ * writes, process.exit, or its dependence on the real DATA_DIR. This is the
+ * one function whose output Tauri/Capacitor's packaged builds serve in
+ * place of a live /api/vocab/:language — a bug here is invisible to every
+ * test that only exercises the Express route, since a packaged build never
+ * calls it.
+ */
+export function buildLanguagePayload(language: string): {
+  language: string; count: number;
+  metadata: { generatedAt: string; source: string };
+  data: ReturnType<typeof loadVocabFile>['words'];
+} {
+  const vocab = loadVocabFile(language);
+  // Same envelope the API sends (routes/public.ts), so the client can treat
+  // a static file and a live response identically — see vocab-source.ts.
+  return {
+    language,
+    count:    vocab.words.length,
+    metadata: { generatedAt: new Date().toISOString(), source: 'static-export' },
+    data:     vocab.words,
+  };
 }
 
 function main(): void {
@@ -54,16 +80,7 @@ function main(): void {
   let totalBytes = 0;
 
   for (const language of languages) {
-    const vocab = loadVocabFile(language);
-
-    // Same envelope the API sends, so the client can treat a static file and
-    // a live response identically.
-    const payload = {
-      language,
-      count:    vocab.words.length,
-      metadata: { generatedAt: new Date().toISOString(), source: 'static-export' },
-      data:     vocab.words,
-    };
+    const payload = buildLanguagePayload(language);
 
     const file = `vocab-${language}.json`;
     const json = JSON.stringify(payload);
@@ -71,10 +88,10 @@ function main(): void {
 
     const bytes = Buffer.byteLength(json);
     totalBytes += bytes;
-    index.push({ language, words: vocab.words.length, file, bytes });
+    index.push({ language, words: payload.count, file, bytes });
 
     console.log(
-      `  ${language.padEnd(12)} ${String(vocab.words.length).padStart(6)} words  `
+      `  ${language.padEnd(12)} ${String(payload.count).padStart(6)} words  `
       + `${(bytes / 1048576).toFixed(2)} MB  -> public/data/${file}`,
     );
   }
@@ -97,4 +114,15 @@ function main(): void {
   closeDatabase();
 }
 
-main();
+// Only run when invoked directly (`npm run export:vocab` / `tsx
+// scripts/export-static-vocab.ts`), not when a test imports this module for
+// buildLanguagePayload — importing used to always run main() too, which
+// meant any test touching this file would mkdir/write real files under
+// public/data/, query whatever DATA_DIR happens to point at, and
+// process.exit(1) if that database had no languages yet. pathToFileURL
+// (rather than a manual `file://` + process.argv[1] string) handles
+// Windows drive-letter paths and separators the same way Node derived
+// import.meta.url itself, so the comparison is exact on every platform.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}

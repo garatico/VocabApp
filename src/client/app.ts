@@ -19,7 +19,6 @@ import { readString, writeString, remove as removeKey } from './utils/storage.ts
 import { mustGet }                              from './utils/dom.ts';
 import { renderMyLists }                        from './modes/my-lists-mode.ts';
 import { renderHistory }                        from './modes/history-mode.ts';
-import { renderAiChat }                          from './modes/ai-chat-mode.ts';
 import { getTriviaQuestions }                    from './data/trivia-questions.ts';
 import { getUserTriviaQuestions }                from './data/user-content.ts';
 import { renderMyContent }                       from './modes/my-content-mode.ts';
@@ -710,7 +709,10 @@ const { updateModeUI } = bindModeSwitch({
     mylists: () => { if (myListsWrap) renderMyLists(myListsWrap as HTMLElement); },
     // Built fresh per visit like History — cheap, and avoids keeping a stale
     // chat session's DOM alive underneath a tab that's dev/desktop-only anyway.
-    chat: () => { if (chatWrap) renderAiChat(chatWrap, langSelect?.value ?? 'spanish'); },
+    // Dynamically imported: this pulls in @mlc-ai/web-llm (14MB package),
+    // which used to ship in the main bundle for every user even though this
+    // tab is dev/desktop-only and gated behind a runtime WebGPU check.
+    chat: () => { if (chatWrap) void import('./modes/ai-chat-mode.ts').then(m => m.renderAiChat(chatWrap, langSelect?.value ?? 'spanish')); },
     trivia: updateTriviaDomainFilter,
     // Built fresh per visit like History/My Lists — cheap, and a word/trivia
     // question/picture added elsewhere in this same session (there isn't

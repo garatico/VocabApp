@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { disableSimpleMode } from './helpers.ts';
 
 /**
  * My Lists — CRUD + Undo. This is where the Undo-snapshot bugs lived: three
@@ -13,7 +14,10 @@ import { test, expect, type Page } from '@playwright/test';
  */
 
 async function createList(page: Page, name: string): Promise<void> {
-  await page.locator('.ml-single-head .ml-new-list-btn').click();
+  // :not(.ml-new-folder-btn) — the Folders feature added a second button
+  // (sidebar.ts's "+ Folder") that shares the plain .ml-new-list-btn class
+  // for styling, which otherwise makes this locator ambiguous.
+  await page.locator('.ml-single-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
   const nameInput = page.locator('.ml-list-name-input');
   await nameInput.fill(name);
   await nameInput.press('Enter');
@@ -33,6 +37,7 @@ async function addWord(page: Page, word: string): Promise<void> {
 }
 
 test.beforeEach(async ({ page }) => {
+  await disableSimpleMode(page);
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="mylists"]').click();

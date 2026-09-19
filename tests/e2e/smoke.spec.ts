@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { disableSimpleMode } from './helpers.ts';
 
 /**
  * Phase 0 smoke test — proves the harness itself works end to end (real
@@ -36,6 +37,12 @@ test('app loads, hides the spinner, and lands on Table mode', async ({ page }) =
 
 test('switching mode tabs shows the matching section and no console errors', async ({ page }) => {
   const errors = trackPageErrors(page);
+  // mylists is one of the tabs Simple Mode hides by default for a fresh
+  // session (see helpers.ts's disableSimpleMode) — this test wants to
+  // prove tab-switching works in general, not specifically test that
+  // default, so it opts out of it the same way a real learner would in
+  // Settings.
+  await disableSimpleMode(page);
   await page.goto('/');
   await expect(page.locator('#loadingSpinner')).toBeHidden();
 

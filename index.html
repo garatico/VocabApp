@@ -15,48 +15,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <meta name="apple-mobile-web-app-title" content="VocabApp"/>
-<!-- Shared tokens -->
-<link rel="stylesheet" href="/styles/shared/variables.css"/>
-<link rel="stylesheet" href="/styles/shared/reset.css"/>
-<!-- Shared UI components. Must load before the per-mode sheets so a mode can
-     still override one property without restating the whole pattern. -->
-<link rel="stylesheet" href="/styles/shared/components.css"/>
-<!-- App styles -->
-<link rel="stylesheet" href="/styles/app/animations.css"/>
-<link rel="stylesheet" href="/styles/app/transitions.css"/>
-<link rel="stylesheet" href="/styles/app/spinner.css"/>
-<link rel="stylesheet" href="/styles/app/theme-toggle.css"/>
-<link rel="stylesheet" href="/styles/app/buttons.css"/>
-<link rel="stylesheet" href="/styles/app/selects.css"/>
-<link rel="stylesheet" href="/styles/app/mode-tabs.css"/>
-<link rel="stylesheet" href="/styles/app/streak-widget.css"/>
-<link rel="stylesheet" href="/styles/app/controls-bar.css"/>
-<link rel="stylesheet" href="/styles/app/class-filter.css"/>
-<link rel="stylesheet" href="/styles/app/domain-filter.css"/>
-<link rel="stylesheet" href="/styles/app/toast.css"/>
-<link rel="stylesheet" href="/styles/app/feedback.css"/>
-<link rel="stylesheet" href="/styles/app/progress.css"/>
-<link rel="stylesheet" href="/styles/app/quiz.css"/>
-<link rel="stylesheet" href="/styles/app/recall.css"/>
-<link rel="stylesheet" href="/styles/app/double-recall.css"/>
-<link rel="stylesheet" href="/styles/app/summary.css"/>
-<link rel="stylesheet" href="/styles/app/table.css"/>
-<link rel="stylesheet" href="/styles/app/picture.css"/>
-<link rel="stylesheet" href="/styles/app/trivia.css"/>
-<link rel="stylesheet" href="/styles/app/guess-blank.css"/>
-<link rel="stylesheet" href="/styles/app/sentence-scramble.css"/>
-<link rel="stylesheet" href="/styles/app/conjugation.css"/>
-<link rel="stylesheet" href="/styles/app/tooltip.css"/>
-<link rel="stylesheet" href="/styles/app/responsive.css"/>
-<link rel="stylesheet" href="/styles/app/list-picker.css"/>
-<link rel="stylesheet" href="/styles/app/my-lists.css"/>
-<link rel="stylesheet" href="/styles/app/my-content.css"/>
-<link rel="stylesheet" href="/styles/app/history.css"/>
-<link rel="stylesheet" href="/styles/app/settings.css"/>
-<link rel="stylesheet" href="/styles/app/font-size.css"/>
-<link rel="stylesheet" href="/styles/app/shortcuts.css"/>
-<link rel="stylesheet" href="/styles/app/onboarding.css"/>
-<link rel="stylesheet" href="/styles/app/chat.css"/>
+<!-- One Vite entry that @imports every stylesheet below in the same order
+     they used to appear as separate <link> tags — see the file's own header
+     comment for why. -->
+<link rel="stylesheet" href="./src/client/styles-entry.css"/>
 
 </head>
 

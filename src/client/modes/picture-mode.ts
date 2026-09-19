@@ -28,6 +28,11 @@ import type { Word }        from '../types.ts';
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface WordWithVisual extends Word {
+  // Narrowed back from Word's optional svg_url/emoji (the server omits
+  // them when unset): withVisuals() below always sets both explicitly,
+  // to null or a real URL, never leaving them absent.
+  svg_url:   string | null;
+  emoji:     string | null;
   _emoji:    string | null;
   _imageUrl: string | null;  // local Wikipedia photo — highest priority
 }

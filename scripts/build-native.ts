@@ -29,6 +29,7 @@ import { execSync, spawnSync } from 'node:child_process';
 import fs   from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { copyFlattened } from './lib/asset-flatten.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -93,37 +94,6 @@ function checkTarget(target: 'windows' | 'android'): boolean {
 
 /** Directories written into public/ by staging. Cleared before each run. */
 const STAGED = ['images', 'emoji', 'svgs'];
-
-function copyFlattened(fromDir: string, toDir: string): { files: number; clashes: string[] } {
-  const clashes: string[] = [];
-  let files = 0;
-  if (!fs.existsSync(fromDir)) return { files, clashes };
-  fs.mkdirSync(toDir, { recursive: true });
-
-  // Express mounts each domain sub-folder at the same URL prefix, so the
-  // flattened layout is what the client already expects.
-  const entries = fs.readdirSync(fromDir, { withFileTypes: true });
-  const walk = (dir: string): void => {
-    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-      const src = path.join(dir, e.name);
-      if (e.isDirectory()) { walk(src); continue; }
-      const dest = path.join(toDir, e.name);
-      if (fs.existsSync(dest)) { clashes.push(e.name); continue; }
-      fs.copyFileSync(src, dest);
-      files++;
-    }
-  };
-  for (const e of entries) {
-    const p = path.join(fromDir, e.name);
-    if (e.isDirectory()) walk(p);
-    else {
-      const dest = path.join(toDir, e.name);
-      if (fs.existsSync(dest)) clashes.push(e.name);
-      else { fs.copyFileSync(p, dest); files++; }
-    }
-  }
-  return { files, clashes };
-}
 
 function stageAssets(): void {
   const dataDir   = path.join(root, 'data');

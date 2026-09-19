@@ -9,10 +9,11 @@
  */
 
 export interface WordLinguistic {
-  infinitive:          string | null;
+  /** Optional — omitted by the server (not sent as `null`) when unset. */
+  infinitive?:         string | null;
   reflexive:           boolean;
-  gender:              string | null;
-  plural:              string | null;
+  gender?:             string | null;
+  plural?:             string | null;
   /**
    * This word's OWN grammatical number ('singular' | 'plural'), for the
    * closed-class determiners where that fact IS the word — Spanish
@@ -24,21 +25,26 @@ export interface WordLinguistic {
    * those also carry a `gender`. See utils/utils.ts's grammarHint().
    */
   grammatical_number?: string | null;
-  register:            string | null;
-  ipa:                 string | null;
-  syllables:           string[] | null;
+  register?:           string | null;
+  ipa?:                string | null;
+  syllables?:          string[] | null;
   /**
    * Fully-resolved conjugation table, keyed by tense name.
    * Generated server-side from conjugation_class + overrides when available,
    * otherwise from the stored JSON. Arrays are 6-element [yo,tú,él,nos,vos,ellos].
    * "past_participle" and "gerund" are string values.
+   *
+   * Optional — the server omits this key entirely (not `conjugations: null`)
+   * for the ~94% of words that aren't verbs, since every reader already goes
+   * through `?.conjugations`. Present only for verbs with resolved forms.
    */
-  conjugations:        Record<string, string[] | string> | null;
+  conjugations?:       Record<string, string[] | string> | null;
   /**
    * Rule class used to generate this verb's conjugations.
    * e.g. "regular-ar", "stem-e-ie", "irregular-tener".
    * Only present on verb entries; absent for non-verbs.
    */
+  /** Optional — omitted by the server (not sent as `null`) when unset. */
   conjugation_class?:  string | null;
 }
 
@@ -63,11 +69,9 @@ export interface Word {
   notes:      string;
   glosses:    string[];
   examples:   string[];
-  svg_url:    string | null;
-  emoji:      string | null;
-  /** Optional (not `string | null` like the others) so existing test
-   *  fixtures that build a Word literal without it still typecheck — the
-   *  real API always sets it (see server's vocab-loader.ts). */
+  /** Optional — omitted by the server (not sent as `null`) when unset. */
+  svg_url?:   string | null;
+  emoji?:     string | null;
   audio_url?: string | null;
   linguistic: WordLinguistic | null;
   frequency:  WordFrequency | null;

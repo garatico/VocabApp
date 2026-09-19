@@ -1,12 +1,17 @@
 import { test, expect } from '@playwright/test';
+import { disableSimpleMode } from './helpers.ts';
 
 /**
  * Testing Profiles — save the current filter bundle from Table mode's own
  * Profiles button, and confirm it reopens cleanly. Full CRUD (rename/
  * delete) lives in My Lists — see my-lists/profile-panel.ts — this only
  * covers the save-here / apply-here path most learners actually use.
+ *
+ * #presetsBtn is one of the controls Simple Mode hides (index.html's
+ * data-simple-hide) — see helpers.ts's disableSimpleMode.
  */
 test('saving a profile from Table mode makes it reusable', async ({ page }) => {
+  await disableSimpleMode(page);
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
 

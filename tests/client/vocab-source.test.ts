@@ -158,4 +158,24 @@ describe('loadVocab', () => {
     expect(result.origin).toBe('static');
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  // isPackagedApp() also checks the plain `__TAURI__` global — older Tauri
+  // releases exposed that instead of `__TAURI_INTERNALS__` (Tauri 2's own
+  // flag, covered above). Both branches gate the exact same behavior, but
+  // only one was ever exercised here — a regression narrowing the check to
+  // just `__TAURI_INTERNALS__` would have shipped unnoticed.
+  it('also treats the plain __TAURI__ global as a packaged build', async () => {
+    vi.stubGlobal('__TAURI__', {});
+    const fetchMock = vi.fn((url: string) =>
+      Promise.resolve(
+        url.includes('/api/') ? jsonResponse({}, 503) : jsonResponse({ data: [word], count: 1 }),
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await loadVocab('spanish');
+
+    expect(result.origin).toBe('static');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

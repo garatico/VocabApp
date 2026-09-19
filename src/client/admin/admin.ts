@@ -49,26 +49,30 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 // ── Packaged-build warning ───────────────────────────────────────────────────
 //
 // A Tauri/Capacitor build ships no Express process at all (see vocab-source.ts's
-// isPackagedApp doc comment) — every tab below would otherwise fail its first
-// request with admin-api.ts's generic "is the Express backend running?" error,
-// which reads like something's broken rather than "this page can't work here."
-// Tabs still initialise normally: a learner who opened this from a real server
-// gets the ordinary per-request error, and nothing here should assume the
-// packaged case is the only reason a fetch could fail.
+// isPackagedApp doc comment). Every tab's init function ultimately funnels into
+// admin-api.ts's apiCall (there's nothing else for this panel to do — it's
+// purely a view onto server-side data), and either fires immediately
+// (Word Editor's initEditor, Conjugation's initConjugation) or on first click
+// (Table View). Left running, each one independently hits the same dead end
+// and surfaces admin-api.ts's generic "is the Express backend running?" error
+// — one per tab, worded like something's broken rather than "this page can't
+// work here", even with the banner below already explaining exactly that.
+// Skipping init entirely here means the banner is the only thing shown: no
+// tab attempts a request that was never going to succeed, so there's nothing
+// left to throw a second, more confusing error on top of it.
 if (isPackagedApp()) {
   document.getElementById('packagedWarning')?.removeAttribute('hidden');
+} else {
+  // ── Initialise all modules ──────────────────────────────────────────────
+  initEditor();
+  initStats();
+  initDbAdmin();
+  initConjugation();
+  initTable();
+
+  // Pre-load data for the default visible tabs
+  void loadMeta();
+  void loadStatistics();
 }
-
-// ── Initialise all modules ────────────────────────────────────────────────────
-
-initEditor();
-initStats();
-initDbAdmin();
-initConjugation();
-initTable();
-
-// Pre-load data for the default visible tabs
-void loadMeta();
-void loadStatistics();
 
 logger.info('✓ Admin panel loaded');

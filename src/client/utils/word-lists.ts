@@ -30,7 +30,7 @@ const FILTER_STATE_PREFIX  = 'vq_listfilter_';
 const MULTI_LISTS_KEY      = 'vq_lists_multi';
 const ADDED_DATES_PREFIX   = 'vq_list_added_';
 
-type ListStore = Record<string, string[]>;
+export type ListStore = Record<string, string[]>;
 
 // ── List metadata: folder + hidden-from-mode ────────────────────────────────
 //
@@ -440,6 +440,28 @@ function loadStore(lang: string): ListStore {
 
 function saveStore(lang: string, store: ListStore): void {
   writeJson(storageKey(lang), store);
+}
+
+/**
+ * The whole per-language store in one read, for a caller that needs
+ * per-word list membership for many words at once (table-mode.ts's
+ * buildTable) and would otherwise call getWordLists/isInAnyList — each a
+ * fresh localStorage.getItem + JSON.parse of this same object — once per
+ * word. Not cached beyond the one read: callers should fetch it once per
+ * render pass and look words up from the snapshot themselves, rather than
+ * this module holding a persistent cache that a direct-storage write
+ * (bypassing addToList/removeFromList — as tests do to reset state between
+ * cases) could silently go stale against.
+ */
+export function loadAllLists(lang: string): ListStore {
+  return loadStore(lang);
+}
+
+/** `listName`s `word` belongs to, from a snapshot `loadAllLists` already read. */
+export function listsForWordIn(store: ListStore, word: string): string[] {
+  return Object.entries(store)
+    .filter(([, words]) => words.includes(word))
+    .map(([name]) => name);
 }
 
 // ── Added-date tracking ──────────────────────────────────────────────────────

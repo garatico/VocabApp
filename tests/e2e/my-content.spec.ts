@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { disableSimpleMode } from './helpers.ts';
 
 /**
  * My Content — adding a custom word, editing a real word's fields, and the
@@ -13,6 +14,7 @@ import { test, expect } from '@playwright/test';
  */
 
 test.beforeEach(async ({ page }) => {
+  await disableSimpleMode(page);
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="myContent"]').click();
@@ -23,7 +25,10 @@ test('adding a custom word shows up in the list below', async ({ page }) => {
   await page.getByPlaceholder('Word in Spanish').fill('palabraprueba');
   await page.getByRole('button', { name: 'Add word(s)' }).click();
 
-  await expect(page.locator('.mc-row-title')).toContainText('palabraprueba — testword');
+  // Scoped to .mc-row--wordlist — My Content also lists trivia/guess-blank
+  // rows sharing the plain .mc-row-title class, which otherwise makes this
+  // locator match every section's rows, not just the word just added.
+  await expect(page.locator('.mc-row--wordlist .mc-row-title')).toContainText('palabraprueba — testword');
 });
 
 test('a custom word with additional senses is hideable/reorderable like a real word', async ({ page }) => {
@@ -44,7 +49,10 @@ test('a custom word with additional senses is hideable/reorderable like a real w
   // one just added, not a same-spelling coincidence from the real data.
   await page.locator('.mc-word-result-word', { hasText: /^charlar$/ }).first().click();
 
-  const detail = page.locator('.mc-word-detail');
+  // .mc-row-detail, not .mc-word-detail (that class belongs to the separate
+  // picture-override panel) — buildWordOverrideRow's own comment says why:
+  // a word now expands in place in its row, not in a panel elsewhere.
+  const detail = page.locator('.mc-row-detail');
   await expect(detail.locator('.mc-gloss-item')).toHaveCount(3);
   await expect(detail.locator('.mc-gloss-checkbox')).toHaveCount(3);
 
@@ -59,12 +67,19 @@ test('editing a real word only records the field that actually changed', async (
   // other result.
   await page.locator('.mc-word-result-word', { hasText: /^hablar$/ }).click();
 
-  await page.locator('.mc-word-detail').getByPlaceholder('Notes').fill('e2e note only');
-  await page.locator('.mc-word-detail').getByRole('button', { name: 'Save changes' }).click();
+  await page.locator('.mc-row-detail').getByPlaceholder('Notes').fill('e2e note only');
+  // "Save" (exact) — not "Save changes", that label belongs to the trivia/
+  // guess-blank question editors elsewhere in this file. renderWordEditorBody
+  // has both "Save" and "Save and Close", so this must be exact or it'd
+  // ambiguously match "Save and Close" too (a plain substring match).
+  await page.locator('.mc-row-detail').getByRole('button', { name: 'Save', exact: true }).click();
 
   // Regression coverage: this used to also show "difficulty → 1" (hablar's
   // own real difficulty, untouched) alongside "notes edited" on every save.
-  await expect(page.locator('.mc-row-meta')).toHaveText('notes edited');
+  // Scoped to .mc-row--overrides's own .mc-row-changes — trivia/guess-blank
+  // rows elsewhere on this page carry an unrelated .mc-row-meta summary of
+  // their own, which made this locator ambiguous.
+  await expect(page.locator('.mc-row--overrides .mc-row-changes')).toHaveText('notes edited');
 });
 
 test('adding and removing a gloss updates the word\'s sense list', async ({ page }) => {
@@ -73,7 +88,7 @@ test('adding and removing a gloss updates the word\'s sense list', async ({ page
   // other result.
   await page.locator('.mc-word-result-word', { hasText: /^hablar$/ }).click();
 
-  const detail = page.locator('.mc-word-detail');
+  const detail = page.locator('.mc-row-detail');
   await expect(detail.locator('.mc-gloss-item')).not.toHaveCount(0);
   const originalGlossCount = await detail.locator('.mc-gloss-item').count();
 
@@ -106,7 +121,7 @@ test('reordering a gloss shows up in a quiz immediately, without a reload', asyn
   await page.getByPlaceholder('Search for a word to edit…').fill('hablar');
   await page.locator('.mc-word-result-word', { hasText: /^hablar$/ }).click();
 
-  const detail = page.locator('.mc-word-detail');
+  const detail = page.locator('.mc-row-detail');
   const spoke = detail.locator('.mc-gloss-item', { hasText: 'spoke' });
   // "Move earlier" four times — hablar's glosses start as talk/talks/
   // speak/speaks/spoke/talked, so this brings "spoke" (5th) all the way to

@@ -4,21 +4,9 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>VocabApp Admin Panel</title>
-  <!-- Shared tokens -->
-  <link rel="stylesheet" href="/styles/shared/variables.css">
-  <link rel="stylesheet" href="/styles/shared/reset.css">
-  <!-- Admin styles -->
-  <link rel="stylesheet" href="/styles/admin/layout.css">
-  <link rel="stylesheet" href="/styles/admin/tabs.css">
-  <link rel="stylesheet" href="/styles/admin/buttons.css">
-  <link rel="stylesheet" href="/styles/admin/inputs.css">
-  <link rel="stylesheet" href="/styles/admin/status.css">
-  <link rel="stylesheet" href="/styles/admin/filter-bar.css">
-  <link rel="stylesheet" href="/styles/admin/word-list.css">
-  <link rel="stylesheet" href="/styles/admin/edit-form.css">
-  <link rel="stylesheet" href="/styles/admin/panels.css">
-  <link rel="stylesheet" href="/styles/admin/conjugation.css">
-  <link rel="stylesheet" href="/styles/admin/table-view.css">
+  <!-- One Vite entry that @imports every stylesheet the admin panel used to
+       link separately — see the file's own header comment. -->
+  <link rel="stylesheet" href="./src/client/admin/styles-entry.css">
 </head>
 <body>
   <div class="container">

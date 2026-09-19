@@ -1,0 +1,21 @@
+/**
+ * styles-entry.css — single Vite entry point for the admin panel's
+ * stylesheets. Same reasoning as ../styles-entry.css; order matches
+ * admin.html's old <link> order exactly.
+ */
+
+/* Shared tokens */
+@import "/styles/shared/variables.css";
+@import "/styles/shared/reset.css";
+/* Admin styles */
+@import "/styles/admin/layout.css";
+@import "/styles/admin/tabs.css";
+@import "/styles/admin/buttons.css";
+@import "/styles/admin/inputs.css";
+@import "/styles/admin/status.css";
+@import "/styles/admin/filter-bar.css";
+@import "/styles/admin/word-list.css";
+@import "/styles/admin/edit-form.css";
+@import "/styles/admin/panels.css";
+@import "/styles/admin/conjugation.css";
+@import "/styles/admin/table-view.css";

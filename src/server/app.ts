@@ -75,12 +75,19 @@ export function createApp({
   app.use('/api', makePublicRoutes(nodeEnv));
   app.use('/api/admin', makeAdminRoutes(nodeEnv));
 
-  app.use('/svgs', express.static(path.join(dataDir, 'svgs')));
+  // maxAge: these had no Cache-Control at all before — every request paid a
+  // full round trip (Express did already send Last-Modified/ETag, so it was
+  // a 304 rather than a re-download, but still a request in the critical
+  // path of every quiz render). 1 day, same as flat-static.ts's default for
+  // /emoji and /images below: long enough to matter, short enough that a
+  // pipeline content update shows up the same day rather than needing a
+  // cache-busting story of its own.
+  app.use('/svgs', express.static(path.join(dataDir, 'svgs'), { maxAge: '1d' }));
 
   // Plain, not flatStatic — a word's pronunciation is language-specific
   // (data/audio/<language>/<slug>.wav), unlike images/emoji where the
   // on-disk grouping is an arbitrary filing choice. See audio-loader.ts.
-  app.use('/audio', express.static(path.join(dataDir, 'audio')));
+  app.use('/audio', express.static(path.join(dataDir, 'audio'), { maxAge: '1d' }));
 
   // Domain-partitioned on disk, flat in the URL space — see flat-static.ts for
   // why this is not a stack of express.static mounts.
@@ -89,7 +96,22 @@ export function createApp({
 
   if (serveStatic) {
     if (nodeEnv === 'production') {
-      app.use(express.static(path.join(projectRoot, 'dist')));
+      app.use(express.static(path.join(projectRoot, 'dist'), {
+        // Vite content-hashes every filename under /assets/ (app-<hash>.js,
+        // app-<hash>.css, …), so a build that changes that file's content
+        // always changes its URL too — safe to cache for as long as
+        // browsers allow and skip revalidation entirely. Everything else
+        // under dist/ (index.html, admin.html, manifest, the static vocab
+        // export under /data/) is NOT hashed and must keep the default
+        // (no explicit max-age — Express still sends Last-Modified/ETag),
+        // since long-caching those would mean a genuinely stale index.html
+        // or vocab export sticking around for whatever this max-age is.
+        setHeaders(res, filePath) {
+          if (path.dirname(filePath).endsWith(`${path.sep}assets`)) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          }
+        },
+      }));
       app.get('/admin', (_req, res) => res.sendFile(path.join(projectRoot, 'dist', 'admin.html')));
       app.get('*', (_req, res) => res.sendFile(path.join(projectRoot, 'dist', 'index.html')));
     } else {

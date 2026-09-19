@@ -1,0 +1,58 @@
+/**
+ * styles-entry.css — single Vite entry point for the app's stylesheets.
+ *
+ * index.html used to link all of these directly as separate <link
+ * rel="stylesheet"> tags. Vite never saw them (absolute `/styles/...` hrefs
+ * are public/ passthrough, outside the module graph), so production shipped
+ * ~40 separate unminified, unhashed HTTP requests instead of one bundled,
+ * minified, cache-busted file. Vite's CSS pipeline *does* resolve and inline
+ * a leading-slash `@import` at build time (verified: this is not the same
+ * as a browser-native `@import`, which would load sequentially at runtime),
+ * so importing the exact same files from here gets bundling for free
+ * without moving a single file out of public/styles/. Order matches
+ * index.html's old <link> order exactly — later rules still need to win the
+ * same cascades they used to.
+ */
+
+/* Shared tokens */
+@import "/styles/shared/variables.css";
+@import "/styles/shared/reset.css";
+/* Shared UI components. Must load before the per-mode sheets so a mode can
+   still override one property without restating the whole pattern. */
+@import "/styles/shared/components.css";
+/* App styles */
+@import "/styles/app/animations.css";
+@import "/styles/app/transitions.css";
+@import "/styles/app/spinner.css";
+@import "/styles/app/theme-toggle.css";
+@import "/styles/app/buttons.css";
+@import "/styles/app/selects.css";
+@import "/styles/app/mode-tabs.css";
+@import "/styles/app/streak-widget.css";
+@import "/styles/app/controls-bar.css";
+@import "/styles/app/class-filter.css";
+@import "/styles/app/domain-filter.css";
+@import "/styles/app/toast.css";
+@import "/styles/app/feedback.css";
+@import "/styles/app/progress.css";
+@import "/styles/app/quiz.css";
+@import "/styles/app/recall.css";
+@import "/styles/app/double-recall.css";
+@import "/styles/app/summary.css";
+@import "/styles/app/table.css";
+@import "/styles/app/picture.css";
+@import "/styles/app/trivia.css";
+@import "/styles/app/guess-blank.css";
+@import "/styles/app/sentence-scramble.css";
+@import "/styles/app/conjugation.css";
+@import "/styles/app/tooltip.css";
+@import "/styles/app/responsive.css";
+@import "/styles/app/list-picker.css";
+@import "/styles/app/my-lists.css";
+@import "/styles/app/my-content.css";
+@import "/styles/app/history.css";
+@import "/styles/app/settings.css";
+@import "/styles/app/font-size.css";
+@import "/styles/app/shortcuts.css";
+@import "/styles/app/onboarding.css";
+@import "/styles/app/chat.css";

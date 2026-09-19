@@ -10,6 +10,7 @@
 
 import { Router }                                                  from 'express';
 import { getDb, clearCache, reloadDb, getSupportedLanguages, supportsDisambiguator } from '../../lib/vocab-loader.js';
+import { clearContentCache }                                       from '../../lib/content-loader.js';
 import { logger }                                                  from '../../lib/logger.js';
 
 const router = Router();
@@ -108,6 +109,10 @@ router.post('/cache/clear', (req, res) => {
   try {
     const lang = (req.body as { lang?: string } | undefined)?.lang || null;
     clearCache(lang ?? undefined);
+    // Trivia/guess-blank aren't cached per-request the way vocab is scoped
+    // to `lang` — a partial clear of just the vocab side would leave stale
+    // question banks behind, so this always clears both in full.
+    clearContentCache();
     const msg = lang ? `Cache cleared for ${lang}` : 'All language caches cleared';
     logger.info('[admin]', msg);
     res.json({ success: true, message: msg });
@@ -120,6 +125,7 @@ router.post('/cache/clear', (req, res) => {
 router.post('/db/reload', (_req, res) => {
   try {
     reloadDb();
+    clearContentCache();
     logger.info('[admin] DB connection reset — will reopen on next request');
     res.json({ success: true, message: 'DB connection reset. Cache cleared. Will reopen on next request.' });
   } catch (err) {

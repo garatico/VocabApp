@@ -5,11 +5,11 @@ import {
   type QuizSlot, type ChineseDisplay,
 } from '../utils/utils.ts';
 import { attachTooltips }        from '../utils/word-tooltip.ts';
-import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
+import { isInAnyList, loadAllLists, listsForWordIn, type ListStore } from '../utils/word-lists.ts';
 import { openListPicker }        from '../utils/list-picker.ts';
 import { openWordInfoPopover }   from '../utils/word-info-popover.ts';
 import { Settings, applyAutofillAttr } from '../settings.ts';
-import { missCount }             from '../utils/session-history.ts';
+import { getMisses, type MissCounts } from '../utils/session-history.ts';
 import { flagUrl }               from '../data/languages.ts';
 import { renderWordWithGender, applyGenderContainer, enableInputWheelScroll, shouldShowGenderIndicator } from '../utils/dom.ts';
 import { hintPrefix, hintableLength } from '../utils/hint-reveal.ts';
@@ -148,6 +148,18 @@ export function renderTableMode({
   // DOM itself.
   const genderSyncFns = new Map<HTMLInputElement, () => void>();
 
+  // Every answer input, in DOM order, rebuilt fresh by buildTable() below.
+  // Kept as a plain array instead of re-running
+  // container.querySelectorAll('input[data-word]') on every answer —
+  // checkAllComplete/updateProgress/the "jump to next unanswered" lookup
+  // used to each do a fresh DOM subtree scan per keystroke, which made
+  // answering a full table an O(n²) traversal for a large word pool.
+  let allInputs: HTMLInputElement[] = [];
+
+  // The <tr> currently carrying '.row-active', tracked directly instead of
+  // container.querySelectorAll('tr.row-active') on every focus event.
+  let activeRow: HTMLTableRowElement | null = null;
+
   function entryDir(_entry: Word): DirectionPair {
     if (direction === 'mixed') return Math.random() < 0.5 ? 'target-en' : 'en-target';
     return direction;
@@ -231,12 +243,10 @@ export function renderTableMode({
   }
 
   function checkAllComplete(): boolean {
-    const allInputs = Array.from(container.querySelectorAll<HTMLInputElement>('input[data-word]'));
     return allInputs.length > 0 && allInputs.every(inp => inp.disabled);
   }
 
   function updateProgress(): void {
-    const allInputs = Array.from(container.querySelectorAll<HTMLInputElement>('input[data-word]'));
     const correct   = allInputs.filter(inp => inp.disabled).length;
     const total     = allInputs.length;
 
@@ -264,9 +274,8 @@ export function renderTableMode({
     if (giveUpBtn) giveUpBtn.disabled = (pct === 100);
   }
 
-  function buildKnownBtn(w: Word, tdWord: HTMLElement): HTMLButtonElement {
+  function buildKnownBtn(w: Word, tdWord: HTMLElement, lists: string[]): HTMLButtonElement {
     const wordLang = w.language ?? lang;
-    const lists = getWordLists(wordLang, w.word);
     const btn   = document.createElement('button');
     btn.type        = 'button';
     btn.className   = 'known-btn' + (lists.length > 0 ? ' known-btn--active' : '');
@@ -307,8 +316,29 @@ export function renderTableMode({
   function buildTable(): void {
     container.innerHTML = '';
     genderSyncFns.clear();
+    allInputs = [];
     const table       = document.createElement('table');
     const pairsPerRow = cols;
+
+    // List membership and miss counts, read once per language rather than
+    // once per row: isInAnyList/getWordLists/missCount each do a fresh
+    // localStorage.getItem + JSON.parse of the whole per-language store,
+    // which made building a large table (thousands of rows) do thousands of
+    // redundant full-store deserializations. A Compare-mode table can mix a
+    // handful of languages, so this is still keyed per language, just
+    // fetched lazily and reused across every row that shares one.
+    const listsByLang  = new Map<string, ListStore>();
+    const missesByLang = new Map<string, MissCounts>();
+    function listsFor(wordLang: string): ListStore {
+      let store = listsByLang.get(wordLang);
+      if (!store) { store = loadAllLists(wordLang); listsByLang.set(wordLang, store); }
+      return store;
+    }
+    function missesFor(wordLang: string): MissCounts {
+      let counts = missesByLang.get(wordLang);
+      if (!counts) { counts = getMisses(wordLang); missesByLang.set(wordLang, counts); }
+      return counts;
+    }
 
     // Compare/Multi-language indicator — see table.css. Off by setting means
     // no lang-tag-* class is ever added below; single-language mode never has
@@ -348,12 +378,13 @@ export function renderTableMode({
           }
         }
 
-        if (isInAnyList(wordLang, w.word)) tdWord.classList.add('word-cell--known');
+        const wordLists = listsForWordIn(listsFor(wordLang), w.word);
+        if (wordLists.length > 0) tdWord.classList.add('word-cell--known');
 
         // Rank / position indicator
         // Repeat offenders from previous sessions, marked before you answer.
         // Advisory only — it changes nothing about scoring.
-        const misses = missCount(wordLang, w.word);
+        const misses = missesFor(wordLang)[w.word] ?? 0;
         if (misses >= 2) {
           tdWord.classList.add('table-word--trouble');
           tdWord.dataset.missed = String(misses);
@@ -448,6 +479,10 @@ export function renderTableMode({
         inp.dataset.hints = String(snap?.hintsShown ?? 0);
         inp.dataset.selected = String(snap?.selected ?? false);
         inp.placeholder  = PLACEHOLDER_FOR[slotsFor(dir)[1]];
+        // Own index into allInputs — read back below instead of re-deriving
+        // it with allInputs.indexOf(inp) on every answer.
+        inp.dataset.idx  = String(allInputs.length);
+        allInputs.push(inp);
 
         selectCb.addEventListener('change', () => {
           inp.dataset.selected = String(selectCb.checked);
@@ -482,7 +517,7 @@ export function renderTableMode({
 
         // Its active/inactive class already reflects real list membership —
         // read fresh inside buildKnownBtn, not from the snapshot.
-        const knownBtn = buildKnownBtn(w, tdWord);
+        const knownBtn = buildKnownBtn(w, tdWord, wordLists);
 
         // ── Hint and Reveal buttons — independent, each only built when its
         // own setting is on (see Settings.getShowHintButton/getShowRevealButton).
@@ -513,8 +548,7 @@ export function renderTableMode({
               tdWord.classList.add('word-cell--known');
             }
 
-            const allInputs  = Array.from(container.querySelectorAll<HTMLInputElement>('input[data-word]'));
-            const currentIdx = allInputs.indexOf(inp);
+            const currentIdx = Number(inp.dataset.idx);
             const next       = allInputs.slice(currentIdx + 1).find(i => !i.disabled);
             if (next) scrollToNext(next);
 
@@ -533,16 +567,16 @@ export function renderTableMode({
         inp.addEventListener('keydown', e => {
           if (e.key !== 'Escape') return;
           e.preventDefault();
-          const allInputs = Array.from(container.querySelectorAll<HTMLInputElement>('input[data-word]'));
-          const idx  = allInputs.indexOf(inp);
+          const idx  = Number(inp.dataset.idx);
           const next = allInputs.slice(idx + 1).find(i => !i.disabled);
           if (next) scrollToNext(next);
         });
 
         // ── Row-active highlight while typing ────────────────────────────────
         inp.addEventListener('focus', () => {
-          container.querySelectorAll('tr.row-active').forEach(r => r.classList.remove('row-active'));
-          inp.closest('tr')?.classList.add('row-active');
+          activeRow?.classList.remove('row-active');
+          activeRow = inp.closest('tr');
+          activeRow?.classList.add('row-active');
         });
         inp.addEventListener('blur', () => {
           inp.closest('tr')?.classList.remove('row-active');
@@ -558,8 +592,7 @@ export function renderTableMode({
             knownBtn.classList.add('known-btn--active');
             tdWord.classList.add('word-cell--known');
           }
-          const allInputs = Array.from(container.querySelectorAll<HTMLInputElement>('input[data-word]'));
-          const idx  = allInputs.indexOf(inp);
+          const idx  = Number(inp.dataset.idx);
           const next = allInputs.slice(idx + 1).find(i => !i.disabled);
           if (next) scrollToNext(next);
           updateProgress();
@@ -643,7 +676,7 @@ export function renderTableMode({
     updateProgress();
 
     // Auto-focus first unanswered input
-    const firstUnanswered = container.querySelector<HTMLInputElement>('input[data-word]:not(:disabled)');
+    const firstUnanswered = allInputs.find(inp => !inp.disabled);
     firstUnanswered?.focus();
   }
 
@@ -654,7 +687,7 @@ export function renderTableMode({
 
   function checkAll(): CheckResult[] {
     const results: CheckResult[] = [];
-    container.querySelectorAll<HTMLInputElement>('input[data-word]').forEach(inp => {
+    allInputs.forEach(inp => {
       if (inp.classList.contains('correct')) { results.push({ ok: true });  return; }
       if (inp.classList.contains('peeked'))  { results.push({ ok: false }); return; }
       const entry = wordMap.get(inputRowKey(inp));
@@ -684,10 +717,6 @@ export function renderTableMode({
   }
 
   function giveUp(): CheckResult[] {
-    const allInputs = Array.from(
-      container.querySelectorAll<HTMLInputElement>('input[data-word]')
-    );
-
     // Count unanswered inputs upfront so we can decide whether shaking is useful
     const unansweredCount = allInputs.filter(
       inp => !inp.classList.contains('correct') &&

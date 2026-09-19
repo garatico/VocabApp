@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { disableSimpleMode } from './helpers.ts';
 
 /**
  * My Lists' and My Content's backup/restore — the disaster-recovery path
@@ -15,11 +16,16 @@ import { test, expect } from '@playwright/test';
  */
 
 test('My Lists: backing up, wiping storage, and restoring brings a list back', async ({ page }) => {
+  // Also reapplied automatically after the mid-test localStorage.clear() +
+  // reload below — addInitScript reruns on every navigation of this page,
+  // not just the first — so My Lists stays reachable post-wipe too.
+  await disableSimpleMode(page);
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="mylists"]').click();
 
-  await page.locator('.ml-single-head .ml-new-list-btn').click();
+  // :not(.ml-new-folder-btn) — see my-lists.spec.ts's createList helper for why.
+  await page.locator('.ml-single-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
   const nameInput = page.locator('.ml-list-name-input');
   await nameInput.fill('BackupRoundTrip');
   await nameInput.press('Enter');
@@ -57,6 +63,7 @@ test('My Lists: backing up, wiping storage, and restoring brings a list back', a
 });
 
 test('My Content: backing up, wiping storage, and restoring brings a word back', async ({ page }) => {
+  await disableSimpleMode(page);
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="myContent"]').click();
@@ -64,7 +71,8 @@ test('My Content: backing up, wiping storage, and restoring brings a word back',
   await page.getByPlaceholder('e.g. cat').fill('testword');
   await page.getByPlaceholder('Word in Spanish').fill('palabraprueba');
   await page.getByRole('button', { name: 'Add word(s)' }).click();
-  await expect(page.locator('.mc-row-title')).toContainText('palabraprueba — testword');
+  // See my-content.spec.ts's identical scoping note.
+  await expect(page.locator('.mc-row--wordlist .mc-row-title')).toContainText('palabraprueba — testword');
 
   const [download] = await Promise.all([
     page.waitForEvent('download'),
@@ -84,5 +92,6 @@ test('My Content: backing up, wiping storage, and restoring brings a word back',
   // than clicking "Load a file…" first, which would open a real OS file
   // picker Playwright doesn't control.
   await page.locator('#myContentWrap input[type="file"]').setInputFiles(filePath!);
-  await expect(page.locator('.mc-row-title')).toContainText('palabraprueba — testword');
+  // See my-content.spec.ts's identical scoping note.
+  await expect(page.locator('.mc-row--wordlist .mc-row-title')).toContainText('palabraprueba — testword');
 });

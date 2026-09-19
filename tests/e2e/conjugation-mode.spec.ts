@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { startMode } from './helpers.ts';
+import { startMode, disableSimpleMode } from './helpers.ts';
 
 /**
  * Conjugation mode, default Grid view — Spanish's most frequent verb is
@@ -36,6 +36,11 @@ test('answering correctly marks the form, and Give Up reveals the rest', async (
 });
 
 test('One at a Time: Give Up offers a "Practice missed" run of just the wrong forms', async ({ page }) => {
+  // The View toggle (Grid/Full Conjugation/One at a Time/…) is one of the
+  // controls Simple Mode hides by default for a fresh session — see
+  // helpers.ts's disableSimpleMode — same as My Lists/My Content/Testing
+  // Profiles elsewhere in this suite.
+  await disableSimpleMode(page);
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="conjugation"]').click();

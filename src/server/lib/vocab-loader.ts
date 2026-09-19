@@ -56,7 +56,18 @@ interface DbRow {
   grammatical_number:    string | null;
 }
 
-/** Public word object served via the API. */
+/**
+ * Public word object served via the API.
+ *
+ * Every `?:` field below (not `| null`, an actual absent key) is omitted
+ * by omitNulls() at serialization time when that word has no value for it,
+ * rather than sent as an explicit `null` — see omitNulls's own comment for
+ * why that's safe. `pos`/`difficulty` stay `| null` (required key): every
+ * word in practice has both, so there's nothing to omit and no reason to
+ * touch how callers read them. `notes`/`examples`/`domains`/`tags`/`glosses`
+ * are untouched for a different reason — they default to `''`/`[]`, never
+ * `null`, so omitNulls already leaves them alone.
+ */
 export interface Word {
   word:        string;
   translation: string;
@@ -65,20 +76,20 @@ export interface Word {
   notes:       string;
   glosses:     string[];
   examples:    string[];
-  svg_url:     string | null;
-  emoji:       string | null;
-  audio_url:   string | null;
+  svg_url?:    string;
+  emoji?:      string;
+  audio_url?:  string;
   linguistic: {
-    infinitive:        string | null;
-    reflexive:         boolean;
-    gender:            string | null;
-    plural:            string | null;
-    grammatical_number: string | null;
-    register:          string | null;
-    ipa:               string | null;
-    syllables:         string[] | null;
-    conjugations:      VerbForms | null;
-    conjugation_class: string | null;
+    infinitive?:        string;
+    reflexive:          boolean;
+    gender?:            string;
+    plural?:            string;
+    grammatical_number?: string;
+    register?:          string;
+    ipa?:               string;
+    syllables?:         string[];
+    conjugations?:      VerbForms;
+    conjugation_class?: string;
   };
   rank:      number | null;
   frequency: {
@@ -97,7 +108,7 @@ export interface Word {
    * before the column existed is still a completely valid database — see
    * hasDisambiguatorColumn below, checked at runtime instead of at boot.
    */
-  disambiguator: string | null;
+  disambiguator?: string;
   /**
    * True for a "function word" — a grammatical particle/auxiliary/suffix
    * (は/を/さん/... — see HAND_CURATED_GRAMMAR_WORDS in VocabApp-Data's
@@ -246,6 +257,27 @@ const vocabCache = new Map<string, VocabData>();
 let parseErrorCount = 0;
 
 /**
+ * `{ [key]: value }` when `value` isn't null, `{}` otherwise — spread into
+ * an object literal below to omit a field rather than send it as an
+ * explicit `null`. Across a full language export, several per-word fields
+ * (svg_url, emoji, audio_url, disambiguator, linguistic.gender/plural/
+ * register/ipa/syllables/conjugation_class/conjugations, …) are null for
+ * most words, each still costing its full `"key":null,` on every row that
+ * doesn't have it. This is safe *specifically* for the fields it's used on
+ * below, each individually verified: every reader in src/client reaches
+ * them via optional chaining (`word.svg_url ?? …`, `word.linguistic?.
+ * gender`) or a loose `== null`/`!= null` check, both of which treat an
+ * absent key exactly like an explicit `null` — never a strict `=== null`/
+ * `!== null` or a `'key' in word` existence check, which an absent key
+ * *would* break. Fields that are never actually null in practice (pos,
+ * difficulty) or default to `''`/`[]` rather than `null` (notes, examples,
+ * domains, tags, glosses) don't use this and are untouched.
+ */
+function ifSet<K extends string, V>(key: K, value: V | null): { [P in K]?: V } {
+  return (value === null ? {} : { [key]: value }) as { [P in K]?: V };
+}
+
+/**
  * Parse a JSON column value, logging a warning on failure.
  */
 function parseJsonField<T>(
@@ -347,9 +379,26 @@ function initializeDatabase(): void {
   }
 }
 
+// checkForExternalDbChange does two fs.statSync calls (main file + -wal
+// sidecar) — cheap individually, but ensureDb() runs at the top of every
+// public API call including loadVocabFile's cache-hit path, so without a
+// cooldown a busy /api/vocab endpoint paid that I/O on every single request
+// instead of just the cache misses. An external edit is now noticed within
+// this cooldown window rather than instantly, which is a fine trade: the
+// admin routes that make such edits already clear the cache explicitly, so
+// this path exists only to catch a write that came from *outside* this app.
+let lastExternalCheckAt = 0;
+const EXTERNAL_CHECK_COOLDOWN_MS = 2000;
+
 /** Open the connection if needed, or reload it if vocabulary.db changed under us. */
 function ensureDb(): Database.Database {
-  if (db) checkForExternalDbChange(path.join(dataDir, 'vocabulary.db'));
+  if (db) {
+    const now = Date.now();
+    if (now - lastExternalCheckAt > EXTERNAL_CHECK_COOLDOWN_MS) {
+      lastExternalCheckAt = now;
+      checkForExternalDbChange(path.join(dataDir, 'vocabulary.db'));
+    }
+  }
   if (!db) initializeDatabase();
   return db as Database.Database;
 }
@@ -441,6 +490,8 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
         conjugations = parseJsonField<VerbForms>(row.conjugations, row.word, 'conjugations');
       }
 
+      const ipa = lang === 'japanese' ? japaneseRomaji(row.word, row.ipa || null) : (row.ipa || null);
+
       return {
         word:        row.word,
         translation: row.translation  || '',
@@ -449,25 +500,25 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
         notes:       row.notes        || '',
         glosses:   row.glosses  ? (parseJsonField<string[]>(row.glosses,  row.word, 'glosses',  []) ?? []).filter(Boolean) : [],
         examples:  row.examples ? (parseJsonField<string[]>(row.examples, row.word, 'examples', []) ?? []).filter(Boolean) : [],
-        svg_url:   getSvgUrl(lang, row.word),
-        emoji:     row.emoji || null,
-        audio_url: getAudioUrl(lang, row.word),
+        ...ifSet('svg_url',   getSvgUrl(lang, row.word)),
+        ...ifSet('emoji',     row.emoji || null),
+        ...ifSet('audio_url', getAudioUrl(lang, row.word)),
         linguistic: {
-          infinitive:        row.infinitive      || null,
-          reflexive:         Boolean(row.reflexive),
-          gender:            row.gender          || null,
-          plural:            row.plural          || null,
-          grammatical_number: row.grammatical_number || null,
-          register:          row.register        || null,
+          reflexive: Boolean(row.reflexive),
+          ...ifSet('infinitive',        row.infinitive || null),
+          ...ifSet('gender',            row.gender || null),
+          ...ifSet('plural',            row.plural || null),
+          ...ifSet('grammatical_number', row.grammatical_number || null),
+          ...ifSet('register',          row.register || null),
           // Japanese: row.ipa is a hiragana reading (see japaneseRomaji's
-          // own doc comment for why), converted to romaji here so the
+          // own doc comment for why), converted to romaji above so the
           // Chinese-oriented romanizedScript display code in utils.ts —
           // which already treats linguistic.ipa as ready-to-show romanized
           // text — works for Japanese unchanged.
-          ipa:               lang === 'japanese' ? japaneseRomaji(row.word, row.ipa || null) : (row.ipa || null),
-          syllables:         row.syllables ? row.syllables.split('-') : null,
-          conjugations,
-          conjugation_class: row.conjugation_class || null,
+          ...ifSet('ipa',               ipa),
+          ...ifSet('syllables',         row.syllables ? row.syllables.split('-') : null),
+          ...ifSet('conjugations',      conjugations),
+          ...ifSet('conjugation_class', row.conjugation_class || null),
         },
         rank:      row.rank ?? null,
         frequency: {
@@ -477,7 +528,7 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
         },
         domains: row.domains ? (parseJsonField<string[]>(row.domains, row.word, 'domains', []) ?? []) : [],
         tags:    row.tags    ? (parseJsonField<string[]>(row.tags,    row.word, 'tags',    []) ?? []).filter(Boolean) : [],
-        disambiguator: row.disambiguator || null,
+        ...ifSet('disambiguator', row.disambiguator || null),
         is_function_word: Boolean(row.is_function_word),
       };
     });

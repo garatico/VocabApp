@@ -100,4 +100,50 @@ describe('GET /api/vocab/:language', () => {
     expect(res.body.metadata).toBeDefined();
     expect(typeof res.body.metadata.cacheAge).toBe('number');
   });
+
+  // Payload-size fix: fields with no value are omitted entirely rather than
+  // sent as `"key":null` — see vocab-loader.ts's ifSet(). This is the exact
+  // behavior a client-side regression (something that started doing
+  // `word.gender === null` instead of `word.linguistic?.gender`) would slip
+  // past unless it's asserted at the wire level, not just "the field reads
+  // as falsy" — an omitted key and an explicit null both read as falsy.
+  describe('omits (rather than nulls) fields with no value', () => {
+    it('a verb includes conjugations, infinitive and conjugation_class', async () => {
+      const res  = await request(app).get('/api/vocab/spanish');
+      const word = res.body.data.find(w => w.word === 'hablar');
+      expect(word.linguistic).toHaveProperty('conjugations');
+      expect(word.linguistic).toHaveProperty('conjugation_class', 'regular-ar');
+      expect(word.linguistic).toHaveProperty('infinitive', 'hablar');
+      // Never applicable to a verb — omitted, not null.
+      expect(word.linguistic).not.toHaveProperty('gender');
+      expect(word.linguistic).not.toHaveProperty('plural');
+    });
+
+    it('a noun includes gender/plural but omits verb-only fields', async () => {
+      const res  = await request(app).get('/api/vocab/spanish');
+      const word = res.body.data.find(w => w.word === 'casa');
+      expect(word.linguistic).toHaveProperty('gender', 'feminine');
+      expect(word.linguistic).toHaveProperty('plural', 'casas');
+      expect(word.linguistic).not.toHaveProperty('conjugations');
+      expect(word.linguistic).not.toHaveProperty('conjugation_class');
+      expect(word.linguistic).not.toHaveProperty('infinitive');
+    });
+
+    it('a word with no linguistic metadata at all omits every optional field', async () => {
+      const res  = await request(app).get('/api/vocab/spanish');
+      const word = res.body.data.find(w => w.word === 'bonito');
+      expect(word).not.toHaveProperty('svg_url');
+      expect(word).not.toHaveProperty('emoji');
+      expect(word).not.toHaveProperty('audio_url');
+      expect(word).not.toHaveProperty('disambiguator');
+      expect(word.linguistic).not.toHaveProperty('gender');
+      expect(word.linguistic).not.toHaveProperty('plural');
+      expect(word.linguistic).not.toHaveProperty('infinitive');
+      expect(word.linguistic).not.toHaveProperty('conjugations');
+      expect(word.linguistic).not.toHaveProperty('conjugation_class');
+      // Present regardless: never null in practice, so never omitted.
+      expect(word).toHaveProperty('pos', 'adjective');
+      expect(word.linguistic).toHaveProperty('reflexive', false);
+    });
+  });
 });

@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { rmSync } from 'fs';
 
 export default defineConfig({
   root: '.',
@@ -16,6 +17,22 @@ export default defineConfig({
           if (req.url === '/admin') req.url = '/admin.html';
           next();
         });
+      },
+    },
+    {
+      // public/styles/*.css still has to live under publicDir so
+      // src/client/(admin/)styles-entry.css's `@import "/styles/...`
+      // resolves at build time — but publicDir also gets copied into dist/
+      // verbatim, and nothing links to those raw files anymore now that
+      // they're bundled into one hashed app.css/admin.css (see
+      // styles-entry.css's own header comment). Left in place they're pure
+      // dead weight in every build output — dist/, the web deploy, and the
+      // Tauri installer alike. Only runs for `vite build`, not the dev
+      // server, where publicDir is served directly rather than copied.
+      name: 'drop-unused-public-styles',
+      apply: 'build',
+      closeBundle() {
+        rmSync(resolve('./dist/styles'), { recursive: true, force: true });
       },
     },
   ],
