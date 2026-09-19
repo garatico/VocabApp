@@ -50,7 +50,8 @@ import { loadWords, loadRawWords } from '../data/data-loader.ts';
 import { availableLanguages } from '../data/vocab-source.ts';
 import { Settings } from '../settings.ts';
 import { buildLangBadge } from '../ui/lang-badge.ts';
-import { readString, readJson, writeJson, isStringArray } from '../utils/storage.ts';
+import { openLanguagePicker } from '../ui/language-picker.ts';
+import { readString, writeString, readJson, writeJson, isStringArray } from '../utils/storage.ts';
 import { foldKey } from '../utils/match.ts';
 import { fillHighlighted } from '../utils/dom.ts';
 import { pageSlice, pageCountFor } from './table-controls.ts';
@@ -570,29 +571,67 @@ function setSelectedLangs(langs: Set<string>): void {
   writeJson(LANG_SELECTION_KEY, [...langs]);
 }
 
+/** "Choose languages…" empty, a couple of names spelled out, or a count past
+ *  that — same shape as table mode's own languagePickerLabel (ui/
+ *  language-picker.ts), minus its "+ " prefix: that reads as "add a
+ *  language" there, but this button already sits right after a spelled-out
+ *  "Add content in" label, so the label doesn't need to repeat "add". */
+function myContentLangLabel(selected: Set<string>): string {
+  if (selected.size === 0) return 'Choose languages…';
+  const labels = [...selected].map(name => LANGUAGES.find(l => l.name === name)?.label ?? name);
+  if (labels.length <= 2) return labels.join(', ');
+  return `${labels.length} languages`;
+}
+
 /**
- * The chip row that picks which languages the forms below show a row for.
- * Toggling a chip persists the change and re-renders the whole tab — the
- * same cheap-rebuild pattern every other action in this file uses.
+ * "Add content in" trigger button + popover — which languages the forms
+ * below show a row for. Reuses table mode's own multi-language popover
+ * (ui/language-picker.ts) rather than a bespoke one, so this looks and
+ * behaves like the "+ Languages" control learners already know from there.
+ *
+ * `onApply` — the full tab rebuild every other change in this file uses —
+ * runs on the popover's onClose, not its onChange: onChange fires on every
+ * single checkbox click while the popover is still open, and that popover
+ * is appended to document.body, outside this tab's own container. Rebuilding
+ * the container on every click would tear out and replace this very button
+ * (the popover's anchor) out from under it while the learner is still
+ * picking languages, leaving a floating popover pointed at a button that no
+ * longer exists. Deferring to onClose also reads better: pick everything
+ * you want, then see the rows update once, instead of a rebuild per click.
  */
-function buildLanguagePicker(currentLang: string, selected: Set<string>, onChange: () => void): HTMLElement {
-  const wrap = el('div', 'mc-lang-picker');
+function buildLanguagePicker(selected: Set<string>, onApply: () => void): HTMLElement {
+  const wrap = el('div', 'mc-lang-dropdown');
   wrap.appendChild(el('span', 'mc-lang-picker-label', 'Add content in'));
-  const chips = el('div', 'mc-lang-picker-chips');
-  for (const info of LANGUAGES) {
-    const chip = el('button', 'mc-lang-chip', info.label);
-    chip.type = 'button';
-    if (selected.has(info.name)) chip.classList.add('active');
-    if (info.name === currentLang) chip.classList.add('mc-lang-chip--current');
-    chip.addEventListener('click', () => {
-      if (selected.has(info.name)) selected.delete(info.name);
-      else selected.add(info.name);
-      setSelectedLangs(selected);
-      onChange();
-    });
-    chips.appendChild(chip);
+  const btn = el('button', 'mc-btn mc-btn--secondary mc-lang-dropdown-btn') as HTMLButtonElement;
+  btn.type = 'button';
+
+  function syncLabel(): void {
+    btn.textContent = `${myContentLangLabel(selected)} ▾`;
   }
-  wrap.appendChild(chips);
+  syncLabel();
+
+  btn.addEventListener('click', () => {
+    // Snapshotted so onClose can skip onApply's rebuild entirely if the
+    // learner opened this, changed nothing, and clicked away — the same
+    // form elsewhere on the tab that made deferring to onClose necessary
+    // in the first place shouldn't lose its half-typed contents to a
+    // rebuild that had nothing to apply.
+    const before = [...selected].sort().join(',');
+    let changed = false;
+    openLanguagePicker({
+      anchorEl: btn,
+      exclude:  '', // nothing excluded — every language is a valid pick here
+      selected,
+      onChange: updated => {
+        setSelectedLangs(updated);
+        syncLabel();
+        changed = [...updated].sort().join(',') !== before;
+      },
+      onClose: () => { if (changed) onApply(); },
+    });
+  });
+
+  wrap.appendChild(btn);
   return wrap;
 }
 
@@ -707,12 +746,77 @@ function buildCollapsible(
   return wrap;
 }
 
-function buildSection(key: string, title: string, description: string, body: HTMLElement): HTMLElement {
-  return buildCollapsible('section', 'h3', {
-    wrap: 'mc-section', header: 'mc-section-header', chevron: 'mc-section-chevron',
-    title: 'mc-section-title', body: 'mc-section-body', desc: 'mc-section-desc',
-    collapsedModifier: 'mc-section--collapsed',
-  }, key, title, description, body);
+// ── Content-type tabs: Words / Trivia / Guess the Blank / Pictures ─────────
+//
+// One of these four is shown at a time, switched the same way the app's own
+// top-level mode-tabs work — not the independently-collapsible accordion
+// this used to be (buildSection, above buildSubsection below, still does
+// that for nested "Add"/"Edit" blocks within a tab). All four panels are
+// built up front and only ever hidden/shown, never rebuilt on a tab switch,
+// so a search in progress or a half-filled form in a tab that isn't showing
+// right now survives clicking over to another and back — same reasoning as
+// buildCollapsible's own "toggle in place, don't rebuild" comment below.
+
+const ACTIVE_TAB_KEY = 'vq_mycontent_activetab';
+
+type MCTabKey = 'words' | 'trivia' | 'guessBlank' | 'pictures';
+const MC_TAB_KEYS: readonly MCTabKey[] = ['words', 'trivia', 'guessBlank', 'pictures'];
+
+function isMCTabKey(v: string | null): v is MCTabKey {
+  return v !== null && (MC_TAB_KEYS as readonly string[]).includes(v);
+}
+
+function getActiveTab(): MCTabKey {
+  const stored = readString(ACTIVE_TAB_KEY);
+  return isMCTabKey(stored) ? stored : 'words';
+}
+
+function setActiveTab(tab: MCTabKey): void {
+  writeString(ACTIVE_TAB_KEY, tab);
+}
+
+interface MCTabDef {
+  key:         MCTabKey;
+  title:       string;
+  description: string;
+  body:        HTMLElement;
+}
+
+function buildContentTabs(tabs: MCTabDef[], initialActive: MCTabKey): HTMLElement {
+  const wrap   = el('div', 'mc-tabs-outer');
+  const tabBar = el('div', 'mc-tabs');
+  tabBar.setAttribute('role', 'tablist');
+  const panelsWrap = el('div', 'mc-tabs-wrap');
+
+  const panels  = new Map<MCTabKey, HTMLElement>();
+  const buttons = new Map<MCTabKey, HTMLButtonElement>();
+
+  function activate(key: MCTabKey): void {
+    panels.forEach((panel, k) => { panel.hidden = k !== key; });
+    buttons.forEach((btn, k) => {
+      btn.classList.toggle('active', k === key);
+      btn.setAttribute('aria-selected', String(k === key));
+    });
+    setActiveTab(key);
+  }
+
+  for (const { key, title, description, body } of tabs) {
+    const btn = el('button', 'mc-tab-btn', title) as HTMLButtonElement;
+    btn.type = 'button';
+    btn.setAttribute('role', 'tab');
+    btn.addEventListener('click', () => activate(key));
+    buttons.set(key, btn);
+    tabBar.appendChild(btn);
+
+    const panel = el('div', 'mc-tab-panel');
+    panel.append(el('p', 'mc-tab-desc', description), body);
+    panels.set(key, panel);
+    panelsWrap.appendChild(panel);
+  }
+
+  wrap.append(tabBar, panelsWrap);
+  activate(panels.has(initialActive) ? initialActive : tabs[0].key);
+  return wrap;
 }
 
 function buildSubsection(key: string, title: string, description: string, body: HTMLElement): HTMLElement {
@@ -735,8 +839,8 @@ function buildSubsection(key: string, title: string, description: string, body: 
 // by switching the language (if needed) and clicking the tab.
 let pendingFocusWord: { lang: string; word: string } | null = null;
 
-/** Switches to My Content, expands the Words section and its "Edit an
- *  Existing Word" subsection, and opens `word`'s editor row — the entry
+/** Switches to My Content, switches to the Words tab and expands its "Edit
+ *  an Existing Word" subsection, and opens `word`'s editor row — the entry
  *  point Table mode's word-info popover uses. Switches the global language
  *  picker to the word's own language first when it differs, the same way
  *  presets.ts's applyBundle does, since My Content's word editor otherwise
@@ -757,13 +861,14 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
   const focusWord = pendingFocusWord && pendingFocusWord.lang === lang ? pendingFocusWord : null;
   pendingFocusWord = null;
   if (focusWord) {
-    // Force both levels open regardless of whatever was collapsed before —
-    // same effect as clicking their headers, and it sticks the same way a
-    // manual click would (see buildCollapsible), which is fine: a learner
-    // who got sent here to edit a word almost certainly wants this
-    // subsection open on their next visit too.
+    // Force the Words tab active and its "Edit an Existing Word" subsection
+    // open regardless of whatever was active/collapsed before — same effect
+    // as clicking there manually, and it sticks the same way a manual click
+    // would (see buildContentTabs/buildCollapsible), which is fine: a
+    // learner who got sent here to edit a word almost certainly wants to
+    // land straight on it again next visit too.
+    setActiveTab('words');
     const keys = getCollapsedSections();
-    keys.delete('words');
     keys.delete('words-edit');
     setCollapsedSections(keys);
   }
@@ -773,7 +878,7 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
   const header = el('div', 'mc-header');
   header.appendChild(el('h2', 'mc-title', 'My Content'));
   header.appendChild(el('p', 'mc-desc',
-    'Add your own words, trivia questions and pictures — in one language or several at once. Everything here lives only in this browser — it is never uploaded, and does not touch the shared word list or trivia bank other learners see.'));
+    'Add your own words, trivia questions and pictures — stored only in this browser, never uploaded or shared with other learners.'));
 
   const backupRow = el('div', 'mc-backup-row');
   const exportBtn = el('button', 'mc-btn mc-btn--secondary', 'Download my content');
@@ -807,28 +912,39 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
     };
     reader.readAsText(file);
   });
-  backupRow.append(exportBtn, exportCsvBtn, importBtn, importInput, importStatus);
+  const selectedLangs = getSelectedLangs(lang);
+  // Same row as the backup/restore buttons — one toolbar for "manage this
+  // tab" controls, rather than the language picker sitting alone in its own
+  // row below. mc-backup-row's flex-wrap already handles a narrow viewport.
+  backupRow.append(
+    exportBtn, exportCsvBtn, importBtn, importInput, importStatus,
+    buildLanguagePicker(selectedLangs, () => renderMyContent(container, lang)),
+  );
   header.appendChild(backupRow);
   wrap.appendChild(header);
 
-  const selectedLangs = getSelectedLangs(lang);
-  wrap.appendChild(buildLanguagePicker(lang, selectedLangs, () => renderMyContent(container, lang)));
-
-  wrap.appendChild(buildSection('words', 'Words',
-    'Add a brand-new word, or search real vocabulary (and words you\'ve added) to hide glosses, reorder them, or override the translation, part of speech, notes or domains.',
-    buildWordsSection(lang, selectedLangs, focusWord ?? undefined)));
-
-  wrap.appendChild(buildSection('trivia', 'Trivia Questions',
-    'Added to the Trivia tab\'s question bank, and included in its Difficulty/Reading/Domain filters. Fill in the question and answer for whichever languages you\'re writing it in — each becomes its own entry in that language\'s bank.',
-    buildTriviaSection(lang, selectedLangs)));
-
-  wrap.appendChild(buildSection('guessBlank', 'Guess the Blank Questions',
-    'Added to Guess the Blank\'s question bank. Write 2-4 clues per question, vaguest first — the mode reveals them one at a time as the learner asks for another hint.',
-    buildGuessBlankSection(lang, selectedLangs)));
-
-  wrap.appendChild(buildSection('pictures', 'Pictures',
-    'Search a language\'s vocabulary for words that already have a photo, icon or emoji, then choose which one Picture Quiz should show for that word. Words with none of their own can still get a custom picture — a pasted URL, an uploaded file, or a pick from the bundled photo library.',
-    buildPicturesSection(lang)));
+  wrap.appendChild(buildContentTabs([
+    {
+      key: 'words', title: 'Words',
+      description: 'Add a brand-new word, or search real vocabulary (and words you\'ve added) to hide glosses, reorder them, or override the translation, part of speech, notes or domains.',
+      body: buildWordsSection(lang, selectedLangs, focusWord ?? undefined),
+    },
+    {
+      key: 'trivia', title: 'Trivia Questions',
+      description: 'Added to the Trivia tab\'s question bank, and included in its Difficulty/Reading/Domain filters. Fill in the question and answer for whichever languages you\'re writing it in — each becomes its own entry in that language\'s bank.',
+      body: buildTriviaSection(lang, selectedLangs),
+    },
+    {
+      key: 'guessBlank', title: 'Guess the Blank',
+      description: 'Added to Guess the Blank\'s question bank. Write 2-4 clues per question, vaguest first — the mode reveals them one at a time as the learner asks for another hint.',
+      body: buildGuessBlankSection(lang, selectedLangs),
+    },
+    {
+      key: 'pictures', title: 'Pictures',
+      description: 'Search a language\'s vocabulary for words that already have a photo, icon or emoji, then choose which one Picture Quiz should show for that word. Words with none of their own can still get a custom picture — a pasted URL, an uploaded file, or a pick from the bundled photo library.',
+      body: buildPicturesSection(lang),
+    },
+  ], focusWord ? 'words' : getActiveTab()));
 
   container.appendChild(wrap);
 }

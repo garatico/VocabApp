@@ -35,7 +35,10 @@
   font-size: 0.85rem;
   color: var(--text-muted);
   line-height: 1.5;
-  max-width: 60ch;
+  /* Fills the card's own width (up to main's page-wide cap) rather than an
+     arbitrary character count — this used to be capped at 60ch, which on a
+     wide screen left most of the card empty beside a short paragraph. */
+  max-width: 100%;
 }
 
 .mc-backup-row {
@@ -52,125 +55,114 @@
   color: var(--danger);
 }
 
-/* ── Language picker — which languages the forms below show a row for.
-   Shared across all three sections, persisted (see LANG_SELECTION_KEY in
-   my-content-mode.ts), and rendered once at the top of the tab rather than
-   inside each section. ── */
-.mc-lang-picker {
+/* ── "Add content in" language dropdown — sits in the same toolbar row as
+   the backup/restore buttons (mc-backup-row) rather than its own row below.
+   The trigger reuses .mc-btn/.mc-btn--secondary so it matches its row-mates;
+   the popover itself is ui/language-picker.ts's shared .list-picker-popover
+   (list-picker.css) — same component Table mode's own "+ Languages" button
+   opens, so this looks and behaves like a dropdown a learner has already
+   seen elsewhere, not a bespoke one. ── */
+.mc-lang-dropdown {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.7rem 0.8rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface2);
+  gap: 0.45rem;
+  /* Pushed to the row's far end — a filter-ish control reads better set
+     apart from the action buttons (Download/Export/Load) beside it. */
+  margin-left: auto;
 }
 .mc-lang-picker-label {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-muted);
-  flex-shrink: 0;
+  white-space: nowrap;
 }
-.mc-lang-picker-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-.mc-lang-chip {
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 0.3rem 0.7rem;
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
-}
-.mc-lang-chip:hover {
-  border-color: var(--accent);
-  color: var(--text);
-}
-.mc-lang-chip.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-/* The chip for whichever language is active in the main controls bar gets a
-   subtler ring so it's easy to spot even when not selected. */
-.mc-lang-chip--current:not(.active) {
-  border-color: var(--accent);
+.mc-lang-dropdown-btn {
+  min-width: 9rem;
 }
 
-/* ── Section shell — one per content type, collapsible. The header always
-   shows; clicking it (or Enter/Space when focused) toggles `.mc-section-body`
-   via `hidden` — see buildSection in my-content-mode.ts. Collapsing never
-   rebuilds the body, so a search or a half-filled form inside it survives
-   being tucked away and reopened. ── */
-.mc-section {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface2);
-  overflow: hidden;
-}
-.mc-section-header {
+/* ── Content-type tabs: Words / Trivia Questions / Guess the Blank /
+   Pictures — one visible at a time, switched by buildContentTabs in
+   my-content-mode.ts. Same look and mechanics as the app's own top-level
+   .mode-tabs/.mode-tab (mode-tabs.css) — a scaled-down copy rather than a
+   shared class, since this tab strip sits nested inside a card instead of
+   flush against the page edge, which changes a couple of the geometry
+   details (no seamless top-of-page join, smaller everything). ── */
+.mc-tabs-outer {
   display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.85rem 0.95rem;
-  cursor: pointer;
-  user-select: none;
+  flex-direction: column;
 }
-.mc-section-header:hover {
-  background: var(--surface);
+.mc-tabs {
+  display: flex;
+  gap: 0.15rem;
+  flex-wrap: wrap;
 }
-.mc-section-header:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-.mc-section-chevron {
-  font-size: 0.75rem;
+.mc-tab-btn {
+  padding: 0.45rem 0.9rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   color: var(--text-muted);
-  flex-shrink: 0;
-  transition: transform var(--transition-fast);
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  white-space: nowrap;
+  margin-bottom: -1px;
+  position: relative;
 }
-.mc-section--collapsed .mc-section-chevron {
-  transform: rotate(-90deg);
-}
-.mc-section-title {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 700;
+.mc-tab-btn:hover {
+  background: var(--border);
   color: var(--text);
 }
-.mc-section-body {
+.mc-tab-btn.active {
+  background: var(--surface);
+  border-color: var(--border-strong);
+  border-bottom-color: var(--surface);
+  color: var(--accent);
+  font-weight: 700;
+  z-index: 1;
+}
+/* Accent stripe at the top of the active tab — same treatment as .mode-tab. */
+.mc-tab-btn.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.mc-tabs-wrap {
+  border: 1px solid var(--border-strong);
+  border-radius: 0 var(--radius) var(--radius) var(--radius);
+  background: var(--surface);
+  padding: 0.9rem 0.95rem;
+}
+.mc-tab-panel {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  padding: 0 0.95rem 0.85rem;
 }
-/* Same `[hidden]`-vs-class-`display` cascade tie as .mc-word-results/
-   .mc-word-detail/.mc-stock-gallery elsewhere in this file: a plain class
-   selector setting `display` ties with the browser's own `[hidden] {
-   display: none }` and (being declared later in this stylesheet) wins,
-   so collapsing a section via `bodyWrap.hidden = true` did nothing visible. */
-.mc-section-body[hidden] {
+/* Same `[hidden]`-vs-class-`display` cascade note as .mc-subsection-body
+   below — nothing here sets `display` on this class today, but a future
+   rule that did would need the same `[hidden]` override. */
+.mc-tab-panel[hidden] {
   display: none;
 }
-.mc-section-desc {
+.mc-tab-desc {
   margin: 0;
   font-size: 0.8rem;
   color: var(--text-muted);
   line-height: 1.45;
 }
 
-/* ── Subsection — a labeled, independently collapsible block inside a
-   section body (e.g. Words' "Add a new word" and "Edit an existing word") —
-   one visual step down from .mc-section above: <div>/<h4> instead of
-   <section>/<h3>, otherwise the same collapse mechanics (buildSubsection in
-   my-content-mode.ts shares buildSection's toggle/persistence logic via
-   buildCollapsible, so the two can't drift apart). ── */
+/* ── Subsection — a labeled, independently collapsible block inside a tab
+   panel (e.g. Words' "Add a new word" and "Edit an existing word") — a
+   <div>/<h4> pair toggled the same way buildContentTabs' own panels are
+   built, via buildCollapsible in my-content-mode.ts (shared so the two
+   can't drift apart). ── */
 .mc-subsections {
   display: flex;
   flex-direction: column;
@@ -218,7 +210,11 @@
   gap: 0.6rem;
   padding: 0 0.8rem 0.75rem;
 }
-/* Same [hidden]-vs-class-display cascade tie as .mc-section-body above. */
+/* Same `[hidden]`-vs-class-`display` cascade tie as .mc-word-results/
+   .mc-word-detail/.mc-stock-gallery elsewhere in this file: a plain class
+   selector setting `display` ties with the browser's own `[hidden] {
+   display: none }` and (being declared later in this stylesheet) wins,
+   so collapsing a subsection via `bodyWrap.hidden = true` did nothing visible. */
 .mc-subsection-body[hidden] {
   display: none;
 }

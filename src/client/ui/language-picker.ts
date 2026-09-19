@@ -27,6 +27,15 @@ export interface LanguagePickerOptions {
   /** Fired on every checkbox toggle, with the updated set. */
   onChange: (selected: Set<string>) => void;
   /**
+   * Fired once the popover closes, for any reason (outside click, Escape, or
+   * another picker opening). Callers whose onChange does something heavy
+   * enough to disrupt the popover itself — e.g. my-content-mode.ts's own
+   * copy, which rebuilds the whole tab and would tear out this popover's
+   * own trigger button out from under it — should defer that to here
+   * instead and keep onChange itself cheap (persist + relabel only).
+   */
+  onClose?: () => void;
+  /**
    * Which languages the database actually has rows for — same meaning as
    * app.ts's `markEmptyLanguages`. A language outside this set is offered
    * disabled with "no data yet", same wording as the primary select. Null
@@ -35,7 +44,7 @@ export interface LanguagePickerOptions {
   available?: Set<string> | null;
 }
 
-export function openLanguagePicker({ anchorEl, exclude, selected, onChange, available = null }: LanguagePickerOptions): void {
+export function openLanguagePicker({ anchorEl, exclude, selected, onChange, onClose, available = null }: LanguagePickerOptions): void {
   closeExistingPicker();
 
   const picker = document.createElement('div');
@@ -110,6 +119,7 @@ export function openLanguagePicker({ anchorEl, exclude, selected, onChange, avai
     picker.remove();
     document.removeEventListener('mousedown', onOutside, true);
     document.removeEventListener('keydown', onKey,       true);
+    onClose?.();
   }
 
   (picker as HTMLElement & { _close?: () => void })._close = close;

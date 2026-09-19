@@ -46,22 +46,21 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   });
 });
 
-// ── Packaged-build warning ───────────────────────────────────────────────────
+// ── Packaged builds: bounce back to the app, don't strand the learner here ──
 //
 // A Tauri/Capacitor build ships no Express process at all (see vocab-source.ts's
-// isPackagedApp doc comment). Every tab's init function ultimately funnels into
-// admin-api.ts's apiCall (there's nothing else for this panel to do — it's
-// purely a view onto server-side data), and either fires immediately
-// (Word Editor's initEditor, Conjugation's initConjugation) or on first click
-// (Table View). Left running, each one independently hits the same dead end
-// and surfaces admin-api.ts's generic "is the Express backend running?" error
-// — one per tab, worded like something's broken rather than "this page can't
-// work here", even with the banner below already explaining exactly that.
-// Skipping init entirely here means the banner is the only thing shown: no
-// tab attempts a request that was never going to succeed, so there's nothing
-// left to throw a second, more confusing error on top of it.
+// isPackagedApp doc comment), so this whole panel is dead weight there — every
+// tab's init function ultimately funnels into admin-api.ts's apiCall, and
+// there is nothing else for this panel to do. This used to show a banner
+// explaining that and then just sit there; the banner was accurate, but it
+// still left whoever opened admin.html looking at a page that can never do
+// anything, however they got here (there's no in-app link to it in a
+// packaged build — see app.ts's DEV-only unhide of a.admin-tab — so reaching
+// it at all means a manual navigation, e.g. through devtools). Redirecting
+// straight back to the main app is the same information acted on rather than
+// just stated: nothing to explain if there's nothing left to look at.
 if (isPackagedApp()) {
-  document.getElementById('packagedWarning')?.removeAttribute('hidden');
+  window.location.replace('./');
 } else {
   // ── Initialise all modules ──────────────────────────────────────────────
   initEditor();

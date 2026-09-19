@@ -285,6 +285,11 @@ export function renderTableMode({
     // adding a word to a list shouldn't require solving it first.
     // Keep Tab moving input → input; the star is still reachable by click.
     btn.tabIndex    = -1;
+    // Simple Mode hides every list-related control (index.html's static
+    // buttons use the same attribute) — Lists itself is disarmed as a
+    // filter under Simple Mode (word-filters.ts's getSimpleMode check), so
+    // a button whose only job is adding to one has nothing left to do.
+    if (Settings.getSimpleMode()) btn.dataset.simpleHide = 'true';
 
     btn.addEventListener('click', e => {
       e.stopPropagation();
@@ -346,7 +351,11 @@ export function renderTableMode({
     const indicatorMode = Settings.getLangIndicator();
     container.classList.toggle('lang-indicator-flag', indicatorMode === 'flag');
     container.classList.toggle('hide-rank', !Settings.getTableShowRank());
-    container.classList.toggle('hide-word-markers', !Settings.getTableShowWordMarkers());
+    // Simple Mode folds in here too: the "on a list" star badge and cell
+    // highlight are exactly the visual this class already exists to hide
+    // (Settings → Table Quiz's own Word Markers toggle), so Simple Mode
+    // reuses it rather than needing its own copy of the same CSS.
+    container.classList.toggle('hide-word-markers', !Settings.getTableShowWordMarkers() || Settings.getSimpleMode());
 
     for (let i = 0; i < words.length; i += pairsPerRow) {
       const tr = document.createElement('tr');
@@ -408,6 +417,11 @@ export function renderTableMode({
         selectCb.title     = 'Select this word';
         selectCb.tabIndex  = -1;
         selectCb.checked   = snap?.selected ?? false;
+        // Simple Mode hides every list-related control — see buildKnownBtn's
+        // identical note. Select Page/+ Add to List(s) (index.html) are the
+        // only things this checkbox's own state ever feeds into, and both
+        // are hidden right alongside it.
+        if (Settings.getSimpleMode()) selectCb.dataset.simpleHide = 'true';
         tdWord.appendChild(selectCb);
 
         const wordDiv = document.createElement('div');

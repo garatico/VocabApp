@@ -2280,6 +2280,20 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
   padding: 0 0.15rem;
 }
 .ml-folder-body[hidden] { display: none; }
+
+/* ── Drag-and-drop: a list card onto a folder header (sidebar.ts's
+   makeListDraggable/makeFolderDropTarget) — Single-Language, Smart and
+   Cross-Language Lists only, see makeFolderDropTarget's own comment for
+   why Testing Profiles isn't included. ── */
+.ml-list-item--dragging {
+  opacity: 0.4;
+}
+.ml-folder-head--drop-target {
+  background: var(--accent-light);
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
 /* Rows inside a folder box already have the box's own border/padding for
    separation, so their individual card margins are trimmed down from the
    ungrouped default — otherwise the folder box read as mostly empty space. */

@@ -25,17 +25,6 @@
       </div>
     </header>
 
-    <!-- Shown instead of the usual API errors when this page is running in a
-         packaged build with no Express backend behind it at all (Tauri
-         desktop, Capacitor mobile) — see admin.ts's isPackagedApp() check.
-         Every tab still loads normally otherwise; a live server rejecting a
-         request gets the ordinary per-request error from admin-api.ts. -->
-    <div id="packagedWarning" class="status error" hidden>
-      ⚠ This Admin Panel needs the Express backend, which the packaged desktop app doesn't run.
-      Open this page from a browser against the dev server (<code>npm run dev</code>) or the
-      hosted site instead.
-    </div>
-
     <div class="tabs">
       <button class="tab-btn active" data-tab="editor">Word Editor</button>
       <button class="tab-btn" data-tab="tableview">Table View</button>
