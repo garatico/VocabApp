@@ -4,7 +4,8 @@
  * DB Admin tab — cache management and CSV export.
  */
 
-import { apiCall, escapeHtml } from './admin-api.js';
+import { escapeHtml } from './admin-api.js';
+import { getAdminDataClient } from './admin-data-client.js';
 
 // ── Local status bar (targets #dbStatus, not the editor's #statusMessage) ─────
 
@@ -18,32 +19,19 @@ function showDbStatus(message: string, type: 'info' | 'success' | 'error' = 'inf
 // ── Cache clear ───────────────────────────────────────────────────────────────
 
 async function clearCache(lang: string | null = null): Promise<string> {
-  const { message } = await apiCall('/cache/clear', 'POST', lang ? { lang } : {});
-  return message as string;
+  return getAdminDataClient().clearCache(lang ?? undefined);
 }
 
 // ── DB reload ─────────────────────────────────────────────────────────────────
 
 async function reloadDb(): Promise<string> {
-  const { message } = await apiCall('/db/reload', 'POST', {});
-  return message as string;
+  return getAdminDataClient().reloadDb();
 }
 
 // ── CSV export ────────────────────────────────────────────────────────────────
 
 async function exportCsv(lang: string): Promise<void> {
-  const response = await fetch('/api/admin/export', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ lang }),
-  });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error((err as { error: string }).error || response.statusText);
-  }
-
-  const csv  = await response.text();
+  const csv  = await getAdminDataClient().exportCsv(lang);
   const blob = new Blob([csv], { type: 'text/csv' });
   const url  = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -68,7 +56,7 @@ async function buildLangButtons(): Promise<void> {
 
   let languages: string[] = ['spanish', 'portuguese', 'italian', 'french'];
   try {
-    const meta = await apiCall('/meta') as { languages?: string[] };
+    const meta = await getAdminDataClient().getMeta();
     if (meta.languages?.length) languages = meta.languages;
   } catch { /* fall back to the default list above */ }
 

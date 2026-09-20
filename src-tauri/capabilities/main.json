@@ -1,0 +1,28 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-capability",
+  "description": "Local SQLite access for the embedded vocabulary db, and the narrow filesystem access needed to copy it from the bundled resource into the app's writable data dir on first launch.",
+  "windows": ["main"],
+  "permissions": [
+    "core:path:default",
+    "core:path:allow-resolve-directory",
+    "sql:default",
+    "sql:allow-execute",
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [{ "path": "$APPDATA" }, { "path": "$APPDATA/**" }]
+    },
+    {
+      "identifier": "fs:allow-mkdir",
+      "allow": [{ "path": "$APPDATA" }, { "path": "$APPDATA/**" }]
+    },
+    {
+      "identifier": "fs:allow-copy-file",
+      "allow": [
+        { "path": "$RESOURCE/**" },
+        { "path": "$APPDATA" },
+        { "path": "$APPDATA/**" }
+      ]
+    }
+  ]
+}

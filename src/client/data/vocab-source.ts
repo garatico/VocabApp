@@ -28,13 +28,54 @@
 import type { Word } from '../types.ts';
 import { logger } from '../utils/logger.ts';
 
-export type VocabOrigin = 'api' | 'static';
+export type VocabOrigin = 'api' | 'sqlite' | 'static';
 
 export interface VocabPayload {
   language: string;
   count:    number;
   data:     Word[];
   origin:   VocabOrigin;
+}
+
+/**
+ * The Tauri desktop build's local SQLite copy, registered by
+ * src/client/tauri/bootstrap.ts once it's provisioned and ready. Tried
+ * between 'api' and 'static' — a live dev server still wins if one happens
+ * to be running (see admin.ts's own hasReachableBackend for the same
+ * "tauri dev can have a real backend" reasoning), but a genuinely packaged
+ * app has no API to fall through from, so sqlite effectively runs first
+ * there. Never registered in a plain web build.
+ */
+export interface VocabPageParams {
+  page?:   number;
+  limit?:  number;
+  search?: string;
+  pos?:    string;
+  band?:   string;
+  domain?: string;
+}
+
+export interface VocabPageResult {
+  language: string;
+  words:    Word[];
+  total:    number;
+  page:     number;
+  pages:    number;
+  limit:    number;
+  origin:   VocabOrigin;
+}
+
+export interface SqliteVocabSource {
+  loadVocab(lang: string): Promise<{ count: number; data: Word[] }>;
+  loadLanguages(): Promise<string[]>;
+  loadVocabPage(lang: string, params: VocabPageParams): Promise<{ words: Word[]; total: number; page: number; pages: number; limit: number }>;
+}
+
+let sqliteSource: SqliteVocabSource | null = null;
+
+/** `null` clears it — used by tests to isolate the sqlite branch between cases. */
+export function registerSqliteVocabSource(source: SqliteVocabSource | null): void {
+  sqliteSource = source;
 }
 
 /** Remembered after the first success, so we stop probing a dead API. */
@@ -150,16 +191,33 @@ async function tryFetchWithRetry(url: string, callbacks: LoadVocabCallbacks): Pr
   return result;
 }
 
+const DEFAULT_ORDER: VocabOrigin[] = ['api', 'sqlite', 'static'];
+
+/** preferredOrigin first (if set), then the rest in default order. */
+function tryOrder(): VocabOrigin[] {
+  if (!preferredOrigin) return DEFAULT_ORDER;
+  return [preferredOrigin, ...DEFAULT_ORDER.filter(o => o !== preferredOrigin)];
+}
+
 /**
- * Load one language, preferring the live API and falling back to the bundled
- * export. Throws only when both are unavailable.
+ * Load one language, preferring the live API, then the packaged desktop
+ * build's local SQLite copy, then falling back to the bundled JSON export.
+ * Throws only when none are available.
  */
 export async function loadVocab(lang: string, callbacks: LoadVocabCallbacks = {}): Promise<VocabPayload> {
-  const order: VocabOrigin[] = preferredOrigin === 'static'
-    ? ['static', 'api']
-    : ['api', 'static'];
+  for (const origin of tryOrder()) {
+    if (origin === 'sqlite') {
+      if (!sqliteSource) continue;
+      try {
+        const result = await sqliteSource.loadVocab(lang);
+        if (preferredOrigin !== origin) { logger.info('vocab: loading from sqlite'); preferredOrigin = origin; }
+        return { language: lang, count: result.count, data: result.data, origin };
+      } catch (err) {
+        logger.warn('vocab: local sqlite load failed, trying next source:', err instanceof Error ? err.message : String(err));
+        continue;
+      }
+    }
 
-  for (const origin of order) {
     const url    = origin === 'api' ? apiUrl(lang) : staticUrl(lang);
     const result = origin === 'api'
       ? await tryFetchWithRetry(url, callbacks)
@@ -178,6 +236,68 @@ export async function loadVocab(lang: string, callbacks: LoadVocabCallbacks = {}
     + 'No server responded and no bundled copy was found at '
     + `${staticUrl(lang)} — run "npm run export:vocab" for offline builds.`,
   );
+}
+
+/**
+ * Load one filtered/paginated page instead of a whole language — the same
+ * page/limit/search/pos/band/domain shape the admin API already uses (see
+ * src/shared/vocab/queries.ts's getWordPage). A new, additive function: the
+ * bulk loadVocab() above is untouched, and every existing consumer (My
+ * Content, My Lists, CSV export, smart lists) keeps calling it exactly as
+ * before — this exists for a caller that specifically wants to avoid holding
+ * a whole language in memory (see table-controls.ts's PagedWordSource).
+ *
+ * Static export has no pagination support and isn't worth adding it to — a
+ * packaged build has sqlite instead (see A4), and the web/hosted path always
+ * has the live API. Tries api then sqlite, matching loadVocab's own
+ * preference for a real backend when one exists (see admin.ts's
+ * hasReachableBackend for the same reasoning): a `tauri dev` window pointed
+ * at a real dev server behaves the same as the plain web app; a genuinely
+ * packaged build has no api to fall through from, so sqlite runs first
+ * there in practice. No retry/backoff here (unlike loadVocab's Render
+ * cold-start handling) — nothing calls this against the hosted deployment
+ * yet, and it's simple to add if that changes.
+ */
+export async function loadVocabPage(lang: string, params: VocabPageParams = {}): Promise<VocabPageResult> {
+  for (const origin of ['api', 'sqlite'] as const) {
+    if (origin === 'sqlite') {
+      if (!sqliteSource) continue;
+      try {
+        const result = await sqliteSource.loadVocabPage(lang, params);
+        return { language: lang, ...result, origin };
+      } catch (err) {
+        logger.warn('vocab page: local sqlite load failed, trying next source:', err instanceof Error ? err.message : String(err));
+        continue;
+      }
+    }
+
+    const qs = new URLSearchParams();
+    qs.set('page', String(params.page ?? 1));
+    if (params.limit)  qs.set('limit',  String(params.limit));
+    if (params.search) qs.set('search', params.search);
+    if (params.pos)    qs.set('pos',    params.pos);
+    if (params.band)   qs.set('band',   params.band);
+    if (params.domain) qs.set('domain', params.domain);
+
+    try {
+      const res = await fetch(`${apiUrl(lang)}?${qs.toString()}`);
+      if (!res.ok) continue;
+      const json = await res.json() as { data?: Word[]; count?: number; page?: number; pages?: number; limit?: number };
+      if (!Array.isArray(json.data)) continue;
+      return {
+        language: lang, words: json.data,
+        total: json.count ?? json.data.length,
+        page:  json.page  ?? params.page  ?? 1,
+        pages: json.pages ?? 1,
+        limit: json.limit ?? params.limit ?? json.data.length,
+        origin,
+      };
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error(`Could not load a page of vocabulary for "${lang}".`);
 }
 
 /** Which source last worked. Null until the first successful load. */
@@ -215,8 +335,14 @@ export async function availableLanguages(): Promise<string[] | null> {
     return null;
   } catch {
     // Nothing answered at all — no server. That is the packaged Tauri or
-    // Capacitor case, where the bundled manifest is the only source there is
-    // and is shipped alongside the data it describes.
+    // Capacitor case, where sqlite (if registered) or the bundled manifest
+    // is the only source there is.
+  }
+
+  if (sqliteSource) {
+    try {
+      return await sqliteSource.loadLanguages();
+    } catch { /* fall through to the static manifest below */ }
   }
 
   try {

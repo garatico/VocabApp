@@ -146,4 +146,56 @@ describe('GET /api/vocab/:language', () => {
       expect(word.linguistic).toHaveProperty('reflexive', false);
     });
   });
+
+  // Pagination (B1): a `page` param switches to the same paginated query the
+  // admin API's GET /vocab already used — same filters, same shared
+  // implementation (src/shared/vocab/queries.ts's getWordPage). No `page`
+  // param must keep behaving exactly as every test above already assumes.
+  describe('pagination (?page=)', () => {
+    it('omitting page returns the unchanged full-array shape, with no page/pages fields', async () => {
+      const res = await request(app).get('/api/vocab/spanish');
+      expect(res.body).not.toHaveProperty('page');
+      expect(res.body).not.toHaveProperty('pages');
+      expect(res.body.count).toBe(3);
+      expect(res.body.data).toHaveLength(3);
+    });
+
+    it('page=1 returns a paginated envelope with page/pages/limit', async () => {
+      const res = await request(app).get('/api/vocab/spanish?page=1&limit=2');
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.language).toBe('spanish');
+      expect(res.body.count).toBe(3);
+      expect(res.body.page).toBe(1);
+      expect(res.body.pages).toBe(2);
+      expect(res.body.limit).toBe(2);
+      expect(res.body.data).toHaveLength(2);
+    });
+
+    it('page=2 returns the remainder', async () => {
+      const res = await request(app).get('/api/vocab/spanish?page=2&limit=2');
+      expect(res.body.page).toBe(2);
+      expect(res.body.data).toHaveLength(1);
+    });
+
+    it('search filters the same way the admin API does', async () => {
+      const res = await request(app).get('/api/vocab/spanish?page=1&search=casa');
+      expect(res.body.count).toBe(1);
+      expect(res.body.data[0].word).toBe('casa');
+    });
+
+    it('band filter matches admin semantics (A1 = rank <= 500)', async () => {
+      const res = await request(app).get('/api/vocab/spanish?page=1&band=A1');
+      expect(res.body.data.every(w => w.frequency.band === 'A1')).toBe(true);
+    });
+
+    it('paginated word objects have the same shape as the unpaginated ones', async () => {
+      const res  = await request(app).get('/api/vocab/spanish?page=1&limit=10');
+      const word = res.body.data.find(w => w.word === 'hablar');
+      expect(word).toBeDefined();
+      expect(Array.isArray(word.glosses)).toBe(true);
+      expect(word.glosses).toContain('to speak');
+      expect(word.linguistic).toHaveProperty('conjugation_class', 'regular-ar');
+    });
+  });
 });

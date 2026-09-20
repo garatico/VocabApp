@@ -206,6 +206,43 @@ describe('POST /api/admin/vocab/:word', () => {
       .send({ notes: 'test' });
     expect(res.status).toBe(404);
   });
+
+  /**
+   * Regression test for the StorageAdapter's manual BEGIN/COMMIT transaction
+   * wrapper (src/server/lib/storage/better-sqlite3-adapter.ts). That wrapper
+   * is only safe because every get/all/run resolves within the same
+   * microtask cascade as the surrounding BEGIN/COMMIT — never real async
+   * I/O — so two concurrent requests (two separate macrotasks) can't
+   * interleave their transactions on the shared connection. If a future
+   * change ever put real async I/O inside applyWordUpdate or the adapter,
+   * SQLite would either throw ("cannot start a transaction within a
+   * transaction") or these two updates would corrupt each other — this test
+   * exists to catch that regression, not because either failure mode is
+   * expected today.
+   */
+  it('two concurrent updates on different words both fully commit, with no interleaving', async () => {
+    const [resA, resB] = await Promise.all([
+      request(app)
+        .post('/api/admin/vocab/hablar?lang=spanish')
+        .send({ notes: 'concurrent-A', glosses: ['speak-A', 'talk-A'] }),
+      request(app)
+        .post('/api/admin/vocab/casa?lang=spanish')
+        .send({ notes: 'concurrent-B', glosses: ['house-B'] }),
+    ]);
+
+    expect(resA.status).toBe(200);
+    expect(resB.status).toBe(200);
+
+    const [getA, getB] = await Promise.all([
+      request(app).get('/api/admin/vocab/hablar?lang=spanish'),
+      request(app).get('/api/admin/vocab/casa?lang=spanish'),
+    ]);
+
+    expect(getA.body.word.notes).toBe('concurrent-A');
+    expect(getA.body.word.glosses).toEqual(['speak-A', 'talk-A']);
+    expect(getB.body.word.notes).toBe('concurrent-B');
+    expect(getB.body.word.glosses).toEqual(['house-B']);
+  });
 });
 
 // POST /api/admin/cache/clear

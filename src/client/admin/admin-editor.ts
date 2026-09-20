@@ -4,7 +4,8 @@
  * Word Editor tab — filter bar, word list, comprehensive edit form.
  */
 
-import { apiCall, showStatus, escapeHtml } from './admin-api.js';
+import { showStatus, escapeHtml } from './admin-api.js';
+import { getAdminDataClient } from './admin-data-client.js';
 import { logger } from '../utils/logger.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -77,27 +78,11 @@ function debounce<T extends (...args: unknown[]) => void>(fn: T, ms: number): (.
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
 
-function buildQuery(): string {
-  const params = new URLSearchParams();
-  params.set('lang',  langSelect.value);
-  params.set('limit', '200');
-
-  const q = searchInput.value.trim();
-  if (q)                  params.set('search', q);
-  if (filterPos.value)    params.set('pos',    filterPos.value);
-  if (filterBand.value)   params.set('band',   filterBand.value);
-  if (filterDomain.value) params.set('domain', filterDomain.value);
-
-  return params.toString();
-}
-
 // ── Meta: populate dropdowns from DB ──────────────────────────────────────────
 
 export async function loadMeta(): Promise<void> {
   try {
-    const { pos, domains, languages, disambiguatorSupported: supported } = await apiCall('/meta') as {
-      pos: string[]; domains: string[]; languages?: string[]; disambiguatorSupported?: boolean;
-    };
+    const { pos, domains, languages, disambiguatorSupported: supported } = await getAdminDataClient().getMeta();
     disambiguatorSupported = Boolean(supported);
     const disambigInput = document.getElementById('editDisambiguator') as HTMLInputElement | null;
     const disambigHint  = document.getElementById('editDisambiguatorHint') as HTMLElement | null;
@@ -164,7 +149,14 @@ async function loadWords(): Promise<void> {
     wordList.innerHTML = '<div class="word-list-empty">Loading…</div>';
     wordCountLabel.textContent = '…';
 
-    const result = await apiCall('/vocab?' + buildQuery()) as { words: WordData[]; total: number };
+    const result = await getAdminDataClient().getVocabPage({
+      lang:   langSelect.value,
+      limit:  200,
+      search: searchInput.value.trim()  || undefined,
+      pos:    filterPos.value           || undefined,
+      band:   filterBand.value          || undefined,
+      domain: filterDomain.value        || undefined,
+    });
     renderWordList(result.words, result.total);
   } catch (err) {
     wordList.innerHTML = `<div class="word-list-empty" style="color:var(--danger);">Error: ${escapeHtml(err instanceof Error ? err.message : String(err))}</div>`;
@@ -362,11 +354,7 @@ async function saveWord(): Promise<void> {
     saveBtn.disabled    = true;
     saveBtn.textContent = 'Saving…';
 
-    const result = await apiCall(
-      `/vocab/${encodeURIComponent(currentWord.word)}?lang=${langSelect.value}`,
-      'POST',
-      collectFormData()
-    ) as { word: WordData };
+    const result = await getAdminDataClient().updateWord(currentWord.word, langSelect.value, collectFormData());
 
     currentWord = result.word;
 

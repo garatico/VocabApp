@@ -4,25 +4,9 @@
  * Statistics tab -- per-language coverage metrics with tab switching.
  */
 
-import { apiCall, showStatus } from './admin-api.js';
-
-interface DomainEntry { domain: string; count: number; }
-
-interface LangStat {
-  total:            number;
-  withExamples:     number;
-  withIPA:          number;
-  withConjugations: number;
-  withGender:       number;
-  posBreakdown:     Record<string, number>;
-  topDomains:       DomainEntry[];
-  coverage: {
-    examples:     number;
-    ipa:          number;
-    conjugations: number;
-    gender:       number;
-  };
-}
+import { showStatus } from './admin-api.js';
+import { getAdminDataClient } from './admin-data-client.js';
+import type { LangStat } from '../../shared/vocab/stats.js';
 
 // Spanish first, then alphabetical. Any language absent from this list still
 // appears — it just sorts alphabetically after the ones named here.
@@ -197,9 +181,9 @@ export async function loadStatistics(): Promise<void> {
     refreshStatsBtn.disabled    = true;
     refreshStatsBtn.textContent = 'Loading...';
 
-    const { stats } = await apiCall('/stats');
+    const stats = await getAdminDataClient().getStats();
 
-    const sorted = sortLangs(Object.entries(stats as Record<string, LangStat>));
+    const sorted = sortLangs(Object.entries(stats));
     const langs  = sorted.map(([l]) => l);
     const active = langs[0] ?? '';
 

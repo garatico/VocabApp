@@ -29,7 +29,9 @@
  * cover narrowing the *set* of words loaded.
  */
 
-import { apiCall, escapeHtml } from './admin-api.js';
+import { escapeHtml } from './admin-api.js';
+import { getAdminDataClient } from './admin-data-client.js';
+import type { BatchUpdateItem } from '../../shared/vocab/write.js';
 import { logger } from '../utils/logger.js';
 import { readString, writeString } from '../utils/storage.ts';
 
@@ -190,7 +192,7 @@ function clearDirty(): void {
 async function loadMeta(): Promise<void> {
   if (metaLoaded) return;
   try {
-    const { languages } = await apiCall('/meta') as { languages?: string[] };
+    const { languages } = await getAdminDataClient().getMeta();
     if (languages?.length) {
       const cur = langSelect.value;
       langSelect.innerHTML = languages
@@ -204,16 +206,6 @@ async function loadMeta(): Promise<void> {
   }
 }
 
-function buildQuery(): string {
-  const params = new URLSearchParams();
-  params.set('lang',  langSelect.value);
-  params.set('limit', pageSizeSelect.value);
-  params.set('page',  String(page));
-  const q = searchInput.value.trim();
-  if (q) params.set('search', q);
-  return params.toString();
-}
-
 async function loadPage(): Promise<void> {
   if (dirty.size > 0 && !window.confirm('You have unsaved changes on this page. Load a new page and discard them?')) {
     return;
@@ -221,7 +213,12 @@ async function loadPage(): Promise<void> {
   tbody.innerHTML = `<tr><td colspan="${COLUMN_COUNT}" class="table-view-empty">Loading…</td></tr>`;
   clearDirty();
   try {
-    const data = await apiCall(`/vocab?${buildQuery()}`) as { words: TableWord[]; page: number; pages: number };
+    const data = await getAdminDataClient().getVocabPage({
+      lang:   langSelect.value,
+      limit:  Number(pageSizeSelect.value),
+      page,
+      search: searchInput.value.trim() || undefined,
+    });
     page  = data.page;
     pages = Math.max(1, data.pages);
     rows  = new Map(data.words.map(w => [w.word, structuredClone(w)]));
@@ -425,7 +422,7 @@ function renderRows(): void {
 // ── Saving ───────────────────────────────────────────────────────────────────
 
 async function saveAll(): Promise<void> {
-  const updates: { word: string; data: unknown }[] = [];
+  const updates: BatchUpdateItem[] = [];
   dirty.forEach(word => {
     const w = rows.get(word);
     if (!w) return;
@@ -457,7 +454,7 @@ async function saveAll(): Promise<void> {
   saveAllBtn.disabled    = true;
   saveAllBtn.textContent = 'Saving…';
   try {
-    const result = await apiCall(`/vocab?lang=${langSelect.value}`, 'POST', { updates }) as { updated: number };
+    const result = await getAdminDataClient().batchUpdate(langSelect.value, updates);
     showTableStatus(`Saved ${result.updated} word(s)`, 'success');
     clearDirty();
     await loadPage();

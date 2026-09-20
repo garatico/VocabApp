@@ -67,18 +67,14 @@ export const REQUIRED_TABLES = [
 export const MINIMUM_SCHEMA_VERSION = 1;
 
 /**
- * CEFR band cutoffs: [band, maxRankInclusive]. Display only.
+ * CEFR band cutoffs: [band, maxRankInclusive]. Display only. Moved to
+ * src/shared/band.ts so the Tauri client can compute the same bands as the
+ * server; re-exported here so this file's existing importers are unaffected.
  *
  * Nothing derived from these leaves the app or arrives in the data, which is
  * what makes it safe for the pipeline to have numbers of its own.
  */
-export const BAND_CUTOFFS: ReadonlyArray<readonly [string, number]> = [
-  ['A1',   500],
-  ['A2',  1500],
-  ['B1',  3000],
-  ['B2',  5000],
-  ['C1',  7000],
-] as const;
+export { BAND_CUTOFFS } from '../../shared/band.js';
 
 /** Where to go when the database is unusable. */
 export const REBUILD_INSTRUCTION =

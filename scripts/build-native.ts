@@ -25,11 +25,15 @@
  * being told up front.
  */
 
+import 'dotenv/config';
+
 import { execSync, spawnSync } from 'node:child_process';
 import fs   from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { copyFlattened } from './lib/asset-flatten.js';
+import { writeAssetManifest } from './lib/asset-manifest.js';
+import { dataDir } from '../src/server/lib/paths.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -137,9 +141,33 @@ function run(cmd: string, label: string): void {
   }
 }
 
-function buildWeb(stepNo: number, total: number): void {
-  step(stepNo, total, 'Export vocabulary to static JSON');
-  run('npm run export:vocab', 'Vocabulary export');
+/**
+ * `exportVocabJson` is false for windows/native: that target reads its
+ * vocabulary from an embedded SQLite copy at runtime instead (see
+ * stageTauriResources below), so the JSON export is dead weight — both the
+ * per-language files themselves and the "hold the whole language as parsed
+ * JS objects" memory cost they force on the client. web/android still need
+ * it; they have no local database to read from.
+ */
+function buildWeb(stepNo: number, total: number, exportVocabJson = true): void {
+  step(stepNo, total, exportVocabJson ? 'Export vocabulary to static JSON' : 'Export vocabulary to static JSON (skipped)');
+  if (exportVocabJson) {
+    run('npm run export:vocab', 'Vocabulary export');
+  } else {
+    // A machine also used for `build:web`/`build:android` can have a stale
+    // export sitting in public/data/ from an earlier run — harmless for
+    // those targets (freshly regenerated each time), but left alone here it
+    // would still get copied into dist/ by vite below, shipping ~39MB of
+    // JSON a windows-only build never reads.
+    const dataDir = path.join(root, 'public', 'data');
+    const stale = fs.existsSync(dataDir)
+      ? fs.readdirSync(dataDir).filter(f => f.startsWith('vocab-') || f === 'index.json')
+      : [];
+    stale.forEach(f => fs.rmSync(path.join(dataDir, f)));
+    console.log(stale.length
+      ? `  skipped — removed ${stale.length} stale export file(s) from an earlier build`
+      : '  skipped — this target reads vocabulary.db directly at runtime instead');
+  }
 
   step(stepNo + 1, total, 'Stage data/ assets into public/');
   stageAssets();
@@ -147,6 +175,36 @@ function buildWeb(stepNo: number, total: number): void {
   step(stepNo + 2, total, 'Build the web bundle');
   run('npx vite build', 'Vite build');
   console.log(`\n  dist/ is ${(dirSize(path.join(root, 'dist')) / 1048576).toFixed(1)} MB`);
+}
+
+/**
+ * Stages what the Tauri desktop build reads at runtime instead of static
+ * JSON: a copy of vocabulary.db (bundled as a read-only Tauri resource,
+ * copied into the app's own writable data dir on first launch — see
+ * src/client/tauri/db-provision.ts) and the asset manifest
+ * (src/client/tauri/asset-resolver.ts) recording which svg/audio files
+ * actually exist, since there's no fs.existsSync at runtime in a webview.
+ *
+ * vocabulary.db is treated as an opaque, already-built artifact — copied
+ * whole, nothing here reaches into VocabApp-Data's own logic to produce it.
+ */
+function stageTauriResources(): void {
+  const resourcesDir = path.join(root, 'src-tauri', 'resources');
+  fs.mkdirSync(resourcesDir, { recursive: true });
+
+  const dbSrc  = path.join(dataDir, 'vocabulary.db');
+  const dbDest = path.join(resourcesDir, 'vocabulary.db');
+  if (!fs.existsSync(dbSrc)) {
+    console.error(`  vocabulary.db not found at ${dbSrc} — set DATA_DIR, or build it in VocabApp-Data first.`);
+    process.exit(1);
+  }
+  fs.copyFileSync(dbSrc, dbDest);
+  console.log(`  vocabulary.db  ${(fs.statSync(dbDest).size / 1048576).toFixed(1)} MB -> src-tauri/resources/`);
+
+  const manifestPath = path.join(root, 'public', 'data', 'asset-manifest.json');
+  const manifest = writeAssetManifest(dataDir, manifestPath);
+  console.log(`  asset-manifest.json  ${manifest.svgConcepts.length} svg concepts, `
+    + `${Object.values(manifest.audioSlugs).reduce((n, s) => n + s.length, 0)} audio files -> public/data/`);
 }
 
 
@@ -191,6 +249,7 @@ function scaffoldTauri(): void {
     },
     app: {
       windows: [{
+        label: 'main',
         title: 'VocabApp',
         width: 1280,
         height: 860,
@@ -212,6 +271,12 @@ function scaffoldTauri(): void {
         'icons/icon.icns',
         'icons/icon.ico',
       ],
+      // stageTauriResources() (above) copies the built vocabulary.db here
+      // before `tauri build` runs — see src/client/tauri/db-provision.ts for
+      // how the packaged app copies it into its own writable data dir.
+      resources: {
+        'resources/vocabulary.db': 'data/vocabulary.db',
+      },
     },
   }, null, 2) + '\n');
 
@@ -227,6 +292,18 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+tauri-plugin-fs = "2"
+# Used only by run_sql_transaction (src/main.rs): tauri-plugin-sql's connection
+# pool checks out a (possibly different) connection per execute()/select()
+# call, which breaks a manual BEGIN/COMMIT sent as separate calls. This one
+# command opens its own short-lived connection and runs a batch of
+# statements atomically — a generic executor with no business logic, not a
+# duplicate of the query/write logic in src/shared/vocab/*. "bundled" links
+# SQLite statically so build machines don't need it preinstalled.
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [profile.release]
 codegen-units = 1
@@ -244,12 +321,86 @@ strip = true
 // builds. Debug builds keep it, which is where panics and logs show up.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use serde::Deserialize;
+
+/// One SQL statement plus its bind parameters, as sent from
+/// src/client/tauri/sql-adapter.ts. \`?\` placeholders — the same convention
+/// every shared query in src/shared/vocab/* already uses.
+#[derive(Deserialize)]
+struct SqlStatement {
+    sql:    String,
+    params: Vec<serde_json::Value>,
+}
+
+fn json_to_rusqlite(value: &serde_json::Value) -> rusqlite::types::Value {
+    match value {
+        serde_json::Value::Null => rusqlite::types::Value::Null,
+        serde_json::Value::Bool(b) => rusqlite::types::Value::Integer(if *b { 1 } else { 0 }),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                rusqlite::types::Value::Integer(i)
+            } else if let Some(f) = n.as_f64() {
+                rusqlite::types::Value::Real(f)
+            } else {
+                rusqlite::types::Value::Null
+            }
+        }
+        serde_json::Value::String(s) => rusqlite::types::Value::Text(s.clone()),
+        // Arrays/objects never appear as bind params in this app's queries.
+        _ => rusqlite::types::Value::Null,
+    }
+}
+
+/// Runs a batch of statements atomically against \`db_path\`, in a single
+/// short-lived connection opened just for this call.
+///
+/// Exists because tauri-plugin-sql's JS API has no transaction() method —
+/// each execute()/select() call checks out a (possibly different) connection
+/// from its internal pool, so a manual BEGIN/COMMIT sent as separate calls
+/// can land on different connections and fail with "cannot start a
+/// transaction within a transaction". This command is a generic executor
+/// with no knowledge of what the statements mean — all query/write logic
+/// stays in src/shared/vocab/write.ts; this only makes "run these atomically"
+/// actually atomic.
+#[tauri::command]
+fn run_sql_transaction(db_path: String, statements: Vec<SqlStatement>) -> Result<(), String> {
+    let mut conn = rusqlite::Connection::open(&db_path).map_err(|e| e.to_string())?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+
+    for stmt in &statements {
+        let bound: Vec<rusqlite::types::Value> = stmt.params.iter().map(json_to_rusqlite).collect();
+        tx.execute(&stmt.sql, rusqlite::params_from_iter(bound))
+            .map_err(|e| format!("{}: {}", e, stmt.sql))?;
+    }
+
+    tx.commit().map_err(|e| e.to_string())
+}
+
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_sql::Builder::default().build())
+        .plugin(tauri_plugin_fs::init())
+        .invoke_handler(tauri::generate_handler![run_sql_transaction])
         .run(tauri::generate_context!())
         .expect("error while running VocabApp");
 }
 `);
+
+  write('capabilities/main.json', JSON.stringify({
+    $schema: '../gen/schemas/desktop-schema.json',
+    identifier: 'main-capability',
+    description: "Local SQLite access for the embedded vocabulary db, and the narrow filesystem access needed to copy it from the bundled resource into the app's writable data dir on first launch.",
+    windows: ['main'],
+    permissions: [
+      'core:path:default',
+      'core:path:allow-resolve-directory',
+      'sql:default',
+      'sql:allow-execute',
+      { identifier: 'fs:allow-exists',     allow: [{ path: '$APPDATA' }, { path: '$APPDATA/**' }] },
+      { identifier: 'fs:allow-mkdir',      allow: [{ path: '$APPDATA' }, { path: '$APPDATA/**' }] },
+      { identifier: 'fs:allow-copy-file',  allow: [{ path: '$RESOURCE/**' }, { path: '$APPDATA' }, { path: '$APPDATA/**' }] },
+    ],
+  }, null, 2) + '\n');
 
   write('.gitignore', `/target
 `);
@@ -300,8 +451,15 @@ if (target === 'windows' || target === 'native') {
     console.error('\n  Missing prerequisites — see above. Nothing was built.');
     process.exit(1);
   }
-  buildWeb(1, 4);
-  step(4, 4, 'Package with Tauri');
+  // `native` also packages Android from this same dist/ (its own block below
+  // has no second buildWeb call) — Android has no embedded db of its own, so
+  // the JSON export has to stay for that target even though windows doesn't
+  // need it. The unused JSON just sits in the Tauri bundle unread in that
+  // case; only a windows-only build actually skips producing it.
+  buildWeb(1, 5, target === 'native');
+  step(4, 5, 'Stage the embedded db + asset manifest for Tauri');
+  stageTauriResources();
+  step(5, 5, 'Package with Tauri');
   scaffoldTauri();
   run('npx tauri build', 'Tauri build');
   console.log('\n  Installer: src-tauri/target/release/bundle/');

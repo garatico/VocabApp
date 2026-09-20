@@ -20,22 +20,7 @@
 import fs   from 'fs';
 import path from 'path';
 import { dataDir } from './paths.js';
-
-// Windows reserves these as device names — CON, PRN, AUX, NUL, COM1-9,
-// LPT1-9 — for *any* file, regardless of extension: "con.wav" resolves to
-// the console device, not a file on disk, to plain Win32 file APIs. Must
-// match audio.py's own _WINDOWS_RESERVED set exactly, same reasoning as
-// slugify() itself.
-const WINDOWS_RESERVED = new Set([
-  'con', 'prn', 'aux', 'nul',
-  ...'0123456789'.split('').map(d => `com${d}`),
-  ...'0123456789'.split('').map(d => `lpt${d}`),
-]);
-
-function slugify(word: string): string {
-  const s = word.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^\p{L}\p{N}_]/gu, '');
-  return WINDOWS_RESERVED.has(s) ? s + '_' : s;
-}
+import { slugify } from '../../shared/assets/audio-slug.js';
 
 function audioPath(language: string, word: string): string {
   return path.join(dataDir, 'audio', language.toLowerCase(), `${slugify(word)}.wav`);

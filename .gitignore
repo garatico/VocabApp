@@ -103,4 +103,7 @@ src-tauri/target/
 src-tauri/icons/
 # schema/capability files Tauri regenerates on every build
 src-tauri/gen/
+# staged copy of VocabApp-Data's built vocabulary.db, bundled as a Tauri
+# resource by scripts/build-native.ts — an artifact, not source.
+src-tauri/resources/
 android/

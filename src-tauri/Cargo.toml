@@ -10,6 +10,18 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+tauri-plugin-fs = "2"
+# Used only by run_sql_transaction (main.rs): tauri-plugin-sql's connection
+# pool checks out a (possibly different) connection per execute()/select()
+# call, which breaks a manual BEGIN/COMMIT sent as separate calls. This one
+# command opens its own short-lived connection and runs a batch of
+# statements atomically — a generic executor with no business logic, not a
+# duplicate of the query/write logic in src/shared/vocab/*. "bundled" links
+# SQLite statically so build machines don't need it preinstalled.
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [profile.release]
 codegen-units = 1

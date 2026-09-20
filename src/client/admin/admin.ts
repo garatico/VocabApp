@@ -12,7 +12,8 @@ import { initConjugation } from './admin-conjugation.js';
 import { initTable } from './admin-table.js';
 import { logger } from '../utils/logger.js';
 import { readString, writeString } from '../utils/storage.ts';
-import { isPackagedApp } from '../data/vocab-source.ts';
+import { isPackagedApp } from '../data/vocab-source.js';
+import { initAdminDataClient } from './admin-data-client.js';
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
@@ -46,22 +47,63 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   });
 });
 
-// ── Packaged builds: bounce back to the app, don't strand the learner here ──
+// ── No usable data source: bounce back to the app, don't strand anyone here ──
 //
-// A Tauri/Capacitor build ships no Express process at all (see vocab-source.ts's
-// isPackagedApp doc comment), so this whole panel is dead weight there — every
-// tab's init function ultimately funnels into admin-api.ts's apiCall, and
-// there is nothing else for this panel to do. This used to show a banner
-// explaining that and then just sit there; the banner was accurate, but it
-// still left whoever opened admin.html looking at a page that can never do
-// anything, however they got here (there's no in-app link to it in a
-// packaged build — see app.ts's DEV-only unhide of a.admin-tab — so reaching
-// it at all means a manual navigation, e.g. through devtools). Redirecting
-// straight back to the main app is the same information acted on rather than
-// just stated: nothing to explain if there's nothing left to look at.
-if (isPackagedApp()) {
-  window.location.replace('./');
-} else {
+// This whole panel is dead weight without either a real Express process
+// behind it or (in a packaged build) its own local SQLite copy. It used to
+// gate this on isPackagedApp() (Tauri/Capacitor never ship a server) and
+// either show a banner explaining that, or later, redirect immediately. Both
+// were wrong in the same way: isPackagedApp() only tells you "this is a
+// Tauri/Capacitor webview," not whether *this* instance has a server behind
+// it — `tauri dev` points its webview at the exact same Vite dev server a
+// browser would use (see tauri.conf.json's devUrl), proxying `/api/*` to a
+// real Express process the same way, so a developer running that alongside
+// `npm run dev:api` in another terminal has a perfectly working backend that
+// isPackagedApp() can't see.
+//
+// So the real backend is always tried first, packaged or not — that's the
+// live, shared VocabApp-Data database, strictly more authoritative than a
+// Tauri build's frozen local copy, and it's what a developer running the
+// normal dev workflow expects to be editing. Local SQLite is only reached
+// for as a fallback, and only in a packaged app, for the case that used to
+// just redirect away: no server anywhere.
+async function hasReachableBackend(): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1500);
+    const res = await fetch('/api/health', { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!res.ok) return false;
+    // Same non-JSON-response guard as admin-api.ts's apiCall: a static-only
+    // host serving index.html for every unmatched path would otherwise read
+    // as a reachable backend just because *something* answered 200.
+    if (!(res.headers.get('content-type') ?? '').includes('application/json')) return false;
+    const data = await res.json() as { status?: string };
+    return data.status === 'ok';
+  } catch {
+    return false; // network error, abort/timeout, or a malformed body
+  }
+}
+
+async function selectAdminDataSource(): Promise<'http' | 'tauri-sqlite' | null> {
+  if (await hasReachableBackend()) return 'http';
+  if (isPackagedApp()) {
+    const { initTauriVocabSource, isTauriSqlReady } = await import('../tauri/bootstrap.js');
+    try {
+      await initTauriVocabSource();
+    } catch (err) {
+      logger.error('Failed to initialize local SQLite for admin:', err);
+    }
+    if (isTauriSqlReady()) return 'tauri-sqlite';
+  }
+  return null;
+}
+
+const dataSource = await selectAdminDataSource();
+
+if (dataSource) {
+  await initAdminDataClient(dataSource === 'tauri-sqlite');
+
   // ── Initialise all modules ──────────────────────────────────────────────
   initEditor();
   initStats();
@@ -72,6 +114,8 @@ if (isPackagedApp()) {
   // Pre-load data for the default visible tabs
   void loadMeta();
   void loadStatistics();
+} else {
+  window.location.replace('./');
 }
 
 logger.info('✓ Admin panel loaded');

@@ -2,7 +2,7 @@
  * vocab-source.test.ts — API/static fallback ordering and Render-cold-start retry.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { loadVocab, resetOrigin } from '../../src/client/data/vocab-source.js';
+import { loadVocab, loadVocabPage, resetOrigin, registerSqliteVocabSource } from '../../src/client/data/vocab-source.js';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -36,6 +36,7 @@ describe('loadVocab', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+    registerSqliteVocabSource(null);
   });
 
   it('returns the API payload when the API answers immediately', async () => {
@@ -177,5 +178,104 @@ describe('loadVocab', () => {
 
     expect(result.origin).toBe('static');
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('loadVocabPage', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    registerSqliteVocabSource(null);
+  });
+
+  it('fetches a page from the API and encodes every filter param', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ data: [word], count: 25, page: 2, pages: 5, limit: 10 })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await loadVocabPage('spanish', {
+      page: 2, limit: 10, search: 'hola', pos: 'noun', band: 'A1', domain: 'animals',
+    });
+
+    expect(result.origin).toBe('api');
+    expect(result.words).toEqual([word]);
+    expect(result.total).toBe(25);
+    expect(result.page).toBe(2);
+    expect(result.pages).toBe(5);
+    expect(result.limit).toBe(10);
+
+    const url = new URL(fetchMock.mock.calls[0][0] as string, 'http://localhost');
+    expect(url.pathname).toBe('/api/vocab/spanish');
+    expect(url.searchParams.get('page')).toBe('2');
+    expect(url.searchParams.get('limit')).toBe('10');
+    expect(url.searchParams.get('search')).toBe('hola');
+    expect(url.searchParams.get('pos')).toBe('noun');
+    expect(url.searchParams.get('band')).toBe('A1');
+    expect(url.searchParams.get('domain')).toBe('animals');
+  });
+
+  it('defaults to page 1 when no page param is given', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: [], count: 0, page: 1, pages: 1, limit: 100 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await loadVocabPage('spanish');
+
+    const url = new URL(fetchMock.mock.calls[0][0] as string, 'http://localhost');
+    expect(url.searchParams.get('page')).toBe('1');
+  });
+
+  it('prefers a live API over a registered sqlite source, matching loadVocab', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: [word], count: 1, page: 1, pages: 1, limit: 100 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const sqliteLoadVocabPage = vi.fn().mockResolvedValue({ words: [word], total: 1, page: 1, pages: 1, limit: 100 });
+    registerSqliteVocabSource({
+      loadVocab: vi.fn(),
+      loadLanguages: vi.fn(),
+      loadVocabPage: sqliteLoadVocabPage,
+    });
+
+    const result = await loadVocabPage('spanish', { page: 1 });
+
+    expect(result.origin).toBe('api');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(sqliteLoadVocabPage).not.toHaveBeenCalled();
+  });
+
+  it('falls through to sqlite when the API is unreachable — the genuinely packaged case', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('network error'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const sqliteLoadVocabPage = vi.fn().mockResolvedValue({ words: [word], total: 1, page: 1, pages: 1, limit: 100 });
+    registerSqliteVocabSource({
+      loadVocab: vi.fn(),
+      loadLanguages: vi.fn(),
+      loadVocabPage: sqliteLoadVocabPage,
+    });
+
+    const result = await loadVocabPage('spanish', { page: 1 });
+
+    expect(result.origin).toBe('sqlite');
+    expect(sqliteLoadVocabPage).toHaveBeenCalledWith('spanish', { page: 1 });
+  });
+
+  it('throws when both the API and a registered sqlite source fail', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('network error'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    registerSqliteVocabSource({
+      loadVocab: vi.fn(),
+      loadLanguages: vi.fn(),
+      loadVocabPage: vi.fn().mockRejectedValue(new Error('no local db yet')),
+    });
+
+    await expect(loadVocabPage('spanish')).rejects.toThrow(/Could not load a page of vocabulary for "spanish"/);
+  });
+
+  it('throws a clear error when nothing answers', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'down' }, 500));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(loadVocabPage('spanish')).rejects.toThrow(/Could not load a page of vocabulary for "spanish"/);
   });
 });

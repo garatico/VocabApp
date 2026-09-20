@@ -6,7 +6,8 @@
  * not stored in the vocabulary DB).
  */
 
-import { apiCall, escapeHtml } from './admin-api.js';
+import { escapeHtml } from './admin-api.js';
+import { getAdminDataClient } from './admin-data-client.js';
 
 // ── Pronoun & tense data ──────────────────────────────────────────────────────
 
@@ -34,7 +35,10 @@ interface VerbWord {
   translation?: string;
   glosses?: string[];
   tags?: string[];
-  conjugation_class?: string;
+  // Nested under linguistic in the shared Word shape (shape-word.ts) that
+  // both the Tauri and (after B1) HTTP paths now return — formatWord.js's
+  // retired admin-only shape used to put this at the top level.
+  linguistic?: { conjugation_class?: string };
 }
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -80,12 +84,11 @@ async function loadVerbs(): Promise<void> {
   conjVerbCount.textContent = '—';
 
   try {
-    const params = new URLSearchParams({ lang, pos: 'verb', limit: '200' });
-    if (query) params.set('search', query);
-
-    const data = await apiCall(`/vocab?${params}`);
-    const words = ((data.words ?? data) as VerbWord[]).filter(
-      w => !w.tags?.includes('function_word') && w.conjugation_class !== 'irregular-hay'
+    const data = await getAdminDataClient().getVocabPage({
+      lang, pos: 'verb', limit: 200, search: query || undefined,
+    });
+    const words = (data.words as VerbWord[]).filter(
+      w => !w.tags?.includes('function_word') && w.linguistic?.conjugation_class !== 'irregular-hay'
     );
 
     conjVerbCount.textContent = String(words.length);

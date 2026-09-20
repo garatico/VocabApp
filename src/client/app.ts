@@ -25,6 +25,7 @@ import { renderMyContent }                       from './modes/my-content-mode.t
 import { LANGUAGES, isoCode, supportsConjugation,
          conjugationUnavailableReason, languageInfo } from './data/languages.ts';
 import { availableLanguages, isPackagedApp }     from './data/vocab-source.ts';
+import { logger } from './utils/logger.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
 import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, setOnSimpleModeChange, refreshStreakReadouts } from './settings.ts';
 import { onActivity } from './utils/streak.ts';
@@ -1141,6 +1142,19 @@ function initReloadButton(): void {
 }
 
 void (async function init(): Promise<void> {
+  // Must complete before anything loads vocab (loadAndBuildFilters, below)
+  // so vocab-source.ts's registered sqlite source is ready by the time it's
+  // needed. A plain web build never reaches isPackagedApp() === true, so
+  // this never pulls in @tauri-apps/plugin-sql there.
+  if (isPackagedApp()) {
+    try {
+      const { initTauriVocabSource } = await import('./tauri/bootstrap.js');
+      await initTauriVocabSource();
+    } catch (err) {
+      logger.error('Failed to initialize local SQLite vocab source:', err);
+    }
+  }
+
   mountUI();
   initPWA();              // service worker + offline indicator (production only)
   applyFontSize();        // apply saved font size before anything renders

@@ -9,8 +9,10 @@
  */
 
 import { Router }          from 'express';
-import { loadVocabFile, getSupportedLanguages } from '../lib/vocab-loader.js';
+import { loadVocabFile, getSupportedLanguages, getDb, getWordColumnFlags, shapeDeps } from '../lib/vocab-loader.js';
 import { loadTriviaQuestions, loadGuessBlankQuestions } from '../lib/content-loader.js';
+import { createBetterSqlite3Adapter } from '../lib/storage/better-sqlite3-adapter.js';
+import { getWordPage } from '../../shared/vocab/queries.js';
 
 export function makePublicRoutes(nodeEnv: string): Router {
   const router = Router();
@@ -21,18 +23,53 @@ export function makePublicRoutes(nodeEnv: string): Router {
   const vocabMaxAge = nodeEnv === 'production' ? 3600 : 300;
 
   // GET /api/vocab/:language
-  router.get('/vocab/:language', (req, res, next) => {
+  //
+  // No `page` param: unchanged full-array response, still through
+  // loadVocabFile's in-memory cache — every existing caller (the plain web
+  // client's bulk loadVocab(), My Content, My Lists, CSV export, smart
+  // lists) keeps working exactly as before. A `page` param bypasses that
+  // cache (page/filter combinations aren't worth caching for v1) and queries
+  // directly via the same shared getWordPage() the admin API uses, so both
+  // ultimately agree on one implementation of "what does a page look like."
+  router.get('/vocab/:language', async (req, res, next) => {
     try {
-      const vocab = loadVocabFile(req.params['language']);
+      const language = req.params['language'];
+
+      if (req.query['page'] === undefined) {
+        const vocab = loadVocabFile(language);
+
+        res.set('Cache-Control', `public, max-age=${vocabMaxAge}`);
+        res.json({
+          success:  true,
+          language: vocab.language,
+          count:    vocab.words.length,
+          metadata: { timestamp: new Date().toISOString(), cacheAge: vocab.cacheAge || 0 },
+          data:     vocab.words,
+        });
+        return;
+      }
+
+      const adapter = createBetterSqlite3Adapter(getDb());
+      const result = await getWordPage(adapter, {
+        language,
+        search: (req.query['search'] as string) || undefined,
+        pos:    (req.query['pos']    as string) || undefined,
+        band:   (req.query['band']   as string) || undefined,
+        domain: (req.query['domain'] as string) || undefined,
+        page:   parseInt(req.query['page'] as string),
+        limit:  req.query['limit'] ? parseInt(req.query['limit'] as string) : undefined,
+      }, getWordColumnFlags(), shapeDeps);
 
       res.set('Cache-Control', `public, max-age=${vocabMaxAge}`);
-
       res.json({
         success:  true,
-        language: vocab.language,
-        count:    vocab.words.length,
-        metadata: { timestamp: new Date().toISOString(), cacheAge: vocab.cacheAge || 0 },
-        data:     vocab.words,
+        language,
+        count:    result.total,
+        page:     result.page,
+        pages:    result.pages,
+        limit:    result.limit,
+        metadata: { timestamp: new Date().toISOString() },
+        data:     result.words,
       });
     } catch (error) {
       next(error);

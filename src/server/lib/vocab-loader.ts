@@ -14,114 +14,21 @@ import path     from 'path';
 import fs       from 'fs';
 import { dataDir } from './paths.js';
 import {
-  checkDatabase, BAND_CUTOFFS as REQUIRED_BANDS, REBUILD_INSTRUCTION,
+  checkDatabase, REBUILD_INSTRUCTION,
   MINIMUM_SCHEMA_VERSION, type DatabaseReport,
 } from './data-requirements.js';
 import { getSvgUrl } from './svg-loader.js';
 import { getAudioUrl } from './audio-loader.js';
-import { conjugate, type VerbForms } from './verb-rules.js';
-import { japaneseRomaji } from './japanese-romaji.js';
 import { logger } from './logger.js';
+import { BAND_CUTOFFS as SHARED_BAND_CUTOFFS, bandFromRank as sharedBandFromRank } from '../../shared/band.js';
+import { buildWordSelectSql, type WordSelectRow } from '../../shared/vocab/word-select.js';
+import { shapeWordRow, type ShapeWordDeps } from '../../shared/vocab/shape-word.js';
+import type { AssetResolver } from '../../shared/assets/types.js';
+import type { Word } from '../../shared/types.js';
+
+export type { Word } from '../../shared/types.js';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-
-/** Raw row returned by the main SELECT query in loadVocabFile. */
-interface DbRow {
-  id:                    number;
-  word:                  string;
-  translation:           string | null;
-  pos:                   string | null;
-  difficulty:            string | null;
-  notes:                 string | null;
-  infinitive:            string | null;
-  reflexive:             number;
-  gender:                string | null;
-  plural:                string | null;
-  register:              string | null;
-  ipa:                   string | null;
-  syllables:             string | null;
-  conjugations:          string | null;
-  conjugation_class:     string | null;
-  future_stem:           string | null;
-  conjugation_overrides: string | null;
-  emoji:                 string | null;
-  rank:                  number | null;
-  corpus_frequency:      number | null;
-  glosses:               string | null;
-  examples:              string | null;
-  domains:               string | null;
-  tags:                  string | null;
-  disambiguator:         string | null;
-  is_function_word:      number;
-  grammatical_number:    string | null;
-}
-
-/**
- * Public word object served via the API.
- *
- * Every `?:` field below (not `| null`, an actual absent key) is omitted
- * by omitNulls() at serialization time when that word has no value for it,
- * rather than sent as an explicit `null` — see omitNulls's own comment for
- * why that's safe. `pos`/`difficulty` stay `| null` (required key): every
- * word in practice has both, so there's nothing to omit and no reason to
- * touch how callers read them. `notes`/`examples`/`domains`/`tags`/`glosses`
- * are untouched for a different reason — they default to `''`/`[]`, never
- * `null`, so omitNulls already leaves them alone.
- */
-export interface Word {
-  word:        string;
-  translation: string;
-  pos:         string | null;
-  difficulty:  string | null;
-  notes:       string;
-  glosses:     string[];
-  examples:    string[];
-  svg_url?:    string;
-  emoji?:      string;
-  audio_url?:  string;
-  linguistic: {
-    infinitive?:        string;
-    reflexive:          boolean;
-    gender?:            string;
-    plural?:            string;
-    grammatical_number?: string;
-    register?:          string;
-    ipa?:               string;
-    syllables?:         string[];
-    conjugations?:      VerbForms;
-    conjugation_class?: string;
-  };
-  rank:      number | null;
-  frequency: {
-    band:             string | null;
-    rank:             number | null;
-    corpus_frequency: number | null;
-  };
-  domains: string[];
-  tags:    string[];
-  /**
-   * Cosmetic sense annotation ("haber" vs "tener", both glossed "have") — see
-   * Word.disambiguator in the client's types.ts for the full rationale. Not
-   * in data-requirements.ts's REQUIRED_WORD_COLUMNS: unlike every other field
-   * above, this one is authored through this app's own Admin panel rather
-   * than by the pipeline that builds vocabulary.db, so a database built
-   * before the column existed is still a completely valid database — see
-   * hasDisambiguatorColumn below, checked at runtime instead of at boot.
-   */
-  disambiguator?: string;
-  /**
-   * True for a "function word" — a grammatical particle/auxiliary/suffix
-   * (は/を/さん/... — see HAND_CURATED_GRAMMAR_WORDS in VocabApp-Data's
-   * corpus.py) whose `translation` is a functional description ("topic
-   * marker"), not a gloss. Unlike `disambiguator` above, this *is*
-   * pipeline-derived — still not in REQUIRED_WORD_COLUMNS, and still
-   * checked at runtime rather than at boot, because a database built
-   * before schemaVersion 5 is just as valid a database; every word on it
-   * is correctly "not a function word" by the same default this app uses
-   * for every language that hasn't been mined with this field yet.
-   */
-  is_function_word: boolean;
-}
 
 /** In-memory cache entry for a loaded language. */
 interface VocabData {
@@ -135,24 +42,13 @@ interface VocabData {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 /**
- * CEFR band cutoffs: [band, maxRankInclusive].
- *
- * Defined in data-requirements.ts, and display-only: the database has no band
- * column, so `bandFromRank` below is the only thing that decides what a rank
- * is called. It used to be a shared fact with the pipeline, maintained by hand
- * on both sides of a project boundary, and the two disagreed for a long time.
- *
- * Re-exported so admin routes can derive SQL BETWEEN ranges from the same data.
+ * CEFR band cutoffs and bandFromRank now live in src/shared/band.ts, so the
+ * Tauri client computes the same bands as this server does. Re-exported here
+ * so admin/words.ts and admin/export.ts's existing imports from this module
+ * keep working unchanged.
  */
-export const BAND_CUTOFFS = REQUIRED_BANDS;
-
-export function bandFromRank(rank: number | null): string | null {
-  if (rank == null) return null;
-  for (const [band, max] of BAND_CUTOFFS) {
-    if (rank <= max) return band;
-  }
-  return 'C2';
-}
+export const BAND_CUTOFFS = SHARED_BAND_CUTOFFS;
+export const bandFromRank = sharedBandFromRank;
 
 
 // Singleton DB connection
@@ -226,6 +122,22 @@ export function supportsDisambiguator(): boolean {
   return hasDisambiguatorCol;
 }
 
+/**
+ * The three optional-column flags, bundled in the shape buildWordSelectSql/
+ * shapeWordRow expect — for any other reader (admin/words.ts, public.ts)
+ * that wants the shared query/shaping functions instead of a second
+ * hand-rolled query. Synchronous and already-cached, unlike
+ * detectWordColumnFlags (src/shared/vocab/column-flags.ts), which exists for
+ * readers that only have an async StorageAdapter, not this live connection.
+ */
+export function getWordColumnFlags(): { hasDisambiguator: boolean; hasIsFunctionWord: boolean; hasGrammaticalNumber: boolean } {
+  return {
+    hasDisambiguator:     hasDisambiguatorCol,
+    hasIsFunctionWord:    hasIsFunctionWordCol,
+    hasGrammaticalNumber: hasGrammaticalNumberCol,
+  };
+}
+
 // Same pattern as hasDisambiguatorCol just above, for the same reason: a
 // database built before schemaVersion 5 doesn't have this column, and that
 // is still a completely valid database — every word on it just isn't a
@@ -253,51 +165,28 @@ function checkGrammaticalNumberColumn(conn: Database.Database): void {
 // Per-language in-memory cache
 const vocabCache = new Map<string, VocabData>();
 
-// Running count of JSON parse failures since process start
+// Running count of JSON parse failures since process start — incremented via
+// shapeDeps.reportIssue below, since the parsing itself now happens in
+// src/shared/vocab/shape-word.ts.
 let parseErrorCount = 0;
 
-/**
- * `{ [key]: value }` when `value` isn't null, `{}` otherwise — spread into
- * an object literal below to omit a field rather than send it as an
- * explicit `null`. Across a full language export, several per-word fields
- * (svg_url, emoji, audio_url, disambiguator, linguistic.gender/plural/
- * register/ipa/syllables/conjugation_class/conjugations, …) are null for
- * most words, each still costing its full `"key":null,` on every row that
- * doesn't have it. This is safe *specifically* for the fields it's used on
- * below, each individually verified: every reader in src/client reaches
- * them via optional chaining (`word.svg_url ?? …`, `word.linguistic?.
- * gender`) or a loose `== null`/`!= null` check, both of which treat an
- * absent key exactly like an explicit `null` — never a strict `=== null`/
- * `!== null` or a `'key' in word` existence check, which an absent key
- * *would* break. Fields that are never actually null in practice (pos,
- * difficulty) or default to `''`/`[]` rather than `null` (notes, examples,
- * domains, tags, glosses) don't use this and are untouched.
- */
-function ifSet<K extends string, V>(key: K, value: V | null): { [P in K]?: V } {
-  return (value === null ? {} : { [key]: value }) as { [P in K]?: V };
-}
+/** svg_url/audio_url lookups, unchanged — just handed to shape-word.ts as an
+ *  AssetResolver instead of being called inline in the row-mapping loop. */
+const assetResolver: AssetResolver = { svgUrl: getSvgUrl, audioUrl: getAudioUrl };
 
-/**
- * Parse a JSON column value, logging a warning on failure.
- */
-function parseJsonField<T>(
-  raw:      string | null,
-  word:     string,
-  field:    string,
-  fallback: T | null = null,
-): T | null {
-  if (!raw) return fallback;
-  try {
-    return JSON.parse(raw) as T;
-  } catch (err) {
-    logger.warn(
-      `vocab-loader: JSON parse error on '${word}' field '${field}': ${(err as Error).message}` +
-      ` — raw: ${String(raw).slice(0, 120)}`
-    );
-    parseErrorCount++;
-    return fallback;
-  }
-}
+/** Wires shape-word.ts's issue reporting back to this module's logger/counter,
+ *  exactly matching what loadVocabFile used to do inline: a parse error logs
+ *  and counts, a conjugation error only logs. Exported so any other reader
+ *  using the shared shape-word.ts (admin/words.ts, public.ts) reports through
+ *  the same counter getDbInfo() surfaces, rather than starting a second one
+ *  nobody ever reads. */
+export const shapeDeps: ShapeWordDeps = {
+  assets: assetResolver,
+  reportIssue(kind, message) {
+    logger.warn(message);
+    if (kind === 'parse-error') parseErrorCount++;
+  },
+};
 
 // ── DB init ────────────────────────────────────────────────────────────────────
 
@@ -441,97 +330,17 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
 
     logger.info(`Loading vocabulary for: ${lang}`);
 
-    const stmt = conn.prepare(`
-      SELECT
-        w.id, w.word, w.translation, w.pos, w.difficulty, w.notes,
-        w.infinitive, w.reflexive, w.gender, w.plural, w.register,
-        w.ipa, w.syllables,
-        w.conjugations,
-        w.conjugation_class, w.future_stem, w.conjugation_overrides,
-        w.emoji, w.rank, w.corpus_frequency,
-        ${hasDisambiguatorCol ? 'w.disambiguator,' : 'NULL as disambiguator,'}
-        ${hasIsFunctionWordCol ? 'w.is_function_word,' : '0 as is_function_word,'}
-        ${hasGrammaticalNumberCol ? 'w.grammatical_number,' : 'NULL as grammatical_number,'}
-        (SELECT json_group_array(gloss)
-           FROM (SELECT gloss FROM word_glosses  WHERE word_id = w.id ORDER BY position)
-        ) AS glosses,
-        (SELECT json_group_array(example)
-           FROM (SELECT example FROM word_examples WHERE word_id = w.id ORDER BY rowid)
-        ) AS examples,
-        w.domains,
-        (SELECT json_group_array(tag)
-           FROM (SELECT tag FROM word_tags WHERE word_id = w.id ORDER BY rowid)
-        ) AS tags
-      FROM words w
+    const sql = `${buildWordSelectSql({
+      hasDisambiguator:     hasDisambiguatorCol,
+      hasIsFunctionWord:    hasIsFunctionWordCol,
+      hasGrammaticalNumber: hasGrammaticalNumberCol,
+    })}
       WHERE w.language = ?
       ORDER BY COALESCE(w.rank, 9999), w.word
-    `);
+    `;
 
-    const rows  = stmt.all(lang) as DbRow[];
-    const words = rows.map((row): Word => {
-      // Conjugations: compute at load time from verb-rules.js for rule-based verbs
-      // (regular-*, ortho-*, stem-*). For irregular-* verbs the full forms live in
-      // conjugation_overrides. Other languages (French, Italian, Portuguese) that
-      // predate the rule engine have conjugations stored as JSON in the DB.
-      let conjugations: VerbForms | null = null;
-      if (row.conjugation_class) {
-        // Spanish: compute from rules + overrides at load time
-        const overrides = row.conjugation_overrides
-          ? (parseJsonField<Record<string, unknown>>(row.conjugation_overrides, row.word, 'conjugation_overrides', {}) ?? {})
-          : {};
-        try {
-          const inf = row.infinitive || row.word;
-          conjugations = conjugate(inf, row.conjugation_class, overrides, row.future_stem ?? null);
-        } catch (e) {
-          logger.warn(`verb-rules: failed for '${row.word}' (${row.conjugation_class}): ${(e as Error).message}`);
-        }
-      } else if (row.conjugations) {
-        // Legacy (French/Italian/Portuguese): read pre-stored JSON from DB
-        conjugations = parseJsonField<VerbForms>(row.conjugations, row.word, 'conjugations');
-      }
-
-      const ipa = lang === 'japanese' ? japaneseRomaji(row.word, row.ipa || null) : (row.ipa || null);
-
-      return {
-        word:        row.word,
-        translation: row.translation  || '',
-        pos:         row.pos          || null,
-        difficulty:  row.difficulty   || null,
-        notes:       row.notes        || '',
-        glosses:   row.glosses  ? (parseJsonField<string[]>(row.glosses,  row.word, 'glosses',  []) ?? []).filter(Boolean) : [],
-        examples:  row.examples ? (parseJsonField<string[]>(row.examples, row.word, 'examples', []) ?? []).filter(Boolean) : [],
-        ...ifSet('svg_url',   getSvgUrl(lang, row.word)),
-        ...ifSet('emoji',     row.emoji || null),
-        ...ifSet('audio_url', getAudioUrl(lang, row.word)),
-        linguistic: {
-          reflexive: Boolean(row.reflexive),
-          ...ifSet('infinitive',        row.infinitive || null),
-          ...ifSet('gender',            row.gender || null),
-          ...ifSet('plural',            row.plural || null),
-          ...ifSet('grammatical_number', row.grammatical_number || null),
-          ...ifSet('register',          row.register || null),
-          // Japanese: row.ipa is a hiragana reading (see japaneseRomaji's
-          // own doc comment for why), converted to romaji above so the
-          // Chinese-oriented romanizedScript display code in utils.ts —
-          // which already treats linguistic.ipa as ready-to-show romanized
-          // text — works for Japanese unchanged.
-          ...ifSet('ipa',               ipa),
-          ...ifSet('syllables',         row.syllables ? row.syllables.split('-') : null),
-          ...ifSet('conjugations',      conjugations),
-          ...ifSet('conjugation_class', row.conjugation_class || null),
-        },
-        rank:      row.rank ?? null,
-        frequency: {
-          band:             bandFromRank(row.rank),
-          rank:             row.rank             ?? null,
-          corpus_frequency: row.corpus_frequency ?? null,
-        },
-        domains: row.domains ? (parseJsonField<string[]>(row.domains, row.word, 'domains', []) ?? []) : [],
-        tags:    row.tags    ? (parseJsonField<string[]>(row.tags,    row.word, 'tags',    []) ?? []).filter(Boolean) : [],
-        ...ifSet('disambiguator', row.disambiguator || null),
-        is_function_word: Boolean(row.is_function_word),
-      };
-    });
+    const rows  = conn.prepare(sql).all(lang) as WordSelectRow[];
+    const words = rows.map((row): Word => shapeWordRow(row, lang, shapeDeps));
 
     const vocabData: VocabData = {
       words,
