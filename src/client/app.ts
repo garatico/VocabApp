@@ -27,7 +27,7 @@ import { LANGUAGES, isoCode, supportsConjugation,
 import { availableLanguages, isPackagedApp }     from './data/vocab-source.ts';
 import { logger } from './utils/logger.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
-import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, setOnSimpleModeChange, refreshStreakReadouts } from './settings.ts';
+import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, setOnSimpleModeChange, setOnShowAdminPanelChange, refreshStreakReadouts } from './settings.ts';
 import { onActivity } from './utils/streak.ts';
 import { showToast } from './ui/toast.ts';
 import { initStreakWidget } from './ui/streak-widget.ts';
@@ -1141,6 +1141,25 @@ function initReloadButton(): void {
   btn.addEventListener('click', () => location.reload());
 }
 
+/** Shown in a dev build regardless of the setting, hidden in a built one
+ *  unless Settings > General > Admin Panel is turned on — see its own
+ *  getShowAdminPanel() comment for why turning it on is always safe.
+ *
+ *  The href also needs fixing up for a packaged app: "/admin" only resolves
+ *  in dev (Vite's admin-rewrite middleware) and on a real web deployment
+ *  (Express's own `/admin` route, app.ts:115). A packaged Tauri build has
+ *  neither — it's a static asset webview serving dist/ as-is, where the
+ *  admin entry is the literal file "admin.html", not an extensionless
+ *  route. Without this the link 404s inside the webview even though the
+ *  tab itself is visible. */
+function updateAdminTabVisibility(): void {
+  const show = import.meta.env.DEV || Settings.getShowAdminPanel();
+  const tab = document.querySelector<HTMLAnchorElement>('a.admin-tab');
+  if (!tab) return;
+  tab.toggleAttribute('hidden', !show);
+  if (isPackagedApp()) tab.href = 'admin.html';
+}
+
 void (async function init(): Promise<void> {
   // Must complete before anything loads vocab (loadAndBuildFilters, below)
   // so vocab-source.ts's registered sqlite source is ready by the time it's
@@ -1235,14 +1254,22 @@ void (async function init(): Promise<void> {
 
   if (myListsWrap) renderMyLists(myListsWrap as HTMLElement);
 
-  // Admin and AI Chat tabs are hidden by default — only shown in dev builds.
-  // AI Chat additionally stays hidden on narrow/mobile viewports regardless
-  // of dev mode — see mode-tabs.css's `.chat-tab` media query — since a
-  // local model is desktop-hardware territory.
+  // AI Chat tab is hidden by default — only shown in dev builds. It
+  // additionally stays hidden on narrow/mobile viewports regardless of dev
+  // mode — see mode-tabs.css's `.chat-tab` media query — since a local model
+  // is desktop-hardware territory.
   if (import.meta.env.DEV) {
-    document.querySelector<HTMLElement>('a.admin-tab')?.removeAttribute('hidden');
     document.querySelector<HTMLElement>('.chat-tab')?.removeAttribute('hidden');
   }
+
+  // Admin tab is hidden by default too, but — unlike AI Chat — a learner can
+  // turn it back on themselves (Settings > General > Admin Panel): it's a
+  // data-editing tool, not a resource-heavy feature tied to desktop
+  // hardware, and admin.ts's own reachability check already sends anyone
+  // without a real backend (or, packaged, a local SQLite copy) straight
+  // back here, so showing the tab is never harmful even when it can't work.
+  updateAdminTabVisibility();
+  setOnShowAdminPanelChange(updateAdminTabVisibility);
 
   updateModeUI();
   await loadAndBuildFilters(langSelect?.value ?? 'spanish');

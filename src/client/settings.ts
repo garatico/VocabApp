@@ -442,6 +442,19 @@ export const Settings = {
   setShowVisualProfiles: (on: boolean): void => set('show_visual_profiles', String(on)),
 
   /**
+   * Whether the Admin tab is shown at all. Off by default — this is a data-
+   * editing tool, not a quiz feature, and most learners never need it. A dev
+   * build shows the tab regardless (see app.ts), so this only matters for a
+   * built app: the packaged desktop app (editing its own local SQLite copy —
+   * see src/client/tauri/bootstrap.ts) or a web deploy with a reachable
+   * backend. admin.ts's own hasReachableBackend()/Tauri-SQL check still
+   * redirects away if neither is true, so turning this on is never harmful,
+   * just sometimes a dead end.
+   */
+  getShowAdminPanel: (): boolean => get('show_admin_panel', 'false') === 'true',
+  setShowAdminPanel: (on: boolean): void => set('show_admin_panel', String(on)),
+
+  /**
    * Which visual categories Picture Quiz is allowed to draw from — Wikipedia
    * photos, SVGs (custom + OpenMoji) and emoji. All on by default, since
    * that's what every session already saw before this setting existed.
@@ -987,6 +1000,14 @@ export function setOnSimpleModeChange(fn: () => void): void {
   onSimpleModeChangeListeners.push(fn);
 }
 
+/** Notified when Show Admin Panel changes, so app.ts can show/hide the tab
+ *  immediately rather than only on next visit. */
+const onShowAdminPanelChangeListeners: (() => void)[] = [];
+
+export function setOnShowAdminPanelChange(fn: () => void): void {
+  onShowAdminPanelChangeListeners.push(fn);
+}
+
 /**
  * Notified when the deselected-pronoun mode changes, so conjugation mode can
  * fill in or clear the answers that 'answer' mode shows. The class alone
@@ -1504,6 +1525,15 @@ export function bindSettings(): void {
     if (!btn) return;
     activateToggle('settingShowVisualProfiles', btn);
     Settings.setShowVisualProfiles(btn.dataset.enabled === 'true');
+  });
+
+  // Admin tab (see getShowAdminPanel)
+  document.getElementById('settingShowAdminPanel')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingShowAdminPanel', btn);
+    Settings.setShowAdminPanel(btn.dataset.enabled === 'true');
+    onShowAdminPanelChangeListeners.forEach(fn => fn());
   });
 
   // My Content: full-viewport word editor (see getFullViewportWordEditor)
@@ -2219,6 +2249,12 @@ function restoreSettingsUI(): void {
   const savedShowVisualProfiles = get('show_visual_profiles', 'false');
   document.querySelectorAll<HTMLElement>('#settingShowVisualProfiles .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.enabled === savedShowVisualProfiles);
+  });
+
+  // Admin tab
+  const savedShowAdminPanel = get('show_admin_panel', 'false');
+  document.querySelectorAll<HTMLElement>('#settingShowAdminPanel .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedShowAdminPanel);
   });
 
   // My Content: full-viewport word editor
