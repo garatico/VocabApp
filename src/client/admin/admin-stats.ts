@@ -7,6 +7,7 @@
 import { showStatus } from './admin-api.js';
 import { getAdminDataClient } from './admin-data-client.js';
 import type { LangStat } from '../../shared/vocab/stats.js';
+import { langFlagImg } from './admin-languages.js';
 
 // Spanish first, then alphabetical. Any language absent from this list still
 // appears — it just sorts alphabetically after the ones named here.
@@ -157,8 +158,9 @@ function buildTabs(langs: string[], activeLang: string): HTMLElement {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'stat-lang-tab' + (lang === activeLang ? ' active' : '');
-    btn.textContent = lang.charAt(0).toUpperCase() + lang.slice(1);
     btn.dataset.lang = lang;
+    btn.appendChild(langFlagImg(lang));
+    btn.append(' ' + (lang.charAt(0).toUpperCase() + lang.slice(1)));
     bar.appendChild(btn);
   });
 

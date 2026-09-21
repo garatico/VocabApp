@@ -37,6 +37,21 @@ export interface AdminVocabPage {
   pages: number;
 }
 
+export interface DbInfo {
+  status:           string;
+  source?:          string;
+  cachedLanguages?: number;
+  parseErrors?:     number;
+  data?: {
+    schemaVersion:   number | null;
+    pipelineVersion: string | null;
+    builtAt:         string | null;
+    minimumSchema:   number;
+    warnings:        string[];
+  };
+  languages?: { language: string; wordCount: number; cachedAt: string; ageMs: number }[];
+}
+
 export interface AdminDataClient {
   getMeta(): Promise<AdminMeta>;
   getVocabPage(params: AdminVocabPageParams): Promise<AdminVocabPage>;
@@ -47,6 +62,9 @@ export interface AdminDataClient {
   clearCache(lang?: string): Promise<string>;
   /** No-op on Tauri, for the same reason as clearCache. */
   reloadDb(): Promise<string>;
+  /** null on Tauri — schema/pipeline provenance and cache state are concepts
+   *  of the server's own vocab-loader.ts, which this build never runs. */
+  getDbInfo(): Promise<DbInfo | null>;
   /** Returns the CSV text; callers handle the Blob/download themselves (same either way). */
   exportCsv(lang: string): Promise<string>;
 }
@@ -89,6 +107,11 @@ const httpAdminDataClient: AdminDataClient = {
   async reloadDb() {
     const { message } = await apiCall('/db/reload', 'POST', {});
     return message as string;
+  },
+
+  async getDbInfo() {
+    const { info } = await apiCall('/db/info') as { info: DbInfo };
+    return info;
   },
 
   async exportCsv(lang) {

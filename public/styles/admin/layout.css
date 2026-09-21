@@ -1,71 +1,22 @@
 /* ================================================================
-   ADMIN LAYOUT — page body, container, header, theme-toggle.
+   ADMIN LAYOUT — page body, container.
+   The title/back-link/theme-toggle used to live in a separate <header>
+   row above the tabs — its own margin, padding and border stacked with
+   the tabs-wrap's below it, pushing the actual controls down for no
+   reason. Title and back-link now live in the tab row itself
+   (.tabs-brand / .tab-exit-link, styled in tabs.css) and the theme
+   toggle moved into its own Settings tab, so there's nothing left here
+   to lay out.
 ================================================================ */
 
 /* reset.css sets box-sizing, font, bg, color — override padding only */
 body {
-  padding: 1.5rem 2rem;
+  padding: 0.5rem 2rem 1.5rem;
 }
 
 .container { max-width: 1600px; margin: 0 auto; }
 
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-/* Restrained on purpose — the main app has no page-level branding at all
-   (no logo, no title bar), so this is already the outlier; sized as a small
-   eyebrow rather than a hero heading keeps it from reading as a different
-   product with its own visual identity bolted on. */
-h1 { font-size: 1.1rem; font-weight: 700; }
-
-/* Back link to main app */
-.back-link {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  text-decoration: none;
-  padding: 0.2rem 0.5rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: transparent;
-  transition: color var(--transition-fast), border-color var(--transition-fast),
-              background var(--transition-fast);
-  white-space: nowrap;
-}
-.back-link:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: var(--accent-light);
-}
-
-/* Theme toggle in the header — sizing only; the pill/segment look itself
-   is .sort-order-toggle/.sort-order-btn in buttons.css, shared with any
-   other admin control that wants the same component. */
-.admin-theme-toggle {
-  flex-shrink: 0;
-}
-.admin-theme-toggle .sort-order-btn {
-  min-height: 32px;
-  font-size: 0.78rem;
-  padding: 0.25rem 0.65rem;
-}
-
 /* ── Responsive ── */
 @media (max-width: 900px) {
-  body { padding: 1rem; }
-  h1   { font-size: 1.4rem; }
+  body { padding: 0.4rem 1rem 1rem; }
 }

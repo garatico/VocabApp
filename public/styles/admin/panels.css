@@ -53,6 +53,9 @@
 }
 
 .stat-lang-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   padding: 0.35rem 1.1rem;
   font-size: 0.82rem;
   font-weight: 600;
@@ -143,6 +146,77 @@
 @media (max-width: 900px) {
   .stat-section-row { grid-template-columns: 1fr; }
 }
+
+/* ── Settings tab ── */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.settings-row-label { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.2rem; }
+.settings-row-desc  { font-size: 0.8rem; color: var(--text-muted); max-width: 32rem; }
+
+/* ── DB info card (connection status + schema/pipeline provenance) ── */
+.db-info-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.db-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem 1.5rem;
+}
+
+.db-info-item { display: flex; flex-direction: column; gap: 0.15rem; }
+
+.db-info-label {
+  font-size: 0.68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.db-info-value { font-size: 0.9rem; font-weight: 600; color: var(--text); }
+.db-info-value--ok    { color: var(--accent); }
+.db-info-value--error { color: #c0392b; }
+html.dark .db-info-value--error { color: #e57373; }
+
+.db-info-warnings {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.db-info-langs {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.db-info-lang-pill {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.db-info-lang-pill strong { color: var(--text); font-weight: 600; }
 
 /* ── DB Admin grid ── */
 .db-admin-grid {

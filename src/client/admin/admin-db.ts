@@ -6,6 +6,8 @@
 
 import { escapeHtml } from './admin-api.js';
 import { getAdminDataClient } from './admin-data-client.js';
+import type { DbInfo } from './admin-data-client.js';
+import { langFlagImgHtml } from './admin-languages.js';
 
 // ── Local status bar (targets #dbStatus, not the editor's #statusMessage) ─────
 
@@ -14,6 +16,80 @@ function showDbStatus(message: string, type: 'info' | 'success' | 'error' = 'inf
   if (!el) return;
   el.innerHTML = `<div class="status ${type}">${escapeHtml(message)}</div>`;
   setTimeout(() => { el.innerHTML = ''; }, type === 'error' ? 5000 : 3000);
+}
+
+// ── DB info card — connection status, schema/pipeline provenance, cache state ──
+
+function formatAge(ageMs: number): string {
+  const s = Math.round(ageMs / 1000);
+  if (s < 60)   return `${s}s ago`;
+  const m = Math.round(s / 60);
+  if (m < 60)   return `${m}m ago`;
+  const h = Math.round(m / 60);
+  return `${h}h ago`;
+}
+
+/** The pipeline stamps `builtAt` as a full ISO timestamp; only the date
+ *  reads at a glance here, so drop the time/offset rather than wrap it. */
+function formatBuiltAt(builtAt: string): string {
+  return builtAt.includes('T') ? builtAt.split('T')[0] : builtAt;
+}
+
+async function refreshDbInfo(): Promise<void> {
+  const card = document.getElementById('dbInfoCard');
+  if (!card) return;
+
+  let info: DbInfo | null;
+  try {
+    info = await getAdminDataClient().getDbInfo();
+  } catch {
+    card.hidden = true;
+    return;
+  }
+  if (!info) { card.hidden = true; return; }
+
+  card.hidden = false;
+
+  if (info.status !== 'connected') {
+    card.innerHTML = `<div class="status error">Database disconnected — reload it above once vocabulary.db is reachable.</div>`;
+    return;
+  }
+
+  const items: string[] = [
+    `<div class="db-info-item"><span class="db-info-label">Status</span><span class="db-info-value db-info-value--ok">Connected</span></div>`,
+  ];
+
+  if (info.data) {
+    const { schemaVersion, pipelineVersion, builtAt, minimumSchema } = info.data;
+    items.push(
+      `<div class="db-info-item"><span class="db-info-label">Schema</span><span class="db-info-value">${escapeHtml(schemaVersion != null ? `v${schemaVersion}` : 'unstamped')} <span class="db-info-label" style="text-transform:none;">(min v${escapeHtml(String(minimumSchema))})</span></span></div>`,
+      `<div class="db-info-item"><span class="db-info-label">Pipeline</span><span class="db-info-value">${escapeHtml(pipelineVersion ?? 'unstamped')}</span></div>`,
+      `<div class="db-info-item"><span class="db-info-label">Built</span><span class="db-info-value">${escapeHtml(builtAt ? formatBuiltAt(builtAt) : 'unknown')}</span></div>`,
+    );
+  }
+
+  items.push(
+    `<div class="db-info-item"><span class="db-info-label">Cached languages</span><span class="db-info-value">${info.cachedLanguages ?? 0}</span></div>`,
+    `<div class="db-info-item"><span class="db-info-label">Parse errors</span><span class="db-info-value ${info.parseErrors ? 'db-info-value--error' : ''}">${info.parseErrors ?? 0}</span></div>`,
+  );
+
+  let html = `<div class="db-info-grid">${items.join('')}</div>`;
+
+  if (info.data?.warnings?.length) {
+    html += `<div class="db-info-warnings">${
+      info.data.warnings.map(w => `<div class="status warning">${escapeHtml(w)}</div>`).join('')
+    }</div>`;
+  }
+
+  if (info.languages?.length) {
+    html += `<div class="db-info-langs">${
+      info.languages.map(l =>
+        `<span class="db-info-lang-pill" data-lang="${escapeHtml(l.language)}">${langFlagImgHtml(l.language)} <strong>${escapeHtml(l.language)}</strong> · ${l.wordCount.toLocaleString()} words · cached ${formatAge(l.ageMs)}</span>`
+      ).join('')
+    }</div>`;
+  }
+
+  card.innerHTML = html;
 }
 
 // ── Cache clear ───────────────────────────────────────────────────────────────
@@ -62,12 +138,12 @@ async function buildLangButtons(): Promise<void> {
 
   clearGroup.innerHTML = languages.map(lang => {
     const label = lang.charAt(0).toUpperCase() + lang.slice(1);
-    return `<button class="secondary clear-lang-cache-btn" data-lang="${escapeHtml(lang)}">Clear ${escapeHtml(label)}</button>`;
+    return `<button class="secondary clear-lang-cache-btn" data-lang="${escapeHtml(lang)}">${langFlagImgHtml(lang)} Clear ${escapeHtml(label)}</button>`;
   }).join('');
 
   exportGroup.innerHTML = languages.map(lang => {
     const label = lang.charAt(0).toUpperCase() + lang.slice(1);
-    return `<button class="secondary export-btn" data-lang="${escapeHtml(lang)}">↓ ${escapeHtml(label)}</button>`;
+    return `<button class="secondary export-btn" data-lang="${escapeHtml(lang)}">${langFlagImgHtml(lang)} ↓ ${escapeHtml(label)}</button>`;
   }).join('');
 
   // Clear per-language cache
@@ -75,16 +151,20 @@ async function buildLangButtons(): Promise<void> {
     btn.addEventListener('click', async () => {
       const lang  = btn.dataset.lang ?? '';
       const label = lang.charAt(0).toUpperCase() + lang.slice(1);
+      // .innerHTML, not .textContent — the flag icon is markup, and
+      // restoring via .textContent would silently drop it from the button
+      // for good after the very first click.
       try {
-        btn.disabled    = true;
-        btn.textContent = 'Clearing...';
+        btn.disabled  = true;
+        btn.innerHTML = 'Clearing…';
         const msg = await clearCache(lang);
         showDbStatus(msg, 'success');
+        void refreshDbInfo();
       } catch (err) {
         showDbStatus(`Error: ${err instanceof Error ? err.message : String(err)}`, 'error');
       } finally {
-        btn.disabled    = false;
-        btn.textContent = `Clear ${label}`;
+        btn.disabled  = false;
+        btn.innerHTML = `${langFlagImgHtml(lang)} Clear ${escapeHtml(label)}`;
       }
     });
   });
@@ -93,17 +173,17 @@ async function buildLangButtons(): Promise<void> {
   exportGroup.querySelectorAll<HTMLButtonElement>('.export-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const lang         = btn.dataset.lang ?? '';
-      const originalText = btn.textContent ?? '';
+      const originalHtml = btn.innerHTML;
       try {
-        btn.disabled    = true;
-        btn.textContent = 'Exporting...';
+        btn.disabled  = true;
+        btn.innerHTML = 'Exporting…';
         await exportCsv(lang);
         showDbStatus(`Exported ${lang}.csv successfully`, 'success');
       } catch (err) {
         showDbStatus(`Export error: ${err instanceof Error ? err.message : String(err)}`, 'error');
       } finally {
-        btn.disabled    = false;
-        btn.textContent = originalText;
+        btn.disabled  = false;
+        btn.innerHTML = originalHtml;
       }
     });
   });
@@ -120,6 +200,7 @@ export function initDbAdmin(): void {
       clearAllBtn.textContent = 'Clearing...';
       const msg = await clearCache();
       showDbStatus(msg, 'success');
+      void refreshDbInfo();
     } catch (err) {
       showDbStatus(`Error: ${err instanceof Error ? err.message : String(err)}`, 'error');
     } finally {
@@ -136,6 +217,7 @@ export function initDbAdmin(): void {
       reloadBtn.textContent = 'Reloading...';
       const msg = await reloadDb();
       showDbStatus(msg, 'success');
+      void refreshDbInfo();
     } catch (err) {
       showDbStatus(`Error: ${err instanceof Error ? err.message : String(err)}`, 'error');
     } finally {
@@ -145,4 +227,5 @@ export function initDbAdmin(): void {
   });
 
   void buildLangButtons();
+  void refreshDbInfo();
 }

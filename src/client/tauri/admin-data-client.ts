@@ -118,6 +118,10 @@ export async function createTauriAdminDataClient(): Promise<AdminDataClient> {
       return 'Nothing to reload — this build reads SQLite directly on every request.';
     },
 
+    async getDbInfo() {
+      return null;
+    },
+
     async exportCsv(lang) {
       const words = await loadAllWordsForLanguage(adapter, lang, columnFlags, shapeDeps);
       return buildCsv(words);

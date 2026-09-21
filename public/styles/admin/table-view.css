@@ -7,8 +7,82 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 0;
+  /* Filter bar above already ends in its own padding-bottom + margin-bottom
+     (see filter-bar.css) — a top padding here on top of that stacked into
+     a noticeably bigger gap than between any other two controls on this
+     tab. */
+  padding: 0 0 0.5rem;
   font-size: 0.85rem;
+}
+
+.table-view-page-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.table-view-page-jump input[type="number"] {
+  width: 4.5rem;
+  padding: 0.3rem 0.5rem;
+}
+.table-view-page-jump button {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+/* ── Search autosuggest — same idea as the word list narrowing itself live
+   in Word Editor, but as a dropdown since the search box here isn't sitting
+   directly above the list it searches. ── */
+.table-search-wrap { position: relative; }
+.table-search-wrap input[type="text"] { width: 100%; }
+
+.table-search-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.3rem;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 5;
+}
+
+.table-search-suggestion {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  border-bottom: 1px solid var(--border);
+}
+.table-search-suggestion:last-child { border-bottom: none; }
+.table-search-suggestion:hover,
+.table-search-suggestion.active { background: var(--surface2); }
+
+.table-search-suggestion-word {
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.table-search-suggestion-translation {
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.table-search-suggestion-empty {
+  padding: 0.6rem 0.7rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .table-view-scroll {
@@ -38,12 +112,17 @@
   z-index: 1;
   background: var(--surface2);
   border-bottom: 2px solid var(--border);
-  padding: 0.5rem 1rem 0.5rem 0.6rem;
+  border-right: 1px solid var(--border);
+  /* Padding lives on .table-view-sort-btn instead, so the button — the
+     actual click target for sorting — fills the whole cell rather than
+     just the width of its label text. */
+  padding: 0;
   text-align: left;
   color: var(--accent);
   font-weight: 700;
   overflow: hidden;
 }
+.table-view-grid thead th:last-child { border-right: none; }
 
 /* Second sticky row, right below the labels — offset by the header row's
    own height so both stay pinned while the body scrolls underneath. */
@@ -53,15 +132,19 @@
   z-index: 1;
   background: var(--surface2);
   border-bottom: 2px solid var(--border);
+  border-right: 1px solid var(--border);
   padding: 0.25rem 0.4rem;
 }
+.table-view-filter-row th:last-child { border-right: none; }
 
 .table-view-sort-btn {
   display: block;
   width: 100%;
+  min-height: 2.15rem;
+  box-sizing: border-box;
   background: none;
   border: none;
-  padding: 0;
+  padding: 0.5rem 1rem 0.5rem 0.6rem;
   margin: 0;
   font: inherit;
   font-weight: 700;
@@ -79,6 +162,14 @@
 
 .table-view-sort-arrow {
   font-size: 0.7em;
+  color: var(--text-muted);
+}
+/* Set by admin-table.ts's updateSortIndicators() on the column currently
+   driving the sort — accent-colored and bold so which way it's sorted
+   reads at a glance instead of blending into the header row. */
+.table-view-th--sorted .table-view-sort-arrow {
+  color: var(--accent);
+  font-weight: 900;
 }
 
 /* Drag handle on a header's right edge — resizes the shared <col> for this
@@ -112,13 +203,26 @@
 
 .table-view-grid tbody td {
   border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
   padding: 0.2rem 0.35rem;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.table-view-grid tbody td:last-child { border-right: none; }
 
 .table-view-grid tbody tr:hover {
   background: var(--surface2);
+}
+
+/* Selecting/dragging across cell text (to copy a column, say) used the
+   browser's default selection color — an opaque blue that reads fine on
+   plain body text but muddies a colored dirty-row background or a value
+   already tinted for edited state. Scoped to the grid only: a lighter,
+   accent-tinted highlight that keeps var(--text) on top instead of the
+   default's white-on-blue. */
+.table-view-grid ::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--text);
 }
 
 .table-view-row--dirty {
@@ -131,11 +235,13 @@
 .table-view-cell-input {
   width: 100%;
   min-width: 0;
+  min-height: 1.9rem;
+  box-sizing: border-box;
   border: 1px solid transparent;
   background: transparent;
   color: var(--text);
   font: inherit;
-  padding: 0.25rem 0.3rem;
+  padding: 0.4rem 0.5rem;
   border-radius: var(--radius-sm, 4px);
 }
 .table-view-cell-input:hover {
@@ -148,8 +254,17 @@
 }
 
 .table-view-cell-readonly {
+  display: block;
+  min-height: 1.9rem;
+  box-sizing: border-box;
+  /* Matches .table-view-cell-input's transparent border pixel-for-pixel —
+     without one here, the readonly cells (Word, Tags, Band) sat 2px taller
+     inside their row than an input cell's bordered box, throwing every row
+     enough out of alignment across columns to notice, especially against
+     the divider lines. */
+  border: 1px solid transparent;
   color: var(--text-muted);
-  padding: 0.25rem 0.3rem;
+  padding: 0.4rem 0.5rem;
   font-style: italic;
 }
 

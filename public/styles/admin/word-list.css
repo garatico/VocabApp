@@ -9,7 +9,7 @@
   align-items: flex-start;
 }
 
-.word-panel { width: 340px; flex-shrink: 0; }
+.word-panel { width: 330px; flex-shrink: 0; }
 .form-panel { flex: 1; min-width: 0; }
 
 /* ── List header ── */
@@ -30,11 +30,32 @@
 /* ── Scrollable list ── */
 .word-list {
   overflow-y: auto;
-  max-height: calc(100vh - 260px);
-  min-height: 400px;
+  max-height: calc(100vh - 300px);
+  min-height: 360px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  background: var(--surface);
+}
+
+/* ── Pager — Prev/Next through the current search/filter, since a wordlist
+   this size was never going to fit in one page. Square-cornered against
+   the list above it and rounded only where it meets nothing, matching how
+   .word-list-header sits flush above the list. ── */
+.word-list-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: 0 0 var(--radius) var(--radius);
-  background: var(--surface);
+  background: var(--surface2);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.word-list-pager button {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
 }
 
 .word-list-empty {
@@ -44,51 +65,94 @@
   font-size: 0.9rem;
 }
 
-/* ── List items ── */
+/* ── List items — one line each: word, translation, POS, band.
+   Used to be three stacked lines (word+translation, badges, a 3-gloss
+   preview) — the gloss preview repeated whatever the translation line
+   already said most of the time, and three lines per row is exactly what
+   made a 25,000+ word list feel like it needed a wider panel than it does. ── */
 .word-item {
-  padding: 0.75rem 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background var(--transition-fast);
+  min-width: 0;
 }
 .word-item:last-child { border-bottom: none; }
 .word-item:hover      { background: var(--surface2); }
 .word-item.active {
   background: var(--accent-light);
   border-left: 3px solid var(--accent);
-  padding-left: calc(0.875rem - 3px);
+  padding-left: calc(0.75rem - 3px);
 }
 
-.word-item-top {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  margin-bottom: 0.25rem;
-}
-.word-item-key     { font-weight: 700; color: var(--accent); font-size: 1rem; }
-.word-item-display { font-size: 0.8rem; color: var(--text-muted); }
-
-.word-item-badges  { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-bottom: 0.25rem; }
-
-.word-item-glosses {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  white-space: nowrap;
+.word-item-key {
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  max-width: 40%;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
+.word-item-translation {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.word-item-badges { display: flex; gap: 0.3rem; flex-shrink: 0; align-items: center; }
 
 /* ── Badges ── */
 .badge {
   display: inline-block;
-  padding: 0.1rem 0.45rem;
+  padding: 0.1rem 0.4rem;
   border-radius: 4px;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
 }
-.badge-pos  { background: var(--accent-light); color: var(--accent); }
+/* A one-line row has no room for "INTERJECTION" at full length — clipped
+   with an ellipsis instead of wrapping the row or pushing the translation
+   out of view. */
+.word-item .badge-pos {
+  max-width: 6.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Same hue-per-POS scheme as the main app's .pos-chip (class-filter.css) —
+   one `--pos-hue` custom property read through a fixed color formula, set
+   per part of speech via [data-pos] so this reads as "the same colors as
+   the app" rather than an admin-only palette. admin-editor.ts sets the
+   attribute from the word's own `pos` field. */
+.badge-pos[data-pos="verb"]        { --pos-hue: 217; }
+.badge-pos[data-pos="noun"]        { --pos-hue: 142; }
+.badge-pos[data-pos="adjective"]   { --pos-hue:  32; }
+.badge-pos[data-pos="adverb"]      { --pos-hue: 280; }
+.badge-pos[data-pos="pronoun"]     { --pos-hue: 340; }
+.badge-pos[data-pos="preposition"] { --pos-hue: 195; }
+.badge-pos[data-pos="conjunction"] { --pos-hue:  20; }
+.badge-pos[data-pos="article"]     { --pos-hue: 260; }
+.badge-pos[data-pos="particle"]    { --pos-hue:  85; }
+.badge-pos[data-pos="suffix"]      { --pos-hue: 165; }
+
+.badge-pos {
+  --pos-hue: 217; /* fallback for a pos not in the list above */
+  background: hsl(var(--pos-hue) 60% 50% / 0.14);
+  color:      hsl(var(--pos-hue) 55% 32%);
+  border: 1px solid hsl(var(--pos-hue) 50% 45% / 0.4);
+}
+html.dark .badge-pos { color: hsl(var(--pos-hue) 62% 72%); }
+
 .badge-band { background: #fef3c7; color: #92400e; }
 html.dark .badge-band { background: rgba(254, 243, 199, 0.12); color: #fcd34d; }
 

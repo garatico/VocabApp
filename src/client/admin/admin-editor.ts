@@ -7,6 +7,8 @@
 import { showStatus, escapeHtml } from './admin-api.js';
 import { getAdminDataClient } from './admin-data-client.js';
 import { logger } from '../utils/logger.js';
+import { langFlagImg } from './admin-languages.js';
+import { readString, writeString } from '../utils/storage.ts';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -46,6 +48,7 @@ interface WordData {
 
 const searchInput     = document.getElementById('searchInput')     as HTMLInputElement;
 const langSelect      = document.getElementById('langSelect')      as HTMLSelectElement;
+const langSelectFlag  = document.getElementById('langSelectFlag')  as HTMLElement;
 const filterPos       = document.getElementById('filterPos')       as HTMLSelectElement;
 const filterBand      = document.getElementById('filterBand')      as HTMLSelectElement;
 const filterDomain    = document.getElementById('filterDomain')    as HTMLSelectElement;
@@ -54,6 +57,11 @@ const clearFiltersBtn = document.getElementById('clearFiltersBtn') as HTMLButton
 
 const wordList        = document.getElementById('wordList')        as HTMLElement;
 const wordCountLabel  = document.getElementById('wordCountLabel')  as HTMLElement;
+const wordListPrevBtn  = document.getElementById('wordListPrevBtn')  as HTMLButtonElement;
+const wordListNextBtn  = document.getElementById('wordListNextBtn')  as HTMLButtonElement;
+const wordListPageLabel = document.getElementById('wordListPageLabel') as HTMLElement;
+
+const settingsWordPageSize = document.getElementById('settingsWordPageSize') as HTMLInputElement;
 
 const formPanelEmpty    = document.getElementById('formPanelEmpty')    as HTMLElement;
 const editFormCard      = document.getElementById('editFormCard')      as HTMLElement;
@@ -71,7 +79,26 @@ let currentWord: WordData | null = null;
 // the field starts disabled rather than briefly editable-then-locked.
 let disambiguatorSupported = false;
 
+// The sidebar used to fetch a flat 200-word slice with no way to reach
+// anything past it — fine for "essential" (a few hundred words) but not for
+// the full 25k+ word database. Paginated in page-sized chunks instead, same
+// Prev/Next pattern as Table View. The page size itself is a Settings tab
+// control (settingsWordPageSize) rather than fixed, persisted the same way
+// Table View persists its own column widths / page size.
+const WORD_PAGE_SIZE_KEY = 'admin_word_list_page_size';
+const DEFAULT_WORD_LIST_PAGE_SIZE = 50;
+let wordListPageSize = DEFAULT_WORD_LIST_PAGE_SIZE;
+let wordListPage = 1;
+let wordListPages = 1;
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Keeps the flag next to #langSelect in sync — <option> can't hold an
+ *  <img> itself, so this is the closest a native select gets to one. */
+function refreshLangFlag(): void {
+  langSelectFlag.innerHTML = '';
+  if (langSelect.value) langSelectFlag.appendChild(langFlagImg(langSelect.value));
+}
 
 function debounce<T extends (...args: unknown[]) => void>(fn: T, ms: number): (...args: Parameters<T>) => void {
   let t: ReturnType<typeof setTimeout>;
@@ -104,6 +131,7 @@ export async function loadMeta(): Promise<void> {
         .map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l.charAt(0).toUpperCase() + l.slice(1))}</option>`)
         .join('');
       langSelect.value = languages.includes(cur) ? cur : languages[0];
+      refreshLangFlag();
     }
 
     const editPosEl = document.getElementById('editPos') as HTMLSelectElement | null;
@@ -133,7 +161,13 @@ export async function loadMeta(): Promise<void> {
       const missing  = pos.filter(p => !existing.includes(p));
       missing.forEach(p => {
         const opt = document.createElement('option');
-        opt.value = opt.textContent = p;
+        // The hard-coded options above are capitalized ("Adjective",
+        // "Noun"…) — a POS the database has that this list doesn't (e.g.
+        // "interjection", "particle") used to get appended as the raw
+        // lowercase DB value, the one option in the dropdown that didn't
+        // match the others' styling.
+        opt.value       = p;
+        opt.textContent = p.charAt(0).toUpperCase() + p.slice(1);
         filterPos.appendChild(opt);
       });
     }
@@ -151,25 +185,32 @@ async function loadWords(): Promise<void> {
 
     const result = await getAdminDataClient().getVocabPage({
       lang:   langSelect.value,
-      limit:  200,
+      limit:  wordListPageSize,
+      page:   wordListPage,
       search: searchInput.value.trim()  || undefined,
       pos:    filterPos.value           || undefined,
       band:   filterBand.value          || undefined,
       domain: filterDomain.value        || undefined,
     });
+    wordListPage  = result.page;
+    wordListPages = Math.max(1, result.pages);
     renderWordList(result.words, result.total);
   } catch (err) {
     wordList.innerHTML = `<div class="word-list-empty" style="color:var(--danger);">Error: ${escapeHtml(err instanceof Error ? err.message : String(err))}</div>`;
     wordCountLabel.textContent = '';
+    wordListPageLabel.textContent = 'Page 1 of 1';
+    wordListPrevBtn.disabled = true;
+    wordListNextBtn.disabled = true;
   }
 }
 
 // ── Word list renderer ────────────────────────────────────────────────────────
 
 function renderWordList(words: WordData[], total: number): void {
-  wordCountLabel.textContent = words.length < total
-    ? `${words.length} / ${total}`
-    : `${total}`;
+  wordCountLabel.textContent = String(total);
+  wordListPageLabel.textContent = `Page ${wordListPage} of ${wordListPages}`;
+  wordListPrevBtn.disabled = wordListPage <= 1;
+  wordListNextBtn.disabled = wordListPage >= wordListPages;
 
   if (!words.length) {
     wordList.innerHTML = '<div class="word-list-empty">No words found</div>';
@@ -186,21 +227,21 @@ function renderWordList(words: WordData[], total: number): void {
     item.className = currentWord && word.word === currentWord.word ? 'word-item active' : 'word-item';
 
     const badgesHtml = [
-      word.pos              ? `<span class="badge badge-pos">${escapeHtml(word.pos)}</span>`             : '',
+      word.pos              ? `<span class="badge badge-pos" data-pos="${escapeHtml(word.pos)}">${escapeHtml(word.pos)}</span>` : '',
       word.frequency?.band  ? `<span class="badge badge-band">${escapeHtml(word.frequency.band)}</span>` : '',
     ].join('');
 
-    const glossPreview   = (word.glosses ?? []).slice(0, 3).map(escapeHtml).join(', ');
-    const translationDiff = word.translation && word.translation !== word.word
-      ? ` <span class="word-item-display">${escapeHtml(word.translation)}</span>`
+    // One line: word, translation, POS, band — was word+translation on their
+    // own line, then a badges line, then up to 3 glosses on a third line.
+    // The gloss preview repeated the translation (its own first line, most
+    // of the time) for no benefit, so it's gone rather than folded in.
+    const translationHtml = word.translation
+      ? `<span class="word-item-translation">${escapeHtml(word.translation)}</span>`
       : '';
 
     item.innerHTML = `
-      <div class="word-item-top">
-        <span class="word-item-key">${escapeHtml(word.word)}</span>${translationDiff}
-      </div>
-      ${badgesHtml   ? `<div class="word-item-badges">${badgesHtml}</div>`     : ''}
-      ${glossPreview ? `<div class="word-item-glosses">${glossPreview}</div>` : ''}
+      <span class="word-item-key">${escapeHtml(word.word)}</span>${translationHtml}
+      <span class="word-item-badges">${badgesHtml}</span>
     `;
 
     item.addEventListener('click', () => {
@@ -233,8 +274,8 @@ function populateForm(word: WordData): void {
   (document.getElementById('editWordDisplay') as HTMLElement).textContent       = word.word;
   (document.getElementById('editTranslation') as HTMLInputElement).value        = word.translation ?? '';
 
-  setSelectValue('editPos',        word.pos             ?? '');
-  setSelectValue('editDifficulty', word.difficulty      ?? '');
+  setSelectValue('editPos', word.pos ?? '');
+  (document.getElementById('editDifficulty') as HTMLInputElement).value = word.difficulty ?? '';
   // band is derived from rank server-side — not editable
 
   const editDomainEl = document.getElementById('editDomain') as HTMLSelectElement | null;
@@ -314,7 +355,7 @@ function collectFormData(): Omit<WordData, 'word'> {
     translation: (document.getElementById('editTranslation') as HTMLInputElement).value.trim(),
     pos:         (document.getElementById('editPos')          as HTMLSelectElement).value || null,
     emoji:       (document.getElementById('editEmoji')        as HTMLInputElement).value.trim()  || null,
-    difficulty:  (document.getElementById('editDifficulty')   as HTMLSelectElement).value || null,
+    difficulty:  (document.getElementById('editDifficulty')   as HTMLInputElement).value.trim() || null,
     notes:       (document.getElementById('editNotes')        as HTMLTextAreaElement).value.trim(),
     glosses:     glossLines,
     examples:    exampleLines,
@@ -378,22 +419,43 @@ async function saveWord(): Promise<void> {
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 export function initEditor(): void {
-  langSelect.addEventListener('change', () => { clearForm(); void loadWords(); });
-  filterPos.addEventListener('change', loadWords);
-  filterBand.addEventListener('change', loadWords);
-  filterDomain.addEventListener('change', loadWords);
+  // Any change to what's being searched for invalidates whatever page of
+  // the old result set we were on — back to page 1, same as a fresh search.
+  const resetPageAndLoad = (): void => { wordListPage = 1; void loadWords(); };
 
-  const debouncedLoad = debounce(loadWords, 350);
+  // Settings tab's "Word Editor Page Size" — restore whatever was picked
+  // last session, same convenience Table View's own page size gets.
+  const savedPageSize = parseInt(readString(WORD_PAGE_SIZE_KEY) ?? '', 10);
+  wordListPageSize = Number.isFinite(savedPageSize) && savedPageSize > 0 ? savedPageSize : DEFAULT_WORD_LIST_PAGE_SIZE;
+  settingsWordPageSize.value = String(wordListPageSize);
+  const debouncedPageSizeChange = debounce(() => {
+    const n = parseInt(settingsWordPageSize.value, 10);
+    wordListPageSize = Number.isFinite(n) && n > 0 ? Math.min(n, 200) : DEFAULT_WORD_LIST_PAGE_SIZE;
+    writeString(WORD_PAGE_SIZE_KEY, String(wordListPageSize));
+    resetPageAndLoad();
+  }, 400);
+  settingsWordPageSize.addEventListener('input', debouncedPageSizeChange);
+
+  refreshLangFlag();
+  langSelect.addEventListener('change', () => { refreshLangFlag(); clearForm(); resetPageAndLoad(); });
+  filterPos.addEventListener('change', resetPageAndLoad);
+  filterBand.addEventListener('change', resetPageAndLoad);
+  filterDomain.addEventListener('change', resetPageAndLoad);
+
+  const debouncedLoad = debounce(resetPageAndLoad, 350);
   searchInput.addEventListener('input', debouncedLoad);
-  searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); void loadWords(); } });
-  searchBtn.addEventListener('click', loadWords);
+  searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); resetPageAndLoad(); } });
+  searchBtn.addEventListener('click', resetPageAndLoad);
+
+  wordListPrevBtn.addEventListener('click', () => { if (wordListPage > 1) { wordListPage--; void loadWords(); } });
+  wordListNextBtn.addEventListener('click', () => { if (wordListPage < wordListPages) { wordListPage++; void loadWords(); } });
 
   clearFiltersBtn.addEventListener('click', () => {
     searchInput.value  = '';
     filterPos.value    = '';
     filterBand.value   = '';
     filterDomain.value = '';
-    void loadWords();
+    resetPageAndLoad();
   });
 
   saveBtn.addEventListener('click', saveWord);

@@ -8,6 +8,7 @@
 
 import { escapeHtml } from './admin-api.js';
 import { getAdminDataClient } from './admin-data-client.js';
+import { langFlagImg } from './admin-languages.js';
 
 // ── Pronoun & tense data ──────────────────────────────────────────────────────
 
@@ -44,6 +45,7 @@ interface VerbWord {
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
 const conjLangSelect   = document.getElementById('conjLangSelect')  as HTMLSelectElement;
+const conjLangSelectFlag = document.getElementById('conjLangSelectFlag') as HTMLElement;
 const conjTenseSelect  = document.getElementById('conjTenseSelect') as HTMLSelectElement;
 const conjSearchInput  = document.getElementById('conjSearchInput') as HTMLInputElement;
 const conjSearchBtn    = document.getElementById('conjSearchBtn')   as HTMLButtonElement;
@@ -188,10 +190,19 @@ function clearInputs(): void {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
+/** Keeps the flag next to #conjLangSelect in sync — <option> can't hold
+ *  an <img> itself, so this is the closest a native select gets to one. */
+function refreshConjLangFlag(): void {
+  conjLangSelectFlag.innerHTML = '';
+  conjLangSelectFlag.appendChild(langFlagImg(conjLangSelect.value));
+}
+
 export function initConjugation(): void {
   populateTenses(currentLang());
+  refreshConjLangFlag();
 
   conjLangSelect.addEventListener('change', () => {
+    refreshConjLangFlag();
     populateTenses(currentLang());
     selectedVerb = null;
     conjEmptyState.style.display = 'flex';

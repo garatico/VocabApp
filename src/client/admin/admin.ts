@@ -35,14 +35,43 @@ themeButtons.forEach(btn => {
   });
 });
 
+// ── Language flags ───────────────────────────────────────────────────────────
+// Show/hide every .flag-icon admin-wide (language selects, DB Admin's
+// per-language buttons, Statistics' tabs) — one class on <html> rather than
+// each module re-checking a setting itself, same shape as the theme toggle
+// right above.
+
+const flagsToggle = document.getElementById('flagsToggle');
+const flagsButtons = flagsToggle?.querySelectorAll<HTMLButtonElement>('[data-flags]') ?? [];
+
+function applyFlagsVisible(visible: boolean): void {
+  document.documentElement.classList.toggle('hide-lang-flags', !visible);
+  flagsButtons.forEach(btn => btn.classList.toggle('active', (btn.dataset.flags === 'on') === visible));
+}
+
+applyFlagsVisible(readString('admin-show-flags') !== 'off');
+
+flagsButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const visible = btn.dataset.flags === 'on';
+    applyFlagsVisible(visible);
+    writeString('admin-show-flags', visible ? 'on' : 'off');
+  });
+});
+
 // ── Tab navigation ────────────────────────────────────────────────────────────
 
-document.querySelectorAll('.tab-btn').forEach(btn => {
+// [data-tab] excludes the "Back to App" link — it shares .tab-btn's look for
+// visual consistency in the tab row, but it's a real navigation away from
+// this page, not a panel switch, so it should neither steal the active
+// state nor hide whatever tab-content is currently showing before the
+// browser unloads the page.
+document.querySelectorAll<HTMLElement>('.tab-btn[data-tab]').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-btn[data-tab]').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
-    const tabId = (btn as HTMLElement).dataset.tab;
+    const tabId = btn.dataset.tab;
     if (tabId) document.getElementById(tabId)?.classList.add('active');
   });
 });

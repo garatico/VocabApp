@@ -2,7 +2,13 @@
    ADMIN STATUS BAR — success / error / info inline messages.
 ================================================================ */
 
-.status-bar { min-height: 38px; margin-bottom: 0.75rem; }
+/* No message → no reserved space. Collapsing this rather than always
+   reserving 38px costs a small layout shift when a message does appear,
+   which reads as an intentional toast dropping in; reserving the space
+   unconditionally read as a dead gap above the filter bar on every load,
+   the far more common case. */
+.status-bar { margin-bottom: 0.75rem; }
+.status-bar:empty { margin-bottom: 0; }
 
 .status {
   padding: 0.6rem 1rem;
@@ -14,7 +20,9 @@
 .status.success { background: #d7f8d5; color: #1b5e20; border: 1px solid #a5d6a7; }
 .status.error   { background: #ffe5e5; color: #b71c1c; border: 1px solid #ffcdd2; }
 .status.info    { background: #dbeafe; color: #0d47a1; border: 1px solid #90caf9; }
+.status.warning { background: #fff3cd; color: #7a5b00; border: 1px solid #ffe08a; }
 
 html.dark .status.success { background: rgba(76,175,80,0.15);  color: #81c784; border-color: rgba(76,175,80,0.3); }
 html.dark .status.error   { background: rgba(244,67,54,0.15);  color: #e57373; border-color: rgba(244,67,54,0.3); }
 html.dark .status.info    { background: rgba(33,150,243,0.15); color: #64b5f6; border-color: rgba(33,150,243,0.3); }
+html.dark .status.warning { background: rgba(255,193,7,0.15);  color: #ffd54f; border-color: rgba(255,193,7,0.3); }

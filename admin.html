@@ -11,27 +11,16 @@
 <body>
   <div class="container">
 
-    <header>
-      <div class="header-left">
-        <a href="/" class="back-link" title="Back to app">← App</a>
-        <h1>VocabApp Admin</h1>
-      </div>
-      <!-- Same sort-order-toggle pill pattern as the main app's Settings →
-           Appearance theme control, so switching themes looks the same in
-           both places rather than a bespoke circular button here. -->
-      <div class="sort-order-toggle admin-theme-toggle" id="themeToggle">
-        <button type="button" class="sort-order-btn" data-theme="light">☀ Light</button>
-        <button type="button" class="sort-order-btn" data-theme="dark">☾ Dark</button>
-      </div>
-    </header>
-
     <div class="tabs">
+      <span class="tabs-brand">VocabApp Admin</span>
       <button class="tab-btn active" data-tab="editor">Word Editor</button>
       <button class="tab-btn" data-tab="tableview">Table View</button>
       <button class="tab-btn" data-tab="dbadmin">DB Admin</button>
       <button class="tab-btn" data-tab="statistics">Statistics</button>
       <button class="tab-btn" data-tab="conjugation">Conjugation</button>
       <button class="tab-btn" data-tab="documentation">Help &amp; Docs</button>
+      <button class="tab-btn" data-tab="settings">⚙ Settings</button>
+      <a href="/" class="tab-btn tab-exit-link" title="Leave the admin panel and return to the main app">↩ Back to App</a>
     </div>
 
     <div class="tabs-wrap">
@@ -43,11 +32,14 @@
 
       <!-- Filter bar -->
       <div class="filter-bar">
-        <span class="filter-label">Language</span>
-        <select id="langSelect">
-          <!-- placeholder; repopulated from /api/admin/meta with every language the DB actually has -->
-          <option value="spanish">Spanish</option>
-        </select>
+        <div class="filter-field">
+          <span class="filter-label">Language</span>
+          <select id="langSelect">
+            <!-- placeholder; repopulated from /api/admin/meta with every language the DB actually has -->
+            <option value="spanish">Spanish</option>
+          </select>
+          <span class="lang-select-flag" id="langSelectFlag"></span>
+        </div>
 
         <div class="filter-divider"></div>
 
@@ -55,35 +47,41 @@
 
         <div class="filter-divider"></div>
 
-        <span class="filter-label">POS</span>
-        <select id="filterPos">
-          <option value="">All</option>
-          <option value="adjective">Adjective</option>
-          <option value="adverb">Adverb</option>
-          <option value="article">Article</option>
-          <option value="conjunction">Conjunction</option>
-          <option value="noun">Noun</option>
-          <option value="preposition">Preposition</option>
-          <option value="pronoun">Pronoun</option>
-          <option value="verb">Verb</option>
-        </select>
+        <div class="filter-field">
+          <span class="filter-label">POS</span>
+          <select id="filterPos">
+            <option value="">All</option>
+            <option value="adjective">Adjective</option>
+            <option value="adverb">Adverb</option>
+            <option value="article">Article</option>
+            <option value="conjunction">Conjunction</option>
+            <option value="noun">Noun</option>
+            <option value="preposition">Preposition</option>
+            <option value="pronoun">Pronoun</option>
+            <option value="verb">Verb</option>
+          </select>
+        </div>
 
-        <span class="filter-label">Band</span>
-        <select id="filterBand">
-          <option value="">All</option>
-          <option value="A1">A1</option>
-          <option value="A2">A2</option>
-          <option value="B1">B1</option>
-          <option value="B2">B2</option>
-          <option value="C1">C1</option>
-          <option value="C2">C2</option>
-        </select>
+        <div class="filter-field">
+          <span class="filter-label">Band</span>
+          <select id="filterBand">
+            <option value="">All</option>
+            <option value="A1">A1</option>
+            <option value="A2">A2</option>
+            <option value="B1">B1</option>
+            <option value="B2">B2</option>
+            <option value="C1">C1</option>
+            <option value="C2">C2</option>
+          </select>
+        </div>
 
-        <span class="filter-label">Domain</span>
-        <select id="filterDomain">
-          <option value="">All</option>
-          <!-- populated from /api/admin/meta -->
-        </select>
+        <div class="filter-field">
+          <span class="filter-label">Domain</span>
+          <select id="filterDomain">
+            <option value="">All</option>
+            <!-- populated from /api/admin/meta -->
+          </select>
+        </div>
 
         <button id="searchBtn">Search</button>
         <button class="ghost" id="clearFiltersBtn">Clear</button>
@@ -101,6 +99,11 @@
           <div class="word-list" id="wordList">
             <div class="word-list-empty">Search to load words</div>
           </div>
+          <div class="word-list-pager">
+            <button id="wordListPrevBtn" class="secondary" disabled>← Prev</button>
+            <span id="wordListPageLabel">Page 1 of 1</span>
+            <button id="wordListNextBtn" class="secondary" disabled>Next →</button>
+          </div>
         </div>
 
         <!-- Edit form -->
@@ -112,9 +115,9 @@
 
           <div class="edit-form-card" id="editFormCard" style="display:none;">
             <div class="edit-form-header">
-              <div>
-                <div class="edit-form-word" id="editFormWordTitle"></div>
-                <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.2rem;" id="editFormWordMeta"></div>
+              <div class="edit-form-title-row">
+                <span class="edit-form-word" id="editFormWordTitle"></span>
+                <span class="edit-form-word-meta" id="editFormWordMeta"></span>
               </div>
               <div class="edit-form-actions">
                 <button id="saveBtn">💾 Save</button>
@@ -144,7 +147,7 @@
               <!-- Classification -->
               <div class="form-section">
                 <div class="form-section-title">Classification</div>
-                <div class="form-row">
+                <div class="form-row-4">
                   <div class="form-group">
                     <label>Part of Speech</label>
                     <select id="editPos">
@@ -159,16 +162,9 @@
                     </select>
                   </div>
                   <div class="form-group">
-                    <label>Difficulty</label>
-                    <select id="editDifficulty">
-                      <option value="">—</option>
-                      <option value="beginner">Beginner</option>
-                      <option value="intermediate">Intermediate</option>
-                      <option value="advanced">Advanced</option>
-                    </select>
+                    <label>Difficulty <span class="hint">1–5</span></label>
+                    <input type="number" id="editDifficulty" min="1" max="5" step="1" placeholder="1–5" title="1 = most common, 5 = rarest">
                   </div>
-                </div>
-                <div class="form-row">
                   <div class="form-group">
                     <label>CEFR Band</label>
                     <select id="editBand">
@@ -312,25 +308,41 @@
 
       <!-- Filter bar -->
       <div class="filter-bar">
-        <span class="filter-label">Language</span>
-        <select id="tableLangSelect">
-          <option value="spanish">Spanish</option>
-        </select>
+        <div class="filter-field">
+          <span class="filter-label">Language</span>
+          <select id="tableLangSelect">
+            <option value="spanish">Spanish</option>
+          </select>
+          <span class="lang-select-flag" id="tableLangSelectFlag"></span>
+        </div>
 
         <div class="filter-divider"></div>
 
-        <input type="text" id="tableSearchInput" placeholder="Search word, translation…" style="flex:1;min-width:180px;">
+        <div class="table-search-wrap" style="flex:1;min-width:180px;">
+          <input type="text" id="tableSearchInput" placeholder="Search word, translation…" autocomplete="off">
+          <!-- populated live by admin-table.ts as you type — same idea as
+               the word list already narrowing itself in Word Editor, but as
+               a dropdown since this box doesn't have a list right under it. -->
+          <div class="table-search-suggestions" id="tableSearchSuggestions" hidden></div>
+        </div>
         <button id="tableSearchBtn">Search</button>
 
         <div class="filter-divider"></div>
 
-        <span class="filter-label">Per page</span>
-        <select id="tablePageSize">
-          <option value="25">25</option>
-          <option value="50" selected>50</option>
-          <option value="100">100</option>
-          <option value="200">200</option>
-        </select>
+        <div class="filter-field">
+          <span class="filter-label">Per page</span>
+          <select id="tablePageSize">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+            <option value="max">Max (200)</option>
+            <option value="custom">Custom…</option>
+          </select>
+          <!-- 200 is getWordPage()'s own server-side ceiling, shared with the
+               public /api/vocab route — see admin-table.ts's MAX_TABLE_PAGE_SIZE. -->
+          <input type="number" id="tablePageSizeCustom" class="custom-count-input" min="1" max="200" step="1" placeholder="e.g. 150" style="display:none;">
+        </div>
 
         <button id="tableSaveAllBtn" disabled>💾 Save All Changes (<span id="tableDirtyCount">0</span>)</button>
       </div>
@@ -339,6 +351,11 @@
         <button id="tablePrevBtn" class="secondary">← Prev</button>
         <span id="tablePageLabel">Page 1 of 1</span>
         <button id="tableNextBtn" class="secondary">Next →</button>
+        <div class="table-view-page-jump">
+          <label for="tablePageInput">Go to page</label>
+          <input type="number" id="tablePageInput" min="1" value="1" aria-label="Go to page">
+          <button id="tablePageJumpBtn" class="secondary">Go</button>
+        </div>
       </div>
 
       <div class="table-view-scroll">
@@ -363,6 +380,11 @@
       <div class="section">
         <h2 class="section-title">Database Administration</h2>
         <div id="dbStatus" style="margin-bottom:1rem;"></div>
+
+        <!-- populated from GET /api/admin/db/info: connection status, schema/
+             pipeline provenance, per-language cache state. Hidden on builds
+             (e.g. Tauri) with no server-side vocab-loader to report on. -->
+        <div class="db-info-card" id="dbInfoCard" hidden></div>
 
         <div class="db-admin-grid">
           <div class="db-card">
@@ -410,20 +432,25 @@
 
       <!-- Filter bar -->
       <div class="filter-bar">
-        <span class="filter-label">Language</span>
-        <select id="conjLangSelect">
-          <option value="spanish">Spanish</option>
-          <option value="portuguese">Portuguese</option>
-          <option value="italian">Italian</option>
-          <option value="french">French</option>
-        </select>
+        <div class="filter-field">
+          <span class="filter-label">Language</span>
+          <select id="conjLangSelect">
+            <option value="spanish">Spanish</option>
+            <option value="portuguese">Portuguese</option>
+            <option value="italian">Italian</option>
+            <option value="french">French</option>
+          </select>
+          <span class="lang-select-flag" id="conjLangSelectFlag"></span>
+        </div>
 
         <div class="filter-divider"></div>
 
-        <span class="filter-label">Tense</span>
-        <select id="conjTenseSelect">
-          <!-- populated by JS based on selected language -->
-        </select>
+        <div class="filter-field">
+          <span class="filter-label">Tense</span>
+          <select id="conjTenseSelect">
+            <!-- populated by JS based on selected language -->
+          </select>
+        </div>
 
         <div class="filter-divider"></div>
 
@@ -491,99 +518,99 @@
       <div class="section">
         <h2 class="section-title">Data Structure &amp; Help</h2>
 
-        <div style="margin-bottom:2rem;">
-          <h3 style="margin-bottom:1rem;font-size:1.05rem;color:var(--accent);">📋 Editable Fields</h3>
-          <table style="width:100%;border-collapse:collapse;font-size:0.875rem;margin-bottom:1.5rem;">
+        <div class="docs-section">
+          <h3 class="docs-heading">📋 Editable Fields</h3>
+          <table class="docs-table">
             <thead>
-              <tr style="background:var(--surface2);border-bottom:2px solid var(--border);">
-                <th style="padding:0.6rem 0.75rem;text-align:left;color:var(--accent);width:18%;">Field</th>
-                <th style="padding:0.6rem 0.75rem;text-align:left;color:var(--accent);">Purpose</th>
-                <th style="padding:0.6rem 0.75rem;text-align:left;color:var(--accent);width:22%;">Format</th>
+              <tr>
+                <th class="docs-col-narrow">Field</th>
+                <th>Purpose</th>
+                <th class="docs-col-medium">Format</th>
               </tr>
             </thead>
             <tbody>
-              <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:0.6rem 0.75rem;"><code>translation</code></td>
-                <td style="padding:0.6rem 0.75rem;">Primary English translation shown to the learner</td>
-                <td style="padding:0.6rem 0.75rem;">Plain text</td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:0.6rem 0.75rem;"><code>pos</code></td>
-                <td style="padding:0.6rem 0.75rem;">Part of speech</td>
-                <td style="padding:0.6rem 0.75rem;">noun, verb, adjective…</td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:0.6rem 0.75rem;"><code>band</code></td>
-                <td style="padding:0.6rem 0.75rem;">CEFR proficiency level</td>
-                <td style="padding:0.6rem 0.75rem;">A1 – C2</td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:0.6rem 0.75rem;"><code>difficulty</code></td>
-                <td style="padding:0.6rem 0.75rem;">Learning difficulty category</td>
-                <td style="padding:0.6rem 0.75rem;">beginner / intermediate / advanced</td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:0.6rem 0.75rem;"><code>domain</code></td>
-                <td style="padding:0.6rem 0.75rem;">Subject area / semantic field</td>
-                <td style="padding:0.6rem 0.75rem;">general, medical, home…</td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:0.6rem 0.75rem;"><code>glosses</code></td>
-                <td style="padding:0.6rem 0.75rem;">English translations — one per line</td>
-                <td style="padding:0.6rem 0.75rem;">to speak<br>to talk</td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:0.6rem 0.75rem;"><code>ipa</code></td>
-                <td style="padding:0.6rem 0.75rem;">IPA pronunciation string</td>
-                <td style="padding:0.6rem 0.75rem;"><code>[aˈβlaɾ]</code></td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:0.6rem 0.75rem;"><code>syllables</code></td>
-                <td style="padding:0.6rem 0.75rem;">Syllable breakdown (hyphen-separated)</td>
-                <td style="padding:0.6rem 0.75rem;">ha-blar</td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:0.6rem 0.75rem;"><code>gender</code></td>
-                <td style="padding:0.6rem 0.75rem;">Grammatical gender (nouns)</td>
-                <td style="padding:0.6rem 0.75rem;">masculine / feminine / neuter</td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:0.6rem 0.75rem;"><code>plural</code></td>
-                <td style="padding:0.6rem 0.75rem;">Plural form of the word</td>
-                <td style="padding:0.6rem 0.75rem;">Plain text</td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:0.6rem 0.75rem;"><code>infinitive</code></td>
-                <td style="padding:0.6rem 0.75rem;">Infinitive form (verbs)</td>
-                <td style="padding:0.6rem 0.75rem;">Plain text</td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:0.6rem 0.75rem;"><code>reflexive</code></td>
-                <td style="padding:0.6rem 0.75rem;">Whether the verb is reflexive</td>
-                <td style="padding:0.6rem 0.75rem;">Checkbox</td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:0.6rem 0.75rem;"><code>register</code></td>
-                <td style="padding:0.6rem 0.75rem;">Language register / formality</td>
-                <td style="padding:0.6rem 0.75rem;">formal / informal / colloquial…</td>
-              </tr>
-              <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:0.6rem 0.75rem;"><code>examples</code></td>
-                <td style="padding:0.6rem 0.75rem;">Usage example sentences — one per line</td>
-                <td style="padding:0.6rem 0.75rem;">Plain text</td>
+              <tr>
+                <td><code>translation</code></td>
+                <td>Primary English translation shown to the learner</td>
+                <td>Plain text</td>
               </tr>
               <tr>
-                <td style="padding:0.6rem 0.75rem;"><code>notes</code></td>
-                <td style="padding:0.6rem 0.75rem;">Usage notes, common mistakes</td>
-                <td style="padding:0.6rem 0.75rem;">Plain text</td>
+                <td><code>pos</code></td>
+                <td>Part of speech</td>
+                <td>noun, verb, adjective…</td>
+              </tr>
+              <tr>
+                <td><code>band</code></td>
+                <td>CEFR proficiency level</td>
+                <td>A1 – C2</td>
+              </tr>
+              <tr>
+                <td><code>difficulty</code></td>
+                <td>Difficulty tier, derived from frequency rank</td>
+                <td>1 (most common) – 5 (rarest)</td>
+              </tr>
+              <tr>
+                <td><code>domain</code></td>
+                <td>Subject area / semantic field</td>
+                <td>general, medical, home…</td>
+              </tr>
+              <tr>
+                <td><code>glosses</code></td>
+                <td>English translations — one per line</td>
+                <td>to speak<br>to talk</td>
+              </tr>
+              <tr>
+                <td><code>ipa</code></td>
+                <td>IPA pronunciation string</td>
+                <td><code>[aˈβlaɾ]</code></td>
+              </tr>
+              <tr>
+                <td><code>syllables</code></td>
+                <td>Syllable breakdown (hyphen-separated)</td>
+                <td>ha-blar</td>
+              </tr>
+              <tr>
+                <td><code>gender</code></td>
+                <td>Grammatical gender (nouns)</td>
+                <td>masculine / feminine / neuter</td>
+              </tr>
+              <tr>
+                <td><code>plural</code></td>
+                <td>Plural form of the word</td>
+                <td>Plain text</td>
+              </tr>
+              <tr>
+                <td><code>infinitive</code></td>
+                <td>Infinitive form (verbs)</td>
+                <td>Plain text</td>
+              </tr>
+              <tr>
+                <td><code>reflexive</code></td>
+                <td>Whether the verb is reflexive</td>
+                <td>Checkbox</td>
+              </tr>
+              <tr>
+                <td><code>register</code></td>
+                <td>Language register / formality</td>
+                <td>formal / informal / colloquial…</td>
+              </tr>
+              <tr>
+                <td><code>examples</code></td>
+                <td>Usage example sentences — one per line</td>
+                <td>Plain text</td>
+              </tr>
+              <tr>
+                <td><code>notes</code></td>
+                <td>Usage notes, common mistakes</td>
+                <td>Plain text</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <div style="background:var(--surface2);padding:1.25rem;border-radius:var(--radius);margin-bottom:1.5rem;">
-          <h3 style="margin-bottom:0.75rem;font-size:1.05rem;color:var(--accent);">🗄️ Database Notes</h3>
-          <ul style="color:var(--text);line-height:1.9;margin:0;padding-left:1.5rem;font-size:0.9rem;">
+        <div class="docs-callout">
+          <h3>🗄️ Database Notes</h3>
+          <ul>
             <li>Vocabulary is stored in <strong>SQLite</strong> (<code>data/vocabulary.db</code>).</li>
             <li>Glosses and examples are stored in separate tables and fully replaced on each save.</li>
             <li>Domains are stored as a JSON array. The editor sets one domain at a time.</li>
@@ -592,9 +619,9 @@
           </ul>
         </div>
 
-        <div style="background:var(--surface2);padding:1.25rem;border-radius:var(--radius);">
-          <h3 style="margin-bottom:0.75rem;font-size:1.05rem;color:var(--accent);">💡 Tips</h3>
-          <ul style="color:var(--text);line-height:1.9;margin:0;padding-left:1.5rem;font-size:0.9rem;">
+        <div class="docs-callout">
+          <h3>💡 Tips</h3>
+          <ul>
             <li><strong>Search</strong> matches on word key, translation, and any gloss.</li>
             <li><strong>Filters</strong> (POS, Band, Domain) narrow the word list and combine with search.</li>
             <li><strong>Glosses:</strong> put each translation on its own line.</li>
@@ -605,6 +632,46 @@
         </div>
       </div>
     </div><!-- /documentation tab -->
+
+    <!-- ═══════════════════ SETTINGS TAB ═══════════════════ -->
+    <div id="settings" class="tab-content">
+      <div class="section">
+        <h2 class="section-title">Admin Panel Settings</h2>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Appearance</div>
+            <div class="settings-row-desc">Theme for the admin panel only — separate from the main app's own theme setting.</div>
+          </div>
+          <!-- Same sort-order-toggle pill pattern as the main app's Settings →
+               Appearance theme control, so switching themes looks the same in
+               both places rather than a bespoke circular button here. -->
+          <div class="sort-order-toggle admin-theme-toggle" id="themeToggle">
+            <button type="button" class="sort-order-btn" data-theme="light">☀ Light</button>
+            <button type="button" class="sort-order-btn" data-theme="dark">☾ Dark</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Language Flags</div>
+            <div class="settings-row-desc">Show flag icons next to languages throughout the admin panel — language selects, DB Admin's per-language buttons, Statistics' tabs.</div>
+          </div>
+          <div class="sort-order-toggle" id="flagsToggle">
+            <button type="button" class="sort-order-btn" data-flags="on">Show</button>
+            <button type="button" class="sort-order-btn" data-flags="off">Hide</button>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div>
+            <div class="settings-row-label">Word Editor Page Size</div>
+            <div class="settings-row-desc">How many words to show per page in the Word Editor sidebar's list.</div>
+          </div>
+          <input type="number" id="settingsWordPageSize" class="custom-count-input" min="10" max="200" step="10" placeholder="50">
+        </div>
+      </div>
+    </div><!-- /settings tab -->
 
     </div><!-- /tabs-wrap -->
   </div><!-- /container -->

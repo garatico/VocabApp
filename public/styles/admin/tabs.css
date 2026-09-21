@@ -7,8 +7,26 @@
   display: flex;
   gap: 0.15rem;
   margin-bottom: 0;
-  padding: 0;
+  padding: 0.15rem 0 0;
   align-items: flex-end;
+  /* Nine items (brand + 7 tabs + Settings + the exit link) don't fit one
+     row under ~500px. Flex items shrink by default rather than wrap onto a
+     second line, which without flex-shrink:0 below squeezed every button
+     below its own label's width — text overlapping text, nothing legible
+     or reliably clickable. Scrolling the row keeps each item at its
+     natural size; only the rarely-needed rightmost tabs move off-screen,
+     reachable with a swipe/scroll instead of a second tab row eating
+     vertical space on every screen size. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.tabs-brand,
+.tab-btn,
+.tab-exit-link {
+  flex-shrink: 0;
 }
 
 .tab-btn {
@@ -56,12 +74,40 @@
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
 }
 
+/* Title used to sit in its own <header> row above the tabs, with its own
+   margin/padding/border adding a full extra row of vertical space before
+   any real control was visible. Inline in the tab row itself, it costs
+   nothing beyond what the tabs already take. */
+.tabs-brand {
+  align-self: center;
+  margin: 0 0.9rem 0.3rem 0.1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* "Back to App" — a plain .tab-btn in every visual respect (same pill,
+   same hover, same flush-bottom seam against .tabs-wrap) so it reads as
+   part of the same row rather than a bolted-on control; only its position
+   (pushed to the far end via margin-left:auto) and its arrow icon mark it
+   as "leaves this page" rather than "switches panel". It never gets
+   .active — clicking it navigates away — so the accent top-stripe never
+   applies to it regardless. */
+.tab-exit-link {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  text-decoration: none;
+}
+
 /* Tab content area sits flush below the tabs */
 .tabs-wrap {
   border: 1px solid var(--border-strong);
   border-radius: 0 var(--radius-sm) var(--radius-sm) var(--radius-sm);
   background: var(--surface);
-  padding: 1.5rem;
+  padding: 1rem 1.25rem 1.25rem;
   margin-bottom: 1.5rem;
   box-shadow: var(--shadow-sm);
 }

@@ -15,16 +15,38 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.25rem;
+  gap: 0.75rem;
+  padding: 0.6rem 1.1rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface2);
 }
-.edit-form-word    { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
-.edit-form-actions { display: flex; gap: 0.5rem; }
+
+/* Word + its POS/band/IPA summary used to stack on two lines — on their
+   own line each, the summary was mostly whitespace either side of a few
+   words. One line, with the summary trailing the word itself, uses that
+   vertical space for the form below instead. */
+.edit-form-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.edit-form-word { font-size: 1.2rem; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+.edit-form-word-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.edit-form-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
 
 .edit-form-body {
   padding: 1.25rem;
-  max-height: calc(100vh - 310px);
+  max-height: calc(100vh - 230px);
   overflow-y: auto;
 }
 
@@ -68,6 +90,7 @@
 /* ── Grid rows ── */
 .form-row   { display: grid; grid-template-columns: 1fr 1fr;     gap: 0.75rem; }
 .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+.form-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.75rem; }
 
 /* ── Checkbox row ── */
 .checkbox-row {
@@ -89,5 +112,8 @@
 
 /* ── Responsive ── */
 @media (max-width: 900px) {
-  .form-row, .form-row-3 { grid-template-columns: 1fr; }
+  .form-row, .form-row-3, .form-row-4 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .form-row, .form-row-3, .form-row-4 { grid-template-columns: 1fr; }
 }

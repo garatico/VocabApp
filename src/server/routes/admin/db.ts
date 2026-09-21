@@ -4,12 +4,13 @@
  * Database management:
  *   GET  /stats        — per-language word counts and coverage
  *   GET  /meta         — available POS values, domains, CEFR bands
+ *   GET  /db/info      — connection status, schema/pipeline version, per-language cache state
  *   POST /cache/clear  — invalidate the in-memory vocab cache (keeps DB connection open)
  *   POST /db/reload    — close + reopen DB from disk; use after replacing vocabulary.db
  */
 
 import { Router }                                                  from 'express';
-import { getDb, clearCache, reloadDb, getSupportedLanguages, supportsDisambiguator } from '../../lib/vocab-loader.js';
+import { getDb, clearCache, reloadDb, getDbInfo, getSupportedLanguages, supportsDisambiguator } from '../../lib/vocab-loader.js';
 import { clearContentCache }                                       from '../../lib/content-loader.js';
 import { logger }                                                  from '../../lib/logger.js';
 
@@ -100,6 +101,16 @@ router.get('/meta', (_req, res) => {
     });
   } catch (err) {
     logger.error('GET /admin/meta:', err);
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// GET /db/info
+router.get('/db/info', (_req, res) => {
+  try {
+    res.json({ success: true, info: getDbInfo() });
+  } catch (err) {
+    logger.error('GET /admin/db/info:', err);
     res.status(500).json({ error: (err as Error).message });
   }
 });

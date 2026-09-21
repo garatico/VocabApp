@@ -34,6 +34,7 @@ import { getAdminDataClient } from './admin-data-client.js';
 import type { BatchUpdateItem } from '../../shared/vocab/write.js';
 import { logger } from '../utils/logger.js';
 import { readString, writeString } from '../utils/storage.ts';
+import { langFlagImg } from './admin-languages.js';
 
 interface Frequency {
   band?: string | null;
@@ -88,6 +89,7 @@ const COLUMNS: ColumnDef[] = [
   { key: 'pos', label: 'POS', width: 90,
     get: w => w.pos ?? '', set: (w, v) => { w.pos = v.trim() || null; } },
   { key: 'difficulty', label: 'Difficulty', width: 90,
+    title: '1 (most common) – 5 (rarest), derived from frequency rank',
     get: w => w.difficulty ?? '', set: (w, v) => { w.difficulty = v.trim() || null; } },
   { key: 'domains', label: 'Domains', width: 130,
     get: w => (w.domains ?? []).join(', '),
@@ -137,17 +139,43 @@ function saveWidths(widths: Record<string, number>): void {
 const savedWidths = loadWidths();
 COLUMNS.forEach(c => { if (savedWidths[c.key]) c.width = savedWidths[c.key]; });
 
+// ── Page size — "Max" and "Custom…" alongside the fixed presets, same
+// pattern as the main app's own word-count select (#sizeSelect/#sizeCustom
+// in index.html). Unlike that one, "Max" here is capped at 200: that's
+// getWordPage()'s own server-side ceiling (shared/vocab/queries.ts), shared
+// with the public /api/vocab route's abuse guard against `?limit=999999` —
+// asking this admin panel for more would just get silently clamped back
+// down there, one layer removed from where the page/pages math is done, so
+// the UI would show a request for "2000" but a total that only matches 200.
+const MAX_TABLE_PAGE_SIZE = 200;
+const PAGE_SIZE_KEY        = 'admin_table_page_size';
+const PAGE_SIZE_CUSTOM_KEY = 'admin_table_page_size_custom';
+
+function getPageSize(): number {
+  if (pageSizeSelect.value === 'max')    return MAX_TABLE_PAGE_SIZE;
+  if (pageSizeSelect.value === 'custom') {
+    const n = parseInt(pageSizeCustomEl.value, 10);
+    return Number.isFinite(n) ? Math.min(Math.max(n, 1), MAX_TABLE_PAGE_SIZE) : 50;
+  }
+  return Number(pageSizeSelect.value) || 50;
+}
+
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 
-const langSelect     = document.getElementById('tableLangSelect')  as HTMLSelectElement;
-const searchInput    = document.getElementById('tableSearchInput') as HTMLInputElement;
-const searchBtn      = document.getElementById('tableSearchBtn')   as HTMLButtonElement;
-const pageSizeSelect = document.getElementById('tablePageSize')    as HTMLSelectElement;
-const saveAllBtn     = document.getElementById('tableSaveAllBtn')  as HTMLButtonElement;
+const langSelect       = document.getElementById('tableLangSelect')       as HTMLSelectElement;
+const langSelectFlag   = document.getElementById('tableLangSelectFlag')   as HTMLElement;
+const searchInput      = document.getElementById('tableSearchInput')      as HTMLInputElement;
+const searchBtn        = document.getElementById('tableSearchBtn')        as HTMLButtonElement;
+const suggestionsEl    = document.getElementById('tableSearchSuggestions') as HTMLElement;
+const pageSizeSelect   = document.getElementById('tablePageSize')         as HTMLSelectElement;
+const pageSizeCustomEl = document.getElementById('tablePageSizeCustom')   as HTMLInputElement;
+const saveAllBtn       = document.getElementById('tableSaveAllBtn')       as HTMLButtonElement;
 const dirtyCountEl   = document.getElementById('tableDirtyCount')  as HTMLElement;
 const prevBtn        = document.getElementById('tablePrevBtn')     as HTMLButtonElement;
 const nextBtn        = document.getElementById('tableNextBtn')     as HTMLButtonElement;
 const pageLabel      = document.getElementById('tablePageLabel')   as HTMLElement;
+const pageInput      = document.getElementById('tablePageInput')   as HTMLInputElement;
+const pageJumpBtn    = document.getElementById('tablePageJumpBtn') as HTMLButtonElement;
 const theadRow       = document.getElementById('tableViewHeadRow') as HTMLElement;
 const filterRow      = document.getElementById('tableViewFilterRow') as HTMLElement;
 const colgroupEl     = document.getElementById('tableViewColgroup') as HTMLTableColElement | null;
@@ -168,6 +196,18 @@ let sortKey: string | null = null;
 let sortDir: 'asc' | 'desc' = 'asc';
 /** column key -> substring filter, case-insensitive. */
 const columnFilters = new Map<string, string>();
+
+function debounce<Args extends unknown[]>(fn: (...args: Args) => void, ms: number): (...args: Args) => void {
+  let t: ReturnType<typeof setTimeout>;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+/** Keeps the flag next to #tableLangSelect in sync — <option> can't hold
+ *  an <img> itself, so this is the closest a native select gets to one. */
+function refreshLangFlag(): void {
+  langSelectFlag.innerHTML = '';
+  if (langSelect.value) langSelectFlag.appendChild(langFlagImg(langSelect.value));
+}
 
 function showTableStatus(message: string, type: 'info' | 'success' | 'error' = 'info'): void {
   if (!statusEl) return;
@@ -199,6 +239,7 @@ async function loadMeta(): Promise<void> {
         .map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l.charAt(0).toUpperCase() + l.slice(1))}</option>`)
         .join('');
       langSelect.value = languages.includes(cur) ? cur : languages[0];
+      refreshLangFlag();
     }
     metaLoaded = true;
   } catch (err) {
@@ -215,7 +256,7 @@ async function loadPage(): Promise<void> {
   try {
     const data = await getAdminDataClient().getVocabPage({
       lang:   langSelect.value,
-      limit:  Number(pageSizeSelect.value),
+      limit:  getPageSize(),
       page,
       search: searchInput.value.trim() || undefined,
     });
@@ -225,6 +266,8 @@ async function loadPage(): Promise<void> {
     pageLabel.textContent = `Page ${page} of ${pages}`;
     prevBtn.disabled = page <= 1;
     nextBtn.disabled = page >= pages;
+    pageInput.max   = String(pages);
+    pageInput.value = String(page);
     renderRows();
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="${COLUMN_COUNT}" class="table-view-empty">Failed to load.</td></tr>`;
@@ -249,6 +292,63 @@ function colEl(key: string): HTMLTableColElement | undefined {
   return colgroupEl?.querySelector<HTMLTableColElement>(`col[data-col="${key}"]`) ?? undefined;
 }
 
+/** Refreshes every header's arrow/aria-sort from the current sortKey/sortDir
+ *  — called after each click instead of rebuilding the whole header, which
+ *  would also tear down and reattach the resize-handle listeners for no
+ *  reason. Before this existed, the arrow span's text was only ever set
+ *  once at buildHeaderRow() time (when nothing was sorted yet), so a column
+ *  header never actually showed which way it was sorted no matter how many
+ *  times you clicked it. */
+function updateSortIndicators(): void {
+  theadRow.querySelectorAll<HTMLElement>('th').forEach(th => {
+    const key    = th.dataset.col;
+    const active = sortKey === key;
+    const arrow  = th.querySelector<HTMLElement>('.table-view-sort-arrow');
+    if (arrow) arrow.textContent = active ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
+    th.classList.toggle('table-view-th--sorted', active);
+    th.setAttribute('aria-sort', active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none');
+  });
+}
+
+// ── Column auto-size (double-click the resize handle) ───────────────────────
+
+/** Canvas 2D context reused across calls purely to avoid re-creating one on
+ *  every double-click — text measurement itself is stateless. */
+let measureCtx: CanvasRenderingContext2D | null = null;
+
+function getMeasureCtx(): CanvasRenderingContext2D {
+  if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d');
+  return measureCtx as CanvasRenderingContext2D;
+}
+
+/** Widest cell wins, header label included — measured with canvas text
+ *  metrics rather than a real DOM element because doing this for every row
+ *  on the page, on every double-click, would mean forcing a layout/reflow
+ *  per row instead of one cheap measureText() call each. */
+function autoSizeColumn(col: ColumnDef): void {
+  const ctx = getMeasureCtx();
+  const sample = tbody.querySelector<HTMLElement>('.table-view-cell-input, .table-view-cell-readonly');
+  const font = sample ? getComputedStyle(sample).font : getComputedStyle(theadRow).font;
+  ctx.font = font;
+
+  let maxWidth = ctx.measureText(col.label).width + 24; // + sort arrow / affordance
+  rows.forEach(w => {
+    const text = col.get(w);
+    if (!text) return;
+    const width = ctx.measureText(text).width;
+    if (width > maxWidth) maxWidth = width;
+  });
+
+  const next = Math.max(50, Math.min(480, Math.round(maxWidth) + 28)); // + cell padding
+  col.width = next;
+  const c = colEl(col.key);
+  if (c) c.style.width = `${next}px`;
+
+  const widths = loadWidths();
+  widths[col.key] = next;
+  saveWidths(widths);
+}
+
 function buildHeaderRow(): void {
   theadRow.innerHTML = '';
   COLUMNS.forEach(col => {
@@ -267,13 +367,13 @@ function buildHeaderRow(): void {
       if (sortKey !== col.key) { sortKey = col.key; sortDir = 'asc'; }
       else if (sortDir === 'asc') { sortDir = 'desc'; }
       else { sortKey = null; }
+      updateSortIndicators();
       renderRows();
     });
     th.appendChild(labelBtn);
 
     const arrow = document.createElement('span');
     arrow.className = 'table-view-sort-arrow';
-    arrow.textContent = sortKey === col.key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
     labelBtn.appendChild(arrow);
 
     // Resize handle — drag the right edge to change this column's <col>
@@ -303,6 +403,11 @@ function buildHeaderRow(): void {
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     });
+    handle.addEventListener('dblclick', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      autoSizeColumn(col);
+    });
     th.appendChild(handle);
     theadRow.appendChild(th);
   });
@@ -315,7 +420,12 @@ function buildFilterRow(): void {
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'table-view-filter-input';
-    input.placeholder = 'Filter…';
+    // A narrow numeric column (Rank, Band…) can't fit "Filter…" without
+    // clipping it to an illegible "Fil…" — shorten the placeholder instead
+    // of widening the column just to hold hint text nobody reads twice.
+    input.placeholder = col.width < 90 ? '…' : 'Filter…';
+    input.title = `Filter ${col.label}`;
+    input.setAttribute('aria-label', `Filter ${col.label}`);
     input.value = columnFilters.get(col.key) ?? '';
     input.addEventListener('input', () => {
       if (input.value.trim()) columnFilters.set(col.key, input.value.trim());
@@ -466,20 +576,132 @@ async function saveAll(): Promise<void> {
   }
 }
 
+// ── Search autosuggest ───────────────────────────────────────────────────────
+// A dropdown of live matches under the search box, the same live-narrowing
+// idea Word Editor's search already gives you via its word list sitting
+// right underneath — Table View's search box doesn't have a list directly
+// under it to narrow, so this gives it one of its own instead.
+
+let suggestionWords: TableWord[] = [];
+let suggestionIndex = -1;
+
+function hideSuggestions(): void {
+  suggestionsEl.hidden = true;
+  suggestionsEl.innerHTML = '';
+  suggestionWords = [];
+  suggestionIndex = -1;
+}
+
+function renderSuggestions(): void {
+  suggestionsEl.innerHTML = suggestionWords.map((w, i) => `
+    <div class="table-search-suggestion${i === suggestionIndex ? ' active' : ''}" data-index="${i}">
+      <span class="table-search-suggestion-word">${escapeHtml(w.word)}</span>
+      <span class="table-search-suggestion-translation">${escapeHtml(w.translation ?? '')}</span>
+    </div>
+  `).join('');
+  suggestionsEl.hidden = false;
+}
+
+function runSearch(): void {
+  hideSuggestions();
+  page = 1;
+  void loadPage();
+}
+
+function selectSuggestion(index: number): void {
+  const w = suggestionWords[index];
+  if (!w) return;
+  searchInput.value = w.word;
+  runSearch();
+}
+
+async function fetchSuggestions(query: string): Promise<void> {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) { hideSuggestions(); return; }
+  try {
+    const result = await getAdminDataClient().getVocabPage({ lang: langSelect.value, search: trimmed, limit: 8 });
+    // A slow response for a query the box has since moved on from
+    // shouldn't clobber whatever the user's typed since — only render if
+    // the box still holds what was actually searched for.
+    if (searchInput.value.trim() !== trimmed) return;
+    suggestionWords = result.words;
+    suggestionIndex = -1;
+    if (suggestionWords.length) renderSuggestions();
+    else hideSuggestions();
+  } catch {
+    hideSuggestions();
+  }
+}
+
+const debouncedSuggest = debounce((q: string) => void fetchSuggestions(q), 250);
+
 // ── Init ─────────────────────────────────────────────────────────────────────
 
 export function initTable(): void {
   buildColgroup();
   buildHeaderRow();
   buildFilterRow();
+  updateSortIndicators();
 
-  searchBtn.addEventListener('click', () => { page = 1; void loadPage(); });
-  searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') { page = 1; void loadPage(); } });
-  langSelect.addEventListener('change', () => { page = 1; void loadPage(); });
-  pageSizeSelect.addEventListener('change', () => { page = 1; void loadPage(); });
+  searchBtn.addEventListener('click', runSearch);
+  searchInput.addEventListener('input', () => debouncedSuggest(searchInput.value));
+  searchInput.addEventListener('keydown', e => {
+    if (!suggestionsEl.hidden && suggestionWords.length) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); suggestionIndex = Math.min(suggestionIndex + 1, suggestionWords.length - 1); renderSuggestions(); return; }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); suggestionIndex = Math.max(suggestionIndex - 1, 0);                          renderSuggestions(); return; }
+      if (e.key === 'Escape')    { hideSuggestions(); return; }
+      if (e.key === 'Enter' && suggestionIndex >= 0) { e.preventDefault(); selectSuggestion(suggestionIndex); return; }
+    }
+    if (e.key === 'Enter') runSearch();
+  });
+  // mousedown, not click: it fires before the input's own blur handler, so
+  // the dropdown is still in the DOM (with its data-index) when this reads it.
+  suggestionsEl.addEventListener('mousedown', e => {
+    const item = (e.target as HTMLElement).closest<HTMLElement>('.table-search-suggestion');
+    if (!item) return;
+    e.preventDefault();
+    selectSuggestion(Number(item.dataset.index));
+  });
+  searchInput.addEventListener('blur', () => { setTimeout(hideSuggestions, 150); });
+
+  refreshLangFlag();
+  langSelect.addEventListener('change', () => { refreshLangFlag(); hideSuggestions(); page = 1; void loadPage(); });
+
+  const restoreAndReload = (): void => { page = 1; void loadPage(); };
+  pageSizeSelect.addEventListener('change', () => {
+    writeString(PAGE_SIZE_KEY, pageSizeSelect.value);
+    pageSizeCustomEl.style.display = pageSizeSelect.value === 'custom' ? 'inline-block' : 'none';
+    if (pageSizeSelect.value === 'custom') pageSizeCustomEl.focus();
+    restoreAndReload();
+  });
+  const debouncedCustomReload = debounce(restoreAndReload, 300);
+  pageSizeCustomEl.addEventListener('input', () => {
+    writeString(PAGE_SIZE_CUSTOM_KEY, pageSizeCustomEl.value);
+    debouncedCustomReload();
+  });
+  // Restore whatever page size was picked last session — same convenience
+  // as column widths already get (see WIDTHS_KEY above).
+  const savedPageSize = readString(PAGE_SIZE_KEY);
+  if (savedPageSize && [...pageSizeSelect.options].some(o => o.value === savedPageSize)) {
+    pageSizeSelect.value = savedPageSize;
+  }
+  const savedCustomSize = readString(PAGE_SIZE_CUSTOM_KEY);
+  if (savedCustomSize) pageSizeCustomEl.value = savedCustomSize;
+  pageSizeCustomEl.style.display = pageSizeSelect.value === 'custom' ? 'inline-block' : 'none';
+
   prevBtn.addEventListener('click', () => { if (page > 1) { page--; void loadPage(); } });
   nextBtn.addEventListener('click', () => { if (page < pages) { page++; void loadPage(); } });
   saveAllBtn.addEventListener('click', () => void saveAll());
+
+  const goToEnteredPage = (): void => {
+    const n = parseInt(pageInput.value, 10);
+    if (!Number.isFinite(n)) { pageInput.value = String(page); return; }
+    const clamped = Math.min(Math.max(n, 1), pages);
+    pageInput.value = String(clamped);
+    if (clamped !== page) { page = clamped; void loadPage(); }
+  };
+  pageJumpBtn.addEventListener('click', goToEnteredPage);
+  pageInput.addEventListener('keydown', e => { if (e.key === 'Enter') goToEnteredPage(); });
 
   // Loaded lazily, the first time this tab is actually opened — the table
   // view's own vocab fetch is no lighter than the Word Editor's, and most

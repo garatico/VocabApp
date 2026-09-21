@@ -21,6 +21,17 @@
 .filter-bar input[type="text"] { flex: 1; min-width: 180px; }
 .filter-bar select              { min-width: 100px; }
 
+/* Pairs a label with its control so flex-wrap moves them to the next line
+   together — without this, a label and its select are two independent flex
+   items and a narrow bar can wrap between them, stranding the label alone
+   at the end of one row and the control at the start of the next. */
+.filter-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
 .filter-label {
   font-size: 0.75rem;
   font-weight: 700;
@@ -34,6 +45,15 @@
   width: 1px; height: 22px;
   background: var(--border);
   flex-shrink: 0;
+}
+
+/* Custom-count number input — revealed next to a "Custom…" <select> option,
+   same shape/behavior as the main app's #sizeCustom (selects.css). Narrow
+   on purpose: wide enough for 4 digits, not so wide it fights the select
+   next to it for space in the filter bar. */
+.custom-count-input {
+  width: 5.5rem;
+  min-width: 0;
 }
 
 /* ── Responsive ── */

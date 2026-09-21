@@ -15,7 +15,7 @@
  *   /vocab, /vocab/:word  →  admin/words.ts
  *   /stats, /meta,
  *   /cache/clear,
- *   /db/reload            →  admin/db.ts
+ *   /db/reload, /db/info  →  admin/db.ts
  *   /export               →  admin/export.ts
  */
 
