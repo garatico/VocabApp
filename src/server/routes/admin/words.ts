@@ -5,13 +5,14 @@
  *   GET  /vocab          — paginated word list
  *   GET  /vocab/:word    — single word
  *   POST /vocab/:word    — update single word
+ *   PUT  /vocab/:word    — create a new word
  *   POST /vocab          — batch update
  */
 
 import { Router }                             from 'express';
 import { getDb, clearCache, supportsDisambiguator, getWordColumnFlags, shapeDeps } from '../../lib/vocab-loader.js';
 import { createBetterSqlite3Adapter }         from '../../lib/storage/better-sqlite3-adapter.js';
-import { applyWordUpdate, type WordUpdateBody, type BatchUpdateItem, type ApplyWordUpdateDeps } from '../../../shared/vocab/write.js';
+import { applyWordUpdate, createWordRow, type WordUpdateBody, type BatchUpdateItem, type ApplyWordUpdateDeps } from '../../../shared/vocab/write.js';
 import { getWordPage, getWord }               from '../../../shared/vocab/queries.js';
 import { validateLanguage }                   from './_utils.js';
 import { logger }                             from '../../lib/logger.js';
@@ -92,6 +93,39 @@ router.post('/vocab/:word', async (req, res) => {
     res.json({ success: true, message: 'Word updated', word: updated });
   } catch (err) {
     logger.error('POST /admin/vocab/:word:', err);
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// PUT /vocab/:word  — create a new word
+router.put('/vocab/:word', async (req, res) => {
+  try {
+    const db   = getDb();
+    const lang = validateLanguage(req.query['lang'] as string | undefined) || 'spanish';
+    const word = req.params['word']?.trim();
+    if (!word) return res.status(400).json({ error: 'Word key is required' });
+
+    const body = (req.body ?? {}) as WordUpdateBody;
+    const errors: string[] = [];
+    if (body.glosses  !== undefined && !Array.isArray(body.glosses))  errors.push('glosses must be an array');
+    if (body.examples !== undefined && !Array.isArray(body.examples)) errors.push('examples must be an array');
+    if (body.domains  !== undefined && !Array.isArray(body.domains))  errors.push('domains must be an array');
+    if (errors.length) return res.status(400).json({ error: errors.join('; ') });
+
+    const existing = db.prepare('SELECT id FROM words WHERE word = ? AND language = ?').get(word, lang);
+    if (existing) return res.status(409).json({ error: `'${word}' already exists for ${lang}` });
+
+    const adapter = createBetterSqlite3Adapter(db);
+    await adapter.transaction(async tx => {
+      const wordId = await createWordRow(tx, word, lang);
+      await applyWordUpdate(tx, wordId, word, body, wordUpdateDeps());
+    });
+
+    clearCache(lang);
+    const created = await getWord(adapter, lang, word, getWordColumnFlags(), shapeDeps);
+    res.status(201).json({ success: true, message: 'Word created', word: created });
+  } catch (err) {
+    logger.error('PUT /admin/vocab/:word:', err);
     res.status(500).json({ error: (err as Error).message });
   }
 });

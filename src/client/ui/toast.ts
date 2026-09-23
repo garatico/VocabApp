@@ -18,8 +18,16 @@ export function showToast(message: string, variant: ToastVariant = 'info', ms = 
   const toast = document.createElement('div');
   toast.className = `toast toast-${variant}`;
   toast.setAttribute('role', 'status');
-  toast.textContent = message;
 
+  const text = document.createElement('span');
+  text.className = 'toast-message';
+  text.textContent = message;
+
+  const progress = document.createElement('div');
+  progress.className = 'toast-progress';
+  progress.style.animationDuration = `${ms}ms`;
+
+  toast.append(text, progress);
   document.body.appendChild(toast);
   window.setTimeout(() => toast.remove(), ms);
 }

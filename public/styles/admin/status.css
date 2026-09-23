@@ -1,14 +1,83 @@
 /* ================================================================
-   ADMIN STATUS BAR — success / error / info inline messages.
+   ADMIN STATUS TOASTS — success / error / info / warning messages,
+   floating bottom-right. See showStatus() in admin-api.ts.
 ================================================================ */
 
-/* No message → no reserved space. Collapsing this rather than always
-   reserving 38px costs a small layout shift when a message does appear,
-   which reads as an intentional toast dropping in; reserving the space
-   unconditionally read as a dead gap above the filter bar on every load,
-   the far more common case. */
-.status-bar { margin-bottom: 0.75rem; }
-.status-bar:empty { margin-bottom: 0; }
+/* Fixed to the viewport, not any tab's own layout — every tab shares one
+   container appended lazily to <body> on the first call, so a toast fired
+   from Table View still reads correctly if the admin has since switched to
+   Conjugation. Stacks newest-at-bottom via normal flex/DOM order. */
+.admin-toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 360px;
+}
+
+.admin-toast {
+  position: relative;
+  padding: 0.7rem 1rem 0.9rem;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  animation: admin-toast-in 0.18s ease-out;
+}
+
+/* Solid, saturated backgrounds with white text — not the same pale-on-white
+   palette .status.success/.error/.info/.warning use below. Those sit inline
+   on a page, already framed by the surrounding card; a toast has to read at
+   a glance from the corner of the eye in light mode, and a pastel box on an
+   almost-white --surface/--surface2 page had barely any edge to catch. */
+.admin-toast--success { background: #2e7d32; color: #fff; }
+.admin-toast--error   { background: #c62828; color: #fff; }
+.admin-toast--info    { background: #1565c0; color: #fff; }
+.admin-toast--warning { background: #b45309; color: #fff; }
+
+/* Dark mode already had the contrast light mode was missing — a pastel-on-
+   dark tint reads as a colored highlight against --surface2, not as a
+   near-invisible box — so it keeps its own (different) treatment rather
+   than inheriting the solid light-mode colors, which would look flat and
+   oversaturated next to the rest of the dark theme's muted surfaces. */
+html.dark .admin-toast--success { background: rgba(76,175,80,0.22);  color: #81c784; border: 1px solid rgba(76,175,80,0.4); }
+html.dark .admin-toast--error   { background: rgba(244,67,54,0.22);  color: #e57373; border: 1px solid rgba(244,67,54,0.4); }
+html.dark .admin-toast--info    { background: rgba(33,150,243,0.22); color: #64b5f6; border: 1px solid rgba(33,150,243,0.4); }
+html.dark .admin-toast--warning { background: rgba(255,193,7,0.22);  color: #ffd54f; border: 1px solid rgba(255,193,7,0.4); }
+
+@keyframes admin-toast-in {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+
+.admin-toast-message { display: block; }
+
+/* Fills left-to-right over the toast's own lifetime — width set to 0 at
+   rest and animated to 100% with a duration matching the setTimeout that
+   removes the toast (set inline per-toast, since 'error' outlives
+   'success'/'info'), so the bar reaching full width is what the dismissal
+   actually looks like rather than an unrelated decoration. */
+.admin-toast-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 0;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+  animation-name: admin-toast-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes admin-toast-progress {
+  from { width: 0; }
+  to   { width: 100%; }
+}
 
 .status {
   padding: 0.6rem 1rem;

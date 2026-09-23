@@ -107,10 +107,39 @@
   border: 1px solid var(--border-strong);
   border-radius: 0 var(--radius-sm) var(--radius-sm) var(--radius-sm);
   background: var(--surface);
-  padding: 1rem 1.25rem 1.25rem;
-  margin-bottom: 1.5rem;
+  /* Trimmed from 1rem all around — with the filter bar's own padding right
+     below it (filter-bar.css), the old value stacked into more dead space
+     above the first real control than any gap elsewhere on the panel.
+     Bottom padding/margin trimmed further still — see layout.css's own
+     comment on body's bottom padding for why: both sit below every panel's
+     own calc(100vh - Npx) height, eating into how close to the viewport's
+     bottom edge that panel can actually reach. */
+  padding: 0.65rem 1.25rem 0.5rem;
+  margin-bottom: 0.4rem;
   box-shadow: var(--shadow-sm);
 }
 
 .tab-content        { display: none; }
 .tab-content.active { display: block; }
+
+/* ── Words tab: Word Editor / Table View toggle ──
+   Sits inline in the filter bar, right after Clear/Save All (admin.html) —
+   .sort-order-toggle/.sort-order-btn (buttons.css) supply the pill look;
+   this only narrows it to content width instead of the full-bleed bar every
+   other .sort-order-toggle on this page (Settings' theme/flags pickers)
+   sits in, which would otherwise stretch a 2-button toggle across the whole
+   filter-bar width. */
+.words-view-toggle {
+  width: max-content;
+  flex-shrink: 0;
+}
+.words-view-toggle .sort-order-btn {
+  padding: 0.35rem 0.9rem;
+  font-size: 0.8rem;
+}
+
+/* No `display` rule of its own, deliberately — .words-subview is a plain
+   <div>, already block by UA default, so the [hidden] attribute (also UA
+   default) is never fighting an author-specified `display` of equal
+   specificity for this element the way .filter-chip-panel[hidden] had to
+   guard against (filter-bar.css) when its own class set `display: flex`. */

@@ -61,13 +61,17 @@ export function shapeWordRow(row: WordSelectRow, language: string, deps: ShapeWo
   // in conjugation_overrides. Other languages (French, Italian, Portuguese)
   // that predate the rule engine have conjugations stored as JSON in the DB.
   let conjugations: VerbForms | null = null;
+  // Parsed once regardless of conjugation_class, rather than only inside the
+  // rule-engine branch below — the admin Conjugation editor needs the raw
+  // overrides object too (to merge an edit into it and save), not just the
+  // forms conjugate() already folded them into.
+  const conjugationOverrides = row.conjugation_overrides
+    ? parseJsonField<Record<string, unknown>>(row.conjugation_overrides, row.word, 'conjugation_overrides', deps, {})
+    : null;
   if (row.conjugation_class) {
-    const overrides = row.conjugation_overrides
-      ? (parseJsonField<Record<string, unknown>>(row.conjugation_overrides, row.word, 'conjugation_overrides', deps, {}) ?? {})
-      : {};
     try {
       const inf = row.infinitive || row.word;
-      conjugations = conjugate(inf, row.conjugation_class, overrides, row.future_stem ?? null);
+      conjugations = conjugate(inf, row.conjugation_class, conjugationOverrides ?? {}, row.future_stem ?? null);
     } catch (e) {
       deps.reportIssue('conjugation-error', `verb-rules: failed for '${row.word}' (${row.conjugation_class}): ${(e as Error).message}`);
     }
@@ -101,8 +105,9 @@ export function shapeWordRow(row: WordSelectRow, language: string, deps: ShapeWo
       // Japanese unchanged.
       ...ifSet('ipa',                ipa),
       ...ifSet('syllables',          row.syllables ? row.syllables.split('-') : null),
-      ...ifSet('conjugations',       conjugations),
-      ...ifSet('conjugation_class',  row.conjugation_class || null),
+      ...ifSet('conjugations',          conjugations),
+      ...ifSet('conjugation_class',     row.conjugation_class || null),
+      ...ifSet('conjugation_overrides', conjugationOverrides),
     },
     rank:      row.rank ?? null,
     frequency: {

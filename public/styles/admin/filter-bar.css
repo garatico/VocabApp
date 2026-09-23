@@ -10,16 +10,32 @@
    separate it from the word list below. */
 .filter-bar {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
   align-items: center;
   flex-wrap: wrap;
-  padding-bottom: 0.875rem;
-  margin-bottom: 1rem;
+  padding-bottom: 0.45rem;
+  margin-bottom: 0.45rem;
   border-bottom: 1px solid var(--border);
 }
 
-.filter-bar input[type="text"] { flex: 1; min-width: 180px; }
-.filter-bar select              { min-width: 100px; }
+/* Every control in this bar at one fixed height, whatever kind of element
+   it actually is — a <select>, a plain text <input>, a <button> and the
+   POS/Band chip trigger (also a <button>, styled below) all used to size
+   themselves from their own padding/font-size, and each carried a
+   different value: 36.8px, 35.2px, 32.8px, 27.2px measured live. `height`
+   set explicitly (with box-sizing: border-box, already global via
+   reset.css) sidesteps that entirely instead of trying to make four kinds
+   of element agree on padding. */
+.filter-bar select,
+.filter-bar input[type="text"],
+.filter-bar button,
+.filter-chip-trigger {
+  height: 2rem;
+}
+
+.filter-bar select              { padding: 0 0.6rem; font-size: 0.82rem; }
+.filter-bar input[type="text"]  { flex: 1; min-width: 180px; padding: 0 0.6rem; font-size: 0.82rem; }
+.filter-bar button              { padding: 0 0.85rem; font-size: 0.8rem; }
 
 /* Pairs a label with its control so flex-wrap moves them to the next line
    together — without this, a label and its select are two independent flex
@@ -45,6 +61,166 @@
   width: 1px; height: 22px;
   background: var(--border);
   flex-shrink: 0;
+}
+
+/* ── Multi-select chip pickers (POS, Band) — see setupChipFilter() in
+   admin-editor.ts. A small trigger button that opens a panel of colored
+   toggle chips below it, same shape as Table View's search-suggestions
+   dropdown (table-view.css). ── */
+.filter-chip-field { position: relative; }
+
+.filter-chip-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.filter-chip-trigger:hover { border-color: var(--accent); }
+.filter-chip-trigger .filter-label { color: var(--text-muted); }
+.filter-chip-trigger-value { font-weight: 600; color: var(--text); white-space: nowrap; }
+.filter-chip-trigger-value--active { color: var(--accent); }
+.filter-chip-caret { font-size: 0.65em; color: var(--text-muted); }
+
+.filter-chip-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 0.3rem;
+  padding: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  width: max-content;
+  max-width: 320px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  z-index: 6;
+}
+/* `display: flex` above is a class selector, the same specificity as the
+   browser's own `[hidden] { display: none }` — author styles win ties over
+   the UA stylesheet, so without this the panel rendered open (and both POS
+   and Band panels sat on screen at once) the moment the page loaded, before
+   anything had actually been clicked to show either. */
+.filter-chip-panel[hidden] { display: none; }
+
+/* Columns panel — checkboxes in two columns instead of the toggle-chip
+   pill row every other .filter-chip-panel holds, since "17 checkboxes" reads
+   far better as a short grid than a single wrapped row of pills. */
+.filter-chip-panel--columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(110px, 1fr));
+  gap: 0.25rem 0.75rem;
+  max-width: 280px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.filter-chip-panel--columns[hidden] { display: none; }
+.filter-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.filter-checkbox-row input[type="checkbox"] { cursor: pointer; flex-shrink: 0; }
+/* .filter-chip-panel-footer's own `flex-basis: 100%` does nothing inside a
+   grid container — this is the grid equivalent, spanning both columns. */
+.filter-chip-panel--columns .filter-chip-panel-footer { grid-column: 1 / -1; }
+
+.filter-chip-panel-footer {
+  flex-basis: 100%;
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.35rem;
+  margin-top: 0.15rem;
+  border-top: 1px solid var(--border);
+}
+.filter-chip-panel-clear {
+  background: none;
+  border: none;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.filter-chip-panel-clear:hover { color: var(--accent); }
+
+/* Same per-POS hues as word-list.css's .badge-pos, plus the app's own
+   traffic-light CEFR scheme (green=easiest through red=hardest) for band —
+   both read through --pos-hue so .filter-chip's color formula below applies
+   to either without knowing which.
+   The fallback lives on the bare .filter-chip base rule below (specificity
+   0,1,0), not a repeated `.filter-chip[data-pos]` (0,2,0) — that used to
+   tie every specific rule here on specificity and then beat all of them on
+   source order, so every POS chip rendered in the same fallback blue no
+   matter what data-pos said. word-list.css's .badge-pos never had this bug:
+   its own fallback was always the bare class alone. */
+.filter-chip[data-pos="verb"]        { --pos-hue: 217; }
+.filter-chip[data-pos="noun"]        { --pos-hue: 142; }
+.filter-chip[data-pos="adjective"]   { --pos-hue:  32; }
+.filter-chip[data-pos="adverb"]      { --pos-hue: 280; }
+.filter-chip[data-pos="pronoun"]     { --pos-hue: 340; }
+.filter-chip[data-pos="preposition"] { --pos-hue: 195; }
+.filter-chip[data-pos="conjunction"] { --pos-hue:  20; }
+.filter-chip[data-pos="article"]     { --pos-hue: 260; }
+.filter-chip[data-pos="particle"]    { --pos-hue:  85; }
+.filter-chip[data-pos="suffix"]      { --pos-hue: 165; }
+.filter-chip[data-pos="interjection"] { --pos-hue: 110; }
+.filter-chip[data-pos="numeral"]      { --pos-hue: 305; }
+
+.filter-chip[data-band="A1"] { --pos-hue: 142; }
+.filter-chip[data-band="A2"] { --pos-hue: 100; }
+.filter-chip[data-band="B1"] { --pos-hue:  60; }
+.filter-chip[data-band="B2"] { --pos-hue:  35; }
+.filter-chip[data-band="C1"] { --pos-hue:  15; }
+.filter-chip[data-band="C2"] { --pos-hue:   0; }
+
+/* One toggle chip — idle state colored per POS/band via --pos-hue (same
+   [data-pos]/[data-band] hue map word-list.css's badges already use, and
+   the same 55%/32% text · 60%/50%/0.14 bg · 50%/45%/0.4 border formula),
+   solid accent once picked so "this is chosen" never blends with "this is
+   what kind of chip it is". */
+.filter-chip {
+  --pos-hue: 217; /* fallback for a pos/band not in the lists above */
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid var(--border-strong);
+  background: var(--surface2);
+  color: var(--text-muted);
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+.filter-chip[data-pos]:not(.active),
+.filter-chip[data-band]:not(.active) {
+  color:        hsl(var(--pos-hue) 55% 32%);
+  border-color: hsl(var(--pos-hue) 50% 45% / 0.45);
+  background:   hsl(var(--pos-hue) 60% 50% / 0.10);
+}
+html.dark .filter-chip[data-pos]:not(.active),
+html.dark .filter-chip[data-band]:not(.active) {
+  color: hsl(var(--pos-hue) 62% 72%);
+}
+.filter-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 /* Custom-count number input — revealed next to a "Custom…" <select> option,

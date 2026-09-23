@@ -6,8 +6,8 @@ import type { StorageAdapter } from '../storage/types.js';
  * synchronous Database onto StorageAdapter so both the server and Tauri's
  * local SQLite copy can run it. Logic unchanged from
  * src/server/routes/admin/words.ts's applyWordUpdate/replaceGlosses/
- * replaceExamples — there is no create-word or delete-word operation, and
- * `word_tags` is never written here (pipeline-authored, read-only).
+ * replaceExamples — there is no delete-word operation, and `word_tags` is
+ * never written here (pipeline-authored, read-only).
  */
 
 export interface LinguisticBody {
@@ -18,6 +18,18 @@ export interface LinguisticBody {
   reflexive?:  boolean | null;
   register?:   string | null;
   syllables?:  string | string[] | null;
+  /** Full replace of the `conjugations` column — the caller (admin
+   *  Conjugation editor) merges its one edited tense into whatever this
+   *  verb already had before sending it, same as it does with glosses/
+   *  examples elsewhere; this never merges server-side. Only meaningful for
+   *  a verb with no conjugation_class — see conjugation_overrides for the
+   *  rule-engine-driven ones. */
+  conjugations?: Record<string, unknown> | null;
+  /** Full replace of the `conjugation_overrides` column, for a verb whose
+   *  forms come from verb-rules.ts's rule engine (conjugation_class set) —
+   *  editing its `conjugations` directly would do nothing, since that
+   *  column is never read for such a verb (shape-word.ts). */
+  conjugation_overrides?: Record<string, unknown> | null;
 }
 
 export interface FrequencyBody {
@@ -49,6 +61,20 @@ export interface ApplyWordUpdateDeps {
    *  see supportsDisambiguator()'s own comment in vocab-loader.ts. */
   supportsDisambiguator: boolean;
   onWarning(message: string): void;
+}
+
+/**
+ * Inserts a bare `words` row (just `word` + `language` — everything else is
+ * nullable/defaulted, per REQUIRED_WORD_COLUMNS/tests/helpers/db.js's own
+ * schema) and returns its id, ready for applyWordUpdate to fill in the rest.
+ * Callers must check for an existing (word, language) row themselves first —
+ * the table's UNIQUE constraint would otherwise surface as a raw SQLite
+ * error instead of a clean "already exists".
+ */
+export async function createWordRow(tx: StorageAdapter, word: string, language: string): Promise<number> {
+  const { lastInsertRowid } = await tx.run('INSERT INTO words (word, language) VALUES (?, ?)', [word, language]);
+  if (lastInsertRowid == null) throw new Error(`Failed to create word row for '${word}' (${language})`);
+  return lastInsertRowid;
 }
 
 export async function replaceGlosses(tx: StorageAdapter, wordId: number, glosses: string[]): Promise<void> {
@@ -120,6 +146,14 @@ export async function applyWordUpdate(
     if ('reflexive' in ling) {
       setClauses.push('reflexive = ?');
       params.push(ling.reflexive != null ? (ling.reflexive ? 1 : 0) : null);
+    }
+    if ('conjugations' in ling) {
+      setClauses.push('conjugations = ?');
+      params.push(ling.conjugations != null ? JSON.stringify(ling.conjugations) : null);
+    }
+    if ('conjugation_overrides' in ling) {
+      setClauses.push('conjugation_overrides = ?');
+      params.push(ling.conjugation_overrides != null ? JSON.stringify(ling.conjugation_overrides) : null);
     }
   }
 

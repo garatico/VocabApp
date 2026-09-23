@@ -2,8 +2,15 @@
    ADMIN EDIT FORM — right-panel card with form sections/groups.
 ================================================================ */
 
-/* ── Card ── */
+/* ── Card ──
+   Fills .form-panel's full height (set by .editor-layout in word-list.css)
+   rather than sizing itself from content, so the card's bottom edge lands
+   in the same place an open word or the empty state — see .form-panel-empty
+   right next to this in the DOM, sized the same way. */
 .edit-form-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -12,11 +19,12 @@
 }
 
 .edit-form-header {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.6rem 1.1rem;
+  padding: 0.4rem 0.9rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface2);
 }
@@ -28,13 +36,13 @@
 .edit-form-title-row {
   display: flex;
   align-items: baseline;
-  gap: 0.6rem;
+  gap: 0.5rem;
   min-width: 0;
   flex: 1 1 auto;
 }
-.edit-form-word { font-size: 1.2rem; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+.edit-form-word { font-size: 1rem; font-weight: 700; color: var(--accent); flex-shrink: 0; }
 .edit-form-word-meta {
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -42,21 +50,35 @@
   min-width: 0;
 }
 
-.edit-form-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+.edit-form-actions { display: flex; gap: 0.4rem; flex-shrink: 0; }
+/* Smaller than the app-wide button default — this bar's job is to stay a
+   thin strip regardless of the form scrolling underneath it, and Save/
+   Reset/✕ don't need full-size touch targets to do that job. */
+.edit-form-actions button {
+  padding: 0.32rem 0.7rem;
+  font-size: 0.78rem;
+}
+.edit-form-actions button.ghost { padding: 0.32rem 0.55rem; }
 
 .edit-form-body {
-  padding: 1.25rem;
-  max-height: calc(100vh - 230px);
+  flex: 1;
+  min-height: 0;
+  padding: 0.75rem 1rem;
   overflow-y: auto;
 }
 
-/* ── Sections ── */
+/* ── Sections — a shaded, rounded card per section, same idea as the main
+   app's own .settings-section (settings.css): background/border/radius off
+   the shared tokens rather than admin-only values, so this reads as "the
+   same kind of card" instead of a look unique to the admin panel. Used to
+   be a bare divider (a border-bottom + margin) with no box at all. ── */
 .form-section {
-  margin-bottom: 1.25rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
 }
-.form-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.form-section:last-child { margin-bottom: 0; }
 
 .form-section-title {
   font-size: 0.7rem;
@@ -64,56 +86,391 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
-  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
 }
 
+/* Turned into a toggle by initCollapsibleSections() (admin-editor.ts) —
+   the rest of .form-section-title's own look (size/weight/caps/color)
+   stays exactly as set above, since this only adds the clickable-row parts. */
+.form-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+.form-section-toggle:hover { color: var(--text); }
+.form-section-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.form-section-caret {
+  font-size: 0.8em;
+  transition: transform var(--transition-fast, 0.15s);
+}
+.form-section.collapsed .form-section-caret { transform: rotate(-90deg); }
+
+/* Body — the card's own inner padding accounts for what used to be
+   .form-section's bottom padding, kept deliberately tight (0.6rem, not the
+   old 0.85rem) so a section's last field sits close to its own card edge
+   rather than pushing the next card further down than it needs to be. */
+.form-section-body { padding: 0 0.75rem 0.6rem; }
+
+/* Collapsed: the title stays visible (and clickable) as a one-line strip;
+   only the fields below it disappear, so a long form becomes a table of
+   contents rather than one unbroken scroll. */
+.form-section.collapsed .form-section-body { display: none; }
+
 /* ── Groups ── */
-.form-group            { margin-bottom: 0.75rem; }
+.form-group            { margin-bottom: 0.45rem; }
 .form-group:last-child { margin-bottom: 0; }
 
 .form-group label {
   display: block;
   font-weight: 600;
-  margin-bottom: 0.3rem;
-  font-size: 0.8rem;
+  margin-bottom: 0.2rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
 }
 
 .form-group input[type="text"],
 .form-group input[type="number"],
 .form-group select,
-.form-group textarea { width: 100%; }
+.form-group textarea {
+  width: 100%;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+}
 
-.form-group textarea { resize: vertical; min-height: 80px; font-family: monospace; font-size: 0.85rem; }
-.form-group textarea.short { min-height: 60px; }
+.form-group textarea { resize: vertical; min-height: 56px; font-family: monospace; font-size: 0.85rem; }
+.form-group textarea.short { min-height: 40px; }
 
 /* ── Grid rows ── */
-.form-row   { display: grid; grid-template-columns: 1fr 1fr;     gap: 0.75rem; }
-.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
-.form-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.75rem; }
+.form-row   { display: grid; grid-template-columns: 1fr 1fr;             gap: 0.6rem; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr;         gap: 0.6rem; }
+.form-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;     gap: 0.6rem; }
+.form-row-5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 0.6rem; }
 
 /* ── Checkbox row ── */
 .checkbox-row {
-  display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0;
+  display: flex; align-items: center; gap: 0.4rem;
+  /* Matches a sibling text input's own height (padding 0.35rem top/bottom +
+     border) so a checkbox field sitting in the same grid row as Gender/
+     Plural/Infinitive/Register lines up with them instead of sitting taller
+     or shorter than the row around it. */
+  height: 2.05rem;
 }
-.checkbox-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
-.checkbox-row label { font-size: 0.9rem; font-weight: 500; color: var(--text); cursor: pointer; margin: 0; }
+.checkbox-row input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); flex-shrink: 0; }
+.checkbox-row label { font-size: 0.85rem; font-weight: 500; color: var(--text); cursor: pointer; margin: 0; white-space: nowrap; }
+
+/* ── Chip input (Glosses) — see setupChipInput() in admin-editor.ts.
+   Looks like a text input from the outside (border/radius/focus ring match
+   .form-group input) but holds rendered chips plus one trailing text field
+   that grows/shrinks with its own content instead of stretching full-width. */
+.chip-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  width: 100%;
+  min-height: 2.1rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-sizing: border-box;
+  cursor: text;
+}
+.chip-input:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.chip-input-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.35rem 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--surface2);
+  border: 1px solid var(--border-strong);
+  font-size: 0.8rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+.chip-input-tag-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.chip-input-tag-remove:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* .form-group .chip-input prefix, not just the class alone: .form-group's
+   own `input[type="text"]` rule above (0,2,1) outranks a single class like
+   `.chip-input-field` (0,1,0) and would otherwise force this input back to
+   width:100% — exactly the auto-width-to-content this field needs to sit
+   inline after the last chip instead of always wrapping onto its own row. */
+.form-group .chip-input .chip-input-field {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 80px;
+  border: none;
+  outline: none;
+  background: none;
+  padding: 0.15rem 0.1rem;
+  font-size: 0.85rem;
+  color: var(--text);
+}
 
 /* ── Read-only field ── */
 .readonly-field {
-  padding: 0.5rem 0.8rem;
+  /* A <div>, not an <input> — without an explicit line-height it inherits
+     the body's 1.5 instead of a text input's own (smaller) UA default of
+     "normal", so despite identical padding/font-size/border, this rendered
+     about 3-4px taller than a real input sitting right next to it. */
+  line-height: normal;
+  padding: 0.35rem 0.6rem;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--text-muted);
   width: 100%;
 }
 
+/* ── Part of Speech / CEFR Band color coding ──
+   Same per-POS hues as word-list.css's .badge-pos and the app's own
+   traffic-light CEFR scheme (green=easiest through red=hardest) for band,
+   copied rather than shared for the same reason every other "same look as
+   elsewhere in admin" comment in this codebase gives: each stylesheet here
+   is its own self-contained copy. admin-editor.ts sets [data-pos]/
+   [data-band] from the word's own field (and live, on #editPos's own
+   change) via setColorAttr(). #editBand is a readonly-field, not a select —
+   band has no column of its own to edit (CLAUDE.md's "band is computed here
+   and nowhere else"), but it still gets the same color treatment as a
+   glance-able summary of which band this word's rank falls into. */
+/* Fallback lives on the bare #editPos/#editBand (specificity 1,0,0), not a
+   repeated `#editPos[data-pos]`/`#editBand[data-band]` (1,0,1) — that would
+   tie every specific rule below on specificity and then beat all of them on
+   source order, the exact bug filter-bar.css's own [data-pos] fallback
+   comment documents (every chip rendering in the same fallback color no
+   matter what data-pos said). */
+#editPos  { --pos-hue: 217; }
+#editBand { --pos-hue: 217; }
+
+#editPos[data-pos="verb"]        { --pos-hue: 217; }
+#editPos[data-pos="noun"]        { --pos-hue: 142; }
+#editPos[data-pos="adjective"]   { --pos-hue:  32; }
+#editPos[data-pos="adverb"]      { --pos-hue: 280; }
+#editPos[data-pos="pronoun"]     { --pos-hue: 340; }
+#editPos[data-pos="preposition"] { --pos-hue: 195; }
+#editPos[data-pos="conjunction"] { --pos-hue:  20; }
+#editPos[data-pos="article"]     { --pos-hue: 260; }
+#editPos[data-pos="particle"]    { --pos-hue:  85; }
+#editPos[data-pos="suffix"]      { --pos-hue: 165; }
+#editPos[data-pos="interjection"] { --pos-hue: 110; }
+#editPos[data-pos="numeral"]      { --pos-hue: 305; }
+
+#editBand[data-band="A1"] { --pos-hue: 142; }
+#editBand[data-band="A2"] { --pos-hue: 100; }
+#editBand[data-band="B1"] { --pos-hue:  60; }
+#editBand[data-band="B2"] { --pos-hue:  35; }
+#editBand[data-band="C1"] { --pos-hue:  15; }
+#editBand[data-band="C2"] { --pos-hue:   0; }
+
+/* #editPos/#editBand id selectors already outrank .form-group select/
+   .readonly-field (both class-based) without needing !important. */
+#editPos[data-pos],
+#editBand[data-band] {
+  background: hsl(var(--pos-hue) 60% 50% / 0.14);
+  border-color: hsl(var(--pos-hue) 50% 45% / 0.4);
+  color: hsl(var(--pos-hue) 55% 32%);
+  font-weight: 600;
+}
+html.dark #editPos[data-pos],
+html.dark #editBand[data-band] {
+  color: hsl(var(--pos-hue) 62% 72%);
+}
+
+/* Closed-select coloring above only ever shows ONE color — whichever POS is
+   currently chosen. Opening the dropdown used to show every option in the
+   same plain list styling, so there was nothing to compare the selected
+   color against. `option` doesn't read CSS custom properties reliably
+   across engines, so these are plain hsl() values (same hue numbers as
+   #editPos[data-pos] above) rather than another var(--pos-hue) consumer.
+   Opaque tints, not the translucent /0.14 the closed box uses — an
+   `<option>`'s own background can't blend against the dropdown popup's
+   surface the way a real element in the page can. */
+#editPos option[value="verb"]        { background: hsl(217 60% 90%); color: hsl(217 55% 28%); }
+#editPos option[value="noun"]        { background: hsl(142 60% 90%); color: hsl(142 55% 28%); }
+#editPos option[value="adjective"]   { background: hsl( 32 60% 90%); color: hsl( 32 55% 28%); }
+#editPos option[value="adverb"]      { background: hsl(280 60% 90%); color: hsl(280 55% 28%); }
+#editPos option[value="pronoun"]     { background: hsl(340 60% 90%); color: hsl(340 55% 28%); }
+#editPos option[value="preposition"] { background: hsl(195 60% 90%); color: hsl(195 55% 28%); }
+#editPos option[value="conjunction"] { background: hsl( 20 60% 90%); color: hsl( 20 55% 28%); }
+#editPos option[value="article"]     { background: hsl(260 60% 90%); color: hsl(260 55% 28%); }
+#editPos option[value="particle"]    { background: hsl( 85 60% 90%); color: hsl( 85 55% 28%); }
+#editPos option[value="suffix"]      { background: hsl(165 60% 90%); color: hsl(165 55% 28%); }
+#editPos option[value="interjection"] { background: hsl(110 60% 90%); color: hsl(110 55% 28%); }
+#editPos option[value="numeral"]      { background: hsl(305 60% 90%); color: hsl(305 55% 28%); }
+
+/* ── Gender color coding — masculine/feminine only (see #editGender's own
+   comment in admin.html for why "neuter" isn't offered even though a few
+   non-Spanish words in the real data carry it). Conventional blue/pink
+   split rather than reusing the POS/Band hue formula — gender isn't part
+   of that palette anywhere else in the app, so there's nothing to match. ── */
+#editGender[data-gender="masculine"] {
+  background: hsl(210 60% 50% / 0.14);
+  border-color: hsl(210 50% 45% / 0.4);
+  color: hsl(210 55% 32%);
+  font-weight: 600;
+}
+#editGender[data-gender="feminine"] {
+  background: hsl(340 60% 50% / 0.14);
+  border-color: hsl(340 50% 45% / 0.4);
+  color: hsl(340 55% 32%);
+  font-weight: 600;
+}
+html.dark #editGender[data-gender="masculine"] { color: hsl(210 62% 72%); }
+html.dark #editGender[data-gender="feminine"]  { color: hsl(340 62% 72%); }
+
+#editGender option[value="masculine"] { background: hsl(210 60% 90%); color: hsl(210 55% 28%); }
+#editGender option[value="feminine"]  { background: hsl(340 60% 90%); color: hsl(340 55% 28%); }
+
+/* ── Emoji fallback + picker — setupEmojiPicker() in admin-emoji-picker.ts ── */
+.emoji-field {
+  position: relative;
+  display: flex;
+  gap: 0.35rem;
+}
+.emoji-field #editEmoji {
+  width: 5rem;
+  min-width: 0;
+  font-size: 1.4rem;
+  text-align: center;
+}
+.emoji-picker-trigger {
+  flex-shrink: 0;
+  padding: 0 0.6rem;
+  font-size: 0.9rem;
+}
+
+.emoji-picker-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 0.3rem;
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  max-height: 320px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  z-index: 8;
+  overflow: hidden;
+}
+/* Same author-vs-UA specificity note as .filter-chip-panel[hidden] — a
+   class selector's own `display` needs an explicit [hidden] override to
+   actually win, since author and UA styles tie on specificity here. */
+.emoji-picker-panel[hidden] { display: none; }
+
+.emoji-picker-search {
+  flex-shrink: 0;
+  margin: 0.5rem 0.5rem 0;
+  width: auto;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.82rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--surface2);
+  color: var(--text);
+}
+.emoji-picker-search:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+/* Category tabs — a horizontally scrolling strip rather than wrapping, so
+   the panel's height stays predictable regardless of how many categories
+   there are. */
+.emoji-picker-tabs {
+  flex-shrink: 0;
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem 0.5rem 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.emoji-picker-tab {
+  flex-shrink: 0;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  white-space: nowrap;
+  background: var(--surface2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.emoji-picker-tab:hover  { background: var(--border); color: var(--text); }
+.emoji-picker-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* The grid itself — fixed-size cells, wrapping, scrollable once it outgrows
+   the panel's own max-height (set above), same "browse a big set in a small
+   popup" shape a chat app's emoji picker uses. */
+.emoji-picker-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+  padding: 0.5rem;
+  overflow-y: auto;
+}
+.emoji-picker-cell {
+  width: 2.1rem;
+  height: 2.1rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  line-height: 1;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+}
+.emoji-picker-cell:hover { background: var(--surface2); border-color: var(--border); }
+
+.emoji-picker-empty {
+  width: 100%;
+  padding: 1.5rem 0.5rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
 /* ── Responsive ── */
 @media (max-width: 900px) {
-  .form-row, .form-row-3, .form-row-4 { grid-template-columns: 1fr 1fr; }
+  .form-row, .form-row-3, .form-row-4, .form-row-5 { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 560px) {
-  .form-row, .form-row-3, .form-row-4 { grid-template-columns: 1fr; }
+  .form-row, .form-row-3, .form-row-4, .form-row-5 { grid-template-columns: 1fr; }
 }

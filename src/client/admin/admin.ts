@@ -5,11 +5,11 @@
  * theme toggle + tab navigation, then initialises everything.
  */
 
-import { loadMeta, initEditor } from './admin-editor.js';
+import { loadMeta, initEditor, isFormDirty, discardFormChanges } from './admin-editor.js';
 import { loadStatistics, initStats } from './admin-stats.js';
 import { initDbAdmin } from './admin-db.js';
 import { initConjugation } from './admin-conjugation.js';
-import { initTable } from './admin-table.js';
+import { initTable, ensureTableLoaded, isTableDirty, discardTableChanges } from './admin-table.js';
 import { logger } from '../utils/logger.js';
 import { readString, writeString } from '../utils/storage.ts';
 import { isPackagedApp } from '../data/vocab-source.js';
@@ -73,6 +73,48 @@ document.querySelectorAll<HTMLElement>('.tab-btn[data-tab]').forEach(btn => {
     btn.classList.add('active');
     const tabId = btn.dataset.tab;
     if (tabId) document.getElementById(tabId)?.classList.add('active');
+  });
+});
+
+// ── Words sub-view toggle (Word Editor / Table View) ─────────────────────────
+// Both views live under the one "Words" tab now — see admin.html's
+// #wordsEditorView/#wordsTableView — so switching between them is a class
+// toggle here rather than the generic .tab-btn[data-tab] handling above.
+
+// One toggle lives in each sub-view's own filter bar (admin.html) rather
+// than a single shared row above both, so all of them need to move together.
+const wordsViewButtons = document.querySelectorAll<HTMLButtonElement>('[data-words-view-toggle] [data-view]');
+const wordsEditorView  = document.getElementById('wordsEditorView');
+const wordsTableView   = document.getElementById('wordsTableView');
+
+function applyWordsView(view: string): void {
+  wordsEditorView?.toggleAttribute('hidden', view !== 'editor');
+  wordsTableView?.toggleAttribute('hidden', view !== 'table');
+  wordsViewButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
+  if (view === 'table') ensureTableLoaded();
+}
+
+function currentWordsView(): string {
+  return wordsEditorView?.hasAttribute('hidden') ? 'table' : 'editor';
+}
+
+// "Save or discard before switching" — a mid-edit Word Editor form or a
+// Table View page with unsaved cell edits would otherwise vanish the moment
+// the other view's data replaces it, with no warning either was ever there.
+// Same discard-and-continue shape loadPage() already uses for its own
+// "load a different page with edits pending" case (admin-table.ts).
+wordsViewButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.view ?? 'editor';
+    if (target === currentWordsView()) return;
+
+    if (isFormDirty() || isTableDirty()) {
+      if (!window.confirm('You have unsaved changes. Discard them and switch?')) return;
+      discardFormChanges();
+      void discardTableChanges();
+    }
+
+    applyWordsView(target);
   });
 });
 

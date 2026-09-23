@@ -2,18 +2,34 @@
    ADMIN WORD LIST — split-panel left side: header, list, items.
 ================================================================ */
 
-/* ── Editor split layout ── */
+/* ── Editor split layout ──
+   Pinned to a fixed viewport-relative height and stretched into by every
+   child below (word-list, word-list-pager, form-panel-empty, edit-form-card)
+   rather than each picking its own height/min-height — before this, the
+   empty state (a flat 400px min-height) and an open word's edit-form-body
+   (calc(100vh - Npx)) disagreed, so the panel's bottom edge visibly jumped
+   depending on whether a word was open. One height here, everything below
+   fills it via height:100%/flex:1, so the whole editor sits flush near the
+   bottom of the viewport either way. */
 .editor-layout {
   display: flex;
   gap: 1.25rem;
-  align-items: flex-start;
+  align-items: stretch;
+  height: calc(100vh - 130px);
 }
 
-.word-panel { width: 330px; flex-shrink: 0; }
-.form-panel { flex: 1; min-width: 0; }
+.word-panel {
+  width: 330px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.form-panel { flex: 1; min-width: 0; min-height: 0; }
 
 /* ── List header ── */
 .word-list-header {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -24,14 +40,20 @@
   border-radius: var(--radius) var(--radius) 0 0;
   font-size: 0.8rem;
 }
+.word-list-header-title { display: flex; align-items: baseline; gap: 0.5rem; }
 .word-list-title { font-weight: 700; color: var(--text); }
 .word-count      { color: var(--text-muted); }
 
+.word-list-new-btn {
+  padding: 0.15rem 0.45rem;
+  font-size: 0.7rem;
+}
+
 /* ── Scrollable list ── */
 .word-list {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  max-height: calc(100vh - 300px);
-  min-height: 360px;
   border: 1px solid var(--border);
   border-bottom: none;
   background: var(--surface);
@@ -42,10 +64,12 @@
    the list above it and rounded only where it meets nothing, matching how
    .word-list-header sits flush above the list. ── */
 .word-list-pager {
+  flex-shrink: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.4rem 0.5rem;
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: 0 0 var(--radius) var(--radius);
@@ -56,6 +80,33 @@
 .word-list-pager button {
   padding: 0.3rem 0.6rem;
   font-size: 0.75rem;
+}
+.word-list-page-select {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 1.4rem 0.3rem 0.5rem;
+  font-size: 0.72rem;
+  text-align: center;
+  text-align-last: center;
+}
+/* Forced onto its own row below Prev/select/Next — flex-basis:100% on a
+   wrapping flex container is what actually causes the break; the row above
+   it already fills the line on its own. */
+.word-list-page-jump {
+  flex: 1 0 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+.word-list-page-input {
+  width: 4.5rem;
+  min-width: 0;
+  padding: 0.3rem 0.35rem;
+  font-size: 0.72rem;
+  text-align: center;
 }
 
 .word-list-empty {
@@ -74,7 +125,12 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.5rem 0.75rem;
+  /* Trimmed further still (was 0.5rem, then 0.3rem) — a 25,000+ word list
+     is scrolled far more than it's read line-by-line, so a thinner row that
+     fits more of the list on screen at once beats extra breathing room per
+     row. 0.15rem plus the border is close to the floor before the row text
+     itself starts getting clipped. */
+  padding: 0.15rem 0.6rem;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background var(--transition-fast);
@@ -85,8 +141,33 @@
 .word-item.active {
   background: var(--accent-light);
   border-left: 3px solid var(--accent);
-  padding-left: calc(0.75rem - 3px);
+  padding-left: calc(0.6rem - 3px);
 }
+
+/* Frequency rank — first in the row (it's what determines the word's
+   position in this very list, sorted by rank server-side), flush against
+   the row's own left edge rather than sitting right-aligned in a fixed-
+   width column: a rank of "1" used to leave most of that column as bare
+   whitespace before the word itself even started. A small grey chip sized
+   to its own digits instead — same idea as the main app's own rank badge
+   (.ui-rank-badge, shared/components.css) tucked into a word card's corner,
+   copied rather than shared since admin.html doesn't load the app's
+   stylesheets (same reasoning every other admin/app "same look" comment in
+   this file gives). */
+.word-item-rank {
+  flex-shrink: 0;
+  min-width: 1.5rem;
+  text-align: center;
+  font-family: monospace;
+  font-size: 0.66rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  background: var(--surface2);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+}
+.word-item.active .word-item-rank { background: var(--surface); }
 
 .word-item-key {
   font-weight: 700;
@@ -144,6 +225,8 @@
 .badge-pos[data-pos="article"]     { --pos-hue: 260; }
 .badge-pos[data-pos="particle"]    { --pos-hue:  85; }
 .badge-pos[data-pos="suffix"]      { --pos-hue: 165; }
+.badge-pos[data-pos="interjection"] { --pos-hue: 110; }
+.badge-pos[data-pos="numeral"]      { --pos-hue: 305; }
 
 .badge-pos {
   --pos-hue: 217; /* fallback for a pos not in the list above */
@@ -153,8 +236,26 @@
 }
 html.dark .badge-pos { color: hsl(var(--pos-hue) 62% 72%); }
 
-.badge-band { background: #fef3c7; color: #92400e; }
-html.dark .badge-band { background: rgba(254, 243, 199, 0.12); color: #fcd34d; }
+/* Same traffic-light CEFR scheme (green=easiest through red=hardest) as
+   the filter bar's own Band chips (filter-bar.css) and edit-form.css's
+   #editBand — fallback on the bare .badge-band (specificity 0,1,0), not a
+   repeated `.badge-band[data-band]` (0,2,0): see .badge-pos's own comment
+   above for why that tie loses to source order instead of actually falling
+   back. */
+.badge-band[data-band="A1"] { --band-hue: 142; }
+.badge-band[data-band="A2"] { --band-hue: 100; }
+.badge-band[data-band="B1"] { --band-hue:  60; }
+.badge-band[data-band="B2"] { --band-hue:  35; }
+.badge-band[data-band="C1"] { --band-hue:  15; }
+.badge-band[data-band="C2"] { --band-hue:   0; }
+
+.badge-band {
+  --band-hue: 217; /* fallback for a band not in the list above */
+  background: hsl(var(--band-hue) 60% 50% / 0.14);
+  color:      hsl(var(--band-hue) 55% 32%);
+  border: 1px solid hsl(var(--band-hue) 50% 45% / 0.4);
+}
+html.dark .badge-band { color: hsl(var(--band-hue) 62% 72%); }
 
 /* ── Empty form state ── */
 .form-panel-empty {
@@ -162,7 +263,7 @@ html.dark .badge-band { background: rgba(254, 243, 199, 0.12); color: #fcd34d; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 400px;
+  height: 100%;
   color: var(--text-muted);
   text-align: center;
   gap: 0.5rem;
@@ -181,9 +282,13 @@ label .hint {
   color: var(--text-muted);
 }
 
-/* ── Responsive ── */
+/* ── Responsive ──
+   Stacked instead of side-by-side, so the fixed-height stretch that keeps
+   the two columns' bottoms aligned no longer applies — .editor-layout goes
+   back to auto height and each stacked piece gets a sane height of its own. */
 @media (max-width: 900px) {
-  .editor-layout { flex-direction: column; }
+  .editor-layout { flex-direction: column; height: auto; }
   .word-panel    { width: 100%; }
-  .word-list     { max-height: 300px; min-height: unset; }
+  .word-list     { flex: none; max-height: 300px; }
+  .form-panel-empty { height: auto; min-height: 300px; }
 }

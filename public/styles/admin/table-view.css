@@ -85,9 +85,16 @@
   font-style: italic;
 }
 
+/* Fixed height reaching near the bottom of the viewport, same idea as
+   Word Editor's .editor-layout (word-list.css) — this used to cap out at
+   calc(100vh - 300px), leaving a lot of unused space below the grid on
+   any normal-height screen. 225px here vs. Word Editor's 185px: this
+   sub-view has an extra row of chrome above the scroll area (the pager sits
+   above the grid here, not below it inside the fixed box the way Word
+   Editor's word-list-pager does). */
 .table-view-scroll {
   overflow: auto;
-  max-height: calc(100vh - 300px);
+  height: calc(100vh - 172px);
   min-height: 300px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -121,12 +128,22 @@
   color: var(--accent);
   font-weight: 700;
   overflow: hidden;
+  /* Draggable for reordering (buildHeaderRow()) — the sort button inside
+     still shows its own pointer cursor over its own area. */
+  cursor: grab;
 }
 .table-view-grid thead th:last-child { border-right: none; }
 
 /* Second sticky row, right below the labels — offset by the header row's
-   own height so both stay pinned while the body scrolls underneath. */
-.table-view-filter-row th {
+   own height so both stay pinned while the body scrolls underneath.
+   `.table-view-grid .table-view-filter-row th` (0,2,1), not the bare
+   `.table-view-filter-row th` (0,1,1) this used to be: that lost the `top`
+   fight to .table-view-grid thead th above (0,1,2) — which matches every
+   <th> in the whole <thead>, filter row included — so this row's `top`
+   silently fell back to that rule's `top: 0`. Both rows then stuck to the
+   exact same spot while scrolling, the later-painted filter row visually
+   replacing the header labels instead of sitting below them. */
+.table-view-grid .table-view-filter-row th {
   position: sticky;
   top: 2.05rem;
   z-index: 1;
@@ -189,7 +206,23 @@
   opacity: 0.5;
 }
 
-.table-view-filter-input {
+/* Drag-to-reorder feedback — the header cell being dragged fades, and
+   whichever one the pointer is currently over gets an accent edge showing
+   where the dropped column will land (drop() always inserts before the
+   target — see reorderColumn()'s own comment, admin-table.ts). */
+.table-view-th--dragging { opacity: 0.4; }
+.table-view-th--drop-target {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* .table-view-grid prefix, not just the class alone: inputs.css's global
+   `input[type="text"]` rule is a tag+attribute selector (specificity 0,1,1),
+   which outranks a single class like `.table-view-filter-input` (0,1,0) —
+   this padding/font-size silently lost that fight and rendered at the
+   global 0.5rem/0.8rem/0.9rem instead, every input on this page quietly
+   bigger than the CSS here says. Scoping to an ancestor class makes this
+   (0,2,0), which wins regardless of stylesheet order. */
+.table-view-grid .table-view-filter-input {
   width: 100%;
   min-width: 0;
   font-size: 0.72rem;
@@ -219,9 +252,11 @@
    plain body text but muddies a colored dirty-row background or a value
    already tinted for edited state. Scoped to the grid only: a lighter,
    accent-tinted highlight that keeps var(--text) on top instead of the
-   default's white-on-blue. */
+   default's white-on-blue. 35% (down to 16%) was dark enough to obscure
+   the column's own text and any POS/Band color coding sitting under it,
+   rather than just marking which cells were selected. */
 .table-view-grid ::selection {
-  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
   color: var(--text);
 }
 
@@ -232,7 +267,14 @@
   background: color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
-.table-view-cell-input {
+/* Same .table-view-grid-prefix reasoning as .table-view-filter-input above —
+   without it, inputs.css's `input[type="text"]` rule (0,1,1) outranked this
+   class alone (0,1,0) and silently won, so every editable cell rendered at
+   the global 0.5rem/0.8rem padding instead of the 0.4rem/0.5rem set here —
+   taller than a readonly cell's <span>, which no global tag selector
+   contests, and the two never actually matched no matter how closely their
+   declared values agreed. */
+.table-view-grid .table-view-cell-input {
   width: 100%;
   min-width: 0;
   min-height: 1.9rem;
@@ -253,20 +295,123 @@
   background: var(--surface);
 }
 
+/* A <span> child of a plain <td> — see readonlyCell()'s own comment for why
+   it isn't a class on the <td> directly. Padding/border/min-height match
+   .table-view-cell-input exactly so a readonly cell (Word, Tags, Band) and
+   an editable one sit at the same height in the row. */
 .table-view-cell-readonly {
   display: block;
   min-height: 1.9rem;
   box-sizing: border-box;
-  /* Matches .table-view-cell-input's transparent border pixel-for-pixel —
-     without one here, the readonly cells (Word, Tags, Band) sat 2px taller
-     inside their row than an input cell's bordered box, throwing every row
-     enough out of alignment across columns to notice, especially against
-     the divider lines. */
   border: 1px solid transparent;
   color: var(--text-muted);
   padding: 0.4rem 0.5rem;
   font-style: italic;
 }
+
+/* POS's own cell — a <select> locked to the preset list (posCellSelect() in
+   admin-table.ts), same box as .table-view-cell-input so it doesn't stand
+   out as a different kind of control in the row. */
+.table-view-grid .table-view-cell-select {
+  width: 100%;
+  min-width: 0;
+  min-height: 1.9rem;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  padding: 0.4rem 0.4rem;
+  border-radius: var(--radius-sm, 4px);
+}
+.table-view-cell-select:hover  { border-color: var(--border); }
+.table-view-cell-select:focus  { outline: none; border-color: var(--accent); background: var(--surface); }
+
+/* ── POS / CEFR Band color coding ──
+   Same per-POS hues and CEFR traffic-light scheme as everywhere else in
+   admin (word-list.css's .badge-pos, edit-form.css's #editPos/#editBand) —
+   copied rather than shared per this codebase's usual "admin.html doesn't
+   load the app's stylesheets" reasoning, and per-file here too rather than
+   a cross-file admin partial. Table View sets [data-pos] on POS's own
+   <select> (posCellSelect()) and [data-band] on Band's readonly <span>
+   (renderRows()'s readonlyCell() call).
+   Fallback lives on the bare .table-view-cell-select/-readonly (specificity
+   0,1,0), not a repeated `[data-pos]`/`[data-band]` (0,2,0) — that would tie
+   every specific rule below on specificity and lose to it on source order,
+   the same bug filter-bar.css's own [data-pos] fallback comment documents. */
+.table-view-cell-select   { --pos-hue: 217; }
+.table-view-cell-readonly { --pos-hue: 217; }
+
+.table-view-cell-select[data-pos="verb"]        { --pos-hue: 217; }
+.table-view-cell-select[data-pos="noun"]        { --pos-hue: 142; }
+.table-view-cell-select[data-pos="adjective"]   { --pos-hue:  32; }
+.table-view-cell-select[data-pos="adverb"]      { --pos-hue: 280; }
+.table-view-cell-select[data-pos="pronoun"]     { --pos-hue: 340; }
+.table-view-cell-select[data-pos="preposition"] { --pos-hue: 195; }
+.table-view-cell-select[data-pos="conjunction"] { --pos-hue:  20; }
+.table-view-cell-select[data-pos="article"]     { --pos-hue: 260; }
+.table-view-cell-select[data-pos="particle"]    { --pos-hue:  85; }
+.table-view-cell-select[data-pos="suffix"]      { --pos-hue: 165; }
+.table-view-cell-select[data-pos="interjection"] { --pos-hue: 110; }
+.table-view-cell-select[data-pos="numeral"]      { --pos-hue: 305; }
+
+.table-view-cell-readonly[data-band="A1"] { --pos-hue: 142; }
+.table-view-cell-readonly[data-band="A2"] { --pos-hue: 100; }
+.table-view-cell-readonly[data-band="B1"] { --pos-hue:  60; }
+.table-view-cell-readonly[data-band="B2"] { --pos-hue:  35; }
+.table-view-cell-readonly[data-band="C1"] { --pos-hue:  15; }
+.table-view-cell-readonly[data-band="C2"] { --pos-hue:   0; }
+
+.table-view-cell-select[data-pos],
+.table-view-cell-readonly[data-band] {
+  background: hsl(var(--pos-hue) 60% 50% / 0.14);
+  border-color: hsl(var(--pos-hue) 50% 45% / 0.4);
+  color: hsl(var(--pos-hue) 55% 32%);
+  font-style: normal;
+  font-weight: 600;
+}
+html.dark .table-view-cell-select[data-pos],
+html.dark .table-view-cell-readonly[data-band] {
+  color: hsl(var(--pos-hue) 62% 72%);
+}
+
+/* Same "the closed box only shows one color" gap #editPos option[...] fixes
+   in edit-form.css — opening this cell's dropdown used to show every POS in
+   plain list styling with nothing to compare the selected color against.
+   Same reasoning there for why these are plain hsl() values, not another
+   var(--pos-hue) consumer. */
+.table-view-cell-select option[value="verb"]        { background: hsl(217 60% 90%); color: hsl(217 55% 28%); }
+.table-view-cell-select option[value="noun"]        { background: hsl(142 60% 90%); color: hsl(142 55% 28%); }
+.table-view-cell-select option[value="adjective"]   { background: hsl( 32 60% 90%); color: hsl( 32 55% 28%); }
+.table-view-cell-select option[value="adverb"]      { background: hsl(280 60% 90%); color: hsl(280 55% 28%); }
+.table-view-cell-select option[value="pronoun"]     { background: hsl(340 60% 90%); color: hsl(340 55% 28%); }
+.table-view-cell-select option[value="preposition"] { background: hsl(195 60% 90%); color: hsl(195 55% 28%); }
+.table-view-cell-select option[value="conjunction"] { background: hsl( 20 60% 90%); color: hsl( 20 55% 28%); }
+.table-view-cell-select option[value="article"]     { background: hsl(260 60% 90%); color: hsl(260 55% 28%); }
+.table-view-cell-select option[value="particle"]    { background: hsl( 85 60% 90%); color: hsl( 85 55% 28%); }
+.table-view-cell-select option[value="suffix"]      { background: hsl(165 60% 90%); color: hsl(165 55% 28%); }
+.table-view-cell-select option[value="interjection"] { background: hsl(110 60% 90%); color: hsl(110 55% 28%); }
+.table-view-cell-select option[value="numeral"]      { background: hsl(305 60% 90%); color: hsl(305 55% 28%); }
+
+/* ── Gender color coding — same conventional blue/pink split as
+   edit-form.css's #editGender, masculine/feminine only. ── */
+.table-view-cell-select[data-gender="masculine"] {
+  background: hsl(210 60% 50% / 0.14);
+  border-color: hsl(210 50% 45% / 0.4);
+  color: hsl(210 55% 32%);
+  font-weight: 600;
+}
+.table-view-cell-select[data-gender="feminine"] {
+  background: hsl(340 60% 50% / 0.14);
+  border-color: hsl(340 50% 45% / 0.4);
+  color: hsl(340 55% 32%);
+  font-weight: 600;
+}
+html.dark .table-view-cell-select[data-gender="masculine"] { color: hsl(210 62% 72%); }
+html.dark .table-view-cell-select[data-gender="feminine"]  { color: hsl(340 62% 72%); }
+
+.table-view-cell-select option[value="masculine"] { background: hsl(210 60% 90%); color: hsl(210 55% 28%); }
+.table-view-cell-select option[value="feminine"]  { background: hsl(340 60% 90%); color: hsl(340 55% 28%); }
 
 .table-view-empty {
   padding: 2rem;

@@ -158,8 +158,63 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
+.settings-row + .settings-row { margin-top: 0.6rem; }
 .settings-row-label { font-weight: 600; font-size: 0.9rem; margin-bottom: 0.2rem; }
 .settings-row-desc  { font-size: 0.8rem; color: var(--text-muted); max-width: 32rem; }
+
+/* A settings-row whose control is too wide to share a line with its label
+   (a whole grid of checkboxes, here) — stacks label above control instead
+   of the usual side-by-side layout. */
+.settings-row--stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* A single top-to-bottom column, not a wrapping multi-column grid this used
+   to be — each row now also carries up/down reorder buttons
+   (renderColumnSettingsChecklist(), admin-table.ts), and "the order these
+   read in" only means anything as one column; a grid that wraps into
+   several would make position ambiguous (2nd of column 1, or 2nd overall?). */
+.settings-columns-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.6rem;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.settings-columns-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.3rem;
+  border-radius: var(--radius-sm, 4px);
+}
+.settings-columns-row:hover { background: var(--surface); }
+.settings-columns-row label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.settings-columns-row input[type="checkbox"] { cursor: pointer; }
+
+.settings-columns-move {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  font-size: 0.68rem;
+  line-height: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.settings-columns-move:hover:not(:disabled) { background: var(--border); color: var(--text); }
+.settings-columns-move:disabled { opacity: 0.35; cursor: default; }
 
 /* ── DB info card (connection status + schema/pipeline provenance) ── */
 .db-info-card {

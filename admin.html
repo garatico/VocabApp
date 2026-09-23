@@ -13,22 +13,20 @@
 
     <div class="tabs">
       <span class="tabs-brand">VocabApp Admin</span>
-      <button class="tab-btn active" data-tab="editor">Word Editor</button>
-      <button class="tab-btn" data-tab="tableview">Table View</button>
+      <button class="tab-btn active" data-tab="editor">Words</button>
+      <button class="tab-btn" data-tab="conjugation">Conjugation</button>
       <button class="tab-btn" data-tab="dbadmin">DB Admin</button>
       <button class="tab-btn" data-tab="statistics">Statistics</button>
-      <button class="tab-btn" data-tab="conjugation">Conjugation</button>
       <button class="tab-btn" data-tab="documentation">Help &amp; Docs</button>
       <button class="tab-btn" data-tab="settings">⚙ Settings</button>
       <a href="/" class="tab-btn tab-exit-link" title="Leave the admin panel and return to the main app">↩ Back to App</a>
     </div>
 
     <div class="tabs-wrap">
-    <!-- ═══════════════════ EDITOR TAB ═══════════════════ -->
+    <!-- ═══════════════════ WORDS TAB (Word Editor / Table View) ═══════════════════ -->
     <div id="editor" class="tab-content active">
 
-      <!-- Status bar -->
-      <div class="status-bar" id="statusMessage"></div>
+      <div class="words-subview" id="wordsEditorView">
 
       <!-- Filter bar -->
       <div class="filter-bar">
@@ -47,44 +45,59 @@
 
         <div class="filter-divider"></div>
 
-        <div class="filter-field">
-          <span class="filter-label">POS</span>
-          <select id="filterPos">
-            <option value="">All</option>
-            <option value="adjective">Adjective</option>
-            <option value="adverb">Adverb</option>
-            <option value="article">Article</option>
-            <option value="conjunction">Conjunction</option>
-            <option value="noun">Noun</option>
-            <option value="preposition">Preposition</option>
-            <option value="pronoun">Pronoun</option>
-            <option value="verb">Verb</option>
-          </select>
+        <!-- Multi-select chip pickers — see admin-editor.ts's setupChipFilter().
+             A trigger button (shows "All" or a count of what's picked) opens a
+             panel of colored toggle chips, same hue formula as the main app's
+             own .pos-chip (class-filter.css), so more than one POS or band can
+             be selected and it reads as "the same colors as the app" rather
+             than an admin-only palette. -->
+        <div class="filter-field filter-chip-field" id="posFilterField">
+          <button type="button" class="filter-chip-trigger" id="posFilterTrigger" aria-haspopup="true" aria-expanded="false">
+            <span class="filter-label">POS</span>
+            <span class="filter-chip-trigger-value" id="posFilterSummary">All</span>
+            <span class="filter-chip-caret">▾</span>
+          </button>
+          <div class="filter-chip-panel" id="posFilterPanel" hidden></div>
         </div>
 
-        <div class="filter-field">
-          <span class="filter-label">Band</span>
-          <select id="filterBand">
-            <option value="">All</option>
-            <option value="A1">A1</option>
-            <option value="A2">A2</option>
-            <option value="B1">B1</option>
-            <option value="B2">B2</option>
-            <option value="C1">C1</option>
-            <option value="C2">C2</option>
-          </select>
+        <div class="filter-field filter-chip-field" id="bandFilterField">
+          <button type="button" class="filter-chip-trigger" id="bandFilterTrigger" aria-haspopup="true" aria-expanded="false">
+            <span class="filter-label">Band</span>
+            <span class="filter-chip-trigger-value" id="bandFilterSummary">All</span>
+            <span class="filter-chip-caret">▾</span>
+          </button>
+          <div class="filter-chip-panel" id="bandFilterPanel" hidden></div>
         </div>
 
-        <div class="filter-field">
-          <span class="filter-label">Domain</span>
-          <select id="filterDomain">
-            <option value="">All</option>
-            <!-- populated from /api/admin/meta -->
-          </select>
+        <div class="filter-field filter-chip-field" id="domainFilterField">
+          <button type="button" class="filter-chip-trigger" id="domainFilterTrigger" aria-haspopup="true" aria-expanded="false">
+            <span class="filter-label">Domain</span>
+            <span class="filter-chip-trigger-value" id="domainFilterSummary">All</span>
+            <span class="filter-chip-caret">▾</span>
+          </button>
+          <div class="filter-chip-panel" id="domainFilterPanel" hidden></div>
         </div>
 
         <button id="searchBtn">Search</button>
         <button class="ghost" id="clearFiltersBtn">Clear</button>
+
+        <!-- Word Editor / Table View toggle — one row-at-a-time editor and
+             one spreadsheet-style bulk grid over the same underlying words,
+             shown and hidden by admin.ts rather than living on separate
+             top-level tabs, since switching between them is something you do
+             constantly within one editing session. One .words-view-toggle
+             lives in each sub-view's own filter bar (this one and Table
+             View's, right after Save All) rather than a single shared row
+             above both — it disappears along with whichever bar it's not
+             currently on, but admin.ts keeps both copies' active state in
+             sync so either one always shows the current view correctly.
+             Reuses the segmented-toggle look already established for the
+             Settings tab's theme/flags pickers (buttons.css's
+             .sort-order-toggle/.sort-order-btn). -->
+        <div class="sort-order-toggle words-view-toggle" data-words-view-toggle>
+          <button type="button" class="sort-order-btn active" data-view="editor">✏️ Word Editor</button>
+          <button type="button" class="sort-order-btn" data-view="table">▦ Table View</button>
+        </div>
       </div>
 
       <!-- Split layout -->
@@ -93,16 +106,33 @@
         <!-- Word list -->
         <div class="word-panel">
           <div class="word-list-header">
-            <span class="word-list-title">Words</span>
-            <span class="word-count" id="wordCountLabel">—</span>
+            <span class="word-list-header-title">
+              <span class="word-list-title">Words</span>
+              <span class="word-count" id="wordCountLabel">—</span>
+            </span>
+            <button type="button" class="ghost word-list-new-btn" id="newWordBtn" title="Add a new word">+ New Word</button>
           </div>
           <div class="word-list" id="wordList">
             <div class="word-list-empty">Search to load words</div>
           </div>
           <div class="word-list-pager">
             <button id="wordListPrevBtn" class="secondary" disabled>← Prev</button>
-            <span id="wordListPageLabel">Page 1 of 1</span>
+            <!-- Page jump — both a dropdown (browse nearby pages without
+                 typing) and a typeable number input (jump straight to page
+                 480 of a 500+ page list without scrolling a giant <option>
+                 list) — rebuilt only when the page count changes, same
+                 reasoning as the main app's own Table mode pager
+                 (table-controls.ts's updatePagers()). Wraps onto its own
+                 row — three controls plus Prev/Next never fit one line in a
+                 330px sidebar. -->
+            <select id="wordListPageSelect" class="word-list-page-select" aria-label="Jump to page">
+              <option value="0">Page 1 of 1</option>
+            </select>
             <button id="wordListNextBtn" class="secondary" disabled>Next →</button>
+            <span class="word-list-page-jump">
+              <input type="number" id="wordListPageInput" class="word-list-page-input" min="1" value="1" aria-label="Page number">
+              <span>of <span id="wordListPageTotal">1</span></span>
+            </span>
           </div>
         </div>
 
@@ -122,24 +152,43 @@
               <div class="edit-form-actions">
                 <button id="saveBtn">💾 Save</button>
                 <button class="secondary" id="resetBtn">Reset</button>
+                <button class="secondary" id="toggleAllSectionsBtn">Collapse All</button>
                 <button class="ghost" id="cancelBtn">✕</button>
               </div>
             </div>
 
             <div class="edit-form-body">
 
-              <!-- Identity -->
+              <!-- Identity — also holds Glosses: a word's translation and
+                   its glosses are the same kind of thing (what it means),
+                   just one slot vs. several, so they read better as one
+                   section than two. -->
               <div class="form-section">
                 <div class="form-section-title">Identity</div>
                 <div class="form-row">
                   <div class="form-group">
-                    <label>Word key (read-only)</label>
-                    <div class="readonly-field" id="editWordDisplay"></div>
-                    <input type="hidden" id="editWord">
+                    <label id="editWordLabel">Word key (read-only)</label>
+                    <!-- A real input, not a separate readonly <div> + hidden
+                         field — editable only while creating a new word (see
+                         startNewWord()/saveWord() in admin-editor.ts), so a
+                         new word's key can actually be typed in, and
+                         `readonly` styles it identically to every other
+                         field's box the rest of the time. -->
+                    <input type="text" id="editWord" class="readonly-field" readonly placeholder="e.g. hablar">
                   </div>
                   <div class="form-group">
                     <label>Translation (primary English)</label>
                     <input type="text" id="editTranslation" placeholder="Primary English translation">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Glosses <span class="hint">type one, press Enter or comma to add</span></label>
+                  <!-- Chips instead of a one-per-line textarea — a word with
+                       3-4 glosses used to cost 3-4 lines of vertical height
+                       for text that's really just a small unordered set.
+                       Wrapping chips take only the height they need. -->
+                  <div class="chip-input" id="editGlossesChips">
+                    <input type="text" id="editGlossesInput" class="chip-input-field" placeholder="Add a gloss…">
                   </div>
                 </div>
               </div>
@@ -147,7 +196,7 @@
               <!-- Classification -->
               <div class="form-section">
                 <div class="form-section-title">Classification</div>
-                <div class="form-row-4">
+                <div class="form-row-3">
                   <div class="form-group">
                     <label>Part of Speech</label>
                     <select id="editPos">
@@ -162,41 +211,41 @@
                     </select>
                   </div>
                   <div class="form-group">
-                    <label>Difficulty <span class="hint">1–5</span></label>
-                    <input type="number" id="editDifficulty" min="1" max="5" step="1" placeholder="1–5" title="1 = most common, 5 = rarest">
-                  </div>
-                  <div class="form-group">
-                    <label>CEFR Band</label>
-                    <select id="editBand">
+                    <label>Difficulty</label>
+                    <select id="editDifficulty" title="1 = most common, 5 = rarest">
                       <option value="">—</option>
-                      <option value="A1">A1</option>
-                      <option value="A2">A2</option>
-                      <option value="B1">B1</option>
-                      <option value="B2">B2</option>
-                      <option value="C1">C1</option>
-                      <option value="C2">C2</option>
+                      <option value="1">1 — most common</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                      <option value="5">5 — rarest</option>
                     </select>
                   </div>
                   <div class="form-group">
-                    <label>Domain</label>
-                    <select id="editDomain">
-                      <option value="">—</option>
-                      <!-- populated from /api/admin/meta -->
-                    </select>
+                    <label>CEFR Band <span class="hint">derived from rank, read-only</span></label>
+                    <!-- Not a select — the database has no band column at all
+                         (see CLAUDE.md's "band is computed here and nowhere
+                         else"): it's always recomputed from `rank` on load,
+                         same as Table View's own read-only Band column, so
+                         there is nothing here an edit could actually save. -->
+                    <input type="text" id="editBand" class="readonly-field" data-band readonly>
                   </div>
                 </div>
-              </div>
-
-              <!-- Translations -->
-              <div class="form-section">
-                <div class="form-section-title">Translations / Glosses</div>
                 <div class="form-group">
-                  <label>Glosses (one per line)</label>
-                  <textarea id="editGlosses" class="short" placeholder="to speak&#10;to talk&#10;to say"></textarea>
+                  <label>Domains <span class="hint">type one, press Enter or comma to add</span></label>
+                  <div class="chip-input" id="editDomainsChips">
+                    <input type="text" id="editDomainsInput" class="chip-input-field" placeholder="Add a domain…" list="editDomainSuggestions">
+                  </div>
+                  <datalist id="editDomainSuggestions"></datalist>
                 </div>
               </div>
 
-              <!-- Linguistics -->
+              <!-- Linguistics — also holds Frequency, Picture Quiz and the
+                   Disambiguator field: each used to be its own section for
+                   one or two fields, more sections to scroll past than
+                   fields to fill in. All "data about this word" belongs
+                   together; Examples and Notes stay separate since they're
+                   free text, not fields. -->
               <div class="form-section">
                 <div class="form-section-title">Linguistic Data</div>
                 <div class="form-row">
@@ -209,22 +258,27 @@
                     <input type="text" id="editSyllables" placeholder="ha-blar">
                   </div>
                 </div>
-                <div class="form-row">
+                <div class="form-row-5">
                   <div class="form-group">
                     <label>Gender</label>
+                    <!-- Masculine/feminine/none only, by design — a few
+                         non-Spanish words in the real data carry other
+                         values (German/Dutch "neuter", Dutch "common",
+                         a handful of Spanish "m/f"); setSelectValue()
+                         (admin-editor.ts) still displays one of those via a
+                         synthetic option if it's what's loaded, but picking
+                         a *new* value here is deliberately locked to these
+                         three. -->
                     <select id="editGender">
-                      <option value="">—</option>
+                      <option value="">— none —</option>
                       <option value="masculine">masculine</option>
                       <option value="feminine">feminine</option>
-                      <option value="neuter">neuter</option>
                     </select>
                   </div>
                   <div class="form-group">
                     <label>Plural form</label>
                     <input type="text" id="editPlural" placeholder="casas">
                   </div>
-                </div>
-                <div class="form-row">
                   <div class="form-group">
                     <label>Infinitive</label>
                     <input type="text" id="editInfinitive" placeholder="hablar">
@@ -240,16 +294,14 @@
                       <option value="technical">technical</option>
                     </select>
                   </div>
+                  <div class="form-group">
+                    <label>&nbsp;</label>
+                    <div class="checkbox-row">
+                      <input type="checkbox" id="editReflexive">
+                      <label for="editReflexive">Reflexive Verb</label>
+                    </div>
+                  </div>
                 </div>
-                <div class="checkbox-row">
-                  <input type="checkbox" id="editReflexive">
-                  <label for="editReflexive">Reflexive verb</label>
-                </div>
-              </div>
-
-              <!-- Frequency -->
-              <div class="form-section">
-                <div class="form-section-title">Frequency Data</div>
                 <div class="form-row">
                   <div class="form-group">
                     <label>Frequency Rank</label>
@@ -260,36 +312,37 @@
                     <input type="number" id="editCorpusFrequency" placeholder="0.00" step="0.01" min="0">
                   </div>
                 </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Emoji fallback <span class="hint">shown when no SVG exists</span></label>
+                    <!-- setupEmojiPicker() (admin-emoji-picker.ts) opens a
+                         browsable grid — search box + category tabs, same
+                         shape as a Discord/Slack emoji picker — rather than
+                         requiring the admin to already know (or copy-paste)
+                         the emoji they want. -->
+                    <div class="emoji-field" id="editEmojiField">
+                      <input type="text" id="editEmoji" placeholder="🍎" maxlength="8">
+                      <button type="button" class="secondary emoji-picker-trigger" id="editEmojiPickerBtn" title="Browse emoji" aria-haspopup="true" aria-expanded="false">🔍</button>
+                      <div class="emoji-picker-panel" id="editEmojiPickerPanel" hidden></div>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>Disambiguator <span id="editDisambiguatorHint" class="hint" hidden></span></label>
+                    <input type="text" id="editDisambiguator" placeholder='e.g. auxiliary — shown as "haber (auxiliary)"'/>
+                  </div>
+                </div>
               </div>
 
-              <!-- Examples -->
+              <!-- Examples & Notes -->
               <div class="form-section">
-                <div class="form-section-title">Example Sentences</div>
+                <div class="form-section-title">Examples &amp; Notes</div>
                 <div class="form-group">
                   <label>Examples (one per line)</label>
                   <textarea id="editExamples" placeholder="Yo hablo español.&#10;¿Hablas inglés?"></textarea>
                 </div>
-              </div>
-
-              <!-- Picture Quiz -->
-              <div class="form-section">
-                <div class="form-section-title">Picture Quiz</div>
-                <div class="form-group">
-                  <label>Emoji fallback (shown when no SVG exists)</label>
-                  <input type="text" id="editEmoji" placeholder="🍎" maxlength="8" style="width:6rem; font-size:1.4rem; text-align:center;"/>
-                </div>
-              </div>
-
-              <!-- Notes -->
-              <div class="form-section">
-                <div class="form-section-title">Notes</div>
                 <div class="form-group">
                   <label>Usage notes, common mistakes, context</label>
                   <textarea id="editNotes" class="short" placeholder="Regular -ar verb. Commonly confused with…"></textarea>
-                </div>
-                <div class="form-group">
-                  <label>Disambiguator <span id="editDisambiguatorHint" class="hint" hidden></span></label>
-                  <input type="text" id="editDisambiguator" placeholder='e.g. auxiliary — shown as "haber (auxiliary)"'/>
                 </div>
               </div>
 
@@ -298,13 +351,13 @@
         </div><!-- /form-panel -->
 
       </div><!-- /editor-layout -->
-    </div><!-- /editor tab -->
+      </div><!-- /wordsEditorView -->
 
-    <!-- ═══════════════════ TABLE VIEW TAB ═══════════════════ -->
-    <div id="tableview" class="tab-content">
-
-      <!-- Status bar -->
-      <div class="status-bar" id="tableStatusMessage"></div>
+      <!-- ── Table View sub-view — hidden by default; admin.ts's toggle
+           shows this and hides wordsEditorView instead of switching a
+           top-level tab. See ensureTableLoaded() (admin-table.ts): its data
+           isn't fetched until this sub-view is actually shown. -->
+      <div class="words-subview" id="wordsTableView" hidden>
 
       <!-- Filter bar -->
       <div class="filter-bar">
@@ -344,7 +397,28 @@
           <input type="number" id="tablePageSizeCustom" class="custom-count-input" min="1" max="200" step="1" placeholder="e.g. 150" style="display:none;">
         </div>
 
+        <!-- Column show/hide — see renderColumnCheckboxes() in
+             admin-table.ts. Same trigger+panel shape as the POS/Band/Domain
+             filter chips (filter-bar.css), holding checkboxes instead of
+             toggle chips. The Settings tab has a matching checklist bound
+             to the same persisted preference (admin_table_hidden_columns),
+             for picking the default without needing to already be on this
+             tab to reach it. -->
+        <div class="filter-field filter-chip-field" id="columnsFilterField">
+          <button type="button" class="filter-chip-trigger" id="columnsFilterTrigger" aria-haspopup="true" aria-expanded="false">
+            <span class="filter-label">Columns</span>
+            <span class="filter-chip-trigger-value" id="columnsFilterSummary">All</span>
+            <span class="filter-chip-caret">▾</span>
+          </button>
+          <div class="filter-chip-panel filter-chip-panel--columns" id="columnsFilterPanel" hidden></div>
+        </div>
+
         <button id="tableSaveAllBtn" disabled>💾 Save All Changes (<span id="tableDirtyCount">0</span>)</button>
+
+        <div class="sort-order-toggle words-view-toggle" data-words-view-toggle>
+          <button type="button" class="sort-order-btn" data-view="editor">✏️ Word Editor</button>
+          <button type="button" class="sort-order-btn active" data-view="table">▦ Table View</button>
+        </div>
       </div>
 
       <div class="table-view-pager">
@@ -373,13 +447,14 @@
           </tbody>
         </table>
       </div>
-    </div><!-- /tableview tab -->
+      </div><!-- /wordsTableView -->
+
+    </div><!-- /editor (Words) tab -->
 
     <!-- ═══════════════════ DB ADMIN TAB ═══════════════════ -->
     <div id="dbadmin" class="tab-content">
       <div class="section">
         <h2 class="section-title">Database Administration</h2>
-        <div id="dbStatus" style="margin-bottom:1rem;"></div>
 
         <!-- populated from GET /api/admin/db/info: connection status, schema/
              pipeline provenance, per-language cache state. Hidden on builds
@@ -439,17 +514,9 @@
             <option value="portuguese">Portuguese</option>
             <option value="italian">Italian</option>
             <option value="french">French</option>
+            <option value="german">German</option>
           </select>
           <span class="lang-select-flag" id="conjLangSelectFlag"></span>
-        </div>
-
-        <div class="filter-divider"></div>
-
-        <div class="filter-field">
-          <span class="filter-label">Tense</span>
-          <select id="conjTenseSelect">
-            <!-- populated by JS based on selected language -->
-          </select>
         </div>
 
         <div class="filter-divider"></div>
@@ -470,6 +537,13 @@
           <div class="conj-verb-list" id="conjVerbList">
             <div class="conj-verb-list-empty">Loading…</div>
           </div>
+          <div class="word-list-pager">
+            <button id="conjVerbPrevBtn" class="secondary" disabled>← Prev</button>
+            <select id="conjVerbPageSelect" class="word-list-page-select" aria-label="Jump to page">
+              <option value="0">Page 1 of 1</option>
+            </select>
+            <button id="conjVerbNextBtn" class="secondary" disabled>Next →</button>
+          </div>
         </div>
 
         <!-- Conjugation table panel -->
@@ -478,7 +552,7 @@
           <!-- Empty state -->
           <div class="conj-empty-state" id="conjEmptyState">
             <div class="hint-icon">🔤</div>
-            <div class="hint-text">Select a verb to practice conjugating it</div>
+            <div class="hint-text">Select a verb to edit its conjugations</div>
           </div>
 
           <!-- Table card -->
@@ -489,24 +563,53 @@
                 <div class="conj-verb-meta" id="conjVerbGlosses"></div>
               </div>
               <div class="edit-form-actions">
-                <button id="conjClearBtn">Clear</button>
+                <button id="conjSaveBtn">💾 Save</button>
                 <button class="secondary" id="conjResetBtn">Reset</button>
+                <button class="ghost" id="conjClearBtn">Clear</button>
               </div>
             </div>
 
-            <div class="conj-tense-label" id="conjTenseLabel"></div>
+            <!-- Colored toggle chips, one per tense, multi-select — see
+                 buildTenseChips() in admin-conjugation.ts. Same --tense-hue
+                 formula and multi-select behavior as the main app's own
+                 .conj-tense-chip (conjugation.css / modes/conjugation/
+                 controls.ts's activeTenses()); a chosen tense becomes its
+                 own column in the table below instead of swapping the whole
+                 table's content out. -->
+            <div class="conj-tense-chips-row">
+              <div class="conj-tense-chips" id="conjTenseChips"></div>
+              <div class="conj-tense-chips-actions">
+                <button type="button" class="ghost" id="conjTensesAll">All</button>
+                <button type="button" class="ghost" id="conjTensesNone">None</button>
+              </div>
+            </div>
 
-            <table class="conj-table">
-              <thead>
-                <tr>
-                  <th class="conj-th-pronoun">Pronoun</th>
-                  <th class="conj-th-form">Conjugated form</th>
-                </tr>
-              </thead>
-              <tbody id="conjTableBody">
-                <!-- populated by JS -->
-              </tbody>
-            </table>
+            <!-- Scrolls on its own if the card is too short to fit table +
+                 extra forms — without this wrapper, the table (flex:1, no
+                 fixed height) refused to shrink below its own content
+                 height, and .conj-table-card's overflow:hidden silently
+                 clipped whatever came after it (Gerund/Past Participle)
+                 instead of showing a scrollbar for either. Also scrolls
+                 horizontally — a verb with every Spanish tense selected at
+                 once is wider than the panel. -->
+            <div class="conj-table-scroll">
+              <table class="conj-table">
+                <thead>
+                  <tr id="conjTableHeadRow">
+                    <!-- Pronoun th + one th per selected tense, built by
+                         renderTable() (admin-conjugation.ts) -->
+                  </tr>
+                </thead>
+                <tbody id="conjTableBody">
+                  <!-- populated by JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Gerund / past participle — not per-pronoun, so outside the
+                 table above; only shown when the language's data has room
+                 for them (see renderExtraForms()). -->
+            <div class="conj-extra-forms" id="conjExtraForms" hidden></div>
           </div>
 
         </div><!-- /conj-table-panel -->
@@ -669,6 +772,14 @@
             <div class="settings-row-desc">How many words to show per page in the Word Editor sidebar's list.</div>
           </div>
           <input type="number" id="settingsWordPageSize" class="custom-count-input" min="10" max="200" step="10" placeholder="50">
+        </div>
+
+        <div class="settings-row settings-row--stack">
+          <div>
+            <div class="settings-row-label">Table View Columns</div>
+            <div class="settings-row-desc">Which columns show by default in Table View's grid — the same list is also reachable from that tab's own "Columns" control, and either one updates the other.</div>
+          </div>
+          <div class="settings-columns-grid" id="settingsColumnsChecklist"></div>
         </div>
       </div>
     </div><!-- /settings tab -->

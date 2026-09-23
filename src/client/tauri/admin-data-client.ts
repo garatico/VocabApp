@@ -15,7 +15,7 @@
  */
 import { getTauriStorageAdapter, getTauriColumnFlags, getTauriShapeDeps } from './bootstrap.js';
 import { getWordPage, getWord, getSupportedLanguages, loadAllWordsForLanguage } from '../../shared/vocab/queries.js';
-import { applyWordUpdate } from '../../shared/vocab/write.js';
+import { applyWordUpdate, createWordRow } from '../../shared/vocab/write.js';
 import { computeStats } from '../../shared/vocab/stats.js';
 import { buildCsv } from '../../shared/vocab/csv.js';
 import type { AdminDataClient } from '../admin/admin-data-client.js';
@@ -87,6 +87,22 @@ export async function createTauriAdminDataClient(): Promise<AdminDataClient> {
       const updated = await getWord(adapter, lang, word, columnFlags, shapeDeps);
       if (!updated) throw new Error('Word not found after update');
       return { word: updated };
+    },
+
+    async createWord(word, lang, data) {
+      const existing = await adapter.get<{ id: number }>(
+        'SELECT id FROM words WHERE word = ? AND language = ?', [word, lang]
+      );
+      if (existing) throw new Error(`'${word}' already exists for ${lang}`);
+
+      await adapter.transaction(async tx => {
+        const wordId = await createWordRow(tx, word, lang);
+        await applyWordUpdate(tx, wordId, word, data, updateDeps);
+      });
+
+      const created = await getWord(adapter, lang, word, columnFlags, shapeDeps);
+      if (!created) throw new Error('Word not found after creation');
+      return { word: created };
     },
 
     async batchUpdate(lang, updates) {

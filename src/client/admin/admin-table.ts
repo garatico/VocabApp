@@ -29,7 +29,7 @@
  * cover narrowing the *set* of words loaded.
  */
 
-import { escapeHtml } from './admin-api.js';
+import { escapeHtml, showStatus } from './admin-api.js';
 import { getAdminDataClient } from './admin-data-client.js';
 import type { BatchUpdateItem } from '../../shared/vocab/write.js';
 import { logger } from '../utils/logger.js';
@@ -86,8 +86,10 @@ const COLUMNS: ColumnDef[] = [
   { key: 'word', label: 'Word', width: 110, readonly: true, get: w => w.word },
   { key: 'translation', label: 'Translation', width: 140,
     get: w => w.translation ?? '', set: (w, v) => { w.translation = v; } },
-  { key: 'pos', label: 'POS', width: 90,
-    get: w => w.pos ?? '', set: (w, v) => { w.pos = v.trim() || null; } },
+  // No `set` here — POS is rendered as a locked-to-preset <select>
+  // (posCellSelect() below), which writes w.pos itself rather than going
+  // through a generic col.set the way every free-text column does.
+  { key: 'pos', label: 'POS', width: 90, get: w => w.pos ?? '' },
   { key: 'difficulty', label: 'Difficulty', width: 90,
     title: '1 (most common) – 5 (rarest), derived from frequency rank',
     get: w => w.difficulty ?? '', set: (w, v) => { w.difficulty = v.trim() || null; } },
@@ -108,8 +110,10 @@ const COLUMNS: ColumnDef[] = [
   { key: 'ipa', label: 'IPA', width: 100,
     get: w => w.linguistic?.ipa ?? '', set: (w, v) => { w.linguistic = { ...w.linguistic, ipa: v.trim() || null }; } },
   { key: 'band', label: 'Band', width: 70, readonly: true, get: w => w.frequency?.band ?? '' },
-  { key: 'gender', label: 'Gender', width: 90,
-    get: w => w.linguistic?.gender ?? '', set: (w, v) => { w.linguistic = { ...w.linguistic, gender: v.trim() || null }; } },
+  // No `set` here — same reasoning as POS above: locked to a preset
+  // <select> (genderCellSelect() below), which writes w.linguistic.gender
+  // itself.
+  { key: 'gender', label: 'Gender', width: 90, get: w => w.linguistic?.gender ?? '' },
   { key: 'plural', label: 'Plural', width: 100,
     get: w => w.linguistic?.plural ?? '', set: (w, v) => { w.linguistic = { ...w.linguistic, plural: v.trim() || null }; } },
   { key: 'infinitive', label: 'Infinitive', width: 100,
@@ -121,7 +125,74 @@ const COLUMNS: ColumnDef[] = [
     get: w => w.linguistic?.register ?? '', set: (w, v) => { w.linguistic = { ...w.linguistic, register: v.trim() || null }; } },
 ];
 
-const COLUMN_COUNT = COLUMNS.length;
+// ── Column visibility — persisted across sessions. Both this tab's own
+// "Columns" dropdown and the Settings tab's matching checklist (built by
+// renderColumnSettings() below, called from admin.ts) read and write this
+// same hiddenColumns set — one preference, not two copies of it drifting
+// apart, so "the default set of hidden/shown columns" picked in Settings is
+// exactly what a fresh page load (or a Reset in the dropdown) shows. ─
+
+const VISIBLE_COLUMNS_KEY = 'admin_table_hidden_columns';
+
+function loadHiddenColumns(): Set<string> {
+  try {
+    const raw = readString(VISIBLE_COLUMNS_KEY);
+    return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+  } catch { return new Set(); }
+}
+function saveHiddenColumns(hidden: Set<string>): void {
+  writeString(VISIBLE_COLUMNS_KEY, JSON.stringify([...hidden]));
+}
+const hiddenColumns = loadHiddenColumns();
+
+// ── Column order — persisted across sessions, drag-to-reorder in the header
+// row itself (buildHeaderRow()) or up/down in the Settings tab's checklist
+// (renderColumnSettingsChecklist()), same "one preference, two entry points"
+// shape as hiddenColumns above. ─────────────────────────────────────────────
+
+const COLUMN_ORDER_KEY = 'admin_table_column_order';
+
+function loadColumnOrder(): string[] {
+  const known = COLUMNS.map(c => c.key);
+  try {
+    const raw = readString(COLUMN_ORDER_KEY);
+    const saved = raw ? (JSON.parse(raw) as string[]).filter(k => known.includes(k)) : [];
+    // A column added (or renamed) since this was last saved has no saved
+    // position — appended at the end in COLUMNS' own order rather than
+    // silently dropped.
+    const missing = known.filter(k => !saved.includes(k));
+    return [...saved, ...missing];
+  } catch { return known; }
+}
+function saveColumnOrder(order: string[]): void {
+  writeString(COLUMN_ORDER_KEY, JSON.stringify(order));
+}
+let columnOrder = loadColumnOrder();
+
+function orderedColumns(): ColumnDef[] {
+  const byKey = new Map(COLUMNS.map(c => [c.key, c]));
+  return columnOrder.map(k => byKey.get(k)).filter((c): c is ColumnDef => Boolean(c));
+}
+
+function visibleColumns(): ColumnDef[] {
+  return orderedColumns().filter(c => !hiddenColumns.has(c.key));
+}
+
+/** Moves `key` to sit immediately before `targetKey` in columnOrder —
+ *  shared by header-row drag-and-drop and the Settings checklist's up/down
+ *  buttons, so both end up with exactly the same reordering semantics.
+ *  Removing `key` first and re-finding `targetKey` afterward (rather than
+ *  computing an insertion index up front) sidesteps having to reason about
+ *  which way the removal shifted `targetKey`'s own index. */
+function reorderColumn(key: string, targetKey: string): void {
+  if (key === targetKey) return;
+  const from = columnOrder.indexOf(key);
+  if (from === -1) return;
+  columnOrder.splice(from, 1);
+  const to = columnOrder.indexOf(targetKey);
+  columnOrder.splice(to === -1 ? from : to, 0, key);
+  saveColumnOrder(columnOrder);
+}
 
 // ── Column widths — persisted across sessions ───────────────────────────────
 
@@ -180,7 +251,6 @@ const theadRow       = document.getElementById('tableViewHeadRow') as HTMLElemen
 const filterRow      = document.getElementById('tableViewFilterRow') as HTMLElement;
 const colgroupEl     = document.getElementById('tableViewColgroup') as HTMLTableColElement | null;
 const tbody          = document.getElementById('tableViewBody')    as HTMLElement;
-const statusEl       = document.getElementById('tableStatusMessage') as HTMLElement | null;
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -197,6 +267,11 @@ let sortDir: 'asc' | 'desc' = 'asc';
 /** column key -> substring filter, case-insensitive. */
 const columnFilters = new Map<string, string>();
 
+// Same 8-value fallback Word Editor's own #editPos ships with before /meta
+// answers (admin-editor.ts's DEFAULT_POS_OPTIONS) — replaced wholesale with
+// the DB's actual set once loadMeta() resolves, same as that select is.
+let posOptions: string[] = ['adjective', 'adverb', 'article', 'conjunction', 'noun', 'preposition', 'pronoun', 'verb'];
+
 function debounce<Args extends unknown[]>(fn: (...args: Args) => void, ms: number): (...args: Args) => void {
   let t: ReturnType<typeof setTimeout>;
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
@@ -207,12 +282,6 @@ function debounce<Args extends unknown[]>(fn: (...args: Args) => void, ms: numbe
 function refreshLangFlag(): void {
   langSelectFlag.innerHTML = '';
   if (langSelect.value) langSelectFlag.appendChild(langFlagImg(langSelect.value));
-}
-
-function showTableStatus(message: string, type: 'info' | 'success' | 'error' = 'info'): void {
-  if (!statusEl) return;
-  statusEl.innerHTML = `<div class="status ${type}">${escapeHtml(message)}</div>`;
-  setTimeout(() => { statusEl.innerHTML = ''; }, type === 'error' ? 5000 : 3000);
 }
 
 function markDirty(word: string): void {
@@ -227,12 +296,26 @@ function clearDirty(): void {
   dirtyCountEl.textContent = '0';
 }
 
+/** Whether any row on the current page has an unsaved edit — admin.ts reads
+ *  this before letting the Word Editor / Table View toggle switch away. */
+export function isTableDirty(): boolean {
+  return dirty.size > 0;
+}
+
+/** admin.ts's discard half of "save or discard before switching" — drops
+ *  every in-memory edit and reloads the current page fresh from the server,
+ *  same as loadPage()'s own already-confirmed discard path. */
+export async function discardTableChanges(): Promise<void> {
+  clearDirty();
+  await loadPage();
+}
+
 // ── Loading ──────────────────────────────────────────────────────────────────
 
 async function loadMeta(): Promise<void> {
   if (metaLoaded) return;
   try {
-    const { languages } = await getAdminDataClient().getMeta();
+    const { languages, pos } = await getAdminDataClient().getMeta();
     if (languages?.length) {
       const cur = langSelect.value;
       langSelect.innerHTML = languages
@@ -241,6 +324,7 @@ async function loadMeta(): Promise<void> {
       langSelect.value = languages.includes(cur) ? cur : languages[0];
       refreshLangFlag();
     }
+    if (pos.length) posOptions = pos;
     metaLoaded = true;
   } catch (err) {
     logger.error('Table view /meta failed:', err);
@@ -251,7 +335,7 @@ async function loadPage(): Promise<void> {
   if (dirty.size > 0 && !window.confirm('You have unsaved changes on this page. Load a new page and discard them?')) {
     return;
   }
-  tbody.innerHTML = `<tr><td colspan="${COLUMN_COUNT}" class="table-view-empty">Loading…</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="${visibleColumns().length}" class="table-view-empty">Loading…</td></tr>`;
   clearDirty();
   try {
     const data = await getAdminDataClient().getVocabPage({
@@ -270,8 +354,8 @@ async function loadPage(): Promise<void> {
     pageInput.value = String(page);
     renderRows();
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="${COLUMN_COUNT}" class="table-view-empty">Failed to load.</td></tr>`;
-    showTableStatus('Table view error: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    tbody.innerHTML = `<tr><td colspan="${visibleColumns().length}" class="table-view-empty">Failed to load.</td></tr>`;
+    showStatus('Table view error: ' + (err instanceof Error ? err.message : String(err)), 'error');
   }
 }
 
@@ -280,7 +364,7 @@ async function loadPage(): Promise<void> {
 function buildColgroup(): void {
   if (!colgroupEl) return;
   colgroupEl.innerHTML = '';
-  COLUMNS.forEach(col => {
+  visibleColumns().forEach(col => {
     const c = document.createElement('col');
     c.style.width = `${col.width}px`;
     c.dataset.col = col.key;
@@ -351,9 +435,37 @@ function autoSizeColumn(col: ColumnDef): void {
 
 function buildHeaderRow(): void {
   theadRow.innerHTML = '';
-  COLUMNS.forEach(col => {
+  visibleColumns().forEach(col => {
     const th = document.createElement('th');
     th.dataset.col = col.key;
+
+    // Drag-to-reorder — the whole header cell is the drag handle (a plain
+    // click still reaches the sort button underneath just fine; only an
+    // actual click-and-drag gesture starts a native HTML5 drag). Dropping
+    // on another column's th moves this one to sit just before it, via the
+    // same reorderColumn() the Settings tab's up/down buttons use.
+    th.draggable = true;
+    th.addEventListener('dragstart', e => {
+      e.dataTransfer?.setData('text/plain', col.key);
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+      th.classList.add('table-view-th--dragging');
+    });
+    th.addEventListener('dragend', () => th.classList.remove('table-view-th--dragging'));
+    th.addEventListener('dragover', e => { e.preventDefault(); th.classList.add('table-view-th--drop-target'); });
+    th.addEventListener('dragleave', () => th.classList.remove('table-view-th--drop-target'));
+    th.addEventListener('drop', e => {
+      e.preventDefault();
+      th.classList.remove('table-view-th--drop-target');
+      const draggedKey = e.dataTransfer?.getData('text/plain');
+      if (!draggedKey || draggedKey === col.key) return;
+      reorderColumn(draggedKey, col.key);
+      buildColgroup();
+      buildHeaderRow();
+      buildFilterRow();
+      updateSortIndicators();
+      renderRows();
+      renderColumnSettingsChecklist();
+    });
 
     const labelBtn = document.createElement('button');
     labelBtn.type = 'button';
@@ -382,6 +494,10 @@ function buildHeaderRow(): void {
     // together without touching a single one of them.
     const handle = document.createElement('span');
     handle.className = 'table-view-col-resize';
+    // Not the drag-to-reorder handle — resizing is its own mousedown-driven
+    // drag (below), which a native HTML5 drag starting from the same
+    // pointer-down would otherwise fight with.
+    handle.draggable = false;
     handle.addEventListener('mousedown', e => {
       e.preventDefault();
       e.stopPropagation();
@@ -415,7 +531,7 @@ function buildHeaderRow(): void {
 
 function buildFilterRow(): void {
   filterRow.innerHTML = '';
-  COLUMNS.forEach(col => {
+  visibleColumns().forEach(col => {
     const th = document.createElement('th');
     const input = document.createElement('input');
     input.type = 'text';
@@ -455,10 +571,79 @@ function cellInput(word: string, col: ColumnDef, value: string): HTMLTableCellEl
   return td;
 }
 
-function readonlyCell(value: string, title?: string): HTMLTableCellElement {
+/** POS's own cell — a `<select>` locked to the same preset list Word
+ *  Editor's own #editPos offers (posOptions, populated from /api/admin/meta
+ *  by loadMeta() below), not free text. A free-text POS cell let a typo or
+ *  a stray plural ("verbs") silently create a part-of-speech the rest of
+ *  the app — POS filter chips, badge coloring, verb-rules.ts's conjugation
+ *  engine keyed on pos === 'verb' — would never recognize. Colored the same
+ *  way #editPos is (edit-form.css's [data-pos] rules copied into
+ *  table-view.css) so this reads as the same control wherever it appears. */
+function posCellSelect(word: string, value: string): HTMLTableCellElement {
   const td = document.createElement('td');
-  td.className = 'table-view-cell-readonly';
-  td.textContent = value;
+  const select = document.createElement('select');
+  select.className = 'table-view-cell-select';
+  select.innerHTML = '<option value="">—</option>' +
+    posOptions.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+  select.value = value;
+  if (value) select.setAttribute('data-pos', value);
+  select.addEventListener('change', () => {
+    const w = rows.get(word);
+    if (w) w.pos = select.value || null;
+    if (select.value) select.setAttribute('data-pos', select.value); else select.removeAttribute('data-pos');
+    markDirty(word);
+  });
+  td.appendChild(select);
+  return td;
+}
+
+/** Gender's own cell — masculine/feminine/none only, same "locked to a
+ *  preset list, not free text" reasoning as posCellSelect() above, and
+ *  matching #editGender's own comment (admin.html) for why "neuter" isn't
+ *  offered even though a few non-Spanish words in the real data carry it. */
+function genderCellSelect(word: string, value: string): HTMLTableCellElement {
+  const td = document.createElement('td');
+  const select = document.createElement('select');
+  select.className = 'table-view-cell-select';
+  select.innerHTML = '<option value="">—</option><option value="masculine">masculine</option><option value="feminine">feminine</option>';
+  // A handful of non-Spanish words carry a gender outside this preset list
+  // (German/Dutch "neuter", Dutch "common", a few Spanish "m/f") — shown via
+  // a synthetic option rather than silently falling back to blank, same as
+  // Word Editor's own setSelectValue() does for #editGender.
+  if (value && value !== 'masculine' && value !== 'feminine') {
+    select.innerHTML += `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`;
+  }
+  select.value = value;
+  if (value === 'masculine' || value === 'feminine') select.setAttribute('data-gender', value);
+  select.addEventListener('change', () => {
+    const w = rows.get(word);
+    if (w) w.linguistic = { ...w.linguistic, gender: select.value || null };
+    if (select.value) select.setAttribute('data-gender', select.value); else select.removeAttribute('data-gender');
+    markDirty(word);
+  });
+  td.appendChild(select);
+  return td;
+}
+
+/** A read-only cell's content lives in a child <span>, not on the <td>
+ *  itself — matching cellInput()'s own td-wraps-child structure exactly.
+ *  It used to carry the class directly on the <td>, which put its padding
+ *  in a specificity fight with `.table-view-grid tbody td`'s own padding
+ *  (the td's plain tag+class selector outranks a single class) and lost,
+ *  so a readonly cell (Word, Tags, Band) ended up shorter than an editable
+ *  one — the input's padding is safely inside a plain, unstyled <td> the
+ *  same way this span now is, never competing with anything.
+ *  `colorAttr` colors Band the same [data-band] way #editBand is (Word
+ *  Editor), via an optional {name, value} pair rather than a Band-specific
+ *  parameter, so this stays usable for any future color-coded readonly
+ *  column too. */
+function readonlyCell(value: string, title?: string, colorAttr?: { name: string; value: string }): HTMLTableCellElement {
+  const td = document.createElement('td');
+  const span = document.createElement('span');
+  span.className = 'table-view-cell-readonly';
+  span.textContent = value;
+  if (colorAttr?.value) span.setAttribute(colorAttr.name, colorAttr.value);
+  td.appendChild(span);
   if (title) td.title = title;
   return td;
 }
@@ -510,7 +695,7 @@ function renderRows(): void {
   tbody.innerHTML = '';
   const words = visibleWords();
   if (words.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${COLUMN_COUNT}" class="table-view-empty">No words match.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${visibleColumns().length}" class="table-view-empty">No words match.</td></tr>`;
     return;
   }
   words.forEach(word => {
@@ -519,8 +704,11 @@ function renderRows(): void {
     const tr = document.createElement('tr');
     tr.dataset.word = word;
 
-    COLUMNS.forEach(col => {
+    visibleColumns().forEach(col => {
       const value = col.get(w);
+      if (col.key === 'pos') { tr.appendChild(posCellSelect(word, value)); return; }
+      if (col.key === 'gender') { tr.appendChild(genderCellSelect(word, value)); return; }
+      if (col.key === 'band') { tr.appendChild(readonlyCell(value, col.title, { name: 'data-band', value })); return; }
       tr.appendChild(col.readonly ? readonlyCell(value, col.title) : cellInput(word, col, value));
     });
 
@@ -565,11 +753,11 @@ async function saveAll(): Promise<void> {
   saveAllBtn.textContent = 'Saving…';
   try {
     const result = await getAdminDataClient().batchUpdate(langSelect.value, updates);
-    showTableStatus(`Saved ${result.updated} word(s)`, 'success');
+    showStatus(`Saved ${result.updated} word(s)`, 'success');
     clearDirty();
     await loadPage();
   } catch (err) {
-    showTableStatus('Save error: ' + (err instanceof Error ? err.message : String(err)), 'error');
+    showStatus('Save error: ' + (err instanceof Error ? err.message : String(err)), 'error');
   } finally {
     saveAllBtn.textContent = `💾 Save All Changes (${dirty.size})`;
     saveAllBtn.disabled = dirty.size === 0;
@@ -635,6 +823,166 @@ async function fetchSuggestions(query: string): Promise<void> {
 
 const debouncedSuggest = debounce((q: string) => void fetchSuggestions(q), 250);
 
+// ── Column visibility UI ─────────────────────────────────────────────────────
+// Two entry points onto the same hiddenColumns set: this tab's own
+// "Columns" dropdown (for "I don't want to see this right now") and the
+// Settings tab's checklist (for "this is what I always want to see" — see
+// admin.html's #settingsColumnsChecklist). Either one toggling a column
+// updates both UIs and re-renders the grid immediately.
+
+function rebuildTableColumns(): void {
+  buildColgroup();
+  buildHeaderRow();
+  buildFilterRow();
+  updateSortIndicators();
+  renderRows();
+}
+
+function updateColumnsSummary(): void {
+  const summary = document.getElementById('columnsFilterSummary');
+  if (!summary) return;
+  const shown = COLUMNS.length - hiddenColumns.size;
+  summary.textContent = hiddenColumns.size === 0 ? 'All' : `${shown} of ${COLUMNS.length}`;
+  summary.classList.toggle('filter-chip-trigger-value--active', hiddenColumns.size > 0);
+}
+
+function toggleColumnVisibility(key: string, visible: boolean): void {
+  if (visible) hiddenColumns.delete(key); else hiddenColumns.add(key);
+  if (!visible) {
+    // A filter or sort on a column that's no longer even shown would
+    // otherwise keep silently narrowing/ordering the grid with no control
+    // left on screen to explain why.
+    columnFilters.delete(key);
+    if (sortKey === key) sortKey = null;
+  }
+  saveHiddenColumns(hiddenColumns);
+  updateColumnsSummary();
+  rebuildTableColumns();
+  renderColumnSettingsChecklist();
+}
+
+function renderColumnCheckboxes(): void {
+  const panel = document.getElementById('columnsFilterPanel');
+  if (!panel) return;
+  panel.innerHTML = '';
+  orderedColumns().forEach(col => {
+    const label = document.createElement('label');
+    label.className = 'filter-checkbox-row';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = !hiddenColumns.has(col.key);
+    checkbox.addEventListener('change', () => toggleColumnVisibility(col.key, checkbox.checked));
+    label.append(checkbox, document.createTextNode(col.label));
+    panel.appendChild(label);
+  });
+
+  const footer = document.createElement('div');
+  footer.className = 'filter-chip-panel-footer';
+  const showAllBtn = document.createElement('button');
+  showAllBtn.type = 'button';
+  showAllBtn.className = 'filter-chip-panel-clear';
+  showAllBtn.textContent = 'Show All';
+  showAllBtn.addEventListener('click', () => {
+    if (hiddenColumns.size === 0) return;
+    hiddenColumns.clear();
+    saveHiddenColumns(hiddenColumns);
+    updateColumnsSummary();
+    renderColumnCheckboxes();
+    rebuildTableColumns();
+    renderColumnSettingsChecklist();
+  });
+  footer.appendChild(showAllBtn);
+  panel.appendChild(footer);
+
+  updateColumnsSummary();
+}
+
+/** Settings tab's own copy of the same checklist — exported so admin.ts can
+ *  render it once at startup regardless of which tab is currently active
+ *  (Settings isn't necessarily open yet, but its DOM already exists). */
+/** The "default set of hidden/shown columns... in the settings" control —
+ *  also where column ORDER is set from outside Table View itself (dragging
+ *  a header there is the quicker way to reorder while you're already
+ *  looking at the grid; this is the discoverable one). Up/down buttons
+ *  rather than drag-and-drop here — a plain vertical list of rows in a
+ *  settings panel doesn't carry the same "these are table columns" framing
+ *  a header row does, so dragging one wouldn't read as obviously as it
+ *  does there. */
+export function renderColumnSettingsChecklist(): void {
+  const container = document.getElementById('settingsColumnsChecklist');
+  if (!container) return;
+  container.innerHTML = '';
+  const cols = orderedColumns();
+  cols.forEach((col, i) => {
+    const row = document.createElement('div');
+    row.className = 'settings-columns-row';
+
+    const label = document.createElement('label');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = !hiddenColumns.has(col.key);
+    checkbox.addEventListener('change', () => toggleColumnVisibility(col.key, checkbox.checked));
+    label.append(checkbox, document.createTextNode(col.label));
+
+    const moveUpBtn = document.createElement('button');
+    moveUpBtn.type = 'button';
+    moveUpBtn.className = 'settings-columns-move';
+    moveUpBtn.textContent = '▲';
+    moveUpBtn.title = `Move ${col.label} up`;
+    moveUpBtn.disabled = i === 0;
+    moveUpBtn.addEventListener('click', () => {
+      if (i === 0) return;
+      reorderColumn(col.key, cols[i - 1].key);
+      rebuildTableColumns();
+      renderColumnCheckboxes();
+      renderColumnSettingsChecklist();
+    });
+
+    const moveDownBtn = document.createElement('button');
+    moveDownBtn.type = 'button';
+    moveDownBtn.className = 'settings-columns-move';
+    moveDownBtn.textContent = '▼';
+    moveDownBtn.title = `Move ${col.label} down`;
+    moveDownBtn.disabled = i === cols.length - 1;
+    moveDownBtn.addEventListener('click', () => {
+      if (i >= cols.length - 1) return;
+      // Moving down means sitting after the NEXT column, i.e. before
+      // whatever comes after that one — reorderColumn only knows "insert
+      // before", so this targets i+2's key (or falls through to append at
+      // the end when i+1 is already last).
+      const targetKey = cols[i + 2]?.key;
+      if (targetKey) reorderColumn(col.key, targetKey);
+      else { columnOrder = columnOrder.filter(k => k !== col.key); columnOrder.push(col.key); saveColumnOrder(columnOrder); }
+      rebuildTableColumns();
+      renderColumnCheckboxes();
+      renderColumnSettingsChecklist();
+    });
+
+    row.append(moveUpBtn, moveDownBtn, label);
+    container.appendChild(row);
+  });
+}
+
+function initColumnsDropdown(): void {
+  const fieldEl   = document.getElementById('columnsFilterField');
+  const triggerEl = document.getElementById('columnsFilterTrigger');
+  const panelEl   = document.getElementById('columnsFilterPanel');
+  if (!fieldEl || !triggerEl || !panelEl) return;
+
+  const field   = fieldEl as HTMLElement;
+  const trigger = triggerEl as HTMLButtonElement;
+  const panel   = panelEl as HTMLElement;
+
+  renderColumnCheckboxes();
+
+  function open(): void  { panel.hidden = false; trigger.setAttribute('aria-expanded', 'true'); }
+  function close(): void { panel.hidden = true;  trigger.setAttribute('aria-expanded', 'false'); }
+
+  trigger.addEventListener('click', () => { if (panel.hidden) open(); else close(); });
+  document.addEventListener('click', e => { if (!field.contains(e.target as Node)) close(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !panel.hidden) close(); });
+}
+
 // ── Init ─────────────────────────────────────────────────────────────────────
 
 export function initTable(): void {
@@ -642,6 +990,8 @@ export function initTable(): void {
   buildHeaderRow();
   buildFilterRow();
   updateSortIndicators();
+  initColumnsDropdown();
+  renderColumnSettingsChecklist();
 
   searchBtn.addEventListener('click', runSearch);
   searchInput.addEventListener('input', () => debouncedSuggest(searchInput.value));
@@ -702,14 +1052,16 @@ export function initTable(): void {
   };
   pageJumpBtn.addEventListener('click', goToEnteredPage);
   pageInput.addEventListener('keydown', e => { if (e.key === 'Enter') goToEnteredPage(); });
+}
 
-  // Loaded lazily, the first time this tab is actually opened — the table
-  // view's own vocab fetch is no lighter than the Word Editor's, and most
-  // sessions never open this tab at all.
-  let loaded = false;
-  document.querySelector('.tab-btn[data-tab="tableview"]')?.addEventListener('click', () => {
-    if (loaded) return;
-    loaded = true;
-    void loadMeta().then(loadPage);
-  });
+// Loaded lazily, the first time this sub-view is actually shown — the table
+// view's own vocab fetch is no lighter than the Word Editor's, and most
+// sessions never switch to it. Called from admin.ts's Word Editor/Table View
+// toggle rather than this module's own tab click listener, since both views
+// now live under one tab (see admin.html's #wordsViewToggle).
+let tableViewLoaded = false;
+export function ensureTableLoaded(): void {
+  if (tableViewLoaded) return;
+  tableViewLoaded = true;
+  void loadMeta().then(loadPage);
 }

@@ -7,7 +7,7 @@
   bottom: 24px;
   right: 24px;
   max-width: 400px;
-  padding: 14px 16px;
+  padding: 14px 16px 16px;
   border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 500;
@@ -17,6 +17,30 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  overflow: hidden;
+}
+
+.toast-message { flex: 1; }
+
+/* Fills left-to-right over the toast's own lifetime — see showToast()'s
+   `ms` argument, which sets this bar's animation-duration inline so the
+   bar reaching full width is what dismissal actually looks like. */
+.toast-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 0;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+  animation-name: toast-progress-fill;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes toast-progress-fill {
+  from { width: 0; }
+  to   { width: 100%; }
 }
 
 .toast.toast-success {
@@ -45,9 +69,9 @@
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
-  .toast { bottom: 16px; right: 16px; max-width: 340px; padding: 12px 14px; font-size: 13px; }
+  .toast { bottom: 16px; right: 16px; max-width: 340px; padding: 12px 14px 14px; font-size: 13px; }
 }
 
 @media (max-width: 600px) {
-  .toast { bottom: 12px; right: 12px; left: 12px; max-width: none; padding: 11px 12px; font-size: 12px; }
+  .toast { bottom: 12px; right: 12px; left: 12px; max-width: none; padding: 11px 12px 13px; font-size: 12px; }
 }

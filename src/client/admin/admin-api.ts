@@ -36,13 +36,33 @@ export async function apiCall(endpoint: string, method = 'GET', data: unknown = 
 }
 
 /**
- * Show a transient status message in the editor status bar (#statusMessage).
+ * Show a transient status message as a bottom-right toast.
+ *
+ * Shared by every admin tab (Word Editor, DB Admin, Table View, Conjugation)
+ * rather than each keeping its own inline status-bar element — a message
+ * about a save/clear/export firing near the bottom-right corner reads the
+ * same regardless of which tab triggered it, and a stray toast from a
+ * previous tab clears itself on its own timer instead of lingering in a
+ * div the user has since scrolled away from.
  */
-export function showStatus(message: string, type: 'info' | 'success' | 'error' = 'info'): void {
-  const el = document.getElementById('statusMessage');
-  if (!el) return;
-  el.innerHTML = `<div class="status ${type}">${escapeHtml(message)}</div>`;
-  setTimeout(() => { el.innerHTML = ''; }, type === 'error' ? 5000 : 3000);
+export function showStatus(message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info'): void {
+  let container = document.getElementById('adminToastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'adminToastContainer';
+    container.className = 'admin-toast-container';
+    document.body.appendChild(container);
+  }
+
+  const ms = type === 'error' ? 5000 : 3000;
+  const toast = document.createElement('div');
+  toast.className = `admin-toast admin-toast--${type}`;
+  toast.innerHTML =
+    `<span class="admin-toast-message">${escapeHtml(message)}</span>` +
+    `<div class="admin-toast-progress" style="animation-duration:${ms}ms"></div>`;
+
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), ms);
 }
 
 /** Safely escape a string for insertion into innerHTML. */

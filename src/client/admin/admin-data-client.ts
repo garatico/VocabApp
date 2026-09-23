@@ -56,6 +56,9 @@ export interface AdminDataClient {
   getMeta(): Promise<AdminMeta>;
   getVocabPage(params: AdminVocabPageParams): Promise<AdminVocabPage>;
   updateWord(word: string, lang: string, data: WordUpdateBody): Promise<{ word: Word }>;
+  /** Throws (with the server's message, e.g. "'X' already exists for Y") if
+   *  the (word, language) pair is already taken. */
+  createWord(word: string, lang: string, data: WordUpdateBody): Promise<{ word: Word }>;
   batchUpdate(lang: string, updates: BatchUpdateItem[]): Promise<{ updated: number }>;
   getStats(): Promise<Record<string, LangStat>>;
   /** No-op on Tauri — there's no separate in-memory cache to clear when every read queries SQLite directly. */
@@ -88,6 +91,10 @@ const httpAdminDataClient: AdminDataClient = {
 
   async updateWord(word, lang, data) {
     return apiCall(`/vocab/${encodeURIComponent(word)}?lang=${encodeURIComponent(lang)}`, 'POST', data) as Promise<{ word: Word }>;
+  },
+
+  async createWord(word, lang, data) {
+    return apiCall(`/vocab/${encodeURIComponent(word)}?lang=${encodeURIComponent(lang)}`, 'PUT', data) as Promise<{ word: Word }>;
   },
 
   async batchUpdate(lang, updates) {

@@ -9,9 +9,14 @@
    to lay out.
 ================================================================ */
 
-/* reset.css sets box-sizing, font, bg, color — override padding only */
+/* reset.css sets box-sizing, font, bg, color — override padding only.
+   Bottom trimmed from 1rem — this and .tabs-wrap's own bottom padding/
+   margin (tabs.css) are the fixed "floor" every calc(100vh - Npx) panel
+   height (word-list.css, table-view.css, conjugation.css) has to reserve
+   room for beneath itself; every rem trimmed here is a rem those panels
+   get to actually use instead. */
 body {
-  padding: 0.5rem 2rem 1.5rem;
+  padding: 0.5rem 2rem 0.5rem;
 }
 
 .container { max-width: 1600px; margin: 0 auto; }

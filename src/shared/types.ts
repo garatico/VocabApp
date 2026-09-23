@@ -43,6 +43,12 @@ export interface Word {
     syllables?:         string[];
     conjugations?:      VerbForms;
     conjugation_class?: string;
+    /** Raw per-verb overrides for a rule-engine verb (conjugation_class set)
+     *  — conjugations above already has these folded in by conjugate(); this
+     *  is the separate, editable source the admin Conjugation editor merges
+     *  an edit into and saves back, rather than the computed result. Absent
+     *  for a verb whose forms come from the `conjugations` column directly. */
+    conjugation_overrides?: Record<string, unknown>;
   };
   rank:      number | null;
   frequency: {

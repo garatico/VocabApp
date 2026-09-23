@@ -245,6 +245,54 @@ describe('POST /api/admin/vocab/:word', () => {
   });
 });
 
+// PUT /api/admin/vocab/:word
+
+describe('PUT /api/admin/vocab/:word', () => {
+  // Words created here would otherwise permanently grow the Spanish dataset
+  // for the rest of this file — POST /api/admin/export's own test counts
+  // rows and runs after this describe block, so a created-but-never-cleaned
+  // word here would silently break an assertion nothing about this block
+  // looks like it should affect.
+  afterAll(() => {
+    db.prepare("DELETE FROM words WHERE language = 'spanish' AND word IN ('nuevo', 'reciente')").run();
+  });
+
+  it('creates a new word and returns it with 201', async () => {
+    const res = await request(app)
+      .put('/api/admin/vocab/nuevo?lang=spanish')
+      .send({ translation: 'new', pos: 'adjective', glosses: ['new', 'fresh'] });
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.word.word).toBe('nuevo');
+    expect(res.body.word.translation).toBe('new');
+    expect(res.body.word.glosses).toEqual(['new', 'fresh']);
+  });
+
+  it('persists the new word -- subsequent GET finds it', async () => {
+    await request(app)
+      .put('/api/admin/vocab/reciente?lang=spanish')
+      .send({ translation: 'recent' });
+    const res = await request(app).get('/api/admin/vocab/reciente?lang=spanish');
+    expect(res.status).toBe(200);
+    expect(res.body.word.translation).toBe('recent');
+  });
+
+  it('returns 409 for a word that already exists in this language', async () => {
+    const res = await request(app)
+      .put('/api/admin/vocab/hablar?lang=spanish')
+      .send({ translation: 'to speak' });
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/already exists/);
+  });
+
+  it('returns 400 when glosses is not an array', async () => {
+    const res = await request(app)
+      .put('/api/admin/vocab/otropalabra?lang=spanish')
+      .send({ glosses: 'not an array' });
+    expect(res.status).toBe(400);
+  });
+});
+
 // POST /api/admin/cache/clear
 
 describe('POST /api/admin/cache/clear', () => {

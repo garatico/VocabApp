@@ -4,19 +4,10 @@
  * DB Admin tab — cache management and CSV export.
  */
 
-import { escapeHtml } from './admin-api.js';
+import { escapeHtml, showStatus } from './admin-api.js';
 import { getAdminDataClient } from './admin-data-client.js';
 import type { DbInfo } from './admin-data-client.js';
 import { langFlagImgHtml } from './admin-languages.js';
-
-// ── Local status bar (targets #dbStatus, not the editor's #statusMessage) ─────
-
-function showDbStatus(message: string, type: 'info' | 'success' | 'error' = 'info'): void {
-  const el = document.getElementById('dbStatus');
-  if (!el) return;
-  el.innerHTML = `<div class="status ${type}">${escapeHtml(message)}</div>`;
-  setTimeout(() => { el.innerHTML = ''; }, type === 'error' ? 5000 : 3000);
-}
 
 // ── DB info card — connection status, schema/pipeline provenance, cache state ──
 
@@ -158,10 +149,10 @@ async function buildLangButtons(): Promise<void> {
         btn.disabled  = true;
         btn.innerHTML = 'Clearing…';
         const msg = await clearCache(lang);
-        showDbStatus(msg, 'success');
+        showStatus(msg, 'success');
         void refreshDbInfo();
       } catch (err) {
-        showDbStatus(`Error: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        showStatus(`Error: ${err instanceof Error ? err.message : String(err)}`, 'error');
       } finally {
         btn.disabled  = false;
         btn.innerHTML = `${langFlagImgHtml(lang)} Clear ${escapeHtml(label)}`;
@@ -178,9 +169,9 @@ async function buildLangButtons(): Promise<void> {
         btn.disabled  = true;
         btn.innerHTML = 'Exporting…';
         await exportCsv(lang);
-        showDbStatus(`Exported ${lang}.csv successfully`, 'success');
+        showStatus(`Exported ${lang}.csv successfully`, 'success');
       } catch (err) {
-        showDbStatus(`Export error: ${err instanceof Error ? err.message : String(err)}`, 'error');
+        showStatus(`Export error: ${err instanceof Error ? err.message : String(err)}`, 'error');
       } finally {
         btn.disabled  = false;
         btn.innerHTML = originalHtml;
@@ -199,10 +190,10 @@ export function initDbAdmin(): void {
       clearAllBtn.disabled    = true;
       clearAllBtn.textContent = 'Clearing...';
       const msg = await clearCache();
-      showDbStatus(msg, 'success');
+      showStatus(msg, 'success');
       void refreshDbInfo();
     } catch (err) {
-      showDbStatus(`Error: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      showStatus(`Error: ${err instanceof Error ? err.message : String(err)}`, 'error');
     } finally {
       clearAllBtn.disabled    = false;
       clearAllBtn.textContent = 'Clear All Caches';
@@ -216,10 +207,10 @@ export function initDbAdmin(): void {
       reloadBtn.disabled    = true;
       reloadBtn.textContent = 'Reloading...';
       const msg = await reloadDb();
-      showDbStatus(msg, 'success');
+      showStatus(msg, 'success');
       void refreshDbInfo();
     } catch (err) {
-      showDbStatus(`Error: ${err instanceof Error ? err.message : String(err)}`, 'error');
+      showStatus(`Error: ${err instanceof Error ? err.message : String(err)}`, 'error');
     } finally {
       reloadBtn.disabled    = false;
       reloadBtn.textContent = 'Reload Database';
