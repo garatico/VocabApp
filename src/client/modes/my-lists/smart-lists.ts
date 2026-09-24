@@ -57,6 +57,8 @@ export interface SmartRule {
   folder?: string;
   /** Modes this smart list is excluded from as a filter option. */
   hiddenModes?: FilterScope[];
+  /** Optional emoji shown before the list's name in the sidebar. */
+  emoji?: string;
 }
 
 export const DEFAULT_SMART_RULE: SmartRule = {

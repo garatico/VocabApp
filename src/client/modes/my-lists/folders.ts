@@ -46,3 +46,43 @@ export function addFolder(scope: string, name: string): boolean {
 export function removeFolder(scope: string, name: string): void {
   writeJson(key(scope), getFolderRegistry(scope).filter(f => f !== name));
 }
+
+// ── Folder appearance ───────────────────────────────────────────────────────
+//
+// An optional emoji and accent colour per folder, stored beside the registry
+// (`ml_folder_style_<scope>`, name → style) rather than inside it so the
+// registry stays a plain string[] that older data and backups already read.
+
+export interface FolderStyle { emoji?: string; color?: string; }
+
+/** Swatches offered in the folder style picker. */
+export const FOLDER_COLORS: readonly string[] = [
+  '#c0392b', '#d9822b', '#c9a227', '#3d8b5a', '#0f7d94', '#2f6fd0', '#7c5cbf', '#b0479a', '#6b6b6b',
+];
+
+const STYLE_PREFIX = 'ml_folder_style_';
+
+function isStyleMap(v: unknown): v is Record<string, FolderStyle> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+function readStyles(scope: string): Record<string, FolderStyle> {
+  return readJson<Record<string, FolderStyle>>(STYLE_PREFIX + scope, {}, isStyleMap);
+}
+
+export function getFolderStyle(scope: string, name: string): FolderStyle {
+  const s = readStyles(scope)[name];
+  return {
+    emoji: typeof s?.emoji === 'string' ? s.emoji : undefined,
+    color: typeof s?.color === 'string' && /^#[0-9a-f]{3,8}$/i.test(s.color) ? s.color : undefined,
+  };
+}
+
+/** Empty fields clear that part; a style with neither is dropped entirely. */
+export function setFolderStyle(scope: string, name: string, style: FolderStyle): void {
+  const all = readStyles(scope);
+  const emoji = style.emoji?.trim() || undefined;
+  const color = style.color || undefined;
+  if (emoji || color) all[name] = { emoji, color }; else delete all[name];
+  writeJson(STYLE_PREFIX + scope, all);
+}

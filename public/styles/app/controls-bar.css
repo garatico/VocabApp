@@ -83,15 +83,6 @@
    the right side's reservation above. */
 #controls { padding-left: 3rem; }
 
-/* Start Quiz's own row — deliberately outside #controls-top's wrapping flex
-   flow. #controls-top holds every mode-conditional control group (Direction,
-   Quiz Style, Compare, ...), and their display:none/'' toggling changes the
-   row's width and where it wraps, which used to carry Start Quiz along with
-   it. A dedicated row below is immune to whatever those groups are doing. */
-#controlsActions {
-  display: flex;
-}
-
 .control-group {
   display: flex;
   flex-direction: column;

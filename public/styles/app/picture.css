@@ -407,7 +407,6 @@
   background: var(--accent, #4f8ef7);
   border-color: var(--accent, #4f8ef7);
   color: #fff;
-  transform: scale(1.08);
 }
 
 .fc-arrow:disabled {

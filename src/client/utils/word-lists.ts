@@ -17,7 +17,7 @@ import { readString, readJson, writeJson, remove as removeKey, isRecord, isStrin
 import { currentScope, type FilterScope } from '../filters/filter-scope.ts';
 import { bucketFor, bucketForRead, SHARED_BUCKET, type Bucket } from '../filters/filter-state.ts';
 import { currentExtraLanguages } from '../filters/filter-lang.ts';
-import { buildLangBadge } from '../ui/lang-badge.ts';
+import { buildListFilterDropdowns } from '../ui/list-filter-dropdowns.ts';
 // smart-lists.ts imports getAllListedWords from this module — both directions
 // only reach across the cycle from inside function bodies (never at module
 // top-level), which ES modules resolve fine; nothing here runs at import time.
@@ -56,6 +56,8 @@ export interface ListMeta {
    *  via the star button/list picker regardless, since that's membership,
    *  not filtering. */
   hiddenModes?: FilterScope[];
+  /** Optional emoji shown before the list's name in the sidebar. */
+  emoji?: string;
 }
 
 /** `meta.folders` if the caller already migrated, otherwise `[meta.folder]`
@@ -745,100 +747,17 @@ export function refreshFilterSelect(lang: string): void {
     saveListFilterState(lang, state);
   }
 
-  // Rebuild checkbox list
+  // Rebuild the dropdowns (one per kind of list — see list-filter-dropdowns.ts)
   container.innerHTML = '';
-  const selectedSet = new Set(state.selected);
-
-  function addRow(row: FilterableListRow): void {
-    const label = document.createElement('label');
-    label.className = 'list-filter-item';
-
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.value = row.qualified;
-    cb.checked = selectedSet.has(row.qualified);
-    cb.addEventListener('change', () => {
+  container.appendChild(buildListFilterDropdowns(rows, {
+    languages: [lang, ...extras],
+    getSelected: () => getListFilterState(lang).selected,
+    setSelected: next => {
       const s = getListFilterState(lang);
-      if (cb.checked) {
-        if (!s.selected.includes(row.qualified)) s.selected.push(row.qualified);
-      } else {
-        s.selected = s.selected.filter(n => n !== row.qualified);
-      }
+      s.selected = next;
       saveListFilterState(lang, s);
-      // A list in more than one folder gets a checkbox per folder (see
-      // addRowsGroupedByFolder) — all referring to the same underlying
-      // selection, so every copy needs to agree the moment one of them
-      // changes, not just on the next unrelated re-render.
-      refreshFilterSelect(lang);
-    });
-
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'list-filter-name';
-    nameSpan.textContent = row.displayName;
-
-    const countSpan = document.createElement('span');
-    countSpan.className = 'list-filter-item-count';
-    // A smart list's size depends on live vocab and isn't computed here —
-    // see enumerateFilterableLists's doc comment.
-    countSpan.textContent = row.count === null ? '≈' : String(row.count);
-    if (row.count === null) countSpan.title = 'Dynamic — re-evaluated when the quiz runs';
-
-    label.append(cb, nameSpan, buildLangBadge(row.badgeLangs), countSpan);
-    container.appendChild(label);
-  }
-
-  // Folder-grouped within a kind: ungrouped rows first (unchanged from
-  // before folders existed), then each named folder as its own small
-  // sub-label — same idea as the Cross-Language/Smart Lists headers below,
-  // one level deeper. A list's folders are purely an organizing label here,
-  // not a second filter dimension, so this only changes how rows are laid
-  // out, never which ones are offered. A list in more than one folder is
-  // offered once per folder — same "appears everywhere it's labeled" model
-  // as the sidebar's own folder groups.
-  function addRowsGroupedByFolder(kindRows: FilterableListRow[]): void {
-    kindRows.filter(r => r.folders.length === 0).forEach(addRow);
-    const folders = [...new Set(kindRows.flatMap(r => r.folders))].sort();
-    folders.forEach(folder => {
-      const folderLabel = document.createElement('span');
-      folderLabel.className = 'list-filter-folder-label';
-      folderLabel.textContent = `📁 ${folder}`;
-      container.appendChild(folderLabel);
-      kindRows.filter(r => r.folders.includes(folder)).forEach(addRow);
-    });
-  }
-
-  if (rows.length === 0) {
-    const empty       = document.createElement('span');
-    empty.className   = 'list-filter-empty';
-    empty.textContent = 'No lists yet — create one in My Lists';
-    container.appendChild(empty);
-  } else {
-    // Single-language lists flow together as one group, whatever language
-    // each belongs to — every pill already carries its own flag badge, so a
-    // full-width header row repeating just that flag for each language (as
-    // this used to do) said nothing the pill itself didn't, at the cost of a
-    // blank-looking row per language. Cross-Language and Smart Lists each
-    // get their own header since those behave differently from a plain list.
-    addRowsGroupedByFolder(rows.filter(r => r.group === 'single'));
-
-    const multiRows = rows.filter(r => r.group === 'multi');
-    if (multiRows.length > 0) {
-      const groupLabel = document.createElement('span');
-      groupLabel.className = 'list-filter-group-label list-filter-group-label--multi';
-      groupLabel.textContent = 'Cross-Language';
-      container.appendChild(groupLabel);
-      addRowsGroupedByFolder(multiRows);
-    }
-
-    const smartRows = rows.filter(r => r.group === 'smart');
-    if (smartRows.length > 0) {
-      const groupLabel = document.createElement('span');
-      groupLabel.className = 'list-filter-group-label list-filter-group-label--smart';
-      groupLabel.textContent = 'Smart Lists';
-      container.appendChild(groupLabel);
-      addRowsGroupedByFolder(smartRows);
-    }
-  }
+    },
+  }));
 
   // Sync mode toggle button active state
   const modeWrap = document.getElementById('listFilterMode');

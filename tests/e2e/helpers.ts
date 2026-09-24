@@ -13,6 +13,8 @@ import { type Page } from '@playwright/test';
 export async function disableSimpleMode(page: Page): Promise<void> {
   await page.addInitScript(() => {
     window.localStorage.setItem('s_simple_mode', 'false');
+    // The proof-of-concept quiz tabs are hidden by default now.
+    window.localStorage.setItem('s_show_experimental_modes', 'true');
   });
 }
 
@@ -21,6 +23,11 @@ export async function disableSimpleMode(page: Page): Promise<void> {
  *  them are testing the controls themselves, only what happens once a quiz
  *  is running. */
 export async function startMode(page: Page, mode: string): Promise<void> {
+  // Picture Quiz, Trivia, Guess the Blank and Sentence Scramble are hidden
+  // until switched on in Settings — see app.ts's syncExperimentalModes.
+  await page.addInitScript(() => {
+    window.localStorage.setItem('s_show_experimental_modes', 'true');
+  });
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator(`.mode-tab[data-mode="${mode}"]`).click();

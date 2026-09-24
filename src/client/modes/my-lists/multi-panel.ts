@@ -36,13 +36,15 @@ import { getMastered, setMasteryLevel, MASTERY_LEVELS } from './mastery.ts';
 import { showUndo } from './undo-toast.ts';
 import { logger } from '../../utils/logger.ts';
 import { buildLangBadge } from '../../ui/lang-badge.ts';
+import { createPager } from './pager.ts';
 import { LANGUAGES } from '../../data/languages.ts';
 import {
   POS_ABBREV, POS_CHIPS, BANDS, type SortMode, type VocabEntry,
 } from './types.ts';
-import { buildMasteryControls, appendCountChip, appendMasteredChip, buildWordDetail, buildEditInMyContentButton } from './row-shared.ts';
-import { buildAudioButton } from '../../ui/audio-play-button.ts';
-import { fillHighlighted } from '../../utils/dom.ts';
+import { appendCountChip, appendMasteredChip, buildWordRow } from './row-shared.ts';
+import { buildExportControls, buildQuizButton } from './list-actions.ts';
+import { exportRows } from './export-list.ts';
+import { qualifyMultiListName } from '../../utils/word-lists.ts';
 
 const SORT_OPTIONS: readonly [SortMode, string][] = [
   ['alpha-asc',   'A → Z'],
@@ -87,25 +89,25 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
   const title = document.createElement('h2');
   title.className = 'ml-panel-title'; title.textContent = listName;
   titleGroup.appendChild(title);
-  header.appendChild(titleGroup);
-
-  // Flags + count sit on their own line, below the title — see sidebar.ts's
-  // card for the same split (name can run long; the meta shouldn't have to
-  // fight it for a line).
-  const metaRow = document.createElement('div');
-  metaRow.className = 'ml-panel-meta-row';
-  let langBadge = buildLangBadge(getMultiListLanguages(listName));
-  const countBadge = document.createElement('span');
-  countBadge.className = 'ml-list-count';
-  function refreshCountBadge(): void {
-    countBadge.textContent = `${entries.length} word${entries.length === 1 ? '' : 's'}`;
-  }
-  refreshCountBadge();
-  metaRow.append(langBadge, countBadge);
-  header.appendChild(metaRow);
-
+  // Stats chips on the title row, Export + Quiz at its right end — same as a
+  // Single-Language list. Exported in the order shown.
   const statsRow = document.createElement('div');
   statsRow.className = 'ml-stats-row';
+  const titleActions = document.createElement('span');
+  titleActions.className = 'ml-title-actions';
+  titleActions.append(
+    ...buildExportControls(fmt => exportRows(
+      visible.map(e => ({ word: e.word, translation: cachedVocabMap(e.language)?.get(e.word)?.translation })),
+      listName, fmt,
+    )),
+    buildQuizButton(ctx.lang, () => qualifyMultiListName(listName)),
+  );
+  titleGroup.append(statsRow, titleActions);
+  header.appendChild(titleGroup);
+
+  // The flag(s) sit in the dropdown row below, right before Part of Speech;
+  // the word count is the stats row's own chip (see renderStats).
+  let langBadge = buildLangBadge(getMultiListLanguages(listName));
 
   // ── Filter / sort toolbar ──────────────────────────────────────────────────
 
@@ -201,9 +203,8 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
     },
   );
 
-  filterDropdownsRow.append(posDropdown.wrap, bandDropdown.wrap, folderDropdown.wrap, hideFromDropdown.wrap);
+  filterDropdownsRow.append(langBadge, posDropdown.wrap, bandDropdown.wrap, folderDropdown.wrap, hideFromDropdown.wrap);
 
-  header.appendChild(statsRow);
   header.appendChild(filterDropdownsRow);
   ctx.panel.appendChild(header);
 
@@ -254,7 +255,6 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
   function doAdd(entry: VocabEntry): void {
     addToMultiList(listName, entry.word, langSel.value);
     entries.push({ word: entry.word, language: langSel.value });
-    refreshCountBadge();
     const nextBadge = buildLangBadge(getMultiListLanguages(listName));
     langBadge.replaceWith(nextBadge);
     langBadge = nextBadge;
@@ -346,6 +346,12 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
   ctx.panel.appendChild(listToolbar);
 
   // ── Word list ────────────────────────────────────────────────────────────
+  // Paged, and back to page 1 only when the filter/sort/selection changed
+  // what is listed — not on a redraw for a row action like removing a word.
+  let lastListingSig = '';
+  const pager = createPager(() => renderRows());
+  ctx.panel.appendChild(pager.el);
+
   const listEl = document.createElement('ul');
   listEl.className = 'ml-word-list';
   ctx.panel.appendChild(listEl);
@@ -389,10 +395,10 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
       if (idx !== -1) entries.splice(idx, 1);
     });
     selectedKeys.clear();
-    refreshCountBadge(); ctx.renderSidebar(false); renderRows();
+    ctx.renderSidebar(false); renderRows();
     showUndo(`Removed ${toRemove.length} word${toRemove.length === 1 ? '' : 's'}`, () => {
       toRemove.forEach(e => { entries.push(e); addToMultiList(listName, e.word, e.language); });
-      refreshCountBadge(); ctx.renderSidebar(false); renderRows();
+      ctx.renderSidebar(false); renderRows();
     });
   });
 
@@ -448,9 +454,12 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
     renderStats(filtered);
     updateChipCounts(filtered);
     visible = sortEntries(filtered);
+    const sig = [filterQuery, [...selectedPos].join(), [...selectedBands].join(), sortMode, hideMastered].join('|');
+    if (sig !== lastListingSig) { pager.reset(); lastListingSig = sig; }
     syncBulkBar();
 
     if (visible.length === 0) {
+      pager.slice(visible); // syncs (hides) the pager row
       const empty = document.createElement('li');
       empty.className = 'ml-word-empty';
       empty.textContent = entries.length === 0
@@ -459,20 +468,12 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
       listEl.appendChild(empty);
       return;
     }
-    visible.forEach(e => listEl.appendChild(buildRow(e)));
+    pager.slice(visible).forEach(e => listEl.appendChild(buildRow(e)));
   }
 
   function buildRow(entry: MultiListEntry): HTMLLIElement {
     const key   = entryKey(entry);
     const ve    = cachedVocabMap(entry.language)?.get(entry.word);
-    const posLabel   = POS_ABBREV[ve?.pos ?? ''] ?? '';
-    const isMastered = getMastered(entry.language).has(entry.word);
-
-    const li = document.createElement('li');
-    li.className = 'ml-word-item'
-      + (key === expandedKey ? ' ml-word-item--expanded' : '')
-      + (isMastered ? ' ml-word-item--mastered' : '');
-
     const check = document.createElement('input');
     check.type = 'checkbox';
     check.className = 'ml-word-check';
@@ -485,29 +486,6 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
       syncBulkBar();
     });
 
-    const wordSpan = document.createElement('span');
-    wordSpan.className = 'ml-word-text';
-    fillHighlighted(wordSpan, entry.word, filterQuery);
-
-    const audioBtn = buildAudioButton(ve?.audioUrl);
-
-    const posSpan = document.createElement('span');
-    posSpan.className = 'ml-word-pos'; posSpan.textContent = posLabel;
-    if (posLabel && ve?.pos) posSpan.dataset.pos = ve.pos; else posSpan.hidden = true;
-
-    const transSpan = document.createElement('span');
-    transSpan.className = 'ml-word-trans';
-    if (ve?.translation) fillHighlighted(transSpan, ve.translation, filterQuery);
-
-    const rankBadge = document.createElement('span');
-    rankBadge.className = 'ml-word-rank';
-    if (ve?.rank != null) rankBadge.textContent = '#' + ve.rank; else rankBadge.hidden = true;
-
-    const actionsDiv = document.createElement('div');
-    actionsDiv.className = 'ml-word-actions';
-
-    const { masteryBtn, quizBadge } = buildMasteryControls(entry.language, entry.word, renderRows);
-
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button'; removeBtn.className = 'ml-remove-btn';
     removeBtn.title = 'Remove from this list'; removeBtn.textContent = '×';
@@ -516,35 +494,23 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
       removeFromMultiList(listName, entry.word, entry.language);
       const idx = entries.findIndex(x => x.word === entry.word && x.language === entry.language);
       if (idx !== -1) entries.splice(idx, 1);
-      refreshCountBadge(); ctx.renderSidebar(false); renderRows();
+      ctx.renderSidebar(false); renderRows();
       showUndo(`Removed "${entry.word}"`, () => {
         entries.push(entry);
         addToMultiList(listName, entry.word, entry.language);
-        refreshCountBadge(); ctx.renderSidebar(false); renderRows();
+        ctx.renderSidebar(false); renderRows();
       });
     });
 
-    const editBtn = buildEditInMyContentButton(entry.language, entry.word);
-
-    actionsDiv.append(quizBadge, masteryBtn, editBtn, removeBtn);
-    li.append(buildLangBadge([entry.language]), check, wordSpan);
-    if (audioBtn) li.appendChild(audioBtn);
-    li.append(posSpan, rankBadge, transSpan, actionsDiv);
-
-    // ── Preview row (collapsed unless expanded) ──────────────────────────────
-    const detail = (key === expandedKey && ve)
-      ? buildWordDetail(ve, entry.language, getMultiAddedDate(listName, entry.language, entry.word))
-      : document.createElement('div');
-    detail.classList.add('ml-word-detail');
-    li.appendChild(detail);
-
-    li.addEventListener('click', e => {
-      if ((e.target as HTMLElement).closest('button')) return;
-      expandedKey = (expandedKey === key) ? null : key;
-      renderRows();
+    return buildWordRow({
+      lang: entry.language, word: entry.word, entry: ve,
+      mastered: getMastered(entry.language).has(entry.word), filter: filterQuery,
+      expanded: key === expandedKey,
+      addedDate: getMultiAddedDate(listName, entry.language, entry.word),
+      redraw: renderRows,
+      onToggleExpand: () => { expandedKey = expandedKey === key ? null : key; renderRows(); },
+      leading: [check], beforePos: [buildLangBadge([entry.language])], extraActions: [removeBtn],
     });
-
-    return li;
   }
 
   renderRows();

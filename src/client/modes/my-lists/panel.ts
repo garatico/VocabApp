@@ -12,13 +12,12 @@
  */
 
 import {
-  getList, saveListFilterState, refreshFilterSelect, getListMeta, setListMeta, metaFolders,
+  getList, getListMeta, setListMeta, metaFolders,
 } from '../../utils/word-lists.ts';
 import { FILTER_SCOPES, SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
 import { BROWSE_ALL_LIST, type ListsCtx } from './context.ts';
 import { renderBrowsePanel } from './browse-panel.ts';
 import { cachedVocab, cachedVocabMap, fetchVocab } from './vocab-cache.ts';
-import { readString } from '../../utils/storage.ts';
 import { logger } from '../../utils/logger.ts';
 import { createAddSearch } from './add-search.ts';
 import { createBulkImport } from './bulk-import.ts';
@@ -27,8 +26,9 @@ import { renderSmartPanel } from './smart-panel.ts';
 import { renderMultiPanel } from './multi-panel.ts';
 import { renderProfilePanel } from './profile-panel.ts';
 import { exportList } from './export-list.ts';
+import { buildExportControls, buildQuizButton } from './list-actions.ts';
 import { closePopover, clickedOutsidePopover } from './move-popover.ts';
-import { BANDS, POS_CHIPS, type ExportFormat, type SortMode, type VocabEntry } from './types.ts';
+import { BANDS, POS_CHIPS, type SortMode, type VocabEntry } from './types.ts';
 import { buildLangBadge } from '../../ui/lang-badge.ts';
 import { buildChipDropdown, buildChecklistDropdown, closeAllChipDropdowns } from './chip-dropdown.ts';
 import { getFolderRegistry, addFolder } from './folders.ts';
@@ -80,10 +80,6 @@ export function renderPanel(ctx: ListsCtx): void {
   const titleGroup = document.createElement('div');
   titleGroup.className = 'ml-panel-title-group';
 
-  const listLabel = document.createElement('span');
-  listLabel.className = 'ml-panel-list-label';
-  listLabel.innerHTML = '<span class="ml-panel-selected-dot" aria-hidden="true"></span>Selected List:';
-
   const flagBadge = buildLangBadge([ctx.lang]);
   flagBadge.classList.add('ml-panel-flag');
 
@@ -97,74 +93,26 @@ export function renderPanel(ctx: ListsCtx): void {
   // Kept as a no-op rather than threaded out of every call site below.
   function refreshCount(): void {}
 
-  const exportBtn = document.createElement('button');
-  exportBtn.type = 'button'; exportBtn.className = 'ml-export-btn';
-  exportBtn.textContent = '↓ Export';
-
-  const exportFmtLabel = document.createElement('span');
-  exportFmtLabel.className = 'ml-export-format-label'; exportFmtLabel.textContent = 'Export Format:';
-
-  const exportFmtSel = document.createElement('select');
-  exportFmtSel.className = 'ml-export-format-sel';
-  exportFmtSel.title = 'Export format';
-  ([
-    ['with-translation', 'Word + Translation'],
-    ['words-only',       'Words Only'],
-  ] as const).forEach(([value, label]) => {
-    const opt = document.createElement('option');
-    opt.value = value; opt.textContent = label;
-    exportFmtSel.appendChild(opt);
-  });
-
-  exportBtn.addEventListener('click', () => {
-    const fmt = exportFmtSel.value as ExportFormat;
+  const exportControls = buildExportControls(fmt => {
     // Exported in the order shown, so the file matches what is on screen.
     exportList(
       wordList.sortWords(getList(ctx.lang, ctx.selectedList)),
       cachedVocabMap(ctx.lang), ctx.selectedList, ctx.lang, fmt,
     );
   });
+  const quizBtn = buildQuizButton(ctx.lang, () => ctx.selectedList || null);
 
-  const quizBtn = document.createElement('button');
-  quizBtn.type = 'button';
-  quizBtn.className = 'ml-quiz-btn';
-  quizBtn.title = 'Focus this list and start a quiz';
-  quizBtn.textContent = '▶ Quiz';
-  quizBtn.addEventListener('click', () => {
-    if (!ctx.selectedList) return;
-    // Quizzing from here means leaving this tab, so pick the mode the user was
-    // last in — but only if it's actually a mode this list filter can reach.
-    // Trivia has no vocabulary-list concept (its own question bank, not
-    // `list`) and My Lists/Settings/History have no quiz at all, so landing
-    // on any of those left Start Quiz doing nothing. Same allowlist as
-    // history-mode.ts's own "quiz these" action.
-    const savedMode = readString('vq_mode');
-    const usableModes = new Set(['table', 'picture']);
-    const targetMode = savedMode && usableModes.has(savedMode) ? savedMode : 'table';
-    // The list filter is per mode, so this has to be written for the mode we
-    // are about to switch to. Writing it for My Lists would set up a filter on
-    // the tab we are leaving and land on an unfiltered quiz.
-    saveListFilterState(
-      ctx.lang,
-      { active: true, mode: 'focus', selected: [ctx.selectedList] },
-      targetMode as FilterScope,
-    );
-    refreshFilterSelect(ctx.lang);
-    document.querySelector<HTMLElement>(`.mode-tab[data-mode="${targetMode}"]`)?.click();
-    (document.getElementById('startBtn') as HTMLButtonElement | null)?.click();
-  });
+  // Export + Quiz sit at the right end of the title row.
+  const titleActions = document.createElement('span');
+  titleActions.className = 'ml-title-actions';
+  titleActions.append(...exportControls, quizBtn);
 
-  titleGroup.appendChild(listLabel); titleGroup.appendChild(flagBadge);
-  titleGroup.appendChild(title);
-  titleGroup.appendChild(exportBtn);
-  titleGroup.appendChild(exportFmtLabel); titleGroup.appendChild(exportFmtSel);
-  // Inline with Export/Export Format rather than its own full-width row
-  // below — one less row means the word list gets that height back.
-  titleGroup.appendChild(quizBtn);
-
-  // Stats row — filled in by the word list on every render.
+  // Stats row (word count, ranks, mastered) — filled in by the word list on
+  // every render; sits on the title row itself, between the title and the actions.
   const statsRow = document.createElement('div');
   statsRow.className = 'ml-stats-row';
+
+  titleGroup.append(flagBadge, title, statsRow, titleActions);
 
   // ── Filter / sort toolbar ──────────────────────────────────────────────────
 
@@ -274,7 +222,6 @@ export function renderPanel(ctx: ListsCtx): void {
   filterDropdownsRow.append(posDropdown.wrap, bandDropdown.wrap, folderDropdown.wrap, hideFromDropdown.wrap);
 
   panelHeader.appendChild(titleGroup);
-  panelHeader.appendChild(statsRow);
   panelHeader.appendChild(filterDropdownsRow);
   ctx.panel.appendChild(panelHeader);
 
@@ -335,6 +282,7 @@ export function renderPanel(ctx: ListsCtx): void {
   listToolbar.appendChild(controlsGroup);
   listToolbar.appendChild(wordList.bulkBar);
   ctx.panel.appendChild(listToolbar);
+  ctx.panel.appendChild(wordList.pagerEl);
   ctx.panel.appendChild(wordList.listEl);
 
   filterInp.addEventListener('input', () => wordList.render());

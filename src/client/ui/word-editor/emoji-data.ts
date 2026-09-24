@@ -1,5 +1,5 @@
 /**
- * admin-emoji-data.ts
+ * emoji-data.ts
  *
  * A curated set of emojis for the Word Editor's "Emoji fallback" field
  * (shown when a word has no SVG/photo) — not the full Unicode emoji set,

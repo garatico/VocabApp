@@ -133,7 +133,6 @@
   border-color: var(--accent);
   background: var(--accent-light);
   color: var(--accent);
-  transform: translateY(-1px);
 }
 .tv-option:disabled { cursor: default; }
 

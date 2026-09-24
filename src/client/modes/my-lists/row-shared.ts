@@ -10,7 +10,9 @@ import { getMasteryLevel, setMasteryLevel, MASTERY_LEVELS, getMasteredDate } fro
 import { quizStrength, wordTally } from '../../utils/session-history.ts';
 import { buildConjSection, buildNonFiniteSection } from '../../utils/word-tooltip.ts';
 import { openWordInMyContentEditor } from '../my-content-mode.ts';
-import type { VocabEntry } from './types.ts';
+import { POS_ABBREV, type VocabEntry } from './types.ts';
+import { buildAudioButton } from '../../ui/audio-play-button.ts';
+import { fillHighlighted } from '../../utils/dom.ts';
 
 /** Compact fill-level glyphs for the mastery scale, 0..MAX_MASTERY_LEVEL. */
 export const MASTERY_GLYPHS = ['○', '◔', '◑', '◕', '●'];
@@ -213,4 +215,83 @@ export function buildWordDetail(entry: VocabEntry, lang: string, addedDate?: num
     detail.appendChild(none);
   }
   return detail;
+}
+
+export interface WordRowOptions {
+  lang: string;
+  word: string;
+  entry: VocabEntry | undefined;
+  mastered: boolean;
+  /** Search text to highlight in the word and its translation. */
+  filter: string;
+  /** Whether this row's detail (glosses, IPA, examples…) is open. */
+  expanded: boolean;
+  addedDate?: number | null;
+  /** Redraw the list — after a mastery change. */
+  redraw: () => void;
+  /** Flip this row's expanded state and redraw (row click). */
+  onToggleExpand: () => void;
+  /** Before the word (e.g. a bulk-select checkbox). */
+  leading?: HTMLElement[];
+  /** Right before the POS tag (e.g. a Cross-Language row's flag). */
+  beforePos?: HTMLElement[];
+  /** After the shared actions (e.g. move / remove). */
+  extraActions?: HTMLElement[];
+}
+
+/**
+ * One word row — the same for Single-Language, Cross-Language and Smart lists:
+ * word, audio, POS, rank, translation, quiz badge, mastery, edit-in-My-Content,
+ * plus a click-to-expand detail (glosses, IPA, examples…). A list type only
+ * supplies what is genuinely its own through `leading`/`beforePos`/`extraActions`.
+ */
+export function buildWordRow(o: WordRowOptions): HTMLLIElement {
+  const { entry } = o;
+  const li = document.createElement('li');
+  li.className = 'ml-word-item'
+    + (o.expanded ? ' ml-word-item--expanded' : '')
+    + (o.mastered ? ' ml-word-item--mastered' : '');
+
+  // Word/meaning disambiguators live in the expanded detail (buildWordDetail),
+  // not on this line, which they widened unpredictably from row to row.
+  const wordSpan = document.createElement('span');
+  wordSpan.className = 'ml-word-text';
+  fillHighlighted(wordSpan, o.word, o.filter);
+
+  const audioBtn = buildAudioButton(entry?.audioUrl);
+
+  const posLabel = POS_ABBREV[entry?.pos ?? ''] ?? '';
+  const posSpan = document.createElement('span');
+  posSpan.className = 'ml-word-pos'; posSpan.textContent = posLabel;
+  if (posLabel && entry?.pos) posSpan.dataset.pos = entry.pos; else posSpan.hidden = true;
+
+  const rankBadge = document.createElement('span');
+  rankBadge.className = 'ml-word-rank';
+  if (entry?.rank != null) rankBadge.textContent = '#' + entry.rank; else rankBadge.hidden = true;
+
+  const transSpan = document.createElement('span');
+  transSpan.className = 'ml-word-trans';
+  if (entry?.translation) fillHighlighted(transSpan, entry.translation, o.filter);
+
+  const { masteryBtn, quizBadge } = buildMasteryControls(o.lang, o.word, o.redraw);
+  const editBtn = buildEditInMyContentButton(o.lang, o.word);
+  const actions = document.createElement('div');
+  actions.className = 'ml-word-actions';
+  actions.append(quizBadge, masteryBtn, editBtn, ...(o.extraActions ?? []));
+
+  li.append(...(o.leading ?? []), wordSpan);
+  if (audioBtn) li.appendChild(audioBtn);
+  li.append(...(o.beforePos ?? []), posSpan, rankBadge, transSpan, actions);
+
+  const detail = (o.expanded && entry)
+    ? buildWordDetail(entry, o.lang, o.addedDate)
+    : document.createElement('div');
+  detail.classList.add('ml-word-detail');
+  li.appendChild(detail);
+
+  li.addEventListener('click', e => {
+    if ((e.target as HTMLElement).closest('button, input')) return;
+    o.onToggleExpand();
+  });
+  return li;
 }

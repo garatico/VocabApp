@@ -614,6 +614,30 @@ export function setWordFields(
   writeJson(wordOverrideKey(lang), { ...getWordOverrides(lang), [wordKey(word)]: next });
 }
 
+/** True when an override changes nothing — every list empty, every field unset. */
+function isEmptyOverride(o: Omit<WordOverride, 'updatedAt'>): boolean {
+  return Object.values(o).every(v =>
+    v === undefined
+    || (Array.isArray(v) && v.length === 0)
+    || (isRecord(v) && Object.keys(v).length === 0));
+}
+
+/**
+ * Replaces a word's whole override in one write with `next` — every editable
+ * part at once (fields, hidden/added/ordered glosses, per-sense notes). The
+ * shared Word Editor saves this way: it works out what differs from the
+ * original and hands the complete result over, so anything not in `next` is
+ * un-overridden. An override that ends up changing nothing is removed
+ * outright rather than left behind as an empty record.
+ */
+export function replaceWordOverride(lang: string, word: string, next: Omit<WordOverride, 'updatedAt'>): void {
+  const overrides = getWordOverrides(lang);
+  const key = wordKey(word);
+  if (isEmptyOverride(next)) delete overrides[key];
+  else overrides[key] = { ...next, updatedAt: Date.now() };
+  writeJson(wordOverrideKey(lang), overrides);
+}
+
 export function setGlossHidden(lang: string, word: string, gloss: string, hidden: boolean): void {
   const current = getWordOverride(lang, word);
   const hiddenSet = new Set(current?.hiddenGlosses ?? []);
@@ -708,7 +732,21 @@ export function applyGlossOrder(glosses: string[], order: string[]): string[] {
  *  reordering so `glossOrder` (saved against whatever was visible at the
  *  time) never has to account for glosses that aren't shown at all. */
 export function applyWordOverride(lang: string, w: Word): Word {
-  const o = getWordOverride(lang, w.word);
+  return applyWordOverrideRecord(w, getWordOverride(lang, w.word));
+}
+
+/** The override stored for `word` in an already-read `getWordOverrides()` record. */
+export function pickWordOverride(overrides: Record<string, WordOverride>, word: string): WordOverride | null {
+  return ownGet(overrides, wordKey(word)) ?? null;
+}
+
+/**
+ * applyWordOverride with the override already in hand. Applying overrides to a
+ * whole vocabulary (the shared Word Editor lists every word) has to read the
+ * stored record once and hand each word its own entry — going through
+ * applyWordOverride would re-parse the whole record from storage per word.
+ */
+export function applyWordOverrideRecord(w: Word, o: WordOverride | null | undefined): Word {
   if (!o) return w;
   const withAdded = o.addedGlosses?.length ? [...w.glosses, ...o.addedGlosses] : w.glosses;
   const visible = o.hiddenGlosses?.length ? withAdded.filter(g => !o.hiddenGlosses!.includes(g)) : withAdded;

@@ -20,7 +20,7 @@
 
 import { FILTER_SCOPES, type FilterScope } from './filter-scope.ts';
 import { currentLangValue, currentExtraLanguages } from './filter-lang.ts';
-import { readJson, writeJson, writeString, isRecord } from '../utils/storage.ts';
+import { readJson, readString, writeJson, writeString, remove, isRecord } from '../utils/storage.ts';
 import { applyClassSelection, getClassFilterState, type ClassFilterState } from './class-filter.ts';
 import { applyDomainSelection, getDomainFilterState, type DomainFilterState } from './domain-filter.ts';
 import { getScriptTypeSelection, applyScriptTypeSelection } from './script-type-filter.ts';
@@ -129,6 +129,8 @@ export interface PresetBundle {
   /** @deprecated superseded by `folders`; kept only so a value written
    *  before that existed still reads back as something. */
   folder?: string;
+  /** Optional emoji shown before the profile's name in the sidebar. */
+  emoji?: string;
 }
 
 const KEY_PREFIX = 'vq_presets_';
@@ -354,6 +356,7 @@ function normalizeBundle(raw: PresetBundle): PresetBundle {
     // `folder` — folded in here, the one place every stored bundle passes
     // through, so nothing downstream has to know the old shape existed.
     folders: raw.folders ?? (raw.folder ? [raw.folder] : []),
+    emoji: typeof raw.emoji === 'string' ? raw.emoji : undefined,
   };
 }
 
@@ -369,6 +372,7 @@ export function deletePreset(mode: FilterScope, name: string): void {
   const store = readStore(mode);
   delete store[name];
   writeStore(mode, store);
+  if (readString(ACTIVE_PROFILE_PREFIX + mode) === name) setActiveProfile(mode, null);
 }
 
 export function getPreset(mode: FilterScope, name: string): PresetBundle | undefined {
@@ -385,6 +389,7 @@ export function renamePreset(mode: FilterScope, oldName: string, newName: string
   store[trimmed] = store[oldName];
   delete store[oldName];
   writeStore(mode, store);
+  if (readString(ACTIVE_PROFILE_PREFIX + mode) === oldName) setActiveProfile(mode, trimmed);
   return true;
 }
 
@@ -490,7 +495,48 @@ export function applyPreset(mode: FilterScope, name: string): boolean {
   const bundle = getPreset(mode, name);
   if (!bundle) return false;
   applyBundle(mode, bundle);
+  setActiveProfile(mode, name);
   return true;
+}
+
+// ── Which profile is applied ────────────────────────────────────────────────
+//
+// Remembered per mode so the filter bar's summary strip can name it, and say
+// when the filters have since drifted from what it saved ("modified").
+// Only the filter parts are compared — language, Part of Speech, Lists,
+// Domains — since those are what the strip is about.
+
+const ACTIVE_PROFILE_PREFIX = 'vq_activeprofile_';
+
+export function setActiveProfile(mode: FilterScope, name: string | null): void {
+  if (name === null) remove(ACTIVE_PROFILE_PREFIX + mode);
+  else writeString(ACTIVE_PROFILE_PREFIX + mode, name);
+}
+
+function filterSignature(b: PresetBundle, withLang: boolean): string {
+  const sorted = (a: string[]): string[] => [...a].sort();
+  return JSON.stringify({
+    // Only when the profile itself saved a language — a profile that leaves it
+    // unset applies to whichever language is on screen.
+    lang: withLang ? (b.language ?? null) : null,
+    c: [b.classes.active, sorted(b.classes.selected)],
+    d: [b.domains.active, sorted(b.domains.selected)],
+    l: [b.listFilter.active, b.listFilter.mode, sorted(b.listFilter.selected)],
+  });
+}
+
+/** The profile applied in this mode, if it still exists, and whether the
+ *  filters have changed since it was applied. */
+export function getActiveProfile(mode: FilterScope): { name: string; modified: boolean } | null {
+  const name = readString(ACTIVE_PROFILE_PREFIX + mode);
+  if (!name) return null;
+  const saved = getPreset(mode, name);
+  if (!saved) return null;
+  const withLang = !!saved.language;
+  return {
+    name,
+    modified: filterSignature(saved, withLang) !== filterSignature(captureCurrentBundle(mode), withLang),
+  };
 }
 
 /**

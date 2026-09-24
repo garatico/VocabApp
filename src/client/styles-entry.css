@@ -56,3 +56,5 @@
 @import "/styles/app/shortcuts.css";
 @import "/styles/app/onboarding.css";
 @import "/styles/app/chat.css";
+/* Shared Word Editor (My Content) — generated from the Admin stylesheets; scoped under .word-editor */
+@import "/styles/app/word-editor.css";

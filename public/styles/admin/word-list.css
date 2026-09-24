@@ -238,7 +238,7 @@ html.dark .badge-pos { color: hsl(var(--pos-hue) 62% 72%); }
 
 /* Same traffic-light CEFR scheme (green=easiest through red=hardest) as
    the filter bar's own Band chips (filter-bar.css) and edit-form.css's
-   #editBand — fallback on the bare .badge-band (specificity 0,1,0), not a
+   .we-band — fallback on the bare .badge-band (specificity 0,1,0), not a
    repeated `.badge-band[data-band]` (0,2,0): see .badge-pos's own comment
    above for why that tie loses to source order instead of actually falling
    back. */
@@ -292,3 +292,8 @@ label .hint {
   .word-list     { flex: none; max-height: 300px; }
   .form-panel-empty { height: auto; min-height: 300px; }
 }
+
+/* Host-supplied markers (My Content): a word you added / one you have edited */
+.badge-custom { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.badge-edited { background: color-mix(in srgb, hsl(35 90% 50%) 16%, transparent); color: hsl(35 80% 38%); }
+html.dark .badge-edited { color: hsl(35 85% 65%); }

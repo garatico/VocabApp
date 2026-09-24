@@ -5,14 +5,12 @@
  * and redraws, so the preview underneath is always what the rule currently
  * selects — there is no Apply button to forget to press.
  *
- * Rows here are plain: word, part of speech, level, translation. None of the
- * per-row actions from an ordinary list apply, because the membership is
- * computed. "Save as list" is the escape hatch — it materialises the current
- * result into a normal, editable list.
- *
- * The preview stops at 400 rows. A rule with no limit can match the entire
- * vocabulary, and this pane is for judging whether the rule is right, not for
- * working through the words.
+ * Rows are the same shared word row every list type uses (row-shared.ts's
+ * buildWordRow: audio, POS, rank, translation, mastery, click-to-expand
+ * detail), and the header offers the same Export and Quiz. What a smart list
+ * lacks is what its computed membership rules out — add/move/remove a word.
+ * "Save as list" is the escape hatch: it materialises the current result into
+ * a normal, editable list. The result is paged, 100 words to a page.
  */
 
 import {
@@ -27,9 +25,15 @@ import {
   getSmartLists, saveSmartRule, evaluateSmart, type SmartRule,
 } from './smart-lists.ts';
 import { showUndo } from './undo-toast.ts';
-import { BANDS, POS_ABBREV, POS_CHIPS } from './types.ts';
-
-const PREVIEW_LIMIT = 400;
+import { BANDS, POS_CHIPS } from './types.ts';
+import { buildChecklistDropdown, buildChipDropdown } from './chip-dropdown.ts';
+import { createPager } from './pager.ts';
+import { buildWordRow } from './row-shared.ts';
+import { buildExportControls, buildQuizButton } from './list-actions.ts';
+import { exportList } from './export-list.ts';
+import { qualifySmartListName } from '../../utils/word-lists.ts';
+import { getFolderRegistry, addFolder } from './folders.ts';
+import { FILTER_SCOPES, SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
 
 /** Same display formatting as the Table/Picture Domains filter — see domain-filter.ts's fmt(). */
 function fmtDomain(d: string): string {
@@ -50,28 +54,83 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
   title.textContent = name;
   const count = document.createElement('span');
   count.className = 'ml-panel-count';
+  // "Matched against N words" reads as part of the count, so it sits right
+  // beside it rather than on a line of its own further down.
+  const matchedNote = document.createElement('span');
+  matchedNote.className = 'ml-smart-desc ml-smart-matched';
   titleGroup.append(title, count);
+  // Marks a list that has words pinned by hand; hidden when there are none.
+  const manualTag = document.createElement('span');
+  manualTag.className = 'ml-manual-badge';
+  manualTag.title = 'Words pinned by hand under Manual Additions';
+  function syncManualTag(): void {
+    manualTag.hidden = rule.manualWords.length === 0;
+    manualTag.textContent = `✋ ${rule.manualWords.length} manual`;
+  }
+  syncManualTag();
+  titleGroup.append(manualTag, matchedNote);
 
   // Materialise — the escape hatch from a query into an editable list.
   const freezeBtn = document.createElement('button');
   freezeBtn.type = 'button'; freezeBtn.className = 'ml-export-btn';
   freezeBtn.textContent = '⤓ Save as list';
   freezeBtn.title = 'Copy these words into a normal, editable list';
-  titleGroup.appendChild(freezeBtn);
+  // Save as list + Export + Quiz at the right end of the title row, like the
+  // other list types. Exported as filtered/sorted on screen.
+  let shownAll: string[] = [];
+  const titleActions = document.createElement('span');
+  titleActions.className = 'ml-title-actions';
+  titleActions.append(
+    freezeBtn,
+    ...buildExportControls(fmt => exportList(shownAll, cachedVocabMap(ctx.lang), name, ctx.lang, fmt)),
+    buildQuizButton(ctx.lang, () => qualifySmartListName(ctx.lang, name)),
+  );
+  titleGroup.appendChild(titleActions);
 
   header.appendChild(titleGroup);
 
-  // What the rule currently selects, as badges rather than one run-on
-  // sentence — each criterion reads on its own, and Level/Type reuse the
-  // exact same coloured-pill styling as the editor's own chips right below
-  // (and My Lists' POS/Level filters everywhere else — see class-filter.css).
-  const badgeRow = document.createElement('div');
-  badgeRow.className = 'ml-rule-badges';
-  header.appendChild(badgeRow);
+  // ── Folders / Hide From — same dropdown row as a Single-Language list's
+  // panel (panel.ts). Written straight onto `rule` (not a copy) so the rule
+  // editor's own persist() below, which saves that same object, can't put
+  // back an older folders/hiddenModes.
+  const smartFolderScope = `smart_${ctx.lang}`;
+  const dropdownsRow = document.createElement('div');
+  dropdownsRow.className = 'ml-filter-dropdowns-row';
 
-  const matchedNote = document.createElement('p');
-  matchedNote.className = 'ml-smart-desc';
-  header.appendChild(matchedNote);
+  function saveMembership(): void {
+    saveSmartRule(ctx.lang, name, rule);
+    ctx.renderSidebar(false);
+  }
+  const folderSelected = new Set(rule.folders ?? []);
+  function syncFolders(): void {
+    rule.folders = [...folderSelected]; rule.folder = undefined;
+    saveMembership();
+  }
+  const newFolderBtn = document.createElement('button');
+  newFolderBtn.type = 'button';
+  newFolderBtn.className = 'ml-chip-dropdown-new-folder';
+  newFolderBtn.textContent = '+ new folder…';
+  newFolderBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const folderName = window.prompt('New folder name:');
+    if (!folderName?.trim()) return;
+    addFolder(smartFolderScope, folderName.trim());
+    folderSelected.add(folderName.trim());
+    syncFolders();
+    ctx.renderPanel(); // rebuild so the new folder shows as a selectable option
+  });
+  const folderDropdown = buildChecklistDropdown(
+    'Folders', getFolderRegistry(smartFolderScope).map(f => ({ value: f, label: f })),
+    folderSelected, syncFolders, newFolderBtn,
+  );
+
+  const hiddenSelected = new Set<string>(rule.hiddenModes ?? []);
+  const hideFromDropdown = buildChecklistDropdown(
+    'Hide From', FILTER_SCOPES.map(s => ({ value: s, label: SCOPE_LABELS[s] })), hiddenSelected,
+    () => { rule.hiddenModes = [...hiddenSelected] as FilterScope[]; saveMembership(); },
+  );
+  dropdownsRow.append(folderDropdown.wrap, hideFromDropdown.wrap);
+  header.appendChild(dropdownsRow);
 
   const vocab = cachedVocab(ctx.lang);
   const vm    = cachedVocabMap(ctx.lang);
@@ -103,57 +162,6 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
   function persist(): void {
     saveSmartRule(ctx.lang, name, rule);
     ctx.renderPanel();
-  }
-
-  function chipGroup(
-    label: string, values: readonly string[], selected: string[],
-    onToggle: (v: string) => void,
-    datasetAttr?: 'pos' | 'band',
-    format?: (v: string) => string,
-  ): HTMLElement {
-    const row = document.createElement('div');
-    row.className = 'ml-smart-row';
-    const lab = document.createElement('span');
-    lab.className = 'ml-band-label'; lab.textContent = label;
-    row.appendChild(lab);
-    values.forEach(v => {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'pos-chip' + (selected.includes(v) ? ' active' : '');
-      if (datasetAttr) chip.dataset[datasetAttr] = v;
-      // The chip's value (`v`) stays lowercase for `pos` — it has to match
-      // vocab entries' `pos` field exactly — the capitalized label (bands are
-      // already uppercase, e.g. "A1") is display-only. `format` covers
-      // anything else that needs its own display label (domains).
-      chip.textContent = format ? format(v) : datasetAttr === 'pos' ? v[0].toUpperCase() + v.slice(1) : v;
-      chip.addEventListener('click', () => { onToggle(v); persist(); });
-      row.appendChild(chip);
-    });
-    return row;
-  }
-
-  /** One pill per criterion the rule is currently filtering on. */
-  function renderRuleBadges(container: HTMLElement, r: SmartRule): void {
-    container.innerHTML = '';
-    const addBadge = (text: string, dataset?: { pos?: string; band?: string }) => {
-      const el = document.createElement('span');
-      el.className = 'pos-chip ml-rule-badge';
-      if (dataset?.pos)  el.dataset.pos  = dataset.pos;
-      if (dataset?.band) el.dataset.band = dataset.band;
-      el.textContent = text;
-      container.appendChild(el);
-    };
-    r.bands.forEach(b => addBadge(b, { band: b }));
-    r.pos.forEach(p => addBadge(p[0].toUpperCase() + p.slice(1), { pos: p }));
-    r.domains.forEach(d => addBadge(fmtDomain(d)));
-    if (r.mastered === 'no')  addBadge('Not Mastered');
-    if (r.mastered === 'yes') addBadge('Mastered');
-    if (r.listed === 'no')    addBadge('Not In A List');
-    if (r.due === 'yes')      addBadge('Due for Review');
-    if (r.wordStartsWith)     addBadge(`Word Starts With "${r.wordStartsWith}"`);
-    if (r.meaningContains)    addBadge(`Meaning Contains "${r.meaningContains}"`);
-    if (r.limit > 0)          addBadge(`Top ${r.limit}`);
-    if (container.children.length === 0) addBadge('Everything');
   }
 
   /**
@@ -242,6 +250,9 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
     const wrap = document.createElement('div');
     wrap.className = 'ml-smart-manual';
 
+    const label = document.createElement('span');
+    label.className = 'filter-section-label ml-smart-manual-label';
+
     const searchRow = document.createElement('div');
     searchRow.className = 'ml-add-row';
     const icon = document.createElement('span');
@@ -282,31 +293,81 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
     }
     input.addEventListener('input', () => renderResults(input.value.trim()));
 
-    const chips = document.createElement('div');
-    chips.className = 'ml-smart-manual-chips';
-    if (rule.manualWords.length === 0) {
-      const empty = document.createElement('span');
-      empty.className = 'ml-smart-manual-empty';
-      empty.textContent = 'No manually added words yet.';
-      chips.appendChild(empty);
-    }
-    rule.manualWords.forEach(w => {
-      const chip = document.createElement('span');
-      chip.className = 'pos-chip ml-smart-manual-chip';
-      const text = document.createElement('span');
-      text.textContent = w;
-      const rm = document.createElement('button');
-      rm.type = 'button'; rm.className = 'ml-smart-manual-remove';
-      rm.textContent = '×'; rm.title = `Remove "${w}"`;
-      rm.addEventListener('click', () => {
-        rule.manualWords = rule.manualWords.filter(x => x !== w);
-        persist();
-      });
-      chip.append(text, rm);
-      chips.appendChild(chip);
-    });
+    // The manually added words: a dropdown on the same line as the input,
+    // searchable and scrollable, each with a remove button. Edits in place
+    // (no panel rebuild) so the dropdown stays open while several are removed.
+    const dd = document.createElement('div');
+    dd.className = 'ml-chip-dropdown';
+    const ddToggle = document.createElement('button');
+    ddToggle.type = 'button'; ddToggle.className = 'ml-chip-dropdown-toggle';
+    const ddPanel = document.createElement('div');
+    ddPanel.className = 'ml-chip-dropdown-panel ml-chip-dropdown-panel--checklist ml-chip-dropdown-panel--right ml-manual-dd-panel';
+    ddPanel.hidden = true;
+    ddPanel.addEventListener('click', e => e.stopPropagation());
+    const ddSearch = document.createElement('input');
+    ddSearch.type = 'search'; ddSearch.className = 'ml-chip-dropdown-search';
+    ddSearch.placeholder = 'Search manual words…';
+    const ddList = document.createElement('div');
+    ddList.className = 'ml-chip-dropdown-scroll';
+    ddPanel.append(ddSearch, ddList);
+    dd.append(ddToggle, ddPanel);
 
-    wrap.append(searchRow, results, chips);
+    function updateLabel(): void {
+      const n = rule.manualWords.length;
+      label.textContent = 'Manual Additions';
+      ddToggle.textContent = `Manual Words: ${n}`;
+      ddToggle.disabled = n === 0;
+      if (n === 0) ddPanel.hidden = true;
+    }
+
+    function renderManualList(): void {
+      ddList.innerHTML = '';
+      const q = norm(ddSearch.value.trim());
+      const shown = rule.manualWords.filter(w => {
+        if (!q) return true;
+        const e = vm?.get(w);
+        return norm(w).includes(q) || (!!e && norm(e.translation).includes(q));
+      });
+      if (shown.length === 0) {
+        const none = document.createElement('div');
+        none.className = 'ml-chip-dropdown-empty';
+        none.textContent = 'No matches';
+        ddList.appendChild(none);
+      }
+      shown.forEach(w => {
+        const item = document.createElement('div');
+        item.className = 'ml-manual-item';
+        const word = document.createElement('span');
+        word.className = 'ml-manual-item-word'; word.textContent = w;
+        const trans = document.createElement('span');
+        trans.className = 'ml-manual-item-trans'; trans.textContent = vm?.get(w)?.translation ?? '';
+        const rm = document.createElement('button');
+        rm.type = 'button'; rm.className = 'ml-smart-manual-remove';
+        rm.textContent = '×'; rm.title = `Remove "${w}"`;
+        rm.addEventListener('click', () => {
+          rule.manualWords = rule.manualWords.filter(x => x !== w);
+          saveSmartRule(ctx.lang, name, rule);
+          ctx.renderSidebar(false);
+          syncManualTag(); updateLabel(); renderManualList();
+          pager.reset(); refresh();
+        });
+        item.append(word, trans, rm);
+        ddList.appendChild(item);
+      });
+    }
+    ddSearch.addEventListener('input', renderManualList);
+    ddToggle.addEventListener('click', e => {
+      e.stopPropagation();
+      document.querySelectorAll<HTMLElement>('.ml-chip-dropdown-panel').forEach(p => { if (p !== ddPanel) p.hidden = true; });
+      ddPanel.hidden = !ddPanel.hidden;
+      if (!ddPanel.hidden) { renderManualList(); ddSearch.focus(); }
+    });
+    updateLabel();
+
+    const row = document.createElement('div');
+    row.className = 'ml-smart-manual-row';
+    row.append(label, searchRow, dd);
+    wrap.append(row, results);
     return wrap;
   }
 
@@ -330,22 +391,34 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
     return row;
   }
 
-  const filterRows: HTMLElement[] = [
-    chipGroup('Level', BANDS, rule.bands, v => {
-      const i = rule.bands.indexOf(v);
-      if (i >= 0) rule.bands.splice(i, 1); else rule.bands.push(v);
-    }, 'band'),
-    chipGroup(
-      'Type', POS_CHIPS.filter(c => c.value).map(c => c.value), rule.pos, v => {
-        const i = rule.pos.indexOf(v);
-        if (i >= 0) rule.pos.splice(i, 1); else rule.pos.push(v);
-      }, 'pos'),
-  ];
+  // Level / Type / Domain — the same dropdowns a Single-Language list has
+  // (Part of Speech + Level), plus Domain. They write straight onto `rule`
+  // and refresh() in place, rather than persist()'s full panel rebuild, so
+  // an open dropdown stays open while several values are ticked.
+  function saveRule(): void {
+    saveSmartRule(ctx.lang, name, rule);
+    ctx.renderSidebar(false);
+    pager.reset();
+    refresh();
+  }
+  const bandSelected = new Set<string>(rule.bands);
+  const bandDropdown = buildChipDropdown(
+    'Level', 'band', BANDS.map(b => ({ value: b, label: b })), bandSelected,
+    () => { rule.bands = [...bandSelected]; saveRule(); },
+  );
+  const posSelected = new Set<string>(rule.pos);
+  const posDropdown = buildChipDropdown(
+    'Type', 'pos', POS_CHIPS.filter(c => c.value), posSelected,
+    () => { rule.pos = [...posSelected]; saveRule(); },
+  );
+  dropdownsRow.prepend(bandDropdown.wrap, posDropdown.wrap);
   if (domainList.length) {
-    filterRows.push(chipGroup('Domain', domainList, rule.domains, v => {
-      const i = rule.domains.indexOf(v);
-      if (i >= 0) rule.domains.splice(i, 1); else rule.domains.push(v);
-    }, undefined, fmtDomain));
+    const domainSelected = new Set<string>(rule.domains);
+    const domainDropdown = buildChecklistDropdown(
+      'Domain', domainList.map(d => ({ value: d, label: fmtDomain(d) })), domainSelected,
+      () => { rule.domains = [...domainSelected]; saveRule(); },
+    );
+    bandDropdown.wrap.after(posDropdown.wrap, domainDropdown.wrap);
   }
 
   const refineRows: HTMLElement[] = [
@@ -378,15 +451,78 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
     ], rule.sort, v => { rule.sort = v as SmartRule['sort']; }),
   ];
 
-  editor.append(
-    group('filters', 'Filters', ...filterRows),
-    group('refine', 'Refine', ...refineRows),
-    group('manual', 'Manual Additions', manualWordsSection()),
-    group('limit', 'Limit & Order', ...limitRows),
-  );
+  // Refine and Limit & Order used to be two groups; they are one set of
+  // rule controls, so one group.
+  editor.append(group('refine', 'Refine, Limit & Order', ...refineRows, ...limitRows));
 
   header.appendChild(editor);
   ctx.panel.appendChild(header);
+
+  // ── Filter / sort toolbar — same controls as a Single-Language list ────────
+  // Narrows what is *shown* of the rule's result; the rule itself, the
+  // "N words" count and "Save as list" are unaffected. Local state, not ctx's,
+  // so it doesn't leak into whichever list is opened next.
+  let filterQuery = '';
+  let sortMode = 'rule';
+  let hideMastered = false;
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'ml-list-toolbar';
+  const controlsGroup = document.createElement('div');
+  controlsGroup.className = 'ml-panel-controls';
+
+  const filterLabel = document.createElement('span');
+  filterLabel.className = 'ui-label ml-toolbar-label'; filterLabel.textContent = 'Filter';
+  const filterInp = document.createElement('input');
+  filterInp.type = 'text'; filterInp.placeholder = 'Filter by word, translation or gloss…';
+  filterInp.className = 'ml-search';
+  filterInp.title = 'Accent-insensitive — searches word, translation and glosses';
+  filterInp.addEventListener('input', () => { filterQuery = filterInp.value; pager.reset(); refresh(); });
+
+  const sortLabel = document.createElement('span');
+  sortLabel.className = 'ui-label ml-toolbar-label'; sortLabel.textContent = 'Sort';
+  const sortSel = document.createElement('select');
+  sortSel.className = 'ml-sort-select'; sortSel.title = 'Sort order';
+  ([
+    ['rule',       "Rule's order"],
+    ['alpha-asc',  'A → Z'],
+    ['alpha-desc', 'Z → A'],
+    ['rank-asc',   'Easiest first'],
+    ['rank-desc',  'Hardest first'],
+  ] as const).forEach(([value, label]) => {
+    const opt = document.createElement('option');
+    opt.value = value; opt.textContent = label;
+    sortSel.appendChild(opt);
+  });
+  sortSel.addEventListener('change', () => { sortMode = sortSel.value; pager.reset(); refresh(); });
+
+  const hideMasteredBtn = document.createElement('button');
+  hideMasteredBtn.type = 'button';
+  hideMasteredBtn.className = 'ml-hide-mastered-btn';
+  hideMasteredBtn.textContent = 'Hide mastered';
+  hideMasteredBtn.title = 'Hide words you have marked as mastered';
+  hideMasteredBtn.addEventListener('click', () => {
+    hideMastered = !hideMastered;
+    hideMasteredBtn.classList.toggle('ml-hide-mastered-btn--active', hideMastered);
+    pager.reset(); refresh();
+  });
+
+  controlsGroup.append(filterLabel, filterInp, sortLabel, sortSel, hideMasteredBtn);
+  toolbar.appendChild(controlsGroup);
+
+  // Manual Additions sit on their own, directly above the filter bar — they
+  // are about which words are in the list, not a rule setting.
+  const manualBox = document.createElement('div');
+  manualBox.className = 'ml-smart-editor ml-smart-manual-box';
+  // Always open — no collapse toggle, unlike the rule editor's groups.
+  manualBox.appendChild(manualWordsSection());
+  ctx.panel.appendChild(manualBox);
+  ctx.panel.appendChild(toolbar);
+
+  // Paged rather than capped: a rule that matches a thousand words used to
+  // stop at the first 400 with "…and N more".
+  const pager = createPager(() => refresh());
+  ctx.panel.appendChild(pager.el);
 
   const listEl = document.createElement('ul');
   listEl.className = 'ml-word-list';
@@ -404,14 +540,15 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
    */
   function refresh(): void {
     words = evaluateSmart(ctx.lang, rule, vocab);
+    shownAll = []; // set below once there is something to export
 
     count.textContent = `${words.length} words`;
-    renderRuleBadges(badgeRow, rule);
     matchedNote.textContent = vocab.length
       ? `Matched Against ${vocab.length.toLocaleString()} Words`
       : '';
 
     listEl.innerHTML = '';
+    pager.el.hidden = true; // re-shown by pager.slice() once there are words to page
 
     if (vocab.length === 0) {
       const loading = document.createElement('li');
@@ -429,37 +566,53 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
     }
 
     const mastered = getMastered(ctx.lang);
-    words.slice(0, PREVIEW_LIMIT).forEach(word => {
-      const entry = vm?.get(word);
-      const li = document.createElement('li');
-      li.className = 'ml-word-item'
-        + (mastered.has(word) ? ' ml-word-item--mastered' : '');
-
-      const wordSpan = document.createElement('span');
-      wordSpan.className = 'ml-word-text'; wordSpan.textContent = word;
-      const posSpan = document.createElement('span');
-      posSpan.className = 'ml-word-pos';
-      posSpan.textContent = POS_ABBREV[entry?.pos ?? ''] ?? '';
-      if (entry?.pos) posSpan.dataset.pos = entry.pos; else posSpan.hidden = true;
-      const bandSpan = document.createElement('span');
-      bandSpan.className = 'ml-word-band';
-      bandSpan.textContent = entry?.band ?? '';
-      if (entry?.band) bandSpan.dataset.band = entry.band; else bandSpan.hidden = true;
-      const transSpan = document.createElement('span');
-      transSpan.className = 'ml-word-trans';
-      transSpan.textContent = entry?.translation ?? '';
-
-      li.append(wordSpan, posSpan, bandSpan, transSpan);
+    const q = norm(filterQuery);
+    let shown = words.filter(w => {
+      if (hideMastered && mastered.has(w)) return false;
+      if (!q) return true;
+      if (norm(w).includes(q)) return true;
+      const e = vm?.get(w);
+      return !!e && (norm(e.translation).includes(q) || e.glosses.some(g => norm(g).includes(q)));
+    });
+    if (sortMode !== 'rule') {
+      const F = 9999;
+      const rank = (w: string): number => vm?.get(w)?.rank ?? F;
+      shown = [...shown].sort(
+        sortMode === 'alpha-asc'  ? (a, b) => norm(a).localeCompare(norm(b))
+        : sortMode === 'alpha-desc' ? (a, b) => norm(b).localeCompare(norm(a))
+        : sortMode === 'rank-asc'   ? (a, b) => rank(a) - rank(b)
+        : (a, b) => rank(b) - rank(a),
+      );
+    }
+    if (shown.length === 0) {
+      const none = document.createElement('li');
+      none.className = 'ml-word-empty';
+      none.textContent = filterQuery ? 'No matches.' : 'No words match the current filters.';
+      listEl.appendChild(none);
+      return;
+    }
+    shownAll = shown;
+    // Words the learner pinned by hand (Manual Additions) rather than ones the
+    // rule selected — marked on the row so the two are told apart at a glance.
+    const manual = new Set(rule.manualWords.map(w => w.toLowerCase()));
+    pager.slice(shown).forEach(word => {
+      const li = buildWordRow({
+        lang: ctx.lang, word, entry: vm?.get(word), mastered: mastered.has(word), filter: filterQuery,
+        expanded: word === ctx.expandedWord,
+        addedDate: null, // a smart list has no "added" date — its words are matched, not added
+        redraw: refresh,
+        onToggleExpand: () => { ctx.expandedWord = ctx.expandedWord === word ? null : word; refresh(); },
+      });
+      if (manual.has(word.toLowerCase())) {
+        li.classList.add('ml-word-item--manual');
+        const tag = document.createElement('span');
+        tag.className = 'ml-word-manual-tag';
+        tag.textContent = '✋ Manual';
+        tag.title = 'Added by hand under Manual Additions — not chosen by the rule';
+        li.querySelector('.ml-word-actions')?.before(tag);
+      }
       listEl.appendChild(li);
     });
-
-    if (words.length > PREVIEW_LIMIT) {
-      const more = document.createElement('li');
-      more.className = 'ml-chunk-sentinel';
-      more.textContent =
-        `…and ${words.length - PREVIEW_LIMIT} more. Save as a list to work through them.`;
-      listEl.appendChild(more);
-    }
   }
 
   freezeBtn.addEventListener('click', () => {

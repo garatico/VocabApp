@@ -442,6 +442,14 @@ export const Settings = {
   setShowVisualProfiles: (on: boolean): void => set('show_visual_profiles', String(on)),
 
   /**
+   * Whether the proof-of-concept quiz tabs (Picture Quiz, Trivia, Guess the
+   * Blank, Sentence Scramble) are shown. Off by default — see app.ts's
+   * syncExperimentalModes.
+   */
+  getShowExperimentalModes: (): boolean => get('show_experimental_modes', 'false') === 'true',
+  setShowExperimentalModes: (on: boolean): void => set('show_experimental_modes', String(on)),
+
+  /**
    * Whether the Admin tab is shown at all. Off by default — this is a data-
    * editing tool, not a quiz feature, and most learners never need it. A dev
    * build shows the tab regardless (see app.ts), so this only matters for a
@@ -534,16 +542,6 @@ export const Settings = {
    * action; off lets a learner who's already sure skip the prompt every time.
    */
   getConfirmRemoveWordOverride: (): boolean => get('confirm_remove_word_override', 'true') === 'true',
-
-  /**
-   * Off (default): a word's expanded editor renders inline, under its row in
-   * My Content's own scrolling list, same as it always has. On: it renders
-   * as a full-viewport overlay instead — for a learner who finds the many
-   * fields (translation, notes, domains, glosses, examples, synonyms...)
-   * cramped inside that list's own scroll box, at the cost of losing sight
-   * of the row list while editing.
-   */
-  getFullViewportWordEditor: (): boolean => get('full_viewport_word_editor', 'false') === 'true',
 
   /**
    * Starting page size for My Content's "Edit an Existing Trivia Question"
@@ -1002,6 +1000,12 @@ export function setOnSimpleModeChange(fn: () => void): void {
 
 /** Notified when Show Admin Panel changes, so app.ts can show/hide the tab
  *  immediately rather than only on next visit. */
+const onExperimentalModesChangeListeners: (() => void)[] = [];
+
+export function setOnExperimentalModesChange(fn: () => void): void {
+  onExperimentalModesChangeListeners.push(fn);
+}
+
 const onShowAdminPanelChangeListeners: (() => void)[] = [];
 
 export function setOnShowAdminPanelChange(fn: () => void): void {
@@ -1527,6 +1531,15 @@ export function bindSettings(): void {
     Settings.setShowVisualProfiles(btn.dataset.enabled === 'true');
   });
 
+  // Proof-of-concept quiz tabs (see getShowExperimentalModes)
+  document.getElementById('settingShowExperimentalModes')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingShowExperimentalModes', btn);
+    Settings.setShowExperimentalModes(btn.dataset.enabled === 'true');
+    onExperimentalModesChangeListeners.forEach(fn => fn());
+  });
+
   // Admin tab (see getShowAdminPanel)
   document.getElementById('settingShowAdminPanel')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
@@ -1534,14 +1547,6 @@ export function bindSettings(): void {
     activateToggle('settingShowAdminPanel', btn);
     Settings.setShowAdminPanel(btn.dataset.enabled === 'true');
     onShowAdminPanelChangeListeners.forEach(fn => fn());
-  });
-
-  // My Content: full-viewport word editor (see getFullViewportWordEditor)
-  document.getElementById('settingFullViewportWordEditor')?.addEventListener('click', e => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
-    activateToggle('settingFullViewportWordEditor', btn);
-    set('full_viewport_word_editor', btn.dataset.enabled ?? 'false');
   });
 
   // My Content: starting page size for the Trivia/Guess the Blank edit lists
@@ -2251,16 +2256,16 @@ function restoreSettingsUI(): void {
     b.classList.toggle('active', b.dataset.enabled === savedShowVisualProfiles);
   });
 
+  // Proof-of-concept quiz tabs
+  const savedShowExperimental = get('show_experimental_modes', 'false');
+  document.querySelectorAll<HTMLElement>('#settingShowExperimentalModes .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedShowExperimental);
+  });
+
   // Admin tab
   const savedShowAdminPanel = get('show_admin_panel', 'false');
   document.querySelectorAll<HTMLElement>('#settingShowAdminPanel .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.enabled === savedShowAdminPanel);
-  });
-
-  // My Content: full-viewport word editor
-  const savedFullViewportWordEditor = get('full_viewport_word_editor', 'false');
-  document.querySelectorAll<HTMLElement>('#settingFullViewportWordEditor .sort-order-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.enabled === savedFullViewportWordEditor);
   });
 
   // My Content: Trivia/Guess the Blank edit list page size

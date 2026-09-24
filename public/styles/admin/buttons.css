@@ -16,13 +16,11 @@ button {
               transform var(--transition-fast), box-shadow var(--transition-fast);
   white-space: nowrap;
 }
-/* Lift magnitude matches the main app's own button.css exactly — this used
-   to be a smaller lift (-1px / 3px blur) than the app's (-2px / 4px), a
-   difference too small to name but big enough that a button felt slightly
-   "off" switching between the two. */
+/* Hover feedback is a colour and shadow change, never movement: a button that
+   lifts on hover moves out from under a cursor resting on its lower edge, which
+   ends the hover, which drops it back, which starts it again — a flicker. */
 button:hover:not(:disabled) {
   background: var(--accent-hover);
-  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 html.dark button:hover:not(:disabled) { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
@@ -30,8 +28,7 @@ html.dark button:hover:not(:disabled) { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3
    app suppresses the lift for it too, so its buttons.css list is where
    this belongs conceptually even though the component itself is defined
    further down this file. */
-button.sort-order-btn:hover:not(:disabled) { transform: none; box-shadow: none; }
-button:active:not(:disabled) { transform: translateY(0); }
+button.sort-order-btn:hover:not(:disabled) { box-shadow: none; }
 button:disabled               { opacity: 0.5; cursor: not-allowed; }
 button:focus-visible          { outline: 2px solid var(--accent); outline-offset: 2px; }
 

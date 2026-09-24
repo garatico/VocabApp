@@ -91,6 +91,8 @@ VocabApp/
 │   │       ├── rate-limit.ts        # express-rate-limit on /api/vocab
 │   │       └── error-handler.ts     # Global error handler
 │   └── client/                      # TypeScript frontend (compiled by Vite)
+│       ├── ui/word-editor/          # The shared Word Editor (filter bar + paged list + edit form)
+│       │                            #   used by the Admin panel AND My Content — see below
 │       ├── app.ts                   # Entry point
 │       ├── types.ts                 # Shared type definitions
 │       ├── start-handler.ts         # Quiz start logic
@@ -196,6 +198,25 @@ read from or write to `vocabulary.db`.
   200/500/1000/2000/4000 there, so a word ranked 3000 was B1 on screen and C1
   in the data. The fix was to stop shipping the derived value, which leaves
   nothing to keep in step.
+- **One Word Editor, two hosts.** `src/client/ui/word-editor/` is the whole
+  editor (`createWordEditor`): filter bar, paged word list, and an edit form
+  with collapsible sections, chip inputs and an emoji picker. It knows nothing
+  about storage; a host passes a `WordEditorAdapter` (`types.ts`). The Admin
+  panel's adapter (`admin/admin-editor.ts`) reads and writes the master
+  database through the admin data client. My Content's
+  (`modes/my-content/word-editor-adapter.ts`, the Words tab) turns an edit
+  into an *override* — only the fields that
+  differ from the original — via the pure `diffToOverride`, so a learner's
+  edits never touch the real vocabulary. Every element id takes an `idPrefix`
+  (`''` in Admin, whose e2e spec and styles use the plain ids; `mcwe-` in My
+  Content) so two hosts can share a page.
+- **`public/styles/app/word-editor.css` is generated** from the Admin
+  stylesheets (`admin/inputs|buttons|filter-bar|word-list|edit-form.css`) by
+  `scripts/word-editor-css.mjs`, with every selector scoped under
+  `.word-editor`. The Admin stylesheets remain the source of truth (they style
+  bare elements globally, which the main app cannot). Edit those, then run
+  `npm run build:word-editor-css`; `tests/client/word-editor-css.test.ts`
+  fails if the checked-in copy is stale.
 - **Flat asset URLs, explicit index**: `data/images/` and `data/emoji/` are
   partitioned by domain on disk and flat in the URL space. `lib/flat-static.ts`
   builds one filename → path index and *reports* a name that exists in two

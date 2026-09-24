@@ -13,14 +13,16 @@
  */
 
 import type { ListsCtx } from './context.ts';
-import { enumerateFilterableLists, type FilterableListRow } from '../../utils/word-lists.ts';
-import { buildLangBadge } from '../../ui/lang-badge.ts';
+import { enumerateFilterableLists } from '../../utils/word-lists.ts';
 import {
-  getPreset, savePreset, describePreset, applyBundle,
+  getPreset, savePreset, describePreset, applyBundle, setActiveProfile,
   type PresetBundle, type WordsBundle, type ConjugationBundle,
 } from '../../filters/presets.ts';
 import { SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
 import { POS_CHIPS } from './types.ts';
+import { buildChecklistDropdown } from './chip-dropdown.ts';
+import { buildListFilterDropdowns } from '../../ui/list-filter-dropdowns.ts';
+import { getFolderRegistry } from './folders.ts';
 import { LANGUAGES } from '../../data/languages.ts';
 import { readString, writeString } from '../../utils/storage.ts';
 import { unionTenseDefs } from '../conjugation/controls.ts';
@@ -123,6 +125,7 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
   applyBtn.title = `Load this profile's language, words and filters into the live ${SCOPE_LABELS[mode]} controls, the same as picking it from that tab's own Testing Profiles button`;
   applyBtn.addEventListener('click', () => {
     applyBundle(mode, bundle);
+    setActiveProfile(mode, name);
     showToast(`Applied "${name}" to ${SCOPE_LABELS[mode]}`, 'success');
   });
   titleGroup.appendChild(applyBtn);
@@ -133,6 +136,41 @@ export function renderProfilePanel(ctx: ListsCtx, mode: FilterScope, name: strin
   desc.className = 'ml-smart-desc';
   desc.textContent = describePreset(bundle, mode);
   header.appendChild(desc);
+
+  // Folders (and the "only show for <language>" lock) — the same place a
+  // list's own panel keeps its Folders control. Written onto `bundle` itself
+  // so persist() below, which spreads that same object, can't undo it. No
+  // "new folder" footer: folders are per-mode and are created from the
+  // sidebar's Testing Profiles "+ Folder", which asks for the mode.
+  const profileFolderScope = `profiles_${mode}`;
+  const membershipRow = document.createElement('div');
+  membershipRow.className = 'ml-filter-dropdowns-row';
+  const folderSelected = new Set(bundle.folders ?? []);
+  const folderDropdown = buildChecklistDropdown(
+    'Folders', getFolderRegistry(profileFolderScope).map(f => ({ value: f, label: f })), folderSelected,
+    () => {
+      bundle.folders = [...folderSelected]; bundle.folder = undefined;
+      savePreset(mode, name, bundle);
+      ctx.renderSidebar(false);
+    },
+  );
+  membershipRow.appendChild(folderDropdown.wrap);
+  if (bundle.language) {
+    const lockLabel = document.createElement('label');
+    lockLabel.className = 'ml-settings-hide-item';
+    const lockCb = document.createElement('input');
+    lockCb.type = 'checkbox';
+    lockCb.checked = !!bundle.languageLocked;
+    lockCb.addEventListener('change', () => {
+      bundle.languageLocked = lockCb.checked;
+      savePreset(mode, name, bundle);
+      ctx.renderSidebar(false);
+    });
+    const langName = LANGUAGES.find(l => l.name === bundle.language)?.label ?? bundle.language;
+    lockLabel.append(lockCb, document.createTextNode(`Only show for ${langName}`));
+    membershipRow.appendChild(lockLabel);
+  }
+  header.appendChild(membershipRow);
 
   const editor = document.createElement('div');
   editor.className = 'ml-smart-editor ml-profile-editor';
@@ -508,50 +546,18 @@ export function buildProfileEditorGroups(
   // shared with the live Lists filter box via enumerateFilterableLists()
   // rather than only ever offering plain lists, which is what left Cross-
   // Language and smart lists unreachable from here before.
-  const listNamesRow = document.createElement('div');
-  listNamesRow.className = 'ml-profile-editor-chips';
   const availableLists = enumerateFilterableLists(primaryLang, bundle.extraLanguages ?? []);
-  if (availableLists.length === 0) {
-    const none = document.createElement('span');
-    none.className = 'ml-profile-editor-hint';
-    none.textContent = `No lists yet in ${primaryLang}`;
-    listNamesRow.appendChild(none);
-  }
-
-  const addListChip = (row: FilterableListRow): void => {
-    const chipLabel = document.createElement('label');
-    chipLabel.className = 'ml-profile-editor-chip';
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.checked = bundle.listFilter.selected.includes(row.qualified);
-    input.addEventListener('change', () => {
-      const selected = input.checked
-        ? [...bundle.listFilter.selected, row.qualified]
-        : bundle.listFilter.selected.filter(n => n !== row.qualified);
-      persist({ ...bundle, listFilter: { ...bundle.listFilter, selected } });
-    });
-    chipLabel.append(input, document.createTextNode(row.displayName), buildLangBadge(row.badgeLangs));
-    listNamesRow.appendChild(chipLabel);
-  };
-
-  const addListGroupLabel = (text: string, cssModifier: string): void => {
-    const groupLabel = document.createElement('span');
-    groupLabel.className = `list-filter-group-label list-filter-group-label--${cssModifier}`;
-    groupLabel.textContent = text;
-    listNamesRow.appendChild(groupLabel);
-  };
-
-  availableLists.filter(r => r.group === 'single').forEach(addListChip);
-  const multiRows = availableLists.filter(r => r.group === 'multi');
-  if (multiRows.length > 0) {
-    addListGroupLabel('Cross-Language', 'multi');
-    multiRows.forEach(addListChip);
-  }
-  const smartRows = availableLists.filter(r => r.group === 'smart');
-  if (smartRows.length > 0) {
-    addListGroupLabel('Smart Lists', 'smart');
-    smartRows.forEach(addListChip);
-  }
+  // Written straight onto `bundle` and saved (no persist() panel rebuild), so
+  // a dropdown stays open while several lists are ticked.
+  const listNamesRow = buildListFilterDropdowns(availableLists, {
+    getSelected: () => bundle.listFilter.selected,
+    setSelected: selected => {
+      bundle.listFilter = { ...bundle.listFilter, selected };
+      savePreset(mode, name, bundle);
+    },
+    emptyText: `No lists yet in ${primaryLang}`,
+    languages: [primaryLang, ...(bundle.extraLanguages ?? [])],
+  });
 
   const listSection = section('lists', `Lists (${primaryLang})`, listActive, listModeRow, listNamesRow);
 

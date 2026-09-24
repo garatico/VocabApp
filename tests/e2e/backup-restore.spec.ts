@@ -68,11 +68,14 @@ test('My Content: backing up, wiping storage, and restoring brings a word back',
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="myContent"]').click();
 
-  await page.getByPlaceholder('e.g. cat').fill('testword');
-  await page.getByPlaceholder('Word in Spanish').fill('palabraprueba');
-  await page.getByRole('button', { name: 'Add word(s)' }).click();
-  // See my-content.spec.ts's identical scoping note.
-  await expect(page.locator('.mc-row--wordlist .mc-row-title')).toContainText('palabraprueba — testword');
+  // Add a word through the Words tab's editor, then look at just the words the
+  // user added — that filter is what proves it survives the round trip.
+  await page.locator('#mcwe-newWordBtn').click();
+  await page.locator('#mcwe-editWord').fill('palabraprueba');
+  await page.locator('#mcwe-editTranslation').fill('testword');
+  await page.locator('#mcwe-saveBtn').click();
+  await page.getByRole('button', { name: 'Added', exact: true }).click();
+  await expect(page.locator('.mc-we .word-item .word-item-key')).toHaveText('palabraprueba');
 
   const [download] = await Promise.all([
     page.waitForEvent('download'),
@@ -85,13 +88,13 @@ test('My Content: backing up, wiping storage, and restoring brings a word back',
   await page.reload();
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="myContent"]').click();
-  // Exact text — .mc-empty is shared by every section's own empty state.
-  await expect(page.getByText('No words added yet.')).toBeVisible();
+  await page.getByRole('button', { name: 'Added', exact: true }).click();
+  await expect(page.locator('.mc-we .word-item')).toHaveCount(0);
 
   // setInputFiles targets the hidden <input type="file"> directly rather
   // than clicking "Load a file…" first, which would open a real OS file
   // picker Playwright doesn't control.
   await page.locator('#myContentWrap input[type="file"]').setInputFiles(filePath!);
-  // See my-content.spec.ts's identical scoping note.
-  await expect(page.locator('.mc-row--wordlist .mc-row-title')).toContainText('palabraprueba — testword');
+  await page.getByRole('button', { name: 'Added', exact: true }).click();
+  await expect(page.locator('.mc-we .word-item .word-item-key')).toHaveText('palabraprueba');
 });

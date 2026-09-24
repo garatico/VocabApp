@@ -10,9 +10,19 @@
  * that already used POS_CHIPS/BANDS keeps its colour coding for free.
  */
 
+import { foldKey } from '../../utils/match.ts';
+
 export interface ChipDropdownOption {
   value: string;
   label: string;
+  /** Checklist only: consecutive options sharing a `group` sit under one
+   *  small heading. The same `value` may appear under several groups (a list
+   *  that belongs to two folders) — they stay ticked together. */
+  group?: string;
+  /** Checklist only: small trailing text, e.g. a word count. */
+  hint?: string;
+  /** Checklist only: a badge (e.g. a language flag) shown after the label. */
+  badge?: () => HTMLElement;
 }
 
 export interface DropdownHandle {
@@ -124,12 +134,18 @@ export function closeAllChipDropdowns(): void {
  * membership and Hide-from-mode, neither of which has a per-value colour to
  * preserve the way Part of Speech/Level do.
  */
+const SEARCH_THRESHOLD = 8;
+
 export function buildChecklistDropdown(
   label: string,
   options: readonly ChipDropdownOption[],
   selected: Set<string>,
   onChange: () => void,
   footer?: HTMLElement,
+  extra?: {
+    /** Group headings that exist but hold no options yet (an empty folder). */
+    emptyGroups?: string[];
+  },
 ): DropdownHandle {
   const wrap = document.createElement('div');
   wrap.className = 'ml-chip-dropdown';
@@ -145,8 +161,69 @@ export function buildChecklistDropdown(
   panel.addEventListener('click', e => e.stopPropagation());
   wrap.appendChild(panel);
 
-  const checkboxes = new Map<string, HTMLInputElement>();
-  options.forEach(({ value, label: optLabel }) => {
+  // A long list (Domain runs to ~30) gets a search box, and the options
+  // scroll inside their own box so the panel never grows off-screen. The
+  // footer (e.g. "+ new folder…") stays put below the scroller.
+  const searchable = options.length > SEARCH_THRESHOLD;
+  const scroller = document.createElement('div');
+  scroller.className = 'ml-chip-dropdown-scroll';
+  let search: HTMLInputElement | null = null;
+  if (searchable) {
+    search = document.createElement('input');
+    search.type = 'search';
+    search.className = 'ml-chip-dropdown-search';
+    search.placeholder = `Search ${label.toLowerCase()}…`;
+    search.setAttribute('aria-label', `Search ${label}`);
+    panel.appendChild(search);
+  }
+  panel.appendChild(scroller);
+  const emptyNote = document.createElement('div');
+  emptyNote.className = 'ml-chip-dropdown-empty';
+  emptyNote.textContent = 'No matches';
+  emptyNote.hidden = true;
+  scroller.appendChild(emptyNote);
+
+  const itemEls: { el: HTMLElement; text: string }[] = [];
+  interface GroupEntry { head: HTMLElement; items: HTMLElement[]; values: string[]; box: HTMLInputElement }
+  const groupEls: GroupEntry[] = [];
+  search?.addEventListener('input', () => {
+    const q = foldKey(search!.value.trim());
+    let shown = 0;
+    itemEls.forEach(({ el, text }) => {
+      const hit = !q || text.includes(q);
+      el.hidden = !hit;
+      if (hit) shown++;
+    });
+    groupEls.forEach(g => { g.head.hidden = !g.items.some(i => !i.hidden); });
+    emptyNote.hidden = shown > 0;
+  });
+
+  const checkboxes = new Map<string, HTMLInputElement[]>();
+  let lastGroup: string | undefined;
+  let currentGroup: GroupEntry | null = null;
+  options.forEach(({ value, label: optLabel, group, hint, badge }) => {
+    if (group !== lastGroup) {
+      lastGroup = group;
+      currentGroup = null;
+      if (group) {
+        // A folder heading is itself a checkbox: tick it to select every
+        // option under it at once (indeterminate while only some are).
+        const head = document.createElement('label');
+        head.className = 'ml-chip-dropdown-group';
+        const box = document.createElement('input');
+        box.type = 'checkbox';
+        head.append(box, document.createTextNode(group));
+        scroller.appendChild(head);
+        const entry: GroupEntry = { head, items: [], values: [], box };
+        box.addEventListener('change', () => {
+          entry.values.forEach(v => { if (box.checked) selected.add(v); else selected.delete(v); });
+          onChange();
+          sync();
+        });
+        currentGroup = entry;
+        groupEls.push(entry);
+      }
+    }
     const cbLabel = document.createElement('label');
     cbLabel.className = 'ml-chip-dropdown-item';
     const cb = document.createElement('input');
@@ -157,14 +234,40 @@ export function buildChecklistDropdown(
       onChange();
       sync();
     });
-    checkboxes.set(value, cb);
-    cbLabel.append(cb, document.createTextNode(optLabel));
-    panel.appendChild(cbLabel);
+    checkboxes.set(value, [...(checkboxes.get(value) ?? []), cb]);
+    const text = document.createElement('span');
+    text.className = 'ml-chip-dropdown-item-text';
+    text.textContent = optLabel;
+    cbLabel.append(cb, text);
+    if (badge) cbLabel.appendChild(badge());
+    if (hint) {
+      const h = document.createElement('span');
+      h.className = 'ml-chip-dropdown-item-hint';
+      h.textContent = hint;
+      cbLabel.appendChild(h);
+    }
+    scroller.appendChild(cbLabel);
+    itemEls.push({ el: cbLabel, text: foldKey(optLabel) });
+    currentGroup?.items.push(cbLabel);
+    currentGroup?.values.push(value);
+  });
+  // Folders that exist but have nothing in them yet: shown, so it is clear
+  // they exist, but with nothing to tick.
+  (extra?.emptyGroups ?? []).forEach(name => {
+    const head = document.createElement('div');
+    head.className = 'ml-chip-dropdown-group ml-chip-dropdown-group--empty';
+    head.textContent = `${name} (empty)`;
+    scroller.appendChild(head);
   });
   if (footer) panel.appendChild(footer);
 
   function sync(): void {
-    checkboxes.forEach((cb, value) => { cb.checked = selected.has(value); });
+    checkboxes.forEach((cbs, value) => cbs.forEach(cb => { cb.checked = selected.has(value); }));
+    groupEls.forEach(g => {
+      const on = g.values.filter(v => selected.has(v)).length;
+      g.box.checked = g.values.length > 0 && on === g.values.length;
+      g.box.indeterminate = on > 0 && on < g.values.length;
+    });
     if (selected.size === 0) toggle.textContent = `${label}`;
     else if (selected.size === 1) {
       const only = [...selected][0];
@@ -181,6 +284,7 @@ export function buildChecklistDropdown(
       if (p !== panel) p.hidden = true;
     });
     panel.hidden = !panel.hidden;
+    if (!panel.hidden) search?.focus();
   });
 
   return { wrap, sync };

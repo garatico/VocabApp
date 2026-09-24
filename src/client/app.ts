@@ -5,6 +5,7 @@ import { initPWA } from './utils/pwa.ts';
 import { bindStartHandler }                    from './start-handler.ts';
 import { bindClassFilter, getSelectedClasses, syncUI as syncClassFilterUI, updateClassFilter } from './filters/class-filter.ts';
 import { initSectionCollapse }                from './filters/section-collapse.ts';
+import { initFiltersBar }                     from './filters/filter-bar.ts';
 import { bindDomainFilter, getSelectedDomains, updateDomainFilter, reloadDomainFilter } from './filters/domain-filter.ts';
 import { bindScriptTypeFilter, getSelectedScriptTypes } from './filters/script-type-filter.ts';
 import { bindUIState, bindModeSwitch, getCurrentMode } from './ui/ui-state.ts';
@@ -27,7 +28,7 @@ import { LANGUAGES, isoCode, supportsConjugation,
 import { availableLanguages, isPackagedApp }     from './data/vocab-source.ts';
 import { logger } from './utils/logger.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
-import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, setOnSimpleModeChange, setOnShowAdminPanelChange, refreshStreakReadouts } from './settings.ts';
+import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, setOnSimpleModeChange, setOnExperimentalModesChange, setOnShowAdminPanelChange, refreshStreakReadouts } from './settings.ts';
 import { onActivity } from './utils/streak.ts';
 import { showToast } from './ui/toast.ts';
 import { initStreakWidget } from './ui/streak-widget.ts';
@@ -371,6 +372,23 @@ function syncSimpleModeLocks(): void {
     if (!tab) return;
     tab.hidden = on;
     if (on && document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === mode) {
+      document.querySelector<HTMLElement>('.mode-tab[data-mode="table"]')?.click();
+    }
+  });
+}
+
+/**
+ * The four proof-of-concept quiz tabs stay hidden until Settings → Experimental
+ * quiz modes is switched on. Hiding one that is currently open drops back to
+ * Table rather than leaving a blank tab bar with a quiz showing.
+ */
+function syncExperimentalModes(): void {
+  const on = Settings.getShowExperimentalModes();
+  (['picture', 'trivia', 'guessBlank', 'sentenceScramble'] as const).forEach(mode => {
+    const tab = document.querySelector<HTMLButtonElement>(`.mode-tab[data-mode="${mode}"]`);
+    if (!tab) return;
+    tab.hidden = !on;
+    if (!on && document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === mode) {
       document.querySelector<HTMLElement>('.mode-tab[data-mode="table"]')?.click();
     }
   });
@@ -1185,11 +1203,14 @@ void (async function init(): Promise<void> {
   syncScriptDisplaySettingsAvailability();
   syncSimpleModeLocks();
   setOnSimpleModeChange(syncSimpleModeLocks);
+  syncExperimentalModes();
+  setOnExperimentalModesChange(syncExperimentalModes);
   bindUIState();
   bindClassFilter();
   bindDomainFilter();
   bindScriptTypeFilter();
   initSectionCollapse();
+  initFiltersBar();
   bindTableControls();
   bindSettings();
   initStreakWidget();
@@ -1237,7 +1258,7 @@ void (async function init(): Promise<void> {
   const savedTab = savedMode
     ? document.querySelector<HTMLElement>(`.mode-tab[data-mode="${savedMode}"]`)
     : null;
-  if (savedTab && savedMode !== 'mylists' && savedMode !== 'settings' && savedMode !== 'history' && savedMode !== 'chat' && savedMode !== 'myContent') {
+  if (savedTab && !savedTab.hidden && savedMode !== 'mylists' && savedMode !== 'settings' && savedMode !== 'history' && savedMode !== 'chat' && savedMode !== 'myContent') {
     savedTab.click();
   } else if (savedMode !== 'table') {
     // Covers both "we intentionally skip restoring mylists/settings/history/chat"

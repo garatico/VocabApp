@@ -1,39 +1,26 @@
 /**
- * admin-emoji-picker.ts
+ * emoji-picker.ts
  *
  * A browsable emoji grid for the Word Editor's "Emoji fallback" field —
  * search box + category tabs + a grid of emoji buttons, the same shape as
  * an emoji picker in a chat app (Discord, Slack), rather than requiring the
  * admin to already know or copy-paste the character they want.
  */
-import { EMOJI_CATEGORIES, ALL_EMOJIS, type EmojiEntry } from './admin-emoji-data.js';
-import { escapeHtml } from './admin-api.js';
+import { EMOJI_CATEGORIES, ALL_EMOJIS, type EmojiEntry } from './emoji-data.ts';
+import { escapeHtml } from './util.ts';
 
 function matchesSearch(entry: EmojiEntry, needle: string): boolean {
   return entry.keywords.some(k => k.includes(needle)) || entry.char === needle;
 }
 
 /** Wires a trigger button + an (initially empty) panel <div> into a working
- *  picker. `inputId` is the text field the chosen emoji gets written into —
+ *  picker. `input` is the text field the chosen emoji gets written into —
  *  a plain 'input' event, not a direct value set some other module has to
  *  know to also listen for, so anything already watching that field (dirty-
  *  state tracking, live previews) picks it up the same way typing would. */
-export function setupEmojiPicker(fieldId: string, triggerId: string, panelId: string, inputId: string): void {
-  const fieldEl = document.getElementById(fieldId);
-  const triggerEl = document.getElementById(triggerId);
-  const panelEl = document.getElementById(panelId);
-  const inputEl = document.getElementById(inputId);
-  if (!fieldEl || !triggerEl || !panelEl || !inputEl) return;
-
-  // Cast to non-nullable types once, here — every nested function below
-  // (open/close/render*, each defined once and reused across multiple
-  // events) then just uses field/trigger/panel/input directly with no
-  // narrowing needed, since the type itself is no longer a union with null.
-  const field   = fieldEl as HTMLElement;
-  const trigger = triggerEl as HTMLButtonElement;
-  const panel   = panelEl as HTMLElement;
-  const input   = inputEl as HTMLInputElement;
-
+export function setupEmojiPicker(
+  field: HTMLElement, trigger: HTMLButtonElement, panel: HTMLElement, input: HTMLInputElement,
+): void {
   let activeCategory = 0;
   let searchQuery = '';
   let searchInput: HTMLInputElement | null = null;

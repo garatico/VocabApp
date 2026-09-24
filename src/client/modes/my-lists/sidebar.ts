@@ -24,8 +24,9 @@ import {
   createMultiList, deleteMultiList, renameMultiList, addToMultiList,
   getListMeta, setListMeta, getMultiListMeta, setMultiListMeta, metaFolders,
 } from '../../utils/word-lists.ts';
-import { getFolderRegistry, addFolder } from './folders.ts';
-import { buildChecklistDropdown, closeAllChipDropdowns } from './chip-dropdown.ts';
+import { getFolderRegistry, addFolder, getFolderStyle, setFolderStyle, FOLDER_COLORS } from './folders.ts';
+import { seedStarterLists } from './starter-lists.ts';
+import { closeAllChipDropdowns } from './chip-dropdown.ts';
 import { readString, writeString } from '../../utils/storage.ts';
 import { logger } from '../../utils/logger.ts';
 import { BROWSE_ALL_LIST, type ListsCtx } from './context.ts';
@@ -181,10 +182,36 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   collapseAllBtn.addEventListener('click', () => {
     const collapseAll = !SIDEBAR_SECTIONS.every(isSectionCollapsed);
     SIDEBAR_SECTIONS.forEach(id => setSectionCollapsed(id, collapseAll));
-    render();
+    // In place — flips each section body's `hidden` and its caret. This used
+    // to call render(), which rebuilt every card in every section *and* the
+    // whole right-hand panel (renderPanel) just to hide some <ul>s.
+    ctx.listNav.querySelectorAll<HTMLElement>('.ml-section-body[data-section]').forEach(body => {
+      const id = body.dataset.section as SidebarSectionId;
+      body.hidden = isSectionCollapsed(id);
+      const caret = ctx.listNav.querySelector(`.ml-section-toggle-btn[data-section="${id}"] .ml-section-caret`);
+      if (caret) caret.textContent = isSectionCollapsed(id) ? '▸' : '▾';
+    });
+    syncCollapseAllLabel();
+  });
+  function syncCollapseAllLabel(): void {
+    collapseAllBtn.textContent = SIDEBAR_SECTIONS.every(isSectionCollapsed) ? 'Expand All' : 'Collapse All';
+  }
+
+  // Browse All Words — the whole vocabulary, not a list, so it lives up here
+  // with the other whole-sidebar controls rather than as a card of its own.
+  const browseBtn = document.createElement('button');
+  browseBtn.type = 'button';
+  browseBtn.className = 'ml-icon-btn ml-text-btn ml-browse-btn';
+  browseBtn.title = "Browse this language's whole vocabulary";
+  browseBtn.innerHTML = '<span aria-hidden="true">📖</span> Browse All Words';
+  browseBtn.addEventListener('click', () => {
+    ctx.selectedList = BROWSE_ALL_LIST;
+    ctx.selectedSmart = null; ctx.selectedMultiList = null; ctx.selectedProfile = null;
+    closePopover(); render(); ctx.renderPanel();
   });
 
   header.appendChild(titleSpan);
+  header.appendChild(browseBtn);
   header.appendChild(collapseAllBtn);
   header.appendChild(backupBtn); header.appendChild(restoreBtn);
   leftPane.appendChild(header);
@@ -199,7 +226,9 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   // createSidebar() call (see the module-level outsideClickHandler note above).
   if (outsideClickHandler) document.removeEventListener('click', outsideClickHandler, true);
   outsideClickHandler = (e: MouseEvent) => {
-    if (!(e.target as HTMLElement).closest('.ml-chip-dropdown')) closeAllChipDropdowns();
+    const t = e.target as HTMLElement;
+    if (!t.closest('.ml-chip-dropdown')) closeAllChipDropdowns();
+    if (!t.closest('.ml-menu-wrap, .ml-action-menu')) closeAllActionMenus();
   };
   document.addEventListener('click', outsideClickHandler, true);
 
@@ -261,7 +290,8 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   /** A section head: label + optional "+ New" and "+ Folder". Shared shape
    *  across all four sections so the sidebar reads as one family of lists. */
   function sectionHead(
-    cls: string, label: string, newTitle?: string, onNew?: () => void, folderScope?: string,
+    cls: string, label: string, newTitle?: string, onNew?: () => void,
+    folderScope?: string | (() => void),
   ): HTMLLIElement {
     const head = document.createElement('li');
     head.className = cls;
@@ -282,6 +312,9 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       folderBtn.type = 'button'; folderBtn.className = 'ml-new-list-btn ml-new-folder-btn';
       folderBtn.title = 'Create a new folder'; folderBtn.textContent = '+ Folder';
       folderBtn.addEventListener('click', () => {
+        // A function scope means the caller needs more than a name (Testing
+        // Profiles asks which mode the folder belongs to) and drives it itself.
+        if (typeof folderScope === 'function') { folderScope(); return; }
         const name = window.prompt('New folder name:');
         if (!name?.trim()) return;
         if (!addFolder(folderScope, name)) { alert(`A folder named "${name.trim()}" already exists.`); return; }
@@ -300,131 +333,110 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     return head;
   }
 
-  /** One Copy/Rename/Delete (or a subset) button, in the shared labeled style. */
-  function actionBtn(
-    glyph: string, label: string, title: string, onClick: (e: MouseEvent) => void, danger = false,
-  ): HTMLButtonElement {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'ml-icon-btn ml-icon-btn--labeled' + (danger ? ' ml-icon-btn--danger' : '');
-    btn.title = title;
-    btn.innerHTML = `<span aria-hidden="true">${glyph}</span> ${label}`;
-    btn.addEventListener('click', onClick);
-    return btn;
+  /** One entry in a card's gear menu. `tone` picks its color (see .ml-menu-item--*). */
+  interface MenuItem {
+    glyph: string; label: string; title: string;
+    tone: 'emoji' | 'hide' | 'copy' | 'rename' | 'delete';
+    /** `anchor` is the card's gear button, for a popover that opens beside it. */
+    onClick: (anchor: HTMLElement) => void;
+  }
+
+  // An open menu is moved to <body> (see buildActionMenu) so an ancestor's
+  // transform/overflow can't offset or clip its fixed position; closing puts
+  // it back inside its own card's wrapper.
+  const menuOwners = new WeakMap<HTMLElement, HTMLElement>();
+
+  function closeAllActionMenus(): void {
+    document.querySelectorAll<HTMLElement>('.ml-action-menu').forEach(m => {
+      m.hidden = true;
+      menuOwners.get(m)?.appendChild(m);
+    });
+    document.querySelectorAll<HTMLElement>('.ml-menu-gear[aria-expanded="true"]')
+      .forEach(b => b.setAttribute('aria-expanded', 'false'));
   }
 
   /**
-   * "⚙ Settings" — a gear button that toggles an inline panel (Folder, and
-   * optionally Hide-from-mode checkboxes or a language-lock checkbox) below
-   * a card, same expand-in-place pattern as My Content's own row editors
-   * rather than a separate popover. Shared by all four sections so Folder
-   * means the same thing and lives in the same place on every kind of card.
+   * A card's ⚙ gear: one button that opens a dropdown of the card's actions
+   * (Copy / Rename / Delete, plus Settings where a card has one), each with
+   * its own icon and color. The menu is `position: fixed`, placed from the
+   * button's rect on open, so the sidebar's scroll container can't clip it.
    */
-  function buildSettingsToggle(panel: HTMLElement): HTMLButtonElement {
-    // Every card this panel sits inside is itself a big click target (click
-    // anywhere on the card to select it) — without this, clicking the
-    // folder input or a checkbox inside the open panel would bubble up and
-    // re-select/re-render the card out from under the very control just
-    // clicked.
-    panel.addEventListener('click', e => e.stopPropagation());
-    const btn = actionBtn('⚙', 'Settings', 'Folder and visibility settings', e => {
-      e.stopPropagation();
-      panel.hidden = !panel.hidden;
-    });
-    return btn;
-  }
+  function buildActionMenu(items: MenuItem[]): HTMLElement {
+    const wrap = document.createElement('span');
+    wrap.className = 'ml-menu-wrap';
 
-  /**
-   * Folder membership — a checkbox per folder registered in `scope` (see
-   * folders.ts), so a list/rule/profile can belong to any number of them at
-   * once, plus an inline "+ new folder" creator. `current` is this item's
-   * own `folders` array; `onChange` receives the full replacement array on
-   * every toggle.
-   */
-  function buildFoldersRow(current: string[], scope: string, onChange: (folders: string[]) => void): HTMLElement {
-    const row = document.createElement('div');
-    row.className = 'ml-settings-row ml-settings-row--hide';
-    const label = document.createElement('span');
-    label.className = 'ml-settings-label';
-    label.textContent = 'Folders';
-    row.appendChild(label);
+    const gear = document.createElement('button');
+    gear.type = 'button';
+    gear.className = 'ml-menu-gear';
+    gear.title = 'Actions';
+    gear.setAttribute('aria-haspopup', 'menu');
+    gear.setAttribute('aria-expanded', 'false');
+    gear.setAttribute('aria-label', 'Actions');
+    gear.textContent = '⚙';
 
-    const allFolders = [...new Set([...getFolderRegistry(scope), ...current])].sort((a, b) => a.localeCompare(b));
-    allFolders.forEach(folder => {
-      const cbLabel = document.createElement('label');
-      cbLabel.className = 'ml-settings-hide-item';
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = current.includes(folder);
-      cb.addEventListener('click', e => e.stopPropagation());
-      cb.addEventListener('change', () => {
-        const next = cb.checked ? [...current, folder] : current.filter(f => f !== folder);
-        onChange(next);
-        render();
+    const menu = document.createElement('div');
+    menuOwners.set(menu, wrap);
+    menu.className = 'ml-action-menu';
+    menu.setAttribute('role', 'menu');
+    menu.hidden = true;
+
+    items.forEach(item => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `ml-menu-item ml-menu-item--${item.tone}`;
+      b.setAttribute('role', 'menuitem');
+      b.title = item.title;
+      b.innerHTML = `<span aria-hidden="true">${item.glyph}</span> ${item.label}`;
+      b.addEventListener('click', e => {
+        e.stopPropagation();
+        closeAllActionMenus();
+        item.onClick(gear);
       });
-      cbLabel.append(cb, document.createTextNode(folder));
-      row.appendChild(cbLabel);
+      menu.appendChild(b);
     });
 
-    const newBtn = document.createElement('button');
-    newBtn.type = 'button';
-    newBtn.className = 'ml-icon-btn';
-    newBtn.textContent = '+ new…';
-    newBtn.addEventListener('click', e => {
+    gear.addEventListener('click', e => {
+      // The card is itself a click target that selects + re-renders.
       e.stopPropagation();
-      const name = window.prompt('New folder name:');
-      if (!name?.trim()) return;
-      addFolder(scope, name);
-      onChange([...current, name.trim()]);
-      render();
+      const opening = menu.hidden;
+      closeAllActionMenus();
+      if (!opening) return;
+      const r = gear.getBoundingClientRect();
+      document.body.appendChild(menu);
+      menu.hidden = false;
+      const w = menu.offsetWidth, h = menu.offsetHeight;
+      menu.style.left = `${Math.max(4, Math.min(r.right - w, window.innerWidth - w - 4))}px`;
+      menu.style.top = `${r.bottom + h + 8 > window.innerHeight ? Math.max(4, r.top - h - 4) : r.bottom + 4}px`;
+      gear.setAttribute('aria-expanded', 'true');
     });
-    row.appendChild(newBtn);
-    return row;
+    menu.addEventListener('click', e => e.stopPropagation());
+    const onEscape = (e: KeyboardEvent): void => { if (e.key === 'Escape') { closeAllActionMenus(); gear.focus(); } };
+    wrap.addEventListener('keydown', onEscape);
+    menu.addEventListener('keydown', onEscape);
+
+    wrap.append(gear, menu);
+    return wrap;
   }
 
-  /** The "Hide from" checkbox row — every FilterScope this list/smart list
-   *  can be excluded from as a filter option (still addable-to regardless). */
-  function buildHideModesRow(hiddenModes: FilterScope[], onChange: (modes: FilterScope[]) => void): HTMLElement {
-    const row = document.createElement('div');
-    row.className = 'ml-settings-row ml-settings-row--hide';
-    const label = document.createElement('span');
-    label.className = 'ml-settings-label';
-    label.textContent = 'Hide From';
-    row.appendChild(label);
-    FILTER_SCOPES.forEach(scope => {
-      const cbLabel = document.createElement('label');
-      cbLabel.className = 'ml-settings-hide-item';
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = hiddenModes.includes(scope);
-      cb.addEventListener('click', e => e.stopPropagation());
-      cb.addEventListener('change', () => {
-        const next = cb.checked ? [...hiddenModes, scope] : hiddenModes.filter(s => s !== scope);
-        onChange(next);
-      });
-      cbLabel.append(cb, document.createTextNode(SCOPE_LABELS[scope]));
-      row.appendChild(cbLabel);
-    });
-    return row;
+  /** A list's own emoji, as a span for the front of its name row (or null). */
+  function emojiSpan(emoji: string | undefined): HTMLElement | null {
+    if (!emoji) return null;
+    const el = document.createElement('span');
+    el.className = 'ml-list-emoji';
+    el.setAttribute('aria-hidden', 'true');
+    el.textContent = emoji;
+    return el;
   }
 
-
-  // ── Browse All Words ─────────────────────────────────────────────────────
-  // A single static entry, not a section — there's nothing to create, copy,
-  // rename or delete here, just the language's whole vocabulary to look at,
-  // so it skips sectionHead's "+ New" and every card's action row.
-
-  function renderBrowseNav(): void {
-    const li = document.createElement('li');
-    li.className = 'ml-list-item ml-browse-item'
-      + (ctx.selectedList === BROWSE_ALL_LIST ? ' active' : '');
-    li.textContent = '📖 Browse All Words';
-    li.addEventListener('click', () => {
-      ctx.selectedList = BROWSE_ALL_LIST;
-      ctx.selectedSmart = null; ctx.selectedMultiList = null; ctx.selectedProfile = null;
-      closePopover(); render(); ctx.renderPanel();
-    });
-    ctx.listNav.appendChild(li);
+  /** The gear menu's "Emoji" entry: pick (or clear) this list's emoji. */
+  function emojiItem(current: string | undefined, save: (emoji: string | undefined) => void): MenuItem {
+    return {
+      glyph: '😀', label: 'Emoji', title: 'Choose an emoji for this list', tone: 'emoji',
+      onClick: anchor => openStylePicker(anchor, {
+        emoji: current, withColor: false,
+        onSave: style => { save(style.emoji); render(false); },
+      }),
+    };
   }
 
   /**
@@ -495,22 +507,19 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
         countSpan.textContent = `${n} word${n === 1 ? '' : 's'}`;
         topRow.append(nameSpan, countSpan);
 
-        const actions = document.createElement('span');
-        actions.className = 'ml-list-actions ml-list-actions--full';
-
         // Folder membership and Hide-from-mode are edited from the Part of
         // Speech/Level dropdown row in panel.ts now, next to this list's own
-        // word filters, rather than a separate "⚙ Settings" gear here.
-        const dupBtn = actionBtn('⧉', 'Copy', 'Duplicate list', e => {
-          e.stopPropagation();
-          const copied = startCopyList(ctx.lang, name);
-          if (copied) { ctx.selectedList = copied; ctx.updateBadge(); render(); }
-        });
-        const renameBtn = actionBtn('✏', 'Rename', 'Rename', e => {
-          e.stopPropagation(); startRenameList(name, li, nameSpan);
-        });
-        const deleteBtn = actionBtn('🗑', 'Delete', 'Delete list', e => {
-          e.stopPropagation();
+        // word filters, rather than in this card's gear menu.
+        const menu = buildActionMenu([
+          emojiItem(meta.emoji, emoji => setListMeta(ctx.lang, name, { ...getListMeta(ctx.lang, name), emoji })),
+          { glyph: '⧉', label: 'Copy', title: 'Duplicate list', tone: 'copy', onClick: () => {
+            const copied = startCopyList(ctx.lang, name);
+            if (copied) { ctx.selectedList = copied; ctx.updateBadge(); render(); }
+          } },
+          { glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename', onClick: () => {
+            startRenameList(name, li, nameSpan);
+          } },
+          { glyph: '🗑', label: 'Delete', title: 'Delete list', tone: 'delete', onClick: () => {
           if (!window.confirm(`Delete list "${name}" and all its words?`)) return;
           // Snapshot before deleting so the whole list can come back intact.
           const words       = [...getList(ctx.lang, name)];
@@ -526,10 +535,11 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
             if (wasSelected) ctx.selectedList = name;
             ctx.updateBadge(); render();
           });
-        }, true);
-
-        actions.append(dupBtn, renameBtn, deleteBtn);
-        li.append(topRow, actions);
+          } },
+        ]);
+        topRow.append(menu);
+        const em = emojiSpan(meta.emoji); if (em) topRow.prepend(em);
+        li.append(topRow);
         li.addEventListener('click', () => {
           ctx.selectedList = name; ctx.selectedSmart = null;
           ctx.selectedMultiList = null; ctx.selectedProfile = null;
@@ -596,49 +606,44 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       countSpan.className = 'ml-list-count';
       paintSmartCount(countSpan, rule);
       smartCountEls.push({ el: countSpan, rule });
-      topRow.append(nameSpan, countSpan);
+      topRow.append(nameSpan);
+      const manualN = rule.manualWords.length;
+      if (manualN > 0) {
+        const tag = document.createElement('span');
+        tag.className = 'ml-manual-badge';
+        tag.textContent = `✋ ${manualN}`;
+        tag.title = `${manualN} manual addition${manualN === 1 ? '' : 's'} — words pinned by hand`;
+        topRow.append(tag);
+      }
+      topRow.append(countSpan);
 
-      const actions = document.createElement('span');
-      actions.className = 'ml-list-actions ml-list-actions--full';
-
-      const settingsPanel = document.createElement('div');
-      settingsPanel.className = 'ml-settings-panel';
-      settingsPanel.hidden = true;
-      settingsPanel.appendChild(buildFoldersRow(rule.folders ?? [], folderScope, next => {
-        saveSmartRule(ctx.lang, name, { ...rule, folders: next, folder: undefined });
-      }));
-      settingsPanel.appendChild(buildHideModesRow(rule.hiddenModes ?? [], modes => {
-        saveSmartRule(ctx.lang, name, { ...rule, hiddenModes: modes });
-      }));
-      const settingsBtn = buildSettingsToggle(settingsPanel);
-
-      const dupBtn = actionBtn('⧉', 'Copy', 'Duplicate smart list', e => {
-        e.stopPropagation();
-        const proposed = suggestSmartCopyName(ctx.lang, name);
-        const input = window.prompt(`Name for the copy of "${name}":`, proposed);
-        if (input === null) return;
-        const newName = input.trim();
-        if (!newName) return;
-        if (getSmartNames(ctx.lang).includes(newName)) {
-          alert(`A smart list named "${newName}" already exists.`); return;
-        }
-        saveSmartRule(ctx.lang, newName, { ...rule });
-        ctx.selectedSmart = newName; ctx.selectedList = ''; ctx.selectedMultiList = null; ctx.selectedProfile = null;
-        render();
-      });
-      const renameBtn = actionBtn('✏', 'Rename', 'Rename', e => {
-        e.stopPropagation(); startRenameSmart(name, li, nameSpan);
-      });
-      const deleteBtn = actionBtn('🗑', 'Delete', 'Delete this smart list', e => {
-        e.stopPropagation();
-        if (!window.confirm(`Delete smart list "${name}"? The words themselves are untouched.`)) return;
-        deleteSmartList(ctx.lang, name);
-        if (ctx.selectedSmart === name) ctx.selectedSmart = null;
-        render();
-      }, true);
-
-      actions.append(settingsBtn, dupBtn, renameBtn, deleteBtn);
-      li.append(topRow, actions, settingsPanel);
+      topRow.append(buildActionMenu([
+        emojiItem(rule.emoji, emoji => saveSmartRule(ctx.lang, name, { ...getSmartLists(ctx.lang)[name], emoji })),
+        { glyph: '⧉', label: 'Copy', title: 'Duplicate smart list', tone: 'copy', onClick: () => {
+          const proposed = suggestSmartCopyName(ctx.lang, name);
+          const input = window.prompt(`Name for the copy of "${name}":`, proposed);
+          if (input === null) return;
+          const newName = input.trim();
+          if (!newName) return;
+          if (getSmartNames(ctx.lang).includes(newName)) {
+            alert(`A smart list named "${newName}" already exists.`); return;
+          }
+          saveSmartRule(ctx.lang, newName, { ...rule });
+          ctx.selectedSmart = newName; ctx.selectedList = ''; ctx.selectedMultiList = null; ctx.selectedProfile = null;
+          render();
+        } },
+        { glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename', onClick: () => {
+          startRenameSmart(name, li, nameSpan);
+        } },
+        { glyph: '🗑', label: 'Delete', title: 'Delete this smart list', tone: 'delete', onClick: () => {
+          if (!window.confirm(`Delete smart list "${name}"? The words themselves are untouched.`)) return;
+          deleteSmartList(ctx.lang, name);
+          if (ctx.selectedSmart === name) ctx.selectedSmart = null;
+          render();
+        } },
+      ]));
+      const em = emojiSpan(rule.emoji); if (em) topRow.prepend(em);
+      li.append(topRow);
       li.addEventListener('click', () => {
         ctx.selectedSmart = name; ctx.selectedMultiList = null; ctx.selectedProfile = null;
         closePopover(); render();
@@ -717,7 +722,8 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       if (e.key === 'Enter') confirmRename(); if (e.key === 'Escape') done();
     });
     nameSpan.replaceWith(inp);
-    li.querySelector('.ml-list-row-top')?.appendChild(okBtn);
+    const rowTop = li.querySelector('.ml-list-row-top');
+    rowTop?.insertBefore(okBtn, rowTop.querySelector('.ml-menu-wrap'));
     inp.focus(); inp.select();
   }
 
@@ -778,64 +784,58 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       nameSpan.className = 'ml-list-name'; nameSpan.textContent = name; nameSpan.title = name;
       topRow.appendChild(nameSpan);
 
-      const metaRow = document.createElement('div');
-      metaRow.className = 'ml-list-row-meta';
       const badge = buildLangBadge(getMultiListLanguages(name));
       const countSpan = document.createElement('span');
       countSpan.className = 'ml-list-count';
       const n = getMultiListCount(name);
       countSpan.textContent = `${n} word${n === 1 ? '' : 's'}`;
-      metaRow.append(badge, countSpan);
-
-      const actions = document.createElement('span');
-      actions.className = 'ml-list-actions ml-list-actions--full';
+      // Flag(s) then count, top-right beside the gear; name top-left.
+      topRow.append(badge, countSpan);
 
       // Folder membership and Hide-from-mode are edited from the Part of
-      // Speech/Level dropdown row in multi-panel.ts now, not a "⚙ Settings"
-      // gear here.
-      const dupBtn = actionBtn('⧉', 'Copy', 'Duplicate cross-language list', e => {
-        e.stopPropagation();
-        const proposed = suggestMultiCopyName(name);
-        const input = window.prompt(`Name for the copy of "${name}":`, proposed);
-        if (input === null) return;
-        const newName = input.trim();
-        if (!newName) return;
-        if (!createMultiList(newName)) { alert(`A cross-language list named "${newName}" already exists.`); return; }
-        for (const entry of getMultiList(name)) addToMultiList(newName, entry.word, entry.language);
-        ctx.selectedMultiList = newName; ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedProfile = null;
-        render();
-      });
-      const renameBtn = actionBtn('✏', 'Rename', 'Rename', e => {
-        e.stopPropagation();
-        const newName = window.prompt('Rename cross-language list:', name);
-        if (!newName?.trim() || newName.trim() === name) return;
-        if (renameMultiList(name, newName.trim())) {
-          if (ctx.selectedMultiList === name) ctx.selectedMultiList = newName.trim();
+      // Speech/Level dropdown row in multi-panel.ts now, not this gear menu.
+      topRow.append(buildActionMenu([
+        emojiItem(meta.emoji, emoji => setMultiListMeta(name, { ...getMultiListMeta(name), emoji })),
+        { glyph: '⧉', label: 'Copy', title: 'Duplicate cross-language list', tone: 'copy', onClick: () => {
+          const proposed = suggestMultiCopyName(name);
+          const input = window.prompt(`Name for the copy of "${name}":`, proposed);
+          if (input === null) return;
+          const newName = input.trim();
+          if (!newName) return;
+          if (!createMultiList(newName)) { alert(`A cross-language list named "${newName}" already exists.`); return; }
+          for (const entry of getMultiList(name)) addToMultiList(newName, entry.word, entry.language);
+          ctx.selectedMultiList = newName; ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedProfile = null;
           render();
-        } else {
-          alert(`A cross-language list named "${newName.trim()}" already exists.`);
-        }
-      });
-      const deleteBtn = actionBtn('🗑', 'Delete', 'Delete list', e => {
-        e.stopPropagation();
-        if (!window.confirm(`Delete cross-language list "${name}" and all its words?`)) return;
-        const entries      = getMultiList(name);
-        const wasSelected  = ctx.selectedMultiList === name;
+        } },
+        { glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename', onClick: () => {
+          const newName = window.prompt('Rename cross-language list:', name);
+          if (!newName?.trim() || newName.trim() === name) return;
+          if (renameMultiList(name, newName.trim())) {
+            if (ctx.selectedMultiList === name) ctx.selectedMultiList = newName.trim();
+            render();
+          } else {
+            alert(`A cross-language list named "${newName.trim()}" already exists.`);
+          }
+        } },
+        { glyph: '🗑', label: 'Delete', title: 'Delete list', tone: 'delete', onClick: () => {
+          if (!window.confirm(`Delete cross-language list "${name}" and all its words?`)) return;
+          const entries      = getMultiList(name);
+          const wasSelected  = ctx.selectedMultiList === name;
 
-        deleteMultiList(name);
-        if (wasSelected) ctx.selectedMultiList = null;
-        render();
-
-        showUndo(`Deleted "${name}" (${entries.length} words)`, () => {
-          createMultiList(name);
-          entries.forEach(e => addToMultiList(name, e.word, e.language));
-          if (wasSelected) ctx.selectedMultiList = name;
+          deleteMultiList(name);
+          if (wasSelected) ctx.selectedMultiList = null;
           render();
-        });
-      }, true);
 
-      actions.append(dupBtn, renameBtn, deleteBtn);
-      li.append(topRow, metaRow, actions);
+          showUndo(`Deleted "${name}" (${entries.length} words)`, () => {
+            createMultiList(name);
+            entries.forEach(e => addToMultiList(name, e.word, e.language));
+            if (wasSelected) ctx.selectedMultiList = name;
+            render();
+          });
+        } },
+      ]));
+      const em = emojiSpan(meta.emoji); if (em) topRow.prepend(em);
+      li.append(topRow);
       li.addEventListener('click', () => {
         ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedProfile = null;
         ctx.selectedMultiList = name;
@@ -896,6 +896,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   function renderProfilesNav(): void {
     const head = sectionHead(
       'ml-profile-head', 'Testing Profiles', 'Create a new testing profile', () => startCreateProfile(head),
+      () => startCreateProfileFolder(head),
     );
     ctx.listNav.appendChild(head);
 
@@ -918,23 +919,36 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       // labeled" model the live Lists filter box uses).
       const profileFolderScope = `profiles_${mode}`;
 
-      const modeHead = document.createElement('li');
+      // One collapsible group per mode: a caret head over a body <ul> that
+      // owns the mode's folders and profiles, same single-`hidden`-flip
+      // collapse as buildFolderGroup. Folders are created from the section
+      // head's "+ Folder", which asks which mode it belongs to.
+      const modeKey = `mode:${mode}`;
+      const modeCollapsed = isFolderCollapsed('profiles', modeKey);
+      const modeGroup = document.createElement('li');
+      modeGroup.className = 'ml-profile-mode-group';
+      const modeHead = document.createElement('div');
       modeHead.className = 'ml-profile-mode-head';
-      const modeLabel = document.createElement('span');
-      modeLabel.textContent = SCOPE_LABELS[mode];
-      modeHead.appendChild(modeLabel);
-      const modeFolderBtn = document.createElement('button');
-      modeFolderBtn.type = 'button'; modeFolderBtn.className = 'ml-new-list-btn ml-new-folder-btn';
-      modeFolderBtn.title = `Create a new folder for ${SCOPE_LABELS[mode]} profiles`;
-      modeFolderBtn.textContent = '+ Folder';
-      modeFolderBtn.addEventListener('click', () => {
-        const name = window.prompt('New folder name:');
-        if (!name?.trim()) return;
-        if (!addFolder(profileFolderScope, name)) { alert(`A folder named "${name.trim()}" already exists.`); return; }
-        render();
+      const modeToggle = document.createElement('button');
+      modeToggle.type = 'button';
+      modeToggle.className = 'ml-section-toggle-btn';
+      const modeArrow = document.createElement('span');
+      modeArrow.className = 'ml-section-caret';
+      modeArrow.textContent = modeCollapsed ? '▸' : '▾';
+      modeToggle.append(modeArrow, document.createTextNode(' ' + SCOPE_LABELS[mode]));
+      modeHead.appendChild(modeToggle);
+      const modeBody = document.createElement('ul');
+      modeBody.className = 'ml-profile-mode-body';
+      modeBody.hidden = modeCollapsed;
+      modeToggle.addEventListener('click', e => {
+        e.stopPropagation();
+        const next = !isFolderCollapsed('profiles', modeKey);
+        setFolderCollapsed('profiles', modeKey, next);
+        modeArrow.textContent = next ? '▸' : '▾';
+        modeBody.hidden = next;
       });
-      modeHead.appendChild(modeFolderBtn);
-      ctx.listNav.appendChild(modeHead);
+      modeGroup.append(modeHead, modeBody);
+      ctx.listNav.appendChild(modeGroup);
 
       const names = listPresets(mode);
       // Locked to the sidebar's current language via a bundle a learner set
@@ -956,7 +970,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
         instances.forEach(folder => byFolder.set(folder, [...(byFolder.get(folder) ?? []), name]));
       });
 
-      function buildProfileRow(name: string, target: HTMLElement = ctx.listNav): void {
+      function buildProfileRow(name: string, target: HTMLElement = modeBody): void {
         const bundle = getPreset(mode, name);
         const selected = ctx.selectedProfile?.mode === mode && ctx.selectedProfile.name === name;
         const li = document.createElement('li');
@@ -976,62 +990,36 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
           if (lang) topRow.appendChild(createFlagImg(lang.flagCountry, lang.label));
         }
 
-        const actions = document.createElement('span');
-        actions.className = 'ml-list-actions ml-list-actions--full';
-
-        const settingsPanel = document.createElement('div');
-        settingsPanel.className = 'ml-settings-panel';
-        settingsPanel.hidden = true;
-        settingsPanel.appendChild(buildFoldersRow(bundle?.folders ?? [], profileFolderScope, next => {
-          if (bundle) savePreset(mode, name, { ...bundle, folders: next, folder: undefined });
-        }));
-        if (bundle?.language) {
-          const lockRow = document.createElement('div');
-          lockRow.className = 'ml-settings-row';
-          const lockLabel = document.createElement('label');
-          lockLabel.className = 'ml-settings-hide-item';
-          const lockCb = document.createElement('input');
-          lockCb.type = 'checkbox';
-          lockCb.checked = !!bundle.languageLocked;
-          lockCb.addEventListener('click', e => e.stopPropagation());
-          lockCb.addEventListener('change', () => {
-            savePreset(mode, name, { ...bundle, languageLocked: lockCb.checked });
+        topRow.append(buildActionMenu([
+          emojiItem(bundle?.emoji, emoji => {
+            const b = getPreset(mode, name);
+            if (b) savePreset(mode, name, { ...b, emoji });
+          }),
+          { glyph: '⧉', label: 'Copy', title: 'Duplicate profile', tone: 'copy', onClick: () => {
+            const proposed = suggestProfileCopyName(mode, name);
+            const input = window.prompt(`Name for the copy of "${name}":`, proposed);
+            if (input === null) return;
+            const newName = input.trim();
+            if (!newName) return;
+            if (!duplicatePreset(mode, name, newName)) {
+              alert(`A profile named "${newName}" already exists for ${SCOPE_LABELS[mode]}.`); return;
+            }
+            ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedMultiList = null;
+            ctx.selectedProfile = { mode, name: newName };
             render();
-          });
-          const langLabel = LANGUAGES.find(l => l.name === bundle.language)?.label ?? bundle.language;
-          lockLabel.append(lockCb, document.createTextNode(`Only show for ${langLabel}`));
-          lockRow.appendChild(lockLabel);
-          settingsPanel.appendChild(lockRow);
-        }
-        const settingsBtn = buildSettingsToggle(settingsPanel);
-
-        const dupBtn = actionBtn('⧉', 'Copy', 'Duplicate profile', e => {
-          e.stopPropagation();
-          const proposed = suggestProfileCopyName(mode, name);
-          const input = window.prompt(`Name for the copy of "${name}":`, proposed);
-          if (input === null) return;
-          const newName = input.trim();
-          if (!newName) return;
-          if (!duplicatePreset(mode, name, newName)) {
-            alert(`A profile named "${newName}" already exists for ${SCOPE_LABELS[mode]}.`); return;
-          }
-          ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedMultiList = null;
-          ctx.selectedProfile = { mode, name: newName };
-          render();
-        });
-        const renameBtn = actionBtn('✏', 'Rename', 'Rename', e => {
-          e.stopPropagation(); startRenameProfile(mode, name, li, nameSpan);
-        });
-        const deleteBtn = actionBtn('🗑', 'Delete', 'Delete profile', e => {
-          e.stopPropagation();
-          if (!window.confirm(`Delete profile "${name}"?`)) return;
-          deletePreset(mode, name);
-          if (selected) ctx.selectedProfile = null;
-          render();
-        }, true);
-
-        actions.append(settingsBtn, dupBtn, renameBtn, deleteBtn);
-        li.append(topRow, actions, settingsPanel);
+          } },
+          { glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename', onClick: () => {
+            startRenameProfile(mode, name, li, nameSpan);
+          } },
+          { glyph: '🗑', label: 'Delete', title: 'Delete profile', tone: 'delete', onClick: () => {
+            if (!window.confirm(`Delete profile "${name}"?`)) return;
+            deletePreset(mode, name);
+            if (selected) ctx.selectedProfile = null;
+            render();
+          } },
+        ]));
+        const em = emojiSpan(bundle?.emoji); if (em) topRow.prepend(em);
+        li.append(topRow);
         li.addEventListener('click', () => {
           ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedMultiList = null;
           ctx.selectedProfile = { mode, name };
@@ -1042,16 +1030,15 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
 
       // Folders first (see renderSection()'s own folders-before-ungrouped
       // ordering), then whatever hasn't been filed into one.
-      // Registered-but-empty folders (this mode's "+ Folder" above, or the
-      // "+ new…" from inside a profile's own settings panel — see
-      // buildFoldersRow) are unioned in here so a freshly-created one still
+      // Registered-but-empty folders (created from the section head's
+      // "+ Folder") are unioned in here so a freshly-created one still
       // shows up with nothing in it yet.
       const allModeFolders = new Set([...byFolder.keys(), ...getFolderRegistry(profileFolderScope)]);
       [...allModeFolders].filter(Boolean).sort().forEach(folder => {
         const folderId = `profiles:${mode}:${folder}`;
-        const group = buildFolderGroup('profiles', folderId, folder);
+        const group = buildFolderGroup('profiles', folderId, folder, undefined, { scope: profileFolderScope, folder });
         const folderBody = group.querySelector<HTMLUListElement>('.ml-folder-body')!;
-        ctx.listNav.appendChild(group);
+        modeBody.appendChild(group);
 
         const namesInFolder = byFolder.get(folder) ?? [];
         if (namesInFolder.length === 0) {
@@ -1110,20 +1097,16 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       nameSpan.textContent = name;
       topRow.appendChild(nameSpan);
 
-      const actions = document.createElement('span');
-      actions.className = 'ml-list-actions ml-list-actions--full';
-      const renameBtn = actionBtn('✏', 'Rename', 'Rename', e => {
-        e.stopPropagation(); startRenameVisualProfile(name);
-      });
-      const deleteBtn = actionBtn('🗑', 'Delete', 'Delete visual profile', e => {
-        e.stopPropagation();
-        if (!window.confirm(`Delete visual profile "${name}"?`)) return;
-        deleteVisualProfile(name);
-        render();
-      }, true);
-      actions.append(renameBtn, deleteBtn);
+      topRow.append(buildActionMenu([
+        { glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename', onClick: () => startRenameVisualProfile(name) },
+        { glyph: '🗑', label: 'Delete', title: 'Delete visual profile', tone: 'delete', onClick: () => {
+          if (!window.confirm(`Delete visual profile "${name}"?`)) return;
+          deleteVisualProfile(name);
+          render();
+        } },
+      ]));
 
-      li.append(topRow, actions);
+      li.append(topRow);
       li.addEventListener('click', () => {
         const profile = getVisualProfile(name);
         if (profile) applyVisualProfile(profile);
@@ -1197,6 +1180,45 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     inp.focus();
   }
 
+  /** Inline "mode + folder name" row for the Testing Profiles "+ Folder" —
+   *  folders are scoped per mode (`profiles_<mode>`), so the mode is chosen
+   *  here rather than by a second button inside each mode's own group. */
+  function startCreateProfileFolder(afterHead: HTMLElement): void {
+    const li = document.createElement('li');
+    li.className = 'ml-list-item ml-list-item--editing ml-list-item--editing-wide';
+
+    const modeSel = document.createElement('select');
+    modeSel.className = 'ml-list-name-input';
+    PROFILE_MODES.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m; opt.textContent = SCOPE_LABELS[m];
+      modeSel.appendChild(opt);
+    });
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.placeholder = 'Folder name...'; inp.className = 'ml-list-name-input';
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button'; okBtn.className = 'ml-icon-btn'; okBtn.textContent = '✓';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button'; cancelBtn.className = 'ml-icon-btn'; cancelBtn.textContent = '✕';
+
+    function confirmCreate(): void {
+      const name = inp.value.trim(); if (!name) { li.remove(); return; }
+      const mode = modeSel.value as FilterScope;
+      if (!addFolder(`profiles_${mode}`, name)) {
+        alert(`A folder named "${name}" already exists for ${SCOPE_LABELS[mode]}.`); return;
+      }
+      render();
+    }
+    okBtn.addEventListener('click', confirmCreate);
+    cancelBtn.addEventListener('click', () => li.remove());
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') confirmCreate(); if (e.key === 'Escape') li.remove();
+    });
+    li.append(modeSel, inp, okBtn, cancelBtn);
+    afterHead.insertAdjacentElement('afterend', li);
+    inp.focus();
+  }
+
   function startRenameProfile(mode: FilterScope, oldName: string, li: HTMLElement, nameSpan: HTMLElement): void {
     const inp = document.createElement('input');
     inp.type = 'text'; inp.value = oldName; inp.className = 'ml-list-name-input';
@@ -1222,7 +1244,8 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       if (e.key === 'Enter') confirmRename(); if (e.key === 'Escape') done();
     });
     nameSpan.replaceWith(inp);
-    li.querySelector('.ml-list-row-top')?.appendChild(okBtn);
+    const rowTop = li.querySelector('.ml-list-row-top');
+    rowTop?.insertBefore(okBtn, rowTop.querySelector('.ml-menu-wrap'));
     inp.focus(); inp.select();
   }
 
@@ -1362,8 +1385,137 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
    * on renderSection() below, which this exists to serve twice over (its own
    * generic folder pass, and renderProfilesNav's bespoke per-mode one).
    */
+  function folderScopeFor(sectionId: SidebarSectionId): string | null {
+    if (sectionId === 'single') return `single_${ctx.lang}`;
+    if (sectionId === 'smart') return `smart_${ctx.lang}`;
+    if (sectionId === 'multi') return 'multi';
+    return null; // Testing Profiles passes its per-mode scope explicitly
+  }
+
+  interface StylePickerOptions {
+    emoji?: string; color?: string;
+    /** Folders get a colour too; a list is emoji-only. */
+    withColor: boolean;
+    onSave(style: { emoji?: string; color?: string }): void;
+  }
+
+  /** Emoji (and optionally colour) picker as a small popover under `anchor`
+   *  (moved to <body> like the gear menu, for the same clipping reasons). */
+  function openStylePicker(anchor: HTMLElement, opts: StylePickerOptions): void {
+    closeAllActionMenus();
+    document.querySelector('.ml-folder-style-pop')?.remove();
+    const style = { emoji: opts.emoji, color: opts.color };
+    const pop = document.createElement('div');
+    pop.className = 'ml-folder-style-pop';
+
+    const save = (): void => opts.onSave({ ...style });
+
+    const emojiRow = document.createElement('label');
+    emojiRow.className = 'ml-folder-style-row';
+    emojiRow.append(document.createTextNode('Emoji'));
+    const emojiInp = document.createElement('input');
+    emojiInp.type = 'text'; emojiInp.maxLength = 8; emojiInp.placeholder = 'None';
+    emojiInp.value = style.emoji ?? '';
+    emojiInp.addEventListener('change', () => { style.emoji = emojiInp.value.trim() || undefined; save(); });
+    emojiRow.appendChild(emojiInp);
+
+    const quick = document.createElement('div');
+    quick.className = 'ml-folder-style-quick';
+    ['📚', '🩺', '🍽', '✈️', '💼', '🏠', '🌿', '💻', '⚖️', '🎨', '⭐', '🔥'].forEach(em => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = em;
+      b.addEventListener('click', () => { style.emoji = em; emojiInp.value = em; save(); });
+      quick.appendChild(b);
+    });
+    const clear = document.createElement('button');
+    clear.type = 'button'; clear.textContent = '∅'; clear.title = 'No emoji';
+    clear.addEventListener('click', () => { style.emoji = undefined; emojiInp.value = ''; save(); });
+    quick.appendChild(clear);
+
+    pop.append(emojiRow, quick);
+
+    if (opts.withColor) {
+      const colorRow = document.createElement('div');
+      colorRow.className = 'ml-folder-style-colors';
+      const swatch = (color: string | undefined): void => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'ml-folder-swatch' + (style.color === color ? ' ml-folder-swatch--on' : '');
+        b.title = color ? color : 'No colour';
+        if (color) b.style.background = color; else b.textContent = '∅';
+        b.addEventListener('click', () => {
+          style.color = color; save();
+          colorRow.querySelectorAll('.ml-folder-swatch').forEach(x => x.classList.remove('ml-folder-swatch--on'));
+          b.classList.add('ml-folder-swatch--on');
+        });
+        colorRow.appendChild(b);
+      };
+      swatch(undefined);
+      FOLDER_COLORS.forEach(swatch);
+      pop.appendChild(colorRow);
+    }
+
+    document.body.appendChild(pop);
+    const r = anchor.getBoundingClientRect();
+    pop.style.left = `${Math.max(4, Math.min(r.right - pop.offsetWidth, window.innerWidth - pop.offsetWidth - 4))}px`;
+    pop.style.top = `${r.bottom + pop.offsetHeight + 8 > window.innerHeight ? Math.max(4, r.top - pop.offsetHeight - 4) : r.bottom + 4}px`;
+    pop.addEventListener('click', e => e.stopPropagation());
+    const dismiss = (e: Event): void => {
+      if (pop.contains(e.target as Node)) return;
+      pop.remove(); document.removeEventListener('click', dismiss, true);
+    };
+    setTimeout(() => document.addEventListener('click', dismiss, true), 0);
+  }
+
+  function openFolderStylePicker(anchor: HTMLElement, scope: string, folder: string): void {
+    const cur = getFolderStyle(scope, folder);
+    openStylePicker(anchor, {
+      ...cur, withColor: true,
+      onSave: next => { setFolderStyle(scope, folder, next); render(false); },
+    });
+  }
+
+  /** "Hide From" for a whole folder: a checkbox per mode in a popover on
+   *  <body>, so — unlike the dropdown this replaced — the sidebar's own
+   *  scrolling/overflow can't clip it. */
+  function openHideFromPicker(anchor: HTMLElement, bulk: BulkHideFrom): void {
+    closeAllActionMenus();
+    document.querySelector('.ml-folder-style-pop')?.remove();
+    const selected = new Set<FilterScope>(bulk.get());
+    const pop = document.createElement('div');
+    pop.className = 'ml-folder-style-pop';
+    const heading = document.createElement('div');
+    heading.className = 'ml-folder-style-row';
+    heading.textContent = 'Hide this folder\'s lists from';
+    pop.appendChild(heading);
+    FILTER_SCOPES.forEach(scope => {
+      const row = document.createElement('label');
+      row.className = 'ml-chip-dropdown-item';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = selected.has(scope);
+      cb.addEventListener('change', () => {
+        if (cb.checked) selected.add(scope); else selected.delete(scope);
+        bulk.set([...selected]);
+      });
+      row.append(cb, document.createTextNode(SCOPE_LABELS[scope]));
+      pop.appendChild(row);
+    });
+    document.body.appendChild(pop);
+    const r = anchor.getBoundingClientRect();
+    pop.style.left = `${Math.max(4, Math.min(r.right - pop.offsetWidth, window.innerWidth - pop.offsetWidth - 4))}px`;
+    pop.style.top = `${r.bottom + pop.offsetHeight + 8 > window.innerHeight ? Math.max(4, r.top - pop.offsetHeight - 4) : r.bottom + 4}px`;
+    pop.addEventListener('click', e => e.stopPropagation());
+    const dismiss = (e: Event): void => {
+      if (pop.contains(e.target as Node)) return;
+      pop.remove(); document.removeEventListener('click', dismiss, true);
+    };
+    setTimeout(() => document.addEventListener('click', dismiss, true), 0);
+  }
+
   function buildFolderGroup(
     sectionId: SidebarSectionId, folderKey: string, label: string, bulkHideFrom?: BulkHideFrom,
+    style?: { scope: string; folder: string },
   ): HTMLLIElement {
     const collapsed = isFolderCollapsed(sectionId, folderKey);
     const group = document.createElement('li');
@@ -1376,11 +1528,16 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     arrow.textContent = collapsed ? '▸' : '▾';
     const icon = document.createElement('span');
     icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = '📁';
+    const look = style ? getFolderStyle(style.scope, style.folder) : {};
+    icon.textContent = '📁'; // always the folder glyph; the emoji is its own span below
+    if (look.color) { head.classList.add('ml-folder-head--colored'); head.style.setProperty('--folder-color', look.color); }
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'ml-section-toggle-btn';
-    toggle.append(arrow, icon, document.createTextNode(' ' + label));
+    toggle.append(arrow, icon);
+    const folderEmoji = emojiSpan(look.emoji);
+    if (folderEmoji) toggle.append(document.createTextNode(' '), folderEmoji);
+    toggle.append(document.createTextNode(' ' + label));
     head.appendChild(toggle);
     makeFolderDropTarget(head, sectionId, folderKey);
 
@@ -1396,15 +1553,20 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       body.hidden = next;
     });
 
-    if (bulkHideFrom) {
-      const selected = new Set(bulkHideFrom.get());
-      const dropdown = buildChecklistDropdown(
-        'Hide From', FILTER_SCOPES.map(s => ({ value: s, label: SCOPE_LABELS[s] })), selected,
-        () => bulkHideFrom!.set([...selected] as FilterScope[]),
-      );
-      dropdown.wrap.classList.add('ml-folder-hide-from');
-      head.appendChild(dropdown.wrap);
+    const folderItems: MenuItem[] = [];
+    if (style) {
+      folderItems.push({
+        glyph: '🎨', label: 'Emoji & Colour', title: "Set this folder's emoji and colour", tone: 'emoji',
+        onClick: anchor => openFolderStylePicker(anchor, style.scope, style.folder),
+      });
     }
+    if (bulkHideFrom) {
+      folderItems.push({
+        glyph: '🚫', label: 'Hide From', title: 'Hide every list in this folder from chosen modes', tone: 'hide',
+        onClick: anchor => openHideFromPicker(anchor, bulkHideFrom),
+      });
+    }
+    if (folderItems.length > 0) head.appendChild(buildActionMenu(folderItems));
 
     group.append(head, body);
     return group;
@@ -1449,8 +1611,10 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     if (labelSpan) toggleBtn.appendChild(labelSpan);
     head.insertBefore(toggleBtn, head.firstChild);
 
+    toggleBtn.dataset.section = id;
     const body = document.createElement('ul');
-    body.className = 'ml-section-body';
+    body.className = `ml-section-body ml-section-body--${id}`;
+    body.dataset.section = id;
     body.hidden = collapsed;
     head.insertAdjacentElement('afterend', body);
 
@@ -1460,6 +1624,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       setSectionCollapsed(id, next);
       arrow.textContent = next ? '▸' : '▾';
       body.hidden = next;
+      syncCollapseAllLabel();
     });
 
     // Testing Profiles manages its own folder sub-grouping (renderProfilesNav)
@@ -1481,7 +1646,10 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     // first row happened to fall.
     const folderNames = [...new Set(rows.map(r => r.dataset.folder || '').filter(Boolean))].sort();
     folderNames.forEach(folder => {
-      const group = buildFolderGroup(id, folder, folder, bulkHideFromFor(id, folder));
+      const scope = folderScopeFor(id);
+      const group = buildFolderGroup(
+        id, folder, folder, bulkHideFromFor(id, folder), scope ? { scope, folder } : undefined,
+      );
       const folderBody = group.querySelector<HTMLUListElement>('.ml-folder-body')!;
       body.appendChild(group);
       rows.filter(r => (r.dataset.folder || '') === folder).forEach(row => {
@@ -1503,7 +1671,8 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     const hadFocus = ctx.listNav.contains(document.activeElement);
 
     ctx.listNav.innerHTML = '';
-    renderBrowseNav();
+    seedStarterLists(ctx.lang);
+    browseBtn.classList.toggle('ml-browse-btn--active', ctx.selectedList === BROWSE_ALL_LIST);
     renderSection('single', renderSingleNav);
     renderSection('smart', renderSmartNav);
     renderSection('multi', renderMultiNav);
@@ -1519,7 +1688,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       li.setAttribute('role', 'button');
     });
     if (hadFocus) ctx.listNav.querySelector<HTMLElement>('.ml-list-item.active')?.focus();
-    collapseAllBtn.textContent = SIDEBAR_SECTIONS.every(isSectionCollapsed) ? 'Expand All' : 'Collapse All';
+    syncCollapseAllLabel();
     if (rerenderPanel) ctx.renderPanel();
   }
 
@@ -1603,7 +1772,8 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       if (e.key === 'Enter') confirmRename(); if (e.key === 'Escape') done();
     });
     nameSpan.replaceWith(inp);
-    li.querySelector('.ml-list-row-top')?.appendChild(okBtn);
+    const rowTop = li.querySelector('.ml-list-row-top');
+    rowTop?.insertBefore(okBtn, rowTop.querySelector('.ml-menu-wrap'));
     inp.focus(); inp.select();
   }
 

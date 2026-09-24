@@ -406,13 +406,6 @@
 
         </div>
 
-        <!-- Start Quiz lives in its own row, outside controls-top's wrapping
-             flex flow, so it never moves when a mode-conditional control
-             group (Direction, Quiz Style, etc.) appears or disappears. -->
-        <div id="controlsActions">
-          <button id="startBtn" data-i18n="controls.startQuiz">Start Quiz</button>
-        </div>
-
         <!-- Conjugation-mode controls: shown only when Conjugation tab is
              active. Placed first among the filter boxes — Tense & Forms is
              the filter that defines what a Conjugation quiz drills, so it
@@ -492,6 +485,12 @@
           </div>
         </div>
 
+        <!-- Part of Speech, Lists and Domains as one Filters bar: each header
+             is a pill whose body opens as a popover, with a summary strip of
+             what is filtering below (filters/filter-bar.ts). Each filter still
+             owns its own state, On/Off, chain and Hide/Focus. -->
+        <div id="filtersBar" class="filters-bar">
+        <div id="filtersRow" class="filters-row">
         <div id="classFilter" class="class-filter-wrap" data-simple-hide="true">
           <button type="button" class="filter-collapse-btn" data-collapse="classFilterBody" aria-expanded="false" aria-controls="classFilterBody">
             <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
@@ -504,7 +503,7 @@
             </button>
             <button type="button" class="filter-chain-btn filter-chain-btn--on" id="classFilterChain" aria-pressed="true">&#128279;</button>
           </span>
-          <div id="classFilterBody" class="filter-body">
+          <div id="classFilterBody" class="filter-body filter-body--collapsed">
             <p class="filter-chain-note" id="classFilterChainNote" role="status" hidden></p>
             <button type="button" class="pos-chip pos-chip-all active" data-i18n="controls.all">All</button>
             <button type="button" class="pos-chip" data-pos="verb" data-i18n="filter.verbs">Verbs</button>
@@ -546,7 +545,7 @@
               </span>
               <span class="list-filter-count">(<span id="knownWordCount">0</span> <span data-i18n="filter.listed">listed</span>)</span>
             </div>
-            <div id="listFilterBody" class="filter-body">
+            <div id="listFilterBody" class="filter-body filter-body--collapsed">
               <p class="filter-chain-note" id="listFilterChainNote" role="status" hidden></p>
               <p class="list-filter-desc" id="listFilterDesc"></p>
               <div class="list-filter-checkboxes" id="listFilterCheckboxes">
@@ -571,9 +570,16 @@
             </span>
             <button type="button" id="clearAllDomains" style="display:none" data-i18n="filter.clearAll">Clear all</button>
           </div>
-          <div id="domainFilterBody" class="filter-body">
+          <div id="domainFilterBody" class="filter-body filter-body--collapsed">
             <p class="filter-chain-note" id="domainFilterChainNote" role="status" hidden></p>
           </div>
+        </div>
+
+        <!-- Start Quiz: the last item in the filters row, using the space left
+             at its right end. -->
+        <button id="startBtn" data-i18n="controls.startQuiz">Start Quiz</button>
+        </div>
+        <div id="filtersSummary" class="filters-summary" data-simple-hide="true" hidden></div>
         </div>
 
         <!-- Only shown for a language with a non-Latin script (Chinese,
@@ -2136,6 +2142,17 @@
 
             <div class="settings-row">
               <div class="settings-label">
+                <span>Experimental quiz modes</span>
+                <span class="settings-desc">Shows the Picture Quiz, Trivia, Guess the Blank and Sentence Scramble tabs. These are proofs of concept — they work, but are unfinished, may change or be removed, and don't get the same polish as Table, Conjugation and My Lists.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingShowExperimentalModes">
+                <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
                 <span>Visual Profiles</span>
                 <span class="settings-desc">Shows a "Visual Profiles" sub-section under Testing Profiles in My Lists' sidebar — saved bundles of display preferences (Theme, Font Size) you can switch between, separate from what a Testing Profile quizzes on.</span>
               </div>
@@ -2153,17 +2170,6 @@
               <div class="sort-order-toggle" id="settingConfirmRemoveWordOverride">
                 <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
                 <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span>Full-viewport word editor</span>
-                <span class="settings-desc">On: a word's expanded editor in My Content takes over the whole viewport instead of expanding inline in the list, with a back arrow to return. Off (default): it expands inline, same as before.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingFullViewportWordEditor">
-                <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
-                <button type="button" class="sort-order-btn" data-enabled="true" data-i18n="common.on">On</button>
               </div>
             </div>
 

@@ -15,9 +15,11 @@ button {
   position: relative;
 }
 
-/* Lift on hover — suppressed for icon/chip/toggle buttons */
+/* Hover feedback is a shadow, never movement. A hover that lifts or scales
+   the button moves it out from under a cursor resting on its lower edge, which
+   ends the hover, which drops it back, which starts the hover again — a
+   flicker. (Suppressed entirely for icon/chip/toggle buttons below.) */
 button:hover:not(:disabled) {
-  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 button:is(
@@ -36,18 +38,14 @@ html.dark button:hover:not(:disabled) {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-button:active:not(:disabled) { transform: translateY(0); }
 button:disabled               { opacity: 0.5; cursor: not-allowed; }
 
 /* Focus ring (a11y) */
 button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ── Primary (Start) — the dominant CTA ── */
-/* Lives in its own row (#controlsActions, index.html) below #controls-top,
-   not inline with the wrapping filter controls, so it's free to run full
-   width at every breakpoint rather than being sized to its own content —
-   the widest, tallest thing in the bar reads as the one action left to
-   take once every filter above it is set. */
+/* Sits at the right end of the filters row (#filtersRow, index.html); the
+   filters-bar rules in class-filter.css size it to match the filter pills. */
 #startBtn {
   background: var(--accent);
   color: #fff;
@@ -97,7 +95,6 @@ input[type="checkbox"] {
   accent-color: var(--accent);
   transition: transform var(--transition-fast);
 }
-input[type="checkbox"]:hover { transform: scale(1.1); }
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
@@ -111,8 +108,8 @@ input[type="checkbox"]:hover { transform: scale(1.1); }
     min-height: 44px;
   }
 
-  /* Reduce hover lift — no hover state on touch anyway */
-  button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  /* Softer hover shadow — no hover state on touch anyway */
+  button:hover:not(:disabled) { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
   html.dark button:hover:not(:disabled) { box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
   input[type="checkbox"] { width: 18px; height: 18px; }
 
@@ -130,5 +127,4 @@ input[type="checkbox"]:hover { transform: scale(1.1); }
   /* Tap scale feedback instead of translate for touch */
   button:active:not(:disabled) { transform: scale(0.97); }
   input[type="checkbox"] { width: 20px; height: 20px; }
-  input[type="checkbox"]:hover { transform: scale(1.05); }
 }

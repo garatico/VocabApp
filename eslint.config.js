@@ -163,7 +163,7 @@ export default [
   },
   {
     // Node.js scripts (data pipeline, validate, test-api, etc.)
-    files: ['scripts/**/*.js'],
+    files: ['scripts/**/*.js', 'scripts/**/*.mjs'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType:  'module',

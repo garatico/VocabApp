@@ -22,17 +22,14 @@ import { foldKey as norm } from '../../utils/match.ts';
 import {
   getList, getListNames, addToList, removeFromList, getAddedDate,
 } from '../../utils/word-lists.ts';
+import { createPager } from './pager.ts';
 import type { ListsCtx } from './context.ts';
 import { cachedVocabMap } from './vocab-cache.ts';
 import { getMastered, setMasteryLevel, MASTERY_LEVELS } from './mastery.ts';
 import { closePopover, openMovePopover } from './move-popover.ts';
 import { showUndo } from './undo-toast.ts';
-import {
-  POS_ABBREV, POS_CHIPS, WORD_CHUNK, type VocabEntry,
-} from './types.ts';
-import { buildMasteryControls, appendCountChip, appendMasteredChip, buildWordDetail, buildEditInMyContentButton } from './row-shared.ts';
-import { buildAudioButton } from '../../ui/audio-play-button.ts';
-import { fillHighlighted } from '../../utils/dom.ts';
+import { POS_CHIPS, type VocabEntry } from './types.ts';
+import { appendCountChip, appendMasteredChip, buildWordRow } from './row-shared.ts';
 
 export interface WordListDeps {
   /** Read at render time so the toolbar owns the text and this module doesn't. */
@@ -49,6 +46,8 @@ export interface WordListDeps {
 
 export interface WordListUI {
   listEl:  HTMLUListElement;
+  /** Prev / page / Next row — append just above `listEl`. Hides itself on one page. */
+  pagerEl: HTMLElement;
   /** Hidden until something is selected, so it costs nothing at rest. */
   bulkBar: HTMLElement;
   /** Filter, sort and redraw from the current input value. */
@@ -63,10 +62,14 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
   const listEl = document.createElement('ul');
   listEl.className = 'ml-word-list';
 
-  // Chunked-render state (see appendChunk)
+  // Every filtered word, across all pages — Select all and Export act on
+  // this, while only the current page is drawn (see render).
   let visibleWords: string[] = [];
-  let renderedCount = 0;
-  let chunkObserver: IntersectionObserver | null = null;
+
+  // Back to page 1 only when what is being listed changed (filter, sort, …),
+  // not on a redraw for a row action like removing a word.
+  let lastListingSig = '';
+  const pager = createPager(() => render());
 
   // Multi-select state. Cleared whenever the visible set changes, so you can
   // never act on a word you can no longer see.
@@ -340,12 +343,15 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     renderStats(filtered);
     updateChipCounts();
     visibleWords  = sortWords(filtered);
-    renderedCount = 0;
-    chunkObserver?.disconnect();
-    chunkObserver = null;
+    const sig = [
+      ctx.lang, ctx.selectedList, filter, [...ctx.selectedPos].join(), [...ctx.selectedBands].join(),
+      ctx.sortMode, ctx.hideMastered,
+    ].join('|');
+    if (sig !== lastListingSig) { pager.reset(); lastListingSig = sig; }
     syncBulkBar();
 
     if (visibleWords.length === 0) {
+      pager.slice(visibleWords); // syncs (hides) the pager row
       const empty = document.createElement('li');
       empty.className = 'ml-word-empty';
       // This used to read "No words in this list yet." whenever the *visible*
@@ -362,32 +368,7 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
       listEl.appendChild(empty); return;
     }
 
-    appendChunk();
-  }
-
-  /** Render the next slice of visibleWords. */
-  function appendChunk(): void {
-    const vm       = cachedVocabMap(ctx.lang);
-    const mastered = getMastered(ctx.lang);
-    listEl.querySelector('.ml-chunk-sentinel')?.remove();
-
-    const slice = visibleWords.slice(renderedCount, renderedCount + WORD_CHUNK);
-    slice.forEach(word => listEl.appendChild(buildRow(word, vm, mastered)));
-    renderedCount += slice.length;
-
-    if (renderedCount >= visibleWords.length) return;
-
-    const sentinel = document.createElement('li');
-    sentinel.className = 'ml-chunk-sentinel';
-    sentinel.textContent =
-      `Loading ${Math.min(WORD_CHUNK, visibleWords.length - renderedCount)} more…`;
-    listEl.appendChild(sentinel);
-
-    chunkObserver?.disconnect();
-    chunkObserver = new IntersectionObserver(entries => {
-      if (entries.some(en => en.isIntersecting)) appendChunk();
-    }, { root: listEl, rootMargin: '400px' });
-    chunkObserver.observe(sentinel);
+    pager.slice(visibleWords).forEach(word => listEl.appendChild(buildRow(word, vm, mastered)));
   }
 
   function buildRow(
@@ -396,15 +377,6 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     mastered: Set<string>,
   ): HTMLLIElement {
     const entry = vm?.get(word);
-    const posLabel = POS_ABBREV[entry?.pos ?? ''] ?? '';
-    const isMastered = mastered.has(word);
-
-    // ── Main row ─────────────────────────────────────────────────────────────
-    const li = document.createElement('li');
-    li.className = 'ml-word-item'
-      + (word === ctx.expandedWord ? ' ml-word-item--expanded' : '')
-      + (isMastered ? ' ml-word-item--mastered' : '');
-
     const check = document.createElement('input');
     check.type = 'checkbox';
     check.className = 'ml-word-check';
@@ -416,38 +388,6 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
       if (check.checked) selectedWords.add(word); else selectedWords.delete(word);
       syncBulkBar();
     });
-
-    // Word/meaning disambiguators used to be appended straight onto this
-    // text ("gato (cat)") — moved into the expanded detail below instead
-    // (see row-shared.ts's buildWordDetail), since that widened the column
-    // unpredictably from row to row and fought the row's own alignment.
-    const wordSpan = document.createElement('span');
-    wordSpan.className = 'ml-word-text';
-    fillHighlighted(wordSpan, word, filterInput.value);
-
-    const audioBtn = buildAudioButton(entry?.audioUrl);
-
-    const posSpan = document.createElement('span');
-    posSpan.className = 'ml-word-pos'; posSpan.textContent = posLabel;
-    if (posLabel && entry?.pos) posSpan.dataset.pos = entry.pos;
-    else posSpan.hidden = true;
-
-    const transSpan = document.createElement('span');
-    transSpan.className = 'ml-word-trans';
-    if (entry?.translation) fillHighlighted(transSpan, entry.translation, filterInput.value);
-
-    const rankBadge = document.createElement('span');
-    rankBadge.className = 'ml-word-rank';
-    if (entry?.rank != null) rankBadge.textContent = '#' + entry.rank;
-    else rankBadge.hidden = true;
-
-    const actionsDiv = document.createElement('div');
-    actionsDiv.className = 'ml-word-actions';
-
-    // Your own rating (mastery scale) and what quizzes have actually shown
-    // (quiz badge) — shared with the cross-language list's rows, see
-    // row-shared.ts.
-    const { masteryBtn, quizBadge } = buildMasteryControls(ctx.lang, word, render);
 
     const moveBtn = document.createElement('button');
     moveBtn.type = 'button'; moveBtn.className = 'ml-move-btn';
@@ -493,32 +433,15 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
       });
     });
 
-    const editBtn = buildEditInMyContentButton(ctx.lang, word);
-
-    actionsDiv.appendChild(quizBadge);
-    actionsDiv.appendChild(masteryBtn); actionsDiv.appendChild(editBtn);
-    actionsDiv.appendChild(moveBtn); actionsDiv.appendChild(removeBtn);
-    li.appendChild(check); li.appendChild(wordSpan);
-    if (audioBtn) li.appendChild(audioBtn);
-    li.appendChild(posSpan);
-    li.appendChild(rankBadge); li.appendChild(transSpan); li.appendChild(actionsDiv);
-
-    // ── Preview row (collapsed unless expanded) ──────────────────────────────
-    const detail = (word === ctx.expandedWord && entry)
-      ? buildWordDetail(entry, ctx.lang, getAddedDate(ctx.lang, ctx.selectedList, word))
-      : document.createElement('div');
-    detail.classList.add('ml-word-detail');
-    li.appendChild(detail);
-
-    // Toggle preview on row click (but not on action buttons)
-    li.addEventListener('click', e => {
-      if ((e.target as HTMLElement).closest('button')) return;
-      ctx.expandedWord = (ctx.expandedWord === word) ? null : word;
-      render();
+    return buildWordRow({
+      lang: ctx.lang, word, entry, mastered: mastered.has(word), filter: filterInput.value,
+      expanded: word === ctx.expandedWord,
+      addedDate: word === ctx.expandedWord ? getAddedDate(ctx.lang, ctx.selectedList, word) : null,
+      redraw: render,
+      onToggleExpand: () => { ctx.expandedWord = ctx.expandedWord === word ? null : word; render(); },
+      leading: [check], extraActions: [moveBtn, removeBtn],
     });
-
-    return li;
   }
 
-  return { listEl, bulkBar, render, sortWords };
+  return { listEl, pagerEl: pager.el, bulkBar, render, sortWords };
 }

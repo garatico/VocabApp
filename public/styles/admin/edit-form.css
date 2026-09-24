@@ -258,51 +258,51 @@
    copied rather than shared for the same reason every other "same look as
    elsewhere in admin" comment in this codebase gives: each stylesheet here
    is its own self-contained copy. admin-editor.ts sets [data-pos]/
-   [data-band] from the word's own field (and live, on #editPos's own
-   change) via setColorAttr(). #editBand is a readonly-field, not a select —
+   [data-band] from the word's own field (and live, on .form-group select.we-pos's own
+   change) via setColorAttr(). .form-group input.we-band is a readonly-field, not a select —
    band has no column of its own to edit (CLAUDE.md's "band is computed here
    and nowhere else"), but it still gets the same color treatment as a
    glance-able summary of which band this word's rank falls into. */
-/* Fallback lives on the bare #editPos/#editBand (specificity 1,0,0), not a
-   repeated `#editPos[data-pos]`/`#editBand[data-band]` (1,0,1) — that would
+/* Fallback lives on the bare .form-group select.we-pos/.form-group input.we-band (specificity 1,0,0), not a
+   repeated `.form-group select.we-pos[data-pos]`/`.form-group input.we-band[data-band]` (1,0,1) — that would
    tie every specific rule below on specificity and then beat all of them on
    source order, the exact bug filter-bar.css's own [data-pos] fallback
    comment documents (every chip rendering in the same fallback color no
    matter what data-pos said). */
-#editPos  { --pos-hue: 217; }
-#editBand { --pos-hue: 217; }
+.form-group select.we-pos  { --pos-hue: 217; }
+.form-group input.we-band { --pos-hue: 217; }
 
-#editPos[data-pos="verb"]        { --pos-hue: 217; }
-#editPos[data-pos="noun"]        { --pos-hue: 142; }
-#editPos[data-pos="adjective"]   { --pos-hue:  32; }
-#editPos[data-pos="adverb"]      { --pos-hue: 280; }
-#editPos[data-pos="pronoun"]     { --pos-hue: 340; }
-#editPos[data-pos="preposition"] { --pos-hue: 195; }
-#editPos[data-pos="conjunction"] { --pos-hue:  20; }
-#editPos[data-pos="article"]     { --pos-hue: 260; }
-#editPos[data-pos="particle"]    { --pos-hue:  85; }
-#editPos[data-pos="suffix"]      { --pos-hue: 165; }
-#editPos[data-pos="interjection"] { --pos-hue: 110; }
-#editPos[data-pos="numeral"]      { --pos-hue: 305; }
+.form-group select.we-pos[data-pos="verb"]        { --pos-hue: 217; }
+.form-group select.we-pos[data-pos="noun"]        { --pos-hue: 142; }
+.form-group select.we-pos[data-pos="adjective"]   { --pos-hue:  32; }
+.form-group select.we-pos[data-pos="adverb"]      { --pos-hue: 280; }
+.form-group select.we-pos[data-pos="pronoun"]     { --pos-hue: 340; }
+.form-group select.we-pos[data-pos="preposition"] { --pos-hue: 195; }
+.form-group select.we-pos[data-pos="conjunction"] { --pos-hue:  20; }
+.form-group select.we-pos[data-pos="article"]     { --pos-hue: 260; }
+.form-group select.we-pos[data-pos="particle"]    { --pos-hue:  85; }
+.form-group select.we-pos[data-pos="suffix"]      { --pos-hue: 165; }
+.form-group select.we-pos[data-pos="interjection"] { --pos-hue: 110; }
+.form-group select.we-pos[data-pos="numeral"]      { --pos-hue: 305; }
 
-#editBand[data-band="A1"] { --pos-hue: 142; }
-#editBand[data-band="A2"] { --pos-hue: 100; }
-#editBand[data-band="B1"] { --pos-hue:  60; }
-#editBand[data-band="B2"] { --pos-hue:  35; }
-#editBand[data-band="C1"] { --pos-hue:  15; }
-#editBand[data-band="C2"] { --pos-hue:   0; }
+.form-group input.we-band[data-band="A1"] { --pos-hue: 142; }
+.form-group input.we-band[data-band="A2"] { --pos-hue: 100; }
+.form-group input.we-band[data-band="B1"] { --pos-hue:  60; }
+.form-group input.we-band[data-band="B2"] { --pos-hue:  35; }
+.form-group input.we-band[data-band="C1"] { --pos-hue:  15; }
+.form-group input.we-band[data-band="C2"] { --pos-hue:   0; }
 
-/* #editPos/#editBand id selectors already outrank .form-group select/
+/* .form-group select.we-pos/.form-group input.we-band id selectors already outrank .form-group select/
    .readonly-field (both class-based) without needing !important. */
-#editPos[data-pos],
-#editBand[data-band] {
+.form-group select.we-pos[data-pos],
+.form-group input.we-band[data-band] {
   background: hsl(var(--pos-hue) 60% 50% / 0.14);
   border-color: hsl(var(--pos-hue) 50% 45% / 0.4);
   color: hsl(var(--pos-hue) 55% 32%);
   font-weight: 600;
 }
-html.dark #editPos[data-pos],
-html.dark #editBand[data-band] {
+html.dark .form-group select.we-pos[data-pos],
+html.dark .form-group input.we-band[data-band] {
   color: hsl(var(--pos-hue) 62% 72%);
 }
 
@@ -311,45 +311,45 @@ html.dark #editBand[data-band] {
    same plain list styling, so there was nothing to compare the selected
    color against. `option` doesn't read CSS custom properties reliably
    across engines, so these are plain hsl() values (same hue numbers as
-   #editPos[data-pos] above) rather than another var(--pos-hue) consumer.
+   .form-group select.we-pos[data-pos] above) rather than another var(--pos-hue) consumer.
    Opaque tints, not the translucent /0.14 the closed box uses — an
    `<option>`'s own background can't blend against the dropdown popup's
    surface the way a real element in the page can. */
-#editPos option[value="verb"]        { background: hsl(217 60% 90%); color: hsl(217 55% 28%); }
-#editPos option[value="noun"]        { background: hsl(142 60% 90%); color: hsl(142 55% 28%); }
-#editPos option[value="adjective"]   { background: hsl( 32 60% 90%); color: hsl( 32 55% 28%); }
-#editPos option[value="adverb"]      { background: hsl(280 60% 90%); color: hsl(280 55% 28%); }
-#editPos option[value="pronoun"]     { background: hsl(340 60% 90%); color: hsl(340 55% 28%); }
-#editPos option[value="preposition"] { background: hsl(195 60% 90%); color: hsl(195 55% 28%); }
-#editPos option[value="conjunction"] { background: hsl( 20 60% 90%); color: hsl( 20 55% 28%); }
-#editPos option[value="article"]     { background: hsl(260 60% 90%); color: hsl(260 55% 28%); }
-#editPos option[value="particle"]    { background: hsl( 85 60% 90%); color: hsl( 85 55% 28%); }
-#editPos option[value="suffix"]      { background: hsl(165 60% 90%); color: hsl(165 55% 28%); }
-#editPos option[value="interjection"] { background: hsl(110 60% 90%); color: hsl(110 55% 28%); }
-#editPos option[value="numeral"]      { background: hsl(305 60% 90%); color: hsl(305 55% 28%); }
+.form-group select.we-pos option[value="verb"]        { background: hsl(217 60% 90%); color: hsl(217 55% 28%); }
+.form-group select.we-pos option[value="noun"]        { background: hsl(142 60% 90%); color: hsl(142 55% 28%); }
+.form-group select.we-pos option[value="adjective"]   { background: hsl( 32 60% 90%); color: hsl( 32 55% 28%); }
+.form-group select.we-pos option[value="adverb"]      { background: hsl(280 60% 90%); color: hsl(280 55% 28%); }
+.form-group select.we-pos option[value="pronoun"]     { background: hsl(340 60% 90%); color: hsl(340 55% 28%); }
+.form-group select.we-pos option[value="preposition"] { background: hsl(195 60% 90%); color: hsl(195 55% 28%); }
+.form-group select.we-pos option[value="conjunction"] { background: hsl( 20 60% 90%); color: hsl( 20 55% 28%); }
+.form-group select.we-pos option[value="article"]     { background: hsl(260 60% 90%); color: hsl(260 55% 28%); }
+.form-group select.we-pos option[value="particle"]    { background: hsl( 85 60% 90%); color: hsl( 85 55% 28%); }
+.form-group select.we-pos option[value="suffix"]      { background: hsl(165 60% 90%); color: hsl(165 55% 28%); }
+.form-group select.we-pos option[value="interjection"] { background: hsl(110 60% 90%); color: hsl(110 55% 28%); }
+.form-group select.we-pos option[value="numeral"]      { background: hsl(305 60% 90%); color: hsl(305 55% 28%); }
 
-/* ── Gender color coding — masculine/feminine only (see #editGender's own
+/* ── Gender color coding — masculine/feminine only (see .form-group select.we-gender's own
    comment in admin.html for why "neuter" isn't offered even though a few
    non-Spanish words in the real data carry it). Conventional blue/pink
    split rather than reusing the POS/Band hue formula — gender isn't part
    of that palette anywhere else in the app, so there's nothing to match. ── */
-#editGender[data-gender="masculine"] {
+.form-group select.we-gender[data-gender="masculine"] {
   background: hsl(210 60% 50% / 0.14);
   border-color: hsl(210 50% 45% / 0.4);
   color: hsl(210 55% 32%);
   font-weight: 600;
 }
-#editGender[data-gender="feminine"] {
+.form-group select.we-gender[data-gender="feminine"] {
   background: hsl(340 60% 50% / 0.14);
   border-color: hsl(340 50% 45% / 0.4);
   color: hsl(340 55% 32%);
   font-weight: 600;
 }
-html.dark #editGender[data-gender="masculine"] { color: hsl(210 62% 72%); }
-html.dark #editGender[data-gender="feminine"]  { color: hsl(340 62% 72%); }
+html.dark .form-group select.we-gender[data-gender="masculine"] { color: hsl(210 62% 72%); }
+html.dark .form-group select.we-gender[data-gender="feminine"]  { color: hsl(340 62% 72%); }
 
-#editGender option[value="masculine"] { background: hsl(210 60% 90%); color: hsl(210 55% 28%); }
-#editGender option[value="feminine"]  { background: hsl(340 60% 90%); color: hsl(340 55% 28%); }
+.form-group select.we-gender option[value="masculine"] { background: hsl(210 60% 90%); color: hsl(210 55% 28%); }
+.form-group select.we-gender option[value="feminine"]  { background: hsl(340 60% 90%); color: hsl(340 55% 28%); }
 
 /* ── Emoji fallback + picker — setupEmojiPicker() in admin-emoji-picker.ts ── */
 .emoji-field {
@@ -474,3 +474,36 @@ html.dark #editGender[data-gender="feminine"]  { color: hsl(340 62% 72%); }
 @media (max-width: 560px) {
   .form-row, .form-row-3, .form-row-4, .form-row-5 { grid-template-columns: 1fr; }
 }
+
+/* ── Shared-editor extras (used when a host turns them on: My Content) ────── */
+.chip-input-tag-move {
+  padding: 0 0.15rem; min-width: 0;
+  background: transparent; color: var(--text-muted);
+  border: none; font-size: 0.9rem; line-height: 1; cursor: pointer;
+}
+.chip-input-tag-move:hover:not(:disabled) { color: var(--accent); background: transparent; box-shadow: none; }
+.chip-input-tag-move:disabled { opacity: 0.25; cursor: default; }
+
+/* A field whose value differs from the original, with a ↺ to put it back */
+.form-group.we-modified > label { color: var(--accent); }
+.we-revert {
+  margin-left: 0.5rem; padding: 0 0.4rem;
+  background: transparent; color: var(--accent);
+  border: 1px solid var(--accent); border-radius: 999px;
+  font-size: 0.66rem; font-weight: 600; line-height: 1.4; cursor: pointer;
+}
+.we-revert:hover:not(:disabled) { background: var(--accent-light); box-shadow: none; }
+
+.we-removed-glosses { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin-top: 0.35rem; }
+.we-removed-label { font-size: 0.7rem; color: var(--text-muted); }
+.we-ghost-chip {
+  padding: 0.1rem 0.5rem;
+  background: transparent; color: var(--text-muted);
+  border: 1px dashed var(--border-strong); border-radius: 999px;
+  font-size: 0.74rem; font-weight: 500; cursor: pointer;
+}
+.we-ghost-chip:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); background: transparent; box-shadow: none; }
+
+.we-meaning-list { display: flex; flex-direction: column; gap: 0.3rem; }
+.we-meaning-row { display: grid; grid-template-columns: minmax(6rem, 1fr) 2fr; align-items: center; gap: 0.5rem; }
+.we-meaning-gloss { font-size: 0.82rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

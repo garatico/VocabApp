@@ -100,6 +100,11 @@
   --ml-accent-multi-light: #e0f4f7;
   --ml-accent-profile:       #b4650f;
   --ml-accent-profile-light: #faf0e0;
+  /* Sidebar gear-menu item colors (Copy/Rename; Delete uses --danger). */
+  --ml-menu-emoji:    #c026d3;
+  --ml-menu-hide:     #0e8a9c;
+  --ml-menu-copy:     #2563eb;
+  --ml-menu-rename:   #b7791f;
 
   /* Table mode's Compare/Multi-language indicator — one tinted cell
      background per language. Distinct hues from each other and from the
@@ -164,6 +169,10 @@ html.dark {
   --ml-accent-multi:       #4fc3d9;
   --ml-accent-multi-light: #122e33;
   --ml-accent-profile:       #e0a855;
+  --ml-menu-emoji:    #e879f9;
+  --ml-menu-hide:     #4fc3d9;
+  --ml-menu-copy:     #6ea0ff;
+  --ml-menu-rename:   #fbbf24;
   --ml-accent-profile-light: #3a2c14;
 
   --shadow:    0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);

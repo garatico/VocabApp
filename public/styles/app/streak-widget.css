@@ -150,3 +150,23 @@
   background: var(--accent);
   color: #fff;
 }
+
+/* ── Corner cluster: one row, inside a grey box so the group reads as one ── */
+.controls-corner {
+  padding: 0.3rem 0.4rem;
+  background: var(--surface2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+}
+
+/* Collapsed controls bar: the boxed corner group sits tight in the top-right
+   corner and the bar is just tall enough to contain it, instead of the box
+   hanging out of the bottom edge. */
+body #controls:has(#controlsBody.filter-body--collapsed) { min-height: 3.3rem; }
+body #controls:has(#controlsBody.filter-body--collapsed) .controls-corner {
+  top: 0.25rem;
+  right: 0.3rem;
+}
+body #controls:has(#controlsBody.filter-body--collapsed) #controlsCollapseBtn.controls-collapse-btn {
+  top: 0.95rem;
+}

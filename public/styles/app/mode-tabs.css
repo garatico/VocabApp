@@ -8,7 +8,9 @@
   gap: 0.15rem;
   margin-bottom: 0;
   padding: 0;
-  align-items: flex-end;
+  /* stretch, not flex-end: every tab (including the smaller-type Admin and
+     AI Chat ones) fills the row's height, so they can never differ. */
+  align-items: stretch;
 }
 
 .mode-tab {
@@ -28,7 +30,15 @@
   /* slide 1px into the controls card so there is zero gap */
   margin-bottom: -1px;
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 2rem;
 }
+
+/* `display` above would otherwise beat the UA [hidden] rule (equal-ish
+   specificity, later wins) and keep a hidden tab on screen. */
+.mode-tab[hidden] { display: none; }
 
 .mode-tab:hover:not(:disabled) {
   background: var(--border);
@@ -54,7 +64,8 @@
   border-bottom-color: var(--surface);
   color: var(--accent);
   font-weight: 700;
-  font-size: 0.84rem;
+  /* same size as an inactive tab — the bolder weight is enough of a cue, and
+     a bigger font made the active tab taller than its neighbours */
   z-index: 1;
   box-shadow: 0 -3px 10px rgba(0,0,0,0.09), -1px 0 0 var(--border-strong), 1px 0 0 var(--border-strong);
 }
@@ -120,3 +131,6 @@ a.admin-tab:hover {
     min-height: 42px; /* comfortable tap target height */
   }
 }
+
+/* Less blank space between the top of the window and the tabs */
+body { padding-top: calc(0.2rem + env(safe-area-inset-top)); }

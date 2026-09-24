@@ -554,3 +554,177 @@ html.dark .pos-chip[data-band]:not(.active):hover {
     height: 18px;
   }
 }
+
+/* Lists filter: a few dropdowns (one per kind) instead of a wall of pills */
+.list-filter-dropdowns { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.4rem; }
+.list-filter-dd--multi .ml-chip-dropdown-toggle { color: var(--ml-accent-multi, inherit); border-color: color-mix(in srgb, var(--ml-accent-multi, var(--border-strong)) 55%, transparent); }
+.list-filter-dd--smart .ml-chip-dropdown-toggle { color: var(--ml-accent-smart, inherit); border-color: color-mix(in srgb, var(--ml-accent-smart, var(--border-strong)) 55%, transparent); }
+
+/* ================================================================
+   FILTERS BAR — Part of Speech / Lists / Domains as one row of pills
+   (filters/filter-bar.ts). Each box's header is the pill; its body opens
+   as a popover under it. Everything inside is unchanged.
+================================================================ */
+.filters-bar { margin-top: 0.5rem; }
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+.filters-row > #classFilter,
+.filters-row > #listFilter,
+.filters-row > #domainFilterWrap {
+  position: relative;
+  flex: 0 0 auto;
+  margin-top: 0;
+  padding: 0.3rem 0.55rem;
+}
+.filters-row .filter-body {
+  position: absolute;
+  top: calc(100% + 0.3rem);
+  left: 0;
+  z-index: 60;
+  width: max-content;
+  min-width: 15rem;
+  max-width: min(560px, calc(100vw - 2rem));
+  padding: 0.6rem 0.7rem;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md, 0 6px 20px rgba(0, 0, 0, 0.28));
+}
+.filters-row .filter-body.filter-body--collapsed { display: none; }
+
+/* Summary of what is filtering right now */
+.filters-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.7rem;
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+}
+.filters-summary[hidden] { display: none; }
+.filters-summary-group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; }
+.filters-summary-title {
+  font-size: 0.64rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--text-muted);
+}
+.filters-summary-chip {
+  display: inline-flex; align-items: center; gap: 0.15rem;
+  padding: 0.1rem 0.45rem; border-radius: 99px;
+  font-size: 0.72rem; font-weight: 600; cursor: pointer;
+  color: var(--accent); background: var(--accent-light);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.filters-summary-chip:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-light); }
+.filters-summary-chip--off { opacity: 0.55; text-decoration: line-through; }
+.filters-summary-x { font-size: 0.85rem; line-height: 1; }
+.filters-summary-clear {
+  margin-left: auto; padding: 0.1rem 0.5rem; border-radius: var(--radius-sm);
+  font-size: 0.7rem; font-weight: 600; cursor: pointer;
+  color: var(--text-muted); background: transparent; border: 1px solid var(--border-strong);
+}
+.filters-summary-clear:hover { color: var(--danger); border-color: var(--danger); }
+
+/* ── Stage 2: the pill is a name + count; its controls live in the popover ── */
+.filter-popover-head {
+  display: flex;
+  flex: 1 0 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.5rem;
+  margin: 0 0 0.35rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+.filter-popover-head .filter-header-controls { display: inline-flex; align-items: center; gap: 0.25rem; }
+.filter-popover-head .list-filter-count { margin-left: auto; }
+.filter-popover-head #clearAllDomains { margin-left: auto; }
+.filters-pill-count {
+  min-width: 1.1rem; padding: 0.02rem 0.35rem; border-radius: 99px;
+  font-size: 0.66rem; font-weight: 700; text-align: center; white-space: nowrap;
+  color: var(--accent); background: var(--accent-light);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.filters-pill-count[hidden] { display: none; }
+.filters-row .filter-box--inactive .filter-collapse-btn { opacity: 0.6; }
+/* A popover's own head is not dimmed with the rest of an inactive filter */
+.filter-box--inactive .filter-popover-head .list-filter-toggle { opacity: 1; }
+
+/* ── Filters row: equal-height pills, Start Quiz at the right end ─────────── */
+.filters-row { align-items: stretch; }
+.filters-row > #classFilter,
+.filters-row > #listFilter,
+.filters-row > #domainFilterWrap {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 38px;
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+}
+.filters-row .list-filter-wrap,
+.filters-row .list-filter-header,
+.filters-row #domainFilterHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+.filters-row .filter-header-controls { display: inline-flex; align-items: center; gap: 0.25rem; }
+
+/* Wider pills, all the same width: equal flex share, name on the left and
+   On/Off + link pushed to the right edge of each. */
+.filters-row > #classFilter,
+.filters-row > #listFilter,
+.filters-row > #domainFilterWrap {
+  flex: 1 1 12rem;
+  min-width: 12rem;
+  max-width: 26rem;
+}
+.filters-row .list-filter-wrap,
+.filters-row .list-filter-header,
+.filters-row #domainFilterHeader { flex: 1 1 auto; min-width: 0; }
+.filters-row .filter-collapse-btn { flex: 1 1 auto; justify-content: flex-start; min-width: 0; }
+.filters-row .filter-header-controls { margin-left: auto; }
+
+/* Start Quiz: the last item in the filters row, right-aligned in the space
+   left after the three filter pills. */
+.filters-row > #startBtn {
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: auto;
+  min-height: 38px;
+  margin-left: auto;
+  padding: 0.3rem 1.3rem;
+  font-size: 0.9rem;
+  box-shadow: none;
+}
+
+/* Applied profile, at the head of the summary strip */
+.filters-summary-profile { padding-right: 0.7rem; border-right: 1px solid var(--border-strong); }
+.filters-summary-profile-name {
+  padding: 0.1rem 0.5rem; border-radius: var(--radius-sm);
+  font-size: 0.74rem; font-weight: 700;
+  color: var(--ml-accent-profile, var(--accent));
+  background: var(--ml-accent-profile-light, var(--accent-light));
+  border: 1px solid var(--ml-accent-profile, var(--accent));
+}
+.filters-summary-modified { font-size: 0.68rem; font-style: italic; color: var(--warning, #b7791f); }
+.filters-summary-action {
+  padding: 0.05rem 0.4rem; border-radius: var(--radius-sm);
+  font-size: 0.68rem; font-weight: 600; cursor: pointer;
+  color: var(--text-muted); background: transparent; border: 1px solid var(--border-strong);
+}
+.filters-summary-action:hover { color: var(--accent); border-color: var(--accent); }
+
+/* Each pill stays on one line; a long label gives way (ellipsis) before the
+   On/Off and link controls wrap underneath it. */
+.filters-row > #classFilter { flex-wrap: nowrap; }
+.filters-row .filter-collapse-btn { overflow: hidden; }
+.filters-row .filter-collapse-btn .filter-section-label {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 0.2rem;
+}
+.filters-row .filter-header-controls { flex-shrink: 0; }

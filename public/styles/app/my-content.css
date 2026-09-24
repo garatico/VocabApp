@@ -635,52 +635,6 @@
   gap: 0.7rem;
 }
 
-/* ── Full-viewport word editor (Settings' "Full-viewport word editor") ──
-   Same .mc-row-detail content as the inline case above, just remounted into
-   a fixed overlay over the whole page instead of expanding under its row —
-   see mountWordEditorDetail() in my-content-mode.ts. */
-.mc-editor-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 500;
-  background: var(--bg);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
-.mc-editor-overlay-header {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: 0.6rem 0.9rem;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
-.mc-editor-overlay-back {
-  font-size: 0.85rem;
-  font-weight: 700;
-  padding: 0.4rem 0.75rem;
-  background: var(--surface2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  cursor: pointer;
-}
-.mc-editor-overlay-back:hover {
-  background: var(--surface);
-}
-.mc-editor-overlay-body {
-  flex: 1;
-  padding: 0.9rem 1rem 2rem;
-  max-width: 900px;
-  width: 100%;
-  margin: 0 auto;
-}
-.mc-editor-overlay-body .mc-row-detail {
-  border: none;
-  padding: 0;
-  margin-bottom: 0;
-}
 /* Added/last-edited date — quiet, right-aligned before the actions column;
    an em dash for a pre-existing entry with no recoverable timestamp (see
    formatMCDate in my-content-mode.ts) rather than nothing rendering in its
@@ -1300,3 +1254,11 @@
   .mc-gloss-note-field { flex: 1 1 100%; order: 1; }
   .mc-gloss-item-controls { order: 2; }
 }
+
+/* ── Shared Word Editor inside My Content (ui/word-editor/, scoped .word-editor) ── */
+.mc-we { margin-top: 0.25rem; }
+/* The editor's own height assumes the Admin page; here it sits under My
+   Content's header and tabs, so give it a fixed, generous height. */
+.mc-we .editor-layout { height: clamp(520px, 78vh, 900px); }
+.mc-we .filter-bar { flex-wrap: wrap; }
+.mc-we .mc-we-scope { flex: 0 0 auto; }
