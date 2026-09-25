@@ -235,7 +235,8 @@ read from or write to `vocabulary.db`.
   served by plain `express.static` and is not optimized. The packaged Tauri app
   bundles originals as-is.
 - **The whole-language vocab response is built once** (`lib/vocab-response.ts`):
-  stable content-hash ETag, brotli-11/gzip-9 precompressed in the background.
+  stable content-hash ETag, brotli-10/gzip-9 precompressed in the background, one job at a time (q11 cost
+  ~18 s of CPU per language for 7% more, and starved the rest of the server).
   Nothing per-request (timestamps!) may go in that body, or the ETag — and the
   service worker's "vocabulary updated" check that compares it — breaks.
 - **Flat asset URLs, explicit index**: `data/images/` and `data/emoji/` are

@@ -5,6 +5,7 @@
  * theme toggle + tab navigation, then initialises everything.
  */
 
+import { hasReachableBackend } from './backend-probe.ts';
 import { loadMeta, initEditor, isFormDirty, discardFormChanges } from './admin-editor.js';
 import { loadStatistics, initStats } from './admin-stats.js';
 import { initDbAdmin } from './admin-db.js';
@@ -138,24 +139,6 @@ wordsViewButtons.forEach(btn => {
 // normal dev workflow expects to be editing. Local SQLite is only reached
 // for as a fallback, and only in a packaged app, for the case that used to
 // just redirect away: no server anywhere.
-async function hasReachableBackend(): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 1500);
-    const res = await fetch('/api/health', { signal: controller.signal });
-    clearTimeout(timeout);
-    if (!res.ok) return false;
-    // Same non-JSON-response guard as admin-api.ts's apiCall: a static-only
-    // host serving index.html for every unmatched path would otherwise read
-    // as a reachable backend just because *something* answered 200.
-    if (!(res.headers.get('content-type') ?? '').includes('application/json')) return false;
-    const data = await res.json() as { status?: string };
-    return data.status === 'ok';
-  } catch {
-    return false; // network error, abort/timeout, or a malformed body
-  }
-}
-
 async function selectAdminDataSource(): Promise<'http' | 'tauri-sqlite' | null> {
   if (await hasReachableBackend()) return 'http';
   if (isPackagedApp()) {

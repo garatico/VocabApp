@@ -1187,6 +1187,9 @@ function updateAdminTabVisibility(): void {
  * is the better trade.
  */
 function prefetchModes(): void {
+  // Nothing to warm in dev: modules are served unbundled, so this would only make
+  // every open tab pull dozens of files through the dev server at once.
+  if (import.meta.env.DEV) return;
   const conn = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
   if (conn?.saveData || /(^|-)2g$/.test(conn?.effectiveType ?? '')) return;
   const run = (): void => {

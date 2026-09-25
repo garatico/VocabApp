@@ -7,7 +7,7 @@
  * ETag changed every time and no client could ever get a 304.
  *
  * Now the body is serialised once per loaded copy of the vocabulary, given a
- * content-hash ETag, and compressed *hard* (brotli 11, ~30% smaller than the
+ * content-hash ETag, and compressed *hard* (brotli 10, ~27% smaller than the
  * on-the-fly default) in the background. Until that finishes the first request
  * falls through to the normal middleware path, so nobody waits on it.
  *
@@ -30,6 +30,9 @@ interface Encoded {
 
 const entries = new WeakMap<object, Encoded>();
 
+/** Tail of the compression queue — see build(). */
+let compressionQueue: Promise<void> = Promise.resolve();
+
 interface VocabLike {
   language: string;
   words:    unknown[];
@@ -50,15 +53,30 @@ function build(vocab: VocabLike): Encoded {
   const etag = `"${crypto.createHash('sha1').update(raw).digest('base64url')}"`;
   const entry: Encoded = { etag, raw, gzip: null, br: null };
 
-  // Off the event loop (libuv threadpool); best-effort — on failure the
-  // request path simply keeps using the middleware's own compression.
-  zlib.gzip(raw, { level: 9 }, (err, out) => { if (!err) entry.gzip = out; });
-  zlib.brotliCompress(raw, {
-    params: {
-      [zlib.constants.BROTLI_PARAM_QUALITY]:   11,
-      [zlib.constants.BROTLI_PARAM_SIZE_HINT]: raw.length,
-    },
-  }, (err, out) => { if (!err) entry.br = out; });
+  // Off the event loop (libuv threadpool), one job at a time. Brotli-10 on
+  // ~10 MB takes several seconds of a pool thread, and the pool is shared with
+  // file reads (static assets, images): several languages compressing at once
+  // — easy when a page load asks for more than one — starved those and made
+  // unrelated requests time out. Best-effort: on failure the request path
+  // simply keeps using the middleware's own compression.
+  compressionQueue = compressionQueue.then(() => new Promise<void>(resolve => {
+    zlib.gzip(raw, { level: 9 }, (gzErr, gz) => {
+      if (!gzErr) entry.gzip = gz;
+      zlib.brotliCompress(raw, {
+        params: {
+          // 10, not 11: on Spanish (~10 MB) q11 is 748 kB for ~18 s of CPU, q10 is
+          // 800 kB for ~6 s. That extra 7% was not worth a core for three times
+          // as long on a server that also has requests to answer.
+          [zlib.constants.BROTLI_PARAM_QUALITY]:   10,
+          [zlib.constants.BROTLI_PARAM_LGWIN]:     24,
+          [zlib.constants.BROTLI_PARAM_SIZE_HINT]: raw.length,
+        },
+      }, (brErr, br) => {
+        if (!brErr) entry.br = br;
+        resolve();
+      });
+    });
+  }));
 
   return entry;
 }
