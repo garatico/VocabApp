@@ -18,11 +18,8 @@ import { initConjControls, setSelectionChangeCallback } from './modes/conjugatio
 import type { Word }                            from './types.ts';
 import { readString, writeString, remove as removeKey } from './utils/storage.ts';
 import { mustGet }                              from './utils/dom.ts';
-import { renderMyLists }                        from './modes/my-lists-mode.ts';
-import { renderHistory }                        from './modes/history-mode.ts';
 import { getTriviaQuestions }                    from './data/trivia-questions.ts';
 import { getUserTriviaQuestions }                from './data/user-content.ts';
-import { renderMyContent }                       from './modes/my-content-mode.ts';
 import { LANGUAGES, isoCode, supportsConjugation,
          conjugationUnavailableReason, languageInfo } from './data/languages.ts';
 import { availableLanguages, isPackagedApp }     from './data/vocab-source.ts';
@@ -728,8 +725,8 @@ const { updateModeUI } = bindModeSwitch({
     // shows up, and so does a list created elsewhere — e.g. a cross-language
     // list started from the star button on a word in Table mode, which My
     // Lists' own state has no way to hear about otherwise.
-    history: () => { if (historyWrap) renderHistory(historyWrap, langSelect?.value ?? 'spanish'); },
-    mylists: () => { if (myListsWrap) renderMyLists(myListsWrap as HTMLElement); },
+    history: () => { if (historyWrap) void import('./modes/history-mode.ts').then(m => m.renderHistory(historyWrap, langSelect?.value ?? 'spanish')); },
+    mylists: () => { if (myListsWrap) void import('./modes/my-lists-mode.ts').then(m => m.renderMyLists(myListsWrap as HTMLElement)); },
     // Built fresh per visit like History — cheap, and avoids keeping a stale
     // chat session's DOM alive underneath a tab that's dev/desktop-only anyway.
     // Dynamically imported: this pulls in @mlc-ai/web-llm (14MB package),
@@ -740,7 +737,7 @@ const { updateModeUI } = bindModeSwitch({
     // Built fresh per visit like History/My Lists — cheap, and a word/trivia
     // question/picture added elsewhere in this same session (there isn't
     // one yet, but a future entry point would be) always shows up.
-    myContent: () => { if (myContentWrap) renderMyContent(myContentWrap, langSelect?.value ?? 'spanish'); },
+    myContent: () => { if (myContentWrap) void import('./modes/my-content-mode.ts').then(m => m.renderMyContent(myContentWrap, langSelect?.value ?? 'spanish')); },
     settings: refreshStreakReadouts,
   },
 });
@@ -1182,6 +1179,29 @@ function updateAdminTabVisibility(): void {
   if (isPackagedApp()) tab.href = 'admin.html';
 }
 
+/**
+ * Fetch the lazily-loaded mode chunks while the browser is idle, so the first
+ * click on a tab or Start Quiz doesn't wait on the network. The service worker
+ * caches them like any other asset, so this is a one-time cost per version.
+ * Skipped on slow or data-saving connections, where the lazy load-on-demand
+ * is the better trade.
+ */
+function prefetchModes(): void {
+  const conn = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+  if (conn?.saveData || /(^|-)2g$/.test(conn?.effectiveType ?? '')) return;
+  const run = (): void => {
+    void import('./modes/picture-mode.ts');
+    void import('./modes/trivia-mode.ts');
+    void import('./modes/guess-blank-mode.ts');
+    void import('./modes/sentence-scramble-mode.ts');
+    void import('./modes/conjugation/index.ts');
+    void import('./modes/history-mode.ts');
+    void import('./modes/my-content-mode.ts');
+  };
+  if ('requestIdleCallback' in window) window.requestIdleCallback(run, { timeout: 5000 });
+  else setTimeout(run, 2500);
+}
+
 void (async function init(): Promise<void> {
   // Must complete before anything loads vocab (loadAndBuildFilters, below)
   // so vocab-source.ts's registered sqlite source is ready by the time it's
@@ -1281,7 +1301,10 @@ void (async function init(): Promise<void> {
     S.set('vq_mode', 'table');
   }
 
-  if (myListsWrap) renderMyLists(myListsWrap as HTMLElement);
+  // Built once up front (it seeds starter lists and mastery state other tabs
+  // read), but off the critical path: the code arrives as its own chunk after
+  // first paint instead of inflating the entry bundle.
+  if (myListsWrap) void import('./modes/my-lists-mode.ts').then(m => m.renderMyLists(myListsWrap as HTMLElement));
 
   // AI Chat tab is hidden by default — only shown in dev builds. It
   // additionally stays hidden on narrow/mobile viewports regardless of dev
@@ -1305,4 +1328,5 @@ void (async function init(): Promise<void> {
   // After the first render — greys out languages the database has no rows for.
   void markEmptyLanguages();
   offerResume();
+  prefetchModes();
 })();

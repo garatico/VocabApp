@@ -13,6 +13,7 @@ import { loadVocabFile, getSupportedLanguages, getDb, getWordColumnFlags, shapeD
 import { loadTriviaQuestions, loadGuessBlankQuestions } from '../lib/content-loader.js';
 import { createBetterSqlite3Adapter } from '../lib/storage/better-sqlite3-adapter.js';
 import { getWordPage } from '../../shared/vocab/queries.js';
+import { sendVocab } from '../lib/vocab-response.js';
 
 export function makePublicRoutes(nodeEnv: string): Router {
   const router = Router();
@@ -36,16 +37,9 @@ export function makePublicRoutes(nodeEnv: string): Router {
       const language = req.params['language'];
 
       if (req.query['page'] === undefined) {
-        const vocab = loadVocabFile(language);
-
-        res.set('Cache-Control', `public, max-age=${vocabMaxAge}`);
-        res.json({
-          success:  true,
-          language: vocab.language,
-          count:    vocab.words.length,
-          metadata: { timestamp: new Date().toISOString(), cacheAge: vocab.cacheAge || 0 },
-          data:     vocab.words,
-        });
+        // Built once per loaded copy, precompressed, with a content-hash ETag —
+        // see lib/vocab-response.ts.
+        sendVocab(req, res, loadVocabFile(language), vocabMaxAge);
         return;
       }
 

@@ -9,6 +9,8 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
+import { Buffer } from 'buffer';
+import { setTimeout } from 'timers';
 import { buildTestApp, teardownTestApp } from './helpers/app.js';
 
 let app, db;
@@ -99,6 +101,72 @@ describe('GET /api/vocab/:language', () => {
     expect(res.status).toBe(200);
     expect(res.body.metadata).toBeDefined();
     expect(typeof res.body.metadata.cacheAge).toBe('number');
+  });
+
+  // The whole-language response is built once per loaded copy with a
+  // content-hash ETag (lib/vocab-response.ts). A per-request ETag meant no
+  // client could ever revalidate — and made the service worker's "vocabulary
+  // changed" check fire on every launch.
+  describe('conditional and precompressed delivery', () => {
+    it('has a stable ETag across requests', async () => {
+      const a = await request(app).get('/api/vocab/spanish');
+      const b = await request(app).get('/api/vocab/spanish');
+      expect(a.headers.etag).toBeTruthy();
+      expect(b.headers.etag).toBe(a.headers.etag);
+      expect(a.body).toEqual(b.body);
+    });
+
+    it('answers 304 to a matching If-None-Match, with no body', async () => {
+      const first = await request(app).get('/api/vocab/spanish');
+      const res = await request(app).get('/api/vocab/spanish').set('If-None-Match', first.headers.etag);
+      expect(res.status).toBe(304);
+      expect(res.text ?? '').toBe('');
+    });
+
+    it('a different ETag gets the full body again', async () => {
+      const res = await request(app).get('/api/vocab/spanish').set('If-None-Match', '"something-else"');
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBeGreaterThan(0);
+    });
+
+    it('varies on Accept-Encoding', async () => {
+      const res = await request(app).get('/api/vocab/spanish');
+      expect(res.headers.vary).toMatch(/Accept-Encoding/i);
+    });
+
+    it('serves brotli once precompressed, and it decodes to the same JSON', async () => {
+      const zlib = await import('zlib');
+      const http = await import('http');
+      const plain = await request(app).get('/api/vocab/spanish');
+
+      // Raw http, so nothing decodes the body before the assertion sees it.
+      const server = app.listen(0);
+      const fetchBr = () => new Promise((resolve, reject) => {
+        http.get({ port: server.address().port, path: '/api/vocab/spanish', headers: { 'Accept-Encoding': 'br' } }, r => {
+          const chunks = [];
+          r.on('data', c => chunks.push(c));
+          r.on('end', () => resolve({ encoding: r.headers['content-encoding'], body: Buffer.concat(chunks) }));
+        }).on('error', reject);
+      });
+
+      try {
+        let got = null;
+        // Background compression: poll briefly rather than assume a timing.
+        for (let i = 0; i < 50 && !got; i++) {
+          const r = await fetchBr();
+          if (r.encoding === 'br' && r.body.length > 0) {
+            // The middleware's fast path also says br, so this proves delivery
+            // and round-tripping, not which compressor produced it — the real
+            // size is checked against the running server, not here.
+            got = r;
+          } else await new Promise(res => setTimeout(res, 100));
+        }
+        expect(got, 'brotli form never became available').not.toBeNull();
+        expect(JSON.parse(zlib.brotliDecompressSync(got.body).toString())).toEqual(plain.body);
+      } finally {
+        server.close();
+      }
+    });
   });
 
   // Payload-size fix: fields with no value are omitted entirely rather than

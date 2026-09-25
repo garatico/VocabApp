@@ -1,11 +1,3 @@
-import { renderPictureMode }              from './modes/picture-mode.ts';
-import { renderTriviaMode }               from './modes/trivia-mode.ts';
-import { renderGuessBlankMode }           from './modes/guess-blank-mode.ts';
-import { renderSentenceScrambleMode }     from './modes/sentence-scramble-mode.ts';
-import { renderConjugationMode, cleanupConjugationMode } from './modes/conjugation/index.ts';
-import { renderConjOneAtATime }           from './modes/conjugation/one-at-a-time-mode.ts';
-import { renderConjRandomTable }          from './modes/conjugation/random-table-mode.ts';
-import { renderConjCardMatch }            from './modes/conjugation/card-match-mode.ts';
 import { startTableQuiz, getTableStyle, syncTableStyleUI } from './modes/table-controls.ts';
 import { renderTableRecallMode }          from './modes/table-recall-mode.ts';
 import { filterWords }                    from './filters/word-filters.ts';
@@ -57,6 +49,11 @@ interface StartHandlerOptions {
 }
 
 
+// Picture, Trivia, Guess the Blank, Sentence Scramble and the Conjugation views
+// are imported where they are used (inside the click handler), not at the top:
+// none of them is needed to show the first Table screen, and together they are
+// a large share of the app's JavaScript. app.ts's prefetchModes() fetches them
+// at idle so Start Quiz is still instant.
 export function bindStartHandler({
   getLang: _getLang,
   getFullLang,
@@ -293,6 +290,7 @@ export function bindStartHandler({
         // It used to ignore `list` and re-read getAllWords() here — which is
         // why every fix to the size handling above had no effect: "Top 1"
         // computed a one-word list and then threw it away.
+        const { renderPictureMode } = await import('./modes/picture-mode.ts');
         renderPictureMode({
           words: list,
           container: pictureWrap,
@@ -326,6 +324,7 @@ export function bindStartHandler({
         // Domain filtering (also real for trivia — see the same file's
         // `domains` field) is applied inside renderTriviaMode itself, since
         // there's no vocabulary `list` here for applyDomainFilter to narrow.
+        const { renderTriviaMode } = await import('./modes/trivia-mode.ts');
         await renderTriviaMode({
           container: triviaWrap,
           lang: fullLang,
@@ -345,6 +344,7 @@ export function bindStartHandler({
 
         // Draws its own hand-written clue bank rather than the vocabulary
         // `list` built above — see data/guess-blank-questions.ts.
+        const { renderGuessBlankMode } = await import('./modes/guess-blank-mode.ts');
         await renderGuessBlankMode({
           container: guessBlankWrap,
           lang: fullLang,
@@ -357,6 +357,7 @@ export function bindStartHandler({
         // Unlike Trivia/Guess the Blank, this uses `list` — already narrowed
         // above to words with at least one example sentence and topped up to
         // the requested size.
+        const { renderSentenceScrambleMode } = await import('./modes/sentence-scramble-mode.ts');
         renderSentenceScrambleMode({
           words: list,
           container: sentenceScrambleWrap,
@@ -384,21 +385,22 @@ export function bindStartHandler({
         // the other three views bypass renderConjugationMode entirely — tear
         // down here so a leftover document keydown handler from a previous
         // Grid/Full session never survives underneath them.
-        cleanupConjugationMode();
+        const conjMain = await import('./modes/conjugation/index.ts');
+        conjMain.cleanupConjugationMode();
         conjugationWrap.innerHTML = '';
         const conjView = (document.querySelector('#conjViewToggle .conj-toggle-btn.active') as HTMLElement | null)
           ?.dataset.view ?? 'grid';
 
         if (conjView === 'oneatatime') {
-          renderConjOneAtATime({ words: list, container: conjugationWrap, lang: fullLang, extraLangs });
+          (await import('./modes/conjugation/one-at-a-time-mode.ts')).renderConjOneAtATime({ words: list, container: conjugationWrap, lang: fullLang, extraLangs });
         } else if (conjView === 'randomtable') {
-          renderConjRandomTable({ words: list, container: conjugationWrap, lang: fullLang, extraLangs });
+          (await import('./modes/conjugation/random-table-mode.ts')).renderConjRandomTable({ words: list, container: conjugationWrap, lang: fullLang, extraLangs });
         } else if (conjView === 'cardmatch') {
           const pairing = (document.querySelector('#conjMatchStyleToggle .conj-toggle-btn.active') as HTMLElement | null)
             ?.dataset.pairing === 'infinitive' ? 'infinitive' : 'pronoun';
-          renderConjCardMatch({ words: list, container: conjugationWrap, lang: fullLang, extraLangs, pairing });
+          (await import('./modes/conjugation/card-match-mode.ts')).renderConjCardMatch({ words: list, container: conjugationWrap, lang: fullLang, extraLangs, pairing });
         } else {
-          renderConjugationMode({
+          conjMain.renderConjugationMode({
             words: list,
             container: conjugationWrap,
             lang: fullLang,

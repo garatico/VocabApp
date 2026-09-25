@@ -19,8 +19,6 @@ import { buildWordDetailContent } from './word-tooltip.ts';
 import { buildGlossDisplay } from './utils.ts';
 import { openListPicker } from './list-picker.ts';
 import { positionPopover } from './popover-position.ts';
-import { openWordInBrowseAllWords } from '../modes/my-lists-mode.ts';
-import { openWordInMyContentEditor } from '../modes/my-content-mode.ts';
 
 export interface WordInfoPopoverOptions {
   anchorEl: HTMLElement;
@@ -124,7 +122,8 @@ export function openWordInfoPopover({
   browseBtn.title       = !revealed ? 'Solve this word first' : '';
   browseBtn.addEventListener('click', () => {
     close();
-    openWordInBrowseAllWords(lang, word.word);
+    // Loaded on demand: these tabs are code the quiz screen doesn't otherwise need.
+    void import('../modes/my-lists-mode.ts').then(m => m.openWordInBrowseAllWords(lang, word.word));
   });
   actions.appendChild(browseBtn);
 
@@ -136,7 +135,7 @@ export function openWordInfoPopover({
   editBtn.title       = !revealed ? 'Solve this word first' : '';
   editBtn.addEventListener('click', () => {
     close();
-    openWordInMyContentEditor(lang, word.word);
+    void import('../modes/my-content-mode.ts').then(m => m.openWordInMyContentEditor(lang, word.word));
   });
   actions.appendChild(editBtn);
 

@@ -11,10 +11,10 @@ import {
 import { buildGlossDisplay } from '../utils/utils.ts';
 import { openBulkListPicker } from '../utils/list-picker.ts';
 import { Settings, setOnPageSizeChange, setOnShowTimerChange } from '../settings.ts';
-// Mastery lives with the lists UI. Importing across modes is not lovely, but
-// the alternative is a second copy of the storage rules, which is how the two
-// disagreeing progress models got here in the first place.
-import { markMastered } from './my-lists-mode.ts';
+// Mastery's storage rules live in my-lists/mastery.ts — imported from there
+// rather than through my-lists-mode.ts, whose static import would drag the whole
+// My Lists UI into the entry bundle.
+import { markMastered } from './my-lists/mastery.ts';
 import { logger } from '../utils/logger.ts';
 import { showSummary, clearSummary } from '../ui/quiz-summary.ts';
 import { setLastMissed } from '../utils/missed-words.ts';

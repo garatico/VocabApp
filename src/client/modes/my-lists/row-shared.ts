@@ -9,7 +9,6 @@
 import { getMasteryLevel, setMasteryLevel, MASTERY_LEVELS, getMasteredDate } from './mastery.ts';
 import { quizStrength, wordTally } from '../../utils/session-history.ts';
 import { buildConjSection, buildNonFiniteSection } from '../../utils/word-tooltip.ts';
-import { openWordInMyContentEditor } from '../my-content-mode.ts';
 import { POS_ABBREV, type VocabEntry } from './types.ts';
 import { buildAudioButton } from '../../ui/audio-play-button.ts';
 import { fillHighlighted } from '../../utils/dom.ts';
@@ -81,7 +80,7 @@ export function buildEditInMyContentButton(lang: string, word: string): HTMLButt
   btn.textContent = '✎';
   btn.addEventListener('click', e => {
     e.stopPropagation();
-    openWordInMyContentEditor(lang, word);
+    void import('../my-content-mode.ts').then(m => m.openWordInMyContentEditor(lang, word));
   });
   return btn;
 }
