@@ -18,6 +18,7 @@ import { markMastered } from './my-lists-mode.ts';
 import { logger } from '../utils/logger.ts';
 import { showSummary, clearSummary } from '../ui/quiz-summary.ts';
 import { setLastMissed } from '../utils/missed-words.ts';
+import { saveResume, clearResume, type SavedTableQuiz } from '../utils/quiz-resume.ts';
 import { readString, writeString } from '../utils/storage.ts';
 import {
   saveSession, recordOutcome, orderWords, getWordOrderLabels,
@@ -161,6 +162,8 @@ function setPrestartControlsEnabled(enabled: boolean): void {
   syncBulkAddButton();
 }
 let sessionRecorded                        = false;
+/** True while a quiz is live and unfinished — the only time a resume point is worth writing. */
+let resumeEnabled                          = false;
 let wordOrder: WordOrder =
   (readString('vq_table_order') as WordOrder | null) ?? 'rank';
 // Shared with table-recall-mode.ts's own toggle — same storage key, so
@@ -549,6 +552,7 @@ function recordMastery(): void {
   // only the first pass should be written.
   if (sessionRecorded) return;
   sessionRecorded = true;
+  endResumePoint();
   stopTimedQuizWatch();
 
   syncSessionState();
@@ -642,6 +646,7 @@ function renderCurrentPage(): void {
     initialState: sessionState,
     onProgress:   () => {
       renderProgress();
+      scheduleResumeSave();
       if (isQuizComplete() && onQuizComplete) {
         recordMastery();
         const cb = onQuizComplete;
@@ -662,6 +667,7 @@ function goToPage(index: number): void {
   if (next === pageIndex) return;
   pageIndex = next;
   renderCurrentPage();
+  scheduleResumeSave();
 
   const area = document.getElementById('tableArea');
   area?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -696,6 +702,8 @@ export function startTableQuiz({
   setPrestartControlsEnabled(true);
   startTimedQuizWatch();
   sessionRecorded  = false;
+  resumeEnabled    = true;
+  clearResume();
   lastMissedWords   = [];
   lastMissedResults = [];
   clearSummary('table');
@@ -731,6 +739,75 @@ function restartWith(words: Word[]): void {
   setTimerControlsEnabled(true);
   startTimedQuizWatch();
   sessionRecorded = false;
+  resumeEnabled   = true;
+  clearResume();
+  clearSummary('table');
+  renderCurrentPage();
+}
+
+// ── Resume point ──────────────────────────────────────────────────────────────
+//
+// See utils/quiz-resume.ts. Written after each answer and page change
+// (debounced — typing fires this per keystroke) and flushed when the page is
+// hidden, which is the last chance a phone gives before killing the tab.
+
+let resumeSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function writeResumePoint(): void {
+  resumeSaveTimer = null;
+  if (!resumeEnabled || allWords.length === 0) return;
+  syncSessionState();
+  const state = [...sessionState.entries()] as unknown as SavedTableQuiz['state'];
+  // Nothing answered yet — there is nothing to lose, so nothing to offer back.
+  if (!state.some(([, a]) => a.disabled === true || (typeof a.value === 'string' && a.value !== ''))) return;
+  saveResume({
+    savedAt:   Date.now(),
+    lang:      quizLang,
+    columns:   quizColumns,
+    direction: resolvedDirection,
+    pageIndex,
+    elapsed:   getStopwatch().elapsedSeconds(),
+    words:     allWords.map(w => (w.language ? { word: w.word, language: w.language } : { word: w.word })),
+    state,
+  });
+}
+
+function scheduleResumeSave(): void {
+  if (!resumeEnabled) return;
+  if (resumeSaveTimer) clearTimeout(resumeSaveTimer);
+  resumeSaveTimer = setTimeout(writeResumePoint, 400);
+}
+
+/** The quiz finished or was abandoned on purpose: stop writing and drop the save. */
+function endResumePoint(): void {
+  resumeEnabled = false;
+  if (resumeSaveTimer) { clearTimeout(resumeSaveTimer); resumeSaveTimer = null; }
+  clearResume();
+}
+
+/**
+ * Rebuild a saved quiz. Unlike startTableQuiz this keeps the saved word order
+ * (re-ordering would scramble which page each answer is on) and restores the
+ * answers, the page and the clock.
+ */
+export function resumeTableQuiz(words: Word[], saved: SavedTableQuiz): void {
+  allWords          = words;
+  quizColumns       = saved.columns;
+  quizLang          = saved.lang;
+  resolvedDirection = saved.direction as TableDirection;
+  onQuizComplete    = () => { /* completion is shown by the progress bar */ };
+  sessionState      = new Map(saved.state as unknown as [string, InputSnapshot][]);
+  pageIndex         = Math.min(saved.pageIndex, Math.max(0, getPageCount() - 1));
+  getStopwatch().start(saved.elapsed);
+  syncTimerToggleIcon();
+  syncTimerVisibility();
+  setTimerControlsEnabled(true);
+  setPrestartControlsEnabled(true);
+  startTimedQuizWatch();
+  sessionRecorded   = false;
+  resumeEnabled     = true;
+  lastMissedWords   = [];
+  lastMissedResults = [];
   clearSummary('table');
   renderCurrentPage();
 }
@@ -792,6 +869,7 @@ function giveUpAll(): CheckResult[] {
  *  (see startTimedQuizWatch) so both paths end a quiz exactly the same way. */
 function performGiveUp(): void {
   if (allWords.length === 0) return;
+  endResumePoint();
   stopTimedQuizWatch();
   getStopwatch().stop();
   syncTimerToggleIcon();
@@ -912,6 +990,11 @@ function wireSummaryButtons(): void {
 // ── Main bind ─────────────────────────────────────────────────────────────────
 
 export function bindTableControls(): void {
+  // The last chance to save before a phone or a closing tab discards the page.
+  window.addEventListener('pagehide', () => {
+    if (resumeSaveTimer) { clearTimeout(resumeSaveTimer); writeResumePoint(); }
+  });
+
   const tableReset   = document.getElementById('tableReset');
   const tableRetry   = document.getElementById('tableRetry');
   const tableExport  = document.getElementById('tableExport');

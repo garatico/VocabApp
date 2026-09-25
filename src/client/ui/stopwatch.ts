@@ -16,8 +16,9 @@
 
 export interface Stopwatch {
   /** Hard (re)start from 0:00 — discards whatever was previously
-   *  accumulated. What every quiz mode calls once at quiz start. */
-  start(): void;
+   *  accumulated. What every quiz mode calls once at quiz start. Pass
+   *  `fromSeconds` to begin already that far in (a resumed quiz). */
+  start(fromSeconds?: number): void;
   /** Pause. Unlike a hard stop this *preserves* accumulated time, so a
    *  later resume() continues rather than restarting — the pause half of
    *  a manual Start/Pause control (table-controls.ts's timer buttons).
@@ -82,8 +83,8 @@ export function createStopwatch(mountEl: HTMLElement | null): Stopwatch {
     if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
   }
 
-  function start(): void {
-    accumulatedMs = 0;
+  function start(fromSeconds = 0): void {
+    accumulatedMs = Math.max(0, fromSeconds) * 1000;
     runStartedAt = Date.now();
     render();
     beginTicking();

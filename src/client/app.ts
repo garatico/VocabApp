@@ -34,6 +34,7 @@ import { showToast } from './ui/toast.ts';
 import { initStreakWidget } from './ui/streak-widget.ts';
 import { initDueBadge } from './ui/due-badge.ts';
 import { initMissedAdd } from './ui/quiz-summary.ts';
+import { offerResume } from './ui/resume-banner.ts';
 import { bindBackupSettings, maybeRemindBackup } from './ui/backup-settings.ts';
 import { initDiceButton } from './ui/dice-widget.ts';
 import { applyTranslations } from './i18n/index.ts';
@@ -1303,4 +1304,5 @@ void (async function init(): Promise<void> {
   await loadAndBuildFilters(langSelect?.value ?? 'spanish');
   // After the first render — greys out languages the database has no rows for.
   void markEmptyLanguages();
+  offerResume();
 })();
