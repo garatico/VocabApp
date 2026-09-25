@@ -1,0 +1,1065 @@
+{
+  "backup": {
+    "lastBackupAt": 1772965800000
+  },
+  "chats": [
+    {
+      "at": 1772965800000,
+      "id": "00000000-0000-4000-8000-000000000001",
+      "messages": [
+        {
+          "content": "Hola",
+          "role": "user"
+        }
+      ],
+      "title": "Ordering food"
+    }
+  ],
+  "folders": {
+    "single_spanish": {
+      "registry": [
+        "Trips"
+      ],
+      "trips": {
+        "color": "#2f6fd0",
+        "emoji": "✈️"
+      }
+    },
+    "smart_spanish": {
+      "registry": [
+        "Starter Lists"
+      ]
+    }
+  },
+  "multiLists": {
+    "Animals": {
+      "entries": [
+        {
+          "language": "spanish",
+          "word": "perro"
+        },
+        {
+          "language": "french",
+          "word": "chat"
+        }
+      ],
+      "meta": {
+        "folders": [
+          "Nature"
+        ]
+      }
+    }
+  },
+  "opaque": {
+    "filterExpanded": "false",
+    "ml_browse_filter": "{}",
+    "ml_browse_sort": "rank",
+    "ml_profile_group_open_table": "true",
+    "ml_sidebar_folder_collapsed_single_Trips": "true",
+    "ml_sidebar_section_collapsed_smart": "true",
+    "ml_smart_group_open_Starter": "true",
+    "s_abbreviate_grammar_hint": "true",
+    "s_advanced_mode": "true",
+    "s_answer_gloss_count": "3",
+    "s_autofill_enabled": "true",
+    "s_chinese_script": "pinyin",
+    "s_confirm_remove_word_override": "false",
+    "s_conj_deselected": "grey",
+    "s_conj_hint_mode": "none",
+    "s_conj_page_size": "25",
+    "s_conj_show_timer": "false",
+    "s_expand_gloss_on_match": "false",
+    "s_filter_linking_enabled": "false",
+    "s_function_word_marker": "both",
+    "s_gender_color_masculine": "#3366cc",
+    "s_gender_indicator_style": "dot",
+    "s_gender_indicator_visibility": "hinted",
+    "s_guess_blank_max_attempts": "2",
+    "s_hint_mode": "first-letter",
+    "s_hint_multi_gloss": "true",
+    "s_history_enabled": "false",
+    "s_inline_profile_editing": "true",
+    "s_lang_color_spanish": "#c0392b",
+    "s_lang_flag_spanish": "es",
+    "s_lang_indicator": "flag",
+    "s_match_mode": "strict",
+    "s_max_sessions_kept": "50",
+    "s_my_content_page_size": "10",
+    "s_onboarding_seen": "1",
+    "s_person_hue_0": "10",
+    "s_picture_source_emoji": "false",
+    "s_picture_source_photos": "false",
+    "s_picture_source_svgs": "false",
+    "s_pos_hue_verb": "200",
+    "s_progress_bar_hint_breakdown": "true",
+    "s_progress_bar_percent_mode": "missed",
+    "s_question_gloss_count": "3",
+    "s_section_open_bodyTable": "true",
+    "s_show_admin_panel": "true",
+    "s_show_disambiguator_hover": "false",
+    "s_show_disambiguator_meaning": "false",
+    "s_show_disambiguator_word": "true",
+    "s_show_gender_article": "true",
+    "s_show_pinyin": "false",
+    "s_show_pinyin_gloss": "false",
+    "s_show_streak_widget": "false",
+    "s_show_visual_profiles": "true",
+    "s_starting_level": "comfortable",
+    "s_streak_widget_format": "number-only",
+    "s_swear_filter_enabled": "true",
+    "s_table_color_correct": "#2e7d32",
+    "s_table_cols": "3",
+    "s_table_hint_button": "true",
+    "s_table_page_size": "50",
+    "s_table_reveal_button": "false",
+    "s_table_row_density": "compact",
+    "s_table_show_rank": "false",
+    "s_table_show_timer": "false",
+    "s_table_show_word_markers": "false",
+    "s_table_timed_quiz": "true",
+    "s_table_timed_quiz_minutes": "15",
+    "s_tense_hue_present": "120",
+    "s_track_hinted_correct": "false",
+    "s_track_hinted_missed": "false",
+    "s_track_hinted_revealed": "false",
+    "s_typo_tolerance": "high",
+    "s_ui_language": "spanish",
+    "theme": "dark",
+    "vq_bands": "B1,B2",
+    "vq_classfilter_table": "{\"active\":true,\"selected\":[\"verb\"]}",
+    "vq_conj_match_order": "rank",
+    "vq_conj_match_pairing": "infinitive",
+    "vq_conj_oat_order": "shuffle",
+    "vq_conj_order": "rank",
+    "vq_conj_page_size": "10",
+    "vq_conj_random_table_size": "5",
+    "vq_conj_random_table_size_custom": "7",
+    "vq_conj_regularity": "all",
+    "vq_conj_size": "100",
+    "vq_conj_size_custom": "80",
+    "vq_conj_tenses_spanish": "[\"present\",\"preterite\"]",
+    "vq_conj_view": "grid",
+    "vq_dir": "target-en",
+    "vq_domainfilter_table": "{\"active\":true,\"selected\":[\"food\"]}",
+    "vq_extra_langs": "[\"french\"]",
+    "vq_filterchain_domain": "true",
+    "vq_guess_blank_difficulty": "easy",
+    "vq_history_collapsed": "[\"trouble\"]",
+    "vq_lang": "spanish",
+    "vq_mode": "table",
+    "vq_mycontent_activetab": "words",
+    "vq_mycontent_collapsed": "[\"trivia\"]",
+    "vq_mycontent_langs": "[\"spanish\"]",
+    "vq_picture_style": "click",
+    "vq_pool_mode": "band",
+    "vq_rank_from": "1",
+    "vq_rank_to": "1000",
+    "vq_scripttype_table": "{\"active\":true,\"selected\":[]}",
+    "vq_size": "250",
+    "vq_size_custom": "750",
+    "vq_size_mode": "window",
+    "vq_sort": "adaptive",
+    "vq_table_order": "shuffle",
+    "vq_table_order_sortby": "meaning",
+    "vq_table_style": "standard",
+    "vq_trivia_category": "history",
+    "vq_trivia_difficulty": "easy",
+    "vq_trivia_reading_difficulty": "easy",
+    "vq_trivia_reading_length": "short",
+    "vq_trivia_style": "choice"
+  },
+  "perLang": {
+    "french": {
+      "goals": {
+        "minutes": 0,
+        "streak": 0,
+        "words": 10
+      },
+      "guessBlankOverrides": {},
+      "listFilter": {
+        "conjugation": {
+          "active": true,
+          "mode": "hide",
+          "selected": []
+        },
+        "mylists": {
+          "active": true,
+          "mode": "hide",
+          "selected": []
+        },
+        "picture": {
+          "active": true,
+          "mode": "hide",
+          "selected": []
+        },
+        "table": {
+          "active": true,
+          "mode": "hide",
+          "selected": []
+        },
+        "trivia": {
+          "active": true,
+          "mode": "hide",
+          "selected": []
+        }
+      },
+      "lists": {
+        "Known": {
+          "added": {
+            "chat": 1772706600000,
+            "maison": 1772706600000
+          },
+          "meta": {},
+          "words": [
+            "chat",
+            "maison"
+          ]
+        }
+      },
+      "mastered": [
+        "maison"
+      ],
+      "masteredDates": {
+        "maison": 1772793000000
+      },
+      "masteryLevels": {},
+      "misses": {
+        "chat": 1
+      },
+      "pictureOverrides": {},
+      "sessions": [
+        {
+          "at": "2026-03-07T10:30:00.000Z",
+          "correct": 3,
+          "hints": 0,
+          "lang": "french",
+          "mode": "trivia",
+          "revealed": 0,
+          "seconds": 60,
+          "total": 5,
+          "unassisted": 3
+        }
+      ],
+      "smartLists": {},
+      "srs": {
+        "chat": {
+          "box": 0,
+          "dueAt": 1772879400000,
+          "ease": 0.85
+        },
+        "maison": {
+          "box": 1,
+          "dueAt": 1772965800000,
+          "ease": 1.05
+        }
+      },
+      "tallies": {
+        "chat": {
+          "correct": 0,
+          "wrong": 1
+        },
+        "maison": {
+          "correct": 1,
+          "wrong": 0
+        }
+      },
+      "triviaOverrides": {},
+      "userGuessBlank": [],
+      "userTrivia": [],
+      "userWords": [],
+      "wordOverrides": {}
+    },
+    "german": {
+      "goals": {
+        "minutes": 0,
+        "streak": 0,
+        "words": 10
+      },
+      "guessBlankOverrides": {},
+      "listFilter": {
+        "conjugation": {
+          "active": true,
+          "mode": "hide",
+          "selected": []
+        },
+        "mylists": {
+          "active": true,
+          "mode": "hide",
+          "selected": []
+        },
+        "picture": {
+          "active": true,
+          "mode": "hide",
+          "selected": []
+        },
+        "table": {
+          "active": true,
+          "mode": "hide",
+          "selected": []
+        },
+        "trivia": {
+          "active": true,
+          "mode": "hide",
+          "selected": []
+        }
+      },
+      "lists": {},
+      "mastered": [],
+      "masteredDates": {},
+      "masteryLevels": {},
+      "misses": {},
+      "pictureOverrides": {},
+      "sessions": [],
+      "smartLists": {},
+      "srs": {},
+      "tallies": {},
+      "triviaOverrides": {},
+      "userGuessBlank": [],
+      "userTrivia": [],
+      "userWords": [],
+      "wordOverrides": {}
+    },
+    "spanish": {
+      "goals": {
+        "minutes": 15,
+        "streak": 0,
+        "words": 10
+      },
+      "guessBlankOverrides": {},
+      "listFilter": {
+        "conjugation": {
+          "active": true,
+          "mode": "focus",
+          "selected": [
+            "spanish␟Travel"
+          ]
+        },
+        "mylists": {
+          "active": true,
+          "mode": "focus",
+          "selected": [
+            "spanish␟Travel"
+          ]
+        },
+        "picture": {
+          "active": true,
+          "mode": "focus",
+          "selected": [
+            "spanish␟Travel"
+          ]
+        },
+        "table": {
+          "active": true,
+          "mode": "focus",
+          "selected": [
+            "spanish␟Travel"
+          ]
+        },
+        "trivia": {
+          "active": true,
+          "mode": "focus",
+          "selected": [
+            "spanish␟Travel"
+          ]
+        }
+      },
+      "lists": {
+        "Known": {
+          "added": {
+            "casa": 1772620200000,
+            "de": 1772620200000,
+            "no": 1772620200000,
+            "perro": 1772620200000,
+            "que": 1772620200000
+          },
+          "meta": {},
+          "words": [
+            "casa",
+            "de",
+            "no",
+            "perro",
+            "que"
+          ]
+        },
+        "Travel": {
+          "added": {
+            "aeropuerto": 1772706600000,
+            "billete": 1772706600000,
+            "hotel": 1772706600000
+          },
+          "meta": {
+            "folders": [
+              "Trips"
+            ],
+            "hideFrom": [
+              "picture"
+            ]
+          },
+          "words": [
+            "aeropuerto",
+            "billete",
+            "hotel"
+          ]
+        }
+      },
+      "mastered": [
+        "de",
+        "no",
+        "que"
+      ],
+      "masteredDates": {
+        "de": 1772706600000,
+        "no": 1772706600000,
+        "que": 1772706600000
+      },
+      "masteryLevels": {
+        "casa": 2,
+        "perro": 3
+      },
+      "misses": {
+        "billete": 2
+      },
+      "pictureOverrides": {
+        "gato": "https://example.com/gato.jpg",
+        "perro": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+      },
+      "sessions": [
+        {
+          "at": "2026-03-06T10:30:00.000Z",
+          "correct": 15,
+          "hints": 1,
+          "lang": "spanish",
+          "mode": "table",
+          "revealed": 2,
+          "seconds": 240,
+          "total": 20,
+          "unassisted": 14
+        },
+        {
+          "at": "2026-03-07T10:30:00.000Z",
+          "correct": 9,
+          "hints": 0,
+          "lang": "spanish",
+          "mode": "picture",
+          "revealed": 1,
+          "seconds": 90,
+          "total": 10,
+          "unassisted": 9
+        }
+      ],
+      "smartLists": {
+        "Arts & Leisure": {
+          "bands": [],
+          "domains": [
+            "art",
+            "music",
+            "sports"
+          ],
+          "due": "any",
+          "emoji": "🎨",
+          "folders": [
+            "Starter Lists"
+          ],
+          "hiddenModes": [],
+          "limit": 0,
+          "listed": "any",
+          "manualWords": [],
+          "mastered": "any",
+          "meaningContains": "",
+          "pos": [],
+          "sort": "rank",
+          "wordStartsWith": ""
+        },
+        "Due B1 verbs": {
+          "bands": [
+            "B1"
+          ],
+          "domains": [],
+          "due": "yes",
+          "folders": [],
+          "hiddenModes": [],
+          "limit": 100,
+          "listed": "no",
+          "manualWords": [],
+          "mastered": "no",
+          "meaningContains": "",
+          "pos": [
+            "verb"
+          ],
+          "sort": "rank",
+          "wordStartsWith": ""
+        },
+        "Feelings & Talk": {
+          "bands": [],
+          "domains": [
+            "emotions",
+            "mind",
+            "communication"
+          ],
+          "due": "any",
+          "emoji": "💬",
+          "folders": [
+            "Starter Lists"
+          ],
+          "hiddenModes": [],
+          "limit": 0,
+          "listed": "any",
+          "manualWords": [],
+          "mastered": "any",
+          "meaningContains": "",
+          "pos": [],
+          "sort": "rank",
+          "wordStartsWith": ""
+        },
+        "Food & Cooking": {
+          "bands": [],
+          "domains": [
+            "food"
+          ],
+          "due": "any",
+          "emoji": "🍽",
+          "folders": [
+            "Starter Lists"
+          ],
+          "hiddenModes": [],
+          "limit": 0,
+          "listed": "any",
+          "manualWords": [],
+          "mastered": "any",
+          "meaningContains": "",
+          "pos": [],
+          "sort": "rank",
+          "wordStartsWith": ""
+        },
+        "Home & Family": {
+          "bands": [],
+          "domains": [
+            "home",
+            "family",
+            "clothing"
+          ],
+          "due": "any",
+          "emoji": "🏠",
+          "folders": [
+            "Starter Lists"
+          ],
+          "hiddenModes": [],
+          "limit": 0,
+          "listed": "any",
+          "manualWords": [],
+          "mastered": "any",
+          "meaningContains": "",
+          "pos": [],
+          "sort": "rank",
+          "wordStartsWith": ""
+        },
+        "Law & Politics": {
+          "bands": [],
+          "domains": [
+            "law",
+            "politics",
+            "military"
+          ],
+          "due": "any",
+          "emoji": "⚖️",
+          "folders": [
+            "Starter Lists"
+          ],
+          "hiddenModes": [],
+          "limit": 0,
+          "listed": "any",
+          "manualWords": [],
+          "mastered": "any",
+          "meaningContains": "",
+          "pos": [],
+          "sort": "rank",
+          "wordStartsWith": ""
+        },
+        "Medicine": {
+          "bands": [],
+          "domains": [
+            "medicine",
+            "health",
+            "body"
+          ],
+          "due": "any",
+          "emoji": "🩺",
+          "folders": [
+            "Starter Lists"
+          ],
+          "hiddenModes": [],
+          "limit": 0,
+          "listed": "any",
+          "manualWords": [],
+          "mastered": "any",
+          "meaningContains": "",
+          "pos": [],
+          "sort": "rank",
+          "wordStartsWith": ""
+        },
+        "Nature & Animals": {
+          "bands": [],
+          "domains": [
+            "nature",
+            "animals"
+          ],
+          "due": "any",
+          "emoji": "🌿",
+          "folders": [
+            "Starter Lists"
+          ],
+          "hiddenModes": [],
+          "limit": 0,
+          "listed": "any",
+          "manualWords": [],
+          "mastered": "any",
+          "meaningContains": "",
+          "pos": [],
+          "sort": "rank",
+          "wordStartsWith": ""
+        },
+        "School": {
+          "bands": [],
+          "domains": [
+            "education"
+          ],
+          "due": "any",
+          "emoji": "🎓",
+          "folders": [
+            "Starter Lists"
+          ],
+          "hiddenModes": [],
+          "limit": 0,
+          "listed": "any",
+          "manualWords": [],
+          "mastered": "any",
+          "meaningContains": "",
+          "pos": [],
+          "sort": "rank",
+          "wordStartsWith": ""
+        },
+        "Technology": {
+          "bands": [],
+          "domains": [
+            "technology",
+            "science"
+          ],
+          "due": "any",
+          "emoji": "💻",
+          "folders": [
+            "Starter Lists"
+          ],
+          "hiddenModes": [],
+          "limit": 0,
+          "listed": "any",
+          "manualWords": [],
+          "mastered": "any",
+          "meaningContains": "",
+          "pos": [],
+          "sort": "rank",
+          "wordStartsWith": ""
+        },
+        "Travel": {
+          "bands": [],
+          "domains": [
+            "travel",
+            "transport",
+            "geography"
+          ],
+          "due": "any",
+          "emoji": "✈️",
+          "folders": [
+            "Starter Lists"
+          ],
+          "hiddenModes": [],
+          "limit": 0,
+          "listed": "any",
+          "manualWords": [],
+          "mastered": "any",
+          "meaningContains": "",
+          "pos": [],
+          "sort": "rank",
+          "wordStartsWith": ""
+        },
+        "Work & Business": {
+          "bands": [],
+          "domains": [
+            "work"
+          ],
+          "due": "any",
+          "emoji": "💼",
+          "folders": [
+            "Starter Lists"
+          ],
+          "hiddenModes": [],
+          "limit": 0,
+          "listed": "any",
+          "manualWords": [],
+          "mastered": "any",
+          "meaningContains": "",
+          "pos": [],
+          "sort": "rank",
+          "wordStartsWith": ""
+        }
+      },
+      "srs": {
+        "aeropuerto": {
+          "box": 1,
+          "dueAt": 1772965800000,
+          "ease": 1.05
+        },
+        "billete": {
+          "box": 0,
+          "dueAt": 1772879400000,
+          "ease": 0.7
+        },
+        "casa": {
+          "box": 1,
+          "dueAt": 1772965800000,
+          "ease": 0.9
+        },
+        "de": {
+          "box": 1,
+          "dueAt": 1772879400000,
+          "ease": 1.05
+        },
+        "no": {
+          "box": 1,
+          "dueAt": 1772879400000,
+          "ease": 1.05
+        },
+        "perro": {
+          "box": 1,
+          "dueAt": 1772879400000,
+          "ease": 1.05
+        },
+        "que": {
+          "box": 1,
+          "dueAt": 1772879400000,
+          "ease": 1.05
+        }
+      },
+      "tallies": {
+        "aeropuerto": {
+          "correct": 1,
+          "wrong": 0
+        },
+        "billete": {
+          "correct": 0,
+          "wrong": 2
+        },
+        "casa": {
+          "correct": 1,
+          "wrong": 1
+        },
+        "de": {
+          "correct": 1,
+          "wrong": 0
+        },
+        "no": {
+          "correct": 1,
+          "wrong": 0
+        },
+        "perro": {
+          "correct": 1,
+          "wrong": 0
+        },
+        "que": {
+          "correct": 1,
+          "wrong": 0
+        }
+      },
+      "triviaOverrides": {},
+      "userGuessBlank": [
+        {
+          "answerEn": "dog",
+          "answerTarget": "perro",
+          "category": "animal",
+          "cluesEn": [
+            "It barks",
+            "A best friend"
+          ],
+          "cluesTarget": [
+            "Ladra",
+            "Es un mejor amigo"
+          ],
+          "difficulty": "easy",
+          "id": "gb-mmhm26o0-jjxh5v"
+        }
+      ],
+      "userTrivia": [
+        {
+          "answerType": "year",
+          "answersEn": [
+            "1492"
+          ],
+          "answersTarget": [
+            "1492"
+          ],
+          "category": "history",
+          "difficulty": "easy",
+          "domains": [
+            "history"
+          ],
+          "id": "tq-mmhm26o0-0lg213",
+          "questionEn": "What year did Columbus arrive?",
+          "questionTarget": "¿En qué año llegó Colón?",
+          "readingDifficulty": "easy",
+          "readingLength": "short"
+        }
+      ],
+      "userWords": [
+        {
+          "antonyms": [],
+          "createdAt": 1772965800000,
+          "difficulty": 2,
+          "disambiguator": "",
+          "domains": [
+            "food"
+          ],
+          "examples": [
+            "Vamos a tapear."
+          ],
+          "extraGlosses": [
+            "to go for tapas"
+          ],
+          "id": "w-mmhm26o0-0qfwod",
+          "meaningDisambiguators": {},
+          "notes": "Colloquial.",
+          "pos": "verb",
+          "rank": 1000000,
+          "synonyms": [],
+          "tags": [],
+          "translation": "to eat tapas",
+          "word": "tapear"
+        }
+      ],
+      "wordOverrides": {
+        "casa": {
+          "hiddenGlosses": [
+            "household"
+          ],
+          "updatedAt": 1772965800000
+        },
+        "perro": {
+          "antonyms": [],
+          "difficulty": 1,
+          "disambiguator": "",
+          "domains": [
+            "animals"
+          ],
+          "examples": [],
+          "notes": "My note",
+          "pos": "noun",
+          "rank": 250,
+          "synonyms": [],
+          "tags": [],
+          "translation": "dog",
+          "updatedAt": 1772965800000
+        }
+      }
+    }
+  },
+  "presets": {
+    "picture": {
+      "Easy pictures": {
+        "active": false,
+        "bundle": {
+          "classes": {
+            "active": true,
+            "selected": []
+          },
+          "direction": "target-en",
+          "domains": {
+            "active": true,
+            "selected": []
+          },
+          "folders": [],
+          "listFilter": {
+            "active": false,
+            "mode": "hide",
+            "selected": []
+          }
+        }
+      }
+    },
+    "table": {
+      "Verbs only": {
+        "active": false,
+        "bundle": {
+          "classes": {
+            "active": true,
+            "selected": [
+              "verb"
+            ]
+          },
+          "direction": "target-en",
+          "domains": {
+            "active": true,
+            "selected": []
+          },
+          "folders": [],
+          "language": "spanish",
+          "listFilter": {
+            "active": false,
+            "mode": "hide",
+            "selected": []
+          }
+        }
+      }
+    }
+  },
+  "resume": {
+    "columns": 2,
+    "direction": "target-en",
+    "elapsed": 75,
+    "lang": "spanish",
+    "pageIndex": 1,
+    "savedAt": 1772965800000,
+    "state": [
+      [
+        "spanish:de",
+        {
+          "dir": "target-en",
+          "disabled": true,
+          "hintsShown": 0,
+          "selected": false,
+          "stateClass": "correct",
+          "value": "of"
+        }
+      ]
+    ],
+    "v": 1,
+    "words": [
+      {
+        "word": "de"
+      },
+      {
+        "word": "que"
+      }
+    ]
+  },
+  "settings": {
+    "getAbbreviateGrammarHint": true,
+    "getAdvancedMode": true,
+    "getAnswerGlossCount": 3,
+    "getAutofillEnabled": true,
+    "getChineseDisplay": "THREW: Cannot read properties of undefined (reading 'getChineseScript')",
+    "getChineseScript": "pinyin",
+    "getConfirmRemoveWordOverride": false,
+    "getConjDeselected": "grey",
+    "getConjHintMode": "none",
+    "getConjPageSize": 25,
+    "getConjRegularityScope": "beforeTopN",
+    "getConjShowTimer": false,
+    "getExpandGlossOnMatch": false,
+    "getFilterLinkingEnabled": false,
+    "getFontSize": "large",
+    "getFunctionWordMarker": "both",
+    "getGenderIndicatorStyle": "dot",
+    "getGenderIndicatorVisibility": "hinted",
+    "getGuessBlankMaxAttempts": 2,
+    "getHideableListsDomainsModes": [
+      "table",
+      "picture",
+      "conjugation",
+      "trivia"
+    ],
+    "getHideablePOSModes": [
+      "table",
+      "picture"
+    ],
+    "getHistoryEnabled": false,
+    "getInlineProfileEditing": true,
+    "getLangIndicator": "flag",
+    "getMatchMode": "strict",
+    "getMaxSessionsKept": 50,
+    "getMyContentPageSize": 10,
+    "getPictureSourceEmoji": false,
+    "getPictureSourcePhotos": false,
+    "getPictureSourceSvgs": false,
+    "getProgressBarPercentMode": "missed",
+    "getProgressBarShowHintBreakdown": true,
+    "getQuestionGlossCount": 3,
+    "getShowAdminPanel": true,
+    "getShowBothScripts": false,
+    "getShowDisambiguatorOnHover": false,
+    "getShowExperimentalModes": true,
+    "getShowGenderArticle": true,
+    "getShowHintButton": true,
+    "getShowHintMultiGlossHint": true,
+    "getShowMeaningSideDisambiguator": false,
+    "getShowPinyinGloss": false,
+    "getShowRevealButton": false,
+    "getShowStreakWidget": false,
+    "getShowTimer": false,
+    "getShowVisualProfiles": true,
+    "getShowWordSideDisambiguator": true,
+    "getSimpleMode": false,
+    "getStreakWidgetFormat": "number-only",
+    "getSwearFilterEnabled": true,
+    "getTableCols": 3,
+    "getTablePageSize": 50,
+    "getTableRowDensity": "compact",
+    "getTableShowRank": false,
+    "getTableShowWordMarkers": false,
+    "getTimedQuizEnabled": true,
+    "getTimedQuizMinutes": 15,
+    "getTrackHintedCorrect": false,
+    "getTrackHintedMissed": false,
+    "getTrackHintedRevealed": false,
+    "getTypoTolerance": "high",
+    "getTypoToleranceRatio": 0.35,
+    "getUILanguage": "spanish"
+  },
+  "streak": {
+    "best": 3,
+    "current": 3,
+    "dailyStats": {
+      "Fri Mar 06 2026": [
+        {
+          "lang": "spanish",
+          "minutes": 4,
+          "words": 15
+        }
+      ],
+      "Sat Mar 07 2026": [
+        {
+          "lang": "spanish",
+          "minutes": 5,
+          "words": 24
+        },
+        {
+          "lang": "french",
+          "minutes": 1,
+          "words": 3
+        }
+      ],
+      "Sun Mar 08 2026": [
+        {
+          "lang": "spanish",
+          "minutes": 1,
+          "words": 9
+        }
+      ]
+    },
+    "goals": {
+      "minutes": 0,
+      "streak": 0,
+      "words": 10
+    },
+    "history": [
+      "Fri Mar 06 2026",
+      "Sat Mar 07 2026",
+      "Sun Mar 08 2026"
+    ],
+    "todayMinutes": 1,
+    "todayWords": 9
+  },
+  "visualProfiles": {
+    "Night reading": {
+      "fontSize": "large",
+      "theme": "dark"
+    }
+  }
+}

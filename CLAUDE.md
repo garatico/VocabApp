@@ -261,6 +261,19 @@ read from or write to `vocabulary.db`.
   `csv-export`. Sections import the shared pieces, never each other's internals
   (the one exception, guess-blank reusing trivia's sort/filter helpers, is
   one-way — keep it acyclic).
+- **Storage changes are guarded by a golden fixture.** `tests/helpers/storage-fixture.ts`
+  seeds localStorage by calling the app's *own* writers (frozen clock, seeded
+  randomness), and reads it back through the app's *own* readers into a plain
+  "semantic" snapshot. `tests/client/storage-golden.test.ts` pins both
+  (`tests/fixtures/storage/current.{raw,semantic}.json`) and fails if the app
+  writes something different, can no longer read the old dump, or if a key family
+  appears in the source that the fixture neither covers nor lists in
+  `KNOWN_UNCOVERED`. **A new key or a changed value shape** fails it on purpose:
+  extend the seeder, run `UPDATE_STORAGE_GOLDEN=1 npx vitest run tests/client/storage-golden.test.ts`,
+  and *read the diff of the golden files* before committing. Keys labelled `raw`
+  in the golden are hand-seeded (DOM-bound writers); irreplaceable data must be
+  `api`. This is Phase 0 of the storage-migration plan (registry and versioned
+  migrations come next); nothing about key names has changed yet.
 - **Flat asset URLs, explicit index**: `data/images/` and `data/emoji/` are
   partitioned by domain on disk and flat in the URL space. `lib/flat-static.ts`
   builds one filename → path index and *reports* a name that exists in two
