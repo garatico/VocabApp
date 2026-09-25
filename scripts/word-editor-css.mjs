@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * word-editor-css.mjs — derives public/styles/app/word-editor.css.
  *
