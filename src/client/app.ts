@@ -30,6 +30,7 @@ import { onActivity } from './utils/streak.ts';
 import { showToast } from './ui/toast.ts';
 import { initStreakWidget } from './ui/streak-widget.ts';
 import { initDueBadge } from './ui/due-badge.ts';
+import { renderLevelChoices } from './ui/level-picker.ts';
 import { initGlobalShortcuts } from './ui/global-shortcuts.ts';
 import { initMissedAdd } from './ui/quiz-summary.ts';
 import { offerResume } from './ui/resume-banner.ts';
@@ -1283,7 +1284,11 @@ void (async function init(): Promise<void> {
     writeString('s_onboarding_seen', '1');
   }
 
-  // Off by default — reachable any time from Settings' "Show onboarding".
+  // Reachable any time from Settings' "Show onboarding"; shown by itself only on
+  // the very first visit, with the level chooser (ui/level-picker.ts) inside it.
+  const levelsHost = document.getElementById('onboardingLevels');
+  if (levelsHost) renderLevelChoices(levelsHost, dismissOnboarding);
+  if (readString('s_onboarding_seen') === null) showOnboarding();
   onboardingDismiss?.addEventListener('click', dismissOnboarding);
   showOnboardingBtn?.addEventListener('click', () => {
     removeKey('s_onboarding_seen');

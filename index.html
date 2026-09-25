@@ -666,6 +666,9 @@
         <div class="onboarding-body" data-i18n-html="onboarding.body">
           <strong>Welcome to VocabApp!</strong> Pick a language and word count in the controls above, then hit <strong>Start Quiz</strong>. Use the tabs to switch between Table, Picture Quiz, Trivia, and Conjugation modes. Head to <strong>⚙ Settings</strong> to configure hints, text size, and more.
         </div>
+        <!-- "Where are you starting?" — see ui/level-picker.ts. Filled in by script;
+             empty (and harmless) if scripting hasn't run. -->
+        <div id="onboardingLevels" class="onboarding-levels-host"></div>
         <button type="button" class="onboarding-dismiss" id="onboardingDismiss" aria-label="Dismiss tip" data-i18n-aria-label="onboarding.dismiss">✕</button>
       </div>
 

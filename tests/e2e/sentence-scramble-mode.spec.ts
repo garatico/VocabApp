@@ -16,6 +16,9 @@ test('reviewing a wrong answer via Back shows what was actually submitted, not t
   await startMode(page, 'sentenceScramble');
 
   const bankChips = page.locator('.ss-chip--bank');
+  // count() does not wait, and the mode's code loads on demand: wait for the
+  // first chip to exist before counting, or a slow load reads as zero chips.
+  await expect(bankChips.first()).toBeVisible();
   const chipCount = await bankChips.count();
   expect(chipCount).toBeGreaterThan(1);
 

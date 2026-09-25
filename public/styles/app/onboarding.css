@@ -13,6 +13,7 @@
   padding: 0.85rem 1rem;
   margin-bottom: 0.6rem;
   animation: slideDown 0.2s ease;
+  flex-wrap: wrap;   /* the level chooser drops onto its own row */
 }
 
 .onboarding-body {
@@ -46,3 +47,30 @@
   #onboardingCard { padding: 0.7rem 0.75rem; gap: 0.6rem; }
   .onboarding-body { font-size: 0.78rem; }
 }
+
+/* ── "Where are you starting?" (ui/level-picker.ts) ── */
+.onboarding-levels-host { order: 3; flex: 1 0 100%; }
+.onboarding-levels-host:empty { display: none; }
+.onboarding-levels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.5rem;
+}
+.onboarding-level {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  text-align: left;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.onboarding-level:hover { border-color: var(--accent); background: var(--surface2); }
+.onboarding-level:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.onboarding-level-label { font-weight: 700; font-size: 0.85rem; color: var(--accent); }
+.onboarding-level-blurb { font-size: 0.75rem; color: var(--text-muted); line-height: 1.35; }

@@ -239,6 +239,14 @@ read from or write to `vocabulary.db`.
   ~18 s of CPU per language for 7% more, and starved the rest of the server).
   Nothing per-request (timestamps!) may go in that body, or the ETag — and the
   service worker's "vocabulary updated" check that compares it — breaks.
+- **First visit asks "where are you starting?"** `utils/level-plan.ts` maps four
+  plain-language levels onto the Words controls (Most Common 100, or CEFR bands
+  A2 / B1+B2 / C1+C2); `ui/level-picker.ts` applies a plan by *clicking the real
+  controls*, so their own handlers persist it and rebuild the pool. It lives in
+  the welcome card, shown once (`s_onboarding_seen`) and re-openable from Settings.
+- **Keyboard:** `ui/choice-keys.ts` (1–9 answer multiple choice), `ui/global-shortcuts.ts`
+  (`g`+letter to change tab, `r` review due, arrows on the tab bar, roving tabindex).
+  New shortcuts belong in the list in `ui/shortcuts-overlay.ts` too.
 - **Flat asset URLs, explicit index**: `data/images/` and `data/emoji/` are
   partitioned by domain on disk and flat in the URL space. `lib/flat-static.ts`
   builds one filename → path index and *reports* a name that exists in two
