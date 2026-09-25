@@ -247,6 +247,13 @@ read from or write to `vocabulary.db`.
 - **Keyboard:** `ui/choice-keys.ts` (1–9 answer multiple choice), `ui/global-shortcuts.ts`
   (`g`+letter to change tab, `r` review due, arrows on the tab bar, roving tabindex).
   New shortcuts belong in the list in `ui/shortcuts-overlay.ts` too.
+- **Settings is five files, not one.** `settings.ts` is the data layer everything
+  imports (the `Settings` getters, `apply*` for colours/font/density, the
+  change-listener setters). The Settings *screen* is `settings-ui.ts` (control
+  binding, restoring state, daily goals), `settings-appearance.ts` (colour and
+  language pickers), `settings-search.ts` (glossary + search) and
+  `settings-streak.ts` (readouts + calendar). New code that only needs a saved
+  value imports `settings.ts`; only the Settings screen imports the others.
 - **Flat asset URLs, explicit index**: `data/images/` and `data/emoji/` are
   partitioned by domain on disk and flat in the URL space. `lib/flat-static.ts`
   builds one filename → path index and *reports* a name that exists in two

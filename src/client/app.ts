@@ -25,7 +25,9 @@ import { LANGUAGES, isoCode, supportsConjugation,
 import { availableLanguages, isPackagedApp }     from './data/vocab-source.ts';
 import { logger } from './utils/logger.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
-import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, setOnSimpleModeChange, setOnExperimentalModesChange, setOnShowAdminPanelChange, refreshStreakReadouts } from './settings.ts';
+import { Settings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, setOnSimpleModeChange, setOnExperimentalModesChange, setOnShowAdminPanelChange } from './settings.ts';
+import { bindSettings } from './settings-ui.ts';
+import { refreshStreakReadouts } from './settings-streak.ts';
 import { onActivity } from './utils/streak.ts';
 import { showToast } from './ui/toast.ts';
 import { initStreakWidget } from './ui/streak-widget.ts';
