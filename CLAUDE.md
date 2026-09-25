@@ -254,6 +254,13 @@ read from or write to `vocabulary.db`.
   language pickers), `settings-search.ts` (glossary + search) and
   `settings-streak.ts` (readouts + calendar). New code that only needs a saved
   value imports `settings.ts`; only the Settings screen imports the others.
+- **My Content is a folder of sections.** `modes/my-content-mode.ts` is only the
+  entry (`renderMyContent`, cross-tab navigation, the Words section);
+  `modes/my-content/` holds `layout` (tabs, collapsibles), `shared` (DOM helpers,
+  pager), `languages`, `trivia`, `guess-blank`, `word-search`, `pictures` and
+  `csv-export`. Sections import the shared pieces, never each other's internals
+  (the one exception, guess-blank reusing trivia's sort/filter helpers, is
+  one-way — keep it acyclic).
 - **Flat asset URLs, explicit index**: `data/images/` and `data/emoji/` are
   partitioned by domain on disk and flat in the URL space. `lib/flat-static.ts`
   builds one filename → path index and *reports* a name that exists in two
