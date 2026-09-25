@@ -179,7 +179,14 @@ export function bindModeSwitch({
       btn.classList.toggle('active', isActive);
       // Only real tabs carry aria-selected — the Admin link (an <a> that
       // navigates away) shares the .mode-tab class but is not a tab.
-      if (btn.getAttribute('role') === 'tab') btn.setAttribute('aria-selected', String(isActive));
+      if (btn.getAttribute('role') === 'tab') {
+        btn.setAttribute('aria-selected', String(isActive));
+        // Roving tabindex (the ARIA tablist pattern): the bar is one Tab stop,
+        // at the active tab, and the arrow keys move within it — see
+        // ui/global-shortcuts.ts. Ten tab stops to get past before any content
+        // was the alternative.
+        btn.tabIndex = isActive ? 0 : -1;
+      }
       if (isActive && scrollTabIntoView) btn.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
     });
 

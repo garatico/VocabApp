@@ -501,3 +501,31 @@
   }
   .picture-card-emoji { font-size: 4rem; }
 }
+
+/* ── Number-key badges (ui/choice-keys.ts) ─────────────────────────────────
+   Shown on any option that can be answered with 1–9. Positioned in the corner
+   so it never shifts the option's own content. */
+[data-key-hint] { position: relative; }
+[data-key-hint]::before {
+  content: attr(data-key-hint);
+  position: absolute;
+  top: 0.3rem;
+  left: 0.35rem;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  padding: 0 0.25rem;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 600 0.7rem/1 'DM Mono', monospace;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.3rem;
+  pointer-events: none;
+  z-index: 1;
+}
+/* Keyboard focus on a picture card needs to be as visible as on any button. */
+.pm-click-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: none) { [data-key-hint]::before { display: none; } }   /* touch: no keyboard */

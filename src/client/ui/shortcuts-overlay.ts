@@ -36,8 +36,31 @@ const SHORTCUTS: ShortcutGroup[] = [
     ],
   },
   {
+    group: 'Multiple choice (Picture click, Trivia choice)',
+    items: [
+      { keys: ['1', '–', '9'],  desc: 'Pick that option (numbered on screen)' },
+    ],
+  },
+  {
+    group: 'Go to (press g, then…)',
+    items: [
+      { keys: ['g', 't'], desc: 'Table' },
+      { keys: ['g', 'p'], desc: 'Picture Quiz' },
+      { keys: ['g', 'v'], desc: 'Trivia' },
+      { keys: ['g', 'b'], desc: 'Guess the Blank' },
+      { keys: ['g', 's'], desc: 'Sentence Scramble' },
+      { keys: ['g', 'c'], desc: 'Conjugation' },
+      { keys: ['g', 'l'], desc: 'My Lists' },
+      { keys: ['g', 'm'], desc: 'My Content' },
+      { keys: ['g', 'h'], desc: 'History' },
+      { keys: ['g', ','], desc: 'Settings' },
+    ],
+  },
+  {
     group: 'General',
     items: [
+      { keys: ['r'],            desc: 'Review the words that are due' },
+      { keys: ['←', '→'],       desc: 'Move between tabs (when the tab bar is focused)' },
       { keys: ['?'],            desc: 'Open this shortcuts reference' },
     ],
   },
@@ -95,16 +118,33 @@ function getOverlay(): HTMLElement {
       if (e.target === el) closeOverlay();
     });
     el.querySelector('#shortcutsClose')?.addEventListener('click', closeOverlay);
+    // The close button is the dialog's only control, so it is the whole focus
+    // trap: Tab has nowhere else to go, and must not escape to the page behind.
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Tab') { e.preventDefault(); el?.querySelector<HTMLElement>('#shortcutsClose')?.focus(); }
+    });
   }
   return el;
 }
 
+/** Where focus was before the dialog opened, so closing can put it back. */
+let returnFocus: HTMLElement | null = null;
+
 function openOverlay(): void {
-  getOverlay().classList.add('open');
+  const el = getOverlay();
+  if (el.classList.contains('open')) return;
+  returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  el.classList.add('open');
+  // aria-modal promises the page behind is inert, so focus has to move in.
+  el.querySelector<HTMLElement>('#shortcutsClose')?.focus();
 }
 
 function closeOverlay(): void {
-  document.getElementById('shortcutsOverlay')?.classList.remove('open');
+  const el = document.getElementById('shortcutsOverlay');
+  if (!el?.classList.contains('open')) return;
+  el.classList.remove('open');
+  returnFocus?.focus();
+  returnFocus = null;
 }
 
 export function initShortcuts(): void {
@@ -113,7 +153,7 @@ export function initShortcuts(): void {
 
   // Keyboard: Shift+? (= '?' char) when not focused on an input/textarea
   document.addEventListener('keydown', e => {
-    if (e.key === '?' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+    if (e.key === '?' && !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) {
       e.preventDefault();
       openOverlay();
     }

@@ -30,6 +30,7 @@ import { onActivity } from './utils/streak.ts';
 import { showToast } from './ui/toast.ts';
 import { initStreakWidget } from './ui/streak-widget.ts';
 import { initDueBadge } from './ui/due-badge.ts';
+import { initGlobalShortcuts } from './ui/global-shortcuts.ts';
 import { initMissedAdd } from './ui/quiz-summary.ts';
 import { offerResume } from './ui/resume-banner.ts';
 import { bindBackupSettings, maybeRemindBackup } from './ui/backup-settings.ts';
@@ -1205,6 +1206,23 @@ function prefetchModes(): void {
   else setTimeout(run, 2500);
 }
 
+/**
+ * Put "where the next Tab key starts" back at the top of the page.
+ *
+ * Startup restores the last tab with a programmatic click(), and browsers treat
+ * that as the place sequential keyboard navigation continues from — so the first
+ * Tab press skipped the skip link and the tab bar and landed somewhere below.
+ * Briefly focusing <body> resets the origin without leaving anything focused.
+ */
+function resetTabOrigin(): void {
+  const body = document.body;
+  const had = body.hasAttribute('tabindex');
+  if (!had) body.setAttribute('tabindex', '-1');
+  body.focus({ preventScroll: true });
+  if (!had) body.removeAttribute('tabindex');
+  (document.activeElement as HTMLElement | null)?.blur?.();
+}
+
 void (async function init(): Promise<void> {
   // Must complete before anything loads vocab (loadAndBuildFilters, below)
   // so vocab-source.ts's registered sqlite source is ready by the time it's
@@ -1247,6 +1265,7 @@ void (async function init(): Promise<void> {
   maybeRemindBackup();
   initDiceButton();
   initShortcuts();
+  initGlobalShortcuts();
   initReloadButton();
   initListFilter(langSelect?.value ?? 'spanish');
   syncConjViewToggle();
@@ -1332,4 +1351,5 @@ void (async function init(): Promise<void> {
   void markEmptyLanguages();
   offerResume();
   prefetchModes();
+  resetTabOrigin();
 })();

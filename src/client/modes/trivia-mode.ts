@@ -38,6 +38,7 @@ import { shuffle } from '../utils/shuffle.ts';
 import { applyAutofillAttr } from '../settings.ts';
 import { saveSession, recordOutcome } from '../utils/session-history.ts';
 import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summary.ts';
+import { bindChoiceKeys } from '../ui/choice-keys.ts';
 import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
 import { languageInfo } from '../data/languages.ts';
@@ -416,6 +417,8 @@ export async function renderTriviaMode({
   // 'choice' sub-mode's answer grid
   const optionsGrid = document.createElement('div');
   optionsGrid.className = 'tv-options';
+  // 1–9 answer the options in order (see ui/choice-keys.ts).
+  bindChoiceKeys(optionsGrid, '.tv-option');
 
   // 'type' sub-mode's answer input
   const typeRow = document.createElement('div');

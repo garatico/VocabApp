@@ -18,6 +18,12 @@ export default defineConfig({
   retries: process.env['CI'] ? 2 : 0,
   reporter: process.env['CI'] ? 'github' : 'list',
 
+  // Assertions get 10 s (default 5). Every worker talks to one single-threaded
+  // dev API that blocks ~1–2 s each time it (re)loads a language — after every
+  // admin write, for one — so with four browsers a UI update can legitimately
+  // land a few seconds late. That is contention, not a bug worth failing on.
+  expect: { timeout: 10_000 },
+
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',

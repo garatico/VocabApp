@@ -17,6 +17,7 @@ import { getPictureOverride, isImageOverride } from '../data/user-content.ts';
 import { saveSession, recordOutcome } from '../utils/session-history.ts';
 import { attachTooltips    } from '../utils/word-tooltip.ts';
 import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summary.ts';
+import { bindChoiceKeys } from '../ui/choice-keys.ts';
 import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import { matchesAnswer, displayWord, wordAndAnnotation, genderKey } from '../utils/utils.ts';
 import { shuffle           } from '../utils/shuffle.ts';
@@ -1045,6 +1046,8 @@ function renderClickMode(
 
   const clickGrid = document.createElement('div');
   clickGrid.className = 'pm-click-grid';
+  // 1–9 pick the pictures in order (see ui/choice-keys.ts).
+  bindChoiceKeys(clickGrid, '.pm-click-card');
 
   const feedback = document.createElement('div');
   feedback.className = 'pm-click-feedback';
@@ -1074,10 +1077,21 @@ function renderClickMode(
 
     clickGrid.innerHTML = '';
 
-    options.forEach(opt => {
+    options.forEach((opt, n) => {
       const card = document.createElement('div');
       card.className    = 'pm-click-card';
       card.dataset.word = opt.word;
+      // A picture to choose is a button: reachable with Tab, operable with
+      // Enter/Space. (It was a bare div — invisible to the keyboard.)
+      card.setAttribute('role', 'button');
+      card.tabIndex = 0;
+      card.setAttribute('aria-label', `Picture ${n + 1}`);
+      card.addEventListener('keydown', e => {
+        if ((e.key === 'Enter' || e.key === ' ') && !card.classList.contains('pm-locked')) {
+          e.preventDefault();
+          card.click();
+        }
+      });
       card.appendChild(buildVisualFrame(buildAllVisuals(opt)));
 
       card.addEventListener('click', () => {
@@ -1085,7 +1099,7 @@ function renderClickMode(
         results[idx] = { chosen: opt.word, right: opt.word === word.word };
         giveUpBtn.disabled = true;   // disable while feedback is showing
 
-        clickGrid.querySelectorAll('.pm-click-card').forEach(c => c.classList.add('pm-locked'));
+        clickGrid.querySelectorAll('.pm-click-card').forEach(c => { c.classList.add('pm-locked'); c.setAttribute('aria-disabled', 'true'); });
 
         if (opt.word === word.word) {
           card.classList.add('pm-correct');

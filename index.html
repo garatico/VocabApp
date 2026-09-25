@@ -24,6 +24,8 @@
 
 
 <body>
+  <a class="skip-link" href="#controls">Skip to quiz controls</a>
+
   <!-- Loading Spinner -->
   <div id="loadingSpinner">
     <div class="spinner"></div>
@@ -58,7 +60,7 @@
         <a href="/admin" class="mode-tab admin-tab" title="Open Admin Panel" hidden><span data-i18n="nav.admin">Admin</span> ↗</a>
       </div>
 
-      <div id="controls">
+      <div id="controls" tabindex="-1">
         <!-- Collapses everything below (#controlsBody) down to just this
              corner strip, so a quiz already in progress can have the full
              screen without the language/word/filter controls above it

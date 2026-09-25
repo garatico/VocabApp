@@ -252,3 +252,20 @@ kbd {
     font-size: 1.05rem;
   }
 }
+
+/* ── Skip link — first Tab stop, visible only while focused. ── */
+.skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: -3rem;
+  z-index: 10000;
+  padding: 0.5rem 0.9rem;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  text-decoration: none;
+  transition: top 0.1s;
+}
+.skip-link:focus { top: 0; }
+#controls:focus { outline: none; }   /* focus target of the skip link, not a control */
