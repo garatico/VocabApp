@@ -78,5 +78,8 @@
   },
   "lint-staged": {
     "*.{ts,js}": "eslint"
+  },
+  "optionalDependencies": {
+    "sharp": "^0.35.4"
   }
 }

@@ -24,6 +24,7 @@ import { dataDir }              from './lib/paths.js';
 import { makeVocabRateLimiter } from './middleware/rate-limit.js';
 import { makeErrorHandler }     from './middleware/error-handler.js';
 import { flatStatic }           from './lib/flat-static.js';
+import { makeImageOptimizer }   from './lib/image-optimizer.js';
 import { logger }               from './lib/logger.js';
 
 const __filename  = fileURLToPath(import.meta.url);
@@ -92,7 +93,9 @@ export function createApp({
   // Domain-partitioned on disk, flat in the URL space — see flat-static.ts for
   // why this is not a stack of express.static mounts.
   app.use('/emoji',  flatStatic(path.join(dataDir, 'emoji')));
-  app.use('/images', flatStatic(path.join(dataDir, 'images')));
+  // Photos are resized to WebP on first request and cached (image-optimizer.ts);
+  // originals in data/ are never modified.
+  app.use('/images', flatStatic(path.join(dataDir, 'images'), { optimize: makeImageOptimizer() }));
 
   if (serveStatic) {
     if (nodeEnv === 'production') {

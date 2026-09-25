@@ -226,6 +226,18 @@ read from or write to `vocabulary.db`.
   are `role="status"` live regions. Only real tabs carry `aria-selected` (the
   Admin link shares `.mode-tab` but is not one). Run it with
   `npx playwright test tests/e2e/a11y.spec.ts`.
+- **Photos are optimized on the way out, never rewritten.** `data/images/` is
+  what the app is *given* (27 MB of Wikipedia originals, the biggest 2.4 MB), so
+  `lib/image-optimizer.ts` derives a resized WebP on the first request that
+  accepts one (`Vary: Accept`) and caches it under the OS temp dir. `sharp` is an
+  *optional* dependency — without it the originals are served. Only the
+  `flatStatic` path does this: a local `public/images/` copy (gitignored) is
+  served by plain `express.static` and is not optimized. The packaged Tauri app
+  bundles originals as-is.
+- **The whole-language vocab response is built once** (`lib/vocab-response.ts`):
+  stable content-hash ETag, brotli-11/gzip-9 precompressed in the background.
+  Nothing per-request (timestamps!) may go in that body, or the ETag — and the
+  service worker's "vocabulary updated" check that compares it — breaks.
 - **Flat asset URLs, explicit index**: `data/images/` and `data/emoji/` are
   partitioned by domain on disk and flat in the URL space. `lib/flat-static.ts`
   builds one filename → path index and *reports* a name that exists in two

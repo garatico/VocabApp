@@ -29,12 +29,19 @@ import fs   from 'fs';
 import path from 'path';
 import type { Request, Response, NextFunction } from 'express';
 import { logger } from './logger.js';
+import type { ImageOptimizer } from './image-optimizer.js';
 
 export interface FlatStaticOptions {
   /** Seconds for the Cache-Control max-age header. Default 3600. */
   maxAgeSeconds?: number;
   /** Minimum gap between index rebuilds triggered by a miss. Default 5000. */
   rescanCooldownMs?: number;
+  /**
+   * Optionally swap a file for a smaller equivalent (see image-optimizer.ts).
+   * Returning null serves the original. The URL and cache headers stay the
+   * same, so `Vary: Accept` is set whenever this is supplied.
+   */
+  optimize?: ImageOptimizer;
 }
 
 /** filename → absolute path, plus the collisions found while building it. */
@@ -85,6 +92,7 @@ export function buildFlatIndex(root: string): {
 export function flatStatic(root: string, options: FlatStaticOptions = {}) {
   const maxAge    = options.maxAgeSeconds ?? 3600;
   const cooldown  = options.rescanCooldownMs ?? 5000;
+  const optimize  = options.optimize;
 
   let index      = new Map<string, string>();
   let lastScanAt = 0;
@@ -121,6 +129,18 @@ export function flatStatic(root: string, options: FlatStaticOptions = {}) {
     if (!file) { next(); return; }
 
     res.set('Cache-Control', `public, max-age=${maxAge}`);
-    res.sendFile(file, err => { if (err) next(err); });
+    if (!optimize) {
+      res.sendFile(file, err => { if (err) next(err); });
+      return;
+    }
+
+    // The same URL answers differently by Accept header, so caches must key on it.
+    res.set('Vary', 'Accept');
+    optimize(file, req.headers['accept'])
+      .catch(() => null)   // an optimizer failure must never cost the original
+      .then(alt => {
+        res.sendFile(alt ?? file, err => { if (err) next(err); });
+      })
+      .catch(next);
   };
 }
