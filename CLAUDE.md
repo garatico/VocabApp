@@ -272,8 +272,16 @@ read from or write to `vocabulary.db`.
   extend the seeder, run `UPDATE_STORAGE_GOLDEN=1 npx vitest run tests/client/storage-golden.test.ts`,
   and *read the diff of the golden files* before committing. Keys labelled `raw`
   in the golden are hand-seeded (DOM-bound writers); irreplaceable data must be
-  `api`. This is Phase 0 of the storage-migration plan (registry and versioned
-  migrations come next); nothing about key names has changed yet.
+  `api`. This is Phase 0 of the storage-migration plan; nothing about key
+  names has changed.
+- **Every storage key family is declared in `utils/storage-keys.ts`** (Phase 1): its class
+  (`data` / `settings` / `ui` / `bookkeeping` / `legacy`), owner file, and whether a full
+  backup carries it. Classification is by entry, not prefix (`vq_history_collapsed` is UI
+  under the `vq_history_` data prefix; exact keys beat prefixes, longest prefix wins).
+  `full-backup.ts` asks the registry. A new key must be registered *and* seeded in the
+  fixture; `tests/client/storage-keys.test.ts` fails on an unregistered family, a dead
+  entry, or any change to what a backup includes (it diffs against the old hand-written
+  filter, kept there as the oracle). Names are untouched — this is about knowing, not moving.
 - **Flat asset URLs, explicit index**: `data/images/` and `data/emoji/` are
   partitioned by domain on disk and flat in the URL space. `lib/flat-static.ts`
   builds one filename → path index and *reports* a name that exists in two

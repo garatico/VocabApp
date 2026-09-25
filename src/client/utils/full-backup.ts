@@ -14,18 +14,14 @@
  */
 
 import { keys, readString, writeString, isRecord } from './storage.ts';
+import { isBackedUp } from './storage-keys.ts';
 
 const FORMAT  = 'vocabapp-full-backup';
 const VERSION = 1;
 
-/** Key prefixes that hold learner data — see storage.ts's KEYS census. */
-const DATA_PREFIXES = ['s_', 'vq_', 'ml_', 'uc_'];
-/** Unprefixed keys worth carrying across. */
-const DATA_KEYS = new Set(['theme', 'filterExpanded']);
-/** Bookkeeping about the backup itself — never part of one. */
+/** Bookkeeping about the backup itself — never part of one (the registry marks them too). */
 const LAST_BACKUP_KEY  = 's_last_backup_at';
 const FIRST_SEEN_KEY   = 's_backup_first_seen';
-const EXCLUDED = new Set([LAST_BACKUP_KEY, FIRST_SEEN_KEY]);
 
 /** Remind after this long without a backup. */
 export const REMINDER_DAYS = 14;
@@ -38,9 +34,14 @@ export interface FullBackup {
   data:       Record<string, string>;
 }
 
+/**
+ * Whether a full backup carries this key. The answer comes from the key registry
+ * (storage-keys.ts) rather than a hand-kept prefix list here: a registered key
+ * follows its family, and an unknown key with one of the app's prefixes is kept
+ * too, so data written by an older or newer version is never silently dropped.
+ */
 export function isDataKey(key: string): boolean {
-  if (EXCLUDED.has(key)) return false;
-  return DATA_KEYS.has(key) || DATA_PREFIXES.some(p => key.startsWith(p));
+  return isBackedUp(key);
 }
 
 export function buildFullBackup(now = new Date()): FullBackup {

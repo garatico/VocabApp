@@ -14,16 +14,15 @@
  * the app writes, which is exactly what a migration has to know about.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { readFileSync, writeFileSync, readdirSync, statSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { familiesInSource, ROOT } from '../helpers/storage-scan.ts';
+import { keyClass } from '../../src/client/utils/storage-keys.ts';
 import {
   installStorageStub, dumpStorage, loadStorage, deterministically,
   seedRealisticStorage, readSemanticState, type Store,
 } from '../helpers/storage-fixture.ts';
 
-const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(HERE, '..', '..');
 const RAW_GOLDEN = join(ROOT, 'tests/fixtures/storage/current.raw.json');
 const SEMANTIC_GOLDEN = join(ROOT, 'tests/fixtures/storage/current.semantic.json');
 const UPDATE = process.env['UPDATE_STORAGE_GOLDEN'] === '1';
@@ -141,33 +140,12 @@ describe('semantic equivalence — what the app sees', () => {
 const KNOWN_UNCOVERED: Record<string, string> = {
   vq_known_: 'LEGACY. The pre-lists "known words" set; word-lists.ts migrates it into a list named "Known" and deletes '
     + 'it on first read, so seeding it would change the lists. Phase 2 folds that migration into the framework and tests it there.',
+  s_kid_friendly_mode: 'LEGACY name of s_simple_mode, read as a fallback only while the new key is absent '
+    + '(settings.ts getSimpleMode). Seeding it beside the new key would test nothing; Phase 2 covers it with a legacy-only fixture.',
+  s_conj_keep_shape: 'LEGACY name of s_conj_deselected, read as a fallback only while the new key is absent. Same treatment.',
   uc_glossorder_: 'LEGACY. The first cut of gloss ordering; user-content.ts migrates it into word overrides on read. '
     + 'Same treatment as vq_known_.',
 };
-
-function* sourceFiles(dir: string): Generator<string> {
-  for (const name of readdirSync(dir)) {
-    const p = join(dir, name);
-    if (statSync(p).isDirectory()) yield* sourceFiles(p);
-    else if (p.endsWith('.ts')) yield p;
-  }
-}
-
-/** Key families named in source: string/template literals with one of the app's prefixes. */
-function familiesInSource(): Set<string> {
-  const out = new Set<string>();
-  const literal = /[`'"]((?:vq_|ml_|uc_|s_)[a-z0-9_]*)(?:\$\{[^}]*\}[a-z0-9_]*)*[`'"]?/g;
-  for (const f of sourceFiles(join(ROOT, 'src/client'))) {
-    const text = readFileSync(f, 'utf8');
-    for (const m of text.matchAll(literal)) out.add(m[1]);
-    // Settings keys are written as get('name') / set('name') under the s_ prefix.
-    if (/settings[^/\\]*\.ts$/.test(f)) {
-      for (const m of text.matchAll(/\b(?:get|set)\('([a-z][a-z0-9_]*)'/g)) out.add('s_' + m[1]);
-    }
-  }
-  // A bare "vq_" / "s_" is a prefix check, not a key.
-  return new Set([...out].filter(k => !/^(vq_|ml_|uc_|s_)$/.test(k)));
-}
 
 /** A dump key belongs to a family when it equals it or extends a trailing-underscore prefix. */
 function belongs(key: string, family: string): boolean {
@@ -197,13 +175,12 @@ describe('key-family coverage', () => {
     expect(existsSync(SEMANTIC_GOLDEN)).toBe(true);
 
     // Settings and per-screen UI state are legitimately raw seeds (their writers are
-    // DOM handlers). The data a person could not get back if it were lost must not be:
+    // DOM handlers). Data the learner could not get back if it were lost must not be:
     // a hand-typed value there would prove nothing about what the app writes.
-    const irreplaceable = /^(vq_lists_|vq_list_added_|vq_mastery|vq_srs_|vq_history_(?!collapsed)|vq_misses_|vq_tally_|vq_streak_(?!goal)|vq_presets_|vq_visual_profiles|vq_smart_|vq_chat_history|uc_|ml_folders_|ml_folder_style_)/;
-    const handTyped = Object.keys(golden.data)
-      .filter(k => irreplaceable.test(k) && golden.origins[k] !== 'api');
-    expect(handTyped).toEqual([]);
+    // "Data" is decided by the registry (utils/storage-keys.ts), not by a prefix guess.
+    const data = Object.keys(golden.data).filter(k => keyClass(k) === 'data');
+    expect(data.filter(k => golden.origins[k] !== 'api')).toEqual([]);
     // ...and there must be some of them, or the check above is vacuous.
-    expect(Object.keys(golden.data).filter(k => irreplaceable.test(k)).length).toBeGreaterThan(20);
+    expect(data.length).toBeGreaterThan(20);
   });
 });

@@ -51,6 +51,12 @@
     }
   },
   "opaque": {
+    "admin_table_col_widths": "{\"word\":120}",
+    "admin_table_column_order": "[\"word\",\"translation\"]",
+    "admin_table_hidden_columns": "[\"notes\"]",
+    "admin_table_page_size": "100",
+    "admin_table_page_size_custom": "75",
+    "admin_word_list_page_size": "50",
     "filterExpanded": "false",
     "ml_browse_filter": "{}",
     "ml_browse_sort": "rank",
@@ -325,7 +331,13 @@
         "streak": 0,
         "words": 10
       },
-      "guessBlankOverrides": {},
+      "guessBlankOverrides": {
+        "builtin-gb-1": {
+          "answerEn": "my answer",
+          "difficulty": "medium",
+          "updatedAt": 1772965800000
+        }
+      },
       "listFilter": {
         "conjugation": {
           "active": true,
@@ -769,7 +781,13 @@
           "wrong": 0
         }
       },
-      "triviaOverrides": {},
+      "triviaOverrides": {
+        "builtin-tq-1": {
+          "difficulty": "hard",
+          "questionEn": "My rewording",
+          "updatedAt": 1772965800000
+        }
+      },
       "userGuessBlank": [
         {
           "answerEn": "dog",

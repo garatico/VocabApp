@@ -214,6 +214,9 @@ export async function seedRealisticStorage(store: Store): Promise<SeedResult> {
   });
   // 1x1 transparent PNG — the shape an uploaded photo takes (a data: URL in localStorage).
   const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  // Edits to the built-in trivia / guess-the-blank questions (keyed by the built-in's own id).
+  content.setTriviaQuestionOverride('spanish', 'builtin-tq-1', { difficulty: 'hard', questionEn: 'My rewording' });
+  content.setGuessBlankQuestionOverride('spanish', 'builtin-gb-1', { difficulty: 'medium', answerEn: 'my answer' });
   content.setPictureOverride('spanish', 'perro', PNG);
   content.setPictureOverride('spanish', 'gato', 'https://example.com/gato.jpg');
   claim('api');
@@ -318,6 +321,10 @@ const UI_STATE_RAW: Record<string, string> = {
   vq_size_custom: '750', vq_table_order: 'shuffle', vq_table_order_sortby: 'meaning',
   vq_trivia_category: 'history', vq_trivia_difficulty: 'easy', vq_trivia_reading_difficulty: 'easy',
   vq_trivia_reading_length: 'short',
+  // The admin panel is its own page, but shares this storage and this gateway.
+  admin_word_list_page_size: '50', admin_table_hidden_columns: JSON.stringify(['notes']),
+  admin_table_column_order: JSON.stringify(['word', 'translation']), admin_table_col_widths: JSON.stringify({ word: 120 }),
+  admin_table_page_size: '100', admin_table_page_size_custom: '75',
   ml_browse_filter: JSON.stringify({}), ml_profile_group_open_table: 'true',
   ml_sidebar_folder_collapsed_single_Trips: 'true', ml_smart_group_open_Starter: 'true',
 };

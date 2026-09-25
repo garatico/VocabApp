@@ -16,16 +16,20 @@
  * ## Keys
  *
  * The literals are unchanged, deliberately. They are already on real machines
- * holding real word lists, and renaming a key is silent data loss. `KEYS`
- * below is a census of the five prefixes in use rather than a scheme anyone
- * would choose:
+ * holding real word lists, and renaming a key is silent data loss.
  *
- *   `s_`   settings          `vq_`  session/mode state
- *   `ml_`  my-lists data     `uc_`  My Content tab additions (user-content.ts)
- *   (none) theme, filterExpanded, s_onboarding_seen
+ * What each key family *is* — irreplaceable data, a setting, or just where a
+ * panel was left — is declared once in storage-keys.ts; the prefixes below only
+ * hint at it (`vq_` and `ml_` each mix data and UI state, and a few keys have no
+ * prefix at all), so ask the registry rather than pattern-matching:
  *
- * Unifying them needs a migration that reads the old key, writes the new one
- * and deletes the old — worth doing, but as its own change with its own test.
+ *   `s_`   settings          `vq_`  session/mode state and learner data
+ *   `ml_`  my-lists data     `uc_`  My Content additions (user-content.ts)
+ *   (none) theme, filterExpanded, and the admin panel's admin_* keys
+ *
+ * Renaming them needs a migration that reads the old key, writes the new one
+ * and deletes the old — worth doing, but as its own change with its own test
+ * (see the golden fixture in tests/helpers/storage-fixture.ts).
  */
 
 /**
