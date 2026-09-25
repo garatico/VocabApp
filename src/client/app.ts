@@ -33,6 +33,7 @@ import { onActivity } from './utils/streak.ts';
 import { showToast } from './ui/toast.ts';
 import { initStreakWidget } from './ui/streak-widget.ts';
 import { initDueBadge } from './ui/due-badge.ts';
+import { initMissedAdd } from './ui/quiz-summary.ts';
 import { bindBackupSettings, maybeRemindBackup } from './ui/backup-settings.ts';
 import { initDiceButton } from './ui/dice-widget.ts';
 import { applyTranslations } from './i18n/index.ts';
@@ -1217,6 +1218,7 @@ void (async function init(): Promise<void> {
   bindSettings();
   initStreakWidget();
   initDueBadge();
+  initMissedAdd();
   bindBackupSettings();
   maybeRemindBackup();
   initDiceButton();

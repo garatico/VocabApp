@@ -13,6 +13,9 @@
  * quiz counts, and the modes know nothing about where the strip lives.
  */
 
+import { getLastMissed, clearLastMissed } from '../utils/missed-words.ts';
+import { openBulkListPicker } from '../utils/list-picker.ts';
+
 /** The element IDs a mode paints its summary into, top and bottom. */
 export interface SummarySlots {
   readonly ids: readonly string[];
@@ -45,17 +48,24 @@ function slotsFor(mode: SummaryMode): readonly string[] {
  * function.
  */
 export function showSummary(mode: SummaryMode, html: string, perfect = false): void {
+  // Every mode that ends a word quiz gets "add the misses to a list" for free.
+  const missed = getLastMissed();
+  const addBtn = missed
+    ? `<button type="button" class="summary-add-missed" data-add-missed>`
+      + `+ Add ${missed.words.length} missed to a list</button>`
+    : '';
   for (const id of slotsFor(mode)) {
     const el = document.getElementById(id);
     if (!el) continue;
     el.style.display = 'flex';
-    el.innerHTML     = html;
+    el.innerHTML     = html + addBtn;
     el.classList.toggle('quiz-summary--perfect', perfect);
   }
 }
 
 /** Hide and empty the strip. Safe to call when it was never shown. */
 export function clearSummary(mode: SummaryMode): void {
+  clearLastMissed();
   for (const id of slotsFor(mode)) {
     const el = document.getElementById(id);
     if (!el) continue;
@@ -78,4 +88,24 @@ export function summaryChip(kind: 'correct' | 'missed' | 'pct', text: string): s
 /** Whole-number percentage, guarding the empty-quiz divide. */
 export function percent(part: number, whole: number): number {
   return whole > 0 ? Math.round((part / whole) * 100) : 0;
+}
+
+// ── "Add missed to a list" ───────────────────────────────────────────────────
+
+let missedClickBound = false;
+
+/** One delegated handler for every strip's button; call once at startup. */
+export function initMissedAdd(): void {
+  if (missedClickBound) return;
+  missedClickBound = true;
+  document.addEventListener('click', e => {
+    const btn = (e.target as Element | null)?.closest<HTMLElement>('[data-add-missed]');
+    const missed = getLastMissed();
+    if (!btn || !missed) return;
+    openBulkListPicker({
+      anchorEl:     btn,
+      words:        missed.words.map(word => ({ word })),
+      fallbackLang: missed.lang,
+    });
+  });
 }

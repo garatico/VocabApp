@@ -22,6 +22,7 @@ import { Settings } from '../settings.ts';
 import { t } from '../i18n/index.ts';
 import { bumpSrs, clearSrs, srsEntry } from './srs.ts';
 import { recordActivity } from './streak.ts';
+import { setLastMissed } from './missed-words.ts';
 
 export type QuizMode = 'recall' | 'doubleRecall' | 'table' | 'picture' | 'conjugation' | 'trivia' | 'wordChoice' | 'guessBlank' | 'sentenceScramble';
 
@@ -157,6 +158,7 @@ export function recordOutcome(
   saveMisses(lang, counts);
   saveWordTallies(lang, tallies);
   bumpSrs(lang, missed, correct);
+  setLastMissed(lang, missed);
 }
 
 /** How many times this word has been missed, net of later successes. */

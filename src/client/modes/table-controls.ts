@@ -17,6 +17,7 @@ import { Settings, setOnPageSizeChange, setOnShowTimerChange } from '../settings
 import { markMastered } from './my-lists-mode.ts';
 import { logger } from '../utils/logger.ts';
 import { showSummary, clearSummary } from '../ui/quiz-summary.ts';
+import { setLastMissed } from '../utils/missed-words.ts';
 import { readString, writeString } from '../utils/storage.ts';
 import {
   saveSession, recordOutcome, orderWords, getWordOrderLabels,
@@ -807,6 +808,10 @@ function performGiveUp(): void {
     lastMissedResults.push(r);
     lastMissedWords.push(allWords[i]);
   });
+
+  // Give Up never reaches recordMastery()/recordOutcome(), so publish the
+  // misses here for the strip's "add to a list" button (quiz-summary.ts).
+  setLastMissed(quizLang, lastMissedWords.map(w => w.word));
 
   const allCorrect = results.every(r => r.ok);
   const summaryHtml = buildSummaryHtml(results);
