@@ -298,9 +298,19 @@ read from or write to `vocabulary.db`.
   helpers (`verbKey`, `hiddenPronounSlots`, `missingDataSlots`, `isSingleForm`, the summary) live
   in `helpers.ts` so One at a Time / Random Table / Card Match import them without loading the
   Grid view; `card.ts` builds one verb's card; `index.ts` is the Grid/Full render function.
-  Known limit: `renderConjugationMode` (~1,350 lines) and `my-lists/sidebar.ts`'s `createSidebar`
-  (~1,680) are single closures whose parts share state, so they cannot be split by moving lines —
-  only by a real refactor to explicit shared context. Don't try a line-range split on them.
+  Known limit: `renderConjugationMode` (~1,350 lines) is a single closure whose parts share
+  state, so it cannot be split by moving lines — only by a real refactor to explicit shared
+  context. Don't try a line-range split on it.
+- **My Lists sidebar = kit factories.** `my-lists/sidebar.ts` (~300 lines) holds the header UI,
+  keyboard navigation and `render()`, and wires the rest: `sidebar-menu.ts` (gear menu),
+  `sidebar-pickers.ts` (emoji / folder style / hide-from), `sidebar-dnd.ts`, `sidebar-folders.ts`
+  (section heads, folder groups, `renderSection`), then one module per section
+  (`sidebar-single|smart|multi|profiles|visual.ts`). Each is `createXKit(deps)` / `createXSection(kit)`:
+  the code sits inside the factory, dependencies are destructured from an explicit argument, and
+  state that used to be per-`createSidebar()` call (menu owners, the dragged item) stays per
+  factory call. `SidebarKit` (`sidebar-kit.ts`) is the shared bundle the sections receive. Add a
+  section by writing a module against `SidebarKit`, not by reaching into another module's state.
+  `tests/e2e/my-lists-sidebar.spec.ts` pins the behaviour and passes on both the old and new code.
 - **Flat asset URLs, explicit index**: `data/images/` and `data/emoji/` are
   partitioned by domain on disk and flat in the URL space. `lib/flat-static.ts`
   builds one filename → path index and *reports* a name that exists in two
