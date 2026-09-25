@@ -67,6 +67,44 @@ describe('backupReminderDue', () => {
     expect(backupReminderDue(t0 + (REMINDER_DAYS + 1) * DAY)).toBe(true);
   });
 
+  describe('what counts as something worth backing up', () => {
+    const t0 = 1_000_000_000_000;
+    const firstSeen = (): string | undefined => store.get('s_backup_first_seen');
+
+    it.each([
+      ['a starter list the app made by itself', { ml_starter_seeded_spanish: 'true', vq_smart_spanish: '{"Starter":{}}' }],
+      ['a folder look the app set up', { ml_folders_smart_spanish: '["Starter Lists"]', ml_folder_style_smart_spanish: '{}' }],
+      ['where panels were left', { ml_sidebar_section_collapsed_smart: 'true', ml_browse_sort: 'rank', vq_history_collapsed: '["trouble"]' }],
+      ['choices in the main controls', { vq_mode: 'table', vq_size: '250', s_simple_mode: 'false', theme: 'dark' }],
+    ])('%s is not learner data: no clock starts and no reminder ever fires', (_what, keys) => {
+      for (const [k, v] of Object.entries(keys)) store.set(k, v);
+      expect(backupReminderDue(t0)).toBe(false);
+      expect(firstSeen()).toBeUndefined();
+      expect(backupReminderDue(t0 + 90 * DAY)).toBe(false);
+    });
+
+    it.each([
+      ['a list you made', { vq_lists_spanish: '{"Known":["casa"]}' }],
+      ['a mastered word', { vq_mastery_spanish: '["casa"]' }],
+      ['a quiz you took', { vq_history_spanish: '[]' }],
+      ['My Content you wrote', { uc_words_spanish: '[]' }],
+      ['a Testing Profile', { vq_presets_table: '{}' }],
+      ['an old-layout "known words" set not yet migrated', { vq_known_spanish: '["casa"]' }],
+    ])('%s is: the clock starts and the reminder fires after the period', (_what, keys) => {
+      for (const [k, v] of Object.entries(keys)) store.set(k, v);
+      expect(backupReminderDue(t0)).toBe(false);
+      expect(firstSeen()).toBe(String(t0));
+      expect(backupReminderDue(t0 + (REMINDER_DAYS + 1) * DAY)).toBe(true);
+    });
+
+    it('real work beside app-made files still counts', () => {
+      store.set('ml_starter_seeded_spanish', 'true');
+      store.set('vq_mastery_spanish', '["casa"]');
+      backupReminderDue(t0);
+      expect(firstSeen()).toBe(String(t0));
+    });
+  });
+
   it('snoozing restarts the period', () => {
     store.set('vq_srs_spanish', '{}');
     const t0 = 1_000_000_000_000;

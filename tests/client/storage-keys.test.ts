@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  KEY_FAMILIES, classifyKey, keyClass, isBackedUp, APP_PREFIXES,
+  KEY_FAMILIES, classifyKey, keyClass, isBackedUp, isLearnerEvidence, APP_PREFIXES,
 } from '../../src/client/utils/storage-keys.ts';
 import { familiesInSource, sampleKeyFor, ROOT } from '../helpers/storage-scan.ts';
 
@@ -132,6 +132,35 @@ describe('the registry itself', () => {
   it('every app-prefixed key is either registered or falls back to being backed up', () => {
     for (const p of APP_PREFIXES) expect(isBackedUp(p + 'brand_new_key')).toBe(classifyKey(p + 'brand_new_key')?.class === 'bookkeeping' ? false : true);
     expect(isBackedUp('some_other_apps_key')).toBe(false);
+  });
+});
+
+describe('learner evidence (what the backup reminder counts)', () => {
+  it('is exactly this set of families — a change here changes who gets nagged', () => {
+    expect(KEY_FAMILIES.filter(f => f.evidence).map(f => f.pattern).sort()).toEqual([
+      'uc_', 'uc_glossorder_', 'vq_chat_history', 'vq_history_', 'vq_known_', 'vq_list_added_', 'vq_lists_',
+      'vq_mastery_', 'vq_misses_', 'vq_presets_', 'vq_srs_', 'vq_streak_', 'vq_tally_', 'vq_visual_profiles',
+    ].sort());
+  });
+
+  it('is only ever irreplaceable data — never UI state, settings or housekeeping', () => {
+    for (const f of KEY_FAMILIES.filter(f => f.evidence)) expect(['data', 'legacy']).toContain(f.class);
+  });
+
+  it('never includes anything the app creates for the learner on its own', () => {
+    for (const k of ['ml_starter_seeded_spanish', 'vq_smart_spanish', 'ml_folders_smart_spanish', 'ml_folder_style_smart_spanish',
+      'ml_browse_sort', 'vq_history_collapsed', 's_simple_mode', 'vq_resume_table']) {
+      expect([k, isLearnerEvidence(k)]).toEqual([k, false]);
+    }
+  });
+
+  it('a panel state is not history just because it wears the history prefix', () => {
+    expect(isLearnerEvidence('vq_history_spanish')).toBe(true);
+    expect(isLearnerEvidence('vq_history_collapsed')).toBe(false);
+  });
+
+  it('unknown keys are not evidence', () => {
+    expect(isLearnerEvidence('some_other_apps_key')).toBe(false);
   });
 });
 

@@ -14,7 +14,7 @@
  */
 
 import { keys, readString, writeString, isRecord } from './storage.ts';
-import { isBackedUp } from './storage-keys.ts';
+import { isBackedUp, isLearnerEvidence } from './storage-keys.ts';
 import { CURRENT_SCHEMA, SCHEMA_KEY } from './storage-migrations.ts';
 
 const FORMAT  = 'vocabapp-full-backup';
@@ -105,10 +105,15 @@ export function lastBackupAt(): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-/** Does this browser hold anything worth losing? */
+/**
+ * Does this browser hold anything worth losing? Decided by the key registry: lists, mastery,
+ * history, the review schedule, My Content and the like count; the starter lists the app
+ * creates for itself, and where a panel was left, do not. (This used to be a hand-kept prefix
+ * list that counted every `ml_`/`uc_` key — including a collapsed sidebar section — and
+ * missed lists and mastery entirely.)
+ */
 function hasLearnerData(): boolean {
-  return keys().some(k => k.startsWith('vq_history_') || k.startsWith('vq_srs_')
-    || k.startsWith('ml_') || k.startsWith('uc_'));
+  return keys().some(isLearnerEvidence);
 }
 
 /**

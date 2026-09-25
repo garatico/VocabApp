@@ -41,6 +41,13 @@ export interface KeyFamily {
   owner:   string;
   /** Whether a full backup includes it. Defaults to true unless the class is `bookkeeping`. */
   backup?: boolean;
+  /**
+   * The existence of this key means the learner has actually done something worth keeping
+   * (made a list, mastered a word, taken a quiz…). Used to decide whether there is anything
+   * to remind them to back up. Deliberately absent from anything the app creates by itself —
+   * the starter lists, folder looks, "seeded" flags — and from UI state.
+   */
+  evidence?: boolean;
   note?:   string;
 }
 
@@ -52,8 +59,8 @@ const prefix = (pattern: string, cls: KeyClass, owner: string, more: Partial<Key
 export const KEY_FAMILIES: readonly KeyFamily[] = [
   // ── Lists ──────────────────────────────────────────────────────────────────
   prefix('vq_lists_',        'data', 'utils/word-lists.ts',
-    { note: 'vq_lists_<lang>, vq_lists_meta_<lang>, vq_lists_multi, vq_lists_multi_added, vq_lists_multi_meta' }),
-  prefix('vq_list_added_',   'data', 'utils/word-lists.ts', { note: 'when each word joined each list' }),
+    { evidence: true, note: 'vq_lists_<lang>, vq_lists_meta_<lang>, vq_lists_multi, vq_lists_multi_added, vq_lists_multi_meta' }),
+  prefix('vq_list_added_',   'data', 'utils/word-lists.ts', { evidence: true, note: 'when each word joined each list' }),
   prefix('vq_listfilter_',   'ui',   'utils/word-lists.ts', { note: 'per-mode Hide/Focus list filter' }),
   prefix('vq_smart_',        'data', 'modes/my-lists/smart-lists.ts', { note: 'saved smart-list rules, per language' }),
   prefix('ml_folders_',      'data', 'modes/my-lists/folders.ts'),
@@ -63,31 +70,31 @@ export const KEY_FAMILIES: readonly KeyFamily[] = [
 
   // ── Mastery, review schedule, quiz history ────────────────────────────────
   prefix('vq_mastery_',      'data', 'modes/my-lists/mastery.ts',
-    { note: 'vq_mastery_<lang>, _dates_<lang>, _scale_<lang>; also the legacy per-list vq_mastery_<lang>_<list>, merged on read' }),
-  prefix('vq_srs_',          'data', 'utils/srs.ts'),
-  prefix('vq_history_',      'data', 'utils/session-history.ts', { note: 'quiz sessions per language' }),
+    { evidence: true, note: 'vq_mastery_<lang>, _dates_<lang>, _scale_<lang>; also the legacy per-list vq_mastery_<lang>_<list>, merged on read' }),
+  prefix('vq_srs_',          'data', 'utils/srs.ts', { evidence: true }),
+  prefix('vq_history_',      'data', 'utils/session-history.ts', { evidence: true, note: 'quiz sessions per language' }),
   exact ('vq_history_collapsed', 'ui', 'modes/history-mode.ts',
     { note: 'shares the vq_history_ prefix with the data above — the reason classification is by entry, not by prefix' }),
-  prefix('vq_misses_',       'data', 'utils/session-history.ts'),
-  prefix('vq_tally_',        'data', 'utils/session-history.ts'),
+  prefix('vq_misses_',       'data', 'utils/session-history.ts', { evidence: true }),
+  prefix('vq_tally_',        'data', 'utils/session-history.ts', { evidence: true }),
 
   // ── Streaks and goals ─────────────────────────────────────────────────────
-  prefix('vq_streak_',       'data', 'utils/streak.ts', { note: 'best, count, daily_lang, goal_history, history, last_date' }),
+  prefix('vq_streak_',       'data', 'utils/streak.ts', { evidence: true, note: 'best, count, daily_lang, goal_history, history, last_date' }),
   prefix('vq_daily_',        'data', 'utils/streak.ts', { note: 'vq_daily_goal[_<lang>] and vq_daily_progress[_<lang>]' }),
 
   // ── Testing profiles ──────────────────────────────────────────────────────
-  prefix('vq_presets_',        'data', 'filters/presets.ts', { note: 'saved Testing Profiles, per mode' }),
+  prefix('vq_presets_',        'data', 'filters/presets.ts', { evidence: true, note: 'saved Testing Profiles, per mode' }),
   prefix('vq_activeprofile_',  'ui',   'filters/presets.ts'),
-  exact ('vq_visual_profiles', 'data', 'filters/visual-profiles.ts'),
+  exact ('vq_visual_profiles', 'data', 'filters/visual-profiles.ts', { evidence: true }),
 
   // ── My Content (user-authored words, questions, edits) ────────────────────
   prefix('uc_',              'data', 'data/user-content.ts',
-    { note: 'words_, triviaq_, gbq_, wordoverride_, triviaoverride_, guessblankoverride_, pictures_ … per language' }),
+    { evidence: true, note: 'words_, triviaq_, gbq_, wordoverride_, triviaoverride_, guessblankoverride_, pictures_ … per language' }),
   prefix('uc_glossorder_',   'legacy', 'data/user-content.ts',
-    { note: 'first cut of gloss ordering; migrated into word overrides on read' }),
+    { evidence: true, note: 'first cut of gloss ordering; migrated into word overrides on read' }),
 
   // ── Chat and an interrupted quiz ──────────────────────────────────────────
-  exact ('vq_chat_history',  'data', 'modes/ai-chat/chat-history.ts'),
+  exact ('vq_chat_history',  'data', 'modes/ai-chat/chat-history.ts', { evidence: true }),
   exact ('vq_resume_table',  'ui',   'utils/quiz-resume.ts', { note: 'an unfinished Table quiz; expires after a day' }),
 
   // ── Current choices in the main controls ──────────────────────────────────
@@ -136,7 +143,7 @@ export const KEY_FAMILIES: readonly KeyFamily[] = [
 
   // ── Legacy fallbacks ──────────────────────────────────────────────────────
   prefix('vq_known_', 'legacy', 'utils/word-lists.ts',
-    { note: 'the pre-lists "known words" set; migrated into a list named "Known" and deleted on first read' }),
+    { evidence: true, note: 'the pre-lists "known words" set; migrated into a list named "Known" and deleted on first read' }),
   exact ('s_kid_friendly_mode', 'legacy', 'settings.ts', { note: 'old name of s_simple_mode; read only while the new key is absent' }),
   exact ('s_conj_keep_shape',   'legacy', 'settings.ts', { note: 'old name of s_conj_deselected; read only while the new key is absent' }),
 
@@ -186,6 +193,11 @@ export function classifyKey(key: string): KeyFamily | null {
 /** What kind of thing this key holds, or null if unknown. */
 export function keyClass(key: string): KeyClass | null {
   return classifyKey(key)?.class ?? null;
+}
+
+/** Does this key's existence show the learner has done something worth keeping? See KeyFamily.evidence. */
+export function isLearnerEvidence(key: string): boolean {
+  return classifyKey(key)?.evidence === true;
 }
 
 /**
