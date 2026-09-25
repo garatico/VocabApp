@@ -235,6 +235,8 @@ export function bindStartHandler({
         list = orderWords(list, 'rank-desc', fullLang);
       } else if (sortOrder === 'trouble') {
         list = orderWords(list, 'trouble', fullLang);
+      } else if (sortOrder === 'adaptive') {
+        list = orderWords(list, 'adaptive', fullLang);
       }
       // 'frequency' keeps the existing rank-based order from loadAndBuildFilters
 

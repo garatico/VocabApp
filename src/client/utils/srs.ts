@@ -20,6 +20,26 @@ import { readJson, writeJson, remove as removeKey, isRecord } from './storage.ts
 export interface SrsEntry {
   box:    number; // 0..MAX_BOX
   dueAt:  number; // epoch ms
+  /**
+   * How easy this particular word has been for this learner, as a multiplier
+   * on the box's interval (1 = the plain Leitner schedule). Absent on entries
+   * written before this existed — read as 1, so old data schedules exactly as
+   * it always did. See nextEase().
+   */
+  ease?:  number;
+}
+
+export const MIN_EASE = 0.7;
+export const MAX_EASE = 2.0;
+
+/**
+ * Ease after an outcome. A miss costs more than a success earns (the usual
+ * SM-2 asymmetry), so a word that keeps slipping is seen more often than the
+ * bare box would say, and one that never slips drifts out further.
+ */
+export function nextEase(prev: number | undefined, correct: boolean): number {
+  const e = (prev ?? 1) + (correct ? 0.05 : -0.15);
+  return Math.min(MAX_EASE, Math.max(MIN_EASE, Math.round(e * 100) / 100));
 }
 
 type SrsState = Record<string, SrsEntry>;
@@ -39,7 +59,8 @@ function srsKey(lang: string): string {
 function isSrsState(v: unknown): v is SrsState {
   if (!isRecord(v)) return false;
   return Object.values(v).every(e =>
-    isRecord(e) && typeof e.box === 'number' && typeof e.dueAt === 'number');
+    isRecord(e) && typeof e.box === 'number' && typeof e.dueAt === 'number'
+    && (e.ease === undefined || typeof e.ease === 'number'));
 }
 
 function getState(lang: string): SrsState {
@@ -63,15 +84,19 @@ export function bumpSrs(lang: string, missed: Iterable<string>, correct: Iterabl
   const now = Date.now();
 
   for (const w of missed) {
-    state[w] = { box: 0, dueAt: now };
+    state[w] = { box: 0, dueAt: now, ease: nextEase(state[w]?.ease, false) };
   }
   for (const w of correct) {
     const prev = state[w];
     // A word never quizzed before starts from the same baseline as one
     // already at box 0, so a first-ever correct answer promotes it exactly
     // like any other box-0-to-box-1 transition.
-    const box = Math.min((prev?.box ?? 0) + 1, MAX_BOX);
-    state[w] = { box, dueAt: now + BOX_INTERVAL_DAYS[box] * DAY_MS };
+    const box  = Math.min((prev?.box ?? 0) + 1, MAX_BOX);
+    const ease = nextEase(prev?.ease, true);
+    // Box 1 is the fixed first step; ease scales only the boxes after it, so a
+    // single lucky answer on a new word can't push its first review around.
+    const interval = BOX_INTERVAL_DAYS[box] * (box >= 2 ? ease : 1);
+    state[w] = { box, dueAt: now + interval * DAY_MS, ease };
   }
 
   saveState(lang, state);

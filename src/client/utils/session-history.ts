@@ -20,7 +20,7 @@ import { shuffleInPlace } from './shuffle.ts';
 import { readJson, writeJson, remove as removeKey, isNumberRecord, isRecord } from './storage.ts';
 import { Settings } from '../settings.ts';
 import { t } from '../i18n/index.ts';
-import { bumpSrs, clearSrs } from './srs.ts';
+import { bumpSrs, clearSrs, srsEntry } from './srs.ts';
 import { recordActivity } from './streak.ts';
 
 export type QuizMode = 'recall' | 'doubleRecall' | 'table' | 'picture' | 'conjugation' | 'trivia' | 'wordChoice' | 'guessBlank' | 'sentenceScramble';
@@ -232,7 +232,7 @@ export function clearHistory(lang: string): void {
 
 // ── Word ordering ─────────────────────────────────────────────────────────────
 
-export type WordOrder = 'rank' | 'rank-desc' | 'alpha' | 'shuffle' | 'trouble';
+export type WordOrder = 'rank' | 'rank-desc' | 'alpha' | 'shuffle' | 'trouble' | 'adaptive';
 
 const WORD_ORDER_LABELS_EN: [WordOrder, string][] = [
   ['rank',      'Most Frequent First'],
@@ -240,6 +240,7 @@ const WORD_ORDER_LABELS_EN: [WordOrder, string][] = [
   ['alpha',     'A → Z'],
   ['shuffle',   'Shuffle'],
   ['trouble',   'Words I Keep Missing First'],
+  ['adaptive',  'Smart (Due & Weak First)'],
 ];
 
 /**
@@ -250,6 +251,26 @@ const WORD_ORDER_LABELS_EN: [WordOrder, string][] = [
  */
 export function getWordOrderLabels(): [WordOrder, string][] {
   return WORD_ORDER_LABELS_EN.map(([value, label]) => [value, t('order.' + value, label)]);
+}
+
+/**
+ * Sort key for the 'adaptive' order — lower comes first.
+ *
+ * Four tiers, most urgent to least, encoded as disjoint numeric bands so one
+ * numeric sort does the whole job:
+ *   0 due now (most overdue first) · 1 weak but not yet due (most missed first)
+ *   2 never seen (by rank, so the common words come before the rare ones)
+ *   3 scheduled for later (soonest first)
+ * Exported for the test; nothing else should need it.
+ */
+export function adaptiveKey(
+  entry: { dueAt: number } | null, misses: number, rank: number | null, now: number,
+): number {
+  const BAND = 1e15;
+  if (entry && entry.dueAt <= now) return 0 * BAND + entry.dueAt;
+  if (misses > 0)                  return 1 * BAND - misses * 1e9 + (rank ?? 9999);
+  if (!entry)                      return 2 * BAND + (rank ?? 9999);
+  return 3 * BAND + entry.dueAt;
 }
 
 /**
@@ -297,6 +318,17 @@ export function orderWords<T extends { word: string; rank?: number | null; trans
         const d = missesFor(b) - missesFor(a);
         return d !== 0 ? d : (a.rank ?? 9999) - (b.rank ?? 9999);
       });
+    }
+    case 'adaptive': {
+      const cache = new Map<string, MissCounts>();
+      const now   = Date.now();
+      const keyed = out.map(w => {
+        const l = typeof lang === 'function' ? lang(w) : lang;
+        let counts = cache.get(l);
+        if (!counts) { counts = getMisses(l); cache.set(l, counts); }
+        return { w, k: adaptiveKey(srsEntry(l, w.word), counts[w.word] ?? 0, w.rank ?? null, now) };
+      });
+      return keyed.sort((a, b) => a.k - b.k).map(x => x.w);
     }
     case 'rank-desc':
       // Rarest first. An unranked word (null) still sorts last, same as

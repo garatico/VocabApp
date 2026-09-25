@@ -115,3 +115,31 @@ describe('clearSrs', () => {
     expect(srsEntry('french', 'maison')).not.toBeNull();
   });
 });
+
+describe('ease', () => {
+  it('a miss lowers ease and correct answers raise it, within bounds', () => {
+    bumpSrs('spanish', ['casa']);
+    expect(srsEntry('spanish', 'casa')?.ease).toBe(0.85);
+    for (let i = 0; i < 40; i++) bumpSrs('spanish', [], ['casa']);
+    expect(srsEntry('spanish', 'casa')?.ease).toBe(2);
+    for (let i = 0; i < 40; i++) bumpSrs('spanish', ['casa']);
+    expect(srsEntry('spanish', 'casa')?.ease).toBe(0.7);
+  });
+
+  it('leaves the first interval fixed and scales later ones by ease', () => {
+    const base = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(base);
+    bumpSrs('spanish', [], ['casa']);
+    expect(srsEntry('spanish', 'casa')?.dueAt).toBe(base + BOX_INTERVAL_DAYS[1] * DAY_MS);
+    bumpSrs('spanish', [], ['casa']);   // box 2, ease 1.10
+    vi.restoreAllMocks();
+    expect(srsEntry('spanish', 'casa')?.dueAt).toBeCloseTo(base + BOX_INTERVAL_DAYS[2] * 1.1 * DAY_MS, -2);
+  });
+
+  it('entries saved before ease existed still load and schedule', () => {
+    store.set('vq_srs_spanish', JSON.stringify({ casa: { box: 2, dueAt: 5 } }));
+    expect(srsEntry('spanish', 'casa')?.box).toBe(2);
+    bumpSrs('spanish', [], ['casa']);
+    expect(srsEntry('spanish', 'casa')?.ease).toBe(1.05);
+  });
+});
