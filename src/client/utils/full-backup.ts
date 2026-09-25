@@ -15,6 +15,7 @@
 
 import { keys, readString, writeString, isRecord } from './storage.ts';
 import { isBackedUp } from './storage-keys.ts';
+import { CURRENT_SCHEMA, SCHEMA_KEY } from './storage-migrations.ts';
 
 const FORMAT  = 'vocabapp-full-backup';
 const VERSION = 1;
@@ -31,6 +32,11 @@ export interface FullBackup {
   format:     typeof FORMAT;
   version:    number;
   exportedAt: string;
+  /**
+   * The storage layout the data was in (see storage-migrations.ts). Absent on backups made
+   * before layouts were versioned, which are read as layout 0 — the original one.
+   */
+  schema?:    number;
   data:       Record<string, string>;
 }
 
@@ -51,7 +57,7 @@ export function buildFullBackup(now = new Date()): FullBackup {
     const v = readString(k);
     if (v !== null) data[k] = v;
   }
-  return { format: FORMAT, version: VERSION, exportedAt: now.toISOString(), data };
+  return { format: FORMAT, version: VERSION, exportedAt: now.toISOString(), schema: CURRENT_SCHEMA, data };
 }
 
 /**
@@ -67,11 +73,19 @@ export function applyFullBackup(raw: string): number {
   if (typeof parsed.version === 'number' && parsed.version > VERSION) {
     throw new Error('That backup was made by a newer version of the app.');
   }
+  const schema = typeof parsed.schema === 'number' && Number.isInteger(parsed.schema) && parsed.schema >= 0 ? parsed.schema : 0;
+  if (schema > CURRENT_SCHEMA) {
+    throw new Error('That backup was made by a newer version of the app.');
+  }
   let written = 0;
   for (const [k, v] of Object.entries(parsed.data)) {
     if (typeof v !== 'string' || !isDataKey(k)) continue;
     if (writeString(k, v)) written++;
   }
+  // The restored keys are in the layout the backup was taken at, not necessarily this browser's.
+  // Put the version back to match so the migrations run over them on the next start. (Steps only
+  // touch legacy-layout keys, so anything already current is left as it is.)
+  writeString(SCHEMA_KEY, String(schema));
   return written;
 }
 

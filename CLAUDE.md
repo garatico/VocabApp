@@ -282,6 +282,18 @@ read from or write to `vocabulary.db`.
   fixture; `tests/client/storage-keys.test.ts` fails on an unregistered family, a dead
   entry, or any change to what a backup includes (it diffs against the old hand-written
   filter, kept there as the oracle). Names are untouched — this is about knowing, not moving.
+- **Stored data is versioned and migrated on startup** (`utils/storage-migrations.ts`).
+  `vq_schema_version` holds the id of the last completed step; `storage-boot.ts` — imported
+  *first* in `app.ts` and `admin.ts` so it finishes before any module reads storage — runs
+  every newer step in order. Steps are **self-contained** (raw keys only; they must not
+  import modules that evolve), **idempotent**, and **write the new value before removing the
+  old**; a failing step stops the run, leaves the version where it was, and retries next start.
+  To add one: append `{ id: N+1, … }` (never edit or reorder a shipped step), add a legacy
+  fixture case and a per-step test in `tests/client/storage-migrations.test.ts`, and if the
+  layout of a *seeded* key changes, regenerate the golden. A full backup records its `schema`;
+  a restore sets the version back to it so the steps run over the restored data. The old lazy
+  migrations in `mastery.ts` / `word-lists.ts` / `user-content.ts` are still there as belt and
+  braces; the test file proves the two agree (hand-built and 60 fuzzed browsers).
 - **Flat asset URLs, explicit index**: `data/images/` and `data/emoji/` are
   partitioned by domain on disk and flat in the URL space. `lib/flat-static.ts`
   builds one filename → path index and *reports* a name that exists in two

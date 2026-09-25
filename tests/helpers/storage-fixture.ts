@@ -274,6 +274,10 @@ export async function seedRealisticStorage(store: Store): Promise<SeedResult> {
   raw('ml_sidebar_section_collapsed_smart', 'true');
   raw('s_section_open_bodyTable', 'true');
 
+  // ── Startup: the migrations stamp the layout version, as they do on every real start ──
+  (await import('../../src/client/utils/storage-migrations.ts')).runMigrations();
+  claim('api');
+
   // ── Every remaining setting, at a valid non-default value ────────────────────
   // Written raw (their setters are private to DOM handlers). Each is read back by
   // Settings.get…, so losing or renaming one shows up in the semantic snapshot.

@@ -143,6 +143,8 @@ export const KEY_FAMILIES: readonly KeyFamily[] = [
   // ── Housekeeping — never backed up ────────────────────────────────────────
   exact ('s_last_backup_at',    'bookkeeping', 'utils/full-backup.ts'),
   exact ('s_backup_first_seen', 'bookkeeping', 'utils/full-backup.ts'),
+  exact ('vq_schema_version',  'bookkeeping', 'utils/storage-migrations.ts',
+    { note: 'the layout the stored data is in; a backup records it separately and a restore sets it back' }),
 
   // ── Settings: everything else under s_ is a preference ────────────────────
   exact ('s_onboarding_seen',  'ui', 'app.ts', { note: 'the welcome card has been shown or dismissed' }),

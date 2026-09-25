@@ -32,6 +32,15 @@ function oldIsDataKey(key: string): boolean {
 /** Keys the old filter never had a chance to see: the admin panel's are unprefixed, so it excluded them. */
 const ADMIN_KEYS = KEY_FAMILIES.filter(f => f.pattern.startsWith('admin_')).map(f => f.pattern);
 
+/**
+ * The deliberate differences from the old filter, and only these. Each is a decision:
+ *  - the admin panel's keys were excluded only by accident (no prefix); now by rule;
+ *  - vq_schema_version (Phase 2) is bookkeeping about *this browser's* layout. Backing it up
+ *    would let a restore claim old data was already migrated, so a backup records the schema
+ *    beside the data instead (full-backup.ts) and a restore sets the version to match.
+ */
+const DELIBERATE = [...ADMIN_KEYS, 'vq_schema_version'];
+
 describe('equivalence with the filter the registry replaced', () => {
   const corpus = (): string[] => {
     const fromRegistry = KEY_FAMILIES.flatMap(f => f.match === 'prefix'
@@ -47,12 +56,15 @@ describe('equivalence with the filter the registry replaced', () => {
     return [...new Set([...GOLDEN_KEYS, ...fromRegistry, ...fromSource, ...adversarial])];
   };
 
-  it('agrees on every known, adversarial and registered key — except the admin keys, which were excluded and still are', () => {
+  it('agrees on every known, adversarial and registered key — except the deliberate differences', () => {
     const disagreements = corpus().filter(k => oldIsDataKey(k) !== isBackedUp(k));
     // The old filter excluded admin_* only because it had no rule for unprefixed keys; the registry
     // makes that explicit (`backup: false`). Any *other* disagreement is a behaviour change.
-    expect(disagreements.filter(k => !ADMIN_KEYS.includes(k))).toEqual([]);
+    expect(disagreements.filter(k => !DELIBERATE.includes(k))).toEqual([]);
     for (const k of ADMIN_KEYS) { expect(oldIsDataKey(k)).toBe(false); expect(isBackedUp(k)).toBe(false); }
+    // The one place the old filter would have been wrong: it would have backed up the version marker.
+    expect(oldIsDataKey('vq_schema_version')).toBe(true);
+    expect(isBackedUp('vq_schema_version')).toBe(false);
   });
 
   it('agrees on 20,000 random keys built from the prefixes and pieces the app uses', () => {
@@ -64,13 +76,13 @@ describe('equivalence with the filter the registry replaced', () => {
     for (let i = 0; i < 20_000; i++) {
       const n = 1 + Math.floor(rnd() * 4);
       const k = Array.from({ length: n }, () => pieces[Math.floor(rnd() * pieces.length)]).join('');
-      if (oldIsDataKey(k) !== isBackedUp(k) && !ADMIN_KEYS.includes(k)) bad.push(k);
+      if (oldIsDataKey(k) !== isBackedUp(k) && !DELIBERATE.includes(k)) bad.push(k);
     }
     expect(bad.slice(0, 10)).toEqual([]);
   });
 
   it('every key the golden fixture holds is backed up exactly when it used to be', () => {
-    for (const k of GOLDEN_KEYS) expect([k, isBackedUp(k)]).toEqual([k, oldIsDataKey(k)]);
+    for (const k of GOLDEN_KEYS.filter(k => !DELIBERATE.includes(k))) expect([k, isBackedUp(k)]).toEqual([k, oldIsDataKey(k)]);
   });
 });
 
@@ -112,7 +124,7 @@ describe('the registry itself', () => {
   it('only bookkeeping and explicit opt-outs are excluded from backups', () => {
     const excluded = KEY_FAMILIES.filter(f => (f.backup ?? f.class !== 'bookkeeping') === false).map(f => f.pattern).sort();
     expect(excluded).toEqual([
-      's_backup_first_seen', 's_last_backup_at',
+      's_backup_first_seen', 's_last_backup_at', 'vq_schema_version',
       ...ADMIN_KEYS,
     ].sort());
   });

@@ -5,6 +5,8 @@
  * theme toggle + tab navigation, then initialises everything.
  */
 
+// FIRST, on purpose: migrates stored data before any module below reads it (see storage-boot.ts).
+import '../utils/storage-boot.ts';
 import { hasReachableBackend } from './backend-probe.ts';
 import { loadMeta, initEditor, isFormDirty, discardFormChanges } from './admin-editor.js';
 import { loadStatistics, initStats } from './admin-stats.js';

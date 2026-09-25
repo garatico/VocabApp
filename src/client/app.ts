@@ -1,5 +1,7 @@
 // ── Imports ───────────────────────────────────────────────────────────────────
 
+// FIRST, on purpose: migrates stored data before any module below reads it (see storage-boot.ts).
+import './utils/storage-boot.ts';
 import { bindTableControls, resolveDirection, syncTableStyleUI } from './modes/table-controls.ts';
 import { initPWA } from './utils/pwa.ts';
 import { bindStartHandler }                    from './start-handler.ts';

@@ -139,12 +139,12 @@ describe('semantic equivalence — what the app sees', () => {
 /** Families the fixture cannot produce, each with the reason. A new entry is a decision. */
 const KNOWN_UNCOVERED: Record<string, string> = {
   vq_known_: 'LEGACY. The pre-lists "known words" set; word-lists.ts migrates it into a list named "Known" and deletes '
-    + 'it on first read, so seeding it would change the lists. Phase 2 folds that migration into the framework and tests it there.',
+    + 'it on first read, so seeding it would change the lists. Covered instead by storage-migrations.test.ts (migration step 2, plus a differential test against the old lazy code).',
   s_kid_friendly_mode: 'LEGACY name of s_simple_mode, read as a fallback only while the new key is absent '
-    + '(settings.ts getSimpleMode). Seeding it beside the new key would test nothing; Phase 2 covers it with a legacy-only fixture.',
-  s_conj_keep_shape: 'LEGACY name of s_conj_deselected, read as a fallback only while the new key is absent. Same treatment.',
+    + '(settings.ts getSimpleMode). Seeding it beside the new key would test nothing; covered instead by migration step 5 in storage-migrations.test.ts.',
+  s_conj_keep_shape: 'LEGACY name of s_conj_deselected, read as a fallback only while the new key is absent. Covered by migration step 6 in storage-migrations.test.ts.',
   uc_glossorder_: 'LEGACY. The first cut of gloss ordering; user-content.ts migrates it into word overrides on read. '
-    + 'Same treatment as vq_known_.',
+    + 'Covered by migration step 4 in storage-migrations.test.ts.',
 };
 
 /** A dump key belongs to a family when it equals it or extends a trailing-underscore prefix. */
