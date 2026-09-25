@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { missingDataSlots } from '../../src/client/modes/conjugation/index.ts';
+import { missingDataSlots } from '../../src/client/modes/conjugation/helpers.ts';
 import type { Word } from '../../src/client/types.ts';
 
 const PRONOUNS = ['yo', 'tú', 'él', 'nosotros', 'vosotros', 'ellos'];

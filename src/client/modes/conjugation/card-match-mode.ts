@@ -23,7 +23,7 @@ import { PRONOUNS, TENSE_DEFS } from './data.js';
 import { activeTenses, activeRegularities, unionTenseDefs, activePronounIndices } from './controls.js';
 import {
   isOwnInfinitive, hasAnyForms, regularityOf, isSingleForm, verbKey, hiddenPronounSlots,
-} from './index.js';
+} from './helpers.js';
 import { shuffle } from '../../utils/shuffle.js';
 import {
   orderWords, getWordOrderLabels, saveSession, recordOutcome, type WordOrder,
