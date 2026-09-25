@@ -238,6 +238,8 @@ export async function renderGuessBlankMode({
 
   const feedback = document.createElement('div');
   feedback.className = 'gb-feedback';
+  // A live region, so a screen reader announces the result as it appears.
+  feedback.setAttribute('role', 'status');
 
   wrap.append(header, counter, prompt, typeRow, feedback);
   container.appendChild(wrap);

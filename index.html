@@ -38,9 +38,11 @@
   </div>
 
   <main>
+      <h1 class="sr-only">VocabApp</h1>
 
       <!-- Mode Tabs -->
-      <div class="mode-tabs" role="tablist" aria-label="Quiz mode">
+      <div class="mode-tabs">
+      <div class="mode-tablist" role="tablist" aria-label="Quiz mode">
         <button class="mode-tab active" data-mode="table" role="tab" aria-selected="true" data-i18n="nav.table">Table</button>
         <button class="mode-tab" data-mode="picture" role="tab" aria-selected="false" data-i18n="nav.pictureQuiz">Picture Quiz</button>
         <button class="mode-tab" data-mode="trivia" role="tab" aria-selected="false" data-i18n="nav.trivia">Trivia</button>
@@ -52,6 +54,7 @@
         <button class="mode-tab" data-mode="history" role="tab" aria-selected="false" data-i18n="nav.history">History</button>
         <button class="mode-tab" data-mode="settings" role="tab" aria-selected="false">⚙ <span data-i18n="nav.settings">Settings</span></button>
         <button class="mode-tab chat-tab" data-mode="chat" role="tab" aria-selected="false" title="Local AI chat — dev builds on desktop only" hidden>🤖 <span data-i18n="nav.aiChat">AI Chat</span></button>
+      </div>
         <a href="/admin" class="mode-tab admin-tab" title="Open Admin Panel" hidden><span data-i18n="nav.admin">Admin</span> ↗</a>
       </div>
 
@@ -148,7 +151,7 @@
               <button type="button" class="sort-order-btn" data-pool="band" data-i18n="controls.level">Level</button>
             </div>
             <div class="size-row" id="topNRow">
-              <select id="sizeSelect">
+              <select id="sizeSelect" aria-label="Number of words">
                 <option value="100">100 Most Common</option>
                 <option value="250">250 Most Common</option>
                 <option value="500">500 Most Common</option>
@@ -187,7 +190,7 @@
                cards once tenses are multiplied in. -->
           <div class="control-group" id="conjSizeSelectGroup" style="display:none">
             <label data-i18n="controls.verbs">Verbs</label>
-            <select id="conjSizeSelect">
+            <select id="conjSizeSelect" aria-label="Number of verbs">
               <option value="5">5 Most Common</option>
               <option value="10">10 Most Common</option>
               <option value="25">25 Most Common</option>
@@ -738,7 +741,7 @@
           </div>
         </div>
 
-        <div id="tableFeedback" class="feedback"></div>
+        <div id="tableFeedback" class="feedback" role="status"></div>
 
         <div class="progressWrap">
           <div class="progress">
@@ -2279,7 +2282,7 @@
           </div>
           <div class="settings-toolbar-item">
             <span class="settings-toolbar-label" data-i18n="settings.appearance.uiLanguage" title="The language of the app's own interface — menus, labels and buttons — separate from the language you're studying" data-i18n-title="settings.appearance.uiLanguageDesc">App language</span>
-            <select class="settings-toolbar-select" id="settingUILanguage">
+            <select class="settings-toolbar-select" id="settingUILanguage" aria-label="App language">
               <option value="english" selected>English</option>
               <option value="spanish">Español</option>
               <option value="french" disabled title="Coming soon" data-i18n-title="settings.appearance.comingSoon">Français</option>

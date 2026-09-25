@@ -295,7 +295,7 @@
 .sort-order-btn.active,
 .conj-toggle-btn.active {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* ── Responsive ── */

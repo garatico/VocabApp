@@ -38,7 +38,7 @@ export function seedStarterLists(lang: string): void {
   if (readString(seededKey(lang)) === 'true') return;
   const existing = getSmartLists(lang);
   addFolder(`smart_${lang}`, STARTER_FOLDER);
-  setFolderStyle(`smart_${lang}`, STARTER_FOLDER, { emoji: '🎓', color: '#7c5cbf' });
+  setFolderStyle(`smart_${lang}`, STARTER_FOLDER, { emoji: '🎓', color: '#6444ad' });
   for (const { name, emoji, domains } of STARTER_LISTS) {
     if (existing[name]) continue;
     saveSmartRule(lang, name, {

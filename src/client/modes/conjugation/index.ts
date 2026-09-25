@@ -320,6 +320,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   orderLabel.textContent = 'Order';
   const orderSel = document.createElement('select');
   orderSel.className = 'conj-order-select';
+  orderSel.setAttribute('aria-label', 'Verb order');
   orderSel.title = 'Order of the verbs in this quiz';
   getWordOrderLabels().forEach(([value, label]) => {
     const o = document.createElement('option');
@@ -835,6 +836,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
 
   const sizeSel = document.createElement('select');
   sizeSel.className = 'conj-order-select conj-full-size';
+  sizeSel.setAttribute('aria-label', 'Number of verbs');
   sizeSel.title = 'Verbs shown at once. Each verb is one card per selected tense.';
   CONJ_PAGE_SIZES.forEach(n => {
     const o = document.createElement('option');

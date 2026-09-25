@@ -166,6 +166,7 @@ export function renderConjOneAtATime({
   orderLabel.textContent = 'Order';
   const orderSel = document.createElement('select');
   orderSel.className = 'conj-order-select';
+  orderSel.setAttribute('aria-label', 'Verb order');
   getWordOrderLabels().forEach(([value, label]) => {
     const o = document.createElement('option');
     o.value = value; o.textContent = label; o.selected = value === verbOrder;

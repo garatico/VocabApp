@@ -19,15 +19,16 @@
 
   /* Text */
   --text:       #1a1916;   /* primary readable text    */
-  --text-muted: #7a7870;   /* labels, placeholders     */
+  --text-muted: #66645c;   /* labels, placeholders — 5.0:1 on --surface2, was #7a7870 (3.8:1) */
 
   /* Accent — primary interactive colour */
   --accent:       #3d6b4f;
   --accent-light: #e8f2ec;           /* tinted accent background */
   --accent-hover: #2e5340;
+  --on-accent:    #ffffff;           /* text on a solid --accent / --accent-hover fill */
 
   /* Semantic — danger */
-  --danger:        #c0392b;
+  --danger:        #9b2c21;
   --danger-light:  #fdf0ee;
   /* Border and hover fill for danger buttons. These were hard-coded as
      #e8a09a / #f9dbd8 in five places, which meant the Give Up buttons kept a
@@ -36,7 +37,7 @@
   --danger-hover:  #f9dbd8;
 
   /* Semantic — quiz feedback */
-  --correct:         #2e7d32;
+  --correct:         #235f27;   /* 5.4:1 on --correct-light (was #2e7d32, 4.46:1) */
   --correct-light:   #d7f8d5;
   --incorrect:       #d32f2f;
   --incorrect-light: #ffe5e5;
@@ -94,7 +95,7 @@
   /* My Lists — one accent per list kind (ordinary lists keep --accent),
      so Smart Lists and Cross-Language Lists read as their own section in the
      sidebar rather than three identically-colored groups. */
-  --ml-accent-smart:       #7c5cbf;
+  --ml-accent-smart:       #6444ad;
   --ml-accent-smart-light: #efe9fa;
   --ml-accent-multi:       #0f7d94;
   --ml-accent-multi-light: #e0f4f7;
@@ -134,13 +135,14 @@ html.dark {
   --border-strong: #524f49;
 
   --text:       #edecea;
-  --text-muted: #908d85;
+  --text-muted: #a29f97;
 
   --accent:       #5a9e72;
-  --accent-light: #1d3327;
+  --accent-light: #18291f;
   --accent-hover: #6db584;
+  --on-accent:    #0f1a13;           /* white on the light dark-mode accent was 3.2:1 */
 
-  --danger:        #e05c4b;
+  --danger:        #f07a6a;
   --danger-light:  #2e1a18;
   --danger-border: #6b3630;
   --danger-hover:  #3d211e;
@@ -164,7 +166,7 @@ html.dark {
   --gender-color-masculine: #89cff0;
   --gender-color-feminine:  #f4c2c2;
 
-  --ml-accent-smart:       #a58ce0;
+  --ml-accent-smart:       #b9a4ec;
   --ml-accent-smart-light: #2a2140;
   --ml-accent-multi:       #4fc3d9;
   --ml-accent-multi-light: #122e33;
@@ -189,4 +191,15 @@ html.dark {
   --lang-dutch-bg:      #6b4415;
   --lang-chinese-bg:    #5c1f45;
   --lang-japanese-bg:   #6b2020;
+}
+
+/* Visually hidden, still read by screen readers (e.g. the page's <h1>). */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }

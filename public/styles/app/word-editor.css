@@ -29,7 +29,7 @@
   font-family: 'Sora', sans-serif;
   padding: 0.45rem 1rem;
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   font-weight: 600;
@@ -93,7 +93,7 @@ html.dark .word-editor button:hover:not(:disabled) { box-shadow: 0 4px 12px rgba
 }
 .word-editor .sort-order-btn:last-child { border-right: none; }
 .word-editor .sort-order-btn:hover { background: var(--surface2); color: var(--text); }
-.word-editor .sort-order-btn.active { background: var(--accent); color: #fff; }
+.word-editor .sort-order-btn.active { background: var(--accent); color: var(--on-accent); }
 
 /* ── from public/styles/admin/filter-bar.css ── */
 .word-editor .filter-bar {
@@ -254,7 +254,7 @@ html.dark .word-editor .filter-chip[data-band]:not(.active) {
 .word-editor .filter-chip.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 .word-editor .custom-count-input {
   width: 5.5rem;
@@ -803,7 +803,7 @@ html.dark .word-editor .form-group select.we-gender[data-gender="feminine"] { co
   cursor: pointer;
 }
 .word-editor .emoji-picker-tab:hover { background: var(--border); color: var(--text); }
-.word-editor .emoji-picker-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.word-editor .emoji-picker-tab.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .word-editor .emoji-picker-grid {
   display: flex;
   flex-wrap: wrap;

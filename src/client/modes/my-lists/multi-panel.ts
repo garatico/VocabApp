@@ -225,6 +225,7 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
 
   const langSel = document.createElement('select');
   langSel.className = 'ml-lang-select ml-multi-add-lang';
+  langSel.setAttribute('aria-label', 'Language');
   LANGUAGES.forEach(({ name, label }) => {
     const opt = document.createElement('option');
     opt.value = name; opt.textContent = label;

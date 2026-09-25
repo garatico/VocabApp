@@ -115,6 +115,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   langLabel.textContent = 'Language';
   const langSel = document.createElement('select');
   langSel.className = 'ml-lang-select';
+  langSel.setAttribute('aria-label', 'Language');
   LANGUAGES.forEach(({ name, label }) => {
     const opt = document.createElement('option');
     opt.value = name; opt.textContent = label;
@@ -1598,6 +1599,9 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     const newOnes = added.slice(before);
     if (newOnes.length === 0) return;
     const [head, ...rows] = newOnes;
+    // The header <li> sits directly in a div (listNav), not a list; the
+    // section's own <ul> body below is the real list, so this is presentational.
+    head.setAttribute('role', 'presentation');
 
     const labelSpan = head.querySelector('span');
     const toggleBtn = document.createElement('button');
@@ -1684,8 +1688,10 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     // removed, so this still tags them — nothing to keyboard-navigate to
     // while hidden, but they're ready the moment their section reopens.
     ctx.listNav.querySelectorAll<HTMLElement>('.ml-list-item').forEach(li => {
+      // Focusable for arrow-key navigation, but deliberately not role=button:
+      // each card holds its own real buttons (menu, folder toggles), and a
+      // button may not contain interactive content.
       li.tabIndex = 0;
-      li.setAttribute('role', 'button');
     });
     if (hadFocus) ctx.listNav.querySelector<HTMLElement>('.ml-list-item.active')?.focus();
     syncCollapseAllLabel();

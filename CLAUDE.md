@@ -217,6 +217,15 @@ read from or write to `vocabulary.db`.
   bare elements globally, which the main app cannot). Edit those, then run
   `npm run build:word-editor-css`; `tests/client/word-editor-css.test.ts`
   fails if the checked-in copy is stale.
+- **Accessibility is a tested bar, not a wish.** `tests/e2e/a11y.spec.ts` runs
+  axe-core (WCAG 2.1 A/AA + best-practice) on every tab, light and dark, with and
+  without a quiz running, and expects *zero* violations. Colour pairs come from
+  `variables.css` tokens — text on a solid accent fill uses `--on-accent` (white
+  in light, near-black in dark), never a literal `#fff`; a user-chosen colour
+  (folders) is mixed toward `--text` before being used as text. Result messages
+  are `role="status"` live regions. Only real tabs carry `aria-selected` (the
+  Admin link shares `.mode-tab` but is not one). Run it with
+  `npx playwright test tests/e2e/a11y.spec.ts`.
 - **Flat asset URLs, explicit index**: `data/images/` and `data/emoji/` are
   partitioned by domain on disk and flat in the URL space. `lib/flat-static.ts`
   builds one filename → path index and *reports* a name that exists in two

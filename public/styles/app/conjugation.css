@@ -406,10 +406,10 @@
   font-weight: 700;
 }
 @media (prefers-color-scheme: dark) {
-  .conj-pronoun-toggle.active { color: hsl(var(--pronoun-hue, 210) 60% 72%); }
+  .conj-pronoun-toggle.active { color: hsl(var(--pronoun-hue, 210) 60% 78%); }
 }
 :root[data-theme="dark"] .conj-pronoun-toggle.active {
-  color: hsl(var(--pronoun-hue, 210) 60% 72%);
+  color: hsl(var(--pronoun-hue, 210) 60% 78%);
 }
 
 /* Hidden pronoun rows (toggled off) */
@@ -1019,7 +1019,6 @@ html:not(.dark) .crt-input.incorrect {
   font-size: 0.64rem;
   font-weight: 400;
   font-style: italic;
-  opacity: 0.75;
 }
 
 @media (max-width: 640px) {
@@ -1242,7 +1241,7 @@ html:not(.dark) .crt-input.incorrect {
    tinted underline in the same hue, so the color reads as a guide line
    running the full width of the table, not just a label on the left edge. */
 .conj-verb-row .conj-pronoun {
-  color: hsl(var(--pronoun-hue, 210) 50% 42%);
+  color: hsl(var(--pronoun-hue, 210) 55% 30%);
 }
 /* Specificity has to clear the legacy 2-column-grid nth-child(3) border
    rule further down this file (a leftover from Grid view's 2-column inner
@@ -1267,7 +1266,7 @@ html:not(.dark) .crt-input.incorrect {
    the way Full's does, so there is no border left for a lower-specificity
    color to lose a fight against. */
 .conj-cards-grid:not(.conj-cards-grid--full) .conj-pronoun {
-  color: hsl(var(--pronoun-hue, 210) 50% 42%);
+  color: hsl(var(--pronoun-hue, 210) 55% 30%);
 }
 .conj-cards-grid:not(.conj-cards-grid--full) .conj-row[data-pi] {
   border-bottom-color: hsl(var(--pronoun-hue, 210) 45% 45% / 0.5);
@@ -1872,7 +1871,7 @@ html:not(.dark) .crt-input.incorrect {
   font-size: 1.3rem;
   font-weight: 700;
   margin-top: 0.5rem;
-  color: hsl(var(--pronoun-hue, 210) 50% 42%);
+  color: hsl(var(--pronoun-hue, 210) 55% 30%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -2005,7 +2004,7 @@ html:not(.dark) .crt-input.incorrect {
    the alternating .crt-table row stripe rather than fighting it. */
 .crt-pronoun {
   font-weight: 600;
-  color: hsl(var(--pronoun-hue, 210) 50% 38%);
+  color: hsl(var(--pronoun-hue, 210) 55% 30%);
   white-space: nowrap;
 }
 .crt-verb {

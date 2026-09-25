@@ -43,6 +43,7 @@ function buildFixture(): { tableArea: HTMLElement; pictureArea: HTMLElement; con
   for (const m of MODES) {
     const btn = document.createElement('button');
     btn.className = 'mode-tab';
+    btn.setAttribute('role', 'tab');   // as in index.html
     btn.dataset.mode = m;
     document.body.appendChild(btn);
     tabs[m] = btn;
@@ -346,6 +347,17 @@ describe('bindModeSwitch — mode-tab active state and scroll-into-view', () => 
     expect(tabs.picture.getAttribute('aria-selected')).toBe('true');
     expect(tabs.table.classList.contains('active')).toBe(false);
     expect(tabs.table.getAttribute('aria-selected')).toBe('false');
+  });
+
+  it('never puts aria-selected on the Admin link, which shares .mode-tab but is not a tab', () => {
+    const { tableArea, pictureArea, conjugationArea } = buildFixture();
+    const admin = document.createElement('a');
+    admin.className = 'mode-tab admin-tab';
+    document.body.appendChild(admin);
+    bindModeSwitch({ tableArea, pictureArea, conjugationArea });
+    tabs.picture.click();
+    expect(tabs.picture.getAttribute('aria-selected')).toBe('true');   // the handler did run
+    expect(admin.hasAttribute('aria-selected')).toBe(false);
   });
 
   it('scrolls the newly active tab into view by default', () => {

@@ -177,7 +177,9 @@ export function bindModeSwitch({
     document.querySelectorAll<HTMLElement>('.mode-tab').forEach(btn => {
       const isActive = btn.dataset.mode === mode;
       btn.classList.toggle('active', isActive);
-      btn.setAttribute('aria-selected', String(isActive));
+      // Only real tabs carry aria-selected — the Admin link (an <a> that
+      // navigates away) shares the .mode-tab class but is not a tab.
+      if (btn.getAttribute('role') === 'tab') btn.setAttribute('aria-selected', String(isActive));
       if (isActive && scrollTabIntoView) btn.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
     });
 

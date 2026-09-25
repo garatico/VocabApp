@@ -75,7 +75,7 @@
 /* Inline action buttons */
 .summary-retry-btn {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
   padding: 0.18rem 0.65rem;

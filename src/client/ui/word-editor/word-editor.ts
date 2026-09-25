@@ -85,7 +85,7 @@ export function createWordEditor(
   filterBar.innerHTML = `
     <div class="filter-field">
       <span class="filter-label">Language</span>
-      <select id="${id('langSelect')}"></select>
+      <select id="${id('langSelect')}" aria-label="Language"></select>
       <span class="lang-select-flag" id="${id('langSelectFlag')}"></span>
     </div>
     <div class="filter-divider"></div>
@@ -138,7 +138,7 @@ export function createWordEditor(
       </span>
       <button type="button" class="ghost word-list-new-btn" id="${id('newWordBtn')}" title="Add a new word">+ New Word</button>
     </div>
-    <div class="word-list" id="${id('wordList')}">
+    <div class="word-list" id="${id('wordList')}" tabindex="0" role="region" aria-label="Words">
       <div class="word-list-empty">Search to load words</div>
     </div>
     <div class="word-list-pager">

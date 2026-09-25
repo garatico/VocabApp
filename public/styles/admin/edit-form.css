@@ -431,7 +431,7 @@ html.dark .form-group select.we-gender[data-gender="feminine"]  { color: hsl(340
   cursor: pointer;
 }
 .emoji-picker-tab:hover  { background: var(--border); color: var(--text); }
-.emoji-picker-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.emoji-picker-tab.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 
 /* The grid itself — fixed-size cells, wrapping, scrollable once it outgrows
    the panel's own max-height (set above), same "browse a big set in a small

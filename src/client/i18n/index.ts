@@ -47,6 +47,12 @@ function withOriginal(el: HTMLElement, attr: string, current: () => string): str
  * after this module's initial pass.
  */
 export function applyTranslations(root: ParentNode = document): void {
+  // Screen readers pick their pronunciation voice from <html lang>; without
+  // this a Spanish interface was read out with English phonetics.
+  if (root === document) {
+    document.documentElement.lang = Settings.getUILanguage() === 'spanish' ? 'es' : 'en';
+  }
+
   root.querySelectorAll<HTMLElement>('[data-i18n]').forEach(el => {
     const key = el.dataset.i18n!;
     const orig = withOriginal(el, 'text', () => el.textContent ?? '');

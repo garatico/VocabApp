@@ -129,7 +129,7 @@
   color: var(--accent);
   cursor: pointer;
 }
-.ml-new-list-btn:hover { background: var(--accent); color: #fff; }
+.ml-new-list-btn:hover { background: var(--accent); color: var(--on-accent); }
 
 .ml-list-nav {
   list-style: none;
@@ -667,7 +667,7 @@
   margin-left: auto;
   padding: 0.28rem 0.8rem;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
   font-size: 0.78rem;
@@ -765,7 +765,7 @@
 .ml-variation-option--picked {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .ml-variation-actions {
@@ -788,7 +788,7 @@
   background: var(--accent);
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -895,7 +895,7 @@
   padding: 0;
   transition: background var(--transition-fast), color var(--transition-fast);
 }
-.ml-add-btn:hover { background: var(--accent); color: #fff; }
+.ml-add-btn:hover { background: var(--accent); color: var(--on-accent); }
 
 
 /* ── POS badge on word rows ──────────────────────────────────── */
@@ -1002,7 +1002,7 @@ html.dark .ml-word-band[data-band] {
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   cursor: pointer;
   white-space: nowrap;
   transition: background var(--transition-fast), border-color var(--transition-fast);
@@ -1052,7 +1052,7 @@ html.dark .ml-word-band[data-band] {
   cursor: pointer;
   transition: background var(--transition-fast), color var(--transition-fast);
 }
-.ml-add-all-btn:hover { background: var(--accent); color: #fff; }
+.ml-add-all-btn:hover { background: var(--accent); color: var(--on-accent); }
 
 /* ── Existing words list ─────────────────────────────────────── */
 .ml-word-list {
@@ -1491,7 +1491,7 @@ mark.search-match {
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 .ml-move-tab:first-child { border-right: 1px solid var(--border); }
-.ml-move-tab.active { background: var(--accent); color: #fff; }
+.ml-move-tab.active { background: var(--accent); color: var(--on-accent); }
 .ml-move-tab:not(.active):hover { background: var(--border); color: var(--text); }
 
 /* ── Mastery button ──────────────────────────────────────────── */
@@ -1884,7 +1884,7 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
 }
 .ml-add-btn:hover {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* min-width guard so this stays a "narrow desktop, still side-by-side" rule
@@ -2371,7 +2371,7 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
 .ml-profile-head { color: var(--ml-accent-profile); }
 
 .ml-single-head .ml-new-list-btn { border-color: var(--accent); color: var(--accent); }
-.ml-single-head .ml-new-list-btn:hover { background: var(--accent); color: #fff; }
+.ml-single-head .ml-new-list-btn:hover { background: var(--accent); color: var(--on-accent); }
 
 .ml-smart-head .ml-new-list-btn {
   border-color: var(--ml-accent-smart);
@@ -2811,7 +2811,9 @@ button.ml-profile-editor-group-title {
   border-left: 3px solid var(--folder-color);
   background: color-mix(in srgb, var(--folder-color) 10%, transparent);
 }
-.ml-folder-head--colored .ml-section-toggle-btn { color: var(--folder-color); }
+/* Mixed toward the text colour: a folder's colour is user data, and a dark
+   purple or pale yellow used as text fails contrast on one theme or the other. */
+.ml-folder-head--colored .ml-section-toggle-btn { color: color-mix(in srgb, var(--folder-color) 45%, var(--text)); }
 .ml-folder-style-btn {
   margin-left: auto;
   border: 0; background: none; cursor: pointer;

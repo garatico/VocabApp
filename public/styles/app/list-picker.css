@@ -162,7 +162,7 @@
   text-align: center;
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 .preset-picker-update-btn:hover:not(:disabled) {
   background: var(--accent-hover);
@@ -395,7 +395,7 @@
   background: var(--surface2);
   color: var(--text);
 }
-.list-picker-ok-btn:hover     { background: var(--accent); color: #fff; border-color: var(--accent); }
+.list-picker-ok-btn:hover     { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .list-picker-cancel-btn:hover { background: var(--border); }
 
 /* ── Language badge — which language a list is in, or "Mixed" ──

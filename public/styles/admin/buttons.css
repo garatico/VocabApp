@@ -6,7 +6,7 @@ button {
   font-family: 'Sora', sans-serif;
   padding: 0.45rem 1rem;
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   font-weight: 600;
@@ -89,4 +89,4 @@ button.ghost:hover:not(:disabled) {
 }
 .sort-order-btn:last-child { border-right: none; }
 .sort-order-btn:hover { background: var(--surface2); color: var(--text); }
-.sort-order-btn.active { background: var(--accent); color: #fff; }
+.sort-order-btn.active { background: var(--accent); color: var(--on-accent); }

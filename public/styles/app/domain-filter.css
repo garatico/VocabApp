@@ -85,7 +85,7 @@
 .domain-qpick.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 .domain-qpick.active:hover {
   background: var(--accent-hover);
@@ -101,7 +101,7 @@
   padding: 0.15rem 0.45rem;
   border-radius: var(--radius-sm);
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border: none;
   user-select: none;
   cursor: default;
@@ -180,7 +180,7 @@
 .domain-suggestion:hover .domain-suggestion-count,
 .domain-suggestion.highlighted .domain-suggestion-count {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* ── Active chips ────────────────────────────────────────────────────────── */
@@ -201,7 +201,7 @@
   padding: 0.18rem 0.2rem 0.18rem 0.55rem;
   border-radius: 999px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   white-space: nowrap;
 }
 

@@ -415,6 +415,7 @@ export function renderTableMode({
         selectCb.type      = 'checkbox';
         selectCb.className = 'row-select-cb';
         selectCb.title     = 'Select this word';
+        selectCb.setAttribute('aria-label', `Select ${w.word}`);
         selectCb.tabIndex  = -1;
         selectCb.checked   = snap?.selected ?? false;
         // Simple Mode hides every list-related control — see buildKnownBtn's

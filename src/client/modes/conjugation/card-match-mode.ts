@@ -228,6 +228,7 @@ export function renderConjCardMatch({
   orderLabel.textContent = 'Order';
   const orderSel = document.createElement('select');
   orderSel.className = 'conj-order-select';
+  orderSel.setAttribute('aria-label', 'Verb order');
   getWordOrderLabels().forEach(([value, label]) => {
     const o = document.createElement('option');
     o.value = value; o.textContent = label; o.selected = value === verbOrder;
@@ -265,6 +266,8 @@ export function renderConjCardMatch({
 
   const feedback = document.createElement('div');
   feedback.className = 'tv-feedback cm-feedback';
+  // A live region, so a screen reader announces the result as it appears.
+  feedback.setAttribute('role', 'status');
 
   const columns = document.createElement('div');
   columns.className = 'cm-columns';

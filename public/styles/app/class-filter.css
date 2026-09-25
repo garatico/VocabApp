@@ -234,7 +234,7 @@
 .pos-chip.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 .pos-chip.active:hover {
   background: var(--accent-hover, var(--accent));

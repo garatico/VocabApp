@@ -13,6 +13,10 @@
   align-items: stretch;
 }
 
+/* The tablist wrapper exists only to hold role=tablist (the Admin link beside
+   it is not a tab); it must not change the flex layout of the row. */
+.mode-tablist { display: contents; }
+
 .mode-tab {
   padding: 0.38rem 0.9rem;
   background: var(--surface2);

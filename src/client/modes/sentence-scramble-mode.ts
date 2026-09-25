@@ -174,6 +174,8 @@ export function renderSentenceScrambleMode({
 
   const feedback = document.createElement('div');
   feedback.className = 'ss-feedback';
+  // A live region, so a screen reader announces the result as it appears.
+  feedback.setAttribute('role', 'status');
 
   wrap.append(header, counter, hint, answerRow, bankRow, actionRow, feedback);
   container.appendChild(wrap);

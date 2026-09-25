@@ -148,7 +148,7 @@
 }
 .streak-popover-settings-btn:hover {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* ── Corner cluster: one row, inside a grey box so the group reads as one ── */

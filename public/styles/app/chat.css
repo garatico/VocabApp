@@ -255,7 +255,7 @@
 
 .chat-send-btn {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border-radius: var(--radius-sm);
   padding: 0.5rem 1.1rem;
 }

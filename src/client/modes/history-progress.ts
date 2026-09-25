@@ -30,6 +30,12 @@ function bar(pct: number, label: string, title: string): HTMLElement {
   const row = el('div', 'prog-row');
   row.title = title;
   const track = el('div', 'prog-track');
+  track.setAttribute('role', 'progressbar');
+  track.setAttribute('aria-label', label);
+  track.setAttribute('aria-valuemin', '0');
+  track.setAttribute('aria-valuemax', '100');
+  track.setAttribute('aria-valuenow', String(pct));
+  track.setAttribute('aria-valuetext', title);
   const fill = el('div', 'prog-fill');
   fill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
   track.appendChild(fill);
@@ -39,7 +45,7 @@ function bar(pct: number, label: string, title: string): HTMLElement {
 
 function section(title: string): { root: HTMLElement; body: HTMLElement } {
   const root = el('div', 'prog-section');
-  root.appendChild(el('h4', 'prog-section-title', title));
+  root.appendChild(el('h3', 'prog-section-title', title));
   const body = el('div', 'prog-section-body');
   root.appendChild(body);
   return { root, body };
@@ -85,6 +91,8 @@ export function renderProgress(body: HTMLElement, lang: string): void {
   counts.forEach((n, i) => {
     const col = el('div', 'prog-forecast-col');
     col.title = `${n} review${n === 1 ? '' : 's'}`;
+    col.setAttribute('role', 'img');
+    col.setAttribute('aria-label', `${i === 0 ? 'Now and overdue' : `In ${i} day${i === 1 ? '' : 's'}`}: ${n} review${n === 1 ? '' : 's'}`);
     col.appendChild(el('span', 'prog-forecast-n', String(n)));
     const b = el('div', 'prog-forecast-bar');
     b.style.height = `${Math.round((n / max) * 4.5 * 100) / 100}rem`;
@@ -111,6 +119,8 @@ export function renderProgress(body: HTMLElement, lang: string): void {
   // ── Activity calendar ───────────────────────────────────────────────────
   const cal = section('Active days');
   const calEl = el('div', 'prog-cal');
+  calEl.setAttribute('role', 'img');
+  calEl.setAttribute('aria-label', 'Calendar of the last 12 weeks; filled squares are days you studied');
   activityGrid(getStreakHistory(), today(), 12).forEach(col => {
     const c = el('div', 'prog-cal-col');
     col.forEach(v => c.appendChild(

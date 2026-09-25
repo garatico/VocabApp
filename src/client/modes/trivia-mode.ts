@@ -441,6 +441,8 @@ export async function renderTriviaMode({
 
   const feedback = document.createElement('div');
   feedback.className = 'tv-feedback';
+  // A live region, so a screen reader announces the result as it appears.
+  feedback.setAttribute('role', 'status');
 
   wrap.append(header, counter, prompt, optionsGrid, typeRow, hintRow, feedback);
   container.appendChild(wrap);

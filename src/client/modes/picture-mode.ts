@@ -1048,6 +1048,8 @@ function renderClickMode(
 
   const feedback = document.createElement('div');
   feedback.className = 'pm-click-feedback';
+  // A live region, so a screen reader announces the result as it appears.
+  feedback.setAttribute('role', 'status');
 
   wrap.append(header, counter, prompt, clickGrid, feedback);
   container.appendChild(wrap);

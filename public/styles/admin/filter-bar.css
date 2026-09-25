@@ -220,7 +220,7 @@ html.dark .filter-chip[data-band]:not(.active) {
 .filter-chip.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* Custom-count number input — revealed next to a "Custom…" <select> option,

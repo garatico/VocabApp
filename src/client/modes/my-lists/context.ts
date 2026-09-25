@@ -66,7 +66,7 @@ export interface ListsCtx {
   readonly selectedBands: Set<string>;
 
   // ── DOM roots ──────────────────────────────────────────────────────────────
-  readonly listNav: HTMLUListElement;
+  readonly listNav: HTMLElement;
   readonly panel: HTMLElement;
 
   // ── Redraws ────────────────────────────────────────────────────────────────
@@ -87,7 +87,7 @@ export interface ListsCtx {
 }
 
 export function createContext(
-  lang: string, listNav: HTMLUListElement, panel: HTMLElement,
+  lang: string, listNav: HTMLElement, panel: HTMLElement,
 ): ListsCtx {
   return {
     lang,

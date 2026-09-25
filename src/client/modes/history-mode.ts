@@ -94,7 +94,7 @@ function buildHistoryPanelHead(key: string, title: string, body: HTMLElement): H
   chevron.textContent = '▾';
   chevron.setAttribute('aria-hidden', 'true');
 
-  const titleEl = document.createElement('h3');
+  const titleEl = document.createElement('h2');
   titleEl.className = 'history-panel-title';
   titleEl.textContent = title;
 
@@ -145,6 +145,7 @@ export function renderHistory(container: HTMLElement, lang: string): void {
   langLabel.textContent = 'Language';
   const langSel = document.createElement('select');
   langSel.className = 'history-lang-select';
+  langSel.setAttribute('aria-label', 'Language');
   LANGUAGES.forEach(l => {
     const opt = document.createElement('option');
     opt.value = l.name; opt.textContent = l.label; opt.selected = l.name === currentLang;

@@ -85,7 +85,9 @@ export function renderMyLists(container: HTMLElement): void {
     (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? 'spanish';
   migrateMastery(lang);
 
-  const listNav = document.createElement('ul');
+  // A div, not a ul: its direct children are section headers and nested
+  // <ul> bodies, which a list may not contain. Each body is the real list.
+  const listNav = document.createElement('div');
   listNav.className = 'ml-list-nav';
 
   const panel = document.createElement('div');
