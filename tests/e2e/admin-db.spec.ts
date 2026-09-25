@@ -25,8 +25,11 @@ test('clearing a language cache round-trips through the server', async ({ page }
   await page.locator('[data-tab="dbadmin"]').click();
 
   await page.locator('.clear-lang-cache-btn[data-lang="german"]').click();
-  await expect(page.locator('#dbStatus')).toContainText(/cleared/i);
-  await expect(page.locator('#dbStatus')).toContainText(/german/i);
+  // Status is a toast now (admin-api.ts's showStatus), not a #dbStatus line.
+  // Filtered by text: other success toasts (e.g. "Statistics loaded") may be on screen too.
+  const toast = page.locator('.admin-toast--success', { hasText: /cleared/i });
+  await expect(toast).toBeVisible();
+  await expect(toast).toContainText(/german/i);
 });
 
 test('exporting a language downloads a real CSV', async ({ page }) => {
@@ -37,7 +40,9 @@ test('exporting a language downloads a real CSV', async ({ page }) => {
     page.waitForEvent('download'),
     page.locator('.export-btn[data-lang="spanish"]').click(),
   ]);
-  const filePath = await download.path();
-  expect(filePath).toBeTruthy();
-  await expect(page.locator('#dbStatus')).toContainText(/exported/i);
+  // Checked first: the toast only lives ~3s, and waiting for the file to finish
+  // writing (download.path()) can outlast it.
+  await expect(page.locator('.admin-toast--success', { hasText: /exported/i })).toBeVisible();
+  expect(download.suggestedFilename()).toMatch(/spanish.*\.csv$/i);
+  expect(await download.path()).toBeTruthy();
 });

@@ -17,7 +17,7 @@ test('the verb list loads and a verb can be selected for drilling', async ({ pag
   await expect(verbCount).not.toHaveText('—');
   await expect(verbCount).not.toHaveText('0');
 
-  const firstVerb = page.locator('.conj-verb-item').first();
+  const firstVerb = page.locator('#conjVerbList .word-item').first();
   await firstVerb.click();
 
   await expect(page.locator('#conjTableCard')).toBeVisible();
