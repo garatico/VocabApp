@@ -294,6 +294,13 @@ read from or write to `vocabulary.db`.
   a restore sets the version back to it so the steps run over the restored data. The old lazy
   migrations in `mastery.ts` / `word-lists.ts` / `user-content.ts` are still there as belt and
   braces; the test file proves the two agree (hand-built and 60 fuzzed browsers).
+- **Conjugation is `conjugation/{index,helpers,card}.ts` plus one file per view.** Small shared
+  helpers (`verbKey`, `hiddenPronounSlots`, `missingDataSlots`, `isSingleForm`, the summary) live
+  in `helpers.ts` so One at a Time / Random Table / Card Match import them without loading the
+  Grid view; `card.ts` builds one verb's card; `index.ts` is the Grid/Full render function.
+  Known limit: `renderConjugationMode` (~1,350 lines) and `my-lists/sidebar.ts`'s `createSidebar`
+  (~1,680) are single closures whose parts share state, so they cannot be split by moving lines —
+  only by a real refactor to explicit shared context. Don't try a line-range split on them.
 - **Flat asset URLs, explicit index**: `data/images/` and `data/emoji/` are
   partitioned by domain on disk and flat in the URL space. `lib/flat-static.ts`
   builds one filename → path index and *reports* a name that exists in two
