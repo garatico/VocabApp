@@ -20,6 +20,7 @@ import {
   type QuizMode, type SessionRecord,
 } from '../utils/session-history.ts';
 import { srsDueWords } from '../utils/srs.ts';
+import { renderProgress } from './history-progress.ts';
 import { studyWords, REVIEW_LIST_NAME } from '../utils/review-due.ts';
 import { cachedVocabMap, fetchVocab } from './my-lists/vocab-cache.ts';
 import {
@@ -155,6 +156,8 @@ export function renderHistory(container: HTMLElement, lang: string): void {
   });
   langRow.append(langLabel, langSel);
 
+  const progressPanel = document.createElement('div');
+  progressPanel.className = 'history-panel history-progress';
   const reviewPanel = document.createElement('div');
   reviewPanel.className = 'history-panel history-review';
   const troublePanel = document.createElement('div');
@@ -162,13 +165,22 @@ export function renderHistory(container: HTMLElement, lang: string): void {
   const sessionsPanel = document.createElement('div');
   sessionsPanel.className = 'history-panel history-sessions';
 
-  wrap.append(langRow, reviewPanel, troublePanel, sessionsPanel);
+  wrap.append(langRow, progressPanel, reviewPanel, troublePanel, sessionsPanel);
   container.appendChild(wrap);
 
   function render(): void {
+    renderProgressPanel();
     renderDueWords();
     renderTroubleWords();
     renderSessionList();
+  }
+
+  function renderProgressPanel(): void {
+    progressPanel.innerHTML = '';
+    const body = document.createElement('div');
+    body.className = 'history-panel-body';
+    progressPanel.append(buildHistoryPanelHead('progress', 'Progress', body), body);
+    renderProgress(body, currentLang);
   }
 
   // ── Due for review (spaced repetition) ───────────────────────────────────

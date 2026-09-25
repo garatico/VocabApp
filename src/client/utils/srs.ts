@@ -107,6 +107,11 @@ export function srsEntry(lang: string, word: string): SrsEntry | null {
   return getState(lang)[word] ?? null;
 }
 
+/** Every scheduled word for a language — for summaries that need the whole picture. */
+export function srsAllEntries(lang: string): Readonly<Record<string, SrsEntry>> {
+  return getState(lang);
+}
+
 /** Words due now or overdue, most-overdue first. A word never quizzed is not due. */
 export function srsDueWords(lang: string, now = Date.now()): string[] {
   return Object.entries(getState(lang))

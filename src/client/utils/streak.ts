@@ -37,7 +37,7 @@ const HISTORY_CAP = 400;
 
 interface DailyProgress { date: string; wordsDone: number; secondsDone: number }
 
-function today(): string {
+export function today(): string {
   return new Date().toDateString();
 }
 
