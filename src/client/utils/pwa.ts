@@ -8,6 +8,7 @@
 
 import { logger } from './logger.ts';
 import { isPackagedApp } from '../data/vocab-source.ts';
+import { showToast } from '../ui/toast.ts';
 
 const SW_URL = '/sw.js';
 
@@ -111,6 +112,14 @@ export function initPWA(): void {
     logger.info('pwa: service worker not registered in dev');
     return;
   }
+
+  // The worker serves vocabulary from cache first and refreshes behind it; when
+  // the fresh copy differs it says so, and this is the learner's cue to reload.
+  navigator.serviceWorker.addEventListener('message', e => {
+    if ((e.data as { type?: string } | null)?.type === 'VOCAB_UPDATED') {
+      showToast('Vocabulary was updated — reload to use the new version.', 'info', 8000);
+    }
+  });
 
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(SW_URL)

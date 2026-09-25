@@ -32,6 +32,8 @@ import { Settings, bindSettings, applyFontSize, setOnFilterVisibilityChange, set
 import { onActivity } from './utils/streak.ts';
 import { showToast } from './ui/toast.ts';
 import { initStreakWidget } from './ui/streak-widget.ts';
+import { initDueBadge } from './ui/due-badge.ts';
+import { bindBackupSettings, maybeRemindBackup } from './ui/backup-settings.ts';
 import { initDiceButton } from './ui/dice-widget.ts';
 import { applyTranslations } from './i18n/index.ts';
 import { initShortcuts }                         from './ui/shortcuts-overlay.ts';
@@ -1214,6 +1216,9 @@ void (async function init(): Promise<void> {
   bindTableControls();
   bindSettings();
   initStreakWidget();
+  initDueBadge();
+  bindBackupSettings();
+  maybeRemindBackup();
   initDiceButton();
   initShortcuts();
   initReloadButton();

@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import { rmSync } from 'fs';
+import { rmSync, readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
+import { createHash } from 'crypto';
 
 export default defineConfig({
   root: '.',
@@ -17,6 +18,27 @@ export default defineConfig({
           if (req.url === '/admin') req.url = '/admin.html';
           next();
         });
+      },
+    },
+    {
+      // sw.js's caches are named after CACHE_VERSION, which used to be bumped by
+      // hand — forget once and returning visitors kept a stale shell. Stamp it
+      // with a hash of the emitted bundle instead, so every real change to the
+      // app evicts the old caches and an unchanged rebuild keeps them.
+      name: 'stamp-service-worker',
+      apply: 'build',
+      closeBundle() {
+        const swPath = resolve('./dist/sw.js');
+        if (!existsSync(swPath)) return;
+        const hash = createHash('sha256');
+        const assets = resolve('./dist/assets');
+        if (existsSync(assets)) {
+          // Hashed filenames already encode content; the name list is enough.
+          hash.update(readdirSync(assets).sort().join('|'));
+        }
+        hash.update(readFileSync(resolve('./dist/index.html')));
+        const id = hash.digest('hex').slice(0, 10);
+        writeFileSync(swPath, readFileSync(swPath, 'utf8').replaceAll('__BUILD_ID__', id));
       },
     },
     {

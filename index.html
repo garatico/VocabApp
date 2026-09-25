@@ -82,6 +82,10 @@
           <!-- Streak counter — see src/client/ui/streak-widget.ts. Settings
                > Streak & Daily Goal controls whether it shows and how it
                reads; clicking it opens a details popover. -->
+          <!-- Spaced-repetition review — "N due" for the current language;
+               one click quizzes exactly the due words. Hidden at zero. See
+               src/client/ui/due-badge.ts. -->
+          <button type="button" id="dueBadge" class="streak-widget due-badge" hidden></button>
           <button type="button" id="streakWidget" class="streak-widget" title="Streak details" hidden></button>
           <!-- Roll the Dice — a random word from the current language, shown
                in the same word-info popover clicking a word elsewhere opens.
@@ -1903,6 +1907,33 @@
                 <button type="button" class="sort-order-btn active" data-history="true" data-i18n="common.on">On</button>
                 <button type="button" class="sort-order-btn" data-history="false" data-i18n="common.off">Off</button>
               </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupBackup" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupBackup">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Backup &amp; Restore</span>
+            </button>
+            <div id="settingsGroupBackup" class="filter-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Back up everything</span>
+                <span class="settings-desc">Downloads one file with your lists, mastery, review schedule, history, streaks, My Content edits and settings. Progress lives only in this browser, so clearing site data erases it — keep a copy. <span id="backupLastReadout">Never backed up.</span></span>
+              </div>
+              <button type="button" id="settingFullBackup" class="settings-action-btn">Download Backup</button>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span>Restore from backup</span>
+                <span class="settings-desc">Replaces the data in this browser with the contents of a full backup file. The page reloads afterward.</span>
+              </div>
+              <button type="button" id="settingFullRestore" class="settings-action-btn settings-action-btn--danger">Restore…</button>
+              <input type="file" id="settingFullRestoreInput" accept="application/json,.json" hidden>
+            </div>
+
+            </div>
             </div>
 
             <div class="settings-group" data-advanced="true">

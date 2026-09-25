@@ -20,6 +20,7 @@ import {
   type QuizMode, type SessionRecord,
 } from '../utils/session-history.ts';
 import { srsDueWords } from '../utils/srs.ts';
+import { studyWords, REVIEW_LIST_NAME } from '../utils/review-due.ts';
 import { cachedVocabMap, fetchVocab } from './my-lists/vocab-cache.ts';
 import {
   createList, addToList, removeFromList, getList,
@@ -56,8 +57,6 @@ const DIRECTION_LABELS: Record<SessionDirection, string> = {
 /** The list "Study these" collects trouble words into — see studyTroubleWords(). */
 const TROUBLE_LIST_NAME = 'Words I Keep Missing';
 
-/** The list "Study these" collects due-for-review words into — see studyDueWords(). */
-const REVIEW_LIST_NAME = 'Due for Review';
 
 // ── Collapsible panels ────────────────────────────────────────────────────
 //
@@ -199,7 +198,7 @@ export function renderHistory(container: HTMLElement, lang: string): void {
     studyBtn.textContent = `▶ Study these ${words.length}`;
     studyBtn.title = `Add ${words.length} word${words.length === 1 ? '' : 's'} to a `
       + `"${REVIEW_LIST_NAME}" list and start a focused Table quiz on them`;
-    studyBtn.addEventListener('click', e => { e.stopPropagation(); studyDueWords(currentLang, words); });
+    studyBtn.addEventListener('click', e => { e.stopPropagation(); studyWords(currentLang, words); });
     head.appendChild(studyBtn);
 
     const list = document.createElement('ul');
@@ -230,29 +229,6 @@ export function renderHistory(container: HTMLElement, lang: string): void {
         if (currentLang === fetchedFor) renderDueWords();
       }).catch(() => {});
     }
-  }
-
-  /** Same mechanism as studyTroubleWords() — see its comment. */
-  function studyDueWords(forLang: string, words: string[]): void {
-    createList(forLang, REVIEW_LIST_NAME);
-
-    const current = new Set(getList(forLang, REVIEW_LIST_NAME));
-    const wanted  = new Set(words);
-    current.forEach(w => { if (!wanted.has(w)) removeFromList(forLang, REVIEW_LIST_NAME, w); });
-    words.forEach(w => { if (!current.has(w)) addToList(forLang, REVIEW_LIST_NAME, w); });
-
-    const savedMode  = readString('vq_mode');
-    const usableModes = new Set(['table', 'picture']);
-    const targetMode = savedMode && usableModes.has(savedMode) ? savedMode : 'table';
-
-    saveListFilterState(
-      forLang,
-      { active: true, mode: 'focus', selected: [REVIEW_LIST_NAME] },
-      targetMode as FilterScope,
-    );
-    refreshFilterSelect(forLang);
-    document.querySelector<HTMLElement>(`.mode-tab[data-mode="${targetMode}"]`)?.click();
-    (document.getElementById('startBtn') as HTMLButtonElement | null)?.click();
   }
 
   // ── Words to review ───────────────────────────────────────────────────────

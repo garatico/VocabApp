@@ -170,3 +170,12 @@ body #controls:has(#controlsBody.filter-body--collapsed) .controls-corner {
 body #controls:has(#controlsBody.filter-body--collapsed) #controlsCollapseBtn.controls-collapse-btn {
   top: 0.95rem;
 }
+
+/* ── Due-for-review badge — same pill as the streak widget, accent-tinted so
+   it reads as an invitation. The [hidden] rule is the same cascade-tie fix
+   as .streak-widget[hidden] above. */
+.due-badge[hidden] { display: none; }
+.due-badge {
+  border-color: var(--accent);
+  color: var(--accent);
+}
