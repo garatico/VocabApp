@@ -29,6 +29,7 @@ import { logger } from './utils/logger.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
 import { Settings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, setOnSimpleModeChange, setOnExperimentalModesChange, setOnShowAdminPanelChange } from './settings.ts';
 import { bindSettings } from './settings-ui.ts';
+import { restoreSettingsPosition } from './settings-search.ts';
 import { refreshStreakReadouts } from './settings-streak.ts';
 import { onActivity } from './utils/streak.ts';
 import { showToast } from './ui/toast.ts';
@@ -744,7 +745,7 @@ const { updateModeUI } = bindModeSwitch({
     // question/picture added elsewhere in this same session (there isn't
     // one yet, but a future entry point would be) always shows up.
     myContent: () => { if (myContentWrap) void import('./modes/my-content-mode.ts').then(m => m.renderMyContent(myContentWrap, langSelect?.value ?? 'spanish')); },
-    settings: refreshStreakReadouts,
+    settings: () => { refreshStreakReadouts(); restoreSettingsPosition(); },
   },
 });
 

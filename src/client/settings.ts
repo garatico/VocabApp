@@ -340,6 +340,9 @@ export const Settings = {
    */
   getGenderColor: (key: 'masculine' | 'feminine'): string | null => readString(P + 'gender_color_' + key),
 
+  /** A My Lists sidebar accent (ML_COLOR_DEFS's keys), or null to use variables.css's own. */
+  getMlColor: (key: MlColorKey): string | null => readString(P + 'list_color_' + key),
+
   // ── All quizzes ────────────────────────────────────────────────────────────
   getMatchMode: (): MatchMode => get('match_mode', 'fuzzy') as MatchMode,
   getTypoTolerance: (): TypoTolerance => get('typo_tolerance', 'normal') as TypoTolerance,
@@ -784,6 +787,20 @@ export const GENDER_COLOR_DEFS: readonly [key: 'masculine' | 'feminine', label: 
   ['feminine',  'Feminine',  '--gender-color-feminine'],
 ];
 
+/**
+ * The My Lists sidebar accents a learner can recolour: key (storage suffix), label, and the CSS
+ * variable each overrides. Single-Language Lists default to the app's own accent but have a
+ * variable of their own, so recolouring them does not touch the rest of the app.
+ */
+export type MlColorKey = 'single' | 'smart' | 'multi' | 'profile' | 'visual';
+export const ML_COLOR_DEFS: readonly [key: MlColorKey, label: string, accentVar: string][] = [
+  ['single',  'Single-Language Lists', '--ml-accent-single'],
+  ['smart',   'Smart Lists',          '--ml-accent-smart'],
+  ['multi',   'Cross-Language Lists', '--ml-accent-multi'],
+  ['profile', 'Testing Profiles',     '--ml-accent-profile'],
+  ['visual',  'Visual Profiles',      '--ml-accent-visual'],
+];
+
 export const TABLE_COLOR_DEFS: readonly [key: string, label: string, fallbackVar: string][] = [
   ['correct',         'Correct',                     '--correct'],
   ['revealed',        'Revealed (?? button)',         '--warning'],
@@ -853,6 +870,25 @@ export function applyGenderColors(): void {
     const hex = Settings.getGenderColor(key);
     if (hex) document.documentElement.style.setProperty('--gender-color-' + key, hex);
     else document.documentElement.style.removeProperty('--gender-color-' + key);
+  }
+}
+
+/**
+ * Apply any saved My Lists accent overrides as inline :root properties. The accent's pale
+ * "-light" companion (selected cards, tags) is derived from it against the current surface, so it
+ * stays readable in both themes and never needs a second setting.
+ */
+export function applyMlColors(): void {
+  for (const [key, , accentVar] of ML_COLOR_DEFS) {
+    const hex = Settings.getMlColor(key);
+    const root = document.documentElement.style;
+    if (hex) {
+      root.setProperty(accentVar, hex);
+      root.setProperty(accentVar + '-light', `color-mix(in srgb, ${hex} 16%, var(--surface))`);
+    } else {
+      root.removeProperty(accentVar);
+      root.removeProperty(accentVar + '-light');
+    }
   }
 }
 

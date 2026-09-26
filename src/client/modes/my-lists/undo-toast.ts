@@ -9,6 +9,8 @@
  * for actions that are additive and so have nothing meaningful to reverse.
  */
 
+import { t } from '../../i18n/index.ts';
+
 let undoTimer: number | null = null;
 
 export function showUndo(message: string, onUndo: (() => void) | null, ms = 9000): void {
@@ -22,13 +24,13 @@ export function showUndo(message: string, onUndo: (() => void) | null, ms = 9000
   msg.className = 'ml-undo-msg'; msg.textContent = message;
 
   const btn = document.createElement('button');
-  btn.type = 'button'; btn.className = 'ml-undo-btn'; btn.textContent = 'Undo';
+  btn.type = 'button'; btn.className = 'ml-undo-btn'; btn.textContent = t('common.undo', 'Undo');
   btn.hidden = onUndo === null;
   btn.addEventListener('click', () => { dismissUndo(); onUndo?.(); });
 
   const close = document.createElement('button');
   close.type = 'button'; close.className = 'ml-undo-close';
-  close.title = 'Dismiss'; close.textContent = '×';
+  close.title = t('common.dismiss', 'Dismiss'); close.textContent = '×';
   close.addEventListener('click', dismissUndo);
 
   toast.append(msg, btn, close);

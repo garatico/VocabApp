@@ -156,6 +156,7 @@ export const KEY_FAMILIES: readonly KeyFamily[] = [
   // ── Settings: everything else under s_ is a preference ────────────────────
   exact ('s_onboarding_seen',  'ui', 'app.ts', { note: 'the welcome card has been shown or dismissed' }),
   exact ('s_starting_level',   'ui', 'ui/level-picker.ts'),
+  exact ('s_settings_section', 'ui', 'settings-search.ts', { note: 'the Settings section you were last reading' }),
   prefix('s_section_open_',    'ui', 'filters/section-collapse.ts', { note: 'which Settings sections are expanded' }),
   prefix('s_',                 'settings', 'settings.ts',
     { note: 'the ~70 preferences behind the Settings object, plus per-language/tense/element colours' }),

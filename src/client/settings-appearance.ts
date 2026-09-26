@@ -1,6 +1,6 @@
 import { LANGUAGES, flagUrl } from './data/languages.ts';
 import { createFlagImg } from './ui/flag-icon.ts';
-import { GENDER_COLOR_DEFS, PERSON_COLOR_DEFS, POS_COLOR_DEFS, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, applyGenderColors, applyLangColors, applyPosColors, applyTableColors, applyTenseColors, set } from './settings.ts';
+import { GENDER_COLOR_DEFS, ML_COLOR_DEFS, PERSON_COLOR_DEFS, POS_COLOR_DEFS, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTenseColors, set } from './settings.ts';
 
 /**
  * settings-appearance.ts — the Settings screen's colour and language-appearance
@@ -210,6 +210,21 @@ export function buildGenderColorRows(): void {
     list.appendChild(buildHexColorSwatchRow(label, current, hex => {
       set('gender_color_' + key, hex);
       applyGenderColors();
+    }));
+  }
+}
+
+/** One row per My Lists sidebar accent — same layout and reasoning as buildGenderColorRows. */
+export function buildMlColorRows(): void {
+  const list = document.getElementById('settingMlColors');
+  if (!list) return;
+  list.innerHTML = '';
+  for (const [key, label, accentVar] of ML_COLOR_DEFS) {
+    const current = Settings.getMlColor(key)
+      ?? rgbToHex(getComputedStyle(document.documentElement).getPropertyValue(accentVar));
+    list.appendChild(buildHexColorSwatchRow(label, current, hex => {
+      set('list_color_' + key, hex);
+      applyMlColors();
     }));
   }
 }

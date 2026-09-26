@@ -720,6 +720,12 @@
                 <button id="tableReset" data-i18n="table.giveUp">Give Up</button>
                 <button id="tableRetry" title="Restart this same word list from scratch — clears every answer, the timer, and this session's mastery credit for it" data-i18n-title="table.retryTip" data-i18n="table.retry">Retry</button>
               </div>
+              <div class="tnav-group settings-links" id="tableSettingsLinks">
+                <span aria-hidden="true">⚙</span>
+                <button type="button" class="settings-link" data-setting-link="settingHintButton" title="Open this setting" data-i18n-title="settings.linkTitle" data-i18n="settings.linkHints">Hints</button>
+                <button type="button" class="settings-link" data-setting-link="settingShowTimer" title="Open this setting" data-i18n-title="settings.linkTitle" data-i18n="settings.linkTimer">Timer</button>
+                <button type="button" class="settings-link" data-setting-link="settingTableRowDensity" title="Open this setting" data-i18n-title="settings.linkTitle" data-i18n="settings.linkDensity">Density</button>
+              </div>
               <div class="tnav-group timer-group" id="tableTimerGroup">
                 <span id="tableStopwatch" class="quiz-stopwatch" title="Time spent on this quiz" data-i18n-title="table.stopwatchTip">0:00</span>
                 <button type="button" id="tableTimerToggle" class="timer-btn" title="Pause timer" aria-label="Pause timer">&#x23F8;</button>
@@ -893,23 +899,45 @@
       </section>
 
       <section id="settingsArea" hidden>
+        <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><symbol id="si-table" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16M15 4v16"/></symbol><symbol id="si-picture" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></symbol><symbol id="si-conj" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></symbol><symbol id="si-guessblank" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.5-4.5"/></symbol><symbol id="si-answers" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></symbol><symbol id="si-appearance" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol><symbol id="si-filters" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4-2v-4L3 5z"/></symbol><symbol id="si-chinese" viewBox="0 0 24 24"><path d="M3 18l5-12 5 12M5 14h6"/><path d="M15 8h6M18 6v2M16.5 18c2-1 3.500-4 3.500-8"/></symbol><symbol id="si-glossary" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5z"/><path d="M4 19a2 2 0 0 0 2 2h13"/></symbol><symbol id="si-streak" viewBox="0 0 24 24"><path d="M12 3c1 4 5 5.500 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z"/></symbol><symbol id="si-history" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol><symbol id="si-general" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></symbol></svg>
         <div class="settings-layout">
           <nav class="settings-nav" aria-label="Settings sections">
             <div class="settings-nav-search">
               <input type="search" id="settingsSearch" class="settings-search-input" data-i18n-placeholder="settings.search.placeholder" placeholder="Search settings…" aria-label="Search settings" data-i18n-aria-label="settings.search.placeholder">
+              <button type="button" id="settingsChangedOnly" class="settings-changed-toggle" aria-pressed="false" title="Show only the settings that are different from their defaults" data-i18n-title="settings.changedOnlyTitle">
+                <span data-i18n="settings.changedOnly">Changed from default</span> <span id="settingsChangedCount" class="settings-changed-count" aria-live="polite"></span>
+              </button>
+              <button type="button" id="settingsResetAll" class="settings-reset-all" title="Put every setting back to its default. Your lists, progress and saved profiles are not affected." data-i18n-title="settings.resetAllTitle">
+                <span data-i18n="settings.resetAll">Reset all to defaults</span>
+              </button>
             </div>
-            <a class="settings-nav-link" href="#settings-sec-table"><span class="settings-nav-icon" aria-hidden="true">📋</span><span data-i18n="settings.nav.table">Table Quiz</span></a>
-            <a class="settings-nav-link" href="#settings-sec-picture"><span class="settings-nav-icon" aria-hidden="true">🖼</span><span data-i18n="nav.pictureQuiz">Picture Quiz</span></a>
-            <a class="settings-nav-link" href="#settings-sec-conj"><span class="settings-nav-icon" aria-hidden="true">🔀</span><span data-i18n="settings.nav.conj">Conjugation Practice</span></a>
-            <a class="settings-nav-link" href="#settings-sec-streak"><span class="settings-nav-icon" aria-hidden="true">🔥</span><span data-i18n="settings.nav.streak">Streak &amp; Daily Goal</span></a>
-            <a class="settings-nav-link" href="#settings-sec-guessblank"><span class="settings-nav-icon" aria-hidden="true">🔍</span><span data-i18n="nav.guessBlank">Guess the Blank</span></a>
-            <a class="settings-nav-link" href="#settings-sec-answers"><span class="settings-nav-icon" aria-hidden="true">✅</span><span data-i18n="settings.nav.answers">Answer Checking</span></a>
-            <a class="settings-nav-link" href="#settings-sec-filters"><span class="settings-nav-icon" aria-hidden="true">🔎</span><span data-i18n="filter.filtersTitle">Filters</span></a>
-            <a class="settings-nav-link" href="#settings-sec-chinese"><span class="settings-nav-icon" aria-hidden="true">文</span><span data-i18n="settings.nav.script">Script Display</span></a>
-            <a class="settings-nav-link" href="#settings-sec-appearance"><span class="settings-nav-icon" aria-hidden="true">🎨</span><span data-i18n="settings.nav.appearance">Appearance</span></a>
-            <a class="settings-nav-link" href="#settings-sec-history"><span class="settings-nav-icon" aria-hidden="true">🕘</span><span data-i18n="settings.nav.history">Session History</span></a>
-            <a class="settings-nav-link" href="#settings-sec-glossary"><span class="settings-nav-icon" aria-hidden="true">📖</span><span data-i18n="settings.nav.glossary">Glossary</span></a>
-            <a class="settings-nav-link" href="#settings-sec-general"><span class="settings-nav-icon" aria-hidden="true">⚙</span><span data-i18n="settings.nav.general">General</span></a>
+            <div class="settings-nav-group">
+              <div class="settings-nav-heading" data-i18n="settings.navGroup.quizzes">Quizzes</div>
+              <a class="settings-nav-link" href="#settings-sec-table"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-table"/></svg></span><span data-i18n="settings.nav.table">Table Quiz</span></a>
+              <a class="settings-nav-link" href="#settings-sec-picture"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-picture"/></svg></span><span data-i18n="nav.pictureQuiz">Picture Quiz</span></a>
+              <a class="settings-nav-link" href="#settings-sec-conj"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-conj"/></svg></span><span data-i18n="settings.nav.conj">Conjugation Practice</span></a>
+              <a class="settings-nav-link" href="#settings-sec-guessblank"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-guessblank"/></svg></span><span data-i18n="nav.guessBlank">Guess the Blank</span></a>
+              <a class="settings-nav-link" href="#settings-sec-answers"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-answers"/></svg></span><span data-i18n="settings.nav.answers">Answer Checking</span></a>
+            </div>
+            <div class="settings-nav-group">
+              <div class="settings-nav-heading" data-i18n="settings.navGroup.display">Display</div>
+              <a class="settings-nav-link" href="#settings-sec-appearance"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-appearance"/></svg></span><span data-i18n="settings.nav.appearance">Appearance</span></a>
+            </div>
+            <div class="settings-nav-group">
+              <div class="settings-nav-heading" data-i18n="settings.navGroup.content">Content</div>
+              <a class="settings-nav-link" href="#settings-sec-filters"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-filters"/></svg></span><span data-i18n="filter.filtersTitle">Filters</span></a>
+              <a class="settings-nav-link" href="#settings-sec-chinese"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-chinese"/></svg></span><span data-i18n="settings.nav.script">Script Display</span></a>
+              <a class="settings-nav-link" href="#settings-sec-glossary"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-glossary"/></svg></span><span data-i18n="settings.nav.glossary">Glossary</span></a>
+            </div>
+            <div class="settings-nav-group">
+              <div class="settings-nav-heading" data-i18n="settings.navGroup.progress">Progress</div>
+              <a class="settings-nav-link" href="#settings-sec-streak"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-streak"/></svg></span><span data-i18n="settings.nav.streak">Streak &amp; Daily Goal</span></a>
+              <a class="settings-nav-link" href="#settings-sec-history"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-history"/></svg></span><span data-i18n="settings.nav.history">Session History</span></a>
+            </div>
+            <div class="settings-nav-group">
+              <div class="settings-nav-heading" data-i18n="settings.navGroup.app">App</div>
+              <a class="settings-nav-link" href="#settings-sec-general"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-general"/></svg></span><span data-i18n="settings.nav.general">General</span></a>
+            </div>
           </nav>
         <div class="settings-wrap">
 
@@ -918,7 +946,7 @@
           <div class="settings-section settings-section--table" id="settings-sec-table">
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyTable" data-default-open="true" aria-expanded="true" aria-controls="settingsBodyTable">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-section-icon" aria-hidden="true">📋</span>
+              <span class="settings-section-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-table"/></svg></span>
               <span class="filter-section-label settings-section-title" data-i18n="settings.nav.table">Table Quiz</span>
             </button>
             <div id="settingsBodyTable" class="filter-body settings-section-body">
@@ -926,39 +954,77 @@
             <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupLayout" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupLayout">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading" data-i18n="settings.table.groupLayout">Layout</span>
+              <span class="settings-group-heading" data-i18n="settings.table.groupProgress">Progress &amp; Timing</span>
             </button>
             <div id="settingsGroupLayout" class="filter-body">
 
             <div class="settings-row">
               <div class="settings-label">
-                <span data-i18n="settings.table.cols">Default columns</span>
-                <span class="settings-desc" data-i18n="settings.table.colsDesc">Word pairs per row when starting a table quiz</span>
+                <span data-i18n="settings.table.pageSize">Words per page</span>
+                <span class="settings-desc" data-i18n="settings.table.pageSizeDesc">Words per table page before it splits — All shows everything at once.</span>
               </div>
-              <div class="sort-order-toggle" id="settingCols">
-                <button type="button" class="sort-order-btn" data-cols="1">1</button>
-                <button type="button" class="sort-order-btn active" data-cols="2">2</button>
-                <button type="button" class="sort-order-btn" data-cols="3">3</button>
-                <button type="button" class="sort-order-btn" data-cols="4">4</button>
+              <div class="sort-order-toggle" id="settingPageSize">
+                <button type="button" class="sort-order-btn" data-pagesize="25">25</button>
+                <button type="button" class="sort-order-btn" data-pagesize="50">50</button>
+                <button type="button" class="sort-order-btn active" data-pagesize="100">100</button>
+                <button type="button" class="sort-order-btn" data-pagesize="200">200</button>
+                <button type="button" class="sort-order-btn" data-pagesize="all" data-i18n="controls.all">All</button>
+              </div>
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupHints" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupHints">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.table.groupHints">Hints &amp; Glosses</span>
+            </button>
+            <div id="settingsGroupHints" class="filter-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.hintButton">Hint button</span>
+                <span class="settings-desc" data-i18n="settings.table.hintButtonDesc">A Hint button beside each answer; each click reveals one more letter.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingHintButton">
+                <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-enabled="true" data-i18n="common.on">On</button>
               </div>
             </div>
 
             <div class="settings-row">
               <div class="settings-label">
-                <span data-i18n="settings.table.rowDensity">Row density</span>
-                <span class="settings-desc" data-i18n="settings.table.rowDensityDesc">How much vertical space each word row takes up. Compact shrinks the word, input and cell padding so more rows fit on screen at once, without changing anything about how the quiz itself works. Ultra Compact shrinks it further still — the frequency rank, list-star/missed-count markers, and gender indicator (if any of those are on below and in Appearance) still show, just with less room to fit into.</span>
+                <span data-i18n="settings.table.revealButton">Reveal word button</span>
+                <span class="settings-desc" data-i18n="settings.table.revealButtonDesc">A Reveal button that fills in the full answer (counts as missed).</span>
               </div>
-              <div class="sort-order-toggle" id="settingTableRowDensity">
-                <button type="button" class="sort-order-btn active" data-density="comfortable" data-i18n="settings.table.densityComfortable">Comfortable</button>
-                <button type="button" class="sort-order-btn" data-density="compact" data-i18n="settings.table.densityCompact">Compact</button>
-                <button type="button" class="sort-order-btn" data-density="ultra" data-i18n="settings.table.densityUltra">Ultra Compact</button>
+              <div class="sort-order-toggle" id="settingRevealButton">
+                <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
               </div>
             </div>
+
+            </div>
+            </div>
+
+            <div class="settings-fold" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn settings-fold-btn" data-collapse="settingsFold-table" data-default-open="false" aria-expanded="false" aria-controls="settingsFold-table">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.advancedFold">Advanced</span>
+            </button>
+            <div id="settingsFold-table" class="filter-body settings-fold-body">
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTableMore1" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupTableMore1">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Progress &amp; Timing</span>
+            </button>
+            <div id="settingsGroupTableMore1" class="filter-body">
 
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.table.progressBarPercentMode">Progress bar percentage</span>
-                <span class="settings-desc" data-i18n="settings.table.progressBarPercentModeDesc">Once a quiz is fully answered, its progress bar's own label switches from a now-meaningless "100%" to something still useful. Correct (default) shows just the percent correct. Missed shows just the percent missed. All shows a fuller breakdown — percent correct, percent revealed, percent missed.</span>
+                <span class="settings-desc" data-i18n="settings.table.progressBarPercentModeDesc">What the progress bar's label shows once a quiz is fully answered.</span>
               </div>
               <div class="sort-order-toggle" id="settingProgressBarPercentMode">
                 <button type="button" class="sort-order-btn active" data-mode="correct" data-i18n="settings.table.progressBarPercentCorrect">Correct</button>
@@ -970,7 +1036,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.table.progressBarHintBreakdown">Progress bar hint breakdown</span>
-                <span class="settings-desc" data-i18n="settings.table.progressBarHintBreakdownDesc">Also show Hinted → Solved / Hinted → Revealed / Hinted → Missed percentages in the progress bar's label once a quiz is fully answered.</span>
+                <span class="settings-desc" data-i18n="settings.table.progressBarHintBreakdownDesc">Adds Hinted → Solved / Revealed / Missed percentages to that label.</span>
               </div>
               <div class="sort-order-toggle" id="settingProgressBarHintBreakdown">
                 <button type="button" class="sort-order-btn" data-show="true" data-i18n="common.on">On</button>
@@ -980,22 +1046,8 @@
 
             <div class="settings-row">
               <div class="settings-label">
-                <span data-i18n="settings.table.pageSize">Words per page</span>
-                <span class="settings-desc" data-i18n="settings.table.pageSizeDesc">How many words a table page shows before it splits into pages you step through with the arrows — All puts everything on one page</span>
-              </div>
-              <div class="sort-order-toggle" id="settingPageSize">
-                <button type="button" class="sort-order-btn" data-pagesize="25">25</button>
-                <button type="button" class="sort-order-btn" data-pagesize="50">50</button>
-                <button type="button" class="sort-order-btn active" data-pagesize="100">100</button>
-                <button type="button" class="sort-order-btn" data-pagesize="200">200</button>
-                <button type="button" class="sort-order-btn" data-pagesize="all" data-i18n="controls.all">All</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
                 <span data-i18n="settings.table.showTimer">Show timer</span>
-                <span class="settings-desc" data-i18n="settings.table.showTimerDesc">Off hides the running clock and its controls — time is still recorded for History and goals, just not displayed.</span>
+                <span class="settings-desc" data-i18n="settings.table.showTimerDesc">Hides the clock and its controls; time is still recorded.</span>
               </div>
               <div class="sort-order-toggle" id="settingShowTimer">
                 <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
@@ -1006,7 +1058,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.table.timedQuiz">Timed quiz</span>
-                <span class="settings-desc" data-i18n="settings.table.timedQuizDesc">Race the clock — when time runs out, the quiz ends and reveals whatever's left, same as Give Up.</span>
+                <span class="settings-desc" data-i18n="settings.table.timedQuizDesc">Race the clock — the quiz ends when time runs out.</span>
               </div>
               <div class="sort-order-toggle" id="settingTimedQuiz">
                 <button type="button" class="sort-order-btn active" data-timed="false" data-i18n="settings.streak.goalOff">Off</button>
@@ -1019,38 +1071,16 @@
             </div>
 
             <div class="settings-group">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupHints" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupHints">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTableMore2" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupTableMore2">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading" data-i18n="settings.table.groupHints">Hints &amp; Glosses</span>
+              <span class="settings-group-heading">Hints &amp; Glosses</span>
             </button>
-            <div id="settingsGroupHints" class="filter-body">
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.table.hintButton">Hint button</span>
-                <span class="settings-desc" data-i18n="settings.table.hintButtonDesc">Shows a Hint button next to each answer box. Each click reveals one more letter, up to one letter short of the full answer.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingHintButton">
-                <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
-                <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.table.revealButton">Reveal word button</span>
-                <span class="settings-desc" data-i18n="settings.table.revealButtonDesc">Shows a Reveal button next to each answer box that fills in the full answer immediately (counts as missed)</span>
-              </div>
-              <div class="sort-order-toggle" id="settingRevealButton">
-                <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
-                <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
-              </div>
-            </div>
+            <div id="settingsGroupTableMore2" class="filter-body">
 
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.table.questionGlosses">Question glosses</span>
-                <span class="settings-desc" data-i18n="settings.table.questionGlossesDesc">How many English senses show in the question box when a word has several (e.g. "to speak / to talk")</span>
+                <span class="settings-desc" data-i18n="settings.table.questionGlossesDesc">How many English meanings show in the question box.</span>
               </div>
               <div class="sort-order-toggle" id="settingQuestionGlosses">
                 <button type="button" class="sort-order-btn active" data-count="1">1</button>
@@ -1078,7 +1108,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.table.expandGloss">Show the sense you typed</span>
-                <span class="settings-desc" data-i18n="settings.table.expandGlossDesc">If your answer matches a sense past the Answer glosses cutoff (e.g. "prove" for probar, when only "try / taste" would normally show), add it to the answer instead of hiding it.</span>
+                <span class="settings-desc" data-i18n="settings.table.expandGlossDesc">Add a correct answer past the Answer glosses cutoff instead of hiding it.</span>
               </div>
               <div class="sort-order-toggle" id="settingExpandGloss">
                 <button type="button" class="sort-order-btn active" data-expand="true" data-i18n="common.on">On</button>
@@ -1089,7 +1119,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.table.hintMultiGloss">Confirm multiple meanings on Hint</span>
-                <span class="settings-desc" data-i18n="settings.table.hintMultiGlossDesc">A Hint only ever spells out one sense of a word. When this is on and the word has more than one accepted sense, Standard style's Hint button says so in its tooltip, and Double Recall's hint shows a trailing " /" — neither reveals what the other sense is, just that one exists.</span>
+                <span class="settings-desc" data-i18n="settings.table.hintMultiGlossDesc">Let a Hint say the word has another accepted meaning.</span>
               </div>
               <div class="sort-order-toggle" id="settingHintMultiGloss">
                 <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
@@ -1100,7 +1130,7 @@
             </div>
             </div>
 
-            <div class="settings-group" data-advanced="true">
+            <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupHintTracking" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupHintTracking">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading">Hint Outcome Tracking</span>
@@ -1109,8 +1139,8 @@
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Track "hinted, then solved"</span>
-                <span class="settings-desc">Whether a word answered correctly after a Hint counts toward session history's stats. The row's color shows this either way — this only controls whether it's recorded.</span>
+                <span data-i18n="settings.table.trackHintedCorrect">Track "hinted, then solved"</span>
+                <span class="settings-desc" data-i18n="settings.table.trackHintedCorrectDesc">Count words solved after a Hint toward session history.</span>
               </div>
               <div class="sort-order-toggle" id="settingTrackHintedCorrect">
                 <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
@@ -1120,8 +1150,8 @@
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Track "hinted, then revealed"</span>
-                <span class="settings-desc">Whether a word revealed with the ?? button, after a Hint was used on it first, counts toward session history's stats.</span>
+                <span data-i18n="settings.table.trackHintedRevealed">Track "hinted, then revealed"</span>
+                <span class="settings-desc" data-i18n="settings.table.trackHintedRevealedDesc">Count words revealed after a Hint toward session history.</span>
               </div>
               <div class="sort-order-toggle" id="settingTrackHintedRevealed">
                 <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
@@ -1131,8 +1161,8 @@
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Track "hinted, then given up on"</span>
-                <span class="settings-desc">Whether a word left unanswered after a Hint, only revealed by the whole quiz's Give Up, counts toward session history's stats.</span>
+                <span data-i18n="settings.table.trackHintedMissed">Track "hinted, then given up on"</span>
+                <span class="settings-desc" data-i18n="settings.table.trackHintedMissedDesc">Count words given up on after a Hint toward session history.</span>
               </div>
               <div class="sort-order-toggle" id="settingTrackHintedMissed">
                 <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
@@ -1143,39 +1173,17 @@
             </div>
             </div>
 
-            <div class="settings-group" data-advanced="true">
+            <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupCellInfo" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupCellInfo">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading" data-i18n="settings.table.groupCellInfo">Cell Info</span>
             </button>
             <div id="settingsGroupCellInfo" class="filter-body">
 
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.table.freqRank">Frequency rank</span>
-                <span class="settings-desc" data-i18n="settings.table.freqRankDesc">The small number in the corner of every word cell, across every Table quiz style</span>
-              </div>
-              <div class="sort-order-toggle" id="settingTableShowRank">
-                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
-                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.table.historyMarkers">Word history markers</span>
-                <span class="settings-desc" data-i18n="settings.table.historyMarkersDesc">The list star and the "missed before" count badge on a word cell, across every Table quiz style</span>
-              </div>
-              <div class="sort-order-toggle" id="settingTableShowMarkers">
-                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
-                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
-              </div>
-            </div>
-
             <div class="settings-row settings-row--stack">
               <div class="settings-label">
                 <span data-i18n="settings.table.disambiguator">Sense disambiguator</span>
-                <span class="settings-desc" data-i18n="settings.table.disambiguatorDesc">A short curated note distinguishing a word from another word that shares its translation (see the Glossary section for the full definition). Each toggle below controls one place it can show, independently of the others — All is a shortcut that switches every one of them on or off together, and reads as blank whenever they're not all set the same way.</span>
+                <span class="settings-desc" data-i18n="settings.table.disambiguatorDesc">A short note that tells apart words sharing a translation. Choose where it shows.</span>
               </div>
               <div class="disambiguator-toggle-grid">
                 <div class="disambiguator-toggle-item">
@@ -1212,7 +1220,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.table.grammarHintAbbrev">Abbreviate grammar hint</span>
-                <span class="settings-desc" data-i18n="settings.table.grammarHintAbbrevDesc">A grammar hint is a short gender/number note on a word whose translation depends on the noun it modifies — an article or determiner like "a" or "this" (see the Glossary section). This picks whether that note is abbreviated ("masc., sing.") or spelled out ("masculine, singular").</span>
+                <span class="settings-desc" data-i18n="settings.table.grammarHintAbbrevDesc">Abbreviate grammar hints ("masc., sing.") or spell them out.</span>
               </div>
               <div class="sort-order-toggle" id="settingAbbreviateGrammarHint">
                 <button type="button" class="sort-order-btn" data-show="true" data-i18n="common.on">On</button>
@@ -1231,63 +1239,8 @@
               </div>
             </div>
 
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.table.genderColor">Gender indicator</span>
-                <span class="settings-desc" data-i18n="settings.table.genderColorDesc">A visual cue on a noun with a known masculine/feminine gender — a small corner dot, a colored pill behind the word, or the whole cell tinted. Pick the colors just below, under "Gender Colors".</span>
-              </div>
-              <div class="sort-order-toggle" id="settingGenderIndicatorStyle">
-                <button type="button" class="sort-order-btn active" data-style="off" data-i18n="common.off">Off</button>
-                <button type="button" class="sort-order-btn" data-style="dot" data-i18n="settings.table.genderStyleDot">Dot</button>
-                <button type="button" class="sort-order-btn" data-style="word-bg" data-i18n="settings.table.genderStyleWordBg">Word background</button>
-                <button type="button" class="sort-order-btn" data-style="box-bg" data-i18n="settings.table.genderStyleBoxBg">Box background</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.table.genderVisibility">Gender indicator timing</span>
-                <span class="settings-desc" data-i18n="settings.table.genderVisibilityDesc">When the indicator above is allowed to show. Always shows it from the start, as a mild hint. Once hinted waits until you've used that row's Hint button or resolved it. Only when revealed waits until the row is fully solved, peeked, or given up on.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingGenderIndicatorVisibility">
-                <button type="button" class="sort-order-btn active" data-visibility="always" data-i18n="settings.table.genderVisibilityAlways">Always</button>
-                <button type="button" class="sort-order-btn" data-visibility="hinted" data-i18n="settings.table.genderVisibilityHinted">Once hinted</button>
-                <button type="button" class="sort-order-btn" data-visibility="revealed" data-i18n="settings.table.genderVisibilityRevealed">Only when revealed</button>
-              </div>
-            </div>
-
             </div>
             </div>
-
-            <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTableColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupTableColors">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading">Table Colors</span>
-            </button>
-            <div id="settingsGroupTableColors" class="filter-body">
-
-            <p class="settings-desc">The color each answer state uses in Table mode — correct, revealed, missed, the in-progress hint color, and each of the three hint-outcome states above.</p>
-            <button type="button" id="settingResetTableColors" class="settings-action-btn">Reset to defaults</button>
-            <div class="conj-color-list" id="settingTableColors">
-              <!-- One row per state, built from TABLE_COLOR_DEFS — see settings.ts -->
-            </div>
-
-            </div>
-            </div>
-
-            <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupGenderColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupGenderColors">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading" data-i18n="settings.appearance.genderColors">Gender Colors</span>
-            </button>
-            <div id="settingsGroupGenderColors" class="filter-body">
-
-            <p class="settings-desc" data-i18n="settings.appearance.genderColorsDesc">The color for the masculine/feminine gender indicator ("Gender indicator" above). Defaults to a conventional baby blue/pink.</p>
-            <button type="button" id="settingResetGenderColors" class="settings-action-btn">Reset to defaults</button>
-            <div class="conj-color-list" id="settingGenderColors">
-              <!-- One row per gender, built from GENDER_COLOR_DEFS — see settings.ts -->
-            </div>
-
             </div>
             </div>
 
@@ -1297,7 +1250,7 @@
           <div class="settings-section settings-section--picture" id="settings-sec-picture">
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyPicture" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyPicture">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-section-icon" aria-hidden="true">🖼</span>
+              <span class="settings-section-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-picture"/></svg></span>
               <span class="filter-section-label settings-section-title" data-i18n="nav.pictureQuiz">Picture Quiz</span>
             </button>
             <div id="settingsBodyPicture" class="filter-body settings-section-body">
@@ -1305,7 +1258,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.picture.photos">Wikipedia photos</span>
-                <span class="settings-desc" data-i18n="settings.picture.photosDesc">Real photographs, where one exists for the word — the highest-quality visual when it's available.</span>
+                <span class="settings-desc" data-i18n="settings.picture.photosDesc">Real photographs, where one exists for the word.</span>
               </div>
               <div class="sort-order-toggle" id="settingPictureSourcePhotos">
                 <button type="button" class="sort-order-btn" data-photos="false" data-i18n="common.off">Off</button>
@@ -1336,9 +1289,27 @@
             </div>
 
             <div class="settings-row">
+              <div class="settings-desc" data-i18n="settings.picture.allOffNote">Turning off every category above leaves a word with no visual at all skipped, the same as it always has been.</div>
+            </div>
+
+            <div class="settings-fold" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn settings-fold-btn" data-collapse="settingsFold-picture" data-default-open="false" aria-expanded="false" aria-controls="settingsFold-picture">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.advancedFold">Advanced</span>
+            </button>
+            <div id="settingsFold-picture" class="filter-body settings-fold-body">
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupPictureMore1" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupPictureMore1">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">More Settings</span>
+            </button>
+            <div id="settingsGroupPictureMore1" class="filter-body">
+
+            <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.picture.stock">Stock photo library</span>
-                <span class="settings-desc" data-i18n="settings.picture.stockDesc">Not connected yet — no stock photo source is wired up for any word. Reserved for a future image source.</span>
+                <span class="settings-desc" data-i18n="settings.picture.stockDesc">Not connected yet — reserved for a future image source.</span>
               </div>
               <div class="sort-order-toggle" id="settingPictureSourceStock" aria-disabled="true">
                 <button type="button" class="sort-order-btn" data-stock="false" disabled data-i18n="common.off">Off</button>
@@ -1346,8 +1317,10 @@
               </div>
             </div>
 
-            <div class="settings-row">
-              <div class="settings-desc" data-i18n="settings.picture.allOffNote">Turning off every category above leaves a word with no visual at all skipped, the same as it always has been.</div>
+            </div>
+            </div>
+
+            </div>
             </div>
 
             </div>
@@ -1356,22 +1329,51 @@
           <div class="settings-section settings-section--conj" id="settings-sec-conj">
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyConj" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyConj">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-section-icon" aria-hidden="true">🔀</span>
+              <span class="settings-section-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-conj"/></svg></span>
               <span class="filter-section-label settings-section-title" data-i18n="settings.nav.conj">Conjugation Practice</span>
             </button>
             <div id="settingsBodyConj" class="filter-body settings-section-body">
 
             <div class="settings-group">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupConjLayout" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupConjLayout">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupConjHints" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupConjHints">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Hints</span>
+            </button>
+            <div id="settingsGroupConjHints" class="filter-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.conj.hints">Hints</span>
+                <span class="settings-desc" data-i18n="settings.conj.hintsDesc">What a slot's ? button does: nothing, one letter, or the full answer.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingConjHint">
+                <button type="button" class="sort-order-btn" data-hint="none" data-i18n="common.none">None</button>
+                <button type="button" class="sort-order-btn" data-hint="first-letter" data-i18n="settings.table.firstLetter">First letter</button>
+                <button type="button" class="sort-order-btn active" data-hint="full" data-i18n="settings.table.fullReveal">Full reveal</button>
+              </div>
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-fold" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn settings-fold-btn" data-collapse="settingsFold-conj" data-default-open="false" aria-expanded="false" aria-controls="settingsFold-conj">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.advancedFold">Advanced</span>
+            </button>
+            <div id="settingsFold-conj" class="filter-body settings-fold-body">
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupConjMore1" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupConjMore1">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading">Layout</span>
             </button>
-            <div id="settingsGroupConjLayout" class="filter-body">
+            <div id="settingsGroupConjMore1" class="filter-body">
 
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.conj.pageSize">Verbs per page</span>
-                <span class="settings-desc" data-i18n="settings.conj.pageSizeDesc">How many verbs Grid/Full Conjugation shows before splitting into pages you step through with the arrows. Only sets the starting default — once a quiz's own Per Page control has been changed, that choice sticks until you change it again.</span>
+                <span class="settings-desc" data-i18n="settings.conj.pageSizeDesc">Starting verbs per page; a quiz's own Per Page control takes over once changed.</span>
               </div>
               <div class="sort-order-toggle" id="settingConjPageSize">
                 <button type="button" class="sort-order-btn" data-pagesize="5">5</button>
@@ -1384,7 +1386,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.conj.showTimer">Show timer</span>
-                <span class="settings-desc" data-i18n="settings.conj.showTimerDesc">Off hides the running clock and its controls — time is still recorded for History and goals, just not displayed. Separate from Table mode's own Show Timer setting above.</span>
+                <span class="settings-desc" data-i18n="settings.conj.showTimerDesc">Hides the clock and its controls; time is still recorded. Separate from Table's.</span>
               </div>
               <div class="sort-order-toggle" id="settingConjShowTimer">
                 <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
@@ -1396,16 +1398,16 @@
             </div>
 
             <div class="settings-group">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupConjHints" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupConjHints">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupConjMore2" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupConjMore2">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading">Hints</span>
             </button>
-            <div id="settingsGroupConjHints" class="filter-body">
+            <div id="settingsGroupConjMore2" class="filter-body">
 
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.conj.shape">Deselected pronouns</span>
-                <span class="settings-desc" data-i18n="settings.conj.shapeDesc">The first three keep the cell and its grid lines, so the card still reads as a full chart. Close up removes the cell and lets the rest move up into it.</span>
+                <span class="settings-desc" data-i18n="settings.conj.shapeDesc">What a deselected pronoun leaves behind — Close up removes the cell.</span>
               </div>
               <div class="sort-order-toggle" id="settingConjShape">
                 <button type="button" class="sort-order-btn" data-shape="blank" title="Keep the cell and its grid lines, hide what is in it" data-i18n-title="settings.conj.blankTip" data-i18n="settings.conj.blank">Blank</button>
@@ -1415,161 +1417,10 @@
               </div>
             </div>
 
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.conj.hints">Hints</span>
-                <span class="settings-desc" data-i18n="settings.conj.hintsDesc">What a slot's ? button does — None hides it, First letter shows one character, Full reveal shows the answer immediately. Separate from Table mode's own Hint/Reveal buttons.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingConjHint">
-                <button type="button" class="sort-order-btn" data-hint="none" data-i18n="common.none">None</button>
-                <button type="button" class="sort-order-btn" data-hint="first-letter" data-i18n="settings.table.firstLetter">First letter</button>
-                <button type="button" class="sort-order-btn active" data-hint="full" data-i18n="settings.table.fullReveal">Full reveal</button>
-              </div>
-            </div>
-
-            </div>
-            </div>
-
-            <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTenseColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupTenseColors">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading" data-i18n="settings.conj.tenseColors">Tense Colors</span>
-            </button>
-            <div id="settingsGroupTenseColors" class="filter-body">
-
-            <p class="settings-desc" data-i18n="settings.conj.tenseColorsDesc">The color each tense's chip, card and table column uses throughout Conjugation Mode and a verb's conjugation table in My Lists.</p>
-            <button type="button" id="settingResetTenseColors" class="settings-action-btn" data-i18n="settings.conj.resetColors">Reset to defaults</button>
-            <div class="conj-color-list" id="settingTenseColors">
-              <!-- One row per tense, built from TENSE_DEFS — see settings.ts -->
-            </div>
-
-            </div>
-            </div>
-
-            <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupFormColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupFormColors">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading" data-i18n="settings.conj.personColors">Form Colors</span>
-            </button>
-            <div id="settingsGroupFormColors" class="filter-body">
-
-            <p class="settings-desc" data-i18n="settings.conj.personColorsDesc">The color each grammatical person's Forms toggle and table rows use.</p>
-            <button type="button" id="settingResetPersonColors" class="settings-action-btn" data-i18n="settings.conj.resetColors">Reset to defaults</button>
-            <div class="conj-color-list" id="settingPersonColors">
-              <!-- One row per pronoun slot (0-5) — see settings.ts -->
-            </div>
-
             </div>
             </div>
 
             </div>
-          </div>
-
-          <div class="settings-section settings-section--streak" id="settings-sec-streak">
-            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyStreak" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyStreak">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-section-icon" aria-hidden="true">🔥</span>
-              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.streak">Streak &amp; Daily Goal</span>
-            </button>
-            <div id="settingsBodyStreak" class="filter-body settings-section-body">
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.streak.current">Current streak</span>
-              </div>
-              <div class="settings-readout" id="streakCurrentReadout">0 days</div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.streak.best">Best streak</span>
-              </div>
-              <div class="settings-readout" id="streakBestReadout">0 days</div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.streak.today">Today's progress</span>
-              </div>
-              <div class="settings-readout" id="streakTodayReadout">0 words</div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.streak.showWidget">Streak counter</span>
-                <span class="settings-desc" data-i18n="settings.streak.showWidgetDesc">A small 🔥 counter in the top-right corner, visible on every tab.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingShowStreakWidget">
-                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
-                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.streak.widgetFormat">Streak counter format</span>
-                <span class="settings-desc" data-i18n="settings.streak.widgetFormatDesc">How the top-right streak counter arranges the fire emoji and the day count.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingStreakWidgetFormat">
-                <button type="button" class="sort-order-btn active" data-format="emoji-number" data-i18n="settings.streak.widgetFormatEmojiFirst">🔥 N</button>
-                <button type="button" class="sort-order-btn" data-format="number-emoji" data-i18n="settings.streak.widgetFormatNumberFirst">N 🔥</button>
-                <button type="button" class="sort-order-btn" data-format="number-only" data-i18n="settings.streak.widgetFormatNumberOnly">N</button>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.streak.goalScope">Goal scope</span>
-                <span class="settings-desc" data-i18n="settings.streak.goalScopeDesc">One set of goals for every language, or a different set for a specific language.</span>
-              </div>
-              <select id="settingGoalScope" class="ml-profile-editor-select">
-                <option value="" data-i18n="settings.streak.goalScopeAll">All languages</option>
-              </select>
-              <button type="button" id="settingGoalScopeReset" data-i18n="settings.streak.goalScopeReset" hidden>Use global default</button>
-            </div>
-
-            <div class="settings-row" data-goal-row="words">
-              <div class="settings-label">
-                <span data-i18n="settings.streak.goalWords">Words goal</span>
-                <span class="settings-desc" data-i18n="settings.streak.goalDesc">Get a small celebration once you reach this. "Off" just tracks the streak with no goal.</span>
-              </div>
-              <div class="sort-order-toggle" data-goal-presets="words"></div>
-              <input type="number" class="ml-profile-editor-number" data-goal-custom="words" min="0" placeholder="Custom…" data-i18n-placeholder="settings.streak.goalCustomPlaceholder">
-            </div>
-
-            <div class="settings-row" data-goal-row="minutes">
-              <div class="settings-label">
-                <span data-i18n="settings.streak.goalMinutes">Minutes goal</span>
-              </div>
-              <div class="sort-order-toggle" data-goal-presets="minutes"></div>
-              <input type="number" class="ml-profile-editor-number" data-goal-custom="minutes" min="0" placeholder="Custom…" data-i18n-placeholder="settings.streak.goalCustomPlaceholder">
-            </div>
-
-            <div class="settings-row" data-goal-row="streak">
-              <div class="settings-label">
-                <span data-i18n="settings.streak.goalStreak">Streak-days goal</span>
-              </div>
-              <div class="sort-order-toggle" data-goal-presets="streak"></div>
-              <input type="number" class="ml-profile-editor-number" data-goal-custom="streak" min="0" placeholder="Custom…" data-i18n-placeholder="settings.streak.goalCustomPlaceholder">
-            </div>
-
-            <div class="settings-row settings-row--stack">
-              <div class="settings-label">
-                <span data-i18n="settings.streak.calendar">Activity</span>
-                <span class="settings-desc" data-i18n="settings.streak.calendarDesc">Days you practiced, and which goals were hit — hover a marked day for the breakdown by language.</span>
-              </div>
-              <div class="settings-calendar settings-calendar--wide" id="streakCalendar">
-                <div class="settings-calendar-nav">
-                  <button type="button" id="streakCalPrev" aria-label="Previous month">&#x2039;</button>
-                  <span id="streakCalLabel"></span>
-                  <button type="button" id="streakCalNext" aria-label="Next month">&#x203A;</button>
-                </div>
-                <div class="settings-calendar-weekdays">
-                  <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
-                </div>
-                <div class="settings-calendar-grid" id="streakCalGrid"></div>
-                <div class="settings-calendar-legend" id="streakCalLegend"></div>
-              </div>
             </div>
 
             </div>
@@ -1578,7 +1429,7 @@
           <div class="settings-section settings-section--guessblank" id="settings-sec-guessblank">
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyGuessBlank" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyGuessBlank">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-section-icon" aria-hidden="true">🔍</span>
+              <span class="settings-section-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-guessblank"/></svg></span>
               <span class="filter-section-label settings-section-title" data-i18n="nav.guessBlank">Guess the Blank</span>
             </button>
             <div id="settingsBodyGuessBlank" class="filter-body settings-section-body">
@@ -1602,7 +1453,7 @@
           <div class="settings-section settings-section--answers" id="settings-sec-answers">
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyAnswers" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyAnswers">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-section-icon" aria-hidden="true">✅</span>
+              <span class="settings-section-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-answers"/></svg></span>
               <span class="filter-section-label settings-section-title" data-i18n="settings.nav.answers">Answer Checking</span>
             </button>
             <div id="settingsBodyAnswers" class="filter-body settings-section-body">
@@ -1617,7 +1468,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.answers.match">Answer matching</span>
-                <span class="settings-desc" data-i18n="settings.answers.matchDesc">Flexible accepts answers regardless of accents and capitalisation — Strict requires exact accents (e.g. está ≠ esta)</span>
+                <span class="settings-desc" data-i18n="settings.answers.matchDesc">Flexible ignores accents and capitals; Strict needs exact accents.</span>
               </div>
               <div class="sort-order-toggle" id="settingMatch">
                 <button type="button" class="sort-order-btn" data-match="strict" data-i18n="settings.answers.strict">Strict</button>
@@ -1628,7 +1479,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.answers.typo">Typo tolerance</span>
-                <span class="settings-desc" data-i18n="settings.answers.typoDesc">How many typos quiz answers forgive — Off requires the exact spelling, Low forgives ~1 letter in 7, Normal ~1 in 4, High ~1 in 3</span>
+                <span class="settings-desc" data-i18n="settings.answers.typoDesc">How many typos an answer may contain and still count.</span>
               </div>
               <div class="sort-order-toggle" id="settingTypo">
                 <button type="button" class="sort-order-btn" data-typo="off" data-i18n="common.off">Off</button>
@@ -1641,7 +1492,14 @@
             </div>
             </div>
 
-            <div class="settings-group" data-advanced="true">
+            <div class="settings-fold" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn settings-fold-btn" data-collapse="settingsFold-answers" data-default-open="false" aria-expanded="false" aria-controls="settingsFold-answers">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.advancedFold">Advanced</span>
+            </button>
+            <div id="settingsFold-answers" class="filter-body settings-fold-body">
+
+            <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAnswersAdvanced" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupAnswersAdvanced">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading">Browser Behavior</span>
@@ -1651,7 +1509,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.answers.autofill">Browser autofill</span>
-                <span class="settings-desc" data-i18n="settings.answers.autofillDesc">Off stops the browser from suggesting or auto-filling previously typed answers in quiz input boxes.</span>
+                <span class="settings-desc" data-i18n="settings.answers.autofillDesc">Off stops the browser suggesting previously typed answers.</span>
               </div>
               <div class="sort-order-toggle" id="settingAutofill">
                 <button type="button" class="sort-order-btn" data-autofill="true" data-i18n="common.on">On</button>
@@ -1661,6 +1519,289 @@
 
             </div>
             </div>
+            </div>
+            </div>
+
+            </div>
+          </div>
+
+          <div class="settings-section settings-section--appearance" id="settings-sec-appearance">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyAppearance" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyAppearance">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-section-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-appearance"/></svg></span>
+              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.appearance">Appearance</span>
+            </button>
+            <div id="settingsBodyAppearance" class="filter-body settings-section-body">
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAppearanceDisplay" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupAppearanceDisplay">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Display</span>
+            </button>
+            <div id="settingsGroupAppearanceDisplay" class="filter-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.appearance.textSize">Text size</span>
+                <span class="settings-desc" data-i18n="settings.appearance.textSizeDesc">Scales quiz text — Small fits more words on screen, Large is easier to read</span>
+              </div>
+              <div class="sort-order-toggle" id="settingFontSize">
+                <button type="button" class="sort-order-btn" data-size="xs">XS</button>
+                <button type="button" class="sort-order-btn" data-size="small">S</button>
+                <button type="button" class="sort-order-btn active" data-size="medium">M</button>
+                <button type="button" class="sort-order-btn" data-size="large">L</button>
+                <button type="button" class="sort-order-btn" data-size="xl">XL</button>
+              </div>
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAppearanceTableLayout" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupAppearanceTableLayout">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.appearance.groupTableLayout">Table Layout</span>
+            </button>
+            <div id="settingsGroupAppearanceTableLayout" class="filter-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.cols">Default columns</span>
+                <span class="settings-desc" data-i18n="settings.table.colsDesc">Word pairs per row when starting a table quiz</span>
+              </div>
+              <div class="sort-order-toggle" id="settingCols">
+                <button type="button" class="sort-order-btn" data-cols="1">1</button>
+                <button type="button" class="sort-order-btn active" data-cols="2">2</button>
+                <button type="button" class="sort-order-btn" data-cols="3">3</button>
+                <button type="button" class="sort-order-btn" data-cols="4">4</button>
+              </div>
+            </div>
+
+            </div>
+            </div>
+
+            <h3 class="settings-subhead" data-i18n="settings.appearance.colors">Colors</h3>
+
+            <div class="settings-fold" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn settings-fold-btn" data-collapse="settingsFold-appearance" data-default-open="false" aria-expanded="false" aria-controls="settingsFold-appearance">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.advancedFold">Advanced</span>
+            </button>
+            <div id="settingsFold-appearance" class="filter-body settings-fold-body">
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAppearanceMore1" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupAppearanceMore1">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Display</span>
+            </button>
+            <div id="settingsGroupAppearanceMore1" class="filter-body">
+
+            <div class="settings-row" data-simple-hide="true">
+              <div class="settings-label">
+                <span data-i18n="settings.appearance.langIndicator">Language indicator</span>
+                <span class="settings-desc" data-i18n="settings.appearance.langIndicatorDesc">How a merged-in word's language is marked in the table: Off, Color or Flag.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingLangIndicator">
+                <button type="button" class="sort-order-btn" data-indicator="off" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-indicator="color" data-i18n="settings.appearance.langColor">Color</button>
+                <button type="button" class="sort-order-btn" data-indicator="flag" data-i18n="settings.appearance.langFlag">Flag</button>
+              </div>
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAppearanceMore2" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupAppearanceMore2">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Table Layout</span>
+            </button>
+            <div id="settingsGroupAppearanceMore2" class="filter-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.rowDensity">Row density</span>
+                <span class="settings-desc" data-i18n="settings.table.rowDensityDesc">How much vertical space each row takes — Compact fits more on screen.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingTableRowDensity">
+                <button type="button" class="sort-order-btn active" data-density="comfortable" data-i18n="settings.table.densityComfortable">Comfortable</button>
+                <button type="button" class="sort-order-btn" data-density="compact" data-i18n="settings.table.densityCompact">Compact</button>
+                <button type="button" class="sort-order-btn" data-density="ultra" data-i18n="settings.table.densityUltra">Ultra Compact</button>
+              </div>
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupMlColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupMlColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">My Lists Colors</span>
+            </button>
+            <div id="settingsGroupMlColors" class="filter-body">
+
+            <p class="settings-desc">The accent colour of each kind of list in My Lists — its section bar, cards and buttons.</p>
+            <button type="button" id="settingResetMlColors" class="settings-action-btn">Reset to defaults</button>
+            <div class="conj-color-list" id="settingMlColors">
+              <!-- One row per list kind, built from ML_COLOR_DEFS — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAppearanceWordCells" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupAppearanceWordCells">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.appearance.groupWordCells">Word Cells</span>
+            </button>
+            <div id="settingsGroupAppearanceWordCells" class="filter-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.freqRank">Frequency rank</span>
+                <span class="settings-desc" data-i18n="settings.table.freqRankDesc">The small number in the corner of every word cell, across every Table quiz style</span>
+              </div>
+              <div class="sort-order-toggle" id="settingTableShowRank">
+                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.historyMarkers">Word history markers</span>
+                <span class="settings-desc" data-i18n="settings.table.historyMarkersDesc">The list star and the "missed before" count badge on a word cell, across every Table quiz style</span>
+              </div>
+              <div class="sort-order-toggle" id="settingTableShowMarkers">
+                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.genderColor">Gender indicator</span>
+                <span class="settings-desc" data-i18n="settings.table.genderColorDesc">A cue on nouns with a known gender: a dot, a coloured pill or a tinted cell.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingGenderIndicatorStyle">
+                <button type="button" class="sort-order-btn active" data-style="off" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-style="dot" data-i18n="settings.table.genderStyleDot">Dot</button>
+                <button type="button" class="sort-order-btn" data-style="word-bg" data-i18n="settings.table.genderStyleWordBg">Word background</button>
+                <button type="button" class="sort-order-btn" data-style="box-bg" data-i18n="settings.table.genderStyleBoxBg">Box background</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.genderVisibility">Gender indicator timing</span>
+                <span class="settings-desc" data-i18n="settings.table.genderVisibilityDesc">When the gender cue may show: always, once hinted, or only when revealed.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingGenderIndicatorVisibility">
+                <button type="button" class="sort-order-btn active" data-visibility="always" data-i18n="settings.table.genderVisibilityAlways">Always</button>
+                <button type="button" class="sort-order-btn" data-visibility="hinted" data-i18n="settings.table.genderVisibilityHinted">Once hinted</button>
+                <button type="button" class="sort-order-btn" data-visibility="revealed" data-i18n="settings.table.genderVisibilityRevealed">Only when revealed</button>
+              </div>
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTableColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupTableColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Table Colors</span>
+            </button>
+            <div id="settingsGroupTableColors" class="filter-body">
+
+            <p class="settings-desc">Colors for each answer state in Table mode, including the hint-outcome states.</p>
+            <button type="button" id="settingResetTableColors" class="settings-action-btn">Reset to defaults</button>
+            <div class="conj-color-list" id="settingTableColors">
+              <!-- One row per state, built from TABLE_COLOR_DEFS — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupGenderColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupGenderColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.appearance.genderColors">Gender Colors</span>
+            </button>
+            <div id="settingsGroupGenderColors" class="filter-body">
+
+            <p class="settings-desc" data-i18n="settings.appearance.genderColorsDesc">Colors for the masculine and feminine gender indicator.</p>
+            <button type="button" id="settingResetGenderColors" class="settings-action-btn">Reset to defaults</button>
+            <div class="conj-color-list" id="settingGenderColors">
+              <!-- One row per gender, built from GENDER_COLOR_DEFS — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTenseColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupTenseColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.conj.tenseColors">Tense Colors</span>
+            </button>
+            <div id="settingsGroupTenseColors" class="filter-body">
+
+            <p class="settings-desc" data-i18n="settings.conj.tenseColorsDesc">The color each tense uses in Conjugation mode and My Lists conjugation tables.</p>
+            <button type="button" id="settingResetTenseColors" class="settings-action-btn" data-i18n="settings.conj.resetColors">Reset to defaults</button>
+            <div class="conj-color-list" id="settingTenseColors">
+              <!-- One row per tense, built from TENSE_DEFS — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupFormColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupFormColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.conj.personColors">Form Colors</span>
+            </button>
+            <div id="settingsGroupFormColors" class="filter-body">
+
+            <p class="settings-desc" data-i18n="settings.conj.personColorsDesc">The color each grammatical person's Forms toggle and table rows use.</p>
+            <button type="button" id="settingResetPersonColors" class="settings-action-btn" data-i18n="settings.conj.resetColors">Reset to defaults</button>
+            <div class="conj-color-list" id="settingPersonColors">
+              <!-- One row per pronoun slot (0-5) — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupPosColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupPosColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.appearance.posColors">Part of Speech Colors</span>
+            </button>
+            <div id="settingsGroupPosColors" class="filter-body">
+
+            <p class="settings-desc" data-i18n="settings.appearance.posColorsDesc">The color each part of speech uses in filter chips, word badges and tooltips.</p>
+            <button type="button" id="settingResetPosColors" class="settings-action-btn">Reset to defaults</button>
+            <div class="conj-color-list" id="settingPosColors">
+              <!-- One row per part of speech, built from POS_COLOR_DEFS — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group" data-simple-hide="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupLangAppearance" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupLangAppearance">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.appearance.langAppearance">Language appearance</span>
+            </button>
+            <div id="settingsGroupLangAppearance" class="filter-body">
+
+            <p class="settings-desc" data-i18n="settings.appearance.langAppearanceDesc">Override each language's flag (Flag mode) and cell color (Color mode) above</p>
+            <div class="lang-appearance-list" id="settingLangColors">
+              <!-- One row per language, built from LANGUAGES — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+            </div>
+            </div>
 
             </div>
           </div>
@@ -1668,7 +1809,7 @@
           <div class="settings-section settings-section--filters" id="settings-sec-filters">
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyFilters" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyFilters">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-section-icon" aria-hidden="true">🔎</span>
+              <span class="settings-section-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-filters"/></svg></span>
               <span class="filter-section-label settings-section-title" data-i18n="filter.filtersTitle">Filters</span>
             </button>
             <div id="settingsBodyFilters" class="filter-body settings-section-body">
@@ -1683,7 +1824,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.filters.swear">Filter swear words</span>
-                <span class="settings-desc" data-i18n="settings.filters.swearDesc">On removes words tagged vulgar in the database, plus a curated per-language list (see data/swear-words.ts) for whatever isn't tagged. Not an exhaustive filter.</span>
+                <span class="settings-desc" data-i18n="settings.filters.swearDesc">Removes words tagged vulgar, plus a curated list per language. Not exhaustive.</span>
               </div>
               <div class="sort-order-toggle" id="settingSwearFilter">
                 <button type="button" class="sort-order-btn" data-swear="true" data-i18n="common.on">On</button>
@@ -1694,7 +1835,14 @@
             </div>
             </div>
 
-            <div class="settings-group" data-advanced="true">
+            <div class="settings-fold" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn settings-fold-btn" data-collapse="settingsFold-filters" data-default-open="false" aria-expanded="false" aria-controls="settingsFold-filters">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.advancedFold">Advanced</span>
+            </button>
+            <div id="settingsFold-filters" class="filter-body settings-fold-body">
+
+            <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupFiltersBehavior" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupFiltersBehavior">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading" data-i18n="settings.filters.groupBehavior">Behavior</span>
@@ -1704,7 +1852,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.filters.linking">Filter linking</span>
-                <span class="settings-desc" data-i18n="settings.filters.linkingDesc">Off removes the 🔗 chain button from the Lists, Class and Domain filters and gives every mode its own independent filter — nothing is shared between them any more.</span>
+                <span class="settings-desc" data-i18n="settings.filters.linkingDesc">Off gives every mode its own filters and hides the 🔗 button.</span>
               </div>
               <div class="sort-order-toggle" id="settingFilterLinking">
                 <button type="button" class="sort-order-btn active" data-linking="true" data-i18n="common.on">On</button>
@@ -1715,7 +1863,7 @@
             </div>
             </div>
 
-            <div class="settings-group" data-advanced="true">
+            <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupFiltersVisibility" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupFiltersVisibility">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading" data-i18n="settings.filters.groupVisibility">Visibility per Mode</span>
@@ -1725,7 +1873,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.filters.posLabel">Part of Speech filter</span>
-                <span class="settings-desc" data-i18n="settings.filters.hidePOSDesc">Check a mode to remove the Part of Speech box there and stop it narrowing anything in that mode — stronger than that filter's own On/Off, which keeps the box (dimmed) with your picks remembered. Only Table and Picture Quiz ever show this box.</span>
+                <span class="settings-desc" data-i18n="settings.filters.hidePOSDesc">Tick a mode to remove its Part of Speech box entirely.</span>
               </div>
               <div class="sort-order-toggle" id="settingHidePOSModes">
                 <button type="button" class="sort-order-btn" data-hide-mode="table" data-i18n="nav.table">Table</button>
@@ -1762,12 +1910,15 @@
 
             </div>
             </div>
+            </div>
+
+            </div>
           </div>
 
           <div class="settings-section settings-section--chinese" id="settings-sec-chinese">
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyChinese" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyChinese">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-section-icon" aria-hidden="true">文</span>
+              <span class="settings-section-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-chinese"/></svg></span>
               <span class="filter-section-label settings-section-title" data-i18n="settings.nav.script">Script Display</span>
             </button>
             <div id="settingsBodyChinese" class="filter-body settings-section-body">
@@ -1775,7 +1926,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.script.primary">Word shown as</span>
-                <span class="settings-desc" data-i18n="settings.script.primaryDesc">For a language with a non-Latin script (Chinese, Japanese): which script is primary — shown by default, and required by default when a direction asks you to type it. The romanized form sidesteps needing an IME to type characters</span>
+                <span class="settings-desc" data-i18n="settings.script.primaryDesc">Which script is primary — shown by default and expected when typing.</span>
               </div>
               <div class="sort-order-toggle" id="settingChineseScript">
                 <button type="button" class="sort-order-btn active" data-chinese-script="characters" data-i18n="settings.script.characters">Characters</button>
@@ -1783,10 +1934,24 @@
               </div>
             </div>
 
+            <div class="settings-fold" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn settings-fold-btn" data-collapse="settingsFold-chinese" data-default-open="false" aria-expanded="false" aria-controls="settingsFold-chinese">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.advancedFold">Advanced</span>
+            </button>
+            <div id="settingsFold-chinese" class="filter-body settings-fold-body">
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupChineseMore1" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupChineseMore1">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">More Settings</span>
+            </button>
+            <div id="settingsGroupChineseMore1" class="filter-body">
+
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.script.showBoth">Show both scripts (word)</span>
-                <span class="settings-desc" data-i18n="settings.script.showBothDesc">Annotate the word with its other script in parentheses, e.g. 的 (de) or 会社 (kaisha), and accept either script as a typed answer</span>
+                <span class="settings-desc" data-i18n="settings.script.showBothDesc">Show the other script in parentheses, and accept either as an answer.</span>
               </div>
               <div class="sort-order-toggle" id="settingShowPinyin">
                 <button type="button" class="sort-order-btn" data-show-pinyin="false" data-i18n="common.off">Off</button>
@@ -1797,7 +1962,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.script.showRomanizedGloss">Show romanization (meaning)</span>
-                <span class="settings-desc" data-i18n="settings.script.showRomanizedGlossDesc">Also show the romanized reading in parentheses next to the English meaning, e.g. already (le) or company (kaisha)</span>
+                <span class="settings-desc" data-i18n="settings.script.showRomanizedGlossDesc">Show the romanized reading beside the English meaning.</span>
               </div>
               <div class="sort-order-toggle" id="settingShowPinyinGloss">
                 <button type="button" class="sort-order-btn" data-show-pinyin-gloss="false" data-i18n="common.off">Off</button>
@@ -1808,7 +1973,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.script.functionMarker">Function-word brackets</span>
-                <span class="settings-desc" data-i18n="settings.script.functionMarkerDesc">Bracket a function word — a grammatical particle/suffix with no real translation, e.g. は "topic marker" — to mark it apart from ordinary vocabulary. Word brackets the target-language slot, Meaning brackets the English side</span>
+                <span class="settings-desc" data-i18n="settings.script.functionMarkerDesc">Bracket function words (particles like は) to set them apart.</span>
               </div>
               <div class="sort-order-toggle" id="settingFunctionWordMarker">
                 <button type="button" class="sort-order-btn" data-function-marker="off" data-i18n="common.off">Off</button>
@@ -1819,153 +1984,6 @@
             </div>
 
             </div>
-          </div>
-
-          <div class="settings-section settings-section--appearance" id="settings-sec-appearance">
-            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyAppearance" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyAppearance">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-section-icon" aria-hidden="true">🎨</span>
-              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.appearance">Appearance</span>
-            </button>
-            <div id="settingsBodyAppearance" class="filter-body settings-section-body">
-
-            <div class="settings-group">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAppearanceDisplay" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupAppearanceDisplay">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading">Display</span>
-            </button>
-            <div id="settingsGroupAppearanceDisplay" class="filter-body">
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.appearance.textSize">Text size</span>
-                <span class="settings-desc" data-i18n="settings.appearance.textSizeDesc">Scales quiz text — Small fits more words on screen, Large is easier to read</span>
-              </div>
-              <div class="sort-order-toggle" id="settingFontSize">
-                <button type="button" class="sort-order-btn" data-size="xs">XS</button>
-                <button type="button" class="sort-order-btn" data-size="small">S</button>
-                <button type="button" class="sort-order-btn active" data-size="medium">M</button>
-                <button type="button" class="sort-order-btn" data-size="large">L</button>
-                <button type="button" class="sort-order-btn" data-size="xl">XL</button>
-              </div>
-            </div>
-
-            <div class="settings-row" data-simple-hide="true">
-              <div class="settings-label">
-                <span data-i18n="settings.appearance.langIndicator">Language indicator</span>
-                <span class="settings-desc" data-i18n="settings.appearance.langIndicatorDesc">When 2+ languages are merged into one table (the "+ Languages" picker), how each word's language is shown — Off leaves cells plain, Color tints the cell, Flag shows a faint flag behind the word</span>
-              </div>
-              <div class="sort-order-toggle" id="settingLangIndicator">
-                <button type="button" class="sort-order-btn" data-indicator="off" data-i18n="common.off">Off</button>
-                <button type="button" class="sort-order-btn active" data-indicator="color" data-i18n="settings.appearance.langColor">Color</button>
-                <button type="button" class="sort-order-btn" data-indicator="flag" data-i18n="settings.appearance.langFlag">Flag</button>
-              </div>
-            </div>
-
-            </div>
-            </div>
-
-            <div class="settings-group" data-advanced="true" data-simple-hide="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupLangAppearance" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupLangAppearance">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading" data-i18n="settings.appearance.langAppearance">Language appearance</span>
-            </button>
-            <div id="settingsGroupLangAppearance" class="filter-body">
-
-            <p class="settings-desc" data-i18n="settings.appearance.langAppearanceDesc">Override each language's flag (Flag mode) and cell color (Color mode) above</p>
-            <div class="lang-appearance-list" id="settingLangColors">
-              <!-- One row per language, built from LANGUAGES — see settings.ts -->
-            </div>
-
-            </div>
-            </div>
-
-            <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupPosColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupPosColors">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading" data-i18n="settings.appearance.posColors">Part of Speech Colors</span>
-            </button>
-            <div id="settingsGroupPosColors" class="filter-body">
-
-            <p class="settings-desc" data-i18n="settings.appearance.posColorsDesc">The color each part of speech uses — the Part of Speech filter chips, My Lists' word badges, and the word tooltip's badge.</p>
-            <button type="button" id="settingResetPosColors" class="settings-action-btn">Reset to defaults</button>
-            <div class="conj-color-list" id="settingPosColors">
-              <!-- One row per part of speech, built from POS_COLOR_DEFS — see settings.ts -->
-            </div>
-
-            </div>
-            </div>
-
-            </div>
-          </div>
-
-          <div class="settings-section settings-section--history" id="settings-sec-history">
-            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyHistory" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyHistory">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-section-icon" aria-hidden="true">🕘</span>
-              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.history">Session History</span>
-            </button>
-            <div id="settingsBodyHistory" class="filter-body settings-section-body">
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.history.sessionHistory">Session history</span>
-                <span class="settings-desc" data-i18n="settings.history.sessionHistoryDesc">Off stops new quiz sessions from being logged to the History tab. Sessions already there are untouched, and this doesn't affect mastery, lists, or the words you keep missing.</span>
-              </div>
-              <div class="sort-order-toggle" id="settingHistory">
-                <button type="button" class="sort-order-btn active" data-history="true" data-i18n="common.on">On</button>
-                <button type="button" class="sort-order-btn" data-history="false" data-i18n="common.off">Off</button>
-              </div>
-            </div>
-
-            <div class="settings-group">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupBackup" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupBackup">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading">Backup &amp; Restore</span>
-            </button>
-            <div id="settingsGroupBackup" class="filter-body">
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span>Back up everything</span>
-                <span class="settings-desc">Downloads one file with your lists, mastery, review schedule, history, streaks, My Content edits and settings. Progress lives only in this browser, so clearing site data erases it — keep a copy. <span id="backupLastReadout">Never backed up.</span></span>
-              </div>
-              <button type="button" id="settingFullBackup" class="settings-action-btn">Download Backup</button>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span>Restore from backup</span>
-                <span class="settings-desc">Replaces the data in this browser with the contents of a full backup file. The page reloads afterward.</span>
-              </div>
-              <button type="button" id="settingFullRestore" class="settings-action-btn settings-action-btn--danger">Restore…</button>
-              <input type="file" id="settingFullRestoreInput" accept="application/json,.json" hidden>
-            </div>
-
-            </div>
-            </div>
-
-            <div class="settings-group" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupHistoryAdvanced" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupHistoryAdvanced">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading">Data Management</span>
-            </button>
-            <div id="settingsGroupHistoryAdvanced" class="filter-body">
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.history.maxSessions">Sessions to keep</span>
-                <span class="settings-desc" data-i18n="settings.history.maxSessionsDesc">How many of your most recent quiz sessions, per language, stay in the History tab's Recent Sessions list before the oldest ones drop off.</span>
-              </div>
-              <input type="number" id="settingMaxSessionsKept" class="ml-profile-editor-number" min="1" max="1000" placeholder="100">
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">
-                <span data-i18n="settings.history.clearHistory">Clear history</span>
-                <span class="settings-desc" data-i18n="settings.history.clearHistoryDesc">Permanently deletes every saved quiz session and "words I keep missing" tally, in every language. Mastery and your lists are not affected.</span>
-              </div>
-              <button type="button" id="settingClearHistory" class="settings-action-btn settings-action-btn--danger" data-i18n="settings.history.clearHistoryBtn">Clear History</button>
             </div>
 
             </div>
@@ -1977,7 +1995,7 @@
           <div class="settings-section settings-section--glossary" id="settings-sec-glossary">
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyGlossary" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyGlossary">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-section-icon" aria-hidden="true">📖</span>
+              <span class="settings-section-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-glossary"/></svg></span>
               <span class="filter-section-label settings-section-title" data-i18n="settings.nav.glossary">Glossary</span>
             </button>
             <div id="settingsBodyGlossary" class="filter-body settings-section-body">
@@ -2007,8 +2025,112 @@
 
             <div class="settings-row settings-row--stack glossary-term" data-category="table">
               <div class="settings-label">
+                <span data-i18n="settings.glossary.progressLabel">Progress bar label</span>
+                <span class="settings-desc" data-i18n="settings.glossary.progressLabelDesc">Once a quiz is fully answered its bar would read a meaningless 100%, so the label switches to something useful. Correct (the default) shows the percent correct, Missed the percent missed, and All a fuller breakdown of correct, revealed and missed. A separate switch adds the Hinted → Solved / Revealed / Missed percentages.</span>
+                <button type="button" class="settings-link settings-link--text" data-setting-link="settingProgressBarPercentMode" data-i18n="settings.goToSetting">Go to setting →</button>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="table">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.rowDensity">Row density</span>
+                <span class="settings-desc" data-i18n="settings.glossary.rowDensityDesc">How much vertical space each Table row takes. Compact shrinks the word, input and cell padding so more rows fit on screen; Ultra Compact shrinks it further. The rank, list-star/missed-count markers and gender indicator still show if they are on, just with less room.</span>
+                <button type="button" class="settings-link settings-link--text" data-setting-link="settingTableRowDensity" data-i18n="settings.goToSetting">Go to setting →</button>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="table">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.answerMatching">Answer matching and typo tolerance</span>
+                <span class="settings-desc" data-i18n="settings.glossary.answerMatchingDesc">Flexible accepts answers regardless of accents and capitals; Strict needs exact accents (está ≠ esta). Typo tolerance forgives a few slips on top of that: Low about 1 letter in 7, Normal 1 in 4, High 1 in 3, and Off requires exact spelling.</span>
+                <button type="button" class="settings-link settings-link--text" data-setting-link="settingMatch" data-i18n="settings.goToSetting">Go to setting →</button>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="table">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.glossCutoff">Gloss cutoff</span>
+                <span class="settings-desc" data-i18n="settings.glossary.glossCutoffDesc">A word can carry several English senses. Question glosses and Answer glosses cap how many are shown in each place. "Show the sense you typed" adds a correct answer that fell past the cutoff back into the revealed answer (e.g. "prove" for probar) instead of hiding it. "Confirm multiple meanings on Hint" makes a Hint say another accepted sense exists — a note in Standard style, a trailing " /" in Double Recall — without saying what it is.</span>
+                <button type="button" class="settings-link settings-link--text" data-setting-link="settingQuestionGlosses" data-i18n="settings.goToSetting">Go to setting →</button>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="table">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.genderTiming">Gender indicator timing</span>
+                <span class="settings-desc" data-i18n="settings.glossary.genderTimingDesc">When the gender indicator is allowed to show. Always shows it from the start, as a mild hint. Once hinted waits until you have used that row's Hint button or resolved it. Only when revealed waits until the row is fully solved, peeked, or given up on.</span>
+                <button type="button" class="settings-link settings-link--text" data-setting-link="settingGenderIndicatorVisibility" data-i18n="settings.goToSetting">Go to setting →</button>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="progress">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.hintTracking">Hint outcome tracking</span>
+                <span class="settings-desc" data-i18n="settings.glossary.hintTrackingDesc">Each hint outcome — hinted then solved, hinted then revealed, hinted then given up on — can be recorded in session history separately. It is purely a recording switch: the row keeps its own colour either way.</span>
+                <button type="button" class="settings-link settings-link--text" data-setting-link="settingTrackHintedCorrect" data-i18n="settings.goToSetting">Go to setting →</button>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="conjugation">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.deselectedPronouns">Deselected pronouns</span>
+                <span class="settings-desc" data-i18n="settings.glossary.deselectedPronounsDesc">When a pronoun is deselected, the first three options keep its cell and grid lines so the card still reads as a full chart — blank, greyed with a disabled box, or greyed with the answer filled in. Close up removes the cell and lets the rest move up into it.</span>
+                <button type="button" class="settings-link settings-link--text" data-setting-link="settingConjShape" data-i18n="settings.goToSetting">Go to setting →</button>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="script">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.languageIndicator">Language indicator</span>
+                <span class="settings-desc" data-i18n="settings.glossary.languageIndicatorDesc">When 2+ languages are merged into one table with the "+ Languages" picker, how each word's language is marked: Off leaves cells plain, Color tints the cell, Flag shows a faint flag behind the word.</span>
+                <button type="button" class="settings-link settings-link--text" data-setting-link="settingLangIndicator" data-i18n="settings.goToSetting">Go to setting →</button>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="script">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.primaryScript">Primary script and function words</span>
+                <span class="settings-desc" data-i18n="settings.glossary.primaryScriptDesc">For a language with a non-Latin script (Chinese, Japanese) the primary script is shown by default and expected when a direction asks you to type it; the romanized form sidesteps needing an IME. A function word is a grammatical particle or suffix with no real translation, e.g. は "topic marker" — bracketing it keeps it apart from ordinary vocabulary.</span>
+                <button type="button" class="settings-link settings-link--text" data-setting-link="settingChineseScript" data-i18n="settings.goToSetting">Go to setting →</button>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="words">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.filterLinking">Filter linking and visibility per mode</span>
+                <span class="settings-desc" data-i18n="settings.glossary.filterLinkingDesc">The Lists, Class and Domain filters can be shared between modes with the 🔗 chain button; turning linking off gives every mode its own independent filters. Visibility per Mode is stronger than a filter's own On/Off: it removes the box from that mode entirely, whereas Off keeps the box dimmed with your picks remembered.</span>
+                <button type="button" class="settings-link settings-link--text" data-setting-link="settingFilterLinking" data-i18n="settings.goToSetting">Go to setting →</button>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="general">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.simpleMode">Simple Mode</span>
+                <span class="settings-desc" data-i18n="settings.glossary.simpleModeDesc">On by default; toggled in the toolbar. Turning it on switches Advanced mode off and the swear-word filter on — both stay changeable afterward. It hides the My Content and My Lists tabs, the Testing Profiles button, the Part of Speech/Lists/Domains filter boxes, the "+ Languages" picker, the Skip Known size mode, and the Language indicator / Language appearance rows in Appearance, for as long as it stays on. Those filters, "+ Languages" and Skip Known also stop applying whatever they were set to. It sets each mode to its simplest option: Table's Direction (Word→Meaning) and Quiz Style (Standard), Picture Quiz (Click the Picture), Conjugation's View (Grid) and Regularity (all), Trivia's difficulty and reading settings (Easy, Short) and Guess the Blank's Difficulty (Easy) — each changeable again by turning Simple Mode off.</span>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="general">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.experimental">Experimental quiz modes</span>
+                <span class="settings-desc" data-i18n="settings.glossary.experimentalDesc">The Picture Quiz, Trivia, Guess the Blank and Sentence Scramble tabs. They are proofs of concept — they work, but are unfinished, may change or be removed, and don't get the same polish as Table, Conjugation and My Lists.</span>
+                <button type="button" class="settings-link settings-link--text" data-setting-link="settingShowExperimentalModes" data-i18n="settings.goToSetting">Go to setting →</button>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="general">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.adminPanel">Admin panel</span>
+                <span class="settings-desc" data-i18n="settings.glossary.adminPanelDesc">An Admin tab for editing word data directly — glosses, examples, part of speech, frequency rank and more. On the desktop app it edits that app's own local copy of the vocabulary database, never the shared one this project is built from. On the web app it only works when a real backend is reachable; otherwise the tab bounces you back to Settings.</span>
+                <button type="button" class="settings-link settings-link--text" data-setting-link="settingShowAdminPanel" data-i18n="settings.goToSetting">Go to setting →</button>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="table">
+              <div class="settings-label">
                 <span data-i18n="settings.glossary.disambiguator">Sense disambiguator</span>
                 <span class="settings-desc" data-i18n="settings.glossary.disambiguatorDesc">A short curated note on a word that shares its translation with another word, telling the two apart — Spanish "ser" and "estar" both mean "be", so "ser" carries the note "permanent" and "estar" carries "temporary". Table Quiz has independent switches for where it shows: next to the word, next to the meaning, and on the hover/click info card.</span>
+                <button type="button" class="settings-link settings-link--text" data-setting-link="settingShowDisambiguatorAll" data-i18n="settings.goToSetting">Go to setting →</button>
               </div>
             </div>
 
@@ -2016,6 +2138,7 @@
               <div class="settings-label">
                 <span data-i18n="settings.glossary.grammarHint">Grammar hint</span>
                 <span class="settings-desc" data-i18n="settings.glossary.grammarHintDesc">A short gender/number note automatically shown on a word whose own translation depends on the noun it modifies — an article or determiner like "a", "this", or "some". Lets you tell Spanish "un" from "una" apart before typing, without giving away the noun itself.</span>
+                <button type="button" class="settings-link settings-link--text" data-setting-link="settingAbbreviateGrammarHint" data-i18n="settings.goToSetting">Go to setting →</button>
               </div>
             </div>
 
@@ -2030,6 +2153,7 @@
               <div class="settings-label">
                 <span data-i18n="settings.glossary.genderIndicator">Gender indicator</span>
                 <span class="settings-desc" data-i18n="settings.glossary.genderIndicatorDesc">A visual marker — a small corner dot, a colored pill behind the word, or the whole cell tinted — showing whether a noun is grammatically masculine or feminine. Independent of the gender article below; a learner can use either, both, or neither.</span>
+                <button type="button" class="settings-link settings-link--text" data-setting-link="settingGenderIndicatorStyle" data-i18n="settings.goToSetting">Go to setting →</button>
               </div>
             </div>
 
@@ -2037,6 +2161,7 @@
               <div class="settings-label">
                 <span data-i18n="settings.glossary.genderArticle">Gender article</span>
                 <span class="settings-desc" data-i18n="settings.glossary.genderArticleDesc">The definite article prefixed to a noun once its gender is known, so it reads "la casa" instead of just "casa" — "the" has no gender in English, but most other languages this app teaches mark it on every noun.</span>
+                <button type="button" class="settings-link settings-link--text" data-setting-link="settingShowGenderArticle" data-i18n="settings.goToSetting">Go to setting →</button>
               </div>
             </div>
 
@@ -2129,10 +2254,224 @@
             </div>
           </div>
 
+          <div class="settings-section settings-section--streak" id="settings-sec-streak">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyStreak" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyStreak">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-section-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-streak"/></svg></span>
+              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.streak">Streak &amp; Daily Goal</span>
+            </button>
+            <div id="settingsBodyStreak" class="filter-body settings-section-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.current">Current streak</span>
+              </div>
+              <div class="settings-readout" id="streakCurrentReadout">0 days</div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.best">Best streak</span>
+              </div>
+              <div class="settings-readout" id="streakBestReadout">0 days</div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.today">Today's progress</span>
+              </div>
+              <div class="settings-readout" id="streakTodayReadout">0 words</div>
+            </div>
+
+            <div class="settings-row" data-goal-row="words">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.goalWords">Words goal</span>
+                <span class="settings-desc" data-i18n="settings.streak.goalDesc">Get a small celebration once you reach this. "Off" just tracks the streak with no goal.</span>
+              </div>
+              <div class="sort-order-toggle" data-goal-presets="words"></div>
+              <input type="number" class="ml-profile-editor-number" data-goal-custom="words" min="0" placeholder="Custom…" data-i18n-placeholder="settings.streak.goalCustomPlaceholder">
+            </div>
+
+            <div class="settings-row" data-goal-row="minutes">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.goalMinutes">Minutes goal</span>
+              </div>
+              <div class="sort-order-toggle" data-goal-presets="minutes"></div>
+              <input type="number" class="ml-profile-editor-number" data-goal-custom="minutes" min="0" placeholder="Custom…" data-i18n-placeholder="settings.streak.goalCustomPlaceholder">
+            </div>
+
+            <div class="settings-fold" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn settings-fold-btn" data-collapse="settingsFold-streak" data-default-open="false" aria-expanded="false" aria-controls="settingsFold-streak">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.advancedFold">Advanced</span>
+            </button>
+            <div id="settingsFold-streak" class="filter-body settings-fold-body">
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupStreakMore1" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupStreakMore1">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">More Settings</span>
+            </button>
+            <div id="settingsGroupStreakMore1" class="filter-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.goalScope">Goal scope</span>
+                <span class="settings-desc" data-i18n="settings.streak.goalScopeDesc">One set of goals for every language, or a different set for a specific language.</span>
+              </div>
+              <select id="settingGoalScope" class="ml-profile-editor-select">
+                <option value="" data-i18n="settings.streak.goalScopeAll">All languages</option>
+              </select>
+              <button type="button" id="settingGoalScopeReset" data-i18n="settings.streak.goalScopeReset" hidden>Use global default</button>
+            </div>
+
+            <div class="settings-row" data-goal-row="streak">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.goalStreak">Streak-days goal</span>
+              </div>
+              <div class="sort-order-toggle" data-goal-presets="streak"></div>
+              <input type="number" class="ml-profile-editor-number" data-goal-custom="streak" min="0" placeholder="Custom…" data-i18n-placeholder="settings.streak.goalCustomPlaceholder">
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.showWidget">Streak counter</span>
+                <span class="settings-desc" data-i18n="settings.streak.showWidgetDesc">A small 🔥 counter in the top-right corner, visible on every tab.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingShowStreakWidget">
+                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.widgetFormat">Streak counter format</span>
+                <span class="settings-desc" data-i18n="settings.streak.widgetFormatDesc">How the top-right streak counter arranges the fire emoji and the day count.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingStreakWidgetFormat">
+                <button type="button" class="sort-order-btn active" data-format="emoji-number" data-i18n="settings.streak.widgetFormatEmojiFirst">🔥 N</button>
+                <button type="button" class="sort-order-btn" data-format="number-emoji" data-i18n="settings.streak.widgetFormatNumberFirst">N 🔥</button>
+                <button type="button" class="sort-order-btn" data-format="number-only" data-i18n="settings.streak.widgetFormatNumberOnly">N</button>
+              </div>
+            </div>
+
+            <div class="settings-row settings-row--stack">
+              <div class="settings-label">
+                <span data-i18n="settings.streak.calendar">Activity</span>
+                <span class="settings-desc" data-i18n="settings.streak.calendarDesc">Days you practiced and goals hit — hover a day for details.</span>
+              </div>
+              <div class="settings-calendar settings-calendar--wide" id="streakCalendar">
+                <div class="settings-calendar-nav">
+                  <button type="button" id="streakCalPrev" aria-label="Previous month">&#x2039;</button>
+                  <span id="streakCalLabel"></span>
+                  <button type="button" id="streakCalNext" aria-label="Next month">&#x203A;</button>
+                </div>
+                <div class="settings-calendar-weekdays">
+                  <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+                </div>
+                <div class="settings-calendar-grid" id="streakCalGrid"></div>
+                <div class="settings-calendar-legend" id="streakCalLegend"></div>
+              </div>
+            </div>
+
+            </div>
+            </div>
+
+            </div>
+            </div>
+
+            </div>
+          </div>
+
+          <div class="settings-section settings-section--history" id="settings-sec-history">
+            <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyHistory" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyHistory">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-section-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-history"/></svg></span>
+              <span class="filter-section-label settings-section-title" data-i18n="settings.nav.history">Session History</span>
+            </button>
+            <div id="settingsBodyHistory" class="filter-body settings-section-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.history.sessionHistory">Session history</span>
+                <span class="settings-desc" data-i18n="settings.history.sessionHistoryDesc">Off stops new sessions being logged to History. Mastery and lists are unaffected.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingHistory">
+                <button type="button" class="sort-order-btn active" data-history="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn" data-history="false" data-i18n="common.off">Off</button>
+              </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupBackup" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupBackup">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Backup &amp; Restore</span>
+            </button>
+            <div id="settingsGroupBackup" class="filter-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.history.backup">Back up everything</span>
+                <span class="settings-desc">One file with your lists, progress and settings. Data lives only in this browser and clearing it erases it. <span id="backupLastReadout">Never backed up.</span></span>
+              </div>
+              <button type="button" id="settingFullBackup" class="settings-action-btn">Download Backup</button>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.history.restore">Restore from backup</span>
+                <span class="settings-desc" data-i18n="settings.history.restoreDesc">Replace this browser's data with a backup file. The page reloads.</span>
+              </div>
+              <button type="button" id="settingFullRestore" class="settings-action-btn settings-action-btn--danger">Restore…</button>
+              <input type="file" id="settingFullRestoreInput" accept="application/json,.json" hidden>
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-fold" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn settings-fold-btn" data-collapse="settingsFold-history" data-default-open="false" aria-expanded="false" aria-controls="settingsFold-history">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.advancedFold">Advanced</span>
+            </button>
+            <div id="settingsFold-history" class="filter-body settings-fold-body">
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupHistoryAdvanced" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupHistoryAdvanced">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Data Management</span>
+            </button>
+            <div id="settingsGroupHistoryAdvanced" class="filter-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.history.maxSessions">Sessions to keep</span>
+                <span class="settings-desc" data-i18n="settings.history.maxSessionsDesc">Recent sessions kept per language before the oldest drop off.</span>
+              </div>
+              <input type="number" id="settingMaxSessionsKept" class="ml-profile-editor-number" min="1" max="1000" placeholder="100">
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.history.clearHistory">Clear history</span>
+                <span class="settings-desc" data-i18n="settings.history.clearHistoryDesc">Permanently deletes all saved sessions and missed-word tallies. Mastery and lists are kept.</span>
+              </div>
+              <button type="button" id="settingClearHistory" class="settings-action-btn settings-action-btn--danger" data-i18n="settings.history.clearHistoryBtn">Clear History</button>
+            </div>
+
+            </div>
+            </div>
+            </div>
+            </div>
+
+            </div>
+          </div>
+
           <div class="settings-section settings-section--general" id="settings-sec-general">
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyGeneral" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyGeneral">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-section-icon" aria-hidden="true">⚙</span>
+              <span class="settings-section-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-general"/></svg></span>
               <span class="filter-section-label settings-section-title" data-i18n="settings.nav.general">General</span>
             </button>
             <div id="settingsBodyGeneral" class="filter-body settings-section-body">
@@ -2147,7 +2486,7 @@
             <div class="settings-row settings-row--stack">
               <div class="settings-label">
                 <span data-i18n="settings.general.kidModeSpecifics">Simple Mode — what it changes</span>
-                <span class="settings-desc" data-i18n="settings.general.kidModeSpecificsDesc">The toggle for this lives in the toolbar to the right, always visible regardless of Advanced mode, and it's on by default. Turning it on: switches Advanced mode off and the swear-word filter on — both stay changeable afterward. Hides the My Content and My Lists tabs, the Testing Profiles button, the Part of Speech/Lists/Domains filter boxes, the "+ Languages" picker, the Skip Known size mode, and the Language indicator/Language appearance rows in Appearance — for as long as this stays on. The Part of Speech/Lists/Domains filters and "+ Languages" also stop applying whatever they were previously set to, not just disappear from view — so does Skip Known, which relies on the Lists filter. And it sets each mode to its simplest option: Table's Direction (Word→Meaning) and Quiz Style (Standard), Picture Quiz (Click the Picture), Conjugation's View (Grid) and Regularity (all), Trivia's Difficulty/Reading Difficulty (Easy) and Reading Length (Short), and Guess the Blank's Difficulty (Easy) — each still changeable by turning this off, same as Advanced mode and the swear filter.</span>
+                <span class="settings-desc" data-i18n="settings.general.kidModeSpecificsDesc">Turn Simple Mode on or off in the toolbar; the Glossary lists exactly what it changes.</span>
               </div>
             </div>
 
@@ -2162,7 +2501,14 @@
             </div>
             </div>
 
-            <div class="settings-group" data-advanced="true">
+            <div class="settings-fold" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn settings-fold-btn" data-collapse="settingsFold-general" data-default-open="false" aria-expanded="false" aria-controls="settingsFold-general">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.advancedFold">Advanced</span>
+            </button>
+            <div id="settingsFold-general" class="filter-body settings-fold-body">
+
+            <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupGeneralAdvanced" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupGeneralAdvanced">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading">Profile Editing &amp; Content</span>
@@ -2172,18 +2518,18 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.general.inlineProfileEditing">Inline profile editing</span>
-                <span class="settings-desc" data-i18n="settings.general.inlineProfileEditingDesc">Adds "Full Profile" and "⚡ Quick Edit" buttons to each Testing Profile in the Profiles popover (Table/Picture/Conjugation), letting you tweak its parameters right there and try them out immediately — without saving over the profile unless you choose "Update" or "Save as new profile…".</span>
+                <span class="settings-desc" data-i18n="settings.general.inlineProfileEditingDesc">Adds Full Profile and ⚡ Quick Edit buttons to each profile in the Profiles popover.</span>
               </div>
               <div class="sort-order-toggle" id="settingInlineProfileEditing">
-                <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
-                <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-enabled="true" data-i18n="common.on">On</button>
               </div>
             </div>
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Experimental quiz modes</span>
-                <span class="settings-desc">Shows the Picture Quiz, Trivia, Guess the Blank and Sentence Scramble tabs. These are proofs of concept — they work, but are unfinished, may change or be removed, and don't get the same polish as Table, Conjugation and My Lists.</span>
+                <span data-i18n="settings.general.experimental">Experimental quiz modes</span>
+                <span class="settings-desc" data-i18n="settings.general.experimentalDesc">Show the unfinished Picture Quiz, Trivia, Guess the Blank and Sentence Scramble tabs.</span>
               </div>
               <div class="sort-order-toggle" id="settingShowExperimentalModes">
                 <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
@@ -2193,8 +2539,8 @@
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Visual Profiles</span>
-                <span class="settings-desc">Shows a "Visual Profiles" sub-section under Testing Profiles in My Lists' sidebar — saved bundles of display preferences (Theme, Font Size) you can switch between, separate from what a Testing Profile quizzes on.</span>
+                <span data-i18n="settings.general.visualProfiles">Visual Profiles</span>
+                <span class="settings-desc" data-i18n="settings.general.visualProfilesDesc">Show a Visual Profiles section in My Lists — saved bundles of display settings.</span>
               </div>
               <div class="sort-order-toggle" id="settingShowVisualProfiles">
                 <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
@@ -2205,7 +2551,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.general.confirmRemoveWordOverride">Confirm before removing a word edit</span>
-                <span class="settings-desc" data-i18n="settings.general.confirmRemoveWordOverrideDesc">My Content's "Edit an Existing Word" list asks before its Remove button resets every override on a word. Off skips the prompt.</span>
+                <span class="settings-desc" data-i18n="settings.general.confirmRemoveWordOverrideDesc">Ask before removing a word's edits in My Content. Off skips the prompt.</span>
               </div>
               <div class="sort-order-toggle" id="settingConfirmRemoveWordOverride">
                 <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
@@ -2215,8 +2561,8 @@
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Trivia/Guess the Blank list page size</span>
-                <span class="settings-desc">Starting "per page" for My Content's "Edit an Existing Trivia Question" and "Edit an Existing Guess the Blank Question" lists — only sets the default; once a list's own Per Page control has been changed, that choice sticks until you change it again.</span>
+                <span data-i18n="settings.general.myContentPageSize">Trivia/Guess the Blank list page size</span>
+                <span class="settings-desc" data-i18n="settings.general.myContentPageSizeDesc">Starting page size for My Content's trivia and Guess the Blank lists.</span>
               </div>
               <div class="sort-order-toggle" id="settingMyContentPageSize">
                 <button type="button" class="sort-order-btn active" data-pagesize="5">5</button>
@@ -2228,7 +2574,7 @@
             </div>
             </div>
 
-            <div class="settings-group" data-advanced="true">
+            <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupGeneralAdmin" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupGeneralAdmin">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading">Admin Panel</span>
@@ -2237,8 +2583,8 @@
 
             <div class="settings-row">
               <div class="settings-label">
-                <span>Show Admin Panel tab</span>
-                <span class="settings-desc">Adds an "Admin" tab for editing word data directly — glosses, examples, part of speech, frequency rank, and more. On the desktop app, this edits that app's own local copy of the vocabulary database, never the shared one this project is built from. On the web app, it only works when a real backend is reachable; otherwise the tab bounces you back here.</span>
+                <span data-i18n="settings.general.adminPanelTab">Show Admin Panel tab</span>
+                <span class="settings-desc" data-i18n="settings.general.adminPanelTabDesc">Adds an Admin tab for editing word data. Needs a reachable backend on the web app.</span>
               </div>
               <div class="sort-order-toggle" id="settingShowAdminPanel">
                 <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
@@ -2246,6 +2592,8 @@
               </div>
             </div>
 
+            </div>
+            </div>
             </div>
             </div>
 

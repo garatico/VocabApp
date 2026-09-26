@@ -311,6 +311,33 @@ read from or write to `vocabulary.db`.
   factory call. `SidebarKit` (`sidebar-kit.ts`) is the shared bundle the sections receive. Add a
   section by writing a module against `SidebarKit`, not by reaching into another module's state.
   `tests/e2e/my-lists-sidebar.spec.ts` pins the behaviour and passes on both the old and new code.
+- **The Settings screen is organised by what you want to change, not by mode.** The side nav has
+  five headings (Quizzes / Display / Content / Progress / App) and the sections in `index.html`
+  follow the same order — `tests/e2e/settings-organisation.spec.ts` fails if they drift apart.
+  How things *look* (row density, columns, badges, and every colour picker under a "Colors"
+  subheading) lives in **Appearance**; a quiz section keeps only what changes how the quiz behaves.
+  A new colour picker or display toggle goes in Appearance. **"Changed from default"** compares each
+  row with its markup as shipped (snapshotted in `bindSettings()` before saved values are painted
+  on), so the `.active` button / selected option in the HTML *is* the default and must match the
+  getter's fallback in `settings.ts`; the spec fails on a fresh browser if any row reads as changed.
+  Rows built by JS after load (the daily-goal rows) opt out with `data-goal-row`. The same snapshot
+  drives the per-row ↺ and each section's "Reset section" — they click the default button / reselect
+  the default option, so the setting's own handler persists and repaints. Each section has one
+  colour (`--sec`, set on the section *and* its nav link in `settings.css`); advanced-only groups sit
+  together in one `.settings-fold` per section (still hidden unless Advanced mode is on); descriptions
+  are one line — anything longer belongs in a Glossary entry. **Keep the default view small:** a new
+  user should see only the essentials (a handful of rows per section); anything that is tuning goes in
+  that section's fold. A section's fold is `#settingsFold-<section>`, and a group inside it needs an id
+  starting `settingsGroup` for search to find it. **Resets are undoable**: row / section resets
+  capture the controls' current state first (`captureRow`) and offer Undo in the existing
+  `undo-toast`; "Reset all" reloads, so its snapshot rides through `sessionStorage` and the toast
+  appears after the reload. What the markup can't describe — colour pickers, daily goals, the timed
+  minutes — is `settings-extras.ts`. **Control ids are public**: `#setting=<id>` links, Glossary
+  "Go to setting" buttons and `data-setting-link` (the quiz screen's ⚙ links) all use them, so don't
+  rename one. Every label/description in Settings needs a `data-i18n` key with a Spanish entry
+  (`tests/client/settings-i18n.test.ts`), and `tests/client/settings-defaults.test.ts` runs the real
+  Settings code over the real markup and fails if any row reads as changed on empty storage. The section last read is remembered in
+  `s_settings_section`.
 - **Flat asset URLs, explicit index**: `data/images/` and `data/emoji/` are
   partitioned by domain on disk and flat in the URL space. `lib/flat-static.ts`
   builds one filename → path index and *reports* a name that exists in two

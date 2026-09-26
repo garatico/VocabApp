@@ -6,10 +6,10 @@ import { getGoals, setGoalTarget, hasLanguageGoal, clearLanguageGoal, type GoalT
 import type { GenderIndicatorStyle, GenderIndicatorVisibility } from './utils/dom.ts';
 import type { ProgressBarPercentMode } from './ui/score-pills.ts';
 import type { StreakWidgetFormat } from './ui/streak-widget.ts';
-import { buildConjColorRows, buildGenderColorRows, buildLangAppearanceRows, buildPosColorRows, buildTableColorRows } from './settings-appearance.ts';
-import { bindGlossary, bindSettingsSearch } from './settings-search.ts';
+import { buildConjColorRows, buildGenderColorRows, buildLangAppearanceRows, buildMlColorRows, buildPosColorRows, buildTableColorRows } from './settings-appearance.ts';
+import { bindGlossary, bindSettingsSearch, snapshotSettingDefaults } from './settings-search.ts';
 import { bindStreakCalendarNav, refreshStreakReadouts } from './settings-streak.ts';
-import { ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applyGenderColors, applyLangColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
+import { ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
 
 /**
  * settings-ui.ts — binds the Settings screen: click handlers for every control,
@@ -92,6 +92,9 @@ function bindMirroredToggle(
  */
 
 export function bindSettings(): void {
+  // Before anything paints saved values onto the controls: the markup is what defines each default.
+  snapshotSettingDefaults();
+
   // Theme
   document.getElementById('settingTheme')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
@@ -680,6 +683,14 @@ export function bindSettings(): void {
     for (const [key] of GENDER_COLOR_DEFS) removeKey(P + 'gender_color_' + key);
     applyGenderColors();
     buildGenderColorRows();
+  });
+
+  buildMlColorRows();
+  applyMlColors();
+  document.getElementById('settingResetMlColors')?.addEventListener('click', () => {
+    for (const [key] of ML_COLOR_DEFS) removeKey(P + 'list_color_' + key);
+    applyMlColors();
+    buildMlColorRows();
   });
 
   restoreSettingsUI();

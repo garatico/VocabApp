@@ -162,13 +162,20 @@
 /* Collapsed controls bar: the boxed corner group sits tight in the top-right
    corner and the bar is just tall enough to contain it, instead of the box
    hanging out of the bottom edge. */
-body #controls:has(#controlsBody.filter-body--collapsed) { min-height: 3.3rem; }
-body #controls:has(#controlsBody.filter-body--collapsed) .controls-corner {
+/* "Collapsed" is the learner's own toggle; `[hidden]` is a tab with no filter form at all (My Lists,
+   My Content, History, Settings…). Both leave only the corner, so both need the bar to be tall
+   enough to contain it — the `[hidden]` case used to keep the shorter 2.6rem bar from shortcuts.css
+   and let the box hang out over the page below. */
+body #controls:has(#controlsBody.filter-body--collapsed),
+body #controls:has(#controlsBody[hidden]) { min-height: 3.6rem; padding-bottom: 0; }
+body #controls:has(#controlsBody.filter-body--collapsed) .controls-corner,
+body #controls:has(#controlsBody[hidden]) .controls-corner {
   top: 0.25rem;
   right: 0.3rem;
 }
-body #controls:has(#controlsBody.filter-body--collapsed) #controlsCollapseBtn.controls-collapse-btn {
-  top: 0.95rem;
+body #controls:has(#controlsBody.filter-body--collapsed) #controlsCollapseBtn.controls-collapse-btn,
+body #controls:has(#controlsBody[hidden]) #controlsCollapseBtn.controls-collapse-btn {
+  top: 1rem;
 }
 
 /* ── Due-for-review badge — same pill as the streak widget, accent-tinted so

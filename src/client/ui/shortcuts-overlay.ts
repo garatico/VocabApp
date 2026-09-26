@@ -57,6 +57,12 @@ const SHORTCUTS: ShortcutGroup[] = [
     ],
   },
   {
+    group: 'Settings',
+    items: [
+      { keys: ['/'], desc: 'Search the settings' },
+    ],
+  },
+  {
     group: 'General',
     items: [
       { keys: ['r'],            desc: 'Review the words that are due' },

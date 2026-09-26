@@ -11,6 +11,8 @@ test('changing Default columns to 1 actually narrows the table', async ({ page }
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
 
   await page.locator('.mode-tab[data-mode="settings"]').click();
+  // Default columns lives under Appearance (Table Layout), which opens from the side nav.
+  await page.locator('.settings-nav-link[href="#settings-sec-appearance"]').click();
   await page.locator('#settingCols [data-cols="1"]').click();
   await expect(page.locator('#settingCols [data-cols="1"]')).toHaveClass(/active/);
 

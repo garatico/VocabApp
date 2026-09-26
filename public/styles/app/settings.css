@@ -6,7 +6,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.5rem;
+  padding: 0.9rem;
   box-shadow: var(--shadow);
 }
 
@@ -38,7 +38,7 @@ body.simple-mode [data-simple-hide="true"] {
 .settings-layout {
   display: flex;
   align-items: flex-start;
-  gap: 2rem;
+  gap: 1rem;
 }
 
 /* ── Toolbar — Advanced mode, Theme, App language: page-level "how this
@@ -86,8 +86,8 @@ body.simple-mode [data-simple-hide="true"] {
   top: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  flex: 0 0 190px;
+  gap: 0.5rem;
+  flex: 0 0 260px;
   align-self: flex-start;
 }
 .settings-nav-link {
@@ -99,6 +99,7 @@ body.simple-mode [data-simple-hide="true"] {
   font-family: 'Sora', sans-serif;
   font-size: 0.82rem;
   font-weight: 600;
+  white-space: nowrap;
   color: var(--text-muted);
   text-decoration: none;
   transition: background var(--transition-fast), color var(--transition-fast);
@@ -115,7 +116,7 @@ body.simple-mode [data-simple-hide="true"] {
    nothing useful in it. */
 .settings-nav-link[hidden] { display: none; }
 .settings-nav-icon {
-  font-size: 0.95rem;
+  display: inline-flex;
   line-height: 1;
   flex-shrink: 0;
 }
@@ -143,7 +144,7 @@ body.simple-mode [data-simple-hide="true"] {
 .settings-wrap {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: 0.5rem;
   min-width: 0;
   flex: 1 1 auto;
   max-width: 960px;
@@ -172,24 +173,17 @@ body.simple-mode [data-simple-hide="true"] {
   scroll-margin-top: 1rem;
 }
 .settings-section-body {
-  padding: 0 1.1rem 0.9rem;
+  padding: 0 0.55rem 0.55rem;
 }
 .settings-section-body > .settings-row:first-child { border-top: none; }
 
-.settings-section--table       { border-left: 3px solid var(--accent); }
-.settings-section--allquiz     { border-left: 3px solid #b78a4a; }
-.settings-section--conj        { border-left: 3px solid #4aa88a; }
-.settings-section--appearance  { border-left: 3px solid #c56d8f; }
-.settings-section--general     { border-left: 3px solid var(--text-muted); }
-.settings-section--streak      { border-left: 3px solid #d9822b; }
-.settings-section--history     { border-left: 3px solid #6b7fd7; }
 
 /* ── Collapsible header — filter-collapse-btn's own layout/arrow behaviour
    (class-filter.css) is reused as-is; this only sizes it for a page-level
    section heading rather than a compact filter-bar one. */
 .settings-collapse-btn {
   width: 100%;
-  padding: 0.85rem 1.1rem;
+  padding: 0.6rem 0.7rem;
   justify-content: flex-start;
 }
 .settings-section-icon {
@@ -204,8 +198,8 @@ body.simple-mode [data-simple-hide="true"] {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
-  padding: 0.55rem 0;
+  gap: 1rem;
+  padding: 0.4rem 0;
 }
 .settings-row + .settings-row {
   border-top: 1px solid var(--border);
@@ -419,12 +413,12 @@ body.simple-mode [data-simple-hide="true"] {
    e.g. "Words per page" (end of Layout) and "Hints & Glosses" don't just
    touch. ── */
 .settings-group {
-  background: var(--surface);
+  background: color-mix(in srgb, var(--sec, var(--accent)) 5%, var(--surface));
   border-radius: var(--radius-sm);
-  padding: 0.15rem 0.8rem 0.65rem;
+  padding: 0.1rem 0.55rem 0.4rem;
 }
 .settings-group + .settings-group {
-  margin-top: 1.15rem;
+  margin-top: 0.55rem;
 }
 .settings-section-body > .settings-group:first-child {
   margin-top: 0;
@@ -443,15 +437,15 @@ body.simple-mode [data-simple-hide="true"] {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: color-mix(in srgb, var(--sec, var(--accent)) 65%, var(--text));
 }
 .settings-group-collapse-btn {
   display: flex;
   width: 100%;
   justify-content: flex-start;
-  padding: 0.9rem 0 0.3rem;
+  padding: 0.6rem 0 0.2rem;
 }
-.settings-group > .settings-group-collapse-btn:first-child { padding-top: 0.7rem; }
+.settings-group > .settings-group-collapse-btn:first-child { padding-top: 0.5rem; }
 /* The group's own body sits right under its heading, same spacing the
    heading used to carry itself before it became a separate wrapped
    .filter-body sibling of the button. */
@@ -737,3 +731,168 @@ body.simple-mode [data-simple-hide="true"] {
   .settings-collapse-btn { padding: 0.7rem 0.85rem; }
   .settings-section-body { padding: 0 0.85rem 0.7rem; }
 }
+
+/* ── Nav grouping: the sections fall under five headings (Quizzes / Display / Content / Progress /
+   App). On narrow screens the nav is a row of chips, where a heading would just be clutter. ── */
+.settings-nav-heading {
+  margin: 0.7rem 0 0.1rem;
+  padding: 0 0.6rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.settings-nav-heading[hidden] { display: none; }
+@media (max-width: 860px) { .settings-nav-heading { display: none; } }
+
+/* A subheading inside a section, e.g. "Colors" above the colour groups in Appearance. */
+.settings-subhead {
+  margin: 1rem 0 0.2rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border);
+  font-family: 'Sora', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+/* "Changed from default": a toggle under the search box, and a marker on each changed row. */
+.settings-changed-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.4rem;
+  width: 100%; margin-top: 0.35rem; padding: 0.35rem 0.6rem;
+  font-size: 0.76rem; font-weight: 600; text-align: left;
+  color: var(--text-muted); background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer;
+}
+.settings-changed-toggle:hover { background: var(--surface2); }
+.settings-changed-toggle[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
+.settings-changed-count:not(:empty) {
+  min-width: 1.3em; padding: 0 0.4em; text-align: center; border-radius: 999px;
+  color: var(--text); background: var(--surface3);
+}
+
+/* Each nav heading and its links sit in a grey box, so it is clear which group a section belongs to. */
+.settings-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.35rem 0.3rem 0.4rem;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.settings-nav-group[hidden] { display: none; }
+.settings-nav-group .settings-nav-heading { margin: 0 0 0.15rem; padding: 0.1rem 0.6rem 0; }
+/* In the narrow layout the nav is one scrolling row of chips: dissolve the boxes back into it. */
+@media (max-width: 860px) { .settings-nav-group { display: contents; } }
+
+/* The marker for a changed setting sits in the group's own left padding, clear of the text. It used
+   to be an inset shadow, which painted over the first letters of the label. */
+.settings-row--changed { box-shadow: none; position: relative; }
+.settings-row--changed::before {
+  content: '';
+  position: absolute;
+  left: -0.45rem;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.settings-reset-all {
+  width: 100%; margin-top: 0.35rem; padding: 0.35rem 0.6rem;
+  font-size: 0.76rem; font-weight: 600; text-align: left;
+  color: var(--text-muted); background: transparent;
+  border: 1px dashed var(--border); border-radius: var(--radius-sm); cursor: pointer;
+}
+.settings-reset-all:hover { color: var(--danger); border-color: var(--danger); background: var(--surface); }
+
+/* ── One colour per section. `--sec` is set on the section and on its nav link, so the header edge,
+   icon, group headings and the nav entry all agree. The colours mean nothing beyond telling
+   sections apart; text uses them mixed toward --text so they stay readable in both themes. ── */
+.settings-section--table,      .settings-nav-link[href="#settings-sec-table"]      { --sec: var(--accent); }
+.settings-section--picture,    .settings-nav-link[href="#settings-sec-picture"]    { --sec: #3f8fbf; }
+.settings-section--conj,       .settings-nav-link[href="#settings-sec-conj"]       { --sec: #3aa387; }
+.settings-section--guessblank, .settings-nav-link[href="#settings-sec-guessblank"] { --sec: #8f6fd0; }
+.settings-section--answers,    .settings-nav-link[href="#settings-sec-answers"]    { --sec: #d0704a; }
+.settings-section--appearance, .settings-nav-link[href="#settings-sec-appearance"] { --sec: #c56d8f; }
+.settings-section--filters,    .settings-nav-link[href="#settings-sec-filters"]    { --sec: #b78a4a; }
+.settings-section--chinese,    .settings-nav-link[href="#settings-sec-chinese"]    { --sec: #b04a9a; }
+.settings-section--glossary,   .settings-nav-link[href="#settings-sec-glossary"]   { --sec: #5f8fa0; }
+.settings-section--streak,     .settings-nav-link[href="#settings-sec-streak"]     { --sec: #d9822b; }
+.settings-section--history,    .settings-nav-link[href="#settings-sec-history"]    { --sec: #6b7fd7; }
+.settings-section--general,    .settings-nav-link[href="#settings-sec-general"]    { --sec: #8a8a8a; }
+
+.settings-section { border-left: 4px solid var(--sec, var(--border)); position: relative; }
+.settings-section-icon, .settings-nav-icon { color: var(--sec, currentColor); }
+.settings-icon { width: 1.05rem; height: 1.05rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.settings-section-icon { display: inline-flex; }
+.settings-nav-link:hover { background: color-mix(in srgb, var(--sec, var(--accent)) 14%, transparent); color: color-mix(in srgb, var(--sec, var(--accent)) 60%, var(--text)); }
+.settings-nav-link.is-current {
+  background: color-mix(in srgb, var(--sec, var(--accent)) 20%, transparent);
+  color: color-mix(in srgb, var(--sec, var(--accent)) 55%, var(--text));
+  box-shadow: inset 3px 0 0 var(--sec, var(--accent));
+}
+
+/* ── Advanced fold: a section's advanced-only groups, kept together behind one heading. ── */
+.settings-fold {
+  margin-top: 0.55rem; padding: 0 0.4rem 0.4rem;
+  border: 1px dashed color-mix(in srgb, var(--sec, var(--accent)) 55%, var(--border));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--sec, var(--accent)) 12%, var(--surface2));
+}
+/* Groups inside the fold are a shade deeper than ordinary groups, so "advanced" reads at a glance. */
+.settings-fold .settings-group { background: color-mix(in srgb, var(--sec, var(--accent)) 14%, var(--surface)); }
+.settings-fold-btn { padding-top: 0.5rem !important; }
+/* Not while collapsed: this display would beat .filter-body--collapsed and the fold could never close. */
+.settings-fold-body:not(.filter-body--collapsed) { display: flex; flex-direction: column; gap: 0.55rem; }
+.settings-fold-body > .settings-group + .settings-group { margin-top: 0; }
+.settings-fold[hidden] { display: none; }
+
+/* ── Reset buttons: one per changed row, one per section head. ── */
+.settings-row-reset {
+  flex: 0 0 auto; align-self: center; padding: 0.1rem 0.45rem;
+  font-size: 0.75rem; line-height: 1.2; color: var(--text-muted); background: transparent;
+  border: 1px solid var(--border); border-radius: 999px; cursor: pointer;
+}
+.settings-row-reset:hover { color: var(--danger); border-color: var(--danger); background: var(--surface); }
+.settings-row-reset[hidden] { display: none; }
+.settings-section-reset {
+  position: absolute; top: 0.5rem; right: 0.7rem; z-index: 1; padding: 0.15rem 0.6rem;
+  font-size: 0.72rem; font-weight: 600; color: var(--text-muted); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 999px; cursor: pointer;
+}
+.settings-section-reset:hover { color: var(--danger); border-color: var(--danger); }
+.settings-section-reset[hidden] { display: none; }
+
+/* ── Jumping to a setting, search breadcrumbs, links out of the quiz screens. ── */
+.settings-crumb {
+  order: -1;
+  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+.settings-crumb[hidden] { display: none; }
+.settings-row--flash, .settings-toolbar-item.settings-row--flash { animation: settings-flash 2.2s ease-out; border-radius: var(--radius-sm); }
+@keyframes settings-flash {
+  0%, 35% { background: color-mix(in srgb, var(--accent) 28%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent); }
+  100%    { background: transparent; box-shadow: 0 0 0 3px transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .settings-row--flash { animation: none; background: color-mix(in srgb, var(--accent) 22%, transparent); } }
+
+.settings-group--changed > .settings-group-collapse-btn::after {
+  content: '●'; margin-left: 0.5rem; font-size: 0.6rem; color: var(--accent);
+}
+.settings-group--changed > .settings-group-collapse-btn { position: relative; }
+
+.settings-link {
+  padding: 0.05rem 0.5rem; font-size: 0.72rem; font-weight: 600; line-height: 1.5;
+  color: var(--text-muted); background: transparent;
+  border: 1px solid var(--border); border-radius: 999px; cursor: pointer;
+}
+.settings-link:hover { color: var(--accent); border-color: var(--accent); background: var(--surface2); }
+.settings-link--text { align-self: flex-start; margin-top: 0.15rem; }
+.settings-links { display: flex; align-items: center; gap: 0.3rem; color: var(--text-muted); }

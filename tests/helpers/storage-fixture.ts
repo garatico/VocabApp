@@ -249,6 +249,7 @@ export async function seedRealisticStorage(store: Store): Promise<SeedResult> {
   raw('s_lang_indicator', 'flag');
   raw('s_onboarding_seen', '1');
   raw('s_starting_level', 'comfortable');
+  raw('s_settings_section', 'settings-sec-appearance');
   raw('theme', 'dark');
   raw('filterExpanded', 'false');
   raw('vq_lang', 'spanish');
@@ -310,6 +311,7 @@ const SETTINGS_NON_DEFAULT: Record<string, string> = {
   // dynamic families: <prefix><language | tense | person | part of speech | element>
   lang_color_spanish: '#c0392b', lang_flag_spanish: 'es', tense_hue_present: '120', person_hue_0: '10',
   pos_hue_verb: '200', table_color_correct: '#2e7d32', gender_color_masculine: '#3366cc',
+  list_color_profile: '#aa3311',
 };
 
 /** Per-mode choices and panel state written by DOM handlers. */
