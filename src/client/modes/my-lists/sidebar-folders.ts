@@ -135,6 +135,7 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
     if (sectionId === 'single') return `single_${ctx.lang}`;
     if (sectionId === 'smart') return `smart_${ctx.lang}`;
     if (sectionId === 'multi') return 'multi';
+    if (sectionId === 'visual') return 'visual_profiles';
     return null; // Testing Profiles passes its per-mode scope explicitly
   }
 

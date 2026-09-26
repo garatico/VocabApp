@@ -137,7 +137,7 @@ export function createProfilesSection(kit: SidebarKit) {
             if (!duplicatePreset(mode, name, newName)) {
               alert(`A profile named "${newName}" already exists for ${SCOPE_LABELS[mode]}.`); return;
             }
-            ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedMultiList = null;
+            ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedMultiList = null; ctx.selectedVisual = null;
             ctx.selectedProfile = { mode, name: newName };
             render();
           } },
@@ -154,7 +154,7 @@ export function createProfilesSection(kit: SidebarKit) {
         const em = emojiSpan(bundle?.emoji); if (em) topRow.prepend(em);
         li.append(topRow);
         li.addEventListener('click', () => {
-          ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedMultiList = null;
+          ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedMultiList = null; ctx.selectedVisual = null;
           ctx.selectedProfile = { mode, name };
           closePopover(); render();
         });
@@ -224,7 +224,7 @@ export function createProfilesSection(kit: SidebarKit) {
         alert(`A profile named "${name}" already exists for ${SCOPE_LABELS[mode]}.`); return;
       }
       savePreset(mode, name, { ...BLANK_BUNDLE });
-      ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedMultiList = null;
+      ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedMultiList = null; ctx.selectedVisual = null;
       ctx.selectedProfile = { mode, name };
       render();
     }

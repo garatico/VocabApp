@@ -162,7 +162,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   browseBtn.innerHTML = '<span aria-hidden="true">📖</span> Browse All Words';
   browseBtn.addEventListener('click', () => {
     ctx.selectedList = BROWSE_ALL_LIST;
-    ctx.selectedSmart = null; ctx.selectedMultiList = null; ctx.selectedProfile = null;
+    ctx.selectedSmart = null; ctx.selectedMultiList = null; ctx.selectedProfile = null; ctx.selectedVisual = null;
     closePopover(); render(); ctx.renderPanel();
   });
 

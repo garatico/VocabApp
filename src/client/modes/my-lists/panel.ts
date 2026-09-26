@@ -25,6 +25,7 @@ import { createWordList } from './word-list.ts';
 import { renderSmartPanel } from './smart-panel.ts';
 import { renderMultiPanel } from './multi-panel.ts';
 import { renderProfilePanel } from './profile-panel.ts';
+import { renderVisualPanel } from './visual-panel.ts';
 import { exportList } from './export-list.ts';
 import { buildExportControls, buildQuizButton } from './list-actions.ts';
 import { closePopover, clickedOutsidePopover } from './move-popover.ts';
@@ -58,6 +59,8 @@ export function renderPanel(ctx: ListsCtx): void {
   if (ctx.selectedMultiList) { renderMultiPanel(ctx, ctx.selectedMultiList); return; }
 
   if (ctx.selectedSmart) { renderSmartPanel(ctx, ctx.selectedSmart); return; }
+
+  if (ctx.selectedVisual) { renderVisualPanel(ctx, ctx.selectedVisual); return; }
 
   if (ctx.selectedProfile) {
     renderProfilePanel(ctx, ctx.selectedProfile.mode, ctx.selectedProfile.name);

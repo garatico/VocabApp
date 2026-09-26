@@ -88,7 +88,7 @@ export function createMultiSection(kit: SidebarKit) {
           if (!newName) return;
           if (!createMultiList(newName)) { alert(`A cross-language list named "${newName}" already exists.`); return; }
           for (const entry of getMultiList(name)) addToMultiList(newName, entry.word, entry.language);
-          ctx.selectedMultiList = newName; ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedProfile = null;
+          ctx.selectedMultiList = newName; ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedProfile = null; ctx.selectedVisual = null;
           render();
         } },
         { glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename', onClick: () => {
@@ -121,7 +121,7 @@ export function createMultiSection(kit: SidebarKit) {
       const em = emojiSpan(meta.emoji); if (em) topRow.prepend(em);
       li.append(topRow);
       li.addEventListener('click', () => {
-        ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedProfile = null;
+        ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedProfile = null; ctx.selectedVisual = null;
         ctx.selectedMultiList = name;
         closePopover(); render();
       });
@@ -154,7 +154,7 @@ export function createMultiSection(kit: SidebarKit) {
     function confirmCreate(): void {
       const name = inp.value.trim(); if (!name) { li.remove(); return; }
       if (!createMultiList(name)) { alert(`A cross-language list named "${name}" already exists.`); return; }
-      ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedProfile = null;
+      ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedProfile = null; ctx.selectedVisual = null;
       ctx.selectedMultiList = name;
       render();
     }

@@ -50,6 +50,9 @@ export interface ListsCtx {
    *  above — a profile isn't a word list at all, so it gets its own render
    *  path (profile-panel.ts) rather than reusing panel.ts's assumptions. */
   selectedProfile: { mode: FilterScope; name: string } | null;
+  /** The open Visual Profile, or null. Same mutual exclusion as the selections above; its panel
+   *  is visual-panel.ts. */
+  selectedVisual: string | null;
   sortMode: SortMode;
   /** The one word whose detail row is open, or null. */
   expandedWord: string | null;
@@ -95,6 +98,7 @@ export function createContext(
     selectedSmart: null,
     selectedMultiList: null,
     selectedProfile: null,
+    selectedVisual: null,
     sortMode:      'alpha-asc',
     expandedWord:  null,
     focusWord:     null,

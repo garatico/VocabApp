@@ -17,10 +17,34 @@
 import { readString, writeString, remove as removeKey, readJson, writeJson, isRecord } from '../utils/storage.ts';
 import { applyTheme, type ThemeValue } from '../ui/theme-toggle.ts';
 import { Settings, applyFontSize, type FontSize } from '../settings.ts';
+import {
+  VISUAL_SETTINGS, captureVisualSettings, applyVisualSetting, visualSettingValueLabel, type VisualSettingValues,
+} from './visual-settings.ts';
 
 export interface VisualProfile {
   theme?:    ThemeValue;
   fontSize?: FontSize;
+  /** Other display settings (visual-settings.ts), keyed by their `key`. Only what the profile sets. */
+  settings?: VisualSettingValues;
+  /** Shown before the name in My Lists, like a list's own emoji. */
+  emoji?:    string;
+  /** Folders it is filed under (scope `visual_profiles`, see folders.ts). Not a display setting. */
+  folders?:  string[];
+}
+
+export const THEME_LABELS: Record<ThemeValue, string> = { light: 'Light', dark: 'Dark', system: 'System' };
+export const FONT_SIZE_LABELS: Record<FontSize, string> = {
+  xs: 'Extra Small', small: 'Small', medium: 'Medium', large: 'Large', xl: 'Extra Large',
+};
+
+/** One line saying what applying it does, e.g. "Dark theme · Large text". */
+export function describeVisualProfile(profile: VisualProfile): string {
+  const parts: string[] = [];
+  if (profile.theme) parts.push(`${THEME_LABELS[profile.theme]} Theme`);
+  if (profile.fontSize) parts.push(`${FONT_SIZE_LABELS[profile.fontSize]} Text`);
+  const others = VISUAL_SETTINGS.filter(d => profile.settings?.[d.key] !== undefined && visualSettingValueLabel(d, profile.settings[d.key]) !== undefined).length;
+  if (others > 0) parts.push(`${others} More Setting${others === 1 ? '' : 's'}`);
+  return parts.length ? parts.join(' · ') : 'Changes Nothing Yet — Choose a Theme, a Font Size or Another Setting';
 }
 
 function isVisualProfile(v: unknown): v is VisualProfile {
@@ -58,6 +82,16 @@ export function saveVisualProfile(name: string, profile: VisualProfile): void {
   saveStore(store);
 }
 
+/** A copy under a new name; false if `newName` is taken or `name` doesn't exist. */
+export function duplicateVisualProfile(name: string, newName: string): boolean {
+  const store = loadStore();
+  const trimmed = newName.trim();
+  if (!trimmed || !store[name] || store[trimmed]) return false;
+  store[trimmed] = structuredClone(store[name]);
+  saveStore(store);
+  return true;
+}
+
 export function deleteVisualProfile(name: string): void {
   const store = loadStore();
   delete store[name];
@@ -79,6 +113,7 @@ export function captureCurrentVisualProfile(): VisualProfile {
   return {
     theme:    (readString('theme') ?? 'system') as ThemeValue,
     fontSize: Settings.getFontSize(),
+    settings: captureVisualSettings(),
   };
 }
 
@@ -91,4 +126,5 @@ export function applyVisualProfile(profile: VisualProfile): void {
     Settings.setFontSize(profile.fontSize);
     applyFontSize(profile.fontSize);
   }
+  for (const [key, value] of Object.entries(profile.settings ?? {})) applyVisualSetting(key, value);
 }

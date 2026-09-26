@@ -1,5 +1,6 @@
 import { getListMeta, setListMeta, getMultiListMeta, setMultiListMeta, metaFolders } from '../../utils/word-lists.ts';
 import { getSmartLists, saveSmartRule } from './smart-lists.ts';
+import { getVisualProfile, saveVisualProfile } from '../../filters/visual-profiles.ts';
 import { type SidebarSectionId } from './sidebar-state.ts';
 
 /**
@@ -10,7 +11,8 @@ import { type SidebarSectionId } from './sidebar-state.ts';
 export type DraggedListItem =
   | { kind: 'single'; lang: string; name: string }
   | { kind: 'smart';  lang: string; name: string }
-  | { kind: 'multi';  name: string };
+  | { kind: 'multi';  name: string }
+  | { kind: 'visual'; name: string };
 
 export interface CreateDndKitDeps {
   render: (rerenderPanel?: boolean) => void;
@@ -70,6 +72,12 @@ export function createDndKit(deps: CreateDndKitDeps) {
       const folders = metaFolders(meta);
       if (folders.includes(folder)) return;
       setMultiListMeta(item.name, { ...meta, folders: [...folders, folder], folder: undefined });
+    } else if (item.kind === 'visual') {
+      const profile = getVisualProfile(item.name);
+      if (!profile) return;
+      const folders = profile.folders ?? [];
+      if (folders.includes(folder)) return;
+      saveVisualProfile(item.name, { ...profile, folders: [...folders, folder] });
     } else {
       const rule = getSmartLists(item.lang)[item.name];
       if (!rule) return;

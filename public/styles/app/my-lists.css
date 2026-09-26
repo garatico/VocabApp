@@ -2976,3 +2976,72 @@ button.ml-profile-editor-group-title {
 label.ml-chip-dropdown-group { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; }
 label.ml-chip-dropdown-group:hover { color: var(--text); }
 .ml-chip-dropdown-group--empty { font-style: italic; opacity: 0.75; }
+
+/* Visual Profile panel (visual-panel.ts): setting cards in a responsive grid, one setting per line */
+.ml-vp-current { align-self: flex-start; }
+.ml-vp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 560px) { .ml-vp-grid { grid-template-columns: minmax(0, 1fr); } }
+.ml-vp-card { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; min-width: 0;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.ml-vp-card-title { display: flex; flex-direction: column; margin: 0 0 4px; font-size: 0.95em; font-weight: 600; }
+.ml-vp-card-hint { font-size: 0.8em; font-weight: 400; opacity: 0.8; }
+.ml-vp-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 0;
+  border-top: 1px solid var(--border); font-size: 0.9em; cursor: pointer; }
+.ml-vp-card-title + .ml-vp-row { border-top: 0; }
+.ml-vp-row-label { min-width: 0; }
+.ml-vp-select { flex: 0 1 9em; min-width: 0; }
+
+/* ── Visual Profiles get their own colour (rose), so they read as a fifth kind of list rather than
+   a second Testing Profiles. Every rule that uses the profile accent inside these elements picks it
+   up through the variable, so nothing else here needs to know about it. ── */
+/* Single-Language Lists have no accent of their own in the rules above — they use the app's --accent —
+   so, like Visual Profiles, they get theirs by re-pointing that variable inside their own section. */
+.ml-single-head, .ml-section-body--single {
+  --accent: var(--ml-accent-single);
+  --accent-light: var(--ml-accent-single-light);
+}
+.ml-visual-head, .ml-visual-item, .ml-section-body--visual, .ml-visual-panel {
+  --ml-accent-profile: var(--ml-accent-visual);
+  --ml-accent-profile-light: var(--ml-accent-visual-light);
+}
+
+/* ── Stronger colour in the sidebar ─────────────────────────────────────────────────────────────
+   Each kind's wash behind its section and its cards was 4–6%, which on most screens is close to
+   invisible. The section's header bar is now its own, clearly stronger band with an accent edge, so
+   it reads as the title of an option group; its label is darkened (light theme) or lightened (dark)
+   toward the text colour so the stronger tint does not cost contrast. ── */
+.ml-single-head, .ml-smart-head, .ml-multi-head, .ml-profile-head {
+  --ml-head-accent: var(--accent);
+  border-top: 0;
+  border-left: 4px solid var(--ml-head-accent);
+  margin-top: 0.5rem;
+  padding-left: 0.6rem;
+  background: color-mix(in srgb, var(--ml-head-accent) 22%, var(--surface));
+  color: color-mix(in srgb, var(--ml-head-accent) 60%, var(--text));
+}
+.ml-single-head { margin-top: 0; }
+.ml-smart-head   { --ml-head-accent: var(--ml-accent-smart); }
+.ml-multi-head   { --ml-head-accent: var(--ml-accent-multi); }
+.ml-profile-head { --ml-head-accent: var(--ml-accent-profile); }
+
+.ml-section-body--single   { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.ml-section-body--smart    { background: color-mix(in srgb, var(--ml-accent-smart) 11%, transparent); }
+.ml-section-body--multi    { background: color-mix(in srgb, var(--ml-accent-multi) 11%, transparent); }
+.ml-section-body--profiles, .ml-section-body--visual { background: color-mix(in srgb, var(--ml-accent-profile) 11%, transparent); }
+
+.ml-single-item  { background: color-mix(in srgb, var(--accent) 11%, var(--surface));
+                   border-left-color: color-mix(in srgb, var(--accent) 65%, transparent); }
+.ml-smart-item   { background: color-mix(in srgb, var(--ml-accent-smart) 13%, var(--surface));
+                   border-left-color: color-mix(in srgb, var(--ml-accent-smart) 65%, transparent); }
+.ml-multi-item   { background: color-mix(in srgb, var(--ml-accent-multi) 13%, var(--surface));
+                   border-left-color: color-mix(in srgb, var(--ml-accent-multi) 65%, transparent); }
+.ml-profile-item { background: color-mix(in srgb, var(--ml-accent-profile) 13%, var(--surface));
+                   border-left-color: color-mix(in srgb, var(--ml-accent-profile) 65%, transparent); }
+.ml-single-item.active { background: var(--accent-light); }
+.ml-smart-item.active   { background: var(--ml-accent-smart-light); }
+.ml-multi-item.active   { background: var(--ml-accent-multi-light); }
+.ml-profile-item.active { background: var(--ml-accent-profile-light); }
+
+/* The header bar is tinted now, so its buttons sit on a solid surface to keep their own contrast. */
+.ml-single-head .ml-new-list-btn, .ml-smart-head .ml-new-list-btn,
+.ml-multi-head .ml-new-list-btn, .ml-profile-head .ml-new-list-btn { background: var(--surface); }

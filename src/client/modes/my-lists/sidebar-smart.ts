@@ -88,7 +88,7 @@ export function createSmartSection(kit: SidebarKit) {
             alert(`A smart list named "${newName}" already exists.`); return;
           }
           saveSmartRule(ctx.lang, newName, { ...rule });
-          ctx.selectedSmart = newName; ctx.selectedList = ''; ctx.selectedMultiList = null; ctx.selectedProfile = null;
+          ctx.selectedSmart = newName; ctx.selectedList = ''; ctx.selectedMultiList = null; ctx.selectedProfile = null; ctx.selectedVisual = null;
           render();
         } },
         { glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename', onClick: () => {
@@ -104,7 +104,7 @@ export function createSmartSection(kit: SidebarKit) {
       const em = emojiSpan(rule.emoji); if (em) topRow.prepend(em);
       li.append(topRow);
       li.addEventListener('click', () => {
-        ctx.selectedSmart = name; ctx.selectedMultiList = null; ctx.selectedProfile = null;
+        ctx.selectedSmart = name; ctx.selectedMultiList = null; ctx.selectedProfile = null; ctx.selectedVisual = null;
         closePopover(); render();
       });
       ctx.listNav.appendChild(li);
@@ -147,7 +147,7 @@ export function createSmartSection(kit: SidebarKit) {
         alert(`A smart list named "${name}" already exists.`); return;
       }
       saveSmartRule(ctx.lang, name, { ...DEFAULT_SMART_RULE });
-      ctx.selectedList = ''; ctx.selectedMultiList = null; ctx.selectedProfile = null;
+      ctx.selectedList = ''; ctx.selectedMultiList = null; ctx.selectedProfile = null; ctx.selectedVisual = null;
       ctx.selectedSmart = name;
       render();
     }

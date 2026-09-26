@@ -240,26 +240,155 @@ test('testing profiles: create in a mode, rename, copy, delete, and a per-mode f
 });
 
 // ═══ Visual profiles (only when switched on in Settings) ═══════════════════════
-test('visual profiles: save the current look, rename, delete', async ({ page }) => {
+async function openVisualProfiles(page: Page): Promise<void> {
   await page.evaluate(() => localStorage.setItem('s_show_visual_profiles', 'true'));
   await page.reload();
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="mylists"]').click();
+  await expect(page.locator('.ml-visual-head')).toBeVisible();
+}
 
-  const head = page.locator('.ml-profile-head', { hasText: 'Visual Profiles' });
-  await expect(head).toBeVisible();
-  answerNext(page, 'Night');
-  await head.locator(NEW_BTN).click();
-  const c = card(page, 'ml-profile-item', 'Night');
+const storedVisual = (page: Page, name: string): Promise<Record<string, unknown> | undefined> =>
+  page.evaluate(n => (JSON.parse(localStorage.getItem('vq_visual_profiles') ?? '{}') as Record<string, Record<string, unknown>>)[n], name);
+
+test('visual profiles: create, rename, copy, delete', async ({ page }) => {
+  await openVisualProfiles(page);
+  await createInline(page, '.ml-visual-head', 'Night');
+  const c = card(page, 'ml-visual-item', 'Night');
   await expect(c).toBeVisible();
+  await expect(c).toHaveClass(/\bactive\b/);            // creating it opens it, like every other list
 
-  answerNext(page, 'Nights');
-  await menuAction(page, c, 'rename');
-  await expect(card(page, 'ml-profile-item', 'Nights')).toBeVisible();
+  await renameInline(page, c, 'Nights');
+  await expect(card(page, 'ml-visual-item', 'Nights')).toBeVisible();
+  await expect(page.locator('.ml-panel-title')).toContainText('Nights');   // the open panel follows the rename
+
+  answerNext(page, 'Nights (copy)');
+  await menuAction(page, card(page, 'ml-visual-item', 'Nights'), 'copy');
+  await expect(card(page, 'ml-visual-item', 'Nights (copy)')).toBeVisible();
 
   answerNext(page);
-  await menuAction(page, card(page, 'ml-profile-item', 'Nights'), 'delete');
-  await expect(card(page, 'ml-profile-item', 'Nights')).toHaveCount(0);
+  await menuAction(page, card(page, 'ml-visual-item', 'Nights (copy)'), 'delete');
+  await expect(card(page, 'ml-visual-item', 'Nights (copy)')).toHaveCount(0);
+  await expect(page.locator('.ml-panel-title')).toHaveCount(0);              // its panel closed with it
+
+  answerNext(page);
+  await menuAction(page, card(page, 'ml-visual-item', 'Nights'), 'delete');
+  await expect(card(page, 'ml-visual-item', 'Nights')).toHaveCount(0);
+});
+
+test('visual profiles: selecting opens the panel without applying; the panel edits and applies', async ({ page }) => {
+  await openVisualProfiles(page);
+  await createInline(page, '.ml-visual-head', 'Look');
+  await expect(page.locator('.ml-panel-title')).toContainText('Look');
+
+  await page.getByLabel('Theme', { exact: true }).selectOption('dark');
+  await page.getByLabel('Font Size', { exact: true }).selectOption('xl');
+  expect(await storedVisual(page, 'Look')).toMatchObject({ theme: 'dark', fontSize: 'xl' });
+  await expect(page.locator('.ml-smart-desc')).toHaveText('Dark Theme · Extra Large Text · 8 More Settings');
+
+  // Editing and selecting never repaint the app; only Apply does.
+  await expect(page.locator('html')).not.toHaveClass(/\bdark\b/);
+  await card(page, 'ml-visual-item', 'Look').click();
+  await expect(page.locator('html')).not.toHaveClass(/\bdark\b/);
+  await page.locator('.ml-panel-title-group .ml-export-btn', { hasText: 'Apply Now' }).click();
+  await expect(page.locator('html')).toHaveClass(/\bdark\b/);
+
+  // "No change" clears a setting, and "use what it looks like now" fills both back in.
+  await page.getByLabel('Font Size', { exact: true }).selectOption('');
+  expect((await storedVisual(page, 'Look'))?.fontSize).toBeUndefined();
+  await page.locator('.ml-vp-current').click();
+  expect((await storedVisual(page, 'Look'))?.theme).toBe('dark');
+  expect((await storedVisual(page, 'Look'))?.fontSize).toBe('xl');   // Apply switched the app to xl above
+});
+
+test('visual profiles: table columns, row density and other display settings are saved and applied', async ({ page }) => {
+  await openVisualProfiles(page);
+  await createInline(page, '.ml-visual-head', 'Dense');
+
+  await page.getByLabel('Columns', { exact: true }).selectOption('4');
+  await page.getByLabel('Row Density', { exact: true }).selectOption('ultra');
+  await page.getByLabel('Frequency Rank Badge', { exact: true }).selectOption('false');
+  expect(((await storedVisual(page, 'Dense'))?.settings)).toMatchObject({ tableCols: '4', rowDensity: 'ultra', showRank: 'false' });
+  await expect(page.locator('.ml-smart-desc')).toContainText('8 More Settings')   // a new profile starts from every setting as it is now;
+
+  // Nothing changes until Apply…
+  const setting = (k: string): Promise<string | null> => page.evaluate(key => localStorage.getItem('s_' + key), k);
+  await expect(page.locator('body')).not.toHaveClass(/table-ultra-compact-rows/);
+  expect(await setting('table_cols')).toBeNull();
+
+  // …then each goes through the real Settings control, so the app repaints and persists it.
+  await page.locator('.ml-panel-title-group .ml-export-btn', { hasText: 'Apply Now' }).click();
+  await expect(page.locator('body')).toHaveClass(/table-ultra-compact-rows/);
+  expect(await setting('table_cols')).toBe('4');
+  expect(await setting('table_show_rank')).toBe('false');
+  await expect(page.locator('#settingCols .sort-order-btn.active')).toHaveAttribute('data-cols', '4');
+
+  // A setting left on "No change" is not part of the profile and is never touched.
+  await page.getByLabel('Columns', { exact: true }).selectOption('');
+  expect(((await storedVisual(page, 'Dense'))?.settings)).not.toHaveProperty('tableCols');
+
+  // A brand-new profile captures every setting as it is right now.
+  await createInline(page, '.ml-visual-head', 'Snapshot');
+  expect(((await storedVisual(page, 'Snapshot'))?.settings)).toMatchObject({ tableCols: '4', rowDensity: 'ultra', showRank: 'false' });
+});
+
+test('visual profiles: emoji, folders (create, file into, drag onto)', async ({ page }) => {
+  await openVisualProfiles(page);
+  await createInline(page, '.ml-visual-head', 'Cosy');
+  await createInline(page, '.ml-visual-head', 'Bright');
+
+  await menuAction(page, card(page, 'ml-visual-item', 'Cosy'), 'emoji');
+  await page.locator('.ml-folder-style-quick button', { hasText: '📚' }).click();
+  await expect(card(page, 'ml-visual-item', 'Cosy').locator('.ml-list-emoji')).toHaveText('📚');
+  expect((await storedVisual(page, 'Cosy'))?.emoji).toBe('📚');
+
+  answerNext(page, 'Reading');
+  await page.locator('.ml-visual-head .ml-new-folder-btn').click();
+  const folder = page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: 'Reading' }) });
+  await expect(folder).toBeVisible();
+
+  // File one via the panel's Folders control…
+  await card(page, 'ml-visual-item', 'Cosy').click();
+  await page.locator('.ml-panel .ml-chip-dropdown', { hasText: 'Folders' }).locator('button').first().click();
+  await page.locator('.ml-panel .ml-chip-dropdown-item', { hasText: 'Reading' }).locator('input').check();
+  await expect(folder.locator('.ml-list-item', { hasText: 'Cosy' })).toBeVisible();
+
+  // …and another by dragging it onto the folder header.
+  await card(page, 'ml-visual-item', 'Bright').dragTo(folder.locator('.ml-folder-head'));
+  await expect(folder.locator('.ml-list-item', { hasText: 'Bright' })).toBeVisible();
+  expect((await storedVisual(page, 'Bright'))?.folders).toEqual(['Reading']);
+});
+
+// ═══ Recolouring the list kinds (Settings → Appearance → My Lists Colors) ═══════
+test('list kind colours: a colour chosen in Settings recolours the sidebar, persists, and resets', async ({ page }) => {
+  const accent = (): Promise<string> => page.evaluate(() => getComputedStyle(document.querySelector('.ml-profile-head') as Element).getPropertyValue('--ml-accent-profile').trim());
+  const original = await accent();
+  const rows = page.locator('#settingMlColors .conj-color-row');
+  await expect(rows).toHaveCount(5);
+  await expect(rows.locator('.conj-color-name')).toHaveText(['Single-Language Lists', 'Smart Lists', 'Cross-Language Lists', 'Testing Profiles', 'Visual Profiles']);
+
+  // <input type="color"> can't be driven by clicking; set its value and fire the event it listens for.
+  await rows.filter({ hasText: 'Testing Profiles' }).locator('input[type="color"]').evaluate((el: HTMLInputElement) => {
+    el.value = '#00aa55'; el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  expect(await accent()).toBe('#00aa55');
+  await expect(page.locator('.ml-profile-head')).toHaveCSS('border-left-color', 'rgb(0, 170, 85)');
+
+  // Single-Language Lists too — and it must not recolour the rest of the app (it defaults to the app accent).
+  const appAccent = await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--accent').trim());
+  await rows.filter({ hasText: 'Single-Language Lists' }).locator('input[type="color"]').evaluate((el: HTMLInputElement) => {
+    el.value = '#cc3366'; el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(page.locator('.ml-single-head')).toHaveCSS('border-left-color', 'rgb(204, 51, 102)');
+  expect(await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--accent').trim())).toBe(appAccent);
+
+  await page.reload();
+  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await page.locator('.mode-tab[data-mode="mylists"]').click();
+  expect(await accent()).toBe('#00aa55');
+
+  await page.locator('#settingResetMlColors').evaluate((el: HTMLElement) => el.click());
+  expect(await accent()).toBe(original);
 });
 
 // ═══ Whole-sidebar controls ════════════════════════════════════════════════════

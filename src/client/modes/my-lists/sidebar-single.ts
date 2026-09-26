@@ -96,7 +96,7 @@ export function createSingleSection(kit: SidebarKit) {
         li.append(topRow);
         li.addEventListener('click', () => {
           ctx.selectedList = name; ctx.selectedSmart = null;
-          ctx.selectedMultiList = null; ctx.selectedProfile = null;
+          ctx.selectedMultiList = null; ctx.selectedProfile = null; ctx.selectedVisual = null;
           closePopover(); render(); ctx.renderPanel();
         });
         ctx.listNav.appendChild(li);

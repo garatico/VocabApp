@@ -95,12 +95,17 @@
   /* My Lists — one accent per list kind (ordinary lists keep --accent),
      so Smart Lists and Cross-Language Lists read as their own section in the
      sidebar rather than three identically-colored groups. */
+  /* Single-Language Lists default to the app accent; Settings can recolour them on their own. */
+  --ml-accent-single:       var(--accent);
+  --ml-accent-single-light: var(--accent-light);
   --ml-accent-smart:       #6444ad;
   --ml-accent-smart-light: #efe9fa;
   --ml-accent-multi:       #0f7d94;
   --ml-accent-multi-light: #e0f4f7;
   --ml-accent-profile:       #b4650f;
   --ml-accent-profile-light: #faf0e0;
+  --ml-accent-visual:        #b8285f;
+  --ml-accent-visual-light:  #fbe6ee;
   /* Sidebar gear-menu item colors (Copy/Rename; Delete uses --danger). */
   --ml-menu-emoji:    #c026d3;
   --ml-menu-hide:     #0e8a9c;
@@ -176,6 +181,8 @@ html.dark {
   --ml-menu-copy:     #6ea0ff;
   --ml-menu-rename:   #fbbf24;
   --ml-accent-profile-light: #3a2c14;
+  --ml-accent-visual:        #f28bb0;
+  --ml-accent-visual-light:  #3d1828;
 
   --shadow:    0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
