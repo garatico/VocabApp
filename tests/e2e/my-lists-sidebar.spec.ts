@@ -371,7 +371,7 @@ test('list kind colours: a colour chosen in Settings recolours the sidebar, pers
   await rows.filter({ hasText: 'Testing Profiles' }).locator('input[type="color"]').evaluate((el: HTMLInputElement) => {
     el.value = '#00aa55'; el.dispatchEvent(new Event('input', { bubbles: true }));
   });
-  expect(await accent()).toBe('#00aa55');
+  await expect.poll(accent).toBe('#00aa55');
   await expect(page.locator('.ml-profile-head')).toHaveCSS('border-left-color', 'rgb(0, 170, 85)');
 
   // Single-Language Lists too — and it must not recolour the rest of the app (it defaults to the app accent).
@@ -385,10 +385,116 @@ test('list kind colours: a colour chosen in Settings recolours the sidebar, pers
   await page.reload();
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="mylists"]').click();
-  expect(await accent()).toBe('#00aa55');
+  await expect(page.locator('.ml-profile-head')).toBeVisible();
+  await expect.poll(accent).toBe('#00aa55');
 
   await page.locator('#settingResetMlColors').evaluate((el: HTMLElement) => el.click());
-  expect(await accent()).toBe(original);
+  await expect.poll(accent).toBe(original);
+});
+
+// ═══ Drag and drop: every kind of list, including every kind of profile ═════════
+/**
+ * Drag one card onto a folder header the way a person does: press on the card, start moving, then bring
+ * the folder into view and release. (Playwright's own dragTo scrolls the long sidebar *after* pressing,
+ * which starts the drag on whatever card slid under the pointer.)
+ */
+async function dragOnto(page: Page, source: Locator, target: Locator): Promise<void> {
+  await source.scrollIntoViewIfNeeded();
+  const s = (await source.boundingBox())!;
+  await page.mouse.move(s.x + 30, s.y + s.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(s.x + 40, s.y + s.height / 2 + 8, { steps: 4 });
+  await target.scrollIntoViewIfNeeded();
+  const t = (await target.boundingBox())!;
+  await page.mouse.move(t.x + 40, t.y + t.height / 2, { steps: 10 });
+  await page.mouse.up();
+}
+
+/** Make a folder in a section through its head's "+ Folder" (a plain prompt). */
+async function makeFolder(page: Page, headSelector: string, name: string): Promise<Locator> {
+  answerNext(page, name);
+  await page.locator(`${headSelector} .ml-new-folder-btn`).click();
+  const group = page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: name }) }).first();
+  await expect(group).toBeVisible();
+  return group;
+}
+
+test('drag and drop: single, smart and cross-language lists can be dropped onto a folder', async ({ page }) => {
+  for (const [head, kind, name, folderName] of [
+    ['.ml-single-head', 'ml-single-item', 'Dnd Single', 'FolderS'],
+    ['.ml-smart-head', 'ml-smart-item', 'Dnd Smart', 'FolderM'],
+    ['.ml-multi-head', 'ml-multi-item', 'Dnd Multi', 'FolderX'],
+  ] as const) {
+    await createInline(page, head, name);
+    const folder = await makeFolder(page, head, folderName);
+    await dragOnto(page, card(page, kind, name), folder.locator('.ml-folder-head'));
+    await expect(folder.locator('.ml-list-item', { hasText: name })).toBeVisible();
+  }
+});
+
+for (const mode of ['table', 'picture', 'conjugation'] as const) {
+  test(`drag and drop: a ${mode} Testing Profile goes into a ${mode} folder, and shows up under it when picking a profile in that mode`, async ({ page }) => {
+    const profile = `P ${mode}`;
+    const folderName = `F ${mode}`;
+
+    // A profile in this mode.
+    await page.locator('.ml-profile-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
+    const row = page.locator('.ml-list-item--editing-wide').first();
+    await row.locator('select').selectOption(mode);
+    await row.locator('.ml-list-name-input').last().fill(profile);
+    await row.locator('.ml-list-name-input').last().press('Enter');
+    await expect(card(page, 'ml-profile-item', profile)).toBeVisible();
+
+    // A folder in the same mode (Testing Profile folders are per mode and ask which).
+    await page.locator('.ml-profile-head .ml-new-folder-btn').click();
+    const frow = page.locator('.ml-list-item--editing-wide').first();
+    await frow.locator('select').selectOption(mode);
+    await frow.locator('.ml-list-name-input').last().fill(folderName);
+    await frow.locator('.ml-list-name-input').last().press('Enter');
+    const folder = page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: folderName }) }).first();
+    await expect(folder).toBeVisible();
+
+    await dragOnto(page, card(page, 'ml-profile-item', profile), folder.locator('.ml-folder-head'));
+    await expect(folder.locator('.ml-list-item', { hasText: profile })).toBeVisible();
+    const stored = await page.evaluate(m => JSON.parse(localStorage.getItem('vq_presets_' + m) ?? '{}') as Record<string, { folders?: string[] }>, mode);
+    expect(stored[profile]?.folders).toEqual([folderName]);
+
+    // …and the picker on that mode's own tab groups it under the folder.
+    await page.locator(`.mode-tab[data-mode="${mode}"]`).click();
+    await page.locator('#presetsBtn').click();
+    const heading = page.locator('.preset-picker-folder', { hasText: folderName });
+    await expect(heading).toBeVisible();
+    await expect(page.locator('.preset-picker-apply', { hasText: profile })).toBeVisible();
+    const order = await page.locator('.preset-picker-folder, .preset-picker-apply').evaluateAll(els => els.map(e => e.textContent ?? ''));
+    expect(order.findIndex(t => t.includes(folderName))).toBeLessThan(order.findIndex(t => t.includes(profile)));
+  });
+}
+
+test('drag and drop: a profile will not go into a folder that belongs to another mode', async ({ page }) => {
+  // A mode's folders only show once that mode has a profile, so give Conjugation one.
+  await page.locator('.ml-profile-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
+  const other = page.locator('.ml-list-item--editing-wide').first();
+  await other.locator('select').selectOption('conjugation');
+  await other.locator('.ml-list-name-input').last().fill('AnyConj');
+  await other.locator('.ml-list-name-input').last().press('Enter');
+  await expect(card(page, 'ml-profile-item', 'AnyConj')).toBeVisible();
+
+  await page.locator('.ml-profile-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
+  const row = page.locator('.ml-list-item--editing-wide').first();
+  await row.locator('select').selectOption('table');
+  await row.locator('.ml-list-name-input').last().fill('OnlyTable');
+  await row.locator('.ml-list-name-input').last().press('Enter');
+
+  await page.locator('.ml-profile-head .ml-new-folder-btn').click();
+  const frow = page.locator('.ml-list-item--editing-wide').first();
+  await frow.locator('select').selectOption('conjugation');
+  await frow.locator('.ml-list-name-input').last().fill('ConjOnly');
+  await frow.locator('.ml-list-name-input').last().press('Enter');
+  const folder = page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: 'ConjOnly' }) }).first();
+  await expect(folder).toBeVisible();
+
+  await dragOnto(page, card(page, 'ml-profile-item', 'OnlyTable'), folder.locator('.ml-folder-head'));
+  await expect(folder.locator('.ml-list-item', { hasText: 'OnlyTable' })).toHaveCount(0);
 });
 
 // ═══ Whole-sidebar controls ════════════════════════════════════════════════════

@@ -2,6 +2,8 @@ import { getListMeta, setListMeta, getMultiListMeta, setMultiListMeta, metaFolde
 import { getSmartLists, saveSmartRule } from './smart-lists.ts';
 import { getVisualProfile, saveVisualProfile } from '../../filters/visual-profiles.ts';
 import { type SidebarSectionId } from './sidebar-state.ts';
+import { getPreset, savePreset } from '../../filters/presets.ts';
+import type { FilterScope } from '../../filters/filter-scope.ts';
 
 /**
  * sidebar-dnd.ts — drag a list card onto a folder header. See the comment inside for why it
@@ -12,7 +14,8 @@ export type DraggedListItem =
   | { kind: 'single'; lang: string; name: string }
   | { kind: 'smart';  lang: string; name: string }
   | { kind: 'multi';  name: string }
-  | { kind: 'visual'; name: string };
+  | { kind: 'visual'; name: string }
+  | { kind: 'profiles'; mode: FilterScope; name: string };
 
 export interface CreateDndKitDeps {
   render: (rerenderPanel?: boolean) => void;
@@ -29,14 +32,11 @@ export function createDndKit(deps: CreateDndKitDeps) {
   // `draggedItem` carries the payload directly, DataTransfer.setData is only
   // called because Firefox refuses to start a drag without at least one.
   //
-  // Scoped to Single-Language, Smart and Cross-Language Lists — the three
-  // kinds whose folder grouping already goes through the generic
-  // renderSection()/buildFolderGroup() pass below with a plain folder-name
-  // `sectionId` ('single'/'smart'/'multi'). Testing Profiles builds its own
-  // per-mode folder boxes directly (see renderProfilesNav) and would need
-  // the profile's mode threaded through the drop payload too, which is a
-  // bigger, separate change; its rows are simply never made draggable here,
-  // so a drop on one of its folder headers has nothing to accept.
+  // Every kind of list can be dragged: Single-Language, Smart, Cross-Language, Visual Profiles and
+  // Testing Profiles. The first four keep one folder box per section, so a drop is matched on
+  // `sectionId`. Testing Profiles build a folder box per *mode* (see renderProfilesNav), keyed
+  // `profiles:<mode>:<folder>`, so a profile carries its mode and is only accepted by a folder of that
+  // mode — see accepts() below.
   //
   // Additive, not exclusive: dropping onto a folder adds it to that item's
   // `folders` array alongside whatever it already belongs to, the same
@@ -60,8 +60,28 @@ export function createDndKit(deps: CreateDndKitDeps) {
     });
   }
 
-  /** Adds `item` to `folder`, a no-op if it's already there. */
-  function addDraggedItemToFolder(item: DraggedListItem, folder: string): void {
+  /** Testing Profiles keep a folder box per mode, keyed `profiles:<mode>:<folder>` (sidebar-profiles.ts). */
+  const profileFolderPrefix = (mode: FilterScope): string => `profiles:${mode}:`;
+
+  /** Can `item` be dropped on the folder header `folderKey` of section `sectionId`? A profile only
+   *  goes into a folder of its own mode. */
+  function accepts(item: DraggedListItem, sectionId: SidebarSectionId, folderKey: string): boolean {
+    if (item.kind === 'profiles') return sectionId === 'profiles' && folderKey.startsWith(profileFolderPrefix(item.mode));
+    return item.kind === sectionId;
+  }
+
+  /** Adds `item` to the folder named by `folderKey`, a no-op if it's already there. */
+  function addDraggedItemToFolder(item: DraggedListItem, folderKey: string): void {
+    if (item.kind === 'profiles') {
+      const bundle = getPreset(item.mode, item.name);
+      if (!bundle) return;
+      const folder = folderKey.slice(profileFolderPrefix(item.mode).length);
+      const folders = bundle.folders ?? (bundle.folder ? [bundle.folder] : []);
+      if (!folder || folders.includes(folder)) return;
+      savePreset(item.mode, item.name, { ...bundle, folders: [...folders, folder], folder: undefined });
+      return;
+    }
+    const folder = folderKey;
     if (item.kind === 'single') {
       const meta = getListMeta(item.lang, item.name);
       const folders = metaFolders(meta);
@@ -93,7 +113,7 @@ export function createDndKit(deps: CreateDndKitDeps) {
    *  ('single'/'smart'/'multi') as DraggedListItem['kind']. */
   function makeFolderDropTarget(head: HTMLElement, sectionId: SidebarSectionId, folderKey: string): void {
     head.addEventListener('dragover', e => {
-      if (!draggedItem || draggedItem.kind !== sectionId) return;
+      if (!draggedItem || !accepts(draggedItem, sectionId, folderKey)) return;
       e.preventDefault();
       if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
       head.classList.add('ml-folder-head--drop-target');
@@ -103,7 +123,7 @@ export function createDndKit(deps: CreateDndKitDeps) {
     });
     head.addEventListener('drop', e => {
       head.classList.remove('ml-folder-head--drop-target');
-      if (!draggedItem || draggedItem.kind !== sectionId) return;
+      if (!draggedItem || !accepts(draggedItem, sectionId, folderKey)) return;
       e.preventDefault();
       addDraggedItemToFolder(draggedItem, folderKey);
       draggedItem = null;

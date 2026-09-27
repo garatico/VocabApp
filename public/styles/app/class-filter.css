@@ -728,3 +728,41 @@ html.dark .pos-chip[data-band]:not(.active):hover {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 0.2rem;
 }
 .filters-row .filter-header-controls { flex-shrink: 0; }
+
+/* ── Filter summary strip: one grey box per group, each in the colour of what it holds ───────────────
+   Part of Speech chips wear the same hue as the chips in the filter itself (verbs blue, nouns green…),
+   Lists take the Single-Language list colour, Domains their own, and the applied Testing Profile the
+   Testing Profiles amber — all of which follow whatever the learner has set in Settings. */
+.filters-summary { gap: 0.4rem 0.5rem; }
+.filters-summary-group {
+  --fs: var(--accent);
+  padding: 0.25rem 0.5rem 0.3rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--fs);
+  border-radius: var(--radius-sm);
+}
+.filters-summary-group[data-kind="pos"]     { --fs: var(--text-muted); }
+.filters-summary-group[data-kind="lists"]   { --fs: var(--ml-accent-single, var(--accent)); }
+.filters-summary-group[data-kind="domains"] { --fs: hsl(250 55% 60%); }
+.filters-summary-profile                    { --fs: var(--ml-accent-profile, var(--accent)); align-items: center; }
+.filters-summary-title { color: color-mix(in srgb, var(--fs) 70%, var(--text)); }
+.filters-summary-profile-name { font-weight: 700; color: color-mix(in srgb, var(--fs) 55%, var(--text)); }
+.filters-summary-chip {
+  --chip: var(--fs);
+  color: color-mix(in srgb, var(--chip) 62%, var(--text));
+  background: color-mix(in srgb, var(--chip) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--chip) 50%, transparent);
+}
+.filters-summary-chip[data-pos] { --chip: hsl(var(--pos-hue, 217) 60% 48%); }
+.filters-summary-chip:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-light); }
+.filters-summary-chip[data-pos="verb"] { --pos-hue: var(--pos-hue-verb,        217); }
+.filters-summary-chip[data-pos="noun"] { --pos-hue: var(--pos-hue-noun,        142); }
+.filters-summary-chip[data-pos="adjective"] { --pos-hue: var(--pos-hue-adjective,    32); }
+.filters-summary-chip[data-pos="adverb"] { --pos-hue: var(--pos-hue-adverb,      280); }
+.filters-summary-chip[data-pos="pronoun"] { --pos-hue: var(--pos-hue-pronoun,     340); }
+.filters-summary-chip[data-pos="preposition"] { --pos-hue: var(--pos-hue-preposition, 195); }
+.filters-summary-chip[data-pos="conjunction"] { --pos-hue: var(--pos-hue-conjunction,  20); }
+.filters-summary-chip[data-pos="article"] { --pos-hue: var(--pos-hue-article,     260); }
+.filters-summary-chip[data-pos="particle"] { --pos-hue: var(--pos-hue-particle,     85); }
+.filters-summary-chip[data-pos="suffix"] { --pos-hue: var(--pos-hue-suffix,      165); }

@@ -128,8 +128,9 @@ function updatePillCounts(): void {
 
 // ── Summary strip ───────────────────────────────────────────────────────────
 
-interface Chip { label: string; off: boolean; remove: () => void; }
-interface Group { title: string; mode?: string; chips: Chip[]; }
+interface Chip { label: string; off: boolean; remove: () => void; /** the part of speech, so the chip can wear its colour */ pos?: string }
+/** `kind` picks the box's colour in class-filter.css (.filters-summary-group[data-kind]). */
+interface Group { kind: 'pos' | 'lists' | 'domains'; title: string; mode?: string; chips: Chip[]; }
 
 function collectGroups(): Group[] {
   const groups: Group[] = [];
@@ -139,9 +140,9 @@ function collectGroups(): Group[] {
     const s = getClassFilterState();
     if (s.selected.length > 0) {
       groups.push({
-        title: 'Part of Speech',
+        kind: 'pos', title: 'Part of Speech',
         chips: s.selected.map(pos => ({
-          label: titleCase(pos), off: !s.active,
+          label: titleCase(pos), off: !s.active, pos,
           remove: () => applyClassSelection(s.selected.filter(p => p !== pos), s.active),
         })),
       });
@@ -152,7 +153,7 @@ function collectGroups(): Group[] {
     const s = getListFilterState(lang);
     if (s.selected.length > 0) {
       groups.push({
-        title: 'Lists', mode: s.mode === 'focus' ? 'Focus' : 'Hide',
+        kind: 'lists', title: 'Lists', mode: s.mode === 'focus' ? 'Focus' : 'Hide',
         chips: s.selected.map(entry => ({
           label: parseSelected(entry, lang).name, off: !s.active,
           remove: () => {
@@ -171,7 +172,7 @@ function collectGroups(): Group[] {
     const s = getDomainFilterState();
     if (s.selected.length > 0) {
       groups.push({
-        title: 'Domains',
+        kind: 'domains', title: 'Domains',
         chips: s.selected.map(d => ({
           label: titleCase(d), off: !s.active,
           remove: () => applyDomainSelection(s.selected.filter(x => x !== d), s.active),
@@ -245,6 +246,7 @@ function renderSummary(): void {
   groups.forEach(g => {
     const wrap = document.createElement('span');
     wrap.className = 'filters-summary-group';
+    wrap.dataset.kind = g.kind;
     const title = document.createElement('span');
     title.className = 'filters-summary-title';
     title.textContent = g.mode ? `${g.title} · ${g.mode}` : g.title;
@@ -253,6 +255,7 @@ function renderSummary(): void {
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'filters-summary-chip' + (c.off ? ' filters-summary-chip--off' : '');
+      if (c.pos) chip.dataset.pos = c.pos;
       chip.title = c.off ? `${c.label} — this filter is switched off` : `Remove ${c.label}`;
       chip.append(document.createTextNode(c.label + ' '), Object.assign(document.createElement('span'), {
         textContent: '×', className: 'filters-summary-x',

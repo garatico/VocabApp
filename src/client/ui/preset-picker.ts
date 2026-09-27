@@ -28,6 +28,8 @@ import {
 import { currentLangValue } from '../filters/filter-lang.ts';
 import { Settings } from '../settings.ts';
 import { buildProfileEditorGroups } from '../modes/my-lists/profile-panel.ts';
+import { getFolderRegistry, getFolderStyle } from '../modes/my-lists/folders.ts';
+import { isFolderCollapsed, setFolderCollapsed } from '../modes/my-lists/sidebar-state.ts';
 
 export interface PresetPickerOptions {
   anchorEl: HTMLElement;
@@ -266,7 +268,10 @@ export function openPresetPicker({ anchorEl, mode, onApply }: PresetPickerOption
 
     const inlineEditingOn = Settings.getInlineProfileEditing();
 
-    names.forEach(name => {
+    /** One profile's row. With folders, a profile filed under several appears under each, so the inline
+     *  editor is only opened under the first of them. */
+    const editorShown = new Set<string>();
+    const renderRow = (name: string): void => {
       const row = document.createElement('div');
       row.className = 'list-picker-row preset-picker-row';
 
@@ -345,8 +350,67 @@ export function openPresetPicker({ anchorEl, mode, onApply }: PresetPickerOption
       row.appendChild(delBtn);
 
       picker.appendChild(row);
-      if (expandedName === name && liveBundle) picker.appendChild(buildInlineEditor(name));
+      if (expandedName === name && liveBundle && !editorShown.has(name)) {
+        editorShown.add(name);
+        picker.appendChild(buildInlineEditor(name));
+      }
+    };
+
+    // Group by folder, the way My Lists' Testing Profiles do (folders are per mode). A registered
+    // folder with nothing in it is skipped — there is nothing here to pick from it.
+    const scope = `profiles_${mode}`;
+    const byFolder = new Map<string, string[]>();
+    names.forEach(name => {
+      const bundle = getPreset(mode, name);
+      const folders = bundle?.folders ?? (bundle?.folder ? [bundle.folder] : []);
+      (folders.length > 0 ? folders : ['']).forEach(f => byFolder.set(f, [...(byFolder.get(f) ?? []), name]));
     });
+    const folderNames = [...new Set([...getFolderRegistry(scope), ...byFolder.keys()])]
+      .filter(f => f && (byFolder.get(f)?.length ?? 0) > 0).sort((a, b) => a.localeCompare(b));
+
+    folderNames.forEach(folder => {
+      const style = getFolderStyle(scope, folder);
+      // The same collapsed/expanded memory as the folder's box in My Lists' Testing Profiles, so the two agree.
+      const stateKey = `profiles:${mode}:${folder}`;
+      const collapsed = isFolderCollapsed('profiles', stateKey);
+      const head = document.createElement('button');
+      head.type = 'button';
+      head.className = 'preset-picker-folder';
+      head.setAttribute('aria-expanded', String(!collapsed));
+      head.title = collapsed ? `Show the profiles in "${folder}"` : `Hide the profiles in "${folder}"`;
+      if (style.color) head.style.setProperty('--folder-color', style.color);
+      head.addEventListener('click', e => {
+        e.stopPropagation();
+        setFolderCollapsed('profiles', stateKey, !collapsed);
+        render();
+        reposition();
+      });
+      const caret = document.createElement('span');
+      caret.className = 'preset-picker-folder-caret';
+      caret.setAttribute('aria-hidden', 'true');
+      caret.textContent = collapsed ? '▸' : '▾';
+      const icon = document.createElement('span');
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = style.emoji ?? '📁';
+      const label = document.createElement('span');
+      label.className = 'preset-picker-folder-name';
+      label.textContent = folder;
+      const count = document.createElement('span');
+      count.className = 'preset-picker-folder-count';
+      count.textContent = String(byFolder.get(folder)?.length ?? 0);
+      head.append(caret, icon, label, count);
+      picker.appendChild(head);
+      if (!collapsed) (byFolder.get(folder) ?? []).forEach(renderRow);
+    });
+
+    const unfiled = byFolder.get('') ?? [];
+    if (folderNames.length > 0 && unfiled.length > 0) {
+      const head = document.createElement('div');
+      head.className = 'preset-picker-folder preset-picker-folder--none';
+      head.textContent = 'No folder';
+      picker.appendChild(head);
+    }
+    unfiled.forEach(renderRow);
 
     const saveRow = document.createElement('div');
     saveRow.className = 'preset-picker-save-row';

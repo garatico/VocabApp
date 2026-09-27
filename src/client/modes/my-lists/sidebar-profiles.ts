@@ -15,7 +15,7 @@ import { isFolderCollapsed, setFolderCollapsed } from './sidebar-state.ts';
 const PROFILE_MODES: FilterScope[] = ['table', 'picture', 'conjugation'];
 
 export function createProfilesSection(kit: SidebarKit) {
-  const { ctx, render, sectionHead, buildActionMenu, emojiSpan, emojiItem, buildFolderGroup } = kit;
+  const { ctx, render, sectionHead, buildActionMenu, emojiSpan, emojiItem, buildFolderGroup, makeListDraggable } = kit;
 
   // ── Testing Profiles ──────────────────────────────────────────────────────
   //
@@ -108,6 +108,7 @@ export function createProfilesSection(kit: SidebarKit) {
         const selected = ctx.selectedProfile?.mode === mode && ctx.selectedProfile.name === name;
         const li = document.createElement('li');
         li.className = 'ml-list-item ml-list-item--full ml-profile-item' + (selected ? ' active' : '');
+        makeListDraggable(li, { kind: 'profiles', mode, name });
 
         const topRow = document.createElement('div');
         topRow.className = 'ml-list-row-top';

@@ -424,3 +424,26 @@
   background: none;
   color: var(--text-muted);
 }
+
+/* Folder headings in the Testing Profiles popover (preset-picker.ts) — the same folders, emoji and
+   colours as My Lists' Testing Profiles. */
+.preset-picker-folder {
+  --folder-color: var(--text-muted);
+  display: flex; align-items: center; gap: 0.35rem;
+  margin: 0.3rem 0 0.1rem; padding: 0.2rem 0.6rem;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--folder-color) 60%, var(--text));
+  background: color-mix(in srgb, var(--folder-color) 14%, var(--surface2));
+  border-left: 3px solid var(--folder-color);
+  border-radius: var(--radius-sm);
+}
+.preset-picker-folder--none { --folder-color: var(--text-muted); }
+/* A folder heading is a button: click to fold or unfold its profiles. */
+button.preset-picker-folder {
+  width: calc(100% - 0.5rem); margin-left: 0.25rem; margin-right: 0.25rem;
+  font-family: inherit; text-align: left; cursor: pointer; border-top: 0; border-right: 0; border-bottom: 0;
+}
+button.preset-picker-folder:hover { background: color-mix(in srgb, var(--folder-color) 24%, var(--surface2)); }
+.preset-picker-folder-caret { width: 0.8rem; font-size: 0.7rem; text-align: center; }
+.preset-picker-folder-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preset-picker-folder-count { font-weight: 600; opacity: 0.8; }
