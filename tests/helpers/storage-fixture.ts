@@ -294,7 +294,7 @@ export async function seedRealisticStorage(store: Store): Promise<SeedResult> {
 const SETTINGS_NON_DEFAULT: Record<string, string> = {
   abbreviate_grammar_hint: 'true', advanced_mode: 'true', answer_gloss_count: '3', autofill_enabled: 'true',
   chinese_script: 'pinyin', confirm_remove_word_override: 'false', conj_deselected: 'grey',
-  conj_hint_mode: 'none', conj_page_size: '25', conj_show_timer: 'false', expand_gloss_on_match: 'false',
+  conj_hint_mode: 'none', conj_page_size: '25', conj_show_timer: 'true', expand_gloss_on_match: 'false',
   filter_linking_enabled: 'false', function_word_marker: 'both', gender_indicator_style: 'dot',
   gender_indicator_visibility: 'hinted', guess_blank_max_attempts: '2', hint_mode: 'first-letter',
   hint_multi_gloss: 'true', history_enabled: 'false', inline_profile_editing: 'true', match_mode: 'strict',
@@ -302,10 +302,10 @@ const SETTINGS_NON_DEFAULT: Record<string, string> = {
   picture_source_photos: 'false', picture_source_svgs: 'false', progress_bar_hint_breakdown: 'true',
   progress_bar_percent_mode: 'missed', question_gloss_count: '3', show_admin_panel: 'true',
   show_disambiguator_hover: 'false', show_disambiguator_meaning: 'false', show_disambiguator_word: 'true',
-  show_gender_article: 'true', show_pinyin: 'false', show_pinyin_gloss: 'false', show_streak_widget: 'false',
+  show_gender_article: 'true', show_pinyin: 'false', show_pinyin_gloss: 'false', show_settings_links: 'true', show_streak_widget: 'false',
   show_visual_profiles: 'true', streak_widget_format: 'number-only', swear_filter_enabled: 'true',
   table_cols: '3', table_hint_button: 'true', table_reveal_button: 'false', table_row_density: 'compact',
-  table_show_rank: 'false', table_show_timer: 'false', table_show_word_markers: 'false',
+  table_show_rank: 'false', table_show_timer: 'true', table_show_word_markers: 'false',
   table_timed_quiz: 'true', table_timed_quiz_minutes: '15', track_hinted_correct: 'false',
   track_hinted_missed: 'false', track_hinted_revealed: 'false', typo_tolerance: 'high', ui_language: 'spanish',
   // dynamic families: <prefix><language | tense | person | part of speech | element>

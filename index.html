@@ -720,7 +720,7 @@
                 <button id="tableReset" data-i18n="table.giveUp">Give Up</button>
                 <button id="tableRetry" title="Restart this same word list from scratch — clears every answer, the timer, and this session's mastery credit for it" data-i18n-title="table.retryTip" data-i18n="table.retry">Retry</button>
               </div>
-              <div class="tnav-group settings-links" id="tableSettingsLinks">
+              <div class="tnav-group settings-links" id="tableSettingsLinks" data-simple-hide="true">
                 <span aria-hidden="true">⚙</span>
                 <button type="button" class="settings-link" data-setting-link="settingHintButton" title="Open this setting" data-i18n-title="settings.linkTitle" data-i18n="settings.linkHints">Hints</button>
                 <button type="button" class="settings-link" data-setting-link="settingShowTimer" title="Open this setting" data-i18n-title="settings.linkTitle" data-i18n="settings.linkTimer">Timer</button>
@@ -1050,8 +1050,8 @@
                 <span class="settings-desc" data-i18n="settings.table.showTimerDesc">Hides the clock and its controls; time is still recorded.</span>
               </div>
               <div class="sort-order-toggle" id="settingShowTimer">
-                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
-                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-show="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn active" data-show="false" data-i18n="common.off">Off</button>
               </div>
             </div>
 
@@ -1389,8 +1389,8 @@
                 <span class="settings-desc" data-i18n="settings.conj.showTimerDesc">Hides the clock and its controls; time is still recorded. Separate from Table's.</span>
               </div>
               <div class="sort-order-toggle" id="settingConjShowTimer">
-                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
-                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-show="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn active" data-show="false" data-i18n="common.off">Off</button>
               </div>
             </div>
 
@@ -1595,6 +1595,17 @@
               <span class="settings-group-heading">Display</span>
             </button>
             <div id="settingsGroupAppearanceMore1" class="filter-body">
+
+            <div class="settings-row" data-simple-hide="true">
+              <div class="settings-label">
+                <span data-i18n="settings.appearance.settingsLinks">Settings shortcuts in quizzes</span>
+                <span class="settings-desc" data-i18n="settings.appearance.settingsLinksDesc">Show ⚙ Hints / Timer / Density links in the Table quiz header.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingShowSettingsLinks">
+                <button type="button" class="sort-order-btn" data-show="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn active" data-show="false" data-i18n="common.off">Off</button>
+              </div>
+            </div>
 
             <div class="settings-row" data-simple-hide="true">
               <div class="settings-label">

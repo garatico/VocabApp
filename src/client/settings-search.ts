@@ -316,6 +316,22 @@ const SYNONYMS: ReadonlyArray<readonly [needle: string, aliases: string]> = [
   ['romaniz', 'pinyin romaji transliteration'],
 ];
 
+/**
+ * Whether the current Advanced / Simple mode lets this element be seen at all. Search must agree with
+ * the page: a setting behind Advanced mode is not offered as a result while Advanced is off, or the
+ * learner would be shown a section with nothing visible in it.
+ */
+function isAvailable(el: HTMLElement): boolean {
+  const cls = document.body.classList;
+  if (!cls.contains('advanced-mode') && el.closest('[data-advanced="true"]')) return false;
+  if (cls.contains('simple-mode') && el.closest('[data-simple-hide="true"]')) return false;
+  // A Glossary entry that explains a setting is only worth showing while that setting is.
+  const link = el.querySelector<HTMLElement>('[data-setting-link]');
+  const target = link?.dataset.settingLink ? document.getElementById(link.dataset.settingLink) : null;
+  if (target && !el.contains(target) && !isAvailable(target)) return false;
+  return true;
+}
+
 export function bindSettingsSearch(): void {
   const input = document.getElementById('settingsSearch') as HTMLInputElement | null;
   const empty = document.getElementById('settingsSearchEmpty');
@@ -511,7 +527,7 @@ export function bindSettingsSearch(): void {
       const groupText = r.groupBody ? groupHeading.get(r.groupBody) ?? '' : '';
       const secText    = sectionTitle.get(r.sectionBody) ?? '';
       const textOk = !q || r.text.includes(q) || groupText.includes(q) || secText.includes(q);
-      const match = textOk && (!changedOnly || isChanged(r.row));
+      const match = isAvailable(r.row) && textOk && (!changedOnly || isChanged(r.row));
       r.row.hidden = !match;
       r.crumb.hidden = !match;
       if (!match) continue;
@@ -531,7 +547,7 @@ export function bindSettingsSearch(): void {
       } else {
         const textOk = !q || (groupHeading.get(body) ?? '').includes(q);
         const changedOk = !changedOnly || colourGroupChanged(body.id);
-        g.hidden = !(textOk && changedOk);
+        g.hidden = !(isAvailable(g) && textOk && changedOk);
         if (!g.hidden) {
           groupMatched.add(body);
           const sec = g.closest<HTMLElement>('.settings-section-body');
@@ -560,6 +576,9 @@ export function bindSettingsSearch(): void {
   }
 
   input.addEventListener('input', applySearch);
+  // Switching Advanced or Simple mode changes which settings exist, so redo the search under the new rules.
+  document.querySelectorAll('#settingAdvancedMode, #settingSimpleMode').forEach(group =>
+    group.addEventListener('click', () => { window.setTimeout(applySearch, 50); }));
   changedBtn?.addEventListener('click', () => {
     changedOnly = !changedOnly;
     changedBtn.setAttribute('aria-pressed', String(changedOnly));

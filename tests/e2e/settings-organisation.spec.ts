@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { startMode } from './helpers.ts';
 
 /**
  * How the Settings screen is organised: sections fall under five nav headings and follow the same
@@ -424,3 +425,72 @@ test('on a phone-width screen the nav is a row of chips and nothing spills sidew
   });
   if (boxes.btnW > 0) expect(boxes.btnLeft).toBeGreaterThanOrEqual(boxes.titleRight - 1);
 });
+
+// ═══ Search follows Advanced mode ═══════════════════════════════════════════════
+test('search only offers settings that the current Advanced / Simple mode makes visible', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem('s_simple_mode', 'false'));     // Advanced stays off
+  await page.goto('/');
+  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await page.locator('.mode-tab[data-mode="settings"]').click();
+
+  await page.locator('#settingsSearch').fill('filter linking');                              // an Advanced-only setting
+  await expect(page.locator('#settingsSearchEmpty')).toBeVisible();
+  await expect(page.locator('#settings-sec-filters')).toBeHidden();
+  await expect(page.locator('.settings-nav-link[href="#settings-sec-filters"]')).toBeHidden();
+  await expect(page.locator('.settings-row:not([hidden])', { has: page.locator('#settingFilterLinking') })).toBeHidden();
+
+  // A basic setting is still found.
+  await page.locator('#settingsSearch').fill('hint button');
+  await expect(page.locator('#settingsSearchEmpty')).toBeHidden();
+  await expect(page.locator('#settingHintButton')).toBeVisible();
+
+  // Turn Advanced on with the search still open: the Advanced setting now appears without retyping.
+  await page.locator('#settingsSearch').fill('filter linking');
+  await page.locator('#settingAdvancedMode [data-advanced-mode="true"]').click();
+  await expect(page.locator('#settingsSearchEmpty')).toBeHidden();
+  await expect(page.locator('#settingFilterLinking')).toBeVisible();
+});
+
+// ═══ Timer and Settings shortcuts are off unless asked for ══════════════════════
+test('the timer and the Settings shortcuts are hidden by default', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem('s_simple_mode', 'false'));       // normal mode, nothing else touched
+  await startMode(page, 'table');
+  await expect(page.locator('#tableControls')).toBeVisible();                                   // the quiz header is there…
+  await expect(page.locator('#tableTimerGroup')).toBeHidden();                                  // …without the clock
+  await expect(page.locator('#tableSettingsLinks')).toBeHidden();                               // …or the shortcuts
+});
+
+test('turning them on shows them — except the shortcuts, which Simple Mode always hides', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('s_simple_mode', 'false');
+    window.localStorage.setItem('s_table_show_timer', 'true');
+    window.localStorage.setItem('s_show_settings_links', 'true');
+  });
+  await startMode(page, 'table');
+  await expect(page.locator('#tableTimerGroup')).toBeVisible();
+  await expect(page.locator('#tableSettingsLinks')).toBeVisible();
+});
+
+test('Simple Mode hides the Settings shortcuts even when they are switched on', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('s_simple_mode', 'true');
+    window.localStorage.setItem('s_show_settings_links', 'true');
+  });
+  await page.goto('/');
+  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await page.locator('.mode-tab[data-mode="table"]').click();
+  await page.locator('#startBtn').click();
+  await expect(page.locator('#tableControls')).toBeVisible();
+  await expect(page.locator('#tableSettingsLinks')).toBeHidden();
+});
+
+test('the Settings shortcuts have an On/Off in Appearance, and it drives the quiz header', async ({ page }) => {
+  await openSettings(page);
+  const row = page.locator('.settings-row', { has: page.locator('#settingShowSettingsLinks') });
+  await page.locator('.settings-nav-link[href="#settings-sec-appearance"]').click();
+  await expect(page.locator('#settingShowSettingsLinks .sort-order-btn.active')).toHaveAttribute('data-show', 'false');
+  await page.locator('#settingShowSettingsLinks [data-show="true"]').evaluate((b: HTMLElement) => b.click());
+  await expect(page.locator('body')).not.toHaveClass(/hide-settings-links/);
+  await expect(row).toHaveClass(/settings-row--changed/);
+});
+

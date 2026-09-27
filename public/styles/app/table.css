@@ -1227,3 +1227,35 @@ body.table-ultra-compact-rows #tableWrap .table-word--trouble::before {
   font-size: 0.58em;
   padding: 0 0.2em;
 }
+
+/* ── Top nav: Jump to Top / Bottom share the pagination row ────────────────────────────────────────
+   The right-hand cluster (summary, actions, settings links, timer) is wide, and the Jump group used to
+   be squeezed into whatever was left between it and Order — on a normal window that was nothing, so the
+   buttons spilled over their neighbours. Row 1 is now Order (left) and the cluster (right); row 2 holds
+   the pager, centred, with Jump to Top at its left and Jump to Bottom at its right. With no pager (a
+   single page) the two Jump buttons simply sit together in the middle. The phone layout below 600px
+   already wraps and is left alone. */
+@media (min-width: 600px) {
+  #tableJumpTop { grid-template-rows: none; }
+  #tableJumpTop .table-nav-side.table-nav-side--end { display: contents; }
+  #tableJumpTop .tnav-right-cluster { grid-row: 1; grid-column: 2; justify-self: end; }
+  /* The Jump group spans the row and pushes its buttons to the two ends; the pager shares the row,
+     centred. The group ignores the pointer so it never blocks the pager beneath it. */
+  #tableJumpTop .tnav-center {
+    grid-row: 2; grid-column: 1 / -1; flex: none; overflow: visible;
+    justify-content: space-between; pointer-events: none;
+  }
+  #tableJumpTop .tnav-center .jump-btn { pointer-events: auto; }
+  #tableJumpTop .table-pager { grid-row: 2; grid-column: 1 / -1; justify-self: center; }
+  #tableJumpTop .table-pager[hidden] ~ .table-nav-side .tnav-center { justify-content: center; }
+}
+/* Not enough width for the pager and both buttons on one line (the pager alone is ~540px): the Jump
+   buttons take the row above it instead, centred, and the pager drops to a third row. */
+@media (min-width: 600px) and (max-width: 1099px) {
+  #tableJumpTop .tnav-center { justify-content: center; gap: 0.5rem; }
+  #tableJumpTop .table-pager { grid-row: 3; }
+}
+
+/* The Settings shortcuts in the Table header are opt-in (Settings → Appearance → Advanced), and never
+   shown in Simple Mode (data-simple-hide on the group). */
+body.hide-settings-links #tableSettingsLinks { display: none; }

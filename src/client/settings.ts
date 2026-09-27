@@ -192,14 +192,18 @@ export const Settings = {
     return Number.isFinite(n) && n > 0 ? n : 10;
   },
 
-  /** On by default — off hides the clock and its start/pause/reset controls.
+  /** Off by default — on shows the clock and its start/pause/reset controls.
    *  Time is still tracked underneath (session history, goals) either way;
    *  this only controls whether it's shown. */
-  getShowTimer: (): boolean => get('table_show_timer', 'true') === 'true',
+  getShowTimer: (): boolean => get('table_show_timer', 'false') === 'true',
 
   /** Conjugation's own copy of getShowTimer — independent so a learner can
    *  hide the clock in one mode without losing it in the other. */
-  getConjShowTimer: (): boolean => get('conj_show_timer', 'true') === 'true',
+  getConjShowTimer: (): boolean => get('conj_show_timer', 'false') === 'true',
+
+  /** The small "⚙ Hints / Timer / Density" shortcuts in the Table quiz header, which open the matching
+   *  setting. Off by default, and never shown in Simple Mode whatever this says. */
+  getShowSettingsLinks: (): boolean => get('show_settings_links', 'false') === 'true',
 
   /** Whether Table mode is a race against the clock — when the limit is hit,
    *  the quiz ends and reveals whatever's left, same as clicking Give Up. */
@@ -893,6 +897,11 @@ export function applyMlColors(): void {
 }
 
 // ── Font size application ─────────────────────────────────────────────────────
+
+/** Show or hide the quiz-screen shortcuts to Settings (CSS: `body.hide-settings-links`). */
+export function applySettingsLinks(): void {
+  document.body.classList.toggle('hide-settings-links', !Settings.getShowSettingsLinks());
+}
 
 export function applyFontSize(size: FontSize = Settings.getFontSize()): void {
   document.documentElement.classList.remove('font-xs', 'font-sm', 'font-lg', 'font-xl');

@@ -58,7 +58,7 @@ export const VISUAL_SETTINGS: readonly VisualSettingDef[] = [
   { key: 'langIndicator', label: 'Language Indicator', group: 'badges', controlId: 'settingLangIndicator', dataAttr: 'indicator',
     storageKey: 'lang_indicator', fallback: 'color', options: [['off', 'Off'], ['color', 'Color'], ['flag', 'Flag']] },
   { key: 'showTimer', label: 'Timer', group: 'extras', controlId: 'settingShowTimer', dataAttr: 'show',
-    storageKey: 'table_show_timer', fallback: 'true', options: ON_OFF },
+    storageKey: 'table_show_timer', fallback: 'false', options: ON_OFF },
   { key: 'streakWidget', label: 'Streak Counter', group: 'extras', controlId: 'settingShowStreakWidget', dataAttr: 'show',
     storageKey: 'show_streak_widget', fallback: 'true', options: ON_OFF },
 ];

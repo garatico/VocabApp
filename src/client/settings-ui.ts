@@ -9,7 +9,7 @@ import type { StreakWidgetFormat } from './ui/streak-widget.ts';
 import { buildConjColorRows, buildGenderColorRows, buildLangAppearanceRows, buildMlColorRows, buildPosColorRows, buildTableColorRows } from './settings-appearance.ts';
 import { bindGlossary, bindSettingsSearch, snapshotSettingDefaults } from './settings-search.ts';
 import { bindStreakCalendarNav, refreshStreakReadouts } from './settings-streak.ts';
-import { ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
+import { ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applySettingsLinks, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
 
 /**
  * settings-ui.ts — binds the Settings screen: click handlers for every control,
@@ -202,7 +202,7 @@ export function bindSettings(): void {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
     if (!btn) return;
     activateToggle('settingShowTimer', btn);
-    set('table_show_timer', btn.dataset.show ?? 'true');
+    set('table_show_timer', btn.dataset.show ?? 'false');
     onShowTimerChangeListeners.forEach(fn => fn());
   });
 
@@ -214,8 +214,17 @@ export function bindSettings(): void {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
     if (!btn) return;
     activateToggle('settingConjShowTimer', btn);
-    set('conj_show_timer', btn.dataset.show ?? 'true');
+    set('conj_show_timer', btn.dataset.show ?? 'false');
     onShowTimerChangeListeners.forEach(fn => fn());
+  });
+
+  // Shortcuts from the quiz screen to Settings (⚙ Hints / Timer / Density)
+  document.getElementById('settingShowSettingsLinks')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingShowSettingsLinks', btn);
+    set('show_settings_links', btn.dataset.show ?? 'false');
+    applySettingsLinks();
   });
 
   // Timed quiz — on/off, plus the minutes input it reveals
@@ -871,13 +880,20 @@ function restoreSettingsUI(): void {
   });
 
   // Show timer
-  const savedShowTimer = get('table_show_timer', 'true');
+  const savedShowTimer = get('table_show_timer', 'false');
   document.querySelectorAll<HTMLElement>('#settingShowTimer .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.show === savedShowTimer);
   });
 
+  // Shortcuts to Settings from the quiz screen
+  const savedSettingsLinks = get('show_settings_links', 'false');
+  document.querySelectorAll<HTMLElement>('#settingShowSettingsLinks .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedSettingsLinks);
+  });
+  applySettingsLinks();
+
   // Show timer — Conjugation
-  const savedConjShowTimer = get('conj_show_timer', 'true');
+  const savedConjShowTimer = get('conj_show_timer', 'false');
   document.querySelectorAll<HTMLElement>('#settingConjShowTimer .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.show === savedConjShowTimer);
   });
