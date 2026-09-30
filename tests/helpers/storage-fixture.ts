@@ -115,6 +115,7 @@ export async function seedRealisticStorage(store: Store): Promise<SeedResult> {
   const lists    = await import('../../src/client/utils/word-lists.ts');
   const mastery  = await import('../../src/client/modes/my-lists/mastery.ts');
   const history  = await import('../../src/client/utils/session-history.ts');
+  const srs      = await import('../../src/client/utils/srs.ts');
   const streak   = await import('../../src/client/utils/streak.ts');
   const presets  = await import('../../src/client/filters/presets.ts');
   const folders  = await import('../../src/client/modes/my-lists/folders.ts');
@@ -174,6 +175,9 @@ export async function seedRealisticStorage(store: Store): Promise<SeedResult> {
   history.recordOutcome('spanish', ['billete'], ['casa', 'aeropuerto']);
   history.saveSession('french', session({ lang: 'french', mode: 'trivia', total: 5, correct: 3, unassisted: 3, hints: 0, revealed: 0, seconds: 60 }));
   history.recordOutcome('french', ['chat'], ['maison']);
+  // 'perro' is due (recordOutcome above just missed it) but excluded from
+  // ever surfacing as due — the schedule itself stays untouched.
+  srs.setDueExempt('spanish', 'perro', true);
   claim('api');
 
   // ── Streaks and daily goals ─────────────────────────────────────────────────
@@ -294,7 +298,8 @@ export async function seedRealisticStorage(store: Store): Promise<SeedResult> {
 const SETTINGS_NON_DEFAULT: Record<string, string> = {
   abbreviate_grammar_hint: 'true', advanced_mode: 'true', answer_gloss_count: '3', autofill_enabled: 'true',
   chinese_script: 'pinyin', confirm_remove_word_override: 'false', conj_deselected: 'grey',
-  conj_hint_mode: 'none', conj_page_size: '25', conj_show_timer: 'true', expand_gloss_on_match: 'false',
+  conj_hint_mode: 'none', conj_page_size: '25', conj_show_timer: 'true', due_exempt_enabled: 'false', due_enabled: 'false', due_soft_cap: '25',
+  expand_gloss_on_match: 'false',
   filter_linking_enabled: 'false', function_word_marker: 'both', gender_indicator_style: 'dot',
   gender_indicator_visibility: 'hinted', guess_blank_max_attempts: '2', hint_mode: 'first-letter',
   hint_multi_gloss: 'true', history_enabled: 'false', inline_profile_editing: 'true', match_mode: 'strict',
@@ -303,7 +308,7 @@ const SETTINGS_NON_DEFAULT: Record<string, string> = {
   progress_bar_percent_mode: 'missed', question_gloss_count: '3', show_admin_panel: 'true',
   show_disambiguator_hover: 'false', show_disambiguator_meaning: 'false', show_disambiguator_word: 'true',
   show_gender_article: 'true', show_pinyin: 'false', show_pinyin_gloss: 'false', show_settings_links: 'true', show_streak_widget: 'false',
-  show_visual_profiles: 'true', streak_widget_format: 'number-only', swear_filter_enabled: 'true',
+  show_visual_profiles: 'true', streak_widget_format: 'number-only', sudden_death: 'true', swear_filter_enabled: 'true',
   table_cols: '3', table_hint_button: 'true', table_reveal_button: 'false', table_row_density: 'compact',
   table_show_rank: 'false', table_show_timer: 'true', table_show_word_markers: 'false',
   table_timed_quiz: 'true', table_timed_quiz_minutes: '15', track_hinted_correct: 'false',
@@ -380,6 +385,7 @@ export async function readSemanticState(opaqueKeys: readonly string[] = []): Pro
       masteryLevels: mastery.getMasteryLevels(lang),
       masteredDates: Object.fromEntries([...mastery.getMastered(lang)].map(w => [w, mastery.getMasteredDate(lang, w)])),
       srs: srs.srsAllEntries(lang),
+      dueExempt: [...srs.getDueExempt(lang)].sort(),
       sessions: history.getSessions(lang),
       misses: history.getMisses(lang),
       tallies: history.getWordTallies(lang),

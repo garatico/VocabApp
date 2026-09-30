@@ -20,6 +20,7 @@ import {
   type QuizMode, type SessionRecord,
 } from '../utils/session-history.ts';
 import { srsDueWords } from '../utils/srs.ts';
+import { Settings } from '../settings.ts';
 import { renderProgress } from './history-progress.ts';
 import { studyWords, REVIEW_LIST_NAME } from '../utils/review-due.ts';
 import { cachedVocabMap, fetchVocab } from './my-lists/vocab-cache.ts';
@@ -188,6 +189,8 @@ export function renderHistory(container: HTMLElement, lang: string): void {
 
   function renderDueWords(): void {
     reviewPanel.innerHTML = '';
+    reviewPanel.hidden = !Settings.getDueEnabled();
+    if (reviewPanel.hidden) return;
 
     const body = document.createElement('div');
     body.className = 'history-panel-body';

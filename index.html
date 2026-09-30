@@ -1489,6 +1489,17 @@
               </div>
             </div>
 
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.answers.suddenDeath">Sudden Death</span>
+                <span class="settings-desc" data-i18n="settings.answers.suddenDeathDesc">The first wrong letter marks it missed — no correcting a typo. Table, Picture Quiz, Trivia and Conjugation's typed answers only.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingSuddenDeath">
+                <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
             </div>
             </div>
 
@@ -2411,6 +2422,52 @@
               <div class="sort-order-toggle" id="settingHistory">
                 <button type="button" class="sort-order-btn active" data-history="true" data-i18n="common.on">On</button>
                 <button type="button" class="sort-order-btn" data-history="false" data-i18n="common.off">Off</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.history.dueEnabled">Due for Review</span>
+                <span class="settings-desc" data-i18n="settings.history.dueEnabledDesc">Off removes the idea entirely, including the badge beside the streak.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingDueEnabled">
+                <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.history.dueCap">Most words due at once</span>
+                <span class="settings-desc" data-i18n="settings.history.dueCapDesc">A review holds at most this many, most overdue first (1–500).</span>
+              </div>
+              <input type="number" id="settingDueSoftCap" class="ml-profile-editor-number" min="1" max="500" placeholder="100">
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.history.dueSpread">Reset overdue backlog</span>
+                <span class="settings-desc" data-i18n="settings.history.dueSpreadDesc">Reschedules every overdue word in every language, a batch per day. Boxes and progress are kept.</span>
+              </div>
+              <button type="button" id="settingDueSpread" class="settings-action-btn" data-i18n="settings.history.dueSpreadBtn">Reset Backlog</button>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.history.dueList">Empty "Due for Review" list</span>
+                <span class="settings-desc" data-i18n="settings.history.dueListDesc">Deletes the helper list a review fills in, in every language. Your own lists are untouched.</span>
+              </div>
+              <button type="button" id="settingDueListClear" class="settings-action-btn" data-i18n="settings.history.dueListBtn">Empty List</button>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.history.dueExempt">"Omit from Due" per word</span>
+                <span class="settings-desc" data-i18n="settings.history.dueExemptDesc">Off hides the per-word button in My Lists and ignores any word already marked — nothing is ever left out of Due for Review.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingDueExempt">
+                <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
               </div>
             </div>
 

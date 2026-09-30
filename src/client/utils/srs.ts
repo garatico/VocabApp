@@ -15,7 +15,8 @@
  * that file's own header comment about two copies of a storage rule.
  */
 
-import { readJson, writeJson, remove as removeKey, isRecord } from './storage.ts';
+import { readJson, writeJson, remove as removeKey, isRecord, isStringArray } from './storage.ts';
+import { Settings, DUE_HARD_CAP } from '../settings.ts';
 
 export interface SrsEntry {
   box:    number; // 0..MAX_BOX
@@ -112,12 +113,47 @@ export function srsAllEntries(lang: string): Readonly<Record<string, SrsEntry>> 
   return getState(lang);
 }
 
-/** Words due now or overdue, most-overdue first. A word never quizzed is not due. */
+/** Words due now or overdue, most-overdue first. A word never quizzed is not
+ *  due, and neither is one marked exempt (see setDueExempt) — it still keeps
+ *  its box/ease and can still be quizzed on demand, it just never surfaces as
+ *  "due" (the header badge, History's Due for Review, a Smart List's `due:
+ *  'yes'` rule). The exemption set itself is ignored entirely while
+ *  Settings.getDueExemptEnabled() is off — the master switch, not a delete —
+ *  so a word marked exempt earlier resumes being excluded the moment it's
+ *  switched back on, rather than having to be re-marked one by one.
+ *
+ *  Nothing is due at all while Settings.getDueEnabled() is off, and the list
+ *  is cut to the learner's soft cap (never past DUE_HARD_CAP) — the
+ *  most-overdue words first, the rest simply wait their turn. */
 export function srsDueWords(lang: string, now = Date.now()): string[] {
+  if (!Settings.getDueEnabled()) return [];
+  const exempt = Settings.getDueExemptEnabled() ? getDueExempt(lang) : null;
+  const cap = Math.min(Settings.getDueSoftCap(), DUE_HARD_CAP);
   return Object.entries(getState(lang))
-    .filter(([, e]) => e.dueAt <= now)
+    .filter(([w, e]) => e.dueAt <= now && !exempt?.has(w))
     .sort((a, b) => a[1].dueAt - b[1].dueAt)
+    .slice(0, cap)
     .map(([w]) => w);
+}
+
+/** Rescue for a runaway backlog: every word that is overdue keeps its box and
+ *  ease but is rescheduled, the most overdue first, in batches of the soft cap
+ *  — one batch tomorrow, the next the day after, and so on — so the backlog
+ *  drips back at a pace that can be studied instead of coming back at once.
+ *  Ignores the exemption set and the on/off switch: it works on the schedule
+ *  itself. Returns how many words were moved. */
+export function spreadOverdueSrs(lang: string, now = Date.now()): number {
+  const state = getState(lang);
+  const overdue = Object.entries(state)
+    .filter(([, e]) => e.dueAt <= now)
+    .sort((a, b) => a[1].dueAt - b[1].dueAt);
+  if (overdue.length === 0) return 0;
+  const batch = Math.min(Settings.getDueSoftCap(), DUE_HARD_CAP);
+  overdue.forEach(([w, e], i) => {
+    state[w] = { ...e, dueAt: now + (1 + Math.floor(i / batch)) * DAY_MS };
+  });
+  saveState(lang, state);
+  return overdue.length;
 }
 
 export function srsDueCount(lang: string, now = Date.now()): number {
@@ -126,4 +162,31 @@ export function srsDueCount(lang: string, now = Date.now()): number {
 
 export function clearSrs(lang: string): void {
   removeKey(srsKey(lang));
+}
+
+// ── "Is Due" exemption ───────────────────────────────────────────────────────
+//
+// A separate, additive key per language (same pattern as mastery.ts's own
+// per-language Set) rather than a field on SrsEntry — a word can be exempted
+// before it has ever been quizzed (no SrsEntry yet), and exemption has
+// nothing to do with the schedule itself, only with whether it's *surfaced*.
+
+const DUE_EXEMPT_PREFIX = 'vq_srs_exempt_';
+
+function dueExemptKey(lang: string): string {
+  return DUE_EXEMPT_PREFIX + lang.toLowerCase();
+}
+
+export function getDueExempt(lang: string): Set<string> {
+  return new Set(readJson<string[]>(dueExemptKey(lang), [], isStringArray));
+}
+
+export function isDueExempt(lang: string, word: string): boolean {
+  return getDueExempt(lang).has(word);
+}
+
+export function setDueExempt(lang: string, word: string, exempt: boolean): void {
+  const words = getDueExempt(lang);
+  if (exempt) words.add(word); else words.delete(word);
+  writeJson(dueExemptKey(lang), [...words]);
 }

@@ -9,7 +9,12 @@ import type { StreakWidgetFormat } from './ui/streak-widget.ts';
 import { buildConjColorRows, buildGenderColorRows, buildLangAppearanceRows, buildMlColorRows, buildPosColorRows, buildTableColorRows } from './settings-appearance.ts';
 import { bindGlossary, bindSettingsSearch, snapshotSettingDefaults } from './settings-search.ts';
 import { bindStreakCalendarNav, refreshStreakReadouts } from './settings-streak.ts';
-import { ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applySettingsLinks, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
+import { refreshDueBadge } from './ui/due-badge.ts';
+import { spreadOverdueSrs } from './utils/srs.ts';
+import { REVIEW_LIST_NAME } from './utils/review-due.ts';
+import { getList, deleteList } from './utils/word-lists.ts';
+import { showToast } from './ui/toast.ts';
+import { DUE_SOFT_CAP_MAX, ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applySettingsLinks, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
 
 /**
  * settings-ui.ts — binds the Settings screen: click handlers for every control,
@@ -216,6 +221,15 @@ export function bindSettings(): void {
     activateToggle('settingConjShowTimer', btn);
     set('conj_show_timer', btn.dataset.show ?? 'false');
     onShowTimerChangeListeners.forEach(fn => fn());
+  });
+
+  // Sudden Death — cross-mode, so it lives with Matching/Typo tolerance
+  // rather than any one mode's own settings.
+  document.getElementById('settingSuddenDeath')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingSuddenDeath', btn);
+    set('sudden_death', btn.dataset.enabled ?? 'false');
   });
 
   // Shortcuts from the quiz screen to Settings (⚙ Hints / Timer / Density)
@@ -554,6 +568,42 @@ export function bindSettings(): void {
     if (!btn) return;
     activateToggle('settingHistory', btn);
     set('history_enabled', btn.dataset.history ?? 'true');
+  });
+
+  // Due for Review on/off and its soft cap (see getDueEnabled / getDueSoftCap)
+  document.getElementById('settingDueEnabled')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingDueEnabled', btn);
+    set('due_enabled', btn.dataset.enabled ?? 'true');
+    refreshDueBadge();
+  });
+  document.getElementById('settingDueSoftCap')?.addEventListener('change', e => {
+    const input = e.target as HTMLInputElement;
+    const n = Math.floor(Number(input.value));
+    if (Number.isFinite(n) && n > 0) set('due_soft_cap', String(Math.min(n, DUE_SOFT_CAP_MAX)));
+    input.value = String(Settings.getDueSoftCap());
+    refreshDueBadge();
+  });
+
+  document.getElementById('settingDueSpread')?.addEventListener('click', () => {
+    if (!window.confirm('Reschedule every overdue word, in every language, a batch per day? Boxes and progress are kept.')) return;
+    const moved = LANGUAGES.reduce((n, l) => n + spreadOverdueSrs(l.name), 0);
+    refreshDueBadge();
+    showToast(moved ? `Rescheduled ${moved} overdue word${moved === 1 ? '' : 's'}.` : 'Nothing was overdue.', 'info', 3000);
+  });
+  document.getElementById('settingDueListClear')?.addEventListener('click', () => {
+    if (!window.confirm(`Delete the "${REVIEW_LIST_NAME}" list in every language? Your own lists are untouched.`)) return;
+    LANGUAGES.forEach(l => { if (getList(l.name, REVIEW_LIST_NAME).length) deleteList(l.name, REVIEW_LIST_NAME); });
+    showToast('Emptied the review list.', 'info', 3000);
+  });
+
+  // "Omit from Due" per word — the master switch for srs.ts's exemption set.
+  document.getElementById('settingDueExempt')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingDueExempt', btn);
+    set('due_exempt_enabled', btn.dataset.enabled ?? 'true');
   });
 
   // Sessions to keep (see getMaxSessionsKept)
@@ -996,6 +1046,12 @@ function restoreSettingsUI(): void {
     b.classList.toggle('active', b.dataset.typo === savedTypo);
   });
 
+  // Sudden Death
+  const savedSuddenDeath = String(Settings.getSuddenDeath());
+  document.querySelectorAll<HTMLElement>('#settingSuddenDeath .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedSuddenDeath);
+  });
+
   // Script display (Chinese/Japanese): two copies of the same controls —
   // one under Settings, one in Table mode's own filter panel (shown only
   // for a romanizedScript language — see syncScriptDisplayAvailability in
@@ -1089,6 +1145,19 @@ function restoreSettingsUI(): void {
   });
   const maxSessionsInput = document.getElementById('settingMaxSessionsKept') as HTMLInputElement | null;
   if (maxSessionsInput) maxSessionsInput.value = String(Settings.getMaxSessionsKept());
+
+  const savedDueEnabled = String(Settings.getDueEnabled());
+  document.querySelectorAll<HTMLElement>('#settingDueEnabled .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedDueEnabled);
+  });
+  const dueCapInput = document.getElementById('settingDueSoftCap') as HTMLInputElement | null;
+  if (dueCapInput) dueCapInput.value = String(Settings.getDueSoftCap());
+
+  // "Omit from Due" per word
+  const savedDueExempt = String(Settings.getDueExemptEnabled());
+  document.querySelectorAll<HTMLElement>('#settingDueExempt .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedDueExempt);
+  });
 
   // Testing Profiles popover's inline "+" editor
   const savedInlineProfileEditing = get('inline_profile_editing', 'false');

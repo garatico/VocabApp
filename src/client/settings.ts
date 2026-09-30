@@ -1,6 +1,13 @@
 import { readString, writeString } from './utils/storage.ts';
 import { LANGUAGES, languageInfo } from './data/languages.ts';
 import { HISTORY_KEEP } from './utils/session-history.ts';
+
+/** Due-for-review caps. The soft cap is the learner's choice (Settings →
+ *  History); the hard cap is not shown anywhere and bounds every review no
+ *  matter what — a study session past this size is not a study session. */
+export const DUE_SOFT_CAP_DEFAULT = 100;
+export const DUE_SOFT_CAP_MAX     = 500;
+export const DUE_HARD_CAP         = 1000;
 import type { ChineseScript, ChineseDisplay, FunctionWordMarker } from './utils/utils.ts';
 import type { GenderIndicatorStyle, GenderIndicatorVisibility } from './utils/dom.ts';
 import type { ProgressBarPercentMode } from './ui/score-pills.ts';
@@ -204,6 +211,38 @@ export const Settings = {
   /** The small "⚙ Hints / Timer / Density" shortcuts in the Table quiz header, which open the matching
    *  setting. Off by default, and never shown in Simple Mode whatever this says. */
   getShowSettingsLinks: (): boolean => get('show_settings_links', 'false') === 'true',
+
+  /** Off by default — on, the first keystroke that can no longer lead to an
+   *  accepted answer (utils.ts's couldStillMatch) immediately marks the cell
+   *  missed, same as Give Up would, instead of letting the learner keep
+   *  correcting it. Applies to every typed-answer mode (Table, Picture Quiz,
+   *  Trivia, Conjugation) — multiple-choice already locks in on the first
+   *  click regardless, and Table's own free-recall (Double Recall) has no
+   *  fixed answer to be "wrong" against, so neither reads this. */
+  getSuddenDeath: (): boolean => get('sudden_death', 'false') === 'true',
+
+  /** On by default. Off both hides the per-word "Omit from Due" button (My
+   *  Lists' row-shared.ts) and makes srs.ts's own srsDueWords stop reading
+   *  the exemption set at all — a word marked exempt earlier is not deleted,
+   *  it just has no effect while this is off, and resumes the moment it's
+   *  switched back on. */
+  getDueExemptEnabled: (): boolean => get('due_exempt_enabled', 'true') === 'true',
+
+  /** On by default. Off disables "due for review" entirely: srs.ts reports
+   *  nothing due, so the header badge, History's Due for Review and a Smart
+   *  List's `due: 'yes'` rule all go quiet. Schedules keep being recorded, so
+   *  switching it back on picks up where it left off. */
+  getDueEnabled: (): boolean => get('due_enabled', 'true') === 'true',
+
+  /** The most words "due" will ever surface at once (most overdue first) —
+   *  the learner's own choice, 1..DUE_SOFT_CAP_MAX. A huge backlog (tens of
+   *  thousands after a long break, or after importing progress) would
+   *  otherwise be copied into a list one word at a time and freeze the app. */
+  getDueSoftCap: (): number => {
+    const n = Math.floor(Number(get('due_soft_cap', String(DUE_SOFT_CAP_DEFAULT))));
+    if (!Number.isFinite(n) || n < 1) return DUE_SOFT_CAP_DEFAULT;
+    return Math.min(n, DUE_SOFT_CAP_MAX);
+  },
 
   /** Whether Table mode is a race against the clock — when the limit is hit,
    *  the quiz ends and reveals whatever's left, same as clicking Give Up. */

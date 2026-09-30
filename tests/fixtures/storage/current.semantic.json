@@ -74,6 +74,9 @@
     "s_conj_hint_mode": "none",
     "s_conj_page_size": "25",
     "s_conj_show_timer": "true",
+    "s_due_enabled": "false",
+    "s_due_exempt_enabled": "false",
+    "s_due_soft_cap": "25",
     "s_expand_gloss_on_match": "false",
     "s_filter_linking_enabled": "false",
     "s_function_word_marker": "both",
@@ -115,6 +118,7 @@
     "s_show_visual_profiles": "true",
     "s_starting_level": "comfortable",
     "s_streak_widget_format": "number-only",
+    "s_sudden_death": "true",
     "s_swear_filter_enabled": "true",
     "s_table_color_correct": "#2e7d32",
     "s_table_cols": "3",
@@ -179,6 +183,7 @@
   },
   "perLang": {
     "french": {
+      "dueExempt": [],
       "goals": {
         "minutes": 0,
         "streak": 0,
@@ -279,6 +284,7 @@
       "wordOverrides": {}
     },
     "german": {
+      "dueExempt": [],
       "goals": {
         "minutes": 0,
         "streak": 0,
@@ -329,6 +335,9 @@
       "wordOverrides": {}
     },
     "spanish": {
+      "dueExempt": [
+        "perro"
+      ],
       "goals": {
         "minutes": 15,
         "streak": 0,
@@ -973,6 +982,9 @@
     "getConjPageSize": 25,
     "getConjRegularityScope": "beforeTopN",
     "getConjShowTimer": true,
+    "getDueEnabled": false,
+    "getDueExemptEnabled": false,
+    "getDueSoftCap": 25,
     "getExpandGlossOnMatch": false,
     "getFilterLinkingEnabled": false,
     "getFontSize": "large",
@@ -1019,6 +1031,7 @@
     "getShowWordSideDisambiguator": true,
     "getSimpleMode": false,
     "getStreakWidgetFormat": "number-only",
+    "getSuddenDeath": true,
     "getSwearFilterEnabled": true,
     "getTableCols": 3,
     "getTablePageSize": 50,

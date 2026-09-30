@@ -19,6 +19,9 @@ export function buildDueBadgeLabel(count: number): string {
   return `\u{1F501} ${count} due`;
 }
 
+/** Redraw now — for Settings, when the due switch or cap changes. */
+export function refreshDueBadge(): void { render(); }
+
 function render(): void {
   const el = document.getElementById('dueBadge');
   if (!el) return;

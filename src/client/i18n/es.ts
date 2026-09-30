@@ -402,6 +402,8 @@ export const es: Record<string, string> = {
   'settings.answers.strict':        'Estricto',
   'settings.answers.typo':          'Tolerancia a errores tipográficos',
   'settings.answers.typoDesc':      'Cuántos errores tipográficos se perdonan en una respuesta.',
+  'settings.answers.suddenDeath':     'Muerte súbita',
+  'settings.answers.suddenDeathDesc': 'La primera letra incorrecta marca la respuesta como fallada, sin poder corregirla. Solo afecta a las respuestas escritas en Tabla, Imágenes, Trivia y Conjugación.',
 
   // ── Settings — Filters ────────────────────────────────────────────────────
   'settings.filters.groupContent':      'Contenido',
@@ -549,4 +551,16 @@ export const es: Record<string, string> = {
   'settings.history.maxSessionsDesc':   'Sesiones recientes conservadas por idioma antes de descartar las más antiguas.',
   'settings.history.sessionHistory':    'Historial de sesiones',
   'settings.history.sessionHistoryDesc':'Desactivado deja de registrar sesiones nuevas en Historial. No afecta dominio ni listas.',
+  'settings.history.dueEnabled':    'Pendiente de Repaso',
+  'settings.history.dueEnabledDesc': 'Desactivado elimina la idea por completo, incluida la insignia junto a la racha.',
+  'settings.history.dueCap':        'Máximo de palabras pendientes',
+  'settings.history.dueCapDesc':    'Un repaso incluye como máximo esta cantidad, las más atrasadas primero (1–500).',
+  'settings.history.dueSpread':     'Restablecer atraso pendiente',
+  'settings.history.dueSpreadDesc': 'Reprograma cada palabra atrasada en todos los idiomas, un lote por día. Se conservan las cajas y el progreso.',
+  'settings.history.dueSpreadBtn':  'Restablecer atraso',
+  'settings.history.dueList':       'Vaciar la lista "Pendiente de Repaso"',
+  'settings.history.dueListDesc':   'Elimina la lista auxiliar que llena un repaso, en todos los idiomas. Tus propias listas no se tocan.',
+  'settings.history.dueListBtn':    'Vaciar lista',
+  'settings.history.dueExempt':'"Omitir de Pendiente" por palabra',
+  'settings.history.dueExemptDesc': 'Desactivado oculta el botón por palabra en Mis Listas e ignora cualquier palabra ya marcada — nada se excluye nunca de Pendiente de Repaso.',
 };

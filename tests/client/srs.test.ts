@@ -18,11 +18,39 @@ const store = new Map<string, string>();
 
 const {
   bumpSrs, srsEntry, srsDueWords, srsDueCount, clearSrs, BOX_INTERVAL_DAYS, MAX_BOX,
+  isDueExempt, setDueExempt, getDueExempt, spreadOverdueSrs,
 } = await import('../../src/client/utils/srs.js');
 
 beforeEach(() => store.clear());
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+describe('due cap and backlog reset', () => {
+  const words = Array.from({ length: 250 }, (_, i) => `w${i}`);
+
+  it('never surfaces more than the soft cap', () => {
+    bumpSrs('spanish', words);
+    expect(srsDueWords('spanish')).toHaveLength(100);
+    store.set('s_due_soft_cap', '7');
+    expect(srsDueWords('spanish')).toHaveLength(7);
+  });
+
+  it('nothing is due while due is switched off', () => {
+    bumpSrs('spanish', words);
+    store.set('s_due_enabled', 'false');
+    expect(srsDueWords('spanish')).toEqual([]);
+  });
+
+  it('spreadOverdueSrs drips the backlog back a cap-sized batch per day', () => {
+    bumpSrs('spanish', words);
+    expect(spreadOverdueSrs('spanish')).toBe(250);
+    const now = Date.now();
+    expect(srsDueWords('spanish', now + 1000)).toEqual([]);
+    expect(srsDueWords('spanish', now + DAY_MS + 1000)).toHaveLength(100);
+    expect(srsDueWords('spanish', now + 3 * DAY_MS + 1000)).toHaveLength(100);
+    expect(srsEntry('spanish', 'w0')?.box).toBe(0);
+  });
+});
 
 describe('bumpSrs', () => {
   it('a never-quizzed word has no entry and is not due', () => {
@@ -103,6 +131,32 @@ describe('srsDueWords', () => {
   it('srsDueCount matches srsDueWords length', () => {
     bumpSrs('spanish', ['a', 'b', 'c']);
     expect(srsDueCount('spanish')).toBe(3);
+  });
+});
+
+describe('due exemption', () => {
+  it('an exempt word never appears as due, even though it keeps its schedule', () => {
+    bumpSrs('spanish', ['casa']);
+    expect(srsDueWords('spanish')).toEqual(['casa']);
+
+    setDueExempt('spanish', 'casa', true);
+    expect(isDueExempt('spanish', 'casa')).toBe(true);
+    expect(srsDueWords('spanish')).toEqual([]);
+    expect(srsDueCount('spanish')).toBe(0);
+    expect(srsEntry('spanish', 'casa')?.box).toBe(0); // the schedule itself is untouched
+
+    setDueExempt('spanish', 'casa', false);
+    expect(srsDueWords('spanish')).toEqual(['casa']);
+  });
+
+  it('a word can be exempted before it has ever been quizzed', () => {
+    setDueExempt('spanish', 'nunca-visto', true);
+    expect(getDueExempt('spanish')).toEqual(new Set(['nunca-visto']));
+  });
+
+  it('is scoped per language', () => {
+    setDueExempt('spanish', 'casa', true);
+    expect(isDueExempt('french', 'casa')).toBe(false);
   });
 });
 
