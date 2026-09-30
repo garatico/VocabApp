@@ -251,7 +251,7 @@ function renderPanelBody(ctx: ListsCtx): void {
   const sourceSelected = new Set(getListSources(ctx.lang, ctx.selectedList).map(s => s.list));
   const sourceDropdown = buildChecklistDropdown(
     'Made of',
-    getListSourceCandidates(ctx.lang, ctx.selectedList).map(n => ({ value: n, label: n })),
+    getListSourceCandidates(ctx.lang, ctx.selectedList).map(n => ({ value: n, label: n, language: ctx.lang })),
     sourceSelected,
     () => {
       setListSources(ctx.lang, ctx.selectedList, [...sourceSelected].map(list => ({ lang: ctx.lang, list })));

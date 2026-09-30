@@ -21,6 +21,24 @@ interface BindModeSwitchOptions {
   onActivate?:      Partial<Record<string, () => void>>;
 }
 
+/**
+ * Settings' page-level switches (Simple Mode, Advanced, Theme, App language) live in the top bar while Settings is
+ * open — the bar has no quiz form to show on that tab — and go back to their own column in the page otherwise.
+ * It is the same element moved, so every handler bound to it keeps working.
+ */
+function placeSettingsToolbar(inSettings: boolean): void {
+  const toolbar = document.querySelector<HTMLElement>('.settings-toolbar');
+  const bar = document.getElementById('controls');
+  const home = document.querySelector<HTMLElement>('#settingsArea .settings-layout');
+  if (!toolbar || !bar || !home) return;
+  if (inSettings) {
+    if (toolbar.parentElement !== bar) bar.insertBefore(toolbar, document.getElementById('controlsCorner'));
+  } else if (toolbar.parentElement !== home) {
+    home.appendChild(toolbar);
+  }
+  toolbar.classList.toggle('settings-toolbar--topbar', inSettings);
+}
+
 export function bindUIState(): void {
   const sizeSelect = document.getElementById('sizeSelect') as HTMLSelectElement;
   const custom     = document.getElementById('sizeCustom') as HTMLInputElement | null;
@@ -63,6 +81,9 @@ export function bindModeSwitch({
     // corner it anchors (#controlsCorner — streak counter, Testing Profiles,
     // keyboard shortcuts) needs to stay in the same place on every tab
     // rather than disappearing along with a form these tabs never had.
+    // CSS keys off this: the desktop reload button shows on Settings only.
+    document.body.dataset['mode'] = mode;
+    placeSettingsToolbar(mode === 'settings');
     const noControls = mode === 'mylists' || mode === 'settings' || mode === 'history' || mode === 'chat' || mode === 'myContent';
     const controlsEl   = document.getElementById('controls');
     const controlsBody = document.getElementById('controlsBody');

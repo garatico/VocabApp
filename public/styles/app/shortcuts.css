@@ -269,3 +269,6 @@ kbd {
 }
 .skip-link:focus { top: 0; }
 #controls:focus { outline: none; }   /* focus target of the skip link, not a control */
+
+/* The desktop reload button belongs to Settings only (ui-state.ts sets body[data-mode]). */
+body:not([data-mode="settings"]) #reloadAppBtn { display: none !important; }

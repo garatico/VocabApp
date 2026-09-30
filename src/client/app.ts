@@ -30,7 +30,7 @@ import { LANGUAGES, isoCode, supportsConjugation,
 import { availableLanguages, isPackagedApp }     from './data/vocab-source.ts';
 import { logger } from './utils/logger.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
-import { Settings, applyFontSize, applyPalette, applyBackground, applyOpacity, setOnFilterVisibilityChange, setOnUILanguageChange, setOnSimpleModeChange, setOnExperimentalModesChange, setOnShowAdminPanelChange } from './settings.ts';
+import { Settings, applyFontSize, applyPalette, applyBackground, applyOpacity, setOnFilterVisibilityChange, setOnUILanguageChange, setOnSimpleModeChange, setOnExperimentalModesChange, setOnShowMyContentChange, setOnShowAdminPanelChange } from './settings.ts';
 import { bindSettings } from './settings-ui.ts';
 import { restoreSettingsPosition } from './settings-search.ts';
 import { refreshStreakReadouts } from './settings-streak.ts';
@@ -381,8 +381,11 @@ function syncSimpleModeLocks(): void {
   (['myContent', 'mylists'] as const).forEach(mode => {
     const tab = document.querySelector<HTMLButtonElement>(`.mode-tab[data-mode="${mode}"]`);
     if (!tab) return;
-    tab.hidden = on;
-    if (on && document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === mode) {
+    // My Content also stays hidden until Settings → My Content tab is on; My Lists only follows Simple Mode.
+    const hide = on || (mode === 'myContent' && !Settings.getShowMyContent());
+    const isOpen = document.querySelector('.mode-tab.active')?.getAttribute('data-mode') === mode;
+    tab.hidden = hide && !(isOpen && !on);   // a tab that is open stays in the bar, so nobody is left on a tab they cannot see
+    if (on && isOpen) {
       document.querySelector<HTMLElement>('.mode-tab[data-mode="table"]')?.click();
     }
   });
@@ -1103,6 +1106,14 @@ function syncConjViewToggle(): void {
   }
 }
 
+// Conjugation's Display (Target / Both / English): switchable at any time, before a quiz or during one — a quiz
+// already showing keeps the display it started with (modes/conjugation/index.ts), the next one picks this up.
+document.getElementById('conjDisplayToggle')?.addEventListener('click', e => {
+  const btn = (e.target as Element).closest<HTMLElement>('.conj-toggle-btn');
+  if (!btn) return;
+  document.querySelectorAll('#conjDisplayToggle .conj-toggle-btn').forEach(b => b.classList.toggle('active', b === btn));
+});
+
 document.getElementById('conjViewToggle')?.addEventListener('click', e => {
   const btn = (e.target as Element).closest<HTMLElement>('.conj-toggle-btn');
   if (!btn?.dataset.view || !CONJ_VIEWS.has(btn.dataset.view)) return;
@@ -1276,6 +1287,10 @@ function resetTabOrigin(): void {
 // Direction, each standing in for the (hidden) chip row that still holds the real state. See ui/toggle-proxy.ts.
 proxyToggleAsSelect(document.getElementById('tableStyleToggle'), document.getElementById('tableStyleSelect') as HTMLSelectElement | null, 'style');
 proxyToggleAsSelect(document.getElementById('sizeModeToggle'), document.getElementById('sizeModeSelect') as HTMLSelectElement | null, 'mode');
+proxyToggleAsCycle(document.getElementById('poolModeToggle'), document.getElementById('poolModeCycle') as HTMLButtonElement | null, 'pool', 'Words');
+proxyToggleAsCycle(document.getElementById('conjMatchStyleToggle'), document.getElementById('conjMatchCycle') as HTMLButtonElement | null, 'pairing', 'Match');
+proxyToggleAsSelect(document.getElementById('conjViewToggle'), document.getElementById('conjViewSelect') as HTMLSelectElement | null, 'view');
+proxyToggleAsCycle(document.getElementById('conjDisplayToggle'), document.getElementById('conjDisplayCycle') as HTMLButtonElement | null, 'mode', 'Display');
 proxyToggleAsCycle(document.getElementById('directionToggle'), document.getElementById('directionCycle') as HTMLButtonElement | null, 'direction', 'Direction');
 
 void (async function init(): Promise<void> {
@@ -1321,6 +1336,7 @@ void (async function init(): Promise<void> {
   setOnSimpleModeChange(syncSimpleModeLocks);
   syncExperimentalModes();
   setOnExperimentalModesChange(syncExperimentalModes);
+  setOnShowMyContentChange(syncSimpleModeLocks);
   bindUIState();
   bindClassFilter();
   bindDomainFilter();

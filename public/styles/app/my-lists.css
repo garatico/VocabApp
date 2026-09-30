@@ -3122,8 +3122,12 @@ label.ml-chip-dropdown-group:hover { color: var(--text); }
 .ml-profile-mode-body .ml-list-item--full { margin-top: 0.05rem; margin-bottom: 0.05rem; padding-top: 0.22rem; padding-bottom: 0.22rem; }
 .ml-profile-mode-body .ml-folder-head { padding-top: 0.14rem; padding-bottom: 0.14rem; }
 
-/* A word that is in an aggregate list because of one of its source lists */
+/* A word that is in an aggregate list because of one of its source lists. It lives inside the meaning cell
+   (multi-panel.ts), after the meaning, so it never takes a grid column of its own. */
 .ml-word-via {
+  display: inline-block;
+  margin-left: 0.5rem;
+  vertical-align: middle;
   font-size: 0.68rem;
   color: var(--text-muted);
   white-space: nowrap;
@@ -3385,3 +3389,10 @@ body .ml-root-drop.ml-root-drop--armed {
   padding-top: calc(0.25rem + 2px);
 }
 .ml-starter-head, .ml-single-head:first-child { margin-top: 0; border-top: 0; padding-top: 0.3rem; }
+
+/* Made of: a list's language leads its row as a flag, and the row wears that language's tint. */
+.ml-chip-dropdown-item--lang {
+  background: color-mix(in srgb, var(--lang-tint, var(--surface2)) 45%, var(--surface));
+  border-radius: var(--radius-sm);
+}
+.ml-chip-dropdown-item--lang .lang-badge { flex-shrink: 0; }

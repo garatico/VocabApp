@@ -310,7 +310,7 @@ const SETTINGS_NON_DEFAULT: Record<string, string> = {
   progress_bar_percent_mode: 'missed', question_gloss_count: '3', show_admin_panel: 'true',
   show_disambiguator_hover: 'false', show_disambiguator_meaning: 'false', show_disambiguator_word: 'true',
   show_gender_article: 'true', show_pinyin: 'false', show_pinyin_gloss: 'false', show_settings_links: 'true', show_streak_widget: 'false',
-  show_visual_profiles: 'true', streak_widget_format: 'number-only', sudden_death: 'true', swear_filter_enabled: 'true',
+  show_my_content: 'true', show_visual_profiles: 'true', streak_widget_format: 'number-only', sudden_death: 'true', swear_filter_enabled: 'true',
   table_cols: '3', table_hint_button: 'true', table_reveal_button: 'false', table_row_density: 'compact',
   table_show_rank: 'false', table_show_timer: 'true', table_show_word_markers: 'false',
   table_timed_quiz: 'true', table_timed_quiz_minutes: '15', track_hinted_correct: 'false',

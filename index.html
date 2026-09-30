@@ -160,6 +160,7 @@
           <div class="control-group" id="wordsSizeGroup">
             <label data-i18n="controls.words">Words</label>
             <div class="words-controls">
+            <button type="button" id="poolModeCycle" class="ctl-cycle" aria-label="Words"></button>
             <div class="sort-order-toggle chip-toggle" id="poolModeToggle" title="Most Common: the N most frequent words. Rank Range: a specific slice of the frequency list. Level: every word at the CEFR level(s) you pick." data-i18n-title="controls.poolModeTip">
               <button type="button" class="sort-order-btn active" data-pool="topn" data-cc="pool-topn" data-i18n="controls.topN">Most Common</button>
               <button type="button" class="sort-order-btn" data-pool="range" data-cc="pool-range" data-i18n="controls.rankRange">Rank Range</button>
@@ -382,22 +383,24 @@
                View, never in the same relationship Display has to it. -->
           <div class="control-stack control-stack--inline-labels">
             <div class="control-group control-group--chip" id="conjViewGroup" data-simple-hide="true" style="display:none">
-              <label data-i18n="controls.view">View</label>
+              <label for="conjViewSelect" data-i18n="controls.view">View</label>
+              <select id="conjViewSelect" class="ctl-select"></select>
               <div class="conj-display-toggle" id="conjViewToggle">
-                <button class="conj-toggle-btn active" data-view="grid" title="Every verb, one card per tense" data-i18n-title="controls.gridTip" data-i18n="controls.grid">Grid</button>
-                <button class="conj-toggle-btn" data-view="full" title="One verb at a time, every tense side by side" data-i18n-title="controls.fullConjugationTip" data-i18n="controls.fullConjugation">Full Conjugation</button>
-                <button class="conj-toggle-btn" data-view="oneatatime" title="One blank at a time — a verb, tense and pronoun, then the next" data-i18n-title="controls.oneAtATimeTip" data-i18n="controls.oneAtATime">One at a Time</button>
-                <button class="conj-toggle-btn" data-view="randomtable" title="Every blank at once, fully shuffled — a random tense of a random verb on every row" data-i18n-title="controls.randomTableTip" data-i18n="controls.randomTable">Random Table</button>
-                <button class="conj-toggle-btn" data-view="cardmatch" title="Match pronouns or infinitives to their conjugated forms" data-i18n-title="controls.cardMatchTip" data-i18n="controls.cardMatch">Card Match</button>
+                <button class="conj-toggle-btn active" data-view="grid" data-cc="view-grid" title="Every verb, one card per tense" data-i18n-title="controls.gridTip" data-i18n="controls.grid">Grid</button>
+                <button class="conj-toggle-btn" data-view="full" data-cc="view-full" title="One verb at a time, every tense side by side" data-i18n-title="controls.fullConjugationTip" data-i18n="controls.fullConjugation">Full Conjugation</button>
+                <button class="conj-toggle-btn" data-view="oneatatime" data-cc="view-oneatatime" title="One blank at a time — a verb, tense and pronoun, then the next" data-i18n-title="controls.oneAtATimeTip" data-i18n="controls.oneAtATime">One at a Time</button>
+                <button class="conj-toggle-btn" data-view="randomtable" data-cc="view-randomtable" title="Every blank at once, fully shuffled — a random tense of a random verb on every row" data-i18n-title="controls.randomTableTip" data-i18n="controls.randomTable">Random Table</button>
+                <button class="conj-toggle-btn" data-view="cardmatch" data-cc="view-cardmatch" title="Match pronouns or infinitives to their conjugated forms" data-i18n-title="controls.cardMatchTip" data-i18n="controls.cardMatch">Card Match</button>
               </div>
             </div>
 
             <div class="control-group control-group--chip" id="conjDisplayGroup" style="display:none">
-              <label data-i18n="controls.display">Display</label>
+              <label for="conjDisplayCycle" data-i18n="controls.display">Display</label>
+              <button type="button" id="conjDisplayCycle" class="ctl-cycle"></button>
               <div class="conj-display-toggle" id="conjDisplayToggle">
-                <button class="conj-toggle-btn" data-mode="target" data-i18n="controls.target">Target</button>
-                <button class="conj-toggle-btn active" data-mode="both" data-i18n="controls.both">Both</button>
-                <button class="conj-toggle-btn" data-mode="english" data-i18n="controls.english">English</button>
+                <button class="conj-toggle-btn" data-mode="target" data-cc="disp-target" data-i18n="controls.target">Target</button>
+                <button class="conj-toggle-btn active" data-mode="both" data-cc="disp-both" data-i18n="controls.both">Both</button>
+                <button class="conj-toggle-btn" data-mode="english" data-cc="disp-english" data-i18n="controls.english">English</button>
               </div>
             </div>
           </div>
@@ -405,10 +408,11 @@
           <!-- Card Match only — which two things get matched. -->
           <div class="control-stack control-stack--inline-labels">
             <div class="control-group control-group--chip" id="conjMatchStyleGroup" style="display:none">
-              <label data-i18n="controls.match">Match</label>
+              <label for="conjMatchCycle" data-i18n="controls.match">Match</label>
+              <button type="button" id="conjMatchCycle" class="ctl-cycle"></button>
               <div class="conj-display-toggle" id="conjMatchStyleToggle">
-                <button class="conj-toggle-btn active" data-pairing="pronoun" title="One verb and tense at a time — match each pronoun to its conjugated form" data-i18n-title="controls.pronounFormTip" data-i18n="controls.pronounForm">Pronoun &#x2194; Form</button>
-                <button class="conj-toggle-btn" data-pairing="infinitive" title="Several verbs at once — match each infinitive to its conjugated form" data-i18n-title="controls.infinitiveFormTip" data-i18n="controls.infinitiveForm">Infinitive &#x2194; Form</button>
+                <button class="conj-toggle-btn active" data-pairing="pronoun" data-cc="match-pronoun" title="One verb and tense at a time — match each pronoun to its conjugated form" data-i18n-title="controls.pronounFormTip" data-i18n="controls.pronounForm">Pronoun &#x2194; Form</button>
+                <button class="conj-toggle-btn" data-pairing="infinitive" data-cc="match-infinitive" title="Several verbs at once — match each infinitive to its conjugated form" data-i18n-title="controls.infinitiveFormTip" data-i18n="controls.infinitiveForm">Infinitive &#x2194; Form</button>
               </div>
             </div>
           </div>
@@ -420,6 +424,7 @@
                verbs while asking for only e.g. 10 of them. -->
           <div class="control-group" id="conjRandomTableSizeGroup" style="display:none">
             <label data-i18n="controls.blanksToPractice" title="How many random verb/tense/form blanks to drill — sampled from the full cross product of your Verbs, Tense &amp; Forms and Regularity selections" data-i18n-title="controls.blanksToPracticeTip">Blanks to Practice</label>
+            <div class="size-row">
             <select id="conjRandomTableSize">
               <option value="10">10</option>
               <option value="25">25</option>
@@ -430,6 +435,7 @@
               <option value="custom">Custom...</option>
             </select>
             <input type="number" id="conjRandomTableSizeCustom" class="custom-count-input" min="1" max="9999" step="1" placeholder="e.g. 40" data-i18n-placeholder="controls.egCustom" style="display:none;"/>
+            </div>
           </div>
 
         </div>
@@ -932,9 +938,9 @@
             <div class="settings-nav-group">
               <div class="settings-nav-heading" data-i18n="settings.navGroup.quizzes">Quizzes</div>
               <a class="settings-nav-link" href="#settings-sec-table"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-table"/></svg></span><span data-i18n="settings.nav.table">Table Quiz</span></a>
-              <a class="settings-nav-link" href="#settings-sec-picture"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-picture"/></svg></span><span data-i18n="nav.pictureQuiz">Picture Quiz</span></a>
+              <a data-advanced="true" class="settings-nav-link" href="#settings-sec-picture"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-picture"/></svg></span><span data-i18n="nav.pictureQuiz">Picture Quiz</span></a>
               <a class="settings-nav-link" href="#settings-sec-conj"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-conj"/></svg></span><span data-i18n="settings.nav.conj">Conjugation Practice</span></a>
-              <a class="settings-nav-link" href="#settings-sec-guessblank"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-guessblank"/></svg></span><span data-i18n="nav.guessBlank">Guess the Blank</span></a>
+              <a data-advanced="true" class="settings-nav-link" href="#settings-sec-guessblank"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-guessblank"/></svg></span><span data-i18n="nav.guessBlank">Guess the Blank</span></a>
               <a class="settings-nav-link" href="#settings-sec-answers"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-answers"/></svg></span><span data-i18n="settings.nav.answers">Answer Checking</span></a>
             </div>
             <div class="settings-nav-group">
@@ -1286,7 +1292,7 @@
             </div>
           </div>
 
-          <div class="settings-section settings-section--picture" id="settings-sec-picture">
+          <div data-advanced="true" class="settings-section settings-section--picture" id="settings-sec-picture">
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyPicture" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyPicture">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-picture"/></svg></span>
@@ -1465,7 +1471,7 @@
             </div>
           </div>
 
-          <div class="settings-section settings-section--guessblank" id="settings-sec-guessblank">
+          <div data-advanced="true" class="settings-section settings-section--guessblank" id="settings-sec-guessblank">
             <button type="button" class="filter-collapse-btn settings-collapse-btn" data-collapse="settingsBodyGuessBlank" data-default-open="false" aria-expanded="false" aria-controls="settingsBodyGuessBlank">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-section-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-guessblank"/></svg></span>
@@ -1528,7 +1534,7 @@
               </div>
             </div>
 
-            <div class="settings-row">
+            <div data-advanced="true" class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.answers.suddenDeath">Sudden Death</span>
                 <span class="settings-desc" data-i18n="settings.answers.suddenDeathDesc">The first wrong letter marks it missed — no correcting a typo. Table, Picture Quiz, Trivia and Conjugation's typed answers only.</span>
@@ -1620,7 +1626,7 @@
               </div>
             </div>
 
-            <div class="settings-row" id="settingAppZoomRow" hidden>
+            <div class="settings-row" id="settingAppZoomRow" data-tauri-only="true">
               <div class="settings-label">
                 <span data-i18n="settings.appearance.appZoom">Window zoom</span>
                 <span class="settings-desc" data-i18n="settings.appearance.appZoomDesc">Ctrl + / Ctrl − / pinch zoom the desktop app. The level is remembered; reset it here.</span>
@@ -1634,7 +1640,14 @@
             </div>
             </div>
 
-            <div class="settings-group">
+            <div class="settings-fold" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn settings-fold-btn" data-collapse="settingsFold-appearance" data-default-open="false" aria-expanded="false" aria-controls="settingsFold-appearance">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.advancedFold">Advanced</span>
+            </button>
+            <div id="settingsFold-appearance" class="filter-body settings-fold-body">
+
+<div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAppearanceBackground" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupAppearanceBackground">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading" data-i18n="settings.appearance.groupBackground">Background &amp; Transparency</span>
@@ -1729,12 +1742,7 @@
 
             <h3 class="settings-subhead" data-i18n="settings.appearance.colors">Colors</h3>
 
-            <div class="settings-fold" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn settings-fold-btn" data-collapse="settingsFold-appearance" data-default-open="false" aria-expanded="false" aria-controls="settingsFold-appearance">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading" data-i18n="settings.advancedFold">Advanced</span>
-            </button>
-            <div id="settingsFold-appearance" class="filter-body settings-fold-body">
+            
 
             <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAppearanceMore1" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupAppearanceMore1">
@@ -1814,7 +1822,7 @@
             </button>
             <div id="settingsGroupCtlColors" class="filter-body">
 
-            <p class="settings-desc">The colour of each option in the controls above the quiz: Words, which words to take, Quiz Style and Direction.</p>
+            <p class="settings-desc">The colour of each option in the controls above the quiz: Words, Table and Conjugation.</p>
             <button type="button" id="settingResetCtlColors" class="settings-action-btn">Reset to defaults</button>
             <div class="conj-color-list" id="settingCtlColors">
               <!-- One row per option, built from CTL_COLOR_DEFS — see settings.ts -->
@@ -2451,14 +2459,14 @@
               <div class="settings-readout" id="streakCurrentReadout">0 days</div>
             </div>
 
-            <div class="settings-row">
+            <div data-advanced="true" class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.streak.best">Best streak</span>
               </div>
               <div class="settings-readout" id="streakBestReadout">0 days</div>
             </div>
 
-            <div class="settings-row">
+            <div data-advanced="true" class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.streak.today">Today's progress</span>
               </div>
@@ -2585,7 +2593,7 @@
               </div>
             </div>
 
-            <div class="settings-row">
+            <div data-advanced="true" class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.history.dueEnabled">Due for Review</span>
                 <span class="settings-desc" data-i18n="settings.history.dueEnabledDesc">Off removes the idea entirely, including the badge beside the streak.</span>
@@ -2596,7 +2604,7 @@
               </div>
             </div>
 
-            <div class="settings-row">
+            <div data-advanced="true" class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.history.dueCap">Most words due at once</span>
                 <span class="settings-desc" data-i18n="settings.history.dueCapDesc">A review holds at most this many, most overdue first (1–500).</span>
@@ -2604,7 +2612,7 @@
               <input type="number" id="settingDueSoftCap" class="ml-profile-editor-number" min="1" max="500" placeholder="100">
             </div>
 
-            <div class="settings-row">
+            <div data-advanced="true" class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.history.dueSpread">Reset overdue backlog</span>
                 <span class="settings-desc" data-i18n="settings.history.dueSpreadDesc">Reschedules every overdue word in every language, a batch per day. Boxes and progress are kept.</span>
@@ -2612,7 +2620,7 @@
               <button type="button" id="settingDueSpread" class="settings-action-btn" data-i18n="settings.history.dueSpreadBtn">Reset Backlog</button>
             </div>
 
-            <div class="settings-row">
+            <div data-advanced="true" class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.history.dueList">Empty "Due for Review" list</span>
                 <span class="settings-desc" data-i18n="settings.history.dueListDesc">Deletes the helper list a review fills in, in every language. Your own lists are untouched.</span>
@@ -2620,7 +2628,7 @@
               <button type="button" id="settingDueListClear" class="settings-action-btn" data-i18n="settings.history.dueListBtn">Empty List</button>
             </div>
 
-            <div class="settings-row">
+            <div data-advanced="true" class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.history.dueExempt">"Omit from Due" per word</span>
                 <span class="settings-desc" data-i18n="settings.history.dueExemptDesc">Off hides the per-word button in My Lists and ignores any word already marked — nothing is ever left out of Due for Review.</span>
@@ -2756,6 +2764,17 @@
 
             <div class="settings-row">
               <div class="settings-label">
+                <span data-i18n="settings.general.showMyContent">My Content tab</span>
+                <span class="settings-desc" data-i18n="settings.general.showMyContentDesc">Show the My Content tab, for adding your own words, trivia and pictures.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingShowMyContent">
+                <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
                 <span data-i18n="settings.general.experimental">Experimental quiz modes</span>
                 <span class="settings-desc" data-i18n="settings.general.experimentalDesc">Show the unfinished Picture Quiz, Trivia, Guess the Blank and Sentence Scramble tabs.</span>
               </div>
@@ -2846,7 +2865,7 @@
               <button type="button" class="sort-order-btn" data-simple-mode="false" data-i18n="common.off">Off</button>
             </div>
           </div>
-          <div class="settings-toolbar-item">
+          <div class="settings-toolbar-item" data-simple-hide="true">
             <span class="settings-toolbar-label" data-i18n="settings.general.advancedMode" title="Only changes this Settings page, not the rest of the app (see Simple Mode above for that). On shows every setting here, including ones most people never need to touch. Off keeps this page to the settings people actually change." data-i18n-title="settings.general.advancedModeDesc">Advanced Settings</span>
             <div class="sort-order-toggle" id="settingAdvancedMode">
               <button type="button" class="sort-order-btn" data-advanced-mode="true" data-i18n="common.on">On</button>

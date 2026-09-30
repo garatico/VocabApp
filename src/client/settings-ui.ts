@@ -1,4 +1,5 @@
 import { readString, writeString, remove as removeKey } from './utils/storage.ts';
+import { enhanceChoiceMenu } from './ui/choice-menu.ts';
 import { applyTheme, type ThemeValue } from './ui/theme-toggle.ts';
 import { LANGUAGES } from './data/languages.ts';
 import { clearHistory } from './utils/session-history.ts';
@@ -14,7 +15,7 @@ import { spreadOverdueSrs } from './utils/srs.ts';
 import { REVIEW_LIST_NAME } from './utils/review-due.ts';
 import { getList, deleteList } from './utils/word-lists.ts';
 import { showToast } from './ui/toast.ts';
-import { applyPalette, applyBackground, applyOpacity, applyCtlColors, CTL_COLOR_DEFS, DUE_SOFT_CAP_MAX, ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applySettingsLinks, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
+import { applyPalette, applyBackground, applyOpacity, applyCtlColors, CTL_COLOR_DEFS, DUE_SOFT_CAP_MAX, ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applySettingsLinks, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onShowMyContentChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
 import { confirmDialog } from './ui/dialog.ts';
 
 /**
@@ -696,6 +697,15 @@ export function bindSettings(): void {
     Settings.setShowVisualProfiles(btn.dataset.enabled === 'true');
   });
 
+  // My Content tab (see getShowMyContent)
+  document.getElementById('settingShowMyContent')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingShowMyContent', btn);
+    Settings.setShowMyContent(btn.dataset.enabled === 'true');
+    onShowMyContentChangeListeners.forEach(fn => fn());
+  });
+
   // Proof-of-concept quiz tabs (see getShowExperimentalModes)
   document.getElementById('settingShowExperimentalModes')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
@@ -809,6 +819,52 @@ export function bindSettings(): void {
     for (const [key] of ML_COLOR_DEFS) removeKey(P + 'list_color_' + key);
     applyMlColors();
     buildMlColorRows();
+  });
+
+  // Fixed Settings page: size the panel to the space under the tab bar, so only the section list scrolls.
+  const settingsArea = document.getElementById('settingsArea');
+  if (settingsArea) {
+    const fit = (): void => {
+      if (settingsArea.hidden) return;
+      const top = settingsArea.getBoundingClientRect().top + window.scrollY;
+      settingsArea.style.setProperty('--settings-h', `${Math.max(360, window.innerHeight - top - 12)}px`);
+    };
+    window.addEventListener('resize', fit);
+    // Switching to Settings also collapses the quiz controls and banner above it, which moves the panel up a moment
+    // after `hidden` flips — so while it is showing, re-measure a couple of times a second (one rect read).
+    let timer: number | undefined;
+    new MutationObserver(() => {
+      window.clearInterval(timer);
+      if (!settingsArea.hidden) { window.requestAnimationFrame(fit); timer = window.setInterval(fit, 400); }
+    }).observe(settingsArea, { attributes: true, attributeFilter: ['hidden'] });
+    fit();
+  }
+
+  // Colour themes and background presets: click-to-open menus over the original button rows.
+  enhanceChoiceMenu(document.getElementById('settingPalette'), {
+    label: 'Color theme',
+    render: b => [...b.childNodes].map(n => n.cloneNode(true)),
+  });
+  const presetSwatch = (b: HTMLButtonElement): Node[] => {
+    const swatch = document.createElement('span');
+    swatch.className = 'choice-menu-swatch';
+    swatch.style.background = b.style.background;
+    return [swatch, document.createTextNode(b.title)];
+  };
+  enhanceChoiceMenu(document.getElementById('settingBgPresets'), {
+    label: 'Background presets',
+    grid: true,
+    placeholder: 'Choose a preset…',
+    render: presetSwatch,
+    current: bs => {
+      const mode = Settings.getBgMode();
+      if (mode === 'default') return null;
+      const c1 = Settings.getBgColor().toLowerCase(), c2 = Settings.getBgColor2().toLowerCase();
+      return bs.find(b => b.dataset.bgMode === mode && (b.dataset.bgC1 ?? '').toLowerCase() === c1
+        && (mode === 'solid' || (b.dataset.bgC2 ?? '').toLowerCase() === c2)) ?? null;
+    },
+    watch: ['settingBgMode', 'settingBgColor', 'settingBgColor2', 'settingBgAngle']
+      .map(id => document.getElementById(id)).filter((el): el is HTMLElement => el !== null),
   });
 
   buildCtlColorRows();
@@ -1263,6 +1319,12 @@ function restoreSettingsUI(): void {
   const savedShowVisualProfiles = get('show_visual_profiles', 'true');
   document.querySelectorAll<HTMLElement>('#settingShowVisualProfiles .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.enabled === savedShowVisualProfiles);
+  });
+
+  // My Content tab
+  const savedShowMyContent = get('show_my_content', 'false');
+  document.querySelectorAll<HTMLElement>('#settingShowMyContent .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedShowMyContent);
   });
 
   // Proof-of-concept quiz tabs

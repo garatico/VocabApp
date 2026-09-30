@@ -215,6 +215,8 @@ export const es: Record<string, string> = {
   'settings.history.backup': 'Copia de seguridad total',
   'settings.history.restore': 'Restaurar copia de seguridad',
   'settings.history.restoreDesc': 'Reemplaza los datos de este navegador con una copia de seguridad. La página se recarga.',
+  'settings.general.showMyContent': 'Pestaña Mi Contenido',
+  'settings.general.showMyContentDesc': 'Muestra la pestaña Mi Contenido, para añadir tus propias palabras, trivia e imágenes.',
   'settings.general.experimental': 'Modos de quiz experimentales',
   'settings.general.experimentalDesc': 'Muestra las pestañas sin terminar de Quiz de Imágenes, Trivia, Completa el Espacio y Ordena la Frase.',
   'settings.general.visualProfiles': 'Perfiles Visuales',

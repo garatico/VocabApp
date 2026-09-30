@@ -11,6 +11,8 @@
  */
 
 import { foldKey } from '../../utils/match.ts';
+import { buildLangBadge } from '../../ui/lang-badge.ts';
+import { languageInfo } from '../../data/languages.ts';
 
 export interface ChipDropdownOption {
   value: string;
@@ -23,6 +25,9 @@ export interface ChipDropdownOption {
   hint?: string;
   /** Checklist only: a badge (e.g. a language flag) shown after the label. */
   badge?: () => HTMLElement;
+  /** Checklist only: the option belongs to a language — its flag leads the row and the row wears that
+   *  language's tint (the same colour coding as the language dropdown). */
+  language?: string;
 }
 
 export interface DropdownHandle {
@@ -201,7 +206,7 @@ export function buildChecklistDropdown(
   const checkboxes = new Map<string, HTMLInputElement[]>();
   let lastGroup: string | undefined;
   let currentGroup: GroupEntry | null = null;
-  options.forEach(({ value, label: optLabel, group, hint, badge }) => {
+  options.forEach(({ value, label: optLabel, group, hint, badge, language }) => {
     if (group !== lastGroup) {
       lastGroup = group;
       currentGroup = null;
@@ -238,7 +243,14 @@ export function buildChecklistDropdown(
     const text = document.createElement('span');
     text.className = 'ml-chip-dropdown-item-text';
     text.textContent = optLabel;
-    cbLabel.append(cb, text);
+    cbLabel.append(cb);
+    if (language) {
+      // Flag first, row tinted: which language a list belongs to reads before its name does.
+      cbLabel.classList.add('ml-chip-dropdown-item--lang');
+      cbLabel.style.setProperty('--lang-tint', `var(${languageInfo(language).colorVar})`);
+      cbLabel.appendChild(buildLangBadge([language]));
+    }
+    cbLabel.append(text);
     if (badge) cbLabel.appendChild(badge());
     if (hint) {
       const h = document.createElement('span');

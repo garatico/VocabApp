@@ -7,12 +7,15 @@ import { test, expect } from '@playwright/test';
  * table row is one word-pair (2 cells), not the default 2 side by side.
  */
 test('changing Default columns to 1 actually narrows the table', async ({ page }) => {
+  // Default columns sits in Appearance's Advanced fold, which only exists once Advanced mode is on.
+  await page.addInitScript(() => { window.localStorage.setItem('s_simple_mode', 'false'); window.localStorage.setItem('s_advanced_mode', 'true'); });
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
 
   await page.locator('.mode-tab[data-mode="settings"]').click();
   // Default columns lives under Appearance (Table Layout), which opens from the side nav.
   await page.locator('.settings-nav-link[href="#settings-sec-appearance"]').click();
+  await page.locator('[data-collapse="settingsFold-appearance"]').click();
   await page.locator('#settingCols [data-cols="1"]').click();
   await expect(page.locator('#settingCols [data-cols="1"]')).toHaveClass(/active/);
 

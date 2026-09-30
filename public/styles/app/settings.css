@@ -926,8 +926,13 @@ body.simple-mode [data-simple-hide="true"] {
 
 .palette-toggle { max-width: 20rem; justify-content: flex-end; }
 
-/* display:flex above beats the UA [hidden] rule; the desktop-only zoom row relies on it. */
+/* Rows that only mean something in the desktop app (Window zoom). The search filter toggles `hidden` on rows,
+   so the packaged-app check is its own class, set by tauri/zoom.ts. */
 .settings-row[hidden] { display: none; }
+body:not(.tauri-app) [data-tauri-only] { display: none !important; }
+
+/* Simple Mode holds the reduced Settings: advanced-only rows stay hidden whatever the Advanced switch says. */
+body.simple-mode [data-advanced="true"] { display: none !important; }
 
 /* Glossary → CSV formats: generated tables (settings-search.ts renderCsvDocs). */
 .csv-docs h4 { margin: 1rem 0 0.35rem; font-size: 0.9rem; color: var(--text); }
@@ -939,3 +944,65 @@ body.simple-mode [data-simple-hide="true"] {
 .csv-docs-table th, .csv-docs-table td { text-align: left; vertical-align: top; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); }
 .csv-docs-table th { font-weight: 700; }
 .csv-docs-name { font-family: monospace; white-space: nowrap; }
+
+/* ── Click-to-open menus for colour theme and background presets (ui/choice-menu.ts) ───────────── */
+.choice-menu { position: relative; display: inline-block; min-width: 11rem; }
+.choice-menu-trigger {
+  display: flex; align-items: center; gap: 0.5rem; width: 100%;
+  min-height: 34px; padding: 0.25rem 0.6rem;
+  font-size: 0.8rem; font-weight: 500; text-align: left; color: var(--text);
+  background: var(--surface2); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer;
+}
+.choice-menu-trigger:hover { border-color: var(--accent); }
+.choice-menu-chevron { margin-left: auto; color: var(--text-muted); font-size: 0.7rem; }
+.choice-menu-list {
+  position: absolute; z-index: 80; top: calc(100% + 2px); right: 0; min-width: 100%;
+  margin: 0; padding: 0.2rem; list-style: none; max-height: 18rem; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); box-shadow: var(--shadow);
+}
+.choice-menu-list[hidden] { display: none; }
+.choice-menu-list--grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; min-width: 16rem; }
+.choice-menu-list li {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.5rem;
+  font-size: 0.8rem; white-space: nowrap; color: var(--text); border-radius: var(--radius-sm); cursor: pointer;
+}
+.choice-menu-list li:hover, .choice-menu-list li.choice-menu-active { background: var(--accent-light); }
+.choice-menu-list li[aria-selected="true"] { font-weight: 700; }
+.choice-menu-swatch { width: 1.6rem; height: 1rem; border-radius: 3px; border: 1px solid color-mix(in srgb, var(--text) 30%, transparent); flex-shrink: 0; }
+.choice-menu-trigger .palette-dot, .choice-menu-list .palette-dot { width: 0.8rem; height: 0.8rem; }
+
+/* ── Brighter subsections ────────────────────────────────────────────────────────────────────────
+   A subsection (.settings-group) is a clearly lighter, section-tinted panel with its own edge on top of
+   its section's card, so where one ends and the next begins reads at a glance. */
+.settings-group {
+  background: color-mix(in srgb, var(--sec, var(--accent)) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--sec, var(--accent)) 28%, var(--border));
+}
+html.dark .settings-group { background: color-mix(in srgb, var(--sec, var(--accent)) 9%, var(--surface2)); }
+.settings-fold .settings-group { background: color-mix(in srgb, var(--sec, var(--accent)) 20%, var(--surface)); }
+html.dark .settings-fold .settings-group { background: color-mix(in srgb, var(--sec, var(--accent)) 14%, var(--surface2)); }
+
+/* ── A fixed Settings page with a scrolling list ────────────────────────────────────────────────
+   On a desktop-width window the Settings panel fills the space under the tab bar (settings-ui.ts sets
+   --settings-h to exactly that), the section nav stays put on the left, and only the list of sections
+   scrolls. The page itself never has to move. Narrower windows keep the ordinary flowing page. */
+@media (min-width: 900px) {
+  #settingsArea:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    height: var(--settings-h, calc(100vh - 8rem));
+    overflow: hidden;
+  }
+  #settingsArea .settings-layout { flex: 1 1 auto; min-height: 0; align-items: stretch; }
+  #settingsArea .settings-nav { position: static; align-self: stretch; overflow-y: auto; padding-right: 0.25rem; }
+  #settingsArea .settings-wrap { overflow-y: auto; min-height: 0; padding-right: 0.4rem; scroll-behavior: smooth; }
+  #settingsArea .settings-toolbar { align-self: flex-start; }
+}
+
+/* ── Settings' page-level switches live in the top bar while Settings is open (ui-state.ts) ─────── */
+#controls > .settings-toolbar--topbar {
+  flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start;
+  gap: 0.35rem 1.4rem; margin: 0; padding: 0.15rem 0;
+}
+body #controls:has(> .settings-toolbar--topbar) { padding-left: 1rem; }
+#controls > .settings-toolbar--topbar .settings-toolbar-item { gap: 0.4rem; }

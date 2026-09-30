@@ -44,7 +44,7 @@ test('One at a Time: Give Up offers a "Practice missed" run of just the wrong fo
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="conjugation"]').click();
-  await page.locator('[data-view="oneatatime"]').click();
+  await page.locator('#conjViewSelect').selectOption('oneatatime');   // View is a dropdown now
   await page.locator('#startBtn').click();
 
   const input = page.locator('.conj-drill-input');

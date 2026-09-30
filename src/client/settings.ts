@@ -494,6 +494,10 @@ export const Settings = {
    * Blank, Sentence Scramble) are shown. Off by default — see app.ts's
    * syncExperimentalModes.
    */
+  /** My Content's tab: hidden until switched on here (and always hidden in Simple Mode). */
+  getShowMyContent: (): boolean => get('show_my_content', 'false') === 'true',
+  setShowMyContent: (on: boolean): void => set('show_my_content', String(on)),
+
   getShowExperimentalModes: (): boolean => get('show_experimental_modes', 'false') === 'true',
   setShowExperimentalModes: (on: boolean): void => set('show_experimental_modes', String(on)),
 
@@ -901,6 +905,16 @@ export const CTL_COLOR_DEFS: readonly [key: string, label: string, cssVar: strin
   ['dir-target-en', 'Direction: Word → Meaning', '--cc-dir-target-en'],
   ['dir-en-target', 'Direction: Meaning → Word', '--cc-dir-en-target'],
   ['dir-mixed',    'Direction: Mixed',         '--cc-dir-mixed'],
+  ['view-grid',       'Conjugation View: Grid',           '--cc-view-grid'],
+  ['view-full',       'Conjugation View: Full',           '--cc-view-full'],
+  ['view-oneatatime', 'Conjugation View: One at a Time',  '--cc-view-oneatatime'],
+  ['view-randomtable','Conjugation View: Random Table',   '--cc-view-randomtable'],
+  ['view-cardmatch',  'Conjugation View: Card Match',     '--cc-view-cardmatch'],
+  ['disp-target',  'Conjugation Display: Target',         '--cc-disp-target'],
+  ['disp-both',    'Conjugation Display: Both',           '--cc-disp-both'],
+  ['disp-english', 'Conjugation Display: English',        '--cc-disp-english'],
+  ['match-pronoun',    'Card Match: Pronoun → Form',      '--cc-match-pronoun'],
+  ['match-infinitive', 'Card Match: Infinitive → Form',   '--cc-match-infinitive'],
 ];
 
 export const TABLE_COLOR_DEFS: readonly [key: string, label: string, fallbackVar: string][] = [
@@ -1137,6 +1151,13 @@ export function setOnSimpleModeChange(fn: () => void): void {
 /** Notified when Show Admin Panel changes, so app.ts can show/hide the tab
  *  immediately rather than only on next visit. */
 export const onExperimentalModesChangeListeners: (() => void)[] = [];
+
+/** Notified when Show My Content changes, so app.ts can show/hide the tab at once. */
+export const onShowMyContentChangeListeners: (() => void)[] = [];
+
+export function setOnShowMyContentChange(fn: () => void): void {
+  onShowMyContentChangeListeners.push(fn);
+}
 
 export function setOnExperimentalModesChange(fn: () => void): void {
   onExperimentalModesChangeListeners.push(fn);

@@ -206,7 +206,7 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
   const sourceKey = (lang: string, list: string): string => lang + '\u0000' + list;
   const sourceSelected = new Set(getMultiSources(listName).map(s => sourceKey(s.lang, s.list)));
   const sourceOptions = LANGUAGES.flatMap(l =>
-    getListNames(l.name).map(list => ({ value: sourceKey(l.name, list), label: `${list} (${l.label})` })));
+    getListNames(l.name).map(list => ({ value: sourceKey(l.name, list), label: `${list} (${l.label})`, language: l.name })));
   const sourceDropdown = buildChecklistDropdown(
     'Made of', sourceOptions, sourceSelected,
     () => {
@@ -544,16 +544,20 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
       viaBadge.title = `Comes from the list "${entry.via}" — change it there`;
     }
 
-    return buildWordRow({
+    const row = buildWordRow({
       lang: entry.language, word: entry.word, entry: ve,
       mastered: getMastered(entry.language).has(entry.word), filter: filterQuery,
       expanded: key === expandedKey,
       addedDate: getMultiAddedDate(listName, entry.language, entry.word),
       redraw: renderRows,
       onToggleExpand: () => { expandedKey = expandedKey === key ? null : key; renderRows(); },
-      leading: [check], beforePos: [buildLangBadge([entry.language]), ...(viaBadge ? [viaBadge] : [])],
+      leading: [check], beforePos: [buildLangBadge([entry.language])],
       extraActions: entry.via ? [] : [moveBtn, removeBtn],
     });
+    // "Comes from" sits inside the meaning cell rather than as a cell of its own: a row is a fixed grid of named
+    // columns, and an extra child with no column pushed every cell after it out of line.
+    if (viaBadge) row.querySelector('.ml-word-trans')?.appendChild(viaBadge);
+    return row;
   }
 
   renderRows();

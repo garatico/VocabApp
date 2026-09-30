@@ -26,11 +26,30 @@ function setZoom(next: number): void {
   zoom = clampZoom(next);
   Settings.setAppZoom(zoom);
   showZoom();
+  flashZoomIndicator();
   if (pending !== null) return;
   pending = window.requestAnimationFrame(() => {
     pending = null;
     getCurrentWebview().setZoom(zoom).catch(err => logger.warn('webview zoom failed', err));
   });
+}
+
+let indicatorTimer: number | undefined;
+
+/** A small "125%" badge in the bottom-left corner that appears on every zoom step and fades out again, like Windows'. */
+function flashZoomIndicator(): void {
+  let el = document.getElementById('zoomIndicator');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'zoomIndicator';
+    el.className = 'zoom-indicator';
+    el.setAttribute('role', 'status');
+    document.body.appendChild(el);
+  }
+  el.textContent = `${Math.round(zoom * 100)}%`;
+  el.classList.add('show');
+  window.clearTimeout(indicatorTimer);
+  indicatorTimer = window.setTimeout(() => el?.classList.remove('show'), 1100);
 }
 
 /** Settings' "Window zoom" row: only exists to be shown in the packaged app, where it reads out the level. */
@@ -45,8 +64,7 @@ export function initAppZoom(): void {
   // WebView2's own touch pinch is a visual zoom that would fight this one; leave panning to the page only.
   document.documentElement.style.touchAction = 'pan-x pan-y';
   zoom = clampZoom(Settings.getAppZoom());
-  const row = document.getElementById('settingAppZoomRow');
-  if (row) row.hidden = false;
+  document.body.classList.add('tauri-app');   // reveals the Window zoom row in Settings (data-tauri-only)
   document.getElementById('settingAppZoomReset')?.addEventListener('click', () => setZoom(1));
   showZoom();
   if (zoom !== 1) getCurrentWebview().setZoom(zoom).catch(err => logger.warn('webview zoom failed', err));

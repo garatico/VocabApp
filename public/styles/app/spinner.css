@@ -66,3 +66,15 @@ html.dark #loadingSpinner { background: rgba(26, 25, 23, 0.95); }
   pointer-events: none;
 }
 .bg-loading[hidden] { display: none; }
+
+/* Desktop zoom: the percentage flashes bottom-left on each step, then fades away (tauri/zoom.ts). */
+.zoom-indicator {
+  position: fixed; left: 16px; bottom: 16px; z-index: 950;
+  padding: 6px 14px;
+  font-size: 1rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: var(--text); background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm); box-shadow: var(--shadow);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+.zoom-indicator.show { opacity: 1; transition-duration: 0.08s; }

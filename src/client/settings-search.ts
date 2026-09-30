@@ -685,21 +685,30 @@ export function bindSettingsSearch(): void {
   refreshChanged();
 
   // Highlight the section being read in the nav, and remember it for next time. A thin band near the
-  // top of the viewport decides which section is "current".
+  // top of whatever scrolls decides which section is "current": the list of sections itself on a desktop
+  // window (the page is fixed there — see settings.css), the window on a narrow one.
   if ('IntersectionObserver' in window) {
     const inBand = new Set<string>();
     let saveTimer: ReturnType<typeof setTimeout> | undefined;
-    const observer = new IntersectionObserver(entries => {
-      for (const e of entries) {
-        if (e.isIntersecting) inBand.add(e.target.id); else inBand.delete(e.target.id);
-      }
-      const current = [...sections].reverse().find(sec => inBand.has(sec.id));
-      if (!current) return;
-      navLinks.forEach(l => l.classList.toggle('is-current', l.getAttribute('href') === `#${current.id}`));
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => writeString(LAST_SECTION_KEY, current.id), 400);
-    }, { rootMargin: '-10% 0px -80% 0px' });
-    sections.forEach(sec => observer.observe(sec));
+    let observer: IntersectionObserver | null = null;
+    const watch = (): void => {
+      observer?.disconnect();
+      inBand.clear();
+      const scroller = wrap instanceof HTMLElement && getComputedStyle(wrap).overflowY === 'auto' ? wrap : null;
+      observer = new IntersectionObserver(entries => {
+        for (const e of entries) {
+          if (e.isIntersecting) inBand.add(e.target.id); else inBand.delete(e.target.id);
+        }
+        const current = [...sections].reverse().find(sec => inBand.has(sec.id));
+        if (!current) return;
+        navLinks.forEach(l => l.classList.toggle('is-current', l.getAttribute('href') === `#${current.id}`));
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => writeString(LAST_SECTION_KEY, current.id), 400);
+      }, { root: scroller, rootMargin: '-10% 0px -80% 0px' });
+      sections.forEach(sec => observer?.observe(sec));
+    };
+    watch();
+    window.matchMedia('(min-width: 900px)').addEventListener('change', watch);
   }
 }
 

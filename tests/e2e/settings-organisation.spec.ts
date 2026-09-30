@@ -170,6 +170,7 @@ test('the nav uses one icon set, keeps every label on one line, and shares each 
 test('a changed row can be reset on its own, and a whole section from its head', async ({ page }) => {
   await openSettings(page);
   await page.locator('.settings-nav-link[href="#settings-sec-appearance"]').click();
+  await page.locator('[data-collapse="settingsFold-appearance"]').click();   // Default columns lives in Appearance's Advanced fold
   await page.locator('#settingCols .sort-order-btn[data-cols="4"]').evaluate((b: HTMLElement) => b.click());
   await page.locator('#settingTableRowDensity .sort-order-btn[data-density="ultra"]').evaluate((b: HTMLElement) => b.click());
   await expect(page.locator('#settingsChangedCount')).toHaveText('2');
@@ -199,7 +200,7 @@ test('Settings reopens on the section you were last reading', async ({ page }) =
   await page.reload();
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="settings"]').click();
-  await expect.poll(() => page.evaluate(() => Math.round(document.getElementById('settings-sec-glossary')!.getBoundingClientRect().top))).toBeLessThan(220);
+  await expect.poll(() => page.evaluate(() => Math.round(document.getElementById('settings-sec-glossary')!.getBoundingClientRect().top - document.querySelector('.settings-wrap')!.getBoundingClientRect().top))).toBeLessThan(60);   // the list scrolls, not the page
   await expect(page.locator('#settingsBodyGlossary')).not.toHaveClass(/filter-body--collapsed/);
 });
 
@@ -243,13 +244,15 @@ test('a new user sees only the essentials; the rest is behind Advanced', async (
   expect(visibleRows).toBeLessThanOrEqual(26);
   // Essentials are still there (Appearance opens from the nav, like any collapsed section).
   await page.locator('.settings-nav-link[href="#settings-sec-appearance"]').click();
-  for (const id of ['settingPageSize', 'settingHintButton', 'settingFontSize', 'settingCols']) {
+  // (Default columns moved into Appearance's Advanced fold: a new user does not need to choose a column count.)
+  for (const id of ['settingPageSize', 'settingHintButton', 'settingFontSize']) {
     await expect(page.locator('#' + id)).toBeVisible();
   }
+  await expect(page.locator('.choice-menu-trigger').first()).toBeVisible();   // the colour theme, as a click-to-open menu
 });
 
 test('the corner buttons sit inside the top bar and never overlap the page below, on every tab', async ({ page }) => {
-  await page.addInitScript(() => window.localStorage.setItem('s_simple_mode', 'false'));
+  await page.addInitScript(() => { window.localStorage.setItem('s_simple_mode', 'false'); window.localStorage.setItem('s_show_my_content', 'true'); });
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   for (const tab of ['mylists', 'myContent', 'history', 'settings', 'table']) {
@@ -270,6 +273,7 @@ test('the corner buttons sit inside the top bar and never overlap the page below
 test('resetting one row can be undone', async ({ page }) => {
   await openSettings(page);
   await page.locator('.settings-nav-link[href="#settings-sec-appearance"]').click();
+  await page.locator('[data-collapse="settingsFold-appearance"]').click();   // Default columns lives in Appearance's Advanced fold
   await page.locator('#settingCols .sort-order-btn[data-cols="4"]').evaluate((b: HTMLElement) => b.click());
   const row = page.locator('.settings-row', { has: page.locator('#settingCols') });
   await row.locator('.settings-row-reset').click();

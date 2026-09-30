@@ -28,6 +28,7 @@ async function open(page: Page, theme: 'light' | 'dark'): Promise<void> {
   await page.addInitScript(t => {
     window.localStorage.setItem('s_simple_mode', 'false');
     window.localStorage.setItem('s_show_experimental_modes', 'true');
+    window.localStorage.setItem('s_show_my_content', 'true');
     window.localStorage.setItem('theme', t);
   }, theme);
   await page.emulateMedia({ colorScheme: theme });

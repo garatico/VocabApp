@@ -132,8 +132,12 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     return tenseDefs.find(d => d.key === key)?.label ?? key;
   }
 
+  // Target / Both / English is read once, when the quiz starts. The toggle can be changed at any time (app.ts keeps
+  // it working before a quiz too) but a quiz already running keeps the display it began with; the next Start Quiz
+  // picks up the new one.
+  const displayModeAtStart = displayToggle?.querySelector<HTMLElement>('.conj-toggle-btn.active')?.dataset.mode ?? 'both';
   function getDisplayMode(): string {
-    return displayToggle?.querySelector<HTMLElement>('.conj-toggle-btn.active')?.dataset.mode ?? 'both';
+    return displayModeAtStart;
   }
 
   function syncPronounRowVisibility(): void {
@@ -1274,14 +1278,6 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     return a.length === b.length && a.every(x => b.includes(x));
   }
 
-  const handleDisplayClick = (e: Event): void => {
-    const btn = (e.target as Element).closest<HTMLElement>('.conj-toggle-btn');
-    if (!btn || !displayToggle?.contains(btn)) return;
-    displayToggle.querySelectorAll('.conj-toggle-btn')
-      .forEach(b => b.classList.toggle('active', b === btn));
-    cardUpdaters.forEach(u => u.updateHeader());
-  };
-
   const handleViewClick = (e: Event): void => {
     const btn = (e.target as Element).closest<HTMLElement>('.conj-toggle-btn');
     if (!btn?.dataset.view || !viewToggle?.contains(btn)) return;
@@ -1361,7 +1357,6 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   document.getElementById('conjTensesNone')?.addEventListener('click', handleTenseChange);
   document.getElementById('conjRegAll')?.addEventListener('click', handleTenseChange);
   document.getElementById('conjRegNone')?.addEventListener('click', handleTenseChange);
-  displayToggle?.addEventListener('click', handleDisplayClick);
   viewToggle?.addEventListener('click', handleViewClick);
   document.addEventListener('keydown', handleCardNav);
 
@@ -1372,7 +1367,6 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     document.getElementById('conjTensesNone')?.removeEventListener('click', handleTenseChange);
     document.getElementById('conjRegAll')?.removeEventListener('click', handleTenseChange);
     document.getElementById('conjRegNone')?.removeEventListener('click', handleTenseChange);
-    displayToggle?.removeEventListener('click', handleDisplayClick);
     viewToggle?.removeEventListener('click', handleViewClick);
     document.removeEventListener('keydown', handleCardNav);
     setProgressCallback(null);

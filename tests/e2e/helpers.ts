@@ -15,6 +15,7 @@ export async function disableSimpleMode(page: Page): Promise<void> {
     window.localStorage.setItem('s_simple_mode', 'false');
     // The proof-of-concept quiz tabs are hidden by default now.
     window.localStorage.setItem('s_show_experimental_modes', 'true');
+    window.localStorage.setItem('s_show_my_content', 'true');
   });
 }
 

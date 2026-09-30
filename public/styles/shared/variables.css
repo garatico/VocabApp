@@ -124,6 +124,9 @@
   --cc-size-window: #0f7d94;  --cc-size-fill: #6444ad;  --cc-size-sample: #b8285f;
   --cc-style-standard: #4d6580;  --cc-style-recall: #c2410c;  --cc-style-double: #8a2f9e;
   --cc-dir-target-en: #1d7a6b;  --cc-dir-en-target: #a3720a;  --cc-dir-mixed: #5b4fc4;
+  --cc-view-grid: #0f7d94;  --cc-view-full: #6444ad;  --cc-view-oneatatime: #c2410c;  --cc-view-randomtable: #b8285f;  --cc-view-cardmatch: #2a62c0;
+  --cc-disp-target: #1d7a6b;  --cc-disp-both: #4d6580;  --cc-disp-english: #a3720a;
+  --cc-match-pronoun: #2a62c0;  --cc-match-infinitive: #b8285f;
   /* Sidebar gear-menu item colors (Copy/Rename; Delete uses --danger). */
   --ml-menu-emoji:    #c026d3;
   --ml-menu-hide:     #0e8a9c;
@@ -210,6 +213,9 @@ html.dark {
   --cc-size-window: #4fc3d9;  --cc-size-fill: #b9a4ec;  --cc-size-sample: #f28bb0;
   --cc-style-standard: #a9bdd4;  --cc-style-recall: #fb923c;  --cc-style-double: #d59bea;
   --cc-dir-target-en: #5fd0bd;  --cc-dir-en-target: #e6c15a;  --cc-dir-mixed: #a89df0;
+  --cc-view-grid: #4fc3d9;  --cc-view-full: #b9a4ec;  --cc-view-oneatatime: #fb923c;  --cc-view-randomtable: #f28bb0;  --cc-view-cardmatch: #7fb0f0;
+  --cc-disp-target: #5fd0bd;  --cc-disp-both: #a9bdd4;  --cc-disp-english: #e6c15a;
+  --cc-match-pronoun: #7fb0f0;  --cc-match-infinitive: #f28bb0;
 
   --shadow:    0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);

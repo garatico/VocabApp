@@ -562,6 +562,16 @@
 [data-cc="dir-target-en"]  { --cc: var(--cc-dir-target-en); }
 [data-cc="dir-en-target"]  { --cc: var(--cc-dir-en-target); }
 [data-cc="dir-mixed"]      { --cc: var(--cc-dir-mixed); }
+[data-cc="view-grid"]        { --cc: var(--cc-view-grid); }
+[data-cc="view-full"]        { --cc: var(--cc-view-full); }
+[data-cc="view-oneatatime"]  { --cc: var(--cc-view-oneatatime); }
+[data-cc="view-randomtable"] { --cc: var(--cc-view-randomtable); }
+[data-cc="view-cardmatch"]   { --cc: var(--cc-view-cardmatch); }
+[data-cc="disp-target"]      { --cc: var(--cc-disp-target); }
+[data-cc="disp-both"]        { --cc: var(--cc-disp-both); }
+[data-cc="disp-english"]     { --cc: var(--cc-disp-english); }
+[data-cc="match-pronoun"]    { --cc: var(--cc-match-pronoun); }
+[data-cc="match-infinitive"] { --cc: var(--cc-match-infinitive); }
 
 #controls-top :is(.sort-order-btn, .conj-toggle-btn, .ctl-select, .ctl-cycle)[data-cc] {
   border-color: color-mix(in srgb, var(--cc) 55%, var(--border-strong));
@@ -588,9 +598,8 @@
   /* Fixed columns: Language, Words and Quiz Style/Direction each keep the width their widest state needs,
      so switching pool mode, picking languages or changing a dropdown never shifts the group beside it. */
   #controls-top > .control-stack:first-child { flex: 0 0 15rem; }
-  #controls-top > #wordsSizeGroup { flex: 0 0 37rem; }
-  #controls-top > .control-stack:has(> #tableStyleGroup) { flex: 0 0 17.5rem; }
-  #controls-top #poolModeToggle .sort-order-btn { padding-left: 0.55rem; padding-right: 0.55rem; }
+  #controls-top > #wordsSizeGroup { flex: 0 0 27.5rem; }   /* the widest state (Most Common, ~440px with the 8rem Words button), so Quiz Style sits snug beside it */
+  body[data-mode="table"] #controls-top > .control-stack:has(> #tableStyleGroup) { flex: 0 0 17.5rem; }   /* only while Table is showing: elsewhere its hidden groups must not hold a gap open */
   .words-controls { flex-wrap: nowrap; }
   .ctl-cycle { min-width: 9.5rem; }
 }
@@ -641,3 +650,10 @@
   margin: 2px 0;
 }
 .list-picker-row.lang-picker-row.list-picker-row--disabled { opacity: 0.55; }
+
+/* Words and Card Match are click-to-cycle buttons now; each keeps a fixed width so it never moves as its label changes. */
+#poolModeCycle { min-width: 8rem; }
+#conjMatchCycle { min-width: 11rem; }
+
+/* Random Table's blank count and its custom box share one line. */
+#conjRandomTableSizeGroup .size-row { display: flex; gap: 0.4rem; align-items: stretch; flex-wrap: nowrap; }
