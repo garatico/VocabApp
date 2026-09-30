@@ -1262,3 +1262,205 @@
 .mc-we .editor-layout { height: clamp(520px, 78vh, 900px); }
 .mc-we .filter-bar { flex-wrap: wrap; }
 .mc-we .mc-we-scope { flex: 0 0 auto; }
+
+/* ── Conjugations tab: tense chips and a card of editable forms per tense ── */
+.mc-conj-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.4rem 0; }
+.mc-conj-chip {
+  font: inherit; font-size: 0.74rem; font-weight: 600; padding: 0.22rem 0.6rem; cursor: pointer;
+  background: var(--surface2); color: var(--text); border: 1px solid var(--border-strong); border-radius: 999px;
+}
+.mc-conj-chip--on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.mc-conj-chip--changed:not(.mc-conj-chip--on) { border-color: var(--accent); color: var(--accent); }
+.mc-conj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.6rem; margin: 0.5rem 0; }
+.mc-conj-card {
+  display: flex; flex-direction: column; gap: 0.25rem; padding: 0.5rem 0.6rem;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.mc-conj-card--changed { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.mc-conj-card-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.mc-conj-row { display: grid; grid-template-columns: 7.5rem 1fr; align-items: center; gap: 0.4rem; font-size: 0.8rem; }
+.mc-conj-row:only-child { grid-template-columns: 1fr; }
+.mc-conj-pronoun { color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-conj-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem; }
+
+/* ── Conjugations tab: the Admin panel's Conjugation editor (styles/admin/conjugation.css), same layout
+   and colour rules — a verb list beside a table of coloured tense columns — under .mcc-* names so the
+   app's own Conjugation-mode styles are left alone. The per-tense and per-person hues are the app's
+   own [data-tense] / [data-pi] maps (conjugation.css). ── */
+.mcc { display: flex; flex-direction: column; gap: 0.75rem; }
+.mcc-filter-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem;
+  padding: 0.5rem 0.75rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.mcc-filter-field { display: flex; align-items: center; gap: 0.4rem; }
+.mcc-filter-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.mcc-divider { width: 1px; align-self: stretch; background: var(--border); }
+.mcc-select, .mcc-search {
+  font: inherit; font-size: 0.85rem; padding: 0.3rem 0.5rem;
+  background: var(--surface2); color: var(--text); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+}
+.mcc-search { flex: 1; min-width: 10rem; }
+.mcc-edited-toggle { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.8rem; color: var(--text-muted); cursor: pointer; }
+.mcc-layout { display: flex; gap: 1.25rem; height: min(72vh, 680px); min-height: 420px; }
+.mcc-verb-panel {
+  width: 300px; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.mcc-verb-panel-header {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+  padding: 0.65rem 0.9rem; border-bottom: 1px solid var(--border); background: var(--surface2);
+}
+.mcc-verb-panel-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.mcc-count { font-size: 0.78rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.mcc-verb-list { flex: 1; min-height: 0; overflow-y: auto; padding: 0.25rem 0; }
+.mcc-verb-list-empty { padding: 1.5rem 1rem; text-align: center; font-size: 0.85rem; color: var(--text-muted); }
+.mcc-verb-item {
+  display: flex; align-items: baseline; gap: 0.5rem; padding: 0.35rem 0.9rem; cursor: pointer;
+  border-left: 3px solid transparent;
+}
+.mcc-verb-item:hover { background: var(--surface2); }
+.mcc-verb-item.active { background: var(--accent-light); border-left-color: var(--accent); }
+.mcc-verb-rank { min-width: 2.2rem; font-size: 0.7rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.mcc-verb-key { font-weight: 700; color: var(--accent); }
+.mcc-verb-translation { font-size: 0.8rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mcc-badge-edited {
+  margin-left: auto; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 0.05rem 0.4rem; border-radius: 999px; background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent);
+}
+.mcc-pager { flex-shrink: 0; display: flex; gap: 0.4rem; align-items: center; padding: 0.5rem; border-top: 1px solid var(--border); background: var(--surface2); }
+.mcc-page-select { flex: 1; min-width: 0; }
+.mcc-table-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.mcc-empty-state {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-muted);
+}
+.mcc-empty-state[hidden], .mcc-table-card[hidden] { display: none; }
+.mcc-hint-icon { font-size: 2rem; }
+.mcc-table-card {
+  display: flex; flex-direction: column; height: 100%; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.mcc-table-header {
+  flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+  padding: 1rem 1.25rem 0.9rem; border-bottom: 1px solid var(--border); background: var(--surface2);
+}
+.mcc-verb-name { font-size: 1.3rem; font-weight: 700; color: var(--text); }
+.mcc-verb-meta { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem; }
+.mcc-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: flex-end; }
+.mcc-btn {
+  font: inherit; font-size: 0.8rem; font-weight: 600; padding: 0.35rem 0.8rem; cursor: pointer;
+  background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); border-radius: var(--radius-sm);
+}
+.mcc-btn:hover:not(:disabled) { background: var(--accent-hover); }
+.mcc-btn:disabled { opacity: 0.5; cursor: default; }
+.mcc-btn--secondary { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
+.mcc-btn--secondary:hover:not(:disabled) { background: var(--surface2); }
+.mcc-btn--ghost { background: none; color: var(--text-muted); border-color: transparent; }
+.mcc-btn--ghost:hover:not(:disabled) { background: var(--surface2); color: var(--text); }
+.mcc-btn--danger { background: var(--surface); color: var(--danger); border-color: var(--danger-border); }
+.mcc-btn--danger:hover:not(:disabled) { background: var(--danger-hover); }
+.mcc-btn[hidden] { display: none; }
+.mcc-chips-row {
+  flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem;
+  padding: 0.75rem 1.25rem; background: var(--surface2); border-bottom: 1px solid var(--border);
+}
+.mcc-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.mcc-chips-actions { flex-shrink: 0; display: flex; gap: 0.3rem; }
+.mcc-chips-actions .mcc-btn { padding: 0.25rem 0.6rem; font-size: 0.72rem; }
+.mcc-chip {
+  padding: 0.3rem 0.75rem; border-radius: 999px; font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  border: 1px solid hsl(var(--tense-hue, 145) 50% 45% / 0.45);
+  background: hsl(var(--tense-hue, 145) 60% 50% / 0.10);
+  color: hsl(var(--tense-hue, 145) 55% 32%);
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+html.dark .mcc-chip:not(.active) { color: hsl(var(--tense-hue, 145) 62% 72%); }
+.mcc-chip.active { background: hsl(var(--tense-hue, 145) 45% 42%); border-color: hsl(var(--tense-hue, 145) 45% 42%); color: #fff; }
+.mcc-chip--changed:not(.active) { box-shadow: inset 0 -3px 0 var(--accent); }
+.mcc-table-scroll { flex: 1; min-height: 0; overflow: auto; }
+.mcc-table { width: 100%; border-collapse: collapse; }
+.mcc-table thead tr { background: var(--surface2); border-bottom: 2px solid var(--border); }
+.mcc-th-pronoun, .mcc-th-form {
+  padding: 0.55rem 1rem; text-align: left; font-size: 0.78rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); white-space: nowrap;
+}
+.mcc-th-pronoun { width: 180px; position: sticky; left: 0; z-index: 2; background: var(--surface2); }
+.mcc-th-form[data-tense] { color: hsl(var(--tense-hue, 145) 55% 32%); background: hsl(var(--tense-hue, 145) 60% 50% / 0.14); }
+html.dark .mcc-th-form[data-tense] { color: hsl(var(--tense-hue, 145) 62% 72%); }
+.mcc-table tbody tr { border-bottom: 1px solid var(--border); }
+.mcc-table tbody tr:last-child { border-bottom: none; }
+.mcc-table tbody tr:hover { background: var(--surface2); }
+.mcc-pronoun {
+  padding: 0.35rem 1rem; font-size: 0.92rem; font-weight: 600; color: var(--text-muted); white-space: nowrap;
+  width: 180px; position: sticky; left: 0; z-index: 1; background: var(--surface);
+}
+.mcc-pronoun[data-pi] { color: hsl(var(--pronoun-hue, 0) 55% 30%); background: hsl(var(--pronoun-hue, 0) 60% 92%); }
+html.dark .mcc-pronoun[data-pi] { color: hsl(var(--pronoun-hue, 0) 65% 75%); background: hsl(var(--pronoun-hue, 0) 35% 20%); }
+.mcc-input-cell { padding: 0.3rem 0.6rem; }
+.mcc-input {
+  width: 100%; max-width: 200px; box-sizing: border-box; padding: 0.3rem 0.6rem; font: inherit; font-size: 0.95rem;
+  background: var(--surface2); color: var(--text); border: 1.5px solid var(--border); border-radius: var(--radius-sm); outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.mcc-input[data-tense] { border-color: hsl(var(--tense-hue, 145) 50% 45% / 0.5); background: hsl(var(--tense-hue, 145) 60% 50% / 0.08); }
+html.dark .mcc-input[data-tense] { background: hsl(var(--tense-hue, 145) 45% 30% / 0.14); }
+.mcc-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); background: var(--surface); }
+/* A form that no longer matches the real vocabulary. */
+.mcc-input--changed { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.mcc-extra-forms { flex-shrink: 0; display: flex; flex-wrap: wrap; gap: 1.25rem; padding: 0.9rem 1.25rem; border-top: 1px solid var(--border); background: var(--surface2); }
+.mcc-extra-forms[hidden] { display: none; }
+.mcc-extra-group { display: flex; flex-direction: column; gap: 0.3rem; min-width: 180px; flex: 1; }
+.mcc-extra-group label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: hsl(var(--tense-hue, 145) 55% 32%); }
+html.dark .mcc-extra-group label { color: hsl(var(--tense-hue, 145) 62% 72%); }
+.mcc-extra-group .mcc-input { max-width: none; }
+@media (max-width: 700px) {
+  .mcc-layout { flex-direction: column; height: auto; }
+  .mcc-verb-panel { width: 100%; max-height: 220px; }
+  .mcc-th-pronoun, .mcc-pronoun { width: 130px; }
+}
+
+/* My Content's top bar: the language picker and the backup / restore buttons in one wrapping row. */
+.mc-topbar { flex-wrap: wrap; row-gap: 0.3rem; }
+.mc-topbar .mc-lang-dropdown { margin: 0; }
+.mc-topbar .mc-import-status { font-size: 0.78rem; }
+
+/* ── Tighter: the bar sits right on the editor (as in My Lists), and the tabs sit close to the top of it ── */
+#controls:has(~ #myContentArea:not([hidden])) { margin-bottom: 0; }
+#myContentArea .mc-wrap { padding-top: 0.35rem; gap: 0.5rem; }
+.mc-tabs-wrap { padding-top: 0.6rem; }
+.mc-lang-dropdown[hidden] { display: none; }
+
+/* ── The tabs live in the top bar, the backup / language controls at its right ── */
+.mc-topbar { justify-content: space-between; gap: 0.5rem 1rem; }
+.mc-topbar .mc-tabs { flex-wrap: wrap; gap: 0.25rem; }
+.mc-topbar .mc-tab-btn { border-radius: var(--radius-sm); border-bottom: 1px solid var(--border); padding: 0.4rem 0.85rem; }
+.mc-topbar .mc-tab-btn.active { border-bottom-color: var(--accent); }
+.mc-topbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-left: auto; }
+/* With the tabs no longer attached to it, the panel is a plain card, and every top control is snugger. */
+.mc-tabs-wrap { border-radius: var(--radius); padding: 0.4rem 0.6rem 0.6rem; }
+#myContentArea .mc-wrap { padding-top: 0.3rem; }
+.mc-we .filter-bar { padding-bottom: 0.3rem; margin-bottom: 0.3rem; gap: 0.3rem; }
+.mc-we .filter-bar select, .mc-we .filter-bar input[type="text"], .mc-we .filter-bar button { height: 1.75rem; }
+.mcc-filter-bar { padding: 0.3rem 0.55rem; gap: 0.4rem; }
+.mcc { gap: 0.45rem; }
+/* Keep the tabs and buttons clear of the streak / dice cluster pinned at the bar's top-right corner. */
+#controls:has(#myContentBar:not([hidden])) { padding-right: 10.5rem; }
+/* Snug enough that the tabs and the buttons share one line at a normal window width. */
+.mc-topbar .mc-tab-btn { padding: 0.3rem 0.65rem; font-size: 0.8rem; }
+.mc-topbar .mc-btn { padding: 0.28rem 0.6rem; font-size: 0.74rem; white-space: nowrap; }
+.mc-topbar .mc-lang-dropdown-btn { padding: 0.28rem 0.6rem; font-size: 0.74rem; }
+.mc-topbar .mc-lang-picker-label { font-size: 0.72rem; }
+#controls:has(#myContentBar:not([hidden])) { padding-left: 2.6rem; padding-right: 10rem; }
+
+/* ── The editor fits the window (see utils/fit-to-screen.ts): #myContentWrap is given the height that is
+   left, and everything inside passes it down so the word list, the form and the conjugation table scroll
+   on their own instead of the page. Phones keep the stacked, page-scrolling layout. ── */
+@media (min-width: 768px) {
+  #myContentWrap .mc-wrap { height: 100%; box-sizing: border-box; min-height: 0; }
+  #myContentWrap .mc-tabs-wrap { flex: 1 1 0; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+  #myContentWrap .mc-tab-panel:not([hidden]) { flex: 1 1 auto; min-height: 0; }
+  #myContentWrap .mc-we { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; margin-top: 0; }
+  #myContentWrap .mc-we .editor-layout { flex: 1 1 auto; height: auto; min-height: 0; }
+  #myContentWrap .mcc { flex: 1 1 auto; min-height: 0; }
+  #myContentWrap .mcc-layout { flex: 1 1 auto; height: auto; min-height: 0; }
+}

@@ -1,3 +1,4 @@
+import { deselectAll } from './context.ts';
 import { getFolderRegistry, addFolder } from './folders.ts';
 import { closePopover } from './move-popover.ts';
 import { LANGUAGES } from '../../data/languages.ts';
@@ -6,6 +7,7 @@ import { modesWithPresets, listPresets, getPreset, deletePreset, renamePreset, d
 import { SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
 import type { SidebarKit } from './sidebar-kit.ts';
 import { isFolderCollapsed, setFolderCollapsed } from './sidebar-state.ts';
+import { confirmDialog } from '../../ui/dialog.ts';
 
 /**
  * sidebar-profiles.ts — the Testing Profiles section: profiles grouped by mode and folder, and
@@ -15,7 +17,7 @@ import { isFolderCollapsed, setFolderCollapsed } from './sidebar-state.ts';
 const PROFILE_MODES: FilterScope[] = ['table', 'picture', 'conjugation'];
 
 export function createProfilesSection(kit: SidebarKit) {
-  const { ctx, render, sectionHead, buildActionMenu, emojiSpan, styleItem, buildFolderGroup, makeListDraggable } = kit;
+  const { ctx, render, sectionHead, buildActionMenu, emojiSpan, styleItem, renderFolderTree, makeRootDropTarget, makeListDraggable } = kit;
 
   // ── Testing Profiles ──────────────────────────────────────────────────────
   //
@@ -151,8 +153,8 @@ export function createProfilesSection(kit: SidebarKit) {
           { glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename', onClick: () => {
             startRenameProfile(mode, name, li, nameSpan);
           } },
-          { glyph: '🗑', label: 'Delete', title: 'Delete profile', tone: 'delete', onClick: () => {
-            if (!window.confirm(`Delete profile "${name}"?`)) return;
+          { glyph: '🗑', label: 'Delete', title: 'Delete profile', tone: 'delete', onClick: async () => {
+            if (!await confirmDialog({ title: `Delete "${name}"?`, message: 'The testing profile will be removed.', confirmLabel: 'Delete profile', danger: true })) return;
             deletePreset(mode, name);
             if (selected) ctx.selectedProfile = null;
             render();
@@ -161,6 +163,7 @@ export function createProfilesSection(kit: SidebarKit) {
         const em = emojiSpan(bundle?.emoji); if (em) topRow.prepend(em);
         li.append(topRow);
         li.addEventListener('click', () => {
+          if (li.classList.contains('active')) { deselectAll(ctx); closePopover(); render(); return; }
           ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedMultiList = null; ctx.selectedVisual = null;
           ctx.selectedProfile = { mode, name };
           closePopover(); render();
@@ -174,22 +177,24 @@ export function createProfilesSection(kit: SidebarKit) {
       // "+ Folder") are unioned in here so a freshly-created one still
       // shows up with nothing in it yet.
       const allModeFolders = new Set([...byFolder.keys(), ...getFolderRegistry(profileFolderScope)]);
-      [...allModeFolders].filter(Boolean).sort().forEach(folder => {
-        const folderId = `profiles:${mode}:${folder}`;
-        const group = buildFolderGroup('profiles', folderId, folder, undefined, { scope: profileFolderScope, folder });
-        const folderBody = group.querySelector<HTMLUListElement>('.ml-folder-body')!;
-        modeBody.appendChild(group);
-
-        const namesInFolder = byFolder.get(folder) ?? [];
-        if (namesInFolder.length === 0) {
-          const empty = document.createElement('li');
-          empty.className = 'ml-list-empty';
-          empty.textContent = 'No profiles in this folder yet.';
-          folderBody.appendChild(empty);
-        }
-        namesInFolder.forEach(name => buildProfileRow(name, folderBody));
+      renderFolderTree({
+        sectionId: 'profiles', container: modeBody, scope: profileFolderScope,
+        paths: [...allModeFolders].filter(Boolean),
+        keyFor: folder => `profiles:${mode}:${folder}`,
+        fillFolder: (folder, folderBody) => {
+          const namesInFolder = byFolder.get(folder) ?? [];
+          // A folder that only holds subfolders needs no "empty" note.
+          if (namesInFolder.length === 0 && !folderBody.querySelector('.ml-folder-group')) {
+            const empty = document.createElement('li');
+            empty.className = 'ml-list-empty';
+            empty.textContent = 'No profiles in this folder yet.';
+            folderBody.appendChild(empty);
+          }
+          namesInFolder.forEach(name => buildProfileRow(name, folderBody));
+        },
       });
       (byFolder.get('') ?? []).forEach(name => buildProfileRow(name));
+      makeRootDropTarget(modeBody, 'profiles', `profiles:${mode}:`);
     });
   }
 

@@ -58,8 +58,12 @@ test('My Lists: backing up, wiping storage, and restoring brings a list back', a
   // visited too.
   await page.locator('#myListsWrap input[type="file"]').setInputFiles(filePath!);
   await expect(page.locator('.ml-list-name', { hasText: 'BackupRoundTrip' })).toBeVisible();
-  await page.locator('.ml-list-name', { hasText: 'BackupRoundTrip' }).click();
-  await expect(page.locator('.ml-word-text')).toHaveText('casa');
+  // Open it — unless the restore already did (clicking the open list closes it).
+  const restored = page.locator('.ml-list-item', { has: page.locator('.ml-list-name', { hasText: 'BackupRoundTrip' }) }).first();
+  await expect(async () => {
+    if (await page.locator('.ml-word-text').count() === 0) await restored.click();
+    await expect(page.locator('.ml-word-text')).toHaveText('casa', { timeout: 1500 });
+  }).toPass();
 });
 
 test('My Content: backing up, wiping storage, and restoring brings a word back', async ({ page }) => {
@@ -94,7 +98,7 @@ test('My Content: backing up, wiping storage, and restoring brings a word back',
   // setInputFiles targets the hidden <input type="file"> directly rather
   // than clicking "Load a file…" first, which would open a real OS file
   // picker Playwright doesn't control.
-  await page.locator('#myContentWrap input[type="file"]').setInputFiles(filePath!);
+  await page.locator('#myContentBar input[type="file"]').setInputFiles(filePath!);
   await page.getByRole('button', { name: 'Added', exact: true }).click();
   await expect(page.locator('.mc-we .word-item .word-item-key')).toHaveText('palabraprueba');
 });

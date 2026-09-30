@@ -15,6 +15,7 @@ import { buildScorePills, scorePct } from '../../ui/score-pills.js';
 import { Settings, applyConjDeselectedClass, setOnConjDeselectedChange, setOnShowTimerChange } from '../../settings.js';
 import { buildCard } from './card.ts';
 import { CardController, ConjugationModeOptions, VISIBLE_ROW, clearConjSummary, hiddenPronounSlots, isSingleForm, missingDataSlots, showConjSummary, verbKey } from './helpers.ts';
+import { confirmDialog } from '../../ui/dialog.ts';
 
 /**
  * conjugation/index.ts
@@ -1127,14 +1128,14 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   buildCards();
   updateTenseSummary();
 
-  orderSel.addEventListener('change', () => {
+  orderSel.addEventListener('change', async () => {
     verbOrder = orderSel.value as WordOrder;
     writeString('vq_conj_order', verbOrder);
     verbs = orderWords(allVerbs, verbOrder, w => w.language ?? lang);
     // Answers live in the DOM here rather than a state map, so re-ordering
     // restarts the cards. Warn rather than silently discarding work.
     const answered = cardUpdaters.some(u => u.card.querySelector('input:disabled'));
-    if (answered && !window.confirm('Re-ordering rebuilds the cards and clears answers so far. Continue?')) {
+    if (answered && !await confirmDialog({ title: 'Re-order the cards?', message: 'Re-ordering rebuilds the cards and clears the answers so far.', confirmLabel: 'Re-order' })) {
       orderSel.value = verbOrder = (readString('vq_conj_order') as WordOrder) ?? 'rank';
       return;
     }

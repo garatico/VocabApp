@@ -20,7 +20,7 @@
 
 import { foldKey as norm } from '../../utils/match.ts';
 import {
-  getList, getListNames, addToList, removeFromList, getAddedDate,
+  getList, getListNames, addToList, removeFromList, getAddedDate, getDerivedWords,
 } from '../../utils/word-lists.ts';
 import { createPager } from './pager.ts';
 import type { ListsCtx } from './context.ts';
@@ -74,6 +74,8 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
   // Multi-select state. Cleared whenever the visible set changes, so you can
   // never act on a word you can no longer see.
   const selectedWords = new Set<string>();
+  /** Words here only because of a source list ("Made of") — shown, but changed in the source. */
+  let derivedWords = new Map<string, string>();
 
   // ── Bulk action bar ────────────────────────────────────────────────────────
 
@@ -169,7 +171,7 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
   });
 
   bulkRemove.addEventListener('click', () => {
-    const words = [...selectedWords];
+    const words = [...selectedWords].filter(w => !derivedWords.has(w));
     if (words.length === 0) return;
     // Snapshotted before removeFromList runs, not read live inside Undo:
     // removing every word in the list (Select all + Remove is the obvious
@@ -204,7 +206,8 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     if (selectedWords.size === 0) return;
     const others = getListNames(ctx.lang).filter(n => n !== ctx.selectedList);
     if (others.length === 0) { alert('No other list to move to. Create one first.'); return; }
-    const words = [...selectedWords];
+    const words = [...selectedWords].filter(w => !derivedWords.has(w));
+    if (words.length === 0) return;
     // Snapshotted now, not read live inside the Undo closure below: moving
     // every word out of the source list empties it, and removeFromList
     // deletes a list the moment it goes empty — sidebar.ts's own render then
@@ -326,6 +329,7 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     const q  = norm(filter);
     const mastered = getMastered(ctx.lang);
 
+    derivedWords = getDerivedWords(ctx.lang, ctx.selectedList);
     const filtered = getList(ctx.lang, ctx.selectedList).filter(w => {
       if (ctx.hideMastered && mastered.has(w)) return false;
       const e = vm?.get(w);
@@ -433,13 +437,21 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
       });
     });
 
+    const via = derivedWords.get(word);
+    const viaBadge = via ? document.createElement('span') : null;
+    if (viaBadge) {
+      viaBadge.className = 'ml-word-via';
+      viaBadge.textContent = `🔗 ${via}`;
+      viaBadge.title = `Comes from the list "${via}" — change it there`;
+    }
+
     return buildWordRow({
       lang: ctx.lang, word, entry, mastered: mastered.has(word), filter: filterInput.value,
       expanded: word === ctx.expandedWord,
       addedDate: word === ctx.expandedWord ? getAddedDate(ctx.lang, ctx.selectedList, word) : null,
       redraw: render,
       onToggleExpand: () => { ctx.expandedWord = ctx.expandedWord === word ? null : word; render(); },
-      leading: [check], extraActions: [moveBtn, removeBtn],
+      leading: [check], beforePos: viaBadge ? [viaBadge] : [], extraActions: via ? [] : [moveBtn, removeBtn],
     });
   }
 

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { startMode } from './helpers.ts';
+import { startMode, confirmNext, cancelNext } from './helpers.ts';
 
 /**
  * How the Settings screen is organised: sections fall under five nav headings and follow the same
@@ -124,11 +124,11 @@ test('Reset all to defaults clears every preference but keeps lists and progress
   await page.locator('.mode-tab[data-mode="settings"]').click();
   await expect(page.locator('#settingsChangedCount')).toHaveText('2');      // the column count and the colour
 
-  page.once('dialog', d => { void d.dismiss(); });
+  await cancelNext(page);
   await page.locator('#settingsResetAll').click();                     // cancelled: nothing changes
   expect(await page.evaluate(() => localStorage.getItem('s_table_cols'))).toBe('4');
 
-  page.once('dialog', d => { void d.accept(); });
+  await confirmNext(page);
   await Promise.all([page.waitForEvent('load'), page.locator('#settingsResetAll').click()]);
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   expect(await page.evaluate(() => [localStorage.getItem('s_table_cols'), localStorage.getItem('s_list_color_profile')])).toEqual([null, null]);
@@ -311,7 +311,7 @@ test('"Reset all" offers Undo after the page reloads', async ({ page }) => {
   await page.locator('.mode-tab[data-mode="settings"]').click();
   await expect(page.locator('#settingsChangedCount')).toHaveText('2');            // the column count and the words goal
 
-  page.once('dialog', d => { void d.accept(); });
+  await confirmNext(page);
   await Promise.all([page.waitForEvent('load'), page.locator('#settingsResetAll').click()]);
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await expect(page.locator('.ml-undo-msg')).toContainText('reset to its default');

@@ -12,6 +12,7 @@ import {
 } from '../utils/full-backup.ts';
 import { showToast } from './toast.ts';
 import { logger } from '../utils/logger.ts';
+import { confirmDialog } from './dialog.ts';
 
 function syncReadout(): void {
   const el = document.getElementById('backupLastReadout');
@@ -35,9 +36,9 @@ export function bindBackupSettings(): void {
     const file = input.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
-        if (!confirm('Restoring replaces the data currently in this browser with the backup. Continue?')) return;
+        if (!await confirmDialog({ title: 'Restore this backup?', message: 'Restoring replaces the data currently in this browser with the backup.', confirmLabel: 'Restore', danger: true })) return;
         const n = applyFullBackup(String(reader.result));
         showToast(`Restored ${n} items — reloading…`, 'success', 2000);
         window.setTimeout(() => location.reload(), 1200);

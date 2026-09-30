@@ -114,6 +114,12 @@
           <button id="shortcutsBtn" aria-label="Keyboard shortcuts (?)">?</button>
         </div>
 
+        <!-- My Lists' own strip in the space its tab has no filter form for: the language being
+             browsed and the title of whatever list is open. Filled by my-lists-mode.ts; shown only
+             on that tab (ui-state.ts). -->
+        <div id="myListsBar" class="ml-topbar" hidden></div>
+        <!-- My Content's own strip: the language(s) it adds content in, and backup / restore / export. -->
+        <div id="myContentBar" class="ml-topbar mc-topbar" hidden></div>
         <div id="controlsBody" class="filter-body">
         <div id="controls-top">
           <!-- Language and the multi-language picker share one column —
@@ -1015,6 +1021,27 @@
             <div id="settingsFold-table" class="filter-body settings-fold-body">
 
             <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTableLists" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupTableLists">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.table.listsGroup">Adding to Lists</span>
+            </button>
+            <div id="settingsGroupTableLists" class="filter-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.listCounts">Word counts in list pickers</span>
+                <span class="settings-desc" data-i18n="settings.table.listCountsDesc">Shows how many words each list holds when choosing where to add a word.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingListPickerCounts">
+                <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTableMore1" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupTableMore1">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading">Progress &amp; Timing</span>
@@ -1553,6 +1580,22 @@
 
             <div class="settings-row">
               <div class="settings-label">
+                <span data-i18n="settings.appearance.palette">Color theme</span>
+                <span class="settings-desc" data-i18n="settings.appearance.paletteDesc">The accent colour used across the app. Light and Dark mode both follow it.</span>
+              </div>
+              <div class="sort-order-toggle palette-toggle" id="settingPalette">
+                <button type="button" class="sort-order-btn active" data-palette="forest"><span class="palette-dot" data-palette-dot="forest" aria-hidden="true"></span>Forest</button>
+                <button type="button" class="sort-order-btn" data-palette="ocean"><span class="palette-dot" data-palette-dot="ocean" aria-hidden="true"></span>Ocean</button>
+                <button type="button" class="sort-order-btn" data-palette="violet"><span class="palette-dot" data-palette-dot="violet" aria-hidden="true"></span>Violet</button>
+                <button type="button" class="sort-order-btn" data-palette="rose"><span class="palette-dot" data-palette-dot="rose" aria-hidden="true"></span>Rose</button>
+                <button type="button" class="sort-order-btn" data-palette="amber"><span class="palette-dot" data-palette-dot="amber" aria-hidden="true"></span>Amber</button>
+                <button type="button" class="sort-order-btn" data-palette="teal"><span class="palette-dot" data-palette-dot="teal" aria-hidden="true"></span>Teal</button>
+                <button type="button" class="sort-order-btn" data-palette="slate"><span class="palette-dot" data-palette-dot="slate" aria-hidden="true"></span>Slate</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
                 <span data-i18n="settings.appearance.textSize">Text size</span>
                 <span class="settings-desc" data-i18n="settings.appearance.textSizeDesc">Scales quiz text — Small fits more words on screen, Large is easier to read</span>
               </div>
@@ -1562,6 +1605,76 @@
                 <button type="button" class="sort-order-btn active" data-size="medium">M</button>
                 <button type="button" class="sort-order-btn" data-size="large">L</button>
                 <button type="button" class="sort-order-btn" data-size="xl">XL</button>
+              </div>
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAppearanceBackground" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupAppearanceBackground">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.appearance.groupBackground">Background &amp; Transparency</span>
+            </button>
+            <div id="settingsGroupAppearanceBackground" class="filter-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.appearance.bgMode">Page background</span>
+                <span class="settings-desc" data-i18n="settings.appearance.bgModeDesc">The theme's own, a solid colour, or a gradient of two colours.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingBgMode">
+                <button type="button" class="sort-order-btn active" data-bg="default" data-i18n="settings.appearance.bgDefault">Default</button>
+                <button type="button" class="sort-order-btn" data-bg="solid" data-i18n="settings.appearance.bgSolid">Solid</button>
+                <button type="button" class="sort-order-btn" data-bg="gradient" data-i18n="settings.appearance.bgGradient">Gradient</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.appearance.bgColors">Background colours</span>
+                <span class="settings-desc" data-i18n="settings.appearance.bgColorsDesc">Pick your own, or start from a preset below. The second colour and the direction are for gradients.</span>
+              </div>
+              <div class="bg-controls">
+                <input type="color" id="settingBgColor" value="#d9e8f5" aria-label="First colour" data-i18n-aria-label="settings.appearance.bgColor1"/>
+                <input type="color" id="settingBgColor2" value="#6c8cff" aria-label="Second colour" data-i18n-aria-label="settings.appearance.bgColor2"/>
+                <select id="settingBgAngle" aria-label="Gradient direction" data-i18n-aria-label="settings.appearance.bgAngle">
+                  <option value="180">Top → Bottom</option>
+                  <option value="90">Left → Right</option>
+                  <option value="135" selected>Top-left → Bottom-right</option>
+                  <option value="45">Bottom-left → Top-right</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.appearance.bgPresets">Presets</span>
+              </div>
+              <div class="bg-presets" id="settingBgPresets" role="group" aria-label="Background presets">
+                <button type="button" class="bg-preset" data-bg-mode="solid" data-bg-c1="#efe6d6" data-bg-c2="#efe6d6" data-bg-angle="135" title="Sand" aria-label="Sand (solid)" style="background:#efe6d6"></button>
+                <button type="button" class="bg-preset" data-bg-mode="solid" data-bg-c1="#d9e8f5" data-bg-c2="#d9e8f5" data-bg-angle="135" title="Sky" aria-label="Sky (solid)" style="background:#d9e8f5"></button>
+                <button type="button" class="bg-preset" data-bg-mode="solid" data-bg-c1="#d8efe2" data-bg-c2="#d8efe2" data-bg-angle="135" title="Mint" aria-label="Mint (solid)" style="background:#d8efe2"></button>
+                <button type="button" class="bg-preset" data-bg-mode="solid" data-bg-c1="#f5dfe6" data-bg-c2="#f5dfe6" data-bg-angle="135" title="Blush" aria-label="Blush (solid)" style="background:#f5dfe6"></button>
+                <button type="button" class="bg-preset" data-bg-mode="solid" data-bg-c1="#e6def5" data-bg-c2="#e6def5" data-bg-angle="135" title="Lavender" aria-label="Lavender (solid)" style="background:#e6def5"></button>
+                <button type="button" class="bg-preset" data-bg-mode="solid" data-bg-c1="#2b3440" data-bg-c2="#2b3440" data-bg-angle="135" title="Slate" aria-label="Slate (solid)" style="background:#2b3440"></button>
+                <button type="button" class="bg-preset" data-bg-mode="gradient" data-bg-c1="#ffd6a5" data-bg-c2="#ffadad" data-bg-angle="135" title="Sunrise" aria-label="Sunrise (gradient)" style="background:linear-gradient(135deg, #ffd6a5, #ffadad)"></button>
+                <button type="button" class="bg-preset" data-bg-mode="gradient" data-bg-c1="#a8d8ff" data-bg-c2="#6c8cff" data-bg-angle="135" title="Ocean" aria-label="Ocean (gradient)" style="background:linear-gradient(135deg, #a8d8ff, #6c8cff)"></button>
+                <button type="button" class="bg-preset" data-bg-mode="gradient" data-bg-c1="#b7e4c7" data-bg-c2="#40916c" data-bg-angle="135" title="Meadow" aria-label="Meadow (gradient)" style="background:linear-gradient(135deg, #b7e4c7, #40916c)"></button>
+                <button type="button" class="bg-preset" data-bg-mode="gradient" data-bg-c1="#ffc2e0" data-bg-c2="#b97bd6" data-bg-angle="135" title="Berry" aria-label="Berry (gradient)" style="background:linear-gradient(135deg, #ffc2e0, #b97bd6)"></button>
+                <button type="button" class="bg-preset" data-bg-mode="gradient" data-bg-c1="#4b3f72" data-bg-c2="#1f2a44" data-bg-angle="160" title="Twilight" aria-label="Twilight (gradient)" style="background:linear-gradient(160deg, #4b3f72, #1f2a44)"></button>
+                <button type="button" class="bg-preset" data-bg-mode="gradient" data-bg-c1="#232526" data-bg-c2="#414345" data-bg-angle="160" title="Midnight" aria-label="Midnight (gradient)" style="background:linear-gradient(160deg, #232526, #414345)"></button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.appearance.opacity">Transparency</span>
+                <span class="settings-desc" data-i18n="settings.appearance.opacityDesc">Lower makes cards and panels see-through so the background shows more. 100% is solid.</span>
+              </div>
+              <div class="bg-controls">
+                <input type="range" id="settingAppOpacity" min="50" max="100" step="5" value="100" aria-label="Card opacity" data-i18n-aria-label="settings.appearance.opacityLabel"/>
+                <output id="settingAppOpacityOut" for="settingAppOpacity">100%</output>
               </div>
             </div>
 

@@ -1,9 +1,12 @@
+import { deselectAll } from './context.ts';
+import { askText } from '../../ui/dialog.ts';
 import { closePopover } from './move-popover.ts';
 import {
   listVisualProfiles, getVisualProfile, saveVisualProfile, deleteVisualProfile, renameVisualProfile,
   duplicateVisualProfile, captureCurrentVisualProfile, describeVisualProfile,
 } from '../../filters/visual-profiles.ts';
 import type { SidebarKit } from './sidebar-kit.ts';
+import { confirmDialog } from '../../ui/dialog.ts';
 
 /**
  * sidebar-visual.ts — the Visual Profiles section (saved Theme and Font Size bundles). A row
@@ -75,10 +78,8 @@ export function createVisualSection(kit: SidebarKit) {
             const current = getVisualProfile(name);
             if (current) saveVisualProfile(name, { ...current, ...style });
           }),
-          { glyph: '⧉', label: 'Copy', title: 'Duplicate visual profile', tone: 'copy', onClick: () => {
-            const input = window.prompt(`Name for the copy of "${name}":`, suggestCopyName(name));
-            if (input === null) return;
-            const newName = input.trim();
+          { glyph: '⧉', label: 'Copy', title: 'Duplicate visual profile', tone: 'copy', onClick: async () => {
+            const newName = await askText({ title: `Copy "${name}"`, message: 'Name for the copy:', initial: suggestCopyName(name), confirmLabel: 'Copy' });
             if (!newName) return;
             if (!duplicateVisualProfile(name, newName)) {
               alert(`A visual profile named "${newName}" already exists.`); return;
@@ -87,8 +88,8 @@ export function createVisualSection(kit: SidebarKit) {
             render();
           } },
           { glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename', onClick: () => startRenameVisualProfile(name, li, nameSpan) },
-          { glyph: '🗑', label: 'Delete', title: 'Delete visual profile', tone: 'delete', onClick: () => {
-            if (!window.confirm(`Delete visual profile "${name}"?`)) return;
+          { glyph: '🗑', label: 'Delete', title: 'Delete visual profile', tone: 'delete', onClick: async () => {
+            if (!await confirmDialog({ title: `Delete "${name}"?`, message: 'The visual profile will be removed.', confirmLabel: 'Delete profile', danger: true })) return;
             deleteVisualProfile(name);
             if (ctx.selectedVisual === name) ctx.selectedVisual = null;
             render();
@@ -97,6 +98,7 @@ export function createVisualSection(kit: SidebarKit) {
         const em = emojiSpan(profile.emoji); if (em) topRow.prepend(em);
         li.append(topRow);
         li.addEventListener('click', () => {
+          if (li.classList.contains('active')) { deselectAll(ctx); closePopover(); render(); return; }
           select(name);
           closePopover(); render();
         });

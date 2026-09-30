@@ -529,6 +529,6 @@ describe('applyUserContentImport', () => {
     const summary = applyUserContentImport(JSON.stringify({
       version: 1, words: { [l]: [{ word: 'gato', translation: 'cat' }] },
     }));
-    expect(summary).toBe('Imported 1 word, 0 trivia questions, 0 Guess the Blank questions, 0 pictures, 0 word overrides');
+    expect(summary).toBe('Imported 1 word, 0 trivia questions, 0 Guess the Blank questions, 0 pictures, 0 word overrides, 0 conjugation overrides');
   });
 });

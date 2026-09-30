@@ -11,8 +11,8 @@
  */
 
 import {
-  getListNames, getList, createList, addToList,
-  getMultiListNames, getMultiList, createMultiList, addToMultiList, type MultiListEntry,
+  getListNames, getListOwn, createList, addToList,
+  getMultiListNames, getMultiListOwn, createMultiList, addToMultiList, type MultiListEntry,
 } from '../../utils/word-lists.ts';
 import { getMastered, saveMastered, getMasteryLevels, setMasteryLevel } from './mastery.ts';
 import { LANGUAGE_NAMES } from '../../data/languages.ts';
@@ -55,7 +55,7 @@ export function buildBackup(): ListsBackup {
 
     if (names.length) {
       backup.lists[l] = {};
-      for (const name of names) backup.lists[l][name] = [...getList(l, name)];
+      for (const name of names) backup.lists[l][name] = [...getListOwn(l, name)];
     }
     if (mastered.length) backup.mastery[l] = mastered;
     if (hasLevels) {
@@ -67,7 +67,7 @@ export function buildBackup(): ListsBackup {
   const multiNames = getMultiListNames();
   if (multiNames.length > 0) {
     backup.multiLists = {};
-    for (const name of multiNames) backup.multiLists[name] = getMultiList(name);
+    for (const name of multiNames) backup.multiLists[name] = getMultiListOwn(name);
   }
 
   return backup;

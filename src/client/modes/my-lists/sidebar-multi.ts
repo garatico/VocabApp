@@ -1,8 +1,12 @@
+import { deselectAll } from './context.ts';
 import { getMultiListNames, getMultiList, getMultiListLanguages, getMultiListCount, createMultiList, deleteMultiList, renameMultiList, addToMultiList, getMultiListMeta, setMultiListMeta, metaFolders } from '../../utils/word-lists.ts';
 import { closePopover } from './move-popover.ts';
+import { exportMenuItems } from './list-actions.ts';
+import { fetchVocab, cachedVocabMap } from './vocab-cache.ts';
 import { showUndo } from './undo-toast.ts';
 import { buildLangBadge } from '../../ui/lang-badge.ts';
 import type { SidebarKit } from './sidebar-kit.ts';
+import { confirmDialog } from '../../ui/dialog.ts';
 
 /**
  * sidebar-multi.ts — the Cross-Language Lists section: its cards and the create / copy flows.
@@ -81,6 +85,11 @@ export function createMultiSection(kit: SidebarKit) {
       // Speech/Level dropdown row in multi-panel.ts now, not this gear menu.
       topRow.append(buildActionMenu([
         styleItem({ emoji: meta.emoji, color: meta.color }, style => setMultiListMeta(name, { ...getMultiListMeta(name), ...style })),
+        ...exportMenuItems(async () => {
+          const entries = getMultiList(name);
+          await Promise.all([...new Set(entries.map(e => e.language))].map(fetchVocab));
+          return entries.map(e => ({ word: e.word, translation: cachedVocabMap(e.language)?.get(e.word)?.translation }));
+        }, name),
         { glyph: '⧉', label: 'Copy', title: 'Duplicate cross-language list', tone: 'copy', onClick: () => {
           const proposed = suggestMultiCopyName(name);
           const input = window.prompt(`Name for the copy of "${name}":`, proposed);
@@ -102,8 +111,8 @@ export function createMultiSection(kit: SidebarKit) {
             alert(`A cross-language list named "${newName.trim()}" already exists.`);
           }
         } },
-        { glyph: '🗑', label: 'Delete', title: 'Delete list', tone: 'delete', onClick: () => {
-          if (!window.confirm(`Delete cross-language list "${name}" and all its words?`)) return;
+        { glyph: '🗑', label: 'Delete', title: 'Delete list', tone: 'delete', onClick: async () => {
+          if (!await confirmDialog({ title: `Delete "${name}"?`, message: 'The cross-language list and all its words will be removed. You can undo this right after.', confirmLabel: 'Delete list', danger: true })) return;
           const entries      = getMultiList(name);
           const wasSelected  = ctx.selectedMultiList === name;
 
@@ -122,6 +131,7 @@ export function createMultiSection(kit: SidebarKit) {
       const em = emojiSpan(meta.emoji); if (em) topRow.prepend(em);
       li.append(topRow);
       li.addEventListener('click', () => {
+        if (li.classList.contains('active')) { deselectAll(ctx); closePopover(); render(); return; }
         ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedProfile = null; ctx.selectedVisual = null;
         ctx.selectedMultiList = name;
         closePopover(); render();

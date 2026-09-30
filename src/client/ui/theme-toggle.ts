@@ -5,7 +5,12 @@ const DARK_CLASS  = 'dark';
 
 export type ThemeValue = 'light' | 'dark' | 'system';
 
+/** Told whenever a theme is applied — the desktop app uses it to recolour its native window frame. */
+let onThemeApplied: ((value: ThemeValue) => void) | null = null;
+export function setOnThemeApplied(cb: (value: ThemeValue) => void): void { onThemeApplied = cb; }
+
 export function applyTheme(value: ThemeValue): void {
+  onThemeApplied?.(value);
   if (value === 'system') {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     document.documentElement.classList.toggle(DARK_CLASS, prefersDark);

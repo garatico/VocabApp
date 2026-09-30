@@ -371,27 +371,22 @@ export function buildProfileEditorGroups(
   const langSection = section('language', 'Language', null, langRow);
 
   // ── Extra languages ("+ Languages" merge, Table/Conjugation only) ──────────
-  const extraRow = document.createElement('div');
-  extraRow.className = 'ml-profile-editor-chips';
   const primaryLang = bundle.language ?? ctxLang;
-  LANGUAGES.filter(l => l.name !== primaryLang).forEach(({ name: langName, label }) => {
-    const chipLabel = document.createElement('label');
-    chipLabel.className = 'ml-profile-editor-chip';
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.checked = (bundle.extraLanguages ?? []).includes(langName);
-    input.addEventListener('change', () => {
-      const current = bundle.extraLanguages ?? [];
-      const extraLanguages = input.checked ? [...current, langName] : current.filter(n => n !== langName);
-      persist({ ...bundle, extraLanguages });
-    });
-    chipLabel.append(input, document.createTextNode(label));
-    extraRow.appendChild(chipLabel);
-  });
-  const extraHint = document.createElement('span');
-  extraHint.className = 'ml-profile-editor-hint';
-  extraHint.textContent = 'Merges into the pool on Table and Conjugation only';
-  const extraSection = section('extraLanguages', 'Languages (+)', null, extraRow, extraHint);
+  // A dropdown of checkboxes rather than a row of them, so it sits on the same line as the primary
+  // language above instead of taking a row (or two) of its own.
+  const extraSelected = new Set((bundle.extraLanguages ?? []).filter(n => n !== primaryLang));
+  const extraDropdown = buildChecklistDropdown(
+    'Add languages',
+    LANGUAGES.filter(l => l.name !== primaryLang).map(l => ({ value: l.name, label: l.label })),
+    extraSelected,
+    () => persist({ ...bundle, extraLanguages: [...extraSelected] }),
+  );
+  extraDropdown.wrap.title = 'Merges into the pool on Table and Conjugation only';
+  const extraSection = section('extraLanguages', 'Languages (+)', null, extraDropdown.wrap);
+  // One row for both: the primary language and the languages merged into it.
+  const languagePair = document.createElement('div');
+  languagePair.className = 'ml-profile-editor-pair';
+  languagePair.append(langSection, extraSection);
 
   // ── Words: pool mode + whichever sub-control that mode uses ────────────────
   const words = bundle.words ?? DEFAULT_WORDS;
@@ -649,7 +644,7 @@ export function buildProfileEditorGroups(
     // as-is rather than re-declaring the same eleven colors a second time,
     // so the two can't quietly drift out of sync with each other.
     const tenseRow = document.createElement('div');
-    tenseRow.className = 'ml-profile-editor-chips ml-profile-editor-tense-chips';
+    tenseRow.className = 'conj-tense-chips';
     tenseDefs.forEach(({ key, label }) => {
       const chip = document.createElement('button');
       chip.type = 'button';
@@ -667,7 +662,7 @@ export function buildProfileEditorGroups(
     // `.conj-reg-chip[data-reg="…"].active` rules) — one definition of the
     // four regularity colors, not a second copy here.
     const regRow = document.createElement('div');
-    regRow.className = 'ml-profile-editor-chips ml-profile-editor-reg-chips';
+    regRow.className = 'conj-reg-chips';
     REGULARITY_OPTIONS.forEach(({ value, label }) => {
       const chip = document.createElement('button');
       chip.type = 'button';
@@ -689,7 +684,8 @@ export function buildProfileEditorGroups(
     // and labels ("yo", "tú", …) are language-specific.
     const disabledPronouns = new Set(conj.disabledPronouns ?? []);
     const formsRow = document.createElement('div');
-    formsRow.className = 'ml-profile-editor-chips ml-profile-editor-forms-chips';
+    // conj-pronoun-toggles is Conjugation mode's own 2 × 3 grid: yo / tú / él down the first column, nosotros / vosotros / ellos down the second.
+    formsRow.className = 'ml-profile-editor-chips ml-profile-editor-forms-chips conj-pronoun-toggles';
     (PRONOUNS[primaryLang] ?? []).forEach((pronoun, i) => {
       const chip = document.createElement('button');
       chip.type = 'button';
@@ -703,7 +699,51 @@ export function buildProfileEditorGroups(
       });
       formsRow.appendChild(chip);
     });
-    const tenseFormsSection = section('tenseForms', 'Tense & Forms', null, tenseRow, regRow, formsRow);
+    // The same three columns as the live Conjugation controls (index.html's .conj-tf-body): Tense in two
+    // columns of coloured chips, Forms as the 2 × 3 pronoun grid, Regularity as a list — each with All / None.
+    const columnHeader = (label: string, onAll: () => void, onNone: () => void): HTMLElement => {
+      const head = document.createElement('div');
+      head.className = 'conj-tf-header';
+      const title = document.createElement('span');
+      title.className = 'filter-section-label';
+      title.textContent = label;
+      head.appendChild(title);
+      ([['All', onAll], ['None', onNone]] as const).forEach(([text, fn]) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'ui-btn-mini'; b.textContent = text;
+        b.addEventListener('click', fn);
+        head.appendChild(b);
+      });
+      return head;
+    };
+    const column = (cls: string, head: HTMLElement, body: HTMLElement): HTMLElement => {
+      const side = document.createElement('div');
+      side.className = `conj-tf-side ${cls}`;
+      side.append(head, body);
+      return side;
+    };
+    const divider = (): HTMLElement => {
+      const d = document.createElement('div');
+      d.className = 'conj-tf-divider';
+      d.setAttribute('aria-hidden', 'true');
+      return d;
+    };
+    const tfBody = document.createElement('div');
+    tfBody.className = 'conj-tf-body ml-profile-editor-tf';
+    tfBody.append(
+      column('conj-tf-side--wide', columnHeader('Tense',
+        () => persist({ ...bundle, conjugation: { ...conj, tenses: tenseDefs.map(d => d.key) } }),
+        () => persist({ ...bundle, conjugation: { ...conj, tenses: [] } })), tenseRow),
+      divider(),
+      column('conj-tf-side--narrow', columnHeader('Forms',
+        () => persist({ ...bundle, conjugation: { ...conj, disabledPronouns: [] } }),
+        () => persist({ ...bundle, conjugation: { ...conj, disabledPronouns: (PRONOUNS[primaryLang] ?? []).map((_, i) => i) } })), formsRow),
+      divider(),
+      column('conj-tf-side--narrow', columnHeader('Regularity',
+        () => persist({ ...bundle, conjugation: { ...conj, regularities: REGULARITY_OPTIONS.map(o => o.value) } }),
+        () => persist({ ...bundle, conjugation: { ...conj, regularities: [] } })), regRow),
+    );
+    const tenseFormsSection = section('tenseForms', 'Tense & Forms', null, tfBody);
 
     const viewRow = document.createElement('div');
     viewRow.className = 'ml-profile-editor-chips';
@@ -731,8 +771,9 @@ export function buildProfileEditorGroups(
   ];
 
   return [
-    group('wordpool', 'Word Pool', langSection, extraSection, wordsSection),
-    group('filters', 'Filters', classSection, domainSection, listSection),
+    group('wordpool', 'Word Pool', languagePair, wordsSection),
+    // Conjugation practice is verbs only, so a Part of Speech filter has nothing to choose between.
+    group('filters', 'Filters', ...(mode === 'conjugation' ? [] : [classSection]), domainSection, listSection),
     ...(conjugationSection ? [conjugationSection] : []),
     ...(behaviorSections.length > 0 ? [group('quizbehavior', 'Quiz Behavior', ...behaviorSections)] : []),
   ];

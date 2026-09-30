@@ -447,3 +447,15 @@ button.preset-picker-folder:hover { background: color-mix(in srgb, var(--folder-
 .preset-picker-folder-caret { width: 0.8rem; font-size: 0.7rem; text-align: center; }
 .preset-picker-folder-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .preset-picker-folder-count { font-weight: 600; opacity: 0.8; }
+
+/* ── Rows in the add-to-list pickers: flag, name, word count ── */
+.list-picker-row { align-items: center; }
+.list-picker-row .flag-icon, .list-picker-row img { flex-shrink: 0; }
+.list-picker-row-label { flex: 1; min-width: 0; }
+.list-picker-row-count {
+  margin-left: auto; padding-left: 0.5rem;
+  font-size: 0.7rem; font-weight: 600; color: var(--text-muted); font-variant-numeric: tabular-nums;
+}
+/* The sections inside the picker sit flush, so their coloured bars run edge to edge. */
+.list-picker-popover .ml-move-section + .ml-move-section { margin-top: 0.25rem; }
+.list-picker-popover .ml-move-section-head { width: 100%; }

@@ -44,3 +44,20 @@ export function extractQuoted(text: string): string {
   if (!match) throw new Error(`No quoted answer found in feedback text: "${text}"`);
   return match[1];
 }
+
+/** Answer the next in-app confirmation dialog (src/client/ui/dialog.ts) the moment it appears: `pick` is
+ *  the button to press — its first named action ("Delete list", "Reset all"…) or Cancel. Register it
+ *  before the click that raises the dialog. (A Playwright locator handler only runs during a later
+ *  action, so it can't answer a dialog raised by the very click it precedes.) */
+async function answerNextDialog(page: Page, pick: '.app-dialog-choice' | '.app-dialog-cancel'): Promise<void> {
+  await page.evaluate(selector => {
+    const watcher = new MutationObserver(() => {
+      const btn = document.querySelector<HTMLElement>(selector);
+      if (btn) { watcher.disconnect(); btn.click(); }
+    });
+    watcher.observe(document.body, { childList: true, subtree: true });
+  }, pick);
+}
+
+export function confirmNext(page: Page): Promise<void> { return answerNextDialog(page, '.app-dialog-choice'); }
+export function cancelNext(page: Page): Promise<void> { return answerNextDialog(page, '.app-dialog-cancel'); }

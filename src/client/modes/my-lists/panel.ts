@@ -13,9 +13,10 @@
 
 import {
   getList, getListMeta, setListMeta, metaFolders,
+  getListSources, setListSources, getListSourceCandidates,
 } from '../../utils/word-lists.ts';
 import { FILTER_SCOPES, SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
-import { BROWSE_ALL_LIST, type ListsCtx } from './context.ts';
+import { BROWSE_ALL_LIST, NO_SELECTION, deselectAll, type ListsCtx } from './context.ts';
 import { renderBrowsePanel } from './browse-panel.ts';
 import { cachedVocab, cachedVocabMap, fetchVocab } from './vocab-cache.ts';
 import { logger } from '../../utils/logger.ts';
@@ -26,8 +27,7 @@ import { renderSmartPanel } from './smart-panel.ts';
 import { renderMultiPanel } from './multi-panel.ts';
 import { renderProfilePanel } from './profile-panel.ts';
 import { renderVisualPanel } from './visual-panel.ts';
-import { exportList } from './export-list.ts';
-import { buildExportControls, buildQuizButton } from './list-actions.ts';
+import { buildQuizButton } from './list-actions.ts';
 import { closePopover, clickedOutsidePopover } from './move-popover.ts';
 import { BANDS, POS_CHIPS, type SortMode, type VocabEntry } from './types.ts';
 import { buildLangBadge } from '../../ui/lang-badge.ts';
@@ -51,7 +51,32 @@ const SORT_OPTIONS: readonly [SortMode, string][] = [
   ['added-asc',   'Oldest first'],
 ];
 
+/** Whether anything is open in the panel: a real list, a smart list, a profile or Browse All Words. */
+function hasSelection(ctx: ListsCtx): boolean {
+  return !!(ctx.selectedMultiList || ctx.selectedSmart || ctx.selectedVisual || ctx.selectedProfile)
+    || (!!ctx.selectedList && ctx.selectedList !== NO_SELECTION);
+}
+
 export function renderPanel(ctx: ListsCtx): void {
+  renderPanelBody(ctx);
+  if (!hasSelection(ctx)) return;
+  // A close button at the panel's top-right corner. Sticky inside a zero-height wrapper, so it
+  // stays put while a long list scrolls without pushing anything down.
+  const wrap = document.createElement('div');
+  wrap.className = 'ml-panel-close-wrap';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'ml-panel-close';
+  // Drawn, not a text glyph, so the cross sits dead centre in the square.
+  btn.innerHTML = '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>';
+  btn.title = 'Close this and deselect';
+  btn.setAttribute('aria-label', 'Deselect');
+  btn.addEventListener('click', () => { deselectAll(ctx); ctx.renderSidebar(); });
+  wrap.appendChild(btn);
+  ctx.panel.prepend(wrap);
+}
+
+function renderPanelBody(ctx: ListsCtx): void {
   closePopover();
   ctx.expandedWord = null;
   ctx.panel.innerHTML = '';
@@ -68,6 +93,12 @@ export function renderPanel(ctx: ListsCtx): void {
   }
 
   if (ctx.selectedList === BROWSE_ALL_LIST) { renderBrowsePanel(ctx); return; }
+
+  if (ctx.selectedList === NO_SELECTION) {
+    const empty = document.createElement('p');
+    empty.className = 'ml-panel-empty'; empty.textContent = 'Select a list to see its words.';
+    ctx.panel.appendChild(empty); return;
+  }
 
   if (!ctx.selectedList) {
     const empty = document.createElement('p');
@@ -96,19 +127,12 @@ export function renderPanel(ctx: ListsCtx): void {
   // Kept as a no-op rather than threaded out of every call site below.
   function refreshCount(): void {}
 
-  const exportControls = buildExportControls(fmt => {
-    // Exported in the order shown, so the file matches what is on screen.
-    exportList(
-      wordList.sortWords(getList(ctx.lang, ctx.selectedList)),
-      cachedVocabMap(ctx.lang), ctx.selectedList, ctx.lang, fmt,
-    );
-  });
   const quizBtn = buildQuizButton(ctx.lang, () => ctx.selectedList || null);
 
-  // Export + Quiz sit at the right end of the title row.
+  // Quiz sits at the right end of the title row (Export is in the list card's gear menu).
   const titleActions = document.createElement('span');
   titleActions.className = 'ml-title-actions';
-  titleActions.append(...exportControls, quizBtn);
+  titleActions.append(quizBtn);
 
   // Stats row (word count, ranks, mastered) — filled in by the word list on
   // every render; sits on the title row itself, between the title and the actions.
@@ -222,7 +246,22 @@ export function renderPanel(ctx: ListsCtx): void {
     },
   );
 
-  filterDropdownsRow.append(posDropdown.wrap, bandDropdown.wrap, folderDropdown.wrap, hideFromDropdown.wrap);
+  // Aggregate lists: other lists of this language this one is made of. Their words are members
+  // live (nothing is copied), shown read-only in the list below with the list they came from.
+  const sourceSelected = new Set(getListSources(ctx.lang, ctx.selectedList).map(s => s.list));
+  const sourceDropdown = buildChecklistDropdown(
+    'Made of',
+    getListSourceCandidates(ctx.lang, ctx.selectedList).map(n => ({ value: n, label: n })),
+    sourceSelected,
+    () => {
+      setListSources(ctx.lang, ctx.selectedList, [...sourceSelected].map(list => ({ lang: ctx.lang, list })));
+      ctx.renderSidebar(false);
+      renderPanel(ctx); // rebuild so the word list and count reflect the new sources
+    },
+  );
+  sourceDropdown.wrap.title = 'Build this list from other lists instead of copying their words';
+
+  filterDropdownsRow.append(posDropdown.wrap, bandDropdown.wrap, folderDropdown.wrap, sourceDropdown.wrap, hideFromDropdown.wrap);
 
   panelHeader.appendChild(titleGroup);
   panelHeader.appendChild(filterDropdownsRow);

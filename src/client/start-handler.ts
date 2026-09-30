@@ -11,6 +11,7 @@ import { activeRegularities } from './modes/conjugation/controls.ts';
 import { Settings } from './settings.ts';
 
 import type { Word } from './types.ts';
+import { confirmDialog } from './ui/dialog.ts';
 
 /** Above this many cards, Start Quiz confirms before building the grid — a
  *  safety net alongside app.ts's live pre-quiz estimate (same threshold). */
@@ -374,10 +375,12 @@ export function bindStartHandler({
         // `list` here is the exact verb pool about to be built into cards.
         const estimate = estimateConjugationSize(list, fullLang, extraLangs);
         if (estimate.cards > CONJ_CARD_CONFIRM_THRESHOLD) {
-          const proceed = window.confirm(
-            `This will build ~${estimate.cards.toLocaleString()} cards `
-            + `(${estimate.verbs.toLocaleString()} verbs × ${estimate.tenses} tenses) and may be slow. Continue?`,
-          );
+          const proceed = await confirmDialog({
+            title: 'Build a very large quiz?',
+            message: `This will build ~${estimate.cards.toLocaleString()} cards `
+            + `(${estimate.verbs.toLocaleString()} verbs × ${estimate.tenses} tenses) and may be slow.`,
+            confirmLabel: 'Build it',
+          });
           if (!proceed) return;   // finally below still resets the Start Quiz button
         }
 

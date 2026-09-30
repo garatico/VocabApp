@@ -20,14 +20,48 @@ import {
   removeFromMultiList,
   createMultiList,
   getMultiListLanguages,
+  getMultiListCount,
+  getList,
 } from './word-lists.ts';
 import { buildLangBadge } from '../ui/lang-badge.ts';
+import { createFlagImg } from '../ui/flag-icon.ts';
+import { buildListSection } from '../ui/list-sections.ts';
+import { LANGUAGES } from '../data/languages.ts';
+import { Settings } from '../settings.ts';
 
 export interface ListPickerOptions {
   anchorEl: HTMLElement;
   lang:     string;
   word:     string;
   onClose?: () => void;
+}
+
+/** One list's row: [checkbox] [flag(s)] name (word count). The count can be switched off in Settings. */
+function buildPickerRow(
+  cb: HTMLInputElement, name: string, count: number, flag: HTMLElement | null,
+): HTMLLabelElement {
+  const row = document.createElement('label');
+  row.className = 'list-picker-row';
+  const label = document.createElement('span');
+  label.className = 'list-picker-row-label';
+  label.textContent = name;
+  row.append(cb);
+  if (flag) row.append(flag);
+  row.append(label);
+  if (Settings.getListPickerCounts()) {
+    const n = document.createElement('span');
+    n.className = 'list-picker-row-count';
+    n.textContent = String(count);
+    n.title = `${count} word${count === 1 ? '' : 's'} in this list`;
+    row.append(n);
+  }
+  return row;
+}
+
+/** The flag of `lang`, the language a single-language list holds. */
+function languageFlag(lang: string): HTMLElement {
+  const info = LANGUAGES.find(l => l.name === lang);
+  return info ? createFlagImg(info.flagCountry, info.label) : document.createElement('span');
 }
 
 export function openListPicker({ anchorEl, lang, word, onClose }: ListPickerOptions): void {
@@ -49,10 +83,7 @@ export function openListPicker({ anchorEl, lang, word, onClose }: ListPickerOpti
       empty.textContent = 'No lists yet.';
       picker.appendChild(empty);
     } else {
-      names.forEach(listName => {
-        const row     = document.createElement('label');
-        row.className = 'list-picker-row';
-
+      const singleRows = names.map(listName => {
         const cb   = document.createElement('input');
         cb.type    = 'checkbox';
         cb.checked = isInList(lang, listName, word);
@@ -64,51 +95,31 @@ export function openListPicker({ anchorEl, lang, word, onClose }: ListPickerOpti
           }
           updateAnchorState();
         });
-
-        const label       = document.createElement('span');
-        label.textContent = listName;
-
-        row.appendChild(cb);
-        row.appendChild(label);
-        picker.appendChild(row);
+        return buildPickerRow(cb, listName, getList(lang, listName).length, languageFlag(lang));
       });
 
       // Cross-language lists — shown for any word regardless of its own
       // language, so a French word can join a list that also holds Spanish
       // and Portuguese ones. Checking a box tags this word with `lang`, the
       // language it actually is, not whatever else is already in the list.
-      if (multiNames.length > 0) {
-        const divider = document.createElement('div');
-        divider.className = 'list-picker-divider';
-        divider.textContent = 'Cross-language lists';
-        picker.appendChild(divider);
-
-        multiNames.forEach(listName => {
-          const row     = document.createElement('label');
-          row.className = 'list-picker-row';
-
-          const cb   = document.createElement('input');
-          cb.type    = 'checkbox';
-          cb.checked = isInMultiList(listName, word, lang);
-          cb.addEventListener('change', () => {
-            if (cb.checked) {
-              addToMultiList(listName, word, lang);
-            } else {
-              removeFromMultiList(listName, word, lang);
-            }
-            updateAnchorState();
-          });
-
-          const label       = document.createElement('span');
-          label.className   = 'list-picker-row-label';
-          label.textContent = listName;
-
-          row.appendChild(cb);
-          row.appendChild(label);
-          row.appendChild(buildLangBadge(getMultiListLanguages(listName)));
-          picker.appendChild(row);
+      const multiRows = multiNames.map(listName => {
+        const cb   = document.createElement('input');
+        cb.type    = 'checkbox';
+        cb.checked = isInMultiList(listName, word, lang);
+        cb.addEventListener('change', () => {
+          if (cb.checked) {
+            addToMultiList(listName, word, lang);
+          } else {
+            removeFromMultiList(listName, word, lang);
+          }
+          updateAnchorState();
         });
-      }
+        return buildPickerRow(cb, listName, getMultiListCount(listName), buildLangBadge(getMultiListLanguages(listName)));
+      });
+
+      const reposition = (): void => positionNear(picker, anchorEl);
+      if (singleRows.length > 0) picker.appendChild(buildListSection('single', 'Single-Language Lists', singleRows, reposition));
+      if (multiRows.length > 0)  picker.appendChild(buildListSection('multi', 'Cross-Language Lists', multiRows, reposition));
     }
 
     const newBtn         = document.createElement('button');
@@ -275,10 +286,7 @@ export function openBulkListPicker({ anchorEl, words, fallbackLang, onClose }: B
       empty.textContent = 'No lists yet.';
       picker.appendChild(empty);
     } else {
-      names.forEach(listName => {
-        const row     = document.createElement('label');
-        row.className = 'list-picker-row';
-
+      const singleRows = names.map(listName => {
         const cb   = document.createElement('input');
         cb.type    = 'checkbox';
         const allIn  = words.every(w => isInList(fallbackLang, listName, w.word));
@@ -292,50 +300,30 @@ export function openBulkListPicker({ anchorEl, words, fallbackLang, onClose }: B
           });
           cb.indeterminate = false;
         });
-
-        const label       = document.createElement('span');
-        label.textContent = listName;
-
-        row.appendChild(cb);
-        row.appendChild(label);
-        picker.appendChild(row);
+        return buildPickerRow(cb, listName, getList(fallbackLang, listName).length, languageFlag(fallbackLang));
       });
 
-      if (multiNames.length > 0) {
-        const divider = document.createElement('div');
-        divider.className = 'list-picker-divider';
-        divider.textContent = 'Cross-language lists';
-        picker.appendChild(divider);
-
-        multiNames.forEach(listName => {
-          const row     = document.createElement('label');
-          row.className = 'list-picker-row';
-
-          const cb   = document.createElement('input');
-          cb.type    = 'checkbox';
-          const allIn  = words.every(w => isInMultiList(listName, w.word, w.language ?? fallbackLang));
-          const someIn = words.some(w => isInMultiList(listName, w.word, w.language ?? fallbackLang));
-          cb.checked       = allIn;
-          cb.indeterminate = someIn && !allIn;
-          cb.addEventListener('change', () => {
-            words.forEach(w => {
-              const wl = w.language ?? fallbackLang;
-              if (cb.checked) addToMultiList(listName, w.word, wl);
-              else removeFromMultiList(listName, w.word, wl);
-            });
-            cb.indeterminate = false;
+      const multiRows = multiNames.map(listName => {
+        const cb   = document.createElement('input');
+        cb.type    = 'checkbox';
+        const allIn  = words.every(w => isInMultiList(listName, w.word, w.language ?? fallbackLang));
+        const someIn = words.some(w => isInMultiList(listName, w.word, w.language ?? fallbackLang));
+        cb.checked       = allIn;
+        cb.indeterminate = someIn && !allIn;
+        cb.addEventListener('change', () => {
+          words.forEach(w => {
+            const wl = w.language ?? fallbackLang;
+            if (cb.checked) addToMultiList(listName, w.word, wl);
+            else removeFromMultiList(listName, w.word, wl);
           });
-
-          const label       = document.createElement('span');
-          label.className   = 'list-picker-row-label';
-          label.textContent = listName;
-
-          row.appendChild(cb);
-          row.appendChild(label);
-          row.appendChild(buildLangBadge(getMultiListLanguages(listName)));
-          picker.appendChild(row);
+          cb.indeterminate = false;
         });
-      }
+        return buildPickerRow(cb, listName, getMultiListCount(listName), buildLangBadge(getMultiListLanguages(listName)));
+      });
+
+      const reposition = (): void => positionNear(picker, anchorEl);
+      if (singleRows.length > 0) picker.appendChild(buildListSection('single', 'Single-Language Lists', singleRows, reposition));
+      if (multiRows.length > 0)  picker.appendChild(buildListSection('multi', 'Cross-Language Lists', multiRows, reposition));
     }
 
     const newBtn         = document.createElement('button');

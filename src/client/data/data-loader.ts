@@ -10,7 +10,7 @@ import { loadVocab } from './vocab-source.ts';
 import { showLoading, hideLoading, showErrorMessage } from '../ui/ui.js';
 import { logger } from '../utils/logger.js';
 import { capitalize } from '../utils/utils.js';
-import { getUserWords, toWord, applyWordOverride } from './user-content.ts';
+import { getUserWords, toWord, applyWordOverride, getConjOverrides, pickConjOverride, applyConjOverrideRecord } from './user-content.ts';
 
 
 const cache: Record<string, Word[]> = {};
@@ -63,7 +63,12 @@ export async function loadRawWords(lang: string): Promise<Word[]> {
  */
 export async function loadWords(lang: string): Promise<Word[]> {
   const words = await loadRawWords(lang);
-  return words.map(w => applyWordOverride(lang, w));
+  const conj = getConjOverrides(lang);            // read once, not per word
+  const hasConj = Object.keys(conj).length > 0;
+  return words.map(w => {
+    const withEdits = applyWordOverride(lang, w);
+    return hasConj ? applyConjOverrideRecord(withEdits, pickConjOverride(conj, w.word)) : withEdits;
+  });
 }
 
 async function loadCachedVocab(lang: string): Promise<Word[]> {

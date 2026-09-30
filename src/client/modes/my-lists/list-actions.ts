@@ -1,37 +1,30 @@
 /**
- * list-actions.ts — the header controls every list panel shares: "↓ Export"
- * (with its format picker) and "▶ Quiz". Built once here so Single-Language,
- * Cross-Language and Smart lists offer them identically.
+ * list-actions.ts — what every list offers: "▶ Quiz" in its panel header, and the two Export
+ * entries in its card's ⚙ menu. Built once here so Single-Language, Cross-Language and Smart lists
+ * offer them identically.
  */
 
 import { readString } from '../../utils/storage.ts';
 import { saveListFilterState, refreshFilterSelect } from '../../utils/word-lists.ts';
 import type { FilterScope } from '../../filters/filter-scope.ts';
-import type { ExportFormat } from './types.ts';
+import { exportRows, type ExportRow } from './export-list.ts';
+import type { MenuItem } from './sidebar-menu.ts';
 
-/** `[button, label, format select]`, ready to append to a title group. */
-export function buildExportControls(onExport: (format: ExportFormat) => void): HTMLElement[] {
-  const btn = document.createElement('button');
-  btn.type = 'button'; btn.className = 'ml-export-btn';
-  btn.textContent = '↓ Export';
-
-  const label = document.createElement('span');
-  label.className = 'ml-export-format-label'; label.textContent = 'Export Format:';
-
-  const sel = document.createElement('select');
-  sel.className = 'ml-export-format-sel';
-  sel.title = 'Export format';
-  ([
-    ['with-translation', 'Word + Translation'],
-    ['words-only',       'Words Only'],
-  ] as const).forEach(([value, text]) => {
-    const opt = document.createElement('option');
-    opt.value = value; opt.textContent = text;
-    sel.appendChild(opt);
-  });
-
-  btn.addEventListener('click', () => onExport(sel.value as ExportFormat));
-  return [btn, label, sel];
+/** A list card's ⚙ "Export" entry, which opens a submenu of the two ways to export it — a study sheet
+ *  (word + translation) or bare words. `getRows` is asked at click time, so it can load the vocabulary
+ *  first and reads the list as it is then. Returned as an array so a menu can spread it in. */
+export function exportMenuItems(getRows: () => Promise<ExportRow[]>, baseName: string): MenuItem[] {
+  return [{
+    glyph: '\u2193', label: 'Export', title: 'Download this list as a .txt file', tone: 'export',
+    onClick: () => {},
+    submenu: ([
+      ['with-translation', 'Word + Translation', 'Download a .txt study sheet — each word with its translation'],
+      ['words-only',       'Words Only',         'Download a .txt with just the words, one per line'],
+    ] as const).map(([format, label, title]) => ({
+      glyph: '\u2193', label, title, tone: 'export' as const,
+      onClick: () => { void getRows().then(rows => exportRows(rows, baseName, format)); },
+    })),
+  }];
 }
 
 /**

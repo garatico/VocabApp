@@ -35,6 +35,7 @@ import type { BatchUpdateItem } from '../../shared/vocab/write.js';
 import { logger } from '../utils/logger.js';
 import { readString, writeString } from '../utils/storage.ts';
 import { langFlagImg } from './admin-languages.js';
+import { confirmDialog } from '../ui/dialog.ts';
 
 interface Frequency {
   band?: string | null;
@@ -332,7 +333,7 @@ async function loadMeta(): Promise<void> {
 }
 
 async function loadPage(): Promise<void> {
-  if (dirty.size > 0 && !window.confirm('You have unsaved changes on this page. Load a new page and discard them?')) {
+  if (dirty.size > 0 && !await confirmDialog({ title: 'Discard unsaved changes?', message: 'You have unsaved changes on this page. Load a new page and discard them?', confirmLabel: 'Discard', danger: true })) {
     return;
   }
   tbody.innerHTML = `<tr><td colspan="${visibleColumns().length}" class="table-view-empty">Loading…</td></tr>`;

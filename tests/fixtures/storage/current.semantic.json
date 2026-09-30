@@ -67,7 +67,13 @@
     "s_abbreviate_grammar_hint": "true",
     "s_advanced_mode": "true",
     "s_answer_gloss_count": "3",
+    "s_app_opacity": "85",
+    "s_app_zoom": "1.25",
     "s_autofill_enabled": "true",
+    "s_bg_angle": "90",
+    "s_bg_color": "#112233",
+    "s_bg_color2": "#445566",
+    "s_bg_mode": "gradient",
     "s_chinese_script": "pinyin",
     "s_confirm_remove_word_override": "false",
     "s_conj_deselected": "grey",
@@ -92,10 +98,12 @@
     "s_lang_flag_spanish": "es",
     "s_lang_indicator": "flag",
     "s_list_color_profile": "#aa3311",
+    "s_list_picker_counts": "false",
     "s_match_mode": "strict",
     "s_max_sessions_kept": "50",
     "s_my_content_page_size": "10",
     "s_onboarding_seen": "1",
+    "s_palette": "ocean",
     "s_person_hue_0": "10",
     "s_picture_source_emoji": "false",
     "s_picture_source_photos": "false",
@@ -183,6 +191,7 @@
   },
   "perLang": {
     "french": {
+      "conjOverrides": {},
       "dueExempt": [],
       "goals": {
         "minutes": 0,
@@ -284,6 +293,7 @@
       "wordOverrides": {}
     },
     "german": {
+      "conjOverrides": {},
       "dueExempt": [],
       "goals": {
         "minutes": 0,
@@ -335,6 +345,19 @@
       "wordOverrides": {}
     },
     "spanish": {
+      "conjOverrides": {
+        "hablar": {
+          "gerund": "hablando",
+          "present": [
+            "hablo",
+            "hablas",
+            "habla",
+            "hablamos",
+            "habláis",
+            "hablan"
+          ]
+        }
+      },
       "dueExempt": [
         "perro"
       ],
@@ -973,7 +996,13 @@
     "getAbbreviateGrammarHint": true,
     "getAdvancedMode": true,
     "getAnswerGlossCount": 3,
+    "getAppOpacity": 85,
+    "getAppZoom": 1.25,
     "getAutofillEnabled": true,
+    "getBgAngle": 90,
+    "getBgColor": "#112233",
+    "getBgColor2": "#445566",
+    "getBgMode": "gradient",
     "getChineseDisplay": "THREW: Cannot read properties of undefined (reading 'getChineseScript')",
     "getChineseScript": "pinyin",
     "getConfirmRemoveWordOverride": false,
@@ -1005,9 +1034,11 @@
     "getHistoryEnabled": false,
     "getInlineProfileEditing": true,
     "getLangIndicator": "flag",
+    "getListPickerCounts": false,
     "getMatchMode": "strict",
     "getMaxSessionsKept": 50,
     "getMyContentPageSize": 10,
+    "getPalette": "ocean",
     "getPictureSourceEmoji": false,
     "getPictureSourcePhotos": false,
     "getPictureSourceSvgs": false,

@@ -1,0 +1,43 @@
+/* ── The confirmation dialog (src/client/ui/dialog.ts), shared by the app and the admin panel ── */
+.app-dialog-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  display: grid; place-items: center;
+  background: rgba(0, 0, 0, 0.45);
+}
+.app-dialog {
+  width: min(26rem, calc(100vw - 2rem));
+  padding: 1rem 1.1rem;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: var(--radius);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+.app-dialog-title { margin: 0 0 0.35rem; font-size: 1rem; }
+.app-dialog-message { margin: 0 0 0.6rem; white-space: pre-line; font-size: 0.85rem; color: var(--text-muted); }
+.app-dialog-choices { display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.6rem; }
+.app-dialog-choice {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem;
+  padding: 0.5rem 0.7rem; text-align: left; cursor: pointer;
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+}
+.app-dialog-choice:hover, .app-dialog-choice:focus-visible { border-color: var(--accent); outline: none; background: var(--accent-light); }
+.app-dialog-choice--danger { border-color: var(--danger); }
+.app-dialog-choice--danger:hover, .app-dialog-choice--danger:focus-visible { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--surface)); }
+.app-dialog-choice-label { font-size: 0.88rem; font-weight: 700; }
+.app-dialog-choice--danger .app-dialog-choice-label { color: var(--danger); }
+.app-dialog-choice-detail { font-size: 0.75rem; color: var(--text-muted); }
+.app-dialog-cancel {
+  align-self: flex-end; padding: 0.3rem 0.9rem; cursor: pointer;
+  background: none; color: var(--text-muted); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.app-dialog-cancel:hover { color: var(--text); border-color: var(--border-strong); }
+
+.app-dialog-input {
+  box-sizing: border-box; width: 100%; padding: 0.4rem 0.55rem; font: inherit; font-size: 0.9rem;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+}
+.app-dialog-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--focus-ring); }
+.app-dialog-choices--row { flex-direction: row-reverse; align-items: center; justify-content: flex-start; gap: 0.6rem; }
+.app-dialog-choices--row .app-dialog-choice { align-items: center; }
+.app-dialog-choices--row .app-dialog-cancel { align-self: center; }

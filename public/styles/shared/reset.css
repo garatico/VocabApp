@@ -23,7 +23,9 @@ html {
 
 body {
   font-family: 'Sora', system-ui, sans-serif;
-  background: var(--bg);
+  /* --page-bg is the learner's own solid colour or gradient (Settings → Appearance → Background). */
+  background: var(--page-bg, var(--bg-solid));
+  background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
   /* safe-area-inset: respect notches, home indicators, and rounded corners */

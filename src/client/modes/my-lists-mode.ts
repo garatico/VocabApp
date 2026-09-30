@@ -32,10 +32,14 @@
  */
 
 import { getListNames, getTotalListedCount, refreshFilterSelect } from '../utils/word-lists.ts';
-import { createContext, BROWSE_ALL_LIST } from './my-lists/context.ts';
+import { createContext, BROWSE_ALL_LIST, NO_SELECTION } from './my-lists/context.ts';
 import { createSidebar } from './my-lists/sidebar.ts';
 import { renderPanel } from './my-lists/panel.ts';
 import { migrateMastery } from './my-lists/mastery.ts';
+import { fitToScreen } from '../utils/fit-to-screen.ts';
+import { getMultiListLanguages } from '../utils/word-lists.ts';
+import { buildLangBadge } from '../ui/lang-badge.ts';
+import { SCOPE_LABELS } from '../filters/filter-scope.ts';
 
 // Mastery is read by the quiz modes through this module, which is where it
 // lived before the split; re-exported so those imports did not have to move.
@@ -105,13 +109,71 @@ export function renderMyLists(container: HTMLElement): void {
 
   const sidebar = createSidebar(ctx);
 
+  // The top bar: the language picker, then the title of whatever is open — the space the other
+  // tabs use for their filters, which this one has none of.
+  const barTitle = document.createElement('h2');
+  barTitle.className = 'ml-topbar-title';
+  const bar = document.getElementById('myListsBar');
+  bar?.replaceChildren(sidebar.langRow, barTitle);
+
+  // The open panel's stats chips (word count, rank range, mastered) live in the bar beside the
+  // title. It is the panel's own element, moved: the panel keeps redrawing it in place.
+  let barStats: HTMLElement | null = null;
+
+  /** Whichever panel was just drawn brings a fresh stats row; it replaces the one in the bar. A panel
+   *  redraws itself in places (choosing what a list is "Made of", adding a folder) without going through
+   *  ctx.renderPanel, so this can't rely on that hook alone — see the observer below. */
+  function adoptStats(): void {
+    const fresh = ctx.panel.querySelector<HTMLElement>('.ml-stats-row');
+    if (!fresh) return;
+    if (barStats && barStats !== fresh) barStats.remove();
+    barStats = fresh;
+    bar?.appendChild(fresh);
+  }
+  new MutationObserver(adoptStats).observe(panel, { childList: true, subtree: true });
+
+  function updateBarTitle(): void {
+    adoptStats();
+    barTitle.replaceChildren();
+    barTitle.classList.remove('ml-topbar-title--none');
+    let name = '';
+    let badge: HTMLElement | null = null;
+    if (ctx.selectedMultiList) {
+      name = ctx.selectedMultiList;
+      badge = buildLangBadge(getMultiListLanguages(name));
+    } else if (ctx.selectedSmart) {
+      name = ctx.selectedSmart;
+    } else if (ctx.selectedVisual) {
+      name = ctx.selectedVisual;
+    } else if (ctx.selectedProfile) {
+      name = `${SCOPE_LABELS[ctx.selectedProfile.mode]}: ${ctx.selectedProfile.name}`;
+    } else if (ctx.selectedList === BROWSE_ALL_LIST) {
+      name = 'Browse All Words';
+    } else if (ctx.selectedList && ctx.selectedList !== NO_SELECTION) {
+      name = ctx.selectedList;
+      badge = buildLangBadge([ctx.lang]);
+    }
+    if (!name) {
+      barTitle.textContent = 'No list open';
+      barTitle.classList.add('ml-topbar-title--none');
+      return;
+    }
+    if (badge) barTitle.append(badge, ' ');
+    barTitle.append(name);
+    barTitle.title = name;
+  }
+
   // The two panes call each other, so the hooks are filled in once both exist.
-  ctx.renderSidebar = (rerenderPanel = true) => sidebar.render(rerenderPanel);
-  ctx.renderPanel   = () => renderPanel(ctx);
+  ctx.renderSidebar = (rerenderPanel = true) => { sidebar.render(rerenderPanel); updateBarTitle(); };
+  ctx.renderPanel   = () => {
+    barStats?.remove(); barStats = null;   // the previous panel's chips; a new panel brings its own
+    renderPanel(ctx); updateBarTitle();
+  };
   ctx.updateBadge   = updateBadge;
 
   container.appendChild(sidebar.leftPane);
   container.appendChild(panel);
+  fitToScreen(container);
 
   sidebar.render();
 }

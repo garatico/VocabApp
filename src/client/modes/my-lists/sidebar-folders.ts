@@ -1,6 +1,10 @@
 import { getListNames, getMultiListNames, getListMeta, setListMeta, getMultiListMeta, setMultiListMeta, metaFolders, deleteList, deleteMultiList } from '../../utils/word-lists.ts';
-import { getFolderRegistry, addFolder, renameFolder, removeFolder, getFolderStyle } from './folders.ts';
+import {
+  getFolderRegistry, addFolder, renameFolder, removeFolder, getFolderStyle,
+  folderLeaf, folderParent, isInFolderTree, moveFolderPath, withAncestors, childFolders, FOLDER_SEP,
+} from './folders.ts';
 import { type ListsCtx } from './context.ts';
+import { askChoice } from '../../ui/dialog.ts';
 import { getSmartNames, getSmartLists, saveSmartRule, deleteSmartList } from './smart-lists.ts';
 import { listVisualProfiles, getVisualProfile, saveVisualProfile, deleteVisualProfile } from '../../filters/visual-profiles.ts';
 import { listPresets, getPreset, savePreset, deletePreset } from '../../filters/presets.ts';
@@ -21,13 +25,18 @@ export interface CreateFolderKitDeps {
   syncCollapseAllLabel: () => void;
   buildActionMenu: (items: MenuItem[]) => HTMLElement;
   emojiSpan: (emoji: string | undefined) => HTMLElement | null;
-  makeFolderDropTarget: (head: HTMLElement, sectionId: SidebarSectionId, folderKey: string) => void;
+  makeFolderDropTarget: (head: HTMLElement, sectionId: SidebarSectionId, folderKey: string, path?: string) => void;
+  makeFolderDraggable: (head: HTMLElement, sectionId: SidebarSectionId, folderKey: string, path: string) => void;
+  makeRootDropTarget: (el: HTMLElement, sectionId: SidebarSectionId, keyPrefix: string) => void;
   openFolderStylePicker: (anchor: HTMLElement, scope: string, folder: string) => void;
   openHideFromPicker: (anchor: HTMLElement, bulk: BulkHideFrom) => void;
 }
 
 export function createFolderKit(deps: CreateFolderKitDeps) {
-  const { ctx, render, syncCollapseAllLabel, buildActionMenu, emojiSpan, makeFolderDropTarget, openFolderStylePicker, openHideFromPicker } = deps;
+  const {
+    ctx, render, syncCollapseAllLabel, buildActionMenu, emojiSpan, makeFolderDropTarget, makeFolderDraggable,
+    makeRootDropTarget, openFolderStylePicker, openHideFromPicker,
+  } = deps;
 
   // ── Shared row-building helpers ─────────────────────────────────────────────
 
@@ -86,7 +95,7 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
    * populated folder still shows up as its own collapsible row.
    */
   function renderEmptyFolderPlaceholders(scope: string, usedFolders: string[]): void {
-    const used = new Set(usedFolders);
+    const used = new Set(withAncestors(usedFolders));
     getFolderRegistry(scope).filter(f => !used.has(f)).forEach(folder => {
       const li = document.createElement('li');
       li.className = 'ml-list-empty';
@@ -98,7 +107,7 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
 
   function bulkHideFromFor(sectionId: SidebarSectionId, folder: string): BulkHideFrom | undefined {
     if (sectionId === 'single') {
-      const names = getListNames(ctx.lang).filter(n => metaFolders(getListMeta(ctx.lang, n)).includes(folder));
+      const names = getListNames(ctx.lang).filter(n => metaFolders(getListMeta(ctx.lang, n)).some(f => isInFolderTree(f, folder)));
       return {
         get: () => [...new Set(names.flatMap(n => getListMeta(ctx.lang, n).hiddenModes ?? []))],
         set: modes => names.forEach(n => setListMeta(ctx.lang, n, { ...getListMeta(ctx.lang, n), hiddenModes: modes })),
@@ -106,14 +115,14 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
     }
     if (sectionId === 'smart') {
       const rules = getSmartLists(ctx.lang);
-      const names = getSmartNames(ctx.lang).filter(n => (rules[n].folders ?? []).includes(folder));
+      const names = getSmartNames(ctx.lang).filter(n => (rules[n].folders ?? []).some(f => isInFolderTree(f, folder)));
       return {
         get: () => [...new Set(names.flatMap(n => rules[n].hiddenModes ?? []))],
         set: modes => names.forEach(n => saveSmartRule(ctx.lang, n, { ...getSmartLists(ctx.lang)[n], hiddenModes: modes })),
       };
     }
     if (sectionId === 'multi') {
-      const names = getMultiListNames().filter(n => metaFolders(getMultiListMeta(n)).includes(folder));
+      const names = getMultiListNames().filter(n => metaFolders(getMultiListMeta(n)).some(f => isInFolderTree(f, folder)));
       return {
         get: () => [...new Set(names.flatMap(n => getMultiListMeta(n).hiddenModes ?? []))],
         set: modes => names.forEach(n => setMultiListMeta(n, { ...getMultiListMeta(n), hiddenModes: modes })),
@@ -135,37 +144,38 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
    * `profiles_<mode>`, which is where the mode this rename applies to comes from.
    */
   function renameFolderReferences(sectionId: SidebarSectionId, scope: string, oldName: string, newName: string): void {
-    const swap = (folders: string[]): string[] => folders.map(f => (f === oldName ? newName : f));
+    const swap = (folders: string[]): string[] => folders.map(f => moveFolderPath(f, oldName, newName));
+    const touches = (folders: string[]): boolean => folders.some(f => isInFolderTree(f, oldName));
     if (sectionId === 'single') {
       getListNames(ctx.lang).forEach(n => {
         const meta = getListMeta(ctx.lang, n);
         const folders = metaFolders(meta);
-        if (folders.includes(oldName)) setListMeta(ctx.lang, n, { ...meta, folders: swap(folders), folder: undefined });
+        if (touches(folders)) setListMeta(ctx.lang, n, { ...meta, folders: swap(folders), folder: undefined });
       });
     } else if (sectionId === 'smart') {
       const rules = getSmartLists(ctx.lang);
       getSmartNames(ctx.lang).forEach(n => {
         const folders = rules[n].folders ?? [];
-        if (folders.includes(oldName)) saveSmartRule(ctx.lang, n, { ...rules[n], folders: swap(folders), folder: undefined });
+        if (touches(folders)) saveSmartRule(ctx.lang, n, { ...rules[n], folders: swap(folders), folder: undefined });
       });
     } else if (sectionId === 'multi') {
       getMultiListNames().forEach(n => {
         const meta = getMultiListMeta(n);
         const folders = metaFolders(meta);
-        if (folders.includes(oldName)) setMultiListMeta(n, { ...meta, folders: swap(folders), folder: undefined });
+        if (touches(folders)) setMultiListMeta(n, { ...meta, folders: swap(folders), folder: undefined });
       });
     } else if (sectionId === 'visual') {
       listVisualProfiles().forEach(n => {
         const profile = getVisualProfile(n);
         const folders = profile?.folders ?? [];
-        if (profile && folders.includes(oldName)) saveVisualProfile(n, { ...profile, folders: swap(folders) });
+        if (profile && touches(folders)) saveVisualProfile(n, { ...profile, folders: swap(folders) });
       });
     } else if (sectionId === 'profiles') {
       const mode = scope.slice('profiles_'.length) as FilterScope;
       listPresets(mode).forEach(n => {
         const bundle = getPreset(mode, n);
         const folders = bundle?.folders ?? (bundle?.folder ? [bundle.folder] : []);
-        if (bundle && folders.includes(oldName)) savePreset(mode, n, { ...bundle, folders: swap(folders), folder: undefined });
+        if (bundle && touches(folders)) savePreset(mode, n, { ...bundle, folders: swap(folders), folder: undefined });
       });
     }
   }
@@ -181,11 +191,12 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
   function deleteFolderReferences(
     sectionId: SidebarSectionId, scope: string, folder: string, alsoDeleteMembers: boolean,
   ): void {
-    const drop = (folders: string[]): string[] => folders.filter(f => f !== folder);
+    const drop = (folders: string[]): string[] => folders.filter(f => !isInFolderTree(f, folder));
+    const inside = (folders: string[]): boolean => folders.some(f => isInFolderTree(f, folder));
     if (sectionId === 'single') {
       getListNames(ctx.lang).forEach(n => {
         const meta = getListMeta(ctx.lang, n);
-        if (!metaFolders(meta).includes(folder)) return;
+        if (!inside(metaFolders(meta))) return;
         if (alsoDeleteMembers) { deleteList(ctx.lang, n); return; }
         setListMeta(ctx.lang, n, { ...meta, folders: drop(metaFolders(meta)), folder: undefined });
       });
@@ -193,14 +204,14 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
       const rules = getSmartLists(ctx.lang);
       getSmartNames(ctx.lang).forEach(n => {
         const folders = rules[n].folders ?? [];
-        if (!folders.includes(folder)) return;
+        if (!inside(folders)) return;
         if (alsoDeleteMembers) { deleteSmartList(ctx.lang, n); return; }
         saveSmartRule(ctx.lang, n, { ...rules[n], folders: drop(folders), folder: undefined });
       });
     } else if (sectionId === 'multi') {
       getMultiListNames().forEach(n => {
         const meta = getMultiListMeta(n);
-        if (!metaFolders(meta).includes(folder)) return;
+        if (!inside(metaFolders(meta))) return;
         if (alsoDeleteMembers) { deleteMultiList(n); return; }
         setMultiListMeta(n, { ...meta, folders: drop(metaFolders(meta)), folder: undefined });
       });
@@ -208,7 +219,7 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
       listVisualProfiles().forEach(n => {
         const profile = getVisualProfile(n);
         const folders = profile?.folders ?? [];
-        if (!profile || !folders.includes(folder)) return;
+        if (!profile || !inside(folders)) return;
         if (alsoDeleteMembers) { deleteVisualProfile(n); return; }
         saveVisualProfile(n, { ...profile, folders: drop(folders) });
       });
@@ -217,7 +228,7 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
       listPresets(mode).forEach(n => {
         const bundle = getPreset(mode, n);
         const folders = bundle?.folders ?? (bundle?.folder ? [bundle.folder] : []);
-        if (!bundle || !folders.includes(folder)) return;
+        if (!bundle || !inside(folders)) return;
         if (alsoDeleteMembers) { deletePreset(mode, n); return; }
         savePreset(mode, n, { ...bundle, folders: drop(folders), folder: undefined });
       });
@@ -238,6 +249,28 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
     if (sectionId === 'multi') return 'multi';
     if (sectionId === 'visual') return 'visual_profiles';
     return null; // Testing Profiles passes its per-mode scope explicitly
+  }
+
+  /**
+   * Drag-and-drop's folder move: `path` goes under `newParent` ('' = top level), taking its
+   * subfolders, their looks and every list filed inside along, exactly as a rename to the new path.
+   * `keyPrefix` says whose folders these are (Testing Profiles: `profiles:<mode>:`).
+   */
+  function moveFolder(sectionId: SidebarSectionId, keyPrefix: string, path: string, newParent: string): void {
+    const scope = sectionId === 'profiles' ? `profiles_${keyPrefix.split(':')[1]}` : folderScopeFor(sectionId);
+    if (!scope) return;
+    const leaf = folderLeaf(path);
+    const dest = newParent ? newParent + FOLDER_SEP + leaf : leaf;
+    if (dest === path || isInFolderTree(newParent, path)) return;
+    addFolder(scope, path); // a level that only exists as someone's parent isn't registered yet
+    if (!renameFolder(scope, path, dest)) {
+      alert(`A folder named "${leaf}" already exists there.`);
+      return;
+    }
+    renameFolderReferences(sectionId, scope, path, dest);
+    setFolderCollapsed(sectionId, keyPrefix + dest, isFolderCollapsed(sectionId, keyPrefix + path));
+    if (newParent) setFolderCollapsed(sectionId, keyPrefix + newParent, false); // show where it landed
+    render();
   }
 
   function buildFolderGroup(
@@ -266,7 +299,12 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
     if (folderEmoji) toggle.append(document.createTextNode(' '), folderEmoji);
     toggle.append(document.createTextNode(' ' + label));
     head.appendChild(toggle);
-    makeFolderDropTarget(head, sectionId, folderKey);
+    // The path is what a drag reads to know which folder this bar is (its label is only the last level).
+    if (style) {
+      head.dataset.folderPath = style.folder;
+      makeFolderDraggable(head, sectionId, folderKey, style.folder);
+    }
+    makeFolderDropTarget(head, sectionId, folderKey, style?.folder);
 
     const body = document.createElement('ul');
     body.className = 'ml-folder-body';
@@ -287,16 +325,35 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
       folderItems.push({
         glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename',
         onClick: () => {
-          const input = window.prompt('Rename folder:', style.folder);
-          const trimmed = input?.trim();
-          if (!trimmed || trimmed === style.folder) return;
-          if (!renameFolder(style.scope, style.folder, trimmed)) {
-            alert(`A folder named "${trimmed}" already exists.`);
+          // Only the last level is edited; the folder stays under the same parent.
+          const input = window.prompt('Rename folder:', folderLeaf(style.folder));
+          const leaf = input?.trim().split(FOLDER_SEP).join('-');
+          if (!leaf || leaf === folderLeaf(style.folder)) return;
+          const parent = folderParent(style.folder);
+          const renamed = parent ? parent + FOLDER_SEP + leaf : leaf;
+          // A level that only exists because a subfolder sits under it isn't registered yet.
+          addFolder(style.scope, style.folder);
+          if (!renameFolder(style.scope, style.folder, renamed)) {
+            alert(`A folder named "${leaf}" already exists here.`);
             return;
           }
-          renameFolderReferences(sectionId, style.scope, style.folder, trimmed);
+          renameFolderReferences(sectionId, style.scope, style.folder, renamed);
           // Carries the collapsed/expanded state over to the new key so renaming doesn't also re-open it.
-          setFolderCollapsed(sectionId, folderKey.slice(0, folderKey.length - style.folder.length) + trimmed, collapsed);
+          setFolderCollapsed(sectionId, folderKey.slice(0, folderKey.length - style.folder.length) + renamed, collapsed);
+          render();
+        },
+      });
+      folderItems.push({
+        glyph: '📁', label: 'Add Subfolder', title: 'Create a folder inside this one', tone: 'copy',
+        onClick: () => {
+          const input = window.prompt(`New folder inside "${folderLeaf(style.folder)}":`);
+          const leaf = input?.trim().split(FOLDER_SEP).join('-');
+          if (!leaf) return;
+          if (!addFolder(style.scope, style.folder + FOLDER_SEP + leaf)) {
+            alert(`A folder named "${leaf}" already exists here.`);
+            return;
+          }
+          setFolderCollapsed(sectionId, folderKey, false);
           render();
         },
       });
@@ -307,14 +364,22 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
       folderItems.push({
         glyph: '🗑', label: 'Delete', title: 'Delete this folder', tone: 'delete',
         onClick: () => {
-          if (!window.confirm(`Delete folder "${style.folder}"?`)) return;
-          const alsoDeleteMembers = window.confirm(
-            `Also delete every list inside "${style.folder}"?\n\n`
-            + 'OK — delete the lists too.\nCancel — just remove the folder; its lists stay, ungrouped.',
-          );
-          deleteFolderReferences(sectionId, style.scope, style.folder, alsoDeleteMembers);
-          removeFolder(style.scope, style.folder);
-          render();
+          const nested = getFolderRegistry(style.scope).some(f => f !== style.folder && isInFolderTree(f, style.folder));
+          const inside = nested ? ' and its subfolders' : '';
+          void askChoice<'folder' | 'all'>({
+            title: `Delete "${folderLeaf(style.folder)}"?`,
+            choices: [
+              { label: nested ? 'Delete folders only' : 'Delete folder only', value: 'folder',
+                detail: `Removes the folder${inside}. Its lists stay, ungrouped.` },
+              { label: nested ? 'Delete folders and all lists inside' : 'Delete folder and all lists inside', value: 'all', danger: true,
+                detail: `Removes the folder${inside} and every list in ${nested ? 'them' : 'it'}. This can't be undone.` },
+            ],
+          }).then(choice => {
+            if (!choice) return;
+            deleteFolderReferences(sectionId, style.scope, style.folder, choice === 'all');
+            removeFolder(style.scope, style.folder);
+            render();
+          });
         },
       });
     }
@@ -328,6 +393,34 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
 
     group.append(head, body);
     return group;
+  }
+
+  /**
+   * Draws `paths` (every folder in play, ancestors filled in) as nested folder boxes into
+   * `container`: each level's subfolders first, then that folder's own rows via `fillFolder`.
+   * `keyFor` is the collapsed-state / drop-target key for a path, which differs per section
+   * (Testing Profiles key theirs by mode).
+   */
+  function renderFolderTree(o: {
+    sectionId: SidebarSectionId; container: HTMLElement; paths: Iterable<string>; scope: string | null;
+    keyFor: (path: string) => string;
+    bulkFor?: (path: string) => BulkHideFrom | undefined;
+    fillFolder: (path: string, body: HTMLUListElement) => void;
+  }): void {
+    const all = withAncestors(o.paths);
+    const build = (parent: string, into: HTMLElement): void => {
+      childFolders(all, parent).forEach(path => {
+        const group = buildFolderGroup(
+          o.sectionId, o.keyFor(path), folderLeaf(path), o.bulkFor?.(path),
+          o.scope ? { scope: o.scope, folder: path } : undefined,
+        );
+        const body = group.querySelector<HTMLUListElement>('.ml-folder-body')!;
+        into.appendChild(group);
+        build(path, body);
+        o.fillFolder(path, body);
+      });
+    };
+    build('', o.container);
   }
 
   /**
@@ -405,21 +498,22 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
     // structure (what's been organized into folders) before the flat list of
     // whatever hasn't been, rather than folders scattered wherever their
     // first row happened to fall.
-    const folderNames = [...new Set(rows.map(r => r.dataset.folder || '').filter(Boolean))].sort();
-    folderNames.forEach(folder => {
-      const scope = folderScopeFor(id);
-      const group = buildFolderGroup(
-        id, folder, folder, bulkHideFromFor(id, folder), scope ? { scope, folder } : undefined,
-      );
-      const folderBody = group.querySelector<HTMLUListElement>('.ml-folder-body')!;
-      body.appendChild(group);
-      rows.filter(r => (r.dataset.folder || '') === folder).forEach(row => {
-        row.classList.add('ml-folder-row');
-        folderBody.appendChild(row);
-      });
+    renderFolderTree({
+      sectionId: id, container: body, scope: folderScopeFor(id),
+      paths: rows.map(r => r.dataset.folder || '').filter(Boolean),
+      keyFor: path => path,
+      bulkFor: path => bulkHideFromFor(id, path),
+      fillFolder: (path, folderBody) => {
+        rows.filter(r => (r.dataset.folder || '') === path).forEach(row => {
+          row.classList.add('ml-folder-row');
+          folderBody.appendChild(row);
+        });
+      },
     });
     rows.filter(r => !r.dataset.folder).forEach(row => body.appendChild(row));
+    // Last, so the strip it adds at the bottom shows without moving anything above it.
+    makeRootDropTarget(body, id, '');
   }
 
-  return { sectionHead, renderEmptyFolderPlaceholders, buildFolderGroup, renderSection };
+  return { sectionHead, renderEmptyFolderPlaceholders, buildFolderGroup, renderFolderTree, renderSection, moveFolder };
 }

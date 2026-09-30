@@ -896,3 +896,32 @@ body.simple-mode [data-simple-hide="true"] {
 .settings-link:hover { color: var(--accent); border-color: var(--accent); background: var(--surface2); }
 .settings-link--text { align-self: flex-start; margin-top: 0.15rem; }
 .settings-links { display: flex; align-items: center; gap: 0.3rem; color: var(--text-muted); }
+
+/* Colour theme picker: each option carries a dot of its own accent. */
+.palette-toggle { flex-wrap: wrap; }
+.palette-toggle .sort-order-btn { display: inline-flex; align-items: center; gap: 0.4rem; }
+.palette-dot { width: 0.8rem; height: 0.8rem; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--text) 30%, transparent); flex-shrink: 0; }
+.palette-dot[data-palette-dot="forest"] { background: #3d6b4f; }
+.palette-dot[data-palette-dot="ocean"] { background: #1f5f99; }
+.palette-dot[data-palette-dot="violet"] { background: #6a4bb0; }
+.palette-dot[data-palette-dot="rose"] { background: #b0335a; }
+.palette-dot[data-palette-dot="amber"] { background: #a05a00; }
+.palette-dot[data-palette-dot="teal"] { background: #0f766e; }
+.palette-dot[data-palette-dot="slate"] { background: #475569; }
+
+/* Page background and transparency controls */
+.bg-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.bg-controls input[type="color"] {
+  width: 2.4rem; height: 1.9rem; padding: 0; cursor: pointer;
+  background: none; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+}
+.bg-controls input[type="range"] { width: 11rem; accent-color: var(--accent); }
+.bg-controls output { min-width: 2.6rem; font-variant-numeric: tabular-nums; font-size: 0.8rem; color: var(--text-muted); }
+.bg-presets { display: flex; flex-wrap: wrap; gap: 0.35rem; max-width: 22rem; }
+.bg-preset {
+  width: 2.2rem; height: 1.5rem; cursor: pointer; padding: 0;
+  border: 2px solid color-mix(in srgb, var(--text) 25%, transparent); border-radius: var(--radius-sm);
+}
+.bg-preset:hover, .bg-preset:focus-visible { border-color: var(--accent); outline: none; }
+
+.palette-toggle { max-width: 20rem; justify-content: flex-end; }

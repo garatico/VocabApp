@@ -14,7 +14,8 @@ import { spreadOverdueSrs } from './utils/srs.ts';
 import { REVIEW_LIST_NAME } from './utils/review-due.ts';
 import { getList, deleteList } from './utils/word-lists.ts';
 import { showToast } from './ui/toast.ts';
-import { DUE_SOFT_CAP_MAX, ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applySettingsLinks, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
+import { applyPalette, applyBackground, applyOpacity, DUE_SOFT_CAP_MAX, ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applySettingsLinks, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
+import { confirmDialog } from './ui/dialog.ts';
 
 /**
  * settings-ui.ts — binds the Settings screen: click handlers for every control,
@@ -225,6 +226,64 @@ export function bindSettings(): void {
 
   // Sudden Death — cross-mode, so it lives with Matching/Typo tolerance
   // rather than any one mode's own settings.
+  // Page background: a mode, two colours, a direction, and presets that fill those in.
+  const setBgMode = (mode: string): void => {
+    set('bg_mode', mode);
+    document.querySelectorAll<HTMLElement>('#settingBgMode .sort-order-btn').forEach(b => b.classList.toggle('active', b.dataset.bg === mode));
+    applyBackground();
+  };
+  document.getElementById('settingBgMode')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (btn) setBgMode(btn.dataset.bg ?? 'default');
+  });
+  // Choosing a colour is asking for one, so a colour picked while on Default turns the background on.
+  document.getElementById('settingBgColor')?.addEventListener('input', e => {
+    set('bg_color', (e.target as HTMLInputElement).value);
+    setBgMode(Settings.getBgMode() === 'default' ? 'solid' : Settings.getBgMode());
+  });
+  document.getElementById('settingBgColor2')?.addEventListener('input', e => {
+    set('bg_color2', (e.target as HTMLInputElement).value);
+    setBgMode('gradient');
+  });
+  document.getElementById('settingBgAngle')?.addEventListener('change', e => {
+    set('bg_angle', (e.target as HTMLSelectElement).value);
+    setBgMode('gradient');
+  });
+  document.querySelectorAll<HTMLButtonElement>('#settingBgPresets .bg-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      set('bg_color', btn.dataset.bgC1 ?? '#d9e8f5');
+      set('bg_color2', btn.dataset.bgC2 ?? '#6c8cff');
+      set('bg_angle', btn.dataset.bgAngle ?? '135');
+      const c1 = document.getElementById('settingBgColor') as HTMLInputElement | null;
+      const c2 = document.getElementById('settingBgColor2') as HTMLInputElement | null;
+      const angle = document.getElementById('settingBgAngle') as HTMLSelectElement | null;
+      if (c1) c1.value = Settings.getBgColor();
+      if (c2) c2.value = Settings.getBgColor2();
+      if (angle) angle.value = String(Settings.getBgAngle());
+      setBgMode(btn.dataset.bgMode ?? 'solid');
+    });
+  });
+  document.getElementById('settingAppOpacity')?.addEventListener('input', e => {
+    const v = (e.target as HTMLInputElement).value;
+    set('app_opacity', v);
+    const out = document.getElementById('settingAppOpacityOut');
+    if (out) out.textContent = `${Settings.getAppOpacity()}%`;
+    applyOpacity();
+  });
+
+  document.getElementById('settingPalette')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingPalette', btn);
+    set('palette', btn.dataset.palette ?? 'forest');
+    applyPalette();
+  });
+  document.getElementById('settingListPickerCounts')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingListPickerCounts', btn);
+    set('list_picker_counts', btn.dataset.show ?? 'true');
+  });
   document.getElementById('settingSuddenDeath')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
     if (!btn) return;
@@ -586,14 +645,14 @@ export function bindSettings(): void {
     refreshDueBadge();
   });
 
-  document.getElementById('settingDueSpread')?.addEventListener('click', () => {
-    if (!window.confirm('Reschedule every overdue word, in every language, a batch per day? Boxes and progress are kept.')) return;
+  document.getElementById('settingDueSpread')?.addEventListener('click', async () => {
+    if (!await confirmDialog({ title: 'Reschedule the overdue backlog?', message: 'Every overdue word, in every language, is rescheduled a batch per day. Boxes and progress are kept.', confirmLabel: 'Reschedule' })) return;
     const moved = LANGUAGES.reduce((n, l) => n + spreadOverdueSrs(l.name), 0);
     refreshDueBadge();
     showToast(moved ? `Rescheduled ${moved} overdue word${moved === 1 ? '' : 's'}.` : 'Nothing was overdue.', 'info', 3000);
   });
-  document.getElementById('settingDueListClear')?.addEventListener('click', () => {
-    if (!window.confirm(`Delete the "${REVIEW_LIST_NAME}" list in every language? Your own lists are untouched.`)) return;
+  document.getElementById('settingDueListClear')?.addEventListener('click', async () => {
+    if (!await confirmDialog({ title: `Delete the "${REVIEW_LIST_NAME}" list?`, message: 'It is removed in every language. Your own lists are untouched.', confirmLabel: 'Delete list', danger: true })) return;
     LANGUAGES.forEach(l => { if (getList(l.name, REVIEW_LIST_NAME).length) deleteList(l.name, REVIEW_LIST_NAME); });
     showToast('Emptied the review list.', 'info', 3000);
   });
@@ -666,8 +725,8 @@ export function bindSettings(): void {
   // Clear history — every language's saved sessions and miss tallies.
   // Mastery and lists live in their own storage (word-lists.ts) and are
   // untouched.
-  document.getElementById('settingClearHistory')?.addEventListener('click', () => {
-    if (!window.confirm('Clear all saved quiz history and "words I keep missing" tallies, in every language? This cannot be undone.')) return;
+  document.getElementById('settingClearHistory')?.addEventListener('click', async () => {
+    if (!await confirmDialog({ title: 'Clear all quiz history?', message: 'Every saved session and "words I keep missing" tally, in every language, is deleted. This cannot be undone.', confirmLabel: 'Clear history', danger: true })) return;
     LANGUAGES.forEach(l => clearHistory(l.name));
   });
 
@@ -1047,6 +1106,27 @@ function restoreSettingsUI(): void {
   });
 
   // Sudden Death
+  document.querySelectorAll<HTMLElement>('#settingBgMode .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.bg === Settings.getBgMode());
+  });
+  const restoreValue = (id: string, value: string): void => {
+    const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+    if (el) el.value = value;
+  };
+  restoreValue('settingBgColor', Settings.getBgColor());
+  restoreValue('settingBgColor2', Settings.getBgColor2());
+  restoreValue('settingBgAngle', String(Settings.getBgAngle()));
+  restoreValue('settingAppOpacity', String(Settings.getAppOpacity()));
+  const opacityOut = document.getElementById('settingAppOpacityOut');
+  if (opacityOut) opacityOut.textContent = `${Settings.getAppOpacity()}%`;
+  const savedPalette = Settings.getPalette();
+  document.querySelectorAll<HTMLElement>('#settingPalette .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.palette === savedPalette);
+  });
+  const savedPickerCounts = String(Settings.getListPickerCounts());
+  document.querySelectorAll<HTMLElement>('#settingListPickerCounts .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.show === savedPickerCounts);
+  });
   const savedSuddenDeath = String(Settings.getSuddenDeath());
   document.querySelectorAll<HTMLElement>('#settingSuddenDeath .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.enabled === savedSuddenDeath);

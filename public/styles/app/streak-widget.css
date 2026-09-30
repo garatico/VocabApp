@@ -186,3 +186,11 @@ body #controls:has(#controlsBody[hidden]) #controlsCollapseBtn.controls-collapse
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* The corner cluster hugs the very top-right corner of the bar on every tab, expanded or collapsed. */
+body #controls .controls-corner,
+body #controls:has(#controlsBody.filter-body--collapsed) .controls-corner,
+body #controls:has(#controlsBody[hidden]) .controls-corner {
+  top: 0.15rem;
+  right: 0.15rem;
+}

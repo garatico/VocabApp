@@ -31,6 +31,7 @@ import { Settings } from '../../settings.ts';
 import type {
   WordData, WordEditorAdapter, WordEditorMeta, WordPage, WordPageQuery,
 } from '../../ui/word-editor/types.ts';
+import { confirmDialog } from '../../ui/dialog.ts';
 
 export type WordScope = 'all' | 'edited' | 'custom';
 
@@ -268,9 +269,9 @@ export function createMyContentAdapter(state: MyContentAdapterState): WordEditor
 
     // Settings → "Confirm before removing a word edit" — the same prompt the
     // original editor showed before dropping a word's overrides.
-    confirmRevert: key =>
+    confirmRevert: async key =>
       !Settings.getConfirmRemoveWordOverride()
-      || window.confirm(`Revert every edit you made to "${key}"?`),
+      || confirmDialog({ title: `Revert "${key}"?`, message: 'Every edit you made to this word is removed.', confirmLabel: 'Revert', danger: true }),
 
     async revertWord(key, lang) {
       removeWordOverride(lang, key);

@@ -53,6 +53,8 @@ let outsideClickHandler: ((e: MouseEvent) => void) | null = null;
 export interface SidebarUI {
   /** The whole left pane, ready to append. */
   leftPane: HTMLElement;
+  /** The language picker — not in the pane itself; my-lists-mode.ts puts it in the top bar. */
+  langRow: HTMLElement;
   /** Redraw. See ListsCtx.renderSidebar for what `rerenderPanel` is for. */
   render(rerenderPanel?: boolean): void;
 }
@@ -82,7 +84,6 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     closePopover(); render();
   });
   langRow.appendChild(langLabel); langRow.appendChild(langSel);
-  leftPane.appendChild(langRow);
 
   // ── Header: title, backup, restore ──────────────────────────────────────────
 
@@ -184,14 +185,17 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   const { buildActionMenu, closeAllActionMenus, emojiSpan } = createMenuKit();
   const { styleItem, openFolderStylePicker, openHideFromPicker } =
     createPickerKit({ render, closeAllActionMenus });
-  const { makeListDraggable, makeFolderDropTarget } = createDndKit({ render });
-  const { sectionHead, renderEmptyFolderPlaceholders, buildFolderGroup, renderSection } = createFolderKit({
+  // The folder kit is built from the drag kit, and the drag kit needs the folder kit's moveFolder —
+  // so it reaches it through this wrapper, which is only called once a drag actually drops.
+  const { makeListDraggable, makeFolderDropTarget, makeFolderDraggable, makeRootDropTarget } =
+    createDndKit({ render, moveFolder: (...args) => moveFolder(...args) });
+  const { sectionHead, renderEmptyFolderPlaceholders, buildFolderGroup, renderFolderTree, renderSection, moveFolder } = createFolderKit({
     ctx, render, syncCollapseAllLabel, buildActionMenu, emojiSpan,
-    makeFolderDropTarget, openFolderStylePicker, openHideFromPicker,
+    makeFolderDropTarget, makeFolderDraggable, makeRootDropTarget, openFolderStylePicker, openHideFromPicker,
   });
   const kit: SidebarKit = {
     ctx, render, sectionHead, buildActionMenu, emojiSpan, styleItem,
-    makeListDraggable, renderEmptyFolderPlaceholders, buildFolderGroup,
+    makeListDraggable, renderEmptyFolderPlaceholders, buildFolderGroup, renderFolderTree, makeRootDropTarget,
   };
   const { renderNav: renderSingleNav }         = createSingleSection(kit);
   const { renderNav: renderSmartNav }          = createSmartSection(kit);
@@ -300,5 +304,5 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     if (rerenderPanel) ctx.renderPanel();
   }
 
-  return { leftPane, render };
+  return { leftPane, langRow, render };
 }

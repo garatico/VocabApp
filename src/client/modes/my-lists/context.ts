@@ -31,6 +31,16 @@ import type { FilterScope } from '../../filters/filter-scope.ts';
  */
 export const BROWSE_ALL_LIST = '\u0000browse-all\u0000';
 
+/** Same trick for "nothing is open": `selectedList` set to this (with every other selection null)
+ *  shows the empty panel and stops the sidebar falling back to the first list. */
+export const NO_SELECTION = '\u0000none\u0000';
+
+/** Closes whatever is open — a list, smart list, profile, Browse All Words — leaving the panel empty. */
+export function deselectAll(ctx: ListsCtx): void {
+  ctx.selectedList = NO_SELECTION;
+  ctx.selectedSmart = null; ctx.selectedMultiList = null; ctx.selectedProfile = null; ctx.selectedVisual = null;
+}
+
 export interface ListsCtx {
   // ── Selection state ────────────────────────────────────────────────────────
   /** The language whose lists are shown. Owned by the sidebar's picker. */

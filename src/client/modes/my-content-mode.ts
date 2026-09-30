@@ -5,6 +5,8 @@ import { createWordEditor } from '../ui/word-editor/word-editor.ts';
 import { createMyContentAdapter, type MyContentAdapterState } from './my-content/word-editor-adapter.ts';
 import { downloadVocabCsv } from './my-content/csv-export.ts';
 import { buildGuessBlankSection } from './my-content/guess-blank.ts';
+import { fitToScreen } from '../utils/fit-to-screen.ts';
+import { buildConjugationsSection, openConjugationEditor } from './my-content/conjugations.ts';
 import { buildLanguagePicker, getSelectedLangs } from './my-content/languages.ts';
 import { buildContentTabs, getActiveTab, getCollapsedSections, setActiveTab, setCollapsedSections } from './my-content/layout.ts';
 import { buildPicturesSection } from './my-content/pictures.ts';
@@ -88,12 +90,9 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
 
   const wrap = el('div', 'mc-wrap');
 
+  // No page title or blurb: the tabs lead, and each tab says what it is for. (Everything stays in this browser.)
   const header = el('div', 'mc-header');
-  header.appendChild(el('h2', 'mc-title', 'My Content'));
-  header.appendChild(el('p', 'mc-desc',
-    'Add your own words, trivia questions and pictures — stored only in this browser, never uploaded or shared with other learners.'));
 
-  const backupRow = el('div', 'mc-backup-row');
   const exportBtn = el('button', 'mc-btn mc-btn--secondary', 'Download my content');
   exportBtn.type = 'button';
   exportBtn.addEventListener('click', () => downloadUserContent());
@@ -126,21 +125,30 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
     reader.readAsText(file);
   });
   const selectedLangs = getSelectedLangs(lang);
-  // Same row as the backup/restore buttons — one toolbar for "manage this
-  // tab" controls, rather than the language picker sitting alone in its own
-  // row below. mc-backup-row's flex-wrap already handles a narrow viewport.
-  backupRow.append(
+  // The tab strip and the tab-wide controls — which languages new content is added in, and backup /
+  // restore / export — live in the top bar (like My Lists' language and title), tabs at the left and
+  // the buttons over at the right. Falls back to rows here on a page without the bar.
+  // "Add content in" chooses the languages a new Trivia or Guess the Blank question is written in (one row per
+  // language). The Words editor and the Conjugations editor work on one language at a time, with their own
+  // language box, and Pictures follows the search — so the picker shows only on the two tabs it affects.
+  const langPicker = buildLanguagePicker(selectedLangs, () => renderMyContent(container, lang));
+  const showPickerFor = (key: string): void => { langPicker.hidden = key !== 'trivia' && key !== 'guessBlank'; };
+  const controls: HTMLElement[] = [
+    langPicker,
     exportBtn, exportCsvBtn, importBtn, importInput, importStatus,
-    buildLanguagePicker(selectedLangs, () => renderMyContent(container, lang)),
-  );
-  header.appendChild(backupRow);
-  wrap.appendChild(header);
+  ];
+  const topBar = document.getElementById('myContentBar');
 
-  wrap.appendChild(buildContentTabs([
+  const tabs = buildContentTabs([
     {
       key: 'words', title: 'Words',
       description: 'Search the vocabulary — and words you\'ve added — to change how a word reads in this browser: hide, reorder or add senses, or override the translation, part of speech, notes and more. Use + New Word to add one of your own. Nothing here changes the real vocabulary.',
       body: buildSharedWordEditor(lang, focusWord ?? undefined),
+    },
+    {
+      key: 'conjugations', title: 'Conjugations',
+      description: 'Correct a verb\'s conjugation table in this browser: pick a verb, choose the tenses, and change any form. Only the tenses you change are overridden; Conjugation practice, My Lists and the tooltips all use your version. Nothing here changes the real vocabulary.',
+      body: buildConjugationsSection(lang),
     },
     {
       key: 'trivia', title: 'Trivia Questions',
@@ -157,9 +165,22 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
       description: 'Search a language\'s vocabulary for words that already have a photo, icon or emoji, then choose which one Picture Quiz should show for that word. Words with none of their own can still get a custom picture — a pasted URL, an uploaded file, or a pick from the bundled photo library.',
       body: buildPicturesSection(lang),
     },
-  ], focusWord ? 'words' : getActiveTab()));
+  ], focusWord ? 'words' : getActiveTab(), showPickerFor);
+
+  if (topBar) {
+    const right = el('div', 'mc-topbar-actions');
+    right.append(...controls);
+    topBar.replaceChildren(tabs.tabBar, right);
+  } else {
+    const backupRow = el('div', 'mc-backup-row');
+    backupRow.append(...controls);
+    header.append(tabs.tabBar, backupRow);
+  }
+  if (header.hasChildNodes()) wrap.appendChild(header);
+  wrap.appendChild(tabs.panels);
 
   container.appendChild(wrap);
+  fitToScreen(container);   // the editor fills what is left of the window; its panes scroll, not the page
 }
 
 // ── Words ────────────────────────────────────────────────────────────────────
@@ -207,6 +228,17 @@ function buildSharedWordEditor(currentLang: string, focusWord?: { lang: string; 
     meaningNotes: true,
     reorderGlosses: true,
     trackOriginal: true,
+    // A verb can go straight to its conjugation table, on the next tab.
+    hostAction: {
+      label: 'Edit conjugations →',
+      title: 'Open this verb in the Conjugations tab',
+      appliesTo: w => w.pos === 'verb',
+      onClick: (w, l) => {
+        setActiveTab('conjugations');
+        document.querySelector<HTMLButtonElement>('.mc-tab-btn[data-tab="conjugations"]')?.click();
+        void openConjugationEditor(l, w.word);
+      },
+    },
   });
 
   const wrap = el('div', 'word-editor mc-we');

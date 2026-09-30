@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, confirmNext } from './helpers.ts';
 
 /**
  * My Content — the shared Word Editor (the Words tab).
@@ -41,7 +41,7 @@ test('editing a word marks the field, saves an override, and Revert undoes it', 
   await expect(page.locator('#mcwe-editTranslation')).toHaveValue('to chat');
 
   // Settings → "Confirm before removing a word edit" is on by default.
-  page.once('dialog', d => void d.accept());
+  await confirmNext(page);
   await page.locator('#mcwe-revertWordBtn').click();
   await expect(page.locator('#mcwe-editTranslation')).toHaveValue(original);
 });
@@ -68,7 +68,7 @@ test('adding a word creates a custom word, and it can be deleted', async ({ page
   await page.getByRole('button', { name: 'Added', exact: true }).click();
   await expect(page.locator('.mc-we .word-item .word-item-key')).toHaveText('zzpruebae2e');
 
-  page.once('dialog', d => void d.accept());
+  await confirmNext(page);
   await page.locator('#mcwe-deleteWordBtn').click();
   await expect(page.locator('.mc-we .word-item')).toHaveCount(0);
 });

@@ -18,6 +18,7 @@ import { positionPopover } from '../../utils/popover-position.ts';
 import { createFlagImg } from '../../ui/flag-icon.ts';
 import { buildLangBadge } from '../../ui/lang-badge.ts';
 import { LANGUAGES } from '../../data/languages.ts';
+import { buildListSection } from '../../ui/list-sections.ts';
 import type { ListsCtx } from './context.ts';
 
 let activePopover: HTMLElement | null = null;
@@ -135,26 +136,28 @@ export function openMovePopover(
   // own (possibly several) flags right below.
   const singleLangInfo = LANGUAGES.find(l => l.name === lang);
 
+  // A section folding changes the popover's height, so it is placed again.
+  const reposition = (): void => positionPopover(popover, anchorBtn, { alignRight: true });
+
   if (singleTargets.length === 0 && multiTargets.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'ml-move-popover-empty'; empty.textContent = 'No other lists';
     popover.appendChild(empty);
   } else {
-    singleTargets.forEach(listName => {
-      const flag = singleLangInfo
-        ? createFlagImg(singleLangInfo.flagCountry, singleLangInfo.label)
-        : document.createElement('span');
-      popover.appendChild(buildItem(listName, flag, word => addToList(lang, listName, word)));
-    });
-    if (singleTargets.length > 0 && multiTargets.length > 0) {
-      const sep = document.createElement('div');
-      sep.className = 'ml-move-popover-label'; sep.textContent = 'Cross-Language Lists';
-      popover.appendChild(sep);
+    if (singleTargets.length > 0) {
+      popover.appendChild(buildListSection('single', 'Single-Language Lists', singleTargets.map(listName => {
+        const flag = singleLangInfo
+          ? createFlagImg(singleLangInfo.flagCountry, singleLangInfo.label)
+          : document.createElement('span');
+        return buildItem(listName, flag, word => addToList(lang, listName, word));
+      }), reposition));
     }
-    multiTargets.forEach(listName => {
-      const flag = buildLangBadge(getMultiListLanguages(listName));
-      popover.appendChild(buildItem(listName, flag, word => addToMultiList(listName, word, lang)));
-    });
+    if (multiTargets.length > 0) {
+      popover.appendChild(buildListSection('multi', 'Cross-Language Lists', multiTargets.map(listName => {
+        const flag = buildLangBadge(getMultiListLanguages(listName));
+        return buildItem(listName, flag, word => addToMultiList(listName, word, lang));
+      }), reposition));
+    }
   }
 
   document.body.appendChild(popover);

@@ -17,6 +17,7 @@ import { logger } from '../utils/logger.js';
 import { readString, writeString } from '../utils/storage.ts';
 import { isPackagedApp } from '../data/vocab-source.js';
 import { initAdminDataClient } from './admin-data-client.js';
+import { confirmDialog } from '../ui/dialog.ts';
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 
@@ -107,12 +108,12 @@ function currentWordsView(): string {
 // Same discard-and-continue shape loadPage() already uses for its own
 // "load a different page with edits pending" case (admin-table.ts).
 wordsViewButtons.forEach(btn => {
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', async () => {
     const target = btn.dataset.view ?? 'editor';
     if (target === currentWordsView()) return;
 
     if (isFormDirty() || isTableDirty()) {
-      if (!window.confirm('You have unsaved changes. Discard them and switch?')) return;
+      if (!await confirmDialog({ title: 'Discard unsaved changes?', message: 'You have unsaved changes. Discard them and switch?', confirmLabel: 'Discard', danger: true })) return;
       discardFormChanges();
       void discardTableChanges();
     }

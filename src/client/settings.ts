@@ -244,6 +244,10 @@ export const Settings = {
     return Math.min(n, DUE_SOFT_CAP_MAX);
   },
 
+  /** On by default. Whether the add-to-list pickers (Table mode's ★ and "Add N to List(s)", and My Lists'
+   *  Move/Copy) show how many words each list already holds. Off drops the number, nothing else. */
+  getListPickerCounts: (): boolean => get('list_picker_counts', 'true') === 'true',
+
   /** Whether Table mode is a race against the clock — when the limit is hit,
    *  the quiz ends and reveals whatever's left, same as clicking Give Up. */
   getTimedQuizEnabled: (): boolean => get('table_timed_quiz', 'false') === 'true',
@@ -627,6 +631,37 @@ export const Settings = {
 
   // ── Appearance ────────────────────────────────────────────────────────────
   getFontSize: (): FontSize => get('font_size', 'medium') as FontSize,
+
+  /** The desktop app's page zoom (1 = 100%), remembered between launches — see tauri/zoom.ts. */
+  getAppZoom: (): number => {
+    const n = Number(get('app_zoom', '1'));
+    return Number.isFinite(n) && n >= 0.5 && n <= 3 ? n : 1;
+  },
+  setAppZoom: (z: number): void => set('app_zoom', String(z)),
+
+  /** The page background: 'default' (the theme's own), a 'solid' colour, or a 'gradient' of two. */
+  getBgMode: (): 'default' | 'solid' | 'gradient' => {
+    const v = get('bg_mode', 'default');
+    return v === 'solid' || v === 'gradient' ? v : 'default';
+  },
+  getBgColor:  (): string => hexOr(get('bg_color', '#d9e8f5'), '#d9e8f5'),
+  getBgColor2: (): string => hexOr(get('bg_color2', '#6c8cff'), '#6c8cff'),
+  /** The gradient's direction in degrees (CSS: 180 runs top to bottom, 90 left to right). */
+  getBgAngle: (): number => {
+    const n = Number(get('bg_angle', '135'));
+    return Number.isFinite(n) ? ((Math.round(n) % 360) + 360) % 360 : 135;
+  },
+  /** How opaque cards and panels are, in percent (100 = solid). Lower lets the page background show through. */
+  getAppOpacity: (): number => {
+    const n = Number(get('app_opacity', '100'));
+    return Number.isFinite(n) ? Math.min(100, Math.max(50, Math.round(n))) : 100;
+  },
+
+  /** The colour theme (see PALETTES). An unknown stored value falls back to the default. */
+  getPalette: (): PaletteId => {
+    const v = get('palette', 'forest');
+    return PALETTES.some(p => p.id === v) ? v as PaletteId : 'forest';
+  },
   /** Storage only — call applyFontSize() (exported below) separately to
    *  actually repaint, same two-step split its own click handler uses. */
   setFontSize: (size: FontSize): void => set('font_size', size),
@@ -940,6 +975,65 @@ export function applyMlColors(): void {
 /** Show or hide the quiz-screen shortcuts to Settings (CSS: `body.hide-settings-links`). */
 export function applySettingsLinks(): void {
   document.body.classList.toggle('hide-settings-links', !Settings.getShowSettingsLinks());
+}
+
+function hexOr(v: string, fallback: string): string {
+  return /^#[0-9a-f]{6}$/i.test(v) ? v : fallback;
+}
+
+/** The page background CSS for the current settings, or null to use the theme's own. */
+export function backgroundCss(): string | null {
+  const mode = Settings.getBgMode();
+  if (mode === 'solid') return Settings.getBgColor();
+  if (mode === 'gradient') return `linear-gradient(${Settings.getBgAngle()}deg, ${Settings.getBgColor()}, ${Settings.getBgColor2()})`;
+  return null;
+}
+
+/** Paints the chosen page background (a `--page-bg` property the body reads). */
+export function applyBackground(): void {
+  const css = backgroundCss();
+  const root = document.documentElement;
+  if (css) root.style.setProperty('--page-bg', css); else root.style.removeProperty('--page-bg');
+}
+
+/** Paints the chosen transparency: cards and panels become that much of their colour (variables.css). */
+export function applyOpacity(): void {
+  const pct = Settings.getAppOpacity();
+  const root = document.documentElement;
+  if (pct >= 100) { root.removeAttribute('data-translucent'); root.style.removeProperty('--app-opacity'); }
+  else { root.setAttribute('data-translucent', ''); root.style.setProperty('--app-opacity', `${pct}%`); }
+}
+
+/** The colour themes Settings offers, and the label each is shown under. 'forest' is the original green. */
+export const PALETTES = [
+  { id: 'forest', label: 'Forest' },
+  { id: 'ocean', label: 'Ocean' },
+  { id: 'violet', label: 'Violet' },
+  { id: 'rose', label: 'Rose' },
+  { id: 'amber', label: 'Amber' },
+  { id: 'teal', label: 'Teal' },
+  { id: 'slate', label: 'Slate' },
+] as const;
+export type PaletteId = (typeof PALETTES)[number]['id'];
+
+/** The accent used for the browser's UI colour (meta theme-color) under each theme, light mode. */
+const PALETTE_META_COLOR: Record<PaletteId, string> = {
+  forest: '#3d6b4f',
+  ocean: '#1f5f99',
+  violet: '#6a4bb0',
+  rose: '#b0335a',
+  amber: '#a05a00',
+  teal: '#0f766e',
+  slate: '#475569',
+};
+
+/** Paints the chosen colour theme: a `data-palette` attribute the stylesheet keys off ('forest', the
+ *  default, has none), and the browser/OS chrome colour where the page can set one. */
+export function applyPalette(id: PaletteId = Settings.getPalette()): void {
+  const root = document.documentElement;
+  if (id === 'forest') root.removeAttribute('data-palette'); else root.dataset.palette = id;
+  document.querySelector<HTMLMetaElement>('meta[name="theme-color"][media*="light"]')
+    ?.setAttribute('content', PALETTE_META_COLOR[id]);
 }
 
 export function applyFontSize(size: FontSize = Settings.getFontSize()): void {

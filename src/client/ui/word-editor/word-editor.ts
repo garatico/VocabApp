@@ -12,6 +12,7 @@ import { buildChipFilter } from './chip-filter.ts';
 import { buildWordForm, type WordFormHandle, type WordFormOptions } from './form.ts';
 import { escapeHtml, debounce } from './util.ts';
 import type { ChipOption, WordData, WordEditorMeta, WordEditorOptions } from './types.ts';
+import { confirmDialog } from '../dialog.ts';
 
 export interface WordEditorHandle {
   /** Appends the filter bar and the list+form layout to `container`. */
@@ -57,6 +58,14 @@ export function createWordEditor(
     deleteBtn.textContent = '🗑 Delete word';
     deleteBtn.title = 'Delete this word (one you added)';
   }
+  const hostAction = options.hostAction;
+  const hostActionBtn = hostAction ? document.createElement('button') : null;
+  if (hostActionBtn && hostAction) {
+    hostActionBtn.type = 'button'; hostActionBtn.className = 'secondary'; hostActionBtn.hidden = true;
+    hostActionBtn.id = id('hostActionBtn');
+    hostActionBtn.textContent = hostAction.label;
+    if (hostAction.title) hostActionBtn.title = hostAction.title;
+  }
   const form = buildWordForm({
     idPrefix: p,
     readOnlyFields: options.readOnlyFields,
@@ -64,12 +73,13 @@ export function createWordEditor(
     meaningNotes: options.meaningNotes,
     reorderGlosses: options.reorderGlosses,
     trackOriginal: options.trackOriginal,
-    extraHeaderButtons: [revertBtn, deleteBtn].filter((b): b is HTMLButtonElement => !!b),
+    extraHeaderButtons: [hostActionBtn, revertBtn, deleteBtn].filter((b): b is HTMLButtonElement => !!b),
   });
   /** Revert / Delete only make sense for a word that has edits / that the user added. */
   function syncHostButtons(word: WordData | null): void {
     if (revertBtn) revertBtn.hidden = !word?.edited;
     if (deleteBtn) deleteBtn.hidden = !word?.custom;
+    if (hostActionBtn && hostAction) hostActionBtn.hidden = !word || !hostAction.appliesTo(word);
   }
   const formHost = form.host;
 
@@ -301,6 +311,7 @@ export function createWordEditor(
   // ── Wiring ─────────────────────────────────────────────────────────────────
   refreshLangFlag();
   langSelect.addEventListener('change', () => { refreshLangFlag(); clearForm(); resetPageAndLoad(); });
+  hostActionBtn?.addEventListener('click', () => { if (currentWord && hostAction) hostAction.onClick(currentWord, langSelect.value); });
 
   const debouncedLoad = debounce(resetPageAndLoad, 350);
   searchInput.addEventListener('input', debouncedLoad);
@@ -329,10 +340,10 @@ export function createWordEditor(
   });
 
   form.saveBtn.addEventListener('click', () => { void saveWord(); });
-  revertBtn?.addEventListener('click', () => {
+  revertBtn?.addEventListener('click', async () => {
     if (!currentWord || !adapter.revertWord) return;
     const key = currentWord.word;
-    if (adapter.confirmRevert && !adapter.confirmRevert(key)) return;
+    if (adapter.confirmRevert && !(await adapter.confirmRevert(key))) return;
     void adapter.revertWord(key, langSelect.value).then(word => {
       currentWord = word;
       form.populate(word);
@@ -341,10 +352,10 @@ export function createWordEditor(
       void load();
     }).catch(err => adapter.notify('Revert error: ' + (err instanceof Error ? err.message : String(err)), 'error'));
   });
-  deleteBtn?.addEventListener('click', () => {
+  deleteBtn?.addEventListener('click', async () => {
     if (!currentWord || !adapter.deleteWord) return;
     const key = currentWord.word;
-    if (!window.confirm(`Delete "${key}"? This can't be undone.`)) return;
+    if (!await confirmDialog({ title: `Delete "${key}"?`, message: "This can't be undone.", confirmLabel: 'Delete', danger: true })) return;
     void adapter.deleteWord(key, langSelect.value).then(() => {
       clearForm();
       adapter.notify(`Deleted: ${key}`, 'success');

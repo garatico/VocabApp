@@ -776,6 +776,60 @@ export function applyWordOverrideRecord(w: Word, o: WordOverride | null | undefi
   };
 }
 
+// ── Conjugation overrides ────────────────────────────────────────────────────
+// A learner's own corrections to a verb's conjugation table, tense by tense. Kept apart from
+// WordOverride (whose whole record the shared Word Editor replaces on every save) so editing a
+// word's translation never disturbs them, and vice versa. A tense holds the same shape the
+// vocabulary does: six forms in pronoun order, or a single string for the participle / gerund.
+// Only a tense the learner actually changed is stored; every other one keeps the real vocabulary's
+// forms (see applyConjOverrideRecord, applied once per word in data-loader.ts's loadWords, so
+// Conjugation mode, My Lists and the tooltips all read the corrected forms without knowing).
+
+export type ConjForms = Record<string, string[] | string>;
+
+function conjOverrideKey(lang: string): string { return `${P}conjoverride_${lang.toLowerCase()}`; }
+
+function isConjOverrideRecord(v: unknown): v is Record<string, ConjForms> {
+  return isRecord(v) && Object.values(v).every(isRecord);
+}
+
+export function getConjOverrides(lang: string): Record<string, ConjForms> {
+  return readJson<Record<string, ConjForms>>(conjOverrideKey(lang), {}, isConjOverrideRecord);
+}
+
+export function getConjOverride(lang: string, word: string): ConjForms | null {
+  return ownGet(getConjOverrides(lang), wordKey(word)) ?? null;
+}
+
+/** Sets (or, with `forms` null, removes) one tense's override for a verb. A verb left with none is dropped. */
+export function setConjOverrideTense(lang: string, word: string, tense: string, forms: string[] | string | null): void {
+  const overrides = getConjOverrides(lang);
+  const key = wordKey(word);
+  const next: ConjForms = { ...(ownGet(overrides, key) ?? {}) };
+  if (forms === null) delete next[tense]; else next[tense] = forms;
+  if (Object.keys(next).length === 0) delete overrides[key]; else overrides[key] = next;
+  writeJson(conjOverrideKey(lang), overrides);
+}
+
+export function clearConjOverride(lang: string, word: string): void {
+  const overrides = getConjOverrides(lang);
+  delete overrides[wordKey(word)];
+  writeJson(conjOverrideKey(lang), overrides);
+}
+
+/** `w` with the override's tenses laid over its own conjugation table (everything else is left as it was). */
+export function applyConjOverrideRecord(w: Word, o: ConjForms | null | undefined): Word {
+  if (!o || Object.keys(o).length === 0) return w;
+  const linguistic = { ...(w.linguistic ?? {}) } as NonNullable<Word['linguistic']>;
+  linguistic.conjugations = { ...(linguistic.conjugations ?? {}), ...o };
+  return { ...w, linguistic };
+}
+
+/** The override stored for `word` in an already-read `getConjOverrides()` record. */
+export function pickConjOverride(overrides: Record<string, ConjForms>, word: string): ConjForms | null {
+  return ownGet(overrides, wordKey(word)) ?? null;
+}
+
 // ── Export / import ──────────────────────────────────────────────────────────
 
 const BACKUP_VERSION = 1;
@@ -787,6 +841,7 @@ interface UserContentBackup {
   trivia:         Record<string, TriviaQuestion[]>;
   pictures:       Record<string, Record<string, string>>;
   wordOverrides?: Record<string, Record<string, WordOverride>>;
+  conjOverrides?: Record<string, Record<string, ConjForms>>;
   guessBlank?:    Record<string, GuessBlankQuestion[]>;
   /** @deprecated pre-word-override export shape — read on import, never written. */
   glossOrders?:   Record<string, Record<string, string[]>>;
@@ -795,7 +850,7 @@ interface UserContentBackup {
 function buildUserContentBackup(): UserContentBackup {
   const backup: UserContentBackup = {
     version: BACKUP_VERSION, exportedAt: new Date().toISOString(),
-    words: {}, trivia: {}, pictures: {}, wordOverrides: {}, guessBlank: {},
+    words: {}, trivia: {}, pictures: {}, wordOverrides: {}, conjOverrides: {}, guessBlank: {},
   };
   for (const l of LANGUAGE_NAMES) {
     const words         = getUserWords(l);
@@ -803,6 +858,8 @@ function buildUserContentBackup(): UserContentBackup {
     const pics           = getPictureOverrides(l);
     const wordOverrides  = getWordOverrides(l);
     const guessBlank     = getUserGuessBlankQuestions(l);
+    const conjOverrides  = getConjOverrides(l);
+    if (Object.keys(conjOverrides).length) backup.conjOverrides![l] = conjOverrides;
     if (words.length)                      backup.words[l]          = words;
     if (trivia.length)                     backup.trivia[l]         = trivia;
     if (Object.keys(pics).length)          backup.pictures[l]       = pics;
@@ -837,10 +894,10 @@ export function downloadUserContent(): void {
 export function applyUserContentImport(raw: string): string {
   const data = JSON.parse(raw) as UserContentBackup;
   if (!data || typeof data !== 'object'
-      || (!data.words && !data.trivia && !data.pictures && !data.wordOverrides && !data.glossOrders && !data.guessBlank)) {
+      || (!data.words && !data.trivia && !data.pictures && !data.wordOverrides && !data.conjOverrides && !data.glossOrders && !data.guessBlank)) {
     throw new Error('That file does not look like a My Content export.');
   }
-  let words = 0, trivia = 0, pics = 0, wordOverrides = 0, guessBlank = 0;
+  let words = 0, trivia = 0, pics = 0, wordOverrides = 0, guessBlank = 0, conjOverrides = 0;
 
   for (const [l, arr] of Object.entries(data.words ?? {})) {
     if (!Array.isArray(arr)) continue;
@@ -893,6 +950,15 @@ export function applyUserContentImport(raw: string): string {
     });
     if (any) writeJson(wordOverrideKey(l), overrides);
   }
+  for (const [l, rec] of Object.entries(data.conjOverrides ?? {})) {
+    if (!rec || typeof rec !== 'object') continue;
+    const overrides = { ...getConjOverrides(l) };
+    let any = false;
+    Object.entries(rec).forEach(([word, forms]) => {
+      if (isRecord(forms)) { overrides[wordKey(word)] = forms as ConjForms; conjOverrides++; any = true; }
+    });
+    if (any) writeJson(conjOverrideKey(l), overrides);
+  }
   // Pre-word-override exports only ever held a gloss reorder — folded straight
   // into the same wordOverrides bucket importing above just populated.
   for (const [l, rec] of Object.entries(data.glossOrders ?? {})) {
@@ -910,5 +976,6 @@ export function applyUserContentImport(raw: string): string {
 
   return `Imported ${words} word${words === 1 ? '' : 's'}, ${trivia} trivia question${trivia === 1 ? '' : 's'}, `
        + `${guessBlank} Guess the Blank question${guessBlank === 1 ? '' : 's'}, `
-       + `${pics} picture${pics === 1 ? '' : 's'}, ${wordOverrides} word override${wordOverrides === 1 ? '' : 's'}`;
+       + `${pics} picture${pics === 1 ? '' : 's'}, ${wordOverrides} word override${wordOverrides === 1 ? '' : 's'}, `
+       + `${conjOverrides} conjugation override${conjOverrides === 1 ? '' : 's'}`;
 }

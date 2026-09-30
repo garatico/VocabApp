@@ -96,8 +96,8 @@ function buildCollapsible(
 
 const ACTIVE_TAB_KEY = 'vq_mycontent_activetab';
 
-type MCTabKey = 'words' | 'trivia' | 'guessBlank' | 'pictures';
-const MC_TAB_KEYS: readonly MCTabKey[] = ['words', 'trivia', 'guessBlank', 'pictures'];
+type MCTabKey = 'words' | 'conjugations' | 'trivia' | 'guessBlank' | 'pictures';
+const MC_TAB_KEYS: readonly MCTabKey[] = ['words', 'conjugations', 'trivia', 'guessBlank', 'pictures'];
 
 function isMCTabKey(v: string | null): v is MCTabKey {
   return v !== null && (MC_TAB_KEYS as readonly string[]).includes(v);
@@ -119,8 +119,10 @@ interface MCTabDef {
   body:        HTMLElement;
 }
 
-export function buildContentTabs(tabs: MCTabDef[], initialActive: MCTabKey): HTMLElement {
-  const wrap   = el('div', 'mc-tabs-outer');
+/** The tab strip and the panels it switches, returned apart so a host can put the strip somewhere else (My Content puts it in the top bar). */
+export interface ContentTabs { tabBar: HTMLElement; panels: HTMLElement }
+
+export function buildContentTabs(tabs: MCTabDef[], initialActive: MCTabKey, onActivate?: (key: MCTabKey) => void): ContentTabs {
   const tabBar = el('div', 'mc-tabs');
   tabBar.setAttribute('role', 'tablist');
   const panelsWrap = el('div', 'mc-tabs-wrap');
@@ -135,25 +137,27 @@ export function buildContentTabs(tabs: MCTabDef[], initialActive: MCTabKey): HTM
       btn.setAttribute('aria-selected', String(k === key));
     });
     setActiveTab(key);
+    onActivate?.(key);
   }
 
   for (const { key, title, description, body } of tabs) {
     const btn = el('button', 'mc-tab-btn', title) as HTMLButtonElement;
     btn.type = 'button';
     btn.setAttribute('role', 'tab');
+    btn.dataset.tab = key;
+    btn.title = description;                       // what the tab is for, on hover rather than as a paragraph
     btn.addEventListener('click', () => activate(key));
     buttons.set(key, btn);
     tabBar.appendChild(btn);
 
     const panel = el('div', 'mc-tab-panel');
-    panel.append(el('p', 'mc-tab-desc', description), body);
+    panel.append(body);
     panels.set(key, panel);
     panelsWrap.appendChild(panel);
   }
 
-  wrap.append(tabBar, panelsWrap);
   activate(panels.has(initialActive) ? initialActive : tabs[0].key);
-  return wrap;
+  return { tabBar, panels: panelsWrap };
 }
 
 export function buildSubsection(key: string, title: string, description: string, body: HTMLElement): HTMLElement {

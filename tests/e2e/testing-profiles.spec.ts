@@ -52,7 +52,6 @@ test('a conjugation profile can turn off specific forms, and applying it reflect
   await nameInput.fill('NoVosotros');
   await nameInput.press('Enter');
 
-  await page.locator('.ml-list-name', { hasText: 'NoVosotros' }).click();
   // Spanish's PRONOUNS order is yo/tu/el/nosotros/vosotros/ellos — index 4 is "vosotros".
   const formsChip = page.locator('.ml-profile-editor-forms-chips .conj-pronoun-toggle').nth(4);
   await expect(formsChip).toHaveText('vosotros');
@@ -71,4 +70,26 @@ test('a conjugation profile can turn off specific forms, and applying it reflect
   await page.locator('.preset-picker-row', { hasText: 'NoVosotros' }).locator('.preset-picker-apply').click();
   const liveToggle = page.locator('#conjPronounToggles .conj-pronoun-toggle').nth(4);
   await expect(liveToggle).not.toHaveClass(/active/);
+});
+
+test('a conjugation profile lays its forms out like Conjugation mode: yo / tú / él, then nosotros / vosotros / ellos', async ({ page }) => {
+  await disableSimpleMode(page);
+  await page.goto('/');
+  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await page.locator('.mode-tab[data-mode="mylists"]').click();
+  await page.locator('.ml-profile-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
+  await page.locator('.ml-list-item--editing select.ml-list-name-input').selectOption('conjugation');
+  const nameInput = page.locator('.ml-list-item--editing input.ml-list-name-input');
+  await nameInput.fill('Grid');
+  await nameInput.press('Enter');
+
+  // No Part of Speech filter on a verbs-only mode.
+  await expect(page.locator('.ml-profile-editor-label', { hasText: 'Part of Speech' })).toHaveCount(0);
+
+  const xs = await page.locator('.ml-profile-editor-forms-chips .conj-pronoun-toggle').evaluateAll(
+    els => els.map(e => Math.round(e.getBoundingClientRect().left)));
+  expect(xs).toHaveLength(6);
+  expect(new Set(xs.slice(0, 3)).size).toBe(1);            // yo, tú, él share a column
+  expect(new Set(xs.slice(3)).size).toBe(1);               // nosotros, vosotros, ellos share the next
+  expect(xs[3]).toBeGreaterThan(xs[0]);
 });

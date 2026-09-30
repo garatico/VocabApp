@@ -84,7 +84,7 @@
   height: 4px;
   background: linear-gradient(90deg, var(--accent), var(--accent-hover));
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  box-shadow: 0 1px 6px rgba(61, 107, 79, 0.4);
+  box-shadow: 0 1px 6px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 /* ── Admin tab — link styled as a tab, never "active" ── */

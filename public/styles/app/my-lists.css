@@ -3121,3 +3121,248 @@ label.ml-chip-dropdown-group:hover { color: var(--text); }
 .ml-profile-mode-head { padding: 0.25rem 0.85rem 0.1rem; }
 .ml-profile-mode-body .ml-list-item--full { margin-top: 0.05rem; margin-bottom: 0.05rem; padding-top: 0.22rem; padding-bottom: 0.22rem; }
 .ml-profile-mode-body .ml-folder-head { padding-top: 0.14rem; padding-bottom: 0.14rem; }
+
+/* A word that is in an aggregate list because of one of its source lists */
+.ml-word-via {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Nested folders: each level steps in */
+.ml-folder-body .ml-folder-group { margin-left: 0.6rem; }
+
+/* Dragging: the strip that takes a list or folder out of its folder, and a folder being dragged */
+.ml-root-drop { display: none; }
+body .ml-root-drop.ml-root-drop--armed {
+  display: block;
+  margin: 0.2rem 0;
+  padding: 0.35rem 0.6rem;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-align: center;
+  list-style: none;
+}
+.ml-root-drop--over { border-color: var(--accent); color: var(--text); background: var(--surface2); }
+.ml-folder-head--dragging { opacity: 0.5; }
+
+/* ── Move / Copy popover: as wide as its longest list name, with collapsible sections coloured to
+   match the sidebar's Single-Language and Cross-Language sections ── */
+.ml-move-popover {
+  width: max-content;
+  max-width: calc(100vw - 8px);
+  max-height: min(70vh, 26rem);
+  overflow-y: auto;
+}
+.ml-move-popover-item { overflow: visible; text-overflow: clip; }
+.ml-move-section--single { --sec: var(--ml-accent-single); --sec-light: var(--ml-accent-single-light); }
+.ml-move-section--multi  { --sec: var(--ml-accent-multi);  --sec-light: var(--ml-accent-multi-light); }
+.ml-move-section-head {
+  display: flex; align-items: center; gap: 0.35rem;
+  width: 100%;
+  padding: 0.3rem 0.55rem;
+  border: 0;
+  border-left: 4px solid var(--sec);
+  background: color-mix(in srgb, var(--sec) 30%, var(--surface));
+  color: color-mix(in srgb, var(--sec) 55%, var(--text));
+  font-size: 0.68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  text-align: left; white-space: nowrap;
+  cursor: pointer;
+}
+.ml-move-section-head:hover { background: color-mix(in srgb, var(--sec) 40%, var(--surface)); }
+.ml-move-section-body { background: color-mix(in srgb, var(--sec) 8%, var(--bg)); }
+.ml-move-section-body[hidden] { display: none; }
+.ml-move-section .ml-move-popover-item:hover { background: var(--sec-light); color: var(--text); }
+
+/* ── Deselect: the close button at the top-right of the open panel ── */
+.ml-panel-close-wrap {
+  position: sticky; top: 0; z-index: 6;
+  align-self: flex-end;
+  height: 0; overflow: visible;
+}
+.ml-panel-close {
+  position: relative; top: -0.15rem;
+  width: 1.5rem; height: 1.5rem;
+  border: 1px solid var(--border-strong); border-radius: 50%;
+  background: var(--surface); color: var(--text-muted);
+  font-size: 0.8rem; line-height: 1; cursor: pointer;
+}
+.ml-panel-close:hover { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+/* ── Sidebar: brighter section bars and expanded sections, darker folders, lighter per level ──
+   The section bar is a stronger band of its section's colour with a more vivid label; the section's
+   body (its cards and folders) is a brighter wash of the same colour when expanded. Open folders are
+   darkened against that wash so they stand out from it, and every level of subfolder inside is a
+   shade lighter than the one around it, so depth reads at a glance. ── */
+.ml-single-head, .ml-smart-head, .ml-multi-head, .ml-profile-head {
+  background: color-mix(in srgb, var(--ml-head-accent) 32%, var(--surface));
+  color: color-mix(in srgb, var(--ml-head-accent) 50%, var(--text));
+}
+.ml-section-body--single   { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.ml-section-body--smart    { background: color-mix(in srgb, var(--ml-accent-smart) 22%, transparent); }
+.ml-section-body--multi    { background: color-mix(in srgb, var(--ml-accent-multi) 22%, transparent); }
+.ml-section-body--profiles, .ml-section-body--visual { background: color-mix(in srgb, var(--ml-accent-profile) 22%, transparent); }
+
+.ml-folder-group { --fd: 20%; background: color-mix(in srgb, black var(--fd), var(--surface2)); }
+.ml-folder-body .ml-folder-group { --fd: 15%; }
+.ml-folder-body .ml-folder-body .ml-folder-group { --fd: 11%; }
+.ml-folder-body .ml-folder-body .ml-folder-body .ml-folder-group { --fd: 7%; }
+.ml-folder-body .ml-folder-body .ml-folder-body .ml-folder-body .ml-folder-group { --fd: 4%; }
+.ml-folder-head { color: var(--text); }
+.ml-section-body > .ml-list-empty { color: var(--text); }
+/* Keep the panel's own header (Export / Quiz buttons) clear of the close button. */
+.ml-panel-close-wrap + * { padding-right: 2rem; box-sizing: border-box; }
+
+/* ── My Lists top bar: the language picker and the open list's title, in #controls ── */
+.ml-topbar {
+  display: flex; align-items: center; gap: 0.75rem;
+  min-height: 36px;
+}
+.ml-topbar[hidden] { display: none; }
+.ml-topbar .ml-lang-row {
+  padding: 0; border: 0; background: none;
+  flex: 0 1 15rem; min-width: 9rem;
+}
+.ml-topbar .ml-lang-select { font-size: 0.85rem; padding: 0.3rem 0.45rem; min-height: 36px; }
+.ml-topbar-title {
+  flex: 1 1 0; min-width: 0; margin: 0;
+  font-size: 1.05rem; font-weight: 700; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ml-topbar-title--none { font-weight: 500; color: var(--text-muted); }
+/* The panel's own title and flag moved up into the bar (the elements stay, for anything that reads them). */
+.ml-panel .ml-panel-title, .ml-panel .ml-panel-flag { display: none; }
+
+/* The panel's stats chips, moved up beside the title in the top bar. */
+.ml-topbar { flex-wrap: wrap; }
+.ml-topbar-title { flex: 0 1 auto; max-width: 40%; }
+.ml-topbar .ml-stats-row { flex: 0 1 auto; min-height: 0; padding: 0; }
+
+/* The deselect button: squarer than the round one it started as. */
+.ml-panel-close { border-radius: var(--radius-sm); width: 1.6rem; height: 1.6rem; }
+
+/* Thinner padding on the filter box and on each row of words. */
+.ml-list-toolbar { padding: 0.3rem 0.6rem 0.25rem; gap: 0.4rem; }
+.ml-list-toolbar .ml-panel-controls { gap: 0.4rem; }
+.ml-list-toolbar .ml-search { padding-top: 0.16rem; padding-bottom: 0.16rem; }
+.ml-list-toolbar .ml-sort-select, .ml-list-toolbar .ml-hide-mastered-btn { padding: 0.2rem 0.5rem; }
+.ml-list-toolbar .ml-bulk-bar { margin-top: 0.2rem; padding: 0.22rem 0.5rem; }
+.ml-word-item { padding: 0.18rem 0.6rem; }
+
+/* The bulk bar is hidden until something is selected; its display:flex was overriding [hidden]. */
+.ml-bulk-bar[hidden] { display: none; }
+
+/* The list's controls (Part of Speech, Level, Folders…) share one row with Export / Quiz / the X. */
+.ml-panel-header { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; }
+.ml-panel-header .ml-filter-dropdowns-row { order: 1; flex: 1 1 auto; min-width: 0; }
+.ml-panel-header .ml-panel-title-group { order: 2; flex: 0 0 auto; margin-left: auto; }
+/* Narrower side margins, so it all fits. */
+.ml-panel { padding-left: 0.5rem; padding-right: 0.5rem; }
+/* A thinner Add Vocabulary box. */
+.ml-add-section { padding: 0.25rem 0.5rem 0.3rem; }
+.ml-add-row { padding-top: 0.1rem; padding-bottom: 0.1rem; }
+/* The deselect button: an exact square, its X centred. */
+.ml-panel-close {
+  display: grid; place-items: center;
+  box-sizing: border-box; width: 1.6rem; height: 1.6rem; padding: 0; line-height: 0;
+}
+.ml-panel-close svg { display: block; }
+/* A rule between the title and its stats. */
+.ml-topbar .ml-stats-row { border-left: 1px solid var(--border-strong); padding-left: 0.75rem; margin-left: 0.1rem; }
+
+.ml-panel-header .ml-filter-dropdowns-row { flex: 1 1 0; min-width: 16rem; }
+
+/* Subfolders: a bit lighter than before, still one shade lighter per level. */
+.ml-folder-body .ml-folder-group { --fd: 11%; }
+.ml-folder-body .ml-folder-body .ml-folder-group { --fd: 7%; }
+.ml-folder-body .ml-folder-body .ml-folder-body .ml-folder-group { --fd: 4%; }
+.ml-folder-body .ml-folder-body .ml-folder-body .ml-folder-body .ml-folder-group { --fd: 2%; }
+
+/* Emoji & colour picker: wider, rectangular colour swatches, a labelled custom colour. */
+.ml-folder-style-pop { width: 21rem; }
+.ml-folder-style-quick button { min-width: 2rem; height: 2rem; font-size: 1.15rem; }
+.ml-folder-style-quick--all { max-height: 11rem; overflow-y: auto; }
+.ml-folder-swatch { width: 2.6rem; height: 1.5rem; border-radius: var(--radius-sm); }
+.ml-folder-swatch--none { width: auto; padding: 0 0.6rem; font-size: 0.7rem; font-weight: 600; }
+.ml-folder-swatch--custom { width: 2.6rem; padding: 0; }
+.ml-folder-swatch--custom::-webkit-color-swatch-wrapper { border-radius: var(--radius-sm); }
+.ml-folder-swatch--custom::-webkit-color-swatch { border-radius: var(--radius-sm); }
+.ml-folder-swatch--custom::-moz-color-swatch { border-radius: var(--radius-sm); }
+.ml-folder-custom { display: flex; align-items: center; gap: 0.5rem; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); cursor: pointer; }
+
+.ml-menu-item--export { --tone: var(--ml-menu-copy); }
+/* Everything in the header row — the list's controls and Quiz — on one centre line. */
+.ml-panel-header .ml-filter-dropdowns-row { align-items: center; margin: 0; }
+.ml-panel-header .ml-title-actions { display: flex; align-items: center; }
+
+/* ── Header row: every control the same height, on the first line, with less space above and below ── */
+.ml-panel { padding-top: 0.4rem; }
+.ml-panel-header { --ml-hdr-h: 1.75rem; align-items: flex-start; padding-bottom: 0.3rem; }
+.ml-panel-header .ml-chip-dropdown-toggle,
+.ml-panel-header .ml-quiz-btn,
+.ml-panel-close {
+  box-sizing: border-box; height: var(--ml-hdr-h);
+  display: inline-flex; align-items: center; justify-content: center;
+  padding-top: 0; padding-bottom: 0; margin: 0; line-height: 1;
+}
+.ml-panel-close { width: var(--ml-hdr-h); padding: 0; top: 0; }
+.ml-panel-close-wrap { top: 0.4rem; }
+.ml-panel-header .ml-title-actions { height: var(--ml-hdr-h); }
+
+/* ── Gear menu: an entry that opens a submenu beneath it ── */
+.ml-menu-item--parent { width: 100%; }
+.ml-menu-chevron { margin-left: auto; font-size: 0.7rem; }
+.ml-submenu { display: flex; flex-direction: column; margin-left: 1.1rem; border-left: 2px solid var(--border); }
+.ml-submenu[hidden] { display: none; }
+.ml-menu-subitem { font-weight: 500; }
+.ml-panel { --ml-hdr-h: 1.75rem; }
+.ml-panel-header .ml-chip-dropdown { display: inline-flex; margin: 0; }
+.ml-panel-header .ml-filter-dropdowns-row { padding: 0; }
+/* A fixed gap between the panel's blocks, so the ✕ (in a zero-height sticky wrapper ahead of the header)
+   can sit exactly where the header row starts. */
+.ml-panel { gap: 0.4rem; }
+.ml-panel-close { top: 0.4rem; }
+.ml-panel-close-wrap { top: 0; }
+
+/* The rules between a word row's columns: clearly visible, not a faint tint. */
+/* (Not on the part-of-speech pill, which has its own rounded border: the rank column's left rule
+   stands in for the divider after it.) */
+.ml-word-text, .ml-word-rank {
+  border-right: 2px solid var(--border-strong);
+}
+.ml-word-rank { border-left: 2px solid var(--border-strong); padding-left: 0.5rem; }
+
+/* ── Testing Profile editor: much less vertical space ──
+   Each section's label and its controls share a line (wrapping only when they must), the primary
+   language and the merged-in ones sit side by side, and the cards and gaps are tighter. ── */
+.ml-profile-editor { gap: 0.4rem; padding: 0.45rem 0.6rem 0.55rem; }
+.ml-profile-editor-group { gap: 0.3rem; padding: 0.4rem 0.6rem; }
+.ml-profile-editor-group-body:not(.filter-body--collapsed) { gap: 0.3rem; }
+.ml-profile-editor-group .ml-profile-editor-section + .ml-profile-editor-section { padding-top: 0.3rem; }
+.ml-profile-editor-section {
+  flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0.2rem 0.75rem;
+}
+.ml-profile-editor-header { flex: 0 0 auto; gap: 0.5rem; min-width: 7.5rem; }
+/* The wide chip grids (tenses, regularity, pronouns) still take a full line of their own. */
+.ml-profile-editor-tense-chips, .ml-profile-editor-reg-chips, .ml-profile-editor-forms-chips { flex: 1 1 100%; }
+.ml-profile-editor-pair { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 1.4rem; }
+.ml-profile-editor-group .ml-profile-editor-pair > .ml-profile-editor-section + .ml-profile-editor-section {
+  padding-top: 0; border-top: 0;
+}
+
+/* The Forms chips in a Conjugation profile: the same 2 × 3 grid as the live Conjugation controls. */
+.ml-profile-editor-forms-chips.conj-pronoun-toggles {
+  display: grid; flex: 0 1 auto; width: max-content; max-width: 24rem; gap: 1px;
+}
+
+/* Conjugation profile: Tense | Forms | Regularity side by side, as in the live controls; the columns wrap on a narrow pane. */
+.ml-profile-editor-tf { flex: 1 1 100%; flex-wrap: wrap; margin-top: 0.2rem; }
+.ml-profile-editor-tf .conj-tf-side--wide { flex: 2 1 22rem; }
+.ml-profile-editor-tf .conj-tf-side--narrow { flex: 1 1 11rem; }
+.ml-profile-editor-tf .conj-tf-divider { min-height: 4rem; }

@@ -1,8 +1,11 @@
-import { getListNames, getList, createList, deleteList, renameList, addToList, getListMeta, setListMeta, metaFolders } from '../../utils/word-lists.ts';
-import { BROWSE_ALL_LIST } from './context.ts';
+import { getListNames, getList, getListOwn, createList, deleteList, renameList, addToList, getListMeta, setListMeta, metaFolders } from '../../utils/word-lists.ts';
+import { BROWSE_ALL_LIST, NO_SELECTION, deselectAll } from './context.ts';
 import { closePopover } from './move-popover.ts';
+import { exportMenuItems } from './list-actions.ts';
+import { fetchVocab, cachedVocabMap } from './vocab-cache.ts';
 import { showUndo } from './undo-toast.ts';
 import type { SidebarKit } from './sidebar-kit.ts';
+import { confirmDialog } from '../../ui/dialog.ts';
 
 /**
  * sidebar-single.ts — the Single-Language Lists section: its cards and the create / rename /
@@ -27,11 +30,11 @@ export function createSingleSection(kit: SidebarKit) {
       ctx.listNav.appendChild(empty);
       // Leaves BROWSE_ALL_LIST alone — Browse All Words doesn't need any
       // real list to exist, so having none yet shouldn't bump it back to ''.
-      if (ctx.selectedList !== BROWSE_ALL_LIST) ctx.selectedList = '';
+      if (ctx.selectedList !== BROWSE_ALL_LIST && ctx.selectedList !== NO_SELECTION) ctx.selectedList = '';
       renderEmptyFolderPlaceholders(folderScope, []);
       return;
     }
-    if (ctx.selectedList !== BROWSE_ALL_LIST && !names.includes(ctx.selectedList)) ctx.selectedList = names[0];
+    if (ctx.selectedList !== BROWSE_ALL_LIST && ctx.selectedList !== NO_SELECTION && !names.includes(ctx.selectedList)) ctx.selectedList = names[0];
 
     const usedFolders = new Set<string>();
 
@@ -67,6 +70,11 @@ export function createSingleSection(kit: SidebarKit) {
         // word filters, rather than in this card's gear menu.
         const menu = buildActionMenu([
           styleItem({ emoji: meta.emoji, color: meta.color }, style => setListMeta(ctx.lang, name, { ...getListMeta(ctx.lang, name), ...style })),
+          ...exportMenuItems(async () => {
+            await fetchVocab(ctx.lang);
+            const vm = cachedVocabMap(ctx.lang);
+            return getList(ctx.lang, name).map(w => ({ word: w, translation: vm?.get(w)?.translation }));
+          }, `${name}-${ctx.lang}`),
           { glyph: '⧉', label: 'Copy', title: 'Duplicate list', tone: 'copy', onClick: () => {
             const copied = startCopyList(ctx.lang, name);
             if (copied) { ctx.selectedList = copied; ctx.updateBadge(); render(); }
@@ -74,10 +82,10 @@ export function createSingleSection(kit: SidebarKit) {
           { glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename', onClick: () => {
             startRenameList(name, li, nameSpan);
           } },
-          { glyph: '🗑', label: 'Delete', title: 'Delete list', tone: 'delete', onClick: () => {
-          if (!window.confirm(`Delete list "${name}" and all its words?`)) return;
+          { glyph: '🗑', label: 'Delete', title: 'Delete list', tone: 'delete', onClick: async () => {
+          if (!await confirmDialog({ title: `Delete "${name}"?`, message: 'The list and all its words will be removed. You can undo this right after.', confirmLabel: 'Delete list', danger: true })) return;
           // Snapshot before deleting so the whole list can come back intact.
-          const words       = [...getList(ctx.lang, name)];
+          const words       = [...getListOwn(ctx.lang, name)];
           const wasSelected = ctx.selectedList === name;
 
           deleteList(ctx.lang, name);
@@ -96,6 +104,8 @@ export function createSingleSection(kit: SidebarKit) {
         const em = emojiSpan(meta.emoji); if (em) topRow.prepend(em);
         li.append(topRow);
         li.addEventListener('click', () => {
+          // Clicking the open list again closes it.
+          if (li.classList.contains('active')) { deselectAll(ctx); closePopover(); render(); return; }
           ctx.selectedList = name; ctx.selectedSmart = null;
           ctx.selectedMultiList = null; ctx.selectedProfile = null; ctx.selectedVisual = null;
           closePopover(); render(); ctx.renderPanel();

@@ -15,11 +15,18 @@ const store = new Map<string, string>();
   clear:      () => { store.clear(); },
 };
 
+// addToList/renameList/deleteList refresh a few DOM badges; there is no page here.
+(globalThis as Record<string, unknown>).document = {
+  getElementById: () => null, querySelector: () => null, querySelectorAll: () => [],
+};
+
 const {
   getMultiListNames, getMultiList, getMultiListLanguages, getMultiListCount,
   isInMultiList, addToMultiList, removeFromMultiList,
   createMultiList, deleteMultiList, renameMultiList,
   qualifyListName, qualifyMultiListName, qualifySmartListName, parseSelected,
+  addToList, renameList, deleteList, setMultiSources, getMultiSources, getMultiListOwn,
+  getList, getListOwn, getDerivedWords, setListSources, getListSources, getListSourceCandidates, removeFromList, getListNames,
 } = await import('../../src/client/utils/word-lists.js');
 
 beforeEach(() => store.clear());
@@ -143,5 +150,101 @@ describe('qualifySmartListName / parseSelected — the three-way qualifier schem
 
   it('falls back to a legacy unqualified single entry for a plain name', () => {
     expect(parseSelected('Known', 'french')).toEqual({ kind: 'single', lang: 'french', name: 'Known' });
+  });
+});
+
+describe('aggregate lists (made of single-language lists)', () => {
+  beforeEach(() => {
+    addToList('spanish', 'Food', 'pan');
+    addToList('spanish', 'Food', 'queso');
+    addToList('french', 'Food', 'pain');
+    createMultiList('All food');
+  });
+
+  it("counts and lists its sources' words live, tagged with where they came from", () => {
+    setMultiSources('All food', [{ lang: 'spanish', list: 'Food' }, { lang: 'french', list: 'Food' }]);
+    expect(getMultiListCount('All food')).toBe(3);
+    expect(getMultiList('All food').find(e => e.word === 'pain')).toEqual({ word: 'pain', language: 'french', via: 'Food' });
+    addToList('spanish', 'Food', 'leche');
+    expect(getMultiListCount('All food')).toBe(4);
+    expect(getMultiListOwn('All food')).toEqual([]);
+  });
+
+  it('a source word counts as a member for quizzes', () => {
+    setMultiSources('All food', [{ lang: 'spanish', list: 'Food' }]);
+    expect(isInMultiList('All food', 'pan', 'spanish')).toBe(true);
+    expect(isInMultiList('All food', 'pan', 'french')).toBe(false);
+  });
+
+  it('does not double-count a word that is also added directly', () => {
+    addToMultiList('All food', 'pan', 'spanish');
+    setMultiSources('All food', [{ lang: 'spanish', list: 'Food' }]);
+    expect(getMultiList('All food').filter(e => e.word === 'pan')).toHaveLength(1);
+  });
+
+  it('survives losing its last own word, and follows a renamed or deleted source', () => {
+    addToMultiList('All food', 'x', 'spanish');
+    setMultiSources('All food', [{ lang: 'spanish', list: 'Food' }]);
+    removeFromMultiList('All food', 'x', 'spanish');
+    expect(getMultiListNames()).toContain('All food');
+
+    renameList('spanish', 'Food', 'Comida');
+    expect(getMultiSources('All food')).toEqual([{ lang: 'spanish', list: 'Comida' }]);
+    expect(getMultiListCount('All food')).toBe(2);
+
+    deleteList('spanish', 'Comida');
+    expect(getMultiSources('All food')).toEqual([]);
+    expect(getMultiListCount('All food')).toBe(0);
+  });
+});
+
+describe('single-language lists made of other lists', () => {
+  beforeEach(() => {
+    addToList('spanish', 'Food', 'pan');
+    addToList('spanish', 'Food', 'queso');
+    addToList('spanish', 'Meals', 'cena');
+  });
+
+  it('includes the sources live and says where each word came from', () => {
+    setListSources('spanish', 'Meals', [{ lang: 'spanish', list: 'Food' }]);
+    expect(getList('spanish', 'Meals')).toEqual(['cena', 'pan', 'queso']);
+    expect(getListOwn('spanish', 'Meals')).toEqual(['cena']);
+    expect([...getDerivedWords('spanish', 'Meals')]).toEqual([['pan', 'Food'], ['queso', 'Food']]);
+    addToList('spanish', 'Food', 'leche');
+    expect(getList('spanish', 'Meals')).toContain('leche');
+  });
+
+  it('follows sources through other aggregates, and a cycle cannot loop', () => {
+    addToList('spanish', 'Menu', 'plato');
+    setListSources('spanish', 'Meals', [{ lang: 'spanish', list: 'Food' }]);
+    setListSources('spanish', 'Menu', [{ lang: 'spanish', list: 'Meals' }]);
+    expect(getList('spanish', 'Menu')).toEqual(['plato', 'cena', 'pan', 'queso']);
+    setListSources('spanish', 'Food', [{ lang: 'spanish', list: 'Menu' }]);   // would close a loop
+    expect(getList('spanish', 'Menu').sort()).toEqual(['cena', 'pan', 'plato', 'queso']);
+  });
+
+  it("offers only lists that wouldn't make a loop", () => {
+    setListSources('spanish', 'Meals', [{ lang: 'spanish', list: 'Food' }]);
+    expect(getListSourceCandidates('spanish', 'Meals')).toEqual(['Food']);
+    expect(getListSourceCandidates('spanish', 'Food')).toEqual([]);   // Meals is made of Food already
+    addToList('spanish', 'Other', 'x');
+    expect(getListSourceCandidates('spanish', 'Food')).toEqual(['Other']);
+  });
+
+  it('is not deleted when its own words run out, and follows a renamed source', () => {
+    setListSources('spanish', 'Meals', [{ lang: 'spanish', list: 'Food' }]);
+    removeFromList('spanish', 'Meals', 'cena');
+    expect(getListNames('spanish')).toContain('Meals');
+    renameList('spanish', 'Food', 'Comida');
+    expect(getListSources('spanish', 'Meals')).toEqual([{ lang: 'spanish', list: 'Comida' }]);
+    expect(getList('spanish', 'Meals')).toEqual(['pan', 'queso']);
+  });
+
+  it('a cross-language list made of an aggregate list sees the whole thing', () => {
+    setListSources('spanish', 'Meals', [{ lang: 'spanish', list: 'Food' }]);
+    createMultiList('All');
+    setMultiSources('All', [{ lang: 'spanish', list: 'Meals' }]);
+    expect(getMultiListCount('All')).toBe(3);
+    expect(isInMultiList('All', 'pan', 'spanish')).toBe(true);
   });
 });

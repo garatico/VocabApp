@@ -9,6 +9,7 @@ import {
   COLOUR_GROUPS, captureColourGroup, captureGoal, captureTimedMinutes, colourGroupChanged, goalChanged, goalTypeOf,
   holdsTimedMinutes, resetColourGroup, resetGoal, resetTimedMinutes, timedMinutesChanged,
 } from './settings-extras.ts';
+import { confirmDialog } from './ui/dialog.ts';
 
 /**
  * settings-search.ts — the Settings screen's Glossary tab and the search box
@@ -125,9 +126,9 @@ function stateOf(row: HTMLElement): string {
   });
   // Toggles, dropdowns and tick boxes only. A number or text box is filled in from storage after the
   // markup is read (e.g. the timed-quiz minutes), so it says nothing about whether the row moved.
-  row.querySelectorAll<HTMLInputElement | HTMLSelectElement>('select, input[type="checkbox"], input[type="radio"]').forEach(el => {
+  row.querySelectorAll<HTMLInputElement | HTMLSelectElement>('select, input[type="checkbox"], input[type="radio"], input[type="range"], input[type="color"]').forEach(el => {
     if (el.closest('.sort-order-toggle')) return;
-    parts.push(el instanceof HTMLInputElement ? String(el.checked) : el.value);
+    parts.push(el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio') ? String(el.checked) : el.value);
   });
   return parts.join('|');
 }
@@ -144,14 +145,20 @@ function controlOps(row: HTMLElement): Array<() => void> {
     const want = group.querySelector<HTMLElement>('.sort-order-btn.active');
     if (want) ops.push(() => { if (!want.classList.contains('active')) want.click(); });
   });
-  row.querySelectorAll<HTMLInputElement | HTMLSelectElement>('select, input[type="checkbox"], input[type="radio"]').forEach(el => {
+  row.querySelectorAll<HTMLInputElement | HTMLSelectElement>('select, input[type="checkbox"], input[type="radio"], input[type="range"], input[type="color"]').forEach(el => {
     if (el.closest('.sort-order-toggle')) return;
-    if (el instanceof HTMLInputElement) {
+    if (el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio')) {
       const want = el.checked;
       ops.push(() => { if (el.checked !== want) el.click(); });
     } else {
       const want = el.value;
-      ops.push(() => { if (el.value !== want) { el.value = want; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+      ops.push(() => {
+        if (el.value === want) return;
+        el.value = want;
+        // A slider or colour box persists on 'input'; a dropdown on 'change'. Fire both.
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      });
     }
   });
   return ops;
@@ -600,8 +607,8 @@ export function bindSettingsSearch(): void {
   // Reset everything to defaults: drop every stored preference, then reload so each control (and
   // whatever reads a setting at startup) starts again from its own default. The snapshot rides
   // through the reload in sessionStorage so the page can offer Undo once it is back.
-  document.getElementById('settingsResetAll')?.addEventListener('click', () => {
-    if (!window.confirm(t('settings.resetAllConfirm', 'Reset every setting to its default?\n\nYour lists, progress, history and saved profiles are not affected.'))) return;
+  document.getElementById('settingsResetAll')?.addEventListener('click', async () => {
+    if (!await confirmDialog({ title: t('settings.resetAllTitle', 'Reset all settings?'), message: t('settings.resetAllConfirm', 'Reset every setting to its default?\n\nYour lists, progress, history and saved profiles are not affected.'), confirmLabel: t('settings.resetAllBtn', 'Reset all'), danger: true })) return;
     const before = snapshotSettings();
     if (Object.keys(before).length > 0) {
       try { window.sessionStorage.setItem(UNDO_ALL_KEY, JSON.stringify(before)); } catch { /* no undo, but the reset still works */ }

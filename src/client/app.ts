@@ -14,10 +14,11 @@ import { bindUIState, bindModeSwitch, getCurrentMode } from './ui/ui-state.ts';
 import { buildFilterUI, initListFilter, syncListFilterUI, filterWords } from './filters/word-filters.ts';
 import { estimateConjugationSize } from './modes/conjugation/verb-filters.ts';
 import { loadWords }                            from './data/data-loader.ts';
-import { initTheme }                            from './ui/theme-toggle.ts';
+import { initTheme, type ThemeValue }            from './ui/theme-toggle.ts';
 import { mountUI }                              from './ui/ui.ts';
 import { initConjControls, setSelectionChangeCallback } from './modes/conjugation/controls.ts';
 import type { Word }                            from './types.ts';
+import { mergedSizedSlice }                     from './utils/merged-pool.ts';
 import { readString, writeString, remove as removeKey } from './utils/storage.ts';
 import { mustGet }                              from './utils/dom.ts';
 import { getTriviaQuestions }                    from './data/trivia-questions.ts';
@@ -27,7 +28,7 @@ import { LANGUAGES, isoCode, supportsConjugation,
 import { availableLanguages, isPackagedApp }     from './data/vocab-source.ts';
 import { logger } from './utils/logger.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
-import { Settings, applyFontSize, setOnFilterVisibilityChange, setOnUILanguageChange, setOnSimpleModeChange, setOnExperimentalModesChange, setOnShowAdminPanelChange } from './settings.ts';
+import { Settings, applyFontSize, applyPalette, applyBackground, applyOpacity, setOnFilterVisibilityChange, setOnUILanguageChange, setOnSimpleModeChange, setOnExperimentalModesChange, setOnShowAdminPanelChange } from './settings.ts';
 import { bindSettings } from './settings-ui.ts';
 import { restoreSettingsPosition } from './settings-search.ts';
 import { refreshStreakReadouts } from './settings-streak.ts';
@@ -618,13 +619,13 @@ async function loadAndBuildFilters(lang: string): Promise<void> {
     const tagged = allLangs.map((l, i) => pools[i].map(w => ({ ...w, language: l })));
     sorted = tagged.flat();
 
-    // Split the configured size evenly across however many languages are
-    // active rather than concatenating full lists — "Top 1000" merged should
-    // still read like "Top 1000", not "Top 1000 per language". Rank Range and
-    // Level aren't a count to split — each language's pool is filtered by the
-    // same range/band independently instead.
-    const share = isMax ? Infinity : Math.max(1, Math.floor(size / allLangs.length));
-    currentBaseList = tagged.flatMap(pool => poolSlice(pool, share));
+    // "Top 1000" merged should still read like "Top 1000", not "Top 1000 per language" — and it is the
+    // 1000 most frequent words of the languages *together* (utils/merged-pool.ts), so the next word in is
+    // always the lowest-ranked one left in any of them. Rank Range and Level aren't a count to take from a
+    // merged order — each language's pool is filtered by the same range/band independently instead.
+    currentBaseList = poolMode === 'topn'
+      ? mergedSizedSlice(tagged, size, isMax, selected)
+      : tagged.flatMap(pool => poolSlice(pool, size));
   } else {
     sorted = primarySorted;
     currentBaseList = poolSlice(sorted, size);
@@ -1241,11 +1242,26 @@ void (async function init(): Promise<void> {
     } catch (err) {
       logger.error('Failed to initialize local SQLite vocab source:', err);
     }
+    // Pinch-to-zoom (touchpad or touch screen) and Ctrl +/-/0: a packaged window has no browser zoom of its own.
+    try {
+      (await import('./tauri/zoom.ts')).initAppZoom();
+    } catch (err) {
+      logger.warn('Zoom is unavailable:', err);
+    }
+    // The native title bar follows the app's Light / Dark / System choice, including one a Visual Profile applies.
+    try {
+      (await import('./tauri/window-theme.ts')).initWindowTheme((readString('theme') ?? 'system') as ThemeValue);
+    } catch (err) {
+      logger.warn('Window theme sync is unavailable:', err);
+    }
   }
 
   mountUI();
   initPWA();              // service worker + offline indicator (production only)
   applyFontSize();        // apply saved font size before anything renders
+  applyPalette();         // ...and the saved colour theme
+  applyBackground();      // ...page background
+  applyOpacity();         // ...and how transparent the cards are
   buildLanguageOptions(); // must precede restoreSettings — it sets .value
   restoreSettings();
   syncConjugationAvailability();

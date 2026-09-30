@@ -36,4 +36,8 @@ export interface SidebarKit {
     bulkHideFrom?: import('./sidebar-pickers.ts').BulkHideFrom,
     style?: { scope: string; folder: string },
   ): HTMLLIElement;
+  /** Make a section body (or one Testing Profile mode's) the place to drop things to take them out of a folder. */
+  makeRootDropTarget(el: HTMLElement, sectionId: import('./sidebar-state.ts').SidebarSectionId, keyPrefix: string): void;
+  /** Nested folder boxes for a set of folder paths (see sidebar-folders.ts). */
+  renderFolderTree: ReturnType<typeof import('./sidebar-folders.ts').createFolderKit>['renderFolderTree'];
 }

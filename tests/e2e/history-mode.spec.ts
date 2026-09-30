@@ -50,7 +50,6 @@ test('a word marked exempt is left out of Due for Review, unless the master swit
   // The per-word button shows up on the word's own row in My Lists, marked
   // "on" (excluded) since it's in the exempt set.
   await page.locator('.mode-tab[data-mode="mylists"]').click();
-  await page.locator('.ml-list-name', { hasText: 'Test' }).click();
   const exemptBtn = page.locator('.ml-due-exempt-btn');
   await expect(exemptBtn).toHaveClass(/ml-due-exempt-btn--on/);
 
@@ -61,7 +60,6 @@ test('a word marked exempt is left out of Due for Review, unless the master swit
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
 
   await page.locator('.mode-tab[data-mode="mylists"]').click();
-  await page.locator('.ml-list-name', { hasText: 'Test' }).click();
   await expect(page.locator('.ml-due-exempt-btn')).toHaveCount(0);
 
   await page.locator('.mode-tab[data-mode="history"]').click();

@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, confirmNext } from './helpers.ts';
 
 /**
  * My Lists sidebar — every section's create / rename / copy / delete, plus folders, the emoji and
@@ -42,23 +42,6 @@ function answerNext(page: Page, value?: string): void {
   page.once('dialog', d => { void (value === undefined ? d.accept() : d.accept(value)); });
 }
 
-/**
- * Answer a run of `window.confirm`s in order (true = OK, false = Cancel) —
- * unlike stacking several `page.once('dialog', ...)` calls, which all attach
- * to the *first* dialog to fire (Node's EventEmitter runs every listener
- * queued for an event when it fires once, not one listener per future
- * occurrence), this advances through `answers` one dialog at a time.
- */
-function answerDialogsInOrder(page: Page, answers: boolean[]): void {
-  let i = 0;
-  const handler = (d: import('@playwright/test').Dialog): void => {
-    const accept = answers[i++] ?? false;
-    void (accept ? d.accept() : d.dismiss());
-    if (i >= answers.length) page.off('dialog', handler);
-  };
-  page.on('dialog', handler);
-}
-
 async function createInline(page: Page, headSelector: string, name: string): Promise<void> {
   await page.locator(`${headSelector} ${NEW_BTN}`).click();
   const input = page.locator('.ml-list-item--editing .ml-list-name-input');
@@ -87,7 +70,7 @@ test('single-language lists: create, rename, copy, delete and undo', async ({ pa
   await menuAction(page, card(page, 'ml-single-item', 'Beta'), 'copy');
   await expect(card(page, 'ml-single-item', 'Beta (copy)')).toBeVisible();
 
-  answerNext(page);
+  await confirmNext(page);
   await menuAction(page, card(page, 'ml-single-item', 'Beta (copy)'), 'delete');
   await expect(card(page, 'ml-single-item', 'Beta (copy)')).toHaveCount(0);
   await expect(page.locator('.ml-undo-msg')).toContainText('Deleted "Beta (copy)"');
@@ -219,19 +202,21 @@ test('folders: delete just ungroups its lists, but can also delete them along wi
   await dragOnto(page, card(page, 'ml-single-item', 'Keepsake'), folder.locator('.ml-folder-head'));
   await expect(folder.locator('.ml-list-item', { hasText: 'Keepsake' })).toBeVisible();
 
-  // Accept the first confirm (delete the folder), dismiss the second (don't
-  // also delete its lists) — the list survives, just ungrouped.
-  answerDialogsInOrder(page, [true, false]);
+  // Choose "folder only" — the list survives, just ungrouped.
   await menuAction(page, folder.locator('.ml-folder-head'), 'delete');
+  await page.locator('.app-dialog .app-dialog-choice', { hasText: 'Delete folder only' }).click();
   await expect(page.locator('.ml-folder-head', { hasText: 'Junk' })).toHaveCount(0);
   await expect(card(page, 'ml-single-item', 'Keepsake')).toBeVisible();
 
-  // Recreate the folder around the same list and this time accept both
-  // confirms — the folder AND the list it held are gone.
+  // Recreate the folder around the same list and this time choose "folder and all lists inside" — the
+  // folder AND the list it held are gone. (Cancel leaves everything as it was.)
   const folder2 = await makeFolder(page, '.ml-single-head', 'Junk');
   await dragOnto(page, card(page, 'ml-single-item', 'Keepsake'), folder2.locator('.ml-folder-head'));
-  answerDialogsInOrder(page, [true, true]);
   await menuAction(page, folder2.locator('.ml-folder-head'), 'delete');
+  await page.locator('.app-dialog .app-dialog-cancel').click();
+  await expect(page.locator('.ml-folder-head', { hasText: 'Junk' })).toHaveCount(1);
+  await menuAction(page, folder2.locator('.ml-folder-head'), 'delete');
+  await page.locator('.app-dialog .app-dialog-choice', { hasText: 'Delete folder and all lists inside' }).click();
   await expect(page.locator('.ml-folder-head', { hasText: 'Junk' })).toHaveCount(0);
   await expect(card(page, 'ml-single-item', 'Keepsake')).toHaveCount(0);
 });
@@ -239,7 +224,7 @@ test('folders: delete just ungroups its lists, but can also delete them along wi
 test('a list card can be given a custom colour via the native colour input', async ({ page }) => {
   await createInline(page, '.ml-single-head', 'Hue');
   await menuAction(page, card(page, 'ml-single-item', 'Hue'), 'emoji');
-  await page.locator('.ml-folder-style-colors input.ml-folder-swatch--custom').fill('#123456');
+  await page.locator('.ml-folder-custom input.ml-folder-swatch--custom').fill('#123456');
   await page.mouse.click(5, 5);
   await expect(card(page, 'ml-single-item', 'Hue')).toHaveClass(/ml-list-item--colored/);
   const meta = await page.evaluate(() => (JSON.parse(localStorage.getItem('vq_lists_meta_spanish') ?? '{}') as Record<string, { color?: string }>).Hue);
@@ -258,7 +243,7 @@ test('smart lists: create, rename, copy and delete', async ({ page }) => {
   await menuAction(page, card(page, 'ml-smart-item', 'Verbs2'), 'copy');
   await expect(card(page, 'ml-smart-item', 'Verbs2 (copy)')).toBeVisible();
 
-  answerNext(page);
+  await confirmNext(page);
   await menuAction(page, card(page, 'ml-smart-item', 'Verbs2 (copy)'), 'delete');
   await expect(card(page, 'ml-smart-item', 'Verbs2 (copy)')).toHaveCount(0);
   await expect(card(page, 'ml-smart-item', 'Verbs2')).toBeVisible();
@@ -277,7 +262,7 @@ test('cross-language lists: create, rename, copy, delete and undo', async ({ pag
   await menuAction(page, card(page, 'ml-multi-item', 'Zoo2'), 'copy');
   await expect(card(page, 'ml-multi-item', 'Zoo2 (copy)')).toBeVisible();
 
-  answerNext(page);
+  await confirmNext(page);
   await menuAction(page, card(page, 'ml-multi-item', 'Zoo2 (copy)'), 'delete');
   await expect(card(page, 'ml-multi-item', 'Zoo2 (copy)')).toHaveCount(0);
   await page.locator('.ml-undo-btn').click();
@@ -349,7 +334,7 @@ test('testing profiles: create in a mode, rename, copy, delete, and a per-mode f
   await folderInput.press('Enter');
   await expect(group.locator('.ml-folder-head', { hasText: 'Drills' })).toBeVisible();
 
-  answerNext(page);
+  await confirmNext(page);
   await menuAction(page, card(page, 'ml-profile-item', 'Faster (copy)', group), 'delete');
   await expect(card(page, 'ml-profile-item', 'Faster (copy)', group)).toHaveCount(0);
   await expect(card(page, 'ml-profile-item', 'Faster', group)).toBeVisible();
@@ -378,16 +363,17 @@ test('visual profiles: create, rename, copy, delete', async ({ page }) => {
   await expect(card(page, 'ml-visual-item', 'Nights')).toBeVisible();
   await expect(page.locator('.ml-panel-title')).toContainText('Nights');   // the open panel follows the rename
 
-  answerNext(page, 'Nights (copy)');
-  await menuAction(page, card(page, 'ml-visual-item', 'Nights'), 'copy');
+  await menuAction(page, card(page, 'ml-visual-item', 'Nights'), 'copy');   // asks in the app's own dialog, not window.prompt
+  await page.locator('.app-dialog .app-dialog-input').fill('Nights (copy)');
+  await page.locator('.app-dialog .app-dialog-input').press('Enter');
   await expect(card(page, 'ml-visual-item', 'Nights (copy)')).toBeVisible();
 
-  answerNext(page);
+  await confirmNext(page);
   await menuAction(page, card(page, 'ml-visual-item', 'Nights (copy)'), 'delete');
   await expect(card(page, 'ml-visual-item', 'Nights (copy)')).toHaveCount(0);
   await expect(page.locator('.ml-panel-title')).toHaveCount(0);              // its panel closed with it
 
-  answerNext(page);
+  await confirmNext(page);
   await menuAction(page, card(page, 'ml-visual-item', 'Nights'), 'delete');
   await expect(card(page, 'ml-visual-item', 'Nights')).toHaveCount(0);
 });
@@ -400,11 +386,10 @@ test('visual profiles: selecting opens the panel without applying; the panel edi
   await page.getByLabel('Theme', { exact: true }).selectOption('dark');
   await page.getByLabel('Font Size', { exact: true }).selectOption('xl');
   expect(await storedVisual(page, 'Look')).toMatchObject({ theme: 'dark', fontSize: 'xl' });
-  await expect(page.locator('.ml-smart-desc')).toHaveText('Dark Theme · Extra Large Text · 8 More Settings');
+  await expect(page.locator('.ml-smart-desc')).toHaveText('Dark Theme · Extra Large Text · 9 More Settings');
 
-  // Editing and selecting never repaint the app; only Apply does.
+  // Editing never repaints the app; only Apply does.
   await expect(page.locator('html')).not.toHaveClass(/\bdark\b/);
-  await card(page, 'ml-visual-item', 'Look').click();
   await expect(page.locator('html')).not.toHaveClass(/\bdark\b/);
   await page.locator('.ml-panel-title-group .ml-export-btn', { hasText: 'Apply Now' }).click();
   await expect(page.locator('html')).toHaveClass(/\bdark\b/);
@@ -425,7 +410,7 @@ test('visual profiles: table columns, row density and other display settings are
   await page.getByLabel('Row Density', { exact: true }).selectOption('ultra');
   await page.getByLabel('Frequency Rank Badge', { exact: true }).selectOption('false');
   expect(((await storedVisual(page, 'Dense'))?.settings)).toMatchObject({ tableCols: '4', rowDensity: 'ultra', showRank: 'false' });
-  await expect(page.locator('.ml-smart-desc')).toContainText('8 More Settings')   // a new profile starts from every setting as it is now;
+  await expect(page.locator('.ml-smart-desc')).toContainText('9 More Settings')   // a new profile starts from every setting as it is now;
 
   // Nothing changes until Apply…
   const setting = (k: string): Promise<string | null> => page.evaluate(key => localStorage.getItem('s_' + key), k);
@@ -661,4 +646,202 @@ test('arrow keys move between cards and Enter opens the focused one', async ({ p
   expect(focusedText).not.toContain('Kb1 ');                    // focus moved off the first card
   await page.keyboard.press('Home');
   await expect(page.locator('.ml-list-item').first()).toBeFocused();
+});
+
+// ═══ Nested folders and aggregate lists ════════════════════════════════════════
+test('folders nest: a subfolder sits inside its parent, and renaming the parent carries it', async ({ page }) => {
+  await createInline(page, '.ml-single-head', 'Passport');
+  answerNext(page, 'Trips');
+  await page.locator('.ml-single-head .ml-new-folder-btn').click();
+  const trips = page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: 'Trips' }) }).first();
+
+  answerNext(page, 'Asia');
+  await menuAction(page, trips.locator('.ml-folder-head').first(), 'copy');   // "Add Subfolder"
+  const asia = trips.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: 'Asia' }) });
+  await expect(asia).toBeVisible();
+
+  await dragOnto(page, card(page, 'ml-single-item', 'Passport'), asia.locator('.ml-folder-head'));
+  await expect(asia.locator('.ml-list-item', { hasText: 'Passport' })).toBeVisible();
+
+  answerNext(page, 'Journeys');
+  await menuAction(page, trips.locator('.ml-folder-head').first(), 'rename');
+  const journeys = page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: 'Journeys' }) }).first();
+  await expect(journeys.locator('.ml-folder-group', { hasText: 'Asia' })).toBeVisible();
+  const meta = await page.evaluate(() => (JSON.parse(localStorage.getItem('vq_lists_meta_spanish') ?? '{}') as Record<string, { folders?: string[] }>).Passport);
+  expect(meta?.folders).toEqual(['Journeys/Asia']);
+});
+
+test('an aggregate cross-language list is made of single-language lists, live', async ({ page }) => {
+  await createInline(page, '.ml-single-head', 'Food');
+  await page.evaluate(() => {
+    localStorage.setItem('vq_lists_spanish', JSON.stringify({ Food: ['pan', 'queso'] }));
+    localStorage.setItem('vq_lists_multi', JSON.stringify({ Everything: [] }));
+    localStorage.setItem('vq_lists_multi_meta', JSON.stringify({ Everything: { sources: [{ lang: 'spanish', list: 'Food' }] } }));
+  });
+  await page.reload();
+  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await page.locator('.mode-tab[data-mode="mylists"]').click();
+  await card(page, 'ml-multi-item', 'Everything').click();
+  await expect(page.locator('.ml-word-list .ml-word-via', { hasText: 'Food' })).toHaveCount(2);
+  await expect(card(page, 'ml-multi-item', 'Everything').locator('.ml-list-count')).toHaveText('2 words');
+});
+
+test('drag and drop: a list moves between folders and back out, and folders nest and come back out', async ({ page }) => {
+  await createInline(page, '.ml-single-head', 'Passport');
+  const a = await makeFolder(page, '.ml-single-head', 'Alpha');
+  const b = await makeFolder(page, '.ml-single-head', 'Beta');
+  const folders = (): Promise<string[] | undefined> => page.evaluate(() =>
+    (JSON.parse(localStorage.getItem('vq_lists_meta_spanish') ?? '{}') as Record<string, { folders?: string[] }>).Passport?.folders);
+
+  // ungrouped → Alpha (added), Alpha → Beta (moved, not copied)
+  await dragOnto(page, card(page, 'ml-single-item', 'Passport'), a.locator('.ml-folder-head'));
+  await expect.poll(folders).toEqual(['Alpha']);
+  await dragOnto(page, card(page, 'ml-single-item', 'Passport', a), b.locator('.ml-folder-head'));
+  await expect.poll(folders).toEqual(['Beta']);
+
+  // out of the folder, back to ungrouped
+  await dragOnto(page, card(page, 'ml-single-item', 'Passport', b), page.locator('.ml-section-body--single .ml-root-drop'));
+  await expect.poll(folders).toEqual([]);
+
+  // a folder dropped onto another nests inside it, and drops back out to the top level
+  await dragOnto(page, b.locator('.ml-folder-head').first(), a.locator('.ml-folder-head').first());
+  const registry = (): Promise<string[]> => page.evaluate(() => JSON.parse(localStorage.getItem('ml_folders_single_spanish') ?? '[]') as string[]);
+  await expect.poll(registry).toContain('Alpha/Beta');
+  await expect(a.locator('.ml-folder-group', { hasText: 'Beta' })).toBeVisible();
+
+  const inner = a.locator('.ml-folder-group', { hasText: 'Beta' });
+  await dragOnto(page, inner.locator('.ml-folder-head').first(), page.locator('.ml-section-body--single .ml-root-drop'));
+  await expect.poll(registry).toEqual(['Alpha', 'Beta']);
+});
+
+test('a single-language list can be made of other lists of its language', async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem('vq_lists_spanish', JSON.stringify({ Food: ['pan', 'queso'], Meals: ['cena'] }));
+    localStorage.setItem('vq_lists_meta_spanish', JSON.stringify({ Meals: { sources: [{ lang: 'spanish', list: 'Food' }] } }));
+  });
+  await page.reload();
+  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await page.locator('.mode-tab[data-mode="mylists"]').click();
+  await card(page, 'ml-single-item', 'Meals').click();
+  await expect(page.locator('.ml-word-list .ml-word-via', { hasText: 'Food' })).toHaveCount(2);
+  await expect(card(page, 'ml-single-item', 'Meals').locator('.ml-list-count')).toHaveText('3 words');
+});
+
+test('an open list can be deselected by clicking it again, or with the X in the panel corner', async ({ page }) => {
+  await createInline(page, '.ml-single-head', 'Alpha');
+  await createInline(page, '.ml-single-head', 'Beta');
+  await expect(page.locator('.ml-panel-title')).toHaveText('Beta');
+
+  await card(page, 'ml-single-item', 'Beta').click();          // click the open one again
+  await expect(page.locator('.ml-panel-title')).toHaveCount(0);
+  await expect(page.locator('.ml-list-item.active')).toHaveCount(0);
+  await expect(page.locator('.ml-panel-empty')).toContainText('Select a list');
+  await expect(page.locator('.ml-panel-close')).toHaveCount(0);
+
+  await card(page, 'ml-single-item', 'Alpha').click();
+  await expect(page.locator('.ml-panel-title')).toHaveText('Alpha');
+  await page.locator('.ml-panel-close').click();               // the X
+  await expect(page.locator('.ml-panel-title')).toHaveCount(0);
+  await expect(page.locator('.ml-list-item.active')).toHaveCount(0);
+});
+
+test('Move to / Copy to: sections are labelled, collapsible and coloured like the sidebar', async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem('vq_lists_spanish', JSON.stringify({ Source: ['pan'], 'A rather long destination list name': [] , Short: [] }));
+    localStorage.setItem('vq_lists_multi', JSON.stringify({ Everywhere: [] }));
+  });
+  await page.reload();
+  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await page.locator('.mode-tab[data-mode="mylists"]').click();
+  await expect(card(page, 'ml-single-item', 'Source')).toHaveClass(/active/);   // the first list opens by itself
+  await page.locator('.ml-word-list .ml-move-btn').first().click();
+
+  const pop = page.locator('.ml-move-popover');
+  await expect(pop.locator('.ml-move-section--single .ml-move-section-head')).toContainText('Single-Language Lists');
+  await expect(pop.locator('.ml-move-section--multi .ml-move-section-head')).toContainText('Cross-Language Lists');
+
+  // as wide as its longest name: nothing is cut off
+  const clipped = await pop.locator('.ml-move-popover-item').evaluateAll(els => els.some(e => e.scrollWidth > e.clientWidth + 1));
+  expect(clipped).toBe(false);
+
+  // coloured like the sidebar's sections
+  const bars = await page.evaluate(() => {
+    const c = (sel: string): string => getComputedStyle(document.querySelector(sel) as Element).borderLeftColor;
+    return { pop: [c('.ml-move-section--single .ml-move-section-head'), c('.ml-move-section--multi .ml-move-section-head')],
+             side: [c('.ml-single-head'), c('.ml-multi-head')] };
+  });
+  expect(bars.pop).toEqual(bars.side);
+
+  // each section folds
+  const body = pop.locator('.ml-move-section--single .ml-move-section-body');
+  await expect(body).toBeVisible();
+  await pop.locator('.ml-move-section--single .ml-move-section-head').click();
+  await expect(body).toBeHidden();
+  await expect(pop.locator('.ml-move-section--multi .ml-move-section-body')).toBeVisible();
+});
+
+test('My Lists fits one screen without page scroll', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true);
+});
+
+test('the emoji picker keeps only emoji, and offers every emoji this system can draw', async ({ page }) => {
+  await createInline(page, '.ml-single-head', 'Decor');
+  await menuAction(page, card(page, 'ml-single-item', 'Decor'), 'emoji');
+  const box = page.locator('.ml-folder-style-pop input[type="text"]');
+  await box.fill('hello');                                    // plain text is discarded
+  await expect(box).toHaveValue('');
+  await box.fill('abc 🚀 def');                               // the emoji in it is kept
+  await expect(box).toHaveValue('🚀');
+  await box.press('Enter');
+  await expect(card(page, 'ml-single-item', 'Decor').locator('.ml-list-emoji')).toHaveText('🚀');
+
+  await page.locator('.ml-emoji-tab', { hasText: 'All' }).click();
+  expect(await page.locator('.ml-folder-style-quick button').count()).toBeGreaterThan(500);
+  await expect(page.locator('.ml-folder-custom')).toContainText('Custom colour');
+});
+
+test('Export lives in each list card’s gear menu, and choosing "Made of" leaves one set of stats, in the top bar', async ({ page }) => {
+  await page.evaluate(() => { localStorage.setItem('vq_lists_spanish', JSON.stringify({ Food: ['pan', 'queso'], Other: ['x'] })); });
+  await page.reload();
+  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await page.locator('.mode-tab[data-mode="mylists"]').click();
+  await expect(page.locator('.ml-panel .ml-export-btn')).toHaveCount(0);        // gone from the panel
+
+  await card(page, 'ml-single-item', 'Food').locator('.ml-menu-gear').click();
+  await page.locator('.ml-action-menu:not([hidden]) .ml-menu-item--parent', { hasText: 'Export' }).click();   // opens the submenu
+  await expect(page.locator('.ml-action-menu:not([hidden]) .ml-menu-subitem')).toHaveCount(2);
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.locator('.ml-action-menu:not([hidden]) .ml-menu-subitem', { hasText: 'Words Only' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe('Food-spanish-words.txt');
+
+  await page.locator('.ml-panel .ml-chip-dropdown', { hasText: 'Made of' }).locator('button').first().click();
+  await page.locator('.ml-panel .ml-chip-dropdown-item', { hasText: 'Other' }).locator('input').check();
+  await expect(page.locator('#myListsBar .ml-stats-row')).toHaveCount(1);
+  await expect(page.locator('.ml-panel .ml-stats-row')).toHaveCount(0);
+  await expect(page.locator('#myListsBar .ml-stat-chip--count')).toHaveText('3 Words');
+});
+
+test('gear menus list their options in one consistent order, Delete last', async ({ page }) => {
+  await createInline(page, '.ml-single-head', 'Alpha');
+  const folder = await makeFolder(page, '.ml-single-head', 'Box');
+  const labels = async (owner: Locator): Promise<string[]> => {
+    await owner.locator('.ml-menu-gear').first().click();
+    const items = (await page.locator('.ml-action-menu:not([hidden]) > .ml-menu-item').allTextContents()).map(s => s.replace(/[^A-Za-z& ]/g, '').trim());
+    await page.keyboard.press('Escape');
+    return items;
+  };
+  expect(await labels(card(page, 'ml-single-item', 'Alpha'))).toEqual(['Rename', 'Copy', 'Emoji & Colour', 'Export', 'Delete']);
+  expect(await labels(folder.locator('.ml-folder-head'))).toEqual(['Rename', 'Add Subfolder', 'Emoji & Colour', 'Hide From', 'Delete']);
+});
+
+test('the list header row: its controls, Quiz and the deselect button share one centre line', async ({ page }) => {
+  await createInline(page, '.ml-single-head', 'Alpha');
+  const centres = await page.evaluate(() => {
+    const mid = (sel: string): number => { const r = (document.querySelector(sel) as HTMLElement).getBoundingClientRect(); return r.top + r.height / 2; };
+    return [mid('.ml-panel-header .ml-chip-dropdown-toggle'), mid('.ml-panel-header .ml-quiz-btn'), mid('.ml-panel-close')];
+  });
+  expect(Math.max(...centres) - Math.min(...centres)).toBeLessThan(1.5);
 });

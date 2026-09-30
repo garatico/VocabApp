@@ -43,6 +43,59 @@ const EMOJI_CATEGORIES: { label: string; emoji: string[] }[] = [
   { label: 'Symbols', emoji: ['🎉', '⚡', '🎲', '🧩', '🔵', '🟢', '🟡', '🟣', '🔺', '⬛', '💬', '🚩'] },
 ];
 
+/** Something that draws as an emoji: a pictograph, a flag (two regional indicators) or a keycap. */
+const EMOJI_RE = /\p{Extended_Pictographic}|\p{Regional_Indicator}|\u20E3/u;
+
+/** The first emoji in `text` (as one whole character — skin tone, ZWJ family and flag included),
+ *  or '' if there isn't one. Letters and other ordinary text are dropped, not kept. */
+export function firstEmoji(text: string): string {
+  // Intl.Segmenter (whole characters) isn't in this TypeScript's lib yet; every current engine has it.
+  const Segmenter = (Intl as unknown as {
+    Segmenter?: new (l?: string, o?: { granularity: 'grapheme' }) => { segment(t: string): Iterable<{ segment: string }> };
+  }).Segmenter;
+  const parts: string[] = Segmenter
+    ? [...new Segmenter(undefined, { granularity: 'grapheme' }).segment(text)].map(s => s.segment)
+    : Array.from(text);
+  return parts.find(p => EMOJI_RE.test(p)) ?? '';
+}
+
+/** Code-point ranges the emoji live in; each point is kept only if it is an emoji (by Unicode's own
+ *  property) *and* this system's fonts can actually draw it — see systemEmoji(). */
+const EMOJI_RANGES: readonly [number, number][] = [
+  [0x1F300, 0x1F5FF], [0x1F600, 0x1F64F], [0x1F680, 0x1F6FF], [0x1F900, 0x1F9FF], [0x1FA70, 0x1FAFF],
+  [0x2600, 0x26FF], [0x2700, 0x27BF], [0x2B00, 0x2BFF], [0x2190, 0x21FF], [0x2300, 0x23FF],
+  [0x1F100, 0x1F1FF], [0x1F200, 0x1F2FF],
+];
+let systemEmojiCache: string[] | null = null;
+
+/** Every emoji this system can display, in Unicode order. The browser can't list the OS's emoji, so
+ *  this asks the font instead: each candidate is drawn to a small canvas and dropped if it comes out
+ *  the same as a code point no font has (the blank/"tofu" box). Computed once, on first use. */
+export function systemEmoji(): string[] {
+  if (systemEmojiCache) return systemEmojiCache;
+  const canvas = document.createElement('canvas');
+  canvas.width = 28; canvas.height = 28;
+  const c = canvas.getContext('2d', { willReadFrequently: true });
+  if (!c) return (systemEmojiCache = []);
+  c.font = '20px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+  c.textBaseline = 'top';
+  const draw = (ch: string): string => {
+    c.clearRect(0, 0, 28, 28);
+    c.fillText(ch, 2, 2);
+    return c.getImageData(0, 0, 28, 28).data.join(',');
+  };
+  const missing = draw('\u{10FFFF}');
+  const out: string[] = [];
+  for (const [from, to] of EMOJI_RANGES) {
+    for (let cp = from; cp <= to; cp++) {
+      const ch = String.fromCodePoint(cp);
+      if (!/\p{Emoji_Presentation}|\p{Extended_Pictographic}/u.test(ch)) continue;
+      if (draw(ch) !== missing) out.push(ch);
+    }
+  }
+  return (systemEmojiCache = out);
+}
+
 export function createPickerKit(deps: CreatePickerKitDeps) {
   const { render, closeAllActionMenus } = deps;
 
@@ -72,9 +125,16 @@ export function createPickerKit(deps: CreatePickerKitDeps) {
     emojiRow.className = 'ml-folder-style-row';
     emojiRow.append(document.createTextNode('Emoji'));
     const emojiInp = document.createElement('input');
-    emojiInp.type = 'text'; emojiInp.maxLength = 8; emojiInp.placeholder = 'None';
+    emojiInp.type = 'text'; emojiInp.placeholder = 'Paste or type an emoji';
+    emojiInp.title = 'Only an emoji is kept — ordinary text is ignored';
+    emojiInp.setAttribute('aria-label', 'Emoji');
     emojiInp.value = style.emoji ?? '';
-    emojiInp.addEventListener('change', () => { style.emoji = emojiInp.value.trim() || undefined; save(); });
+    // Emoji only: whatever is typed or pasted is cut down to its first emoji (or nothing).
+    emojiInp.addEventListener('input', () => {
+      const em = firstEmoji(emojiInp.value);
+      if (emojiInp.value !== em) emojiInp.value = em;
+    });
+    emojiInp.addEventListener('change', () => { style.emoji = firstEmoji(emojiInp.value) || undefined; emojiInp.value = style.emoji ?? ''; save(); });
     emojiRow.appendChild(emojiInp);
     pop.appendChild(emojiRow);
 
@@ -83,15 +143,19 @@ export function createPickerKit(deps: CreatePickerKitDeps) {
     // many categories exist. Starts on whichever category (if any) already
     // contains the card's current emoji, so re-opening the picker doesn't
     // always dump the user back on "Common".
-    const startCategory = EMOJI_CATEGORIES.find(c => style.emoji && c.emoji.includes(style.emoji)) ?? EMOJI_CATEGORIES[0];
+    const startCategory: { label: string; emoji: string[] } =
+      EMOJI_CATEGORIES.find(c => style.emoji && c.emoji.includes(style.emoji)) ?? EMOJI_CATEGORIES[0];
     const tabs = document.createElement('div');
     tabs.className = 'ml-emoji-tabs';
     const grid = document.createElement('div');
     grid.className = 'ml-folder-style-quick';
 
-    function paintGrid(category: typeof EMOJI_CATEGORIES[number]): void {
+    function paintGrid(category: { label: string; emoji: string[] }): void {
       grid.innerHTML = '';
-      category.emoji.forEach(em => {
+      grid.classList.toggle('ml-folder-style-quick--all', category.label === ALL_LABEL);
+      // "All" is worked out from this system's fonts the first time it is opened.
+      const list = category.label === ALL_LABEL ? systemEmoji() : category.emoji;
+      list.forEach(em => {
         const b = document.createElement('button');
         b.type = 'button'; b.textContent = em; b.title = em;
         b.addEventListener('click', () => { style.emoji = em; emojiInp.value = em; save(); });
@@ -103,7 +167,8 @@ export function createPickerKit(deps: CreatePickerKitDeps) {
       grid.appendChild(clear);
     }
 
-    EMOJI_CATEGORIES.forEach(cat => {
+    const ALL_LABEL = 'All';
+    [...EMOJI_CATEGORIES, { label: ALL_LABEL, emoji: [] }].forEach(cat => {
       const tab = document.createElement('button');
       tab.type = 'button'; tab.textContent = cat.label;
       tab.className = 'ml-emoji-tab' + (cat === startCategory ? ' ml-emoji-tab--on' : '');
@@ -124,7 +189,7 @@ export function createPickerKit(deps: CreatePickerKitDeps) {
       b.type = 'button';
       b.className = 'ml-folder-swatch' + (style.color === color ? ' ml-folder-swatch--on' : '');
       b.title = color ? color : 'No colour';
-      if (color) b.style.background = color; else b.textContent = '∅';
+      if (color) b.style.background = color; else { b.textContent = 'None'; b.classList.add('ml-folder-swatch--none'); }
       b.addEventListener('click', () => {
         style.color = color; save();
         colorRow.querySelectorAll('.ml-folder-swatch').forEach(x => x.classList.remove('ml-folder-swatch--on'));
@@ -143,6 +208,7 @@ export function createPickerKit(deps: CreatePickerKitDeps) {
     customColor.type = 'color';
     customColor.className = 'ml-folder-swatch ml-folder-swatch--custom';
     customColor.title = 'Custom colour…';
+    customColor.setAttribute('aria-label', 'Custom colour');
     const currentColor = style.color;
     customColor.value = currentColor && /^#[0-9a-f]{6}$/i.test(currentColor) ? currentColor : '#888888';
     const isPreset = (c: string | undefined): boolean => c === undefined || FOLDER_COLORS.includes(c);
@@ -152,8 +218,13 @@ export function createPickerKit(deps: CreatePickerKitDeps) {
       colorRow.querySelectorAll('.ml-folder-swatch').forEach(x => x.classList.remove('ml-folder-swatch--on'));
       customColor.classList.add('ml-folder-swatch--on');
     });
-    colorRow.appendChild(customColor);
-    pop.appendChild(colorRow);
+    // The custom picker says so in words, on its own line under the presets.
+    const customLabel = document.createElement('label');
+    customLabel.className = 'ml-folder-custom';
+    const customText = document.createElement('span');
+    customText.textContent = 'Custom colour';
+    customLabel.append(customColor, customText);
+    pop.append(colorRow, customLabel);
 
     document.body.appendChild(pop);
     const r = anchor.getBoundingClientRect();

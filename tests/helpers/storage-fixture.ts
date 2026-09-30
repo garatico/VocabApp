@@ -221,6 +221,8 @@ export async function seedRealisticStorage(store: Store): Promise<SeedResult> {
   // Edits to the built-in trivia / guess-the-blank questions (keyed by the built-in's own id).
   content.setTriviaQuestionOverride('spanish', 'builtin-tq-1', { difficulty: 'hard', questionEn: 'My rewording' });
   content.setGuessBlankQuestionOverride('spanish', 'builtin-gb-1', { difficulty: 'medium', answerEn: 'my answer' });
+  content.setConjOverrideTense('spanish', 'hablar', 'present', ['hablo', 'hablas', 'habla', 'hablamos', 'habláis', 'hablan']);
+  content.setConjOverrideTense('spanish', 'hablar', 'gerund', 'hablando');
   content.setPictureOverride('spanish', 'perro', PNG);
   content.setPictureOverride('spanish', 'gato', 'https://example.com/gato.jpg');
   claim('api');
@@ -298,7 +300,7 @@ export async function seedRealisticStorage(store: Store): Promise<SeedResult> {
 const SETTINGS_NON_DEFAULT: Record<string, string> = {
   abbreviate_grammar_hint: 'true', advanced_mode: 'true', answer_gloss_count: '3', autofill_enabled: 'true',
   chinese_script: 'pinyin', confirm_remove_word_override: 'false', conj_deselected: 'grey',
-  conj_hint_mode: 'none', conj_page_size: '25', conj_show_timer: 'true', due_exempt_enabled: 'false', due_enabled: 'false', due_soft_cap: '25',
+  conj_hint_mode: 'none', conj_page_size: '25', conj_show_timer: 'true', due_exempt_enabled: 'false', due_enabled: 'false', due_soft_cap: '25', list_picker_counts: 'false', palette: 'ocean', app_zoom: '1.25', bg_mode: 'gradient', bg_color: '#112233', bg_color2: '#445566', bg_angle: '90', app_opacity: '85',
   expand_gloss_on_match: 'false',
   filter_linking_enabled: 'false', function_word_marker: 'both', gender_indicator_style: 'dot',
   gender_indicator_visibility: 'hinted', guess_blank_max_attempts: '2', hint_mode: 'first-letter',
@@ -397,6 +399,7 @@ export async function readSemanticState(opaqueKeys: readonly string[] = []): Pro
       guessBlankOverrides: content.getGuessBlankQuestionOverrides(lang),
       pictureOverrides: content.getPictureOverrides(lang),
       wordOverrides: content.getWordOverrides(lang),
+      conjOverrides: content.getConjOverrides(lang),
       goals: streak.getGoals(lang),
     };
   }

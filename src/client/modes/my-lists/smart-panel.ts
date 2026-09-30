@@ -29,8 +29,7 @@ import { BANDS, POS_CHIPS } from './types.ts';
 import { buildChecklistDropdown, buildChipDropdown } from './chip-dropdown.ts';
 import { createPager } from './pager.ts';
 import { buildWordRow } from './row-shared.ts';
-import { buildExportControls, buildQuizButton } from './list-actions.ts';
-import { exportList } from './export-list.ts';
+import { buildQuizButton } from './list-actions.ts';
 import { qualifySmartListName } from '../../utils/word-lists.ts';
 import { getFolderRegistry, addFolder } from './folders.ts';
 import { FILTER_SCOPES, SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
@@ -77,12 +76,10 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
   freezeBtn.title = 'Copy these words into a normal, editable list';
   // Save as list + Export + Quiz at the right end of the title row, like the
   // other list types. Exported as filtered/sorted on screen.
-  let shownAll: string[] = [];
   const titleActions = document.createElement('span');
   titleActions.className = 'ml-title-actions';
   titleActions.append(
     freezeBtn,
-    ...buildExportControls(fmt => exportList(shownAll, cachedVocabMap(ctx.lang), name, ctx.lang, fmt)),
     buildQuizButton(ctx.lang, () => qualifySmartListName(ctx.lang, name)),
   );
   titleGroup.appendChild(titleActions);
@@ -540,7 +537,6 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
    */
   function refresh(): void {
     words = evaluateSmart(ctx.lang, rule, vocab);
-    shownAll = []; // set below once there is something to export
 
     count.textContent = `${words.length} words`;
     matchedNote.textContent = vocab.length
@@ -591,7 +587,6 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
       listEl.appendChild(none);
       return;
     }
-    shownAll = shown;
     // Words the learner pinned by hand (Manual Additions) rather than ones the
     // rule selected — marked on the row so the two are told apart at a glance.
     const manual = new Set(rule.manualWords.map(w => w.toLowerCase()));

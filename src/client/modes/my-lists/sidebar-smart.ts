@@ -1,7 +1,10 @@
+import { deselectAll } from './context.ts';
 import { closePopover } from './move-popover.ts';
+import { exportMenuItems } from './list-actions.ts';
 import { getSmartNames, getSmartLists, saveSmartRule, deleteSmartList, renameSmartList, evaluateSmart, DEFAULT_SMART_RULE, type SmartRule } from './smart-lists.ts';
-import { cachedVocab, fetchVocab } from './vocab-cache.ts';
+import { cachedVocab, cachedVocabMap, fetchVocab } from './vocab-cache.ts';
 import type { SidebarKit } from './sidebar-kit.ts';
+import { confirmDialog } from '../../ui/dialog.ts';
 
 /**
  * sidebar-smart.ts — the Smart Lists section (saved queries): its cards and the create / rename /
@@ -79,6 +82,12 @@ export function createSmartSection(kit: SidebarKit) {
 
       topRow.append(buildActionMenu([
         styleItem({ emoji: rule.emoji, color: rule.color }, style => saveSmartRule(ctx.lang, name, { ...getSmartLists(ctx.lang)[name], ...style })),
+        ...exportMenuItems(async () => {
+          const vocab = await fetchVocab(ctx.lang);
+          const rule = getSmartLists(ctx.lang)[name];
+          const vm = cachedVocabMap(ctx.lang);
+          return (rule ? evaluateSmart(ctx.lang, rule, vocab) : []).map(w => ({ word: w, translation: vm?.get(w)?.translation }));
+        }, `${name}-${ctx.lang}`),
         { glyph: '⧉', label: 'Copy', title: 'Duplicate smart list', tone: 'copy', onClick: () => {
           const proposed = suggestSmartCopyName(ctx.lang, name);
           const input = window.prompt(`Name for the copy of "${name}":`, proposed);
@@ -95,8 +104,8 @@ export function createSmartSection(kit: SidebarKit) {
         { glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename', onClick: () => {
           startRenameSmart(name, li, nameSpan);
         } },
-        { glyph: '🗑', label: 'Delete', title: 'Delete this smart list', tone: 'delete', onClick: () => {
-          if (!window.confirm(`Delete smart list "${name}"? The words themselves are untouched.`)) return;
+        { glyph: '🗑', label: 'Delete', title: 'Delete this smart list', tone: 'delete', onClick: async () => {
+          if (!await confirmDialog({ title: `Delete "${name}"?`, message: 'The words themselves are untouched.', confirmLabel: 'Delete smart list', danger: true })) return;
           deleteSmartList(ctx.lang, name);
           if (ctx.selectedSmart === name) ctx.selectedSmart = null;
           render();
@@ -105,6 +114,7 @@ export function createSmartSection(kit: SidebarKit) {
       const em = emojiSpan(rule.emoji); if (em) topRow.prepend(em);
       li.append(topRow);
       li.addEventListener('click', () => {
+        if (li.classList.contains('active')) { deselectAll(ctx); closePopover(); render(); return; }
         ctx.selectedSmart = name; ctx.selectedMultiList = null; ctx.selectedProfile = null; ctx.selectedVisual = null;
         closePopover(); render();
       });

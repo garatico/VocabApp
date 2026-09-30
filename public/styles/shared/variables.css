@@ -92,6 +92,13 @@
   /* Extra surface step between --surface2 and --border */
   --surface3: #e6e5df;
 
+  /* The same four backgrounds, always opaque: what Settings → Appearance → Transparency mixes toward
+     transparent (below), and what popovers and the page itself keep. */
+  --bg-solid:       #f5f4f0;
+  --surface-solid:  #ffffff;
+  --surface2-solid: #f0efe9;
+  --surface3-solid: #e6e5df;
+
   /* My Lists — one accent per list kind (ordinary lists keep --accent),
      so Smart Lists and Cross-Language Lists read as their own section in the
      sidebar rather than three identically-colored groups. */
@@ -190,6 +197,11 @@ html.dark {
   --focus-ring: rgba(90, 158, 114, 0.25);
   --surface3:   #333229;
 
+  --bg-solid:       #1a1917;
+  --surface-solid:  #23221f;
+  --surface2-solid: #2c2b27;
+  --surface3-solid: #333229;
+
   --lang-spanish-bg:    #5a2e24;
   --lang-portuguese-bg: #1f5236;
   --lang-italian-bg:    #4a2d68;
@@ -209,4 +221,80 @@ html.dark {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ── Colour themes ────────────────────────────────────────────────
+   Settings → Appearance → Color theme sets data-palette on <html> (settings.ts's applyPalette).
+   Each one re-points the accent family, light and dark; 'forest' is the default set above and has
+   no attribute. Solid --accent fills carry white (light) / near-black (dark) text, so every accent
+   here is chosen to keep that pair above 4.5:1. ─────────────────────────────────────────────── */
+html[data-palette="ocean"] {
+  --accent: #1f5f99; --accent-light: #e6f0f9; --accent-hover: #164a78;
+  --focus-ring: rgba(31, 95, 153, 0.15);
+}
+html.dark[data-palette="ocean"] {
+  --accent: #6aa9e0; --accent-light: #14263a; --accent-hover: #86bcec; --on-accent: #0b1622;
+  --focus-ring: rgba(106, 169, 224, 0.25);
+}
+html[data-palette="violet"] {
+  --accent: #6a4bb0; --accent-light: #eeeaf8; --accent-hover: #533a91;
+  --focus-ring: rgba(106, 75, 176, 0.15);
+}
+html.dark[data-palette="violet"] {
+  --accent: #a48ce0; --accent-light: #241b3a; --accent-hover: #b9a5eb; --on-accent: #150f24;
+  --focus-ring: rgba(164, 140, 224, 0.25);
+}
+html[data-palette="rose"] {
+  --accent: #b0335a; --accent-light: #fbe9ef; --accent-hover: #8f2748;
+  --focus-ring: rgba(176, 51, 90, 0.15);
+}
+html.dark[data-palette="rose"] {
+  --accent: #e57a9c; --accent-light: #33141f; --accent-hover: #ee94b0; --on-accent: #240c14;
+  --focus-ring: rgba(229, 122, 156, 0.25);
+}
+html[data-palette="amber"] {
+  --accent: #a05a00; --accent-light: #fbf0dc; --accent-hover: #804800;
+  --focus-ring: rgba(160, 90, 0, 0.15);
+}
+html.dark[data-palette="amber"] {
+  --accent: #e0a24a; --accent-light: #33230d; --accent-hover: #ebb668; --on-accent: #221606;
+  --focus-ring: rgba(224, 162, 74, 0.25);
+}
+html[data-palette="teal"] {
+  --accent: #0f766e; --accent-light: #dff3f0; --accent-hover: #0b5d56;
+  --focus-ring: rgba(15, 118, 110, 0.15);
+}
+html.dark[data-palette="teal"] {
+  --accent: #4fb8ad; --accent-light: #10292a; --accent-hover: #6ccbc1; --on-accent: #0a1c1c;
+  --focus-ring: rgba(79, 184, 173, 0.25);
+}
+html[data-palette="slate"] {
+  --accent: #475569; --accent-light: #eceff3; --accent-hover: #334155;
+  --focus-ring: rgba(71, 85, 105, 0.15);
+}
+html.dark[data-palette="slate"] {
+  --accent: #94a3b8; --accent-light: #1c232c; --accent-hover: #b0bccd; --on-accent: #10151b;
+  --focus-ring: rgba(148, 163, 184, 0.25);
+}
+
+/* ── Transparency ─────────────────────────────────────────────────
+   Settings → Appearance → Transparency sets data-translucent and --app-opacity (a percentage) on <html>.
+   The four background tokens then become that much of their solid colour over whatever is behind, so a
+   chosen page background shows through every card and panel. Popovers, menus and dialogs opt back out:
+   text floating over other text has to stay readable. ─────────────────────────────────────────── */
+html[data-translucent] {
+  --bg:       color-mix(in srgb, var(--bg-solid) var(--app-opacity), transparent);
+  --surface:  color-mix(in srgb, var(--surface-solid) var(--app-opacity), transparent);
+  --surface2: color-mix(in srgb, var(--surface2-solid) var(--app-opacity), transparent);
+  --surface3: color-mix(in srgb, var(--surface3-solid) var(--app-opacity), transparent);
+}
+html[data-translucent] :is(
+  .app-dialog, .list-picker-popover, .preset-picker-popover, .ml-action-menu, .ml-chip-dropdown-panel,
+  .ml-folder-style-pop, .ml-move-popover, .ml-undo-toast, .toast, .ml-variation-dialog, .filter-popover-head,
+  [role="dialog"], [role="tooltip"], [role="menu"]
+) {
+  --bg: var(--bg-solid);
+  --surface: var(--surface-solid);
+  --surface2: var(--surface2-solid);
+  --surface3: var(--surface3-solid);
 }

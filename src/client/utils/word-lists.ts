@@ -60,7 +60,14 @@ export interface ListMeta {
   emoji?: string;
   /** Optional accent colour for the list's own sidebar card, same palette/picker as a folder's. */
   color?: string;
+  /** Lists this list is *made of* (cross-language lists, and single-language lists made of
+   *  others in the same language). Their words count as members live — nothing is copied, so
+   *  edits to a source show up here at once. */
+  sources?: ListSource[];
 }
+
+/** One single-language list an aggregate cross-language list draws from. */
+export interface ListSource { lang: string; list: string; }
 
 /** `meta.folders` if the caller already migrated, otherwise `[meta.folder]`
  *  folded in — the one place every reader of a list's folders should go
@@ -117,6 +124,9 @@ export function setMultiListMeta(listName: string, meta: ListMeta): void {
 export interface MultiListEntry {
   word:     string;
   language: string;
+  /** Only on entries returned by getMultiList(): set when the word is here because a source
+   *  list (see ListMeta.sources) holds it, not because it was added to this list itself. */
+  via?:     string;
 }
 
 type MultiListStore = Record<string, MultiListEntry[]>;
@@ -168,9 +178,36 @@ export function getMultiListNames(): string[] {
   return Object.keys(loadMultiStore());
 }
 
-export function getMultiList(listName: string): MultiListEntry[] {
+/** Only the words added to this list itself — no source lists' words (backups, edits). */
+export function getMultiListOwn(listName: string): MultiListEntry[] {
   const store = loadMultiStore();
   return store[listName] ? [...store[listName]] : [];
+}
+
+export function getMultiSources(listName: string): ListSource[] {
+  return getMultiListMeta(listName).sources ?? [];
+}
+
+/** Sources whose list still exists — a deleted source simply contributes nothing. */
+function liveSources(listName: string): ListSource[] {
+  return getMultiSources(listName).filter(s => s.list in loadStore(s.lang));
+}
+
+/** Every member: the list's own words, then each source's (skipping repeats). */
+export function getMultiList(listName: string): MultiListEntry[] {
+  const own = getMultiListOwn(listName);
+  const sources = liveSources(listName);
+  if (sources.length === 0) return own;
+  const seen = new Set(own.map(e => e.language + '\u0000' + e.word));
+  for (const s of sources) {
+    for (const word of getList(s.lang, s.list)) {
+      const k = s.lang + '\u0000' + word;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      own.push({ word, language: s.lang, via: s.list });
+    }
+  }
+  return own;
 }
 
 /** Distinct languages present — empty for a new list with no words yet. */
@@ -180,7 +217,8 @@ export function getMultiListLanguages(listName: string): string[] {
 
 export function isInMultiList(listName: string, word: string, language: string): boolean {
   const store = loadMultiStore();
-  return !!store[listName]?.some(e => e.word === word && e.language === language);
+  if (store[listName]?.some(e => e.word === word && e.language === language)) return true;
+  return liveSources(listName).some(s => s.lang === language && getList(language, s.list).includes(word));
 }
 
 export function addToMultiList(listName: string, word: string, language: string): void {
@@ -202,7 +240,8 @@ export function removeFromMultiList(listName: string, word: string, language: st
   const store = loadMultiStore();
   if (!store[listName]) return;
   store[listName] = store[listName].filter(e => !(e.word === word && e.language === language));
-  if (store[listName].length === 0) delete store[listName];
+  // An aggregate list is defined by its sources, so running out of own words doesn't end it.
+  if (store[listName].length === 0 && getMultiSources(listName).length === 0) delete store[listName];
   saveMultiStore(store);
 
   const dates = loadMultiAddedDates();
@@ -258,7 +297,37 @@ export function renameMultiList(oldName: string, newName: string): boolean {
 }
 
 export function getMultiListCount(listName: string): number {
-  return loadMultiStore()[listName]?.length ?? 0;
+  return getMultiList(listName).length;
+}
+
+export function setMultiSources(listName: string, sources: ListSource[]): void {
+  const meta = getMultiListMeta(listName);
+  setMultiListMeta(listName, { ...meta, sources: sources.length ? sources : undefined });
+}
+
+/** A single-language list was renamed or deleted (`newName` null): keep aggregates pointing at it. */
+function retargetSources(lang: string, oldName: string, newName: string | null): void {
+  const store = loadMultiMeta();
+  let changed = false;
+  for (const meta of Object.values(store)) {
+    if (!meta.sources?.some(s => s.lang === lang && s.list === oldName)) continue;
+    meta.sources = meta.sources.flatMap(s =>
+      s.lang !== lang || s.list !== oldName ? [s] : newName ? [{ lang, list: newName }] : []);
+    if (meta.sources.length === 0) delete meta.sources;
+    changed = true;
+  }
+  if (changed) saveMultiMeta(store);
+
+  const singles = loadMeta(lang);
+  let singlesChanged = false;
+  for (const meta of Object.values(singles)) {
+    if (!meta.sources?.some(s => s.lang === lang && s.list === oldName)) continue;
+    meta.sources = meta.sources.flatMap(s =>
+      s.lang !== lang || s.list !== oldName ? [s] : newName ? [{ lang, list: newName }] : []);
+    if (meta.sources.length === 0) delete meta.sources;
+    singlesChanged = true;
+  }
+  if (singlesChanged) saveMeta(lang, singles);
 }
 
 /**
@@ -519,9 +588,60 @@ export function getListNames(lang: string): string[] {
   return Object.keys(store);
 }
 
-export function getList(lang: string, listName: string): string[] {
+/** Only the words added to this list itself — no source lists' words (backups, undo). */
+export function getListOwn(lang: string, listName: string): string[] {
   const store = loadStore(lang);
   return store[listName] ? [...store[listName]] : [];
+}
+
+/** word → the source list it is here through, for every word this list has only because of
+ *  a source (own words are left out). Sources are followed through other aggregate lists,
+ *  each list once, so a cycle can't loop. */
+function collectList(
+  lang: string, name: string, seen: Set<string>, into: Map<string, string | undefined>, via?: string,
+): void {
+  if (seen.has(name)) return;
+  seen.add(name);
+  const store = loadStore(lang);
+  for (const w of store[name] ?? []) if (!into.has(w)) into.set(w, via);
+  for (const s of loadMeta(lang)[name]?.sources ?? []) {
+    if (s.lang === lang && s.list in store) collectList(lang, s.list, seen, into, via ?? s.list);
+  }
+}
+
+/** Every member: the list's own words, then its sources' (skipping repeats). */
+export function getList(lang: string, listName: string): string[] {
+  const into = new Map<string, string | undefined>();
+  collectList(lang, listName, new Set(), into);
+  return [...into.keys()];
+}
+
+export function getDerivedWords(lang: string, listName: string): Map<string, string> {
+  const into = new Map<string, string | undefined>();
+  collectList(lang, listName, new Set(), into);
+  const derived = new Map<string, string>();
+  for (const [w, via] of into) if (via) derived.set(w, via);
+  return derived;
+}
+
+export function getListSources(lang: string, listName: string): ListSource[] {
+  return getListMeta(lang, listName).sources ?? [];
+}
+
+export function setListSources(lang: string, listName: string, sources: ListSource[]): void {
+  setListMeta(lang, listName, { ...getListMeta(lang, listName), sources: sources.length ? sources : undefined });
+}
+
+/** Lists of `lang` that `listName` could be made of: not itself, and not one that is (through
+ *  its own sources) already made of it. */
+export function getListSourceCandidates(lang: string, listName: string): string[] {
+  const dependsOn = (name: string, target: string, seen = new Set<string>()): boolean => {
+    if (name === target) return true;
+    if (seen.has(name)) return false;
+    seen.add(name);
+    return getListSources(lang, name).some(s => s.lang === lang && dependsOn(s.list, target, seen));
+  };
+  return getListNames(lang).filter(n => n !== listName && !dependsOn(n, listName));
 }
 
 export function getAllListedWords(lang: string): Set<string> {
@@ -568,7 +688,8 @@ export function removeFromList(lang: string, listName: string, word: string): vo
   const store = loadStore(lang);
   if (!store[listName]) return;
   store[listName] = store[listName].filter(w => w !== word);
-  if (store[listName].length === 0) delete store[listName];
+  // An aggregate list is defined by its sources, so running out of own words doesn't end it.
+  if (store[listName].length === 0 && getListSources(lang, listName).length === 0) delete store[listName];
   saveStore(lang, store);
   refreshCountBadge(lang);
 
@@ -599,6 +720,7 @@ export function deleteList(lang: string, listName: string): void {
 
   const meta = loadMeta(lang);
   if (meta[listName]) { delete meta[listName]; saveMeta(lang, meta); }
+  retargetSources(lang, listName, null);
 }
 
 export function renameList(lang: string, oldName: string, newName: string): boolean {
@@ -621,6 +743,7 @@ export function renameList(lang: string, oldName: string, newName: string): bool
     delete meta[oldName];
     saveMeta(lang, meta);
   }
+  retargetSources(lang, oldName, newName);
   return true;
 }
 

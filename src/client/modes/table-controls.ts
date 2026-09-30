@@ -657,6 +657,9 @@ function renderCurrentPage(): void {
 
   updatePagers();
   renderProgress();
+  // The checkboxes were just rebuilt, so the Add-to-list(s) button must be re-read from them: on a
+  // restart (Retry / Start Quiz) it otherwise kept the old quiz's count, enabled with nothing checked.
+  syncBulkAddButton();
 }
 
 /** Move to a page, keeping every answer entered so far. */

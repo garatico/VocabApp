@@ -30,6 +30,7 @@ import { Settings } from '../settings.ts';
 import { buildProfileEditorGroups } from '../modes/my-lists/profile-panel.ts';
 import { getFolderRegistry, getFolderStyle } from '../modes/my-lists/folders.ts';
 import { isFolderCollapsed, setFolderCollapsed } from '../modes/my-lists/sidebar-state.ts';
+import { confirmDialog } from './dialog.ts';
 
 export interface PresetPickerOptions {
   anchorEl: HTMLElement;
@@ -339,9 +340,9 @@ export function openPresetPicker({ anchorEl, mode, onApply }: PresetPickerOption
       delBtn.className   = 'preset-picker-delete';
       delBtn.textContent = '×';
       delBtn.title       = `Delete "${name}"`;
-      delBtn.addEventListener('click', e => {
+      delBtn.addEventListener('click', async e => {
         e.stopPropagation();
-        if (!window.confirm(`Delete profile "${name}"?`)) return;
+        if (!await confirmDialog({ title: `Delete "${name}"?`, message: 'The testing profile will be removed.', confirmLabel: 'Delete profile', danger: true })) return;
         deletePreset(mode, name);
         if (expandedName === name) closeEditor();
         render();

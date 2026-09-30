@@ -13,7 +13,10 @@ const store = new Map<string, string>();
   key: (i: number) => [...store.keys()][i] ?? null,
 };
 
-const { addFolder, getFolderRegistry, renameFolder, removeFolder, getFolderStyle, setFolderStyle } =
+const {
+  addFolder, getFolderRegistry, renameFolder, removeFolder, getFolderStyle, setFolderStyle,
+  folderLeaf, folderParent, withAncestors, childFolders, isInFolderTree, moveFolderPath,
+} =
   await import('../../src/client/modes/my-lists/folders.js');
 
 beforeEach(() => store.clear());
@@ -71,5 +74,55 @@ describe('removeFolder (for contrast with rename)', () => {
     addFolder('single_spanish', 'Trips');
     removeFolder('single_spanish', 'Trips');
     expect(getFolderRegistry('single_spanish')).toEqual([]);
+  });
+});
+
+describe('nested folders', () => {
+  it('a typed path becomes a nested folder, tidied', () => {
+    expect(addFolder('single_spanish', ' Verbs / Irregular ')).toBe(true);
+    expect(getFolderRegistry('single_spanish')).toEqual(['Verbs/Irregular']);
+  });
+
+  it('splits a path into leaf and parent', () => {
+    expect(folderLeaf('A/B/C')).toBe('C');
+    expect(folderParent('A/B/C')).toBe('A/B');
+    expect(folderParent('A')).toBe('');
+  });
+
+  it('fills in the levels above a folder and finds its children', () => {
+    const all = withAncestors(['A/B/C', 'A/D', 'E']);
+    expect(all.sort()).toEqual(['A', 'A/B', 'A/B/C', 'A/D', 'E']);
+    expect(childFolders(all, '')).toEqual(['A', 'E']);
+    expect(childFolders(all, 'A')).toEqual(['A/B', 'A/D']);
+  });
+
+  it('a tree is a folder and everything beneath it, not a name prefix', () => {
+    expect(isInFolderTree('A/B', 'A')).toBe(true);
+    expect(isInFolderTree('A', 'A')).toBe(true);
+    expect(isInFolderTree('Animals', 'A')).toBe(false);
+    expect(moveFolderPath('A/B', 'A', 'X')).toBe('X/B');
+    expect(moveFolderPath('Animals', 'A', 'X')).toBe('Animals');
+  });
+
+  it('renaming a folder carries its subfolders and their styles', () => {
+    addFolder('s', 'A/B');
+    addFolder('s', 'A/B/C');
+    setFolderStyle('s', 'A/B/C', { emoji: '🌱' });
+    expect(renameFolder('s', 'A', 'Z')).toBe(true);
+    expect(getFolderRegistry('s')).toEqual(['Z/B', 'Z/B/C']);
+    expect(getFolderStyle('s', 'Z/B/C')).toEqual({ emoji: '🌱', color: undefined });
+  });
+
+  it('refuses to move a folder inside itself', () => {
+    addFolder('s', 'A');
+    expect(renameFolder('s', 'A', 'A/B')).toBe(false);
+  });
+
+  it('removing a folder removes its subfolders too', () => {
+    addFolder('s', 'A');
+    addFolder('s', 'A/B');
+    addFolder('s', 'Animals');
+    removeFolder('s', 'A');
+    expect(getFolderRegistry('s')).toEqual(['Animals']);
   });
 });

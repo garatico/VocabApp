@@ -27,6 +27,7 @@
 import {
   getMultiList, getMultiListLanguages, removeFromMultiList, addToMultiList, isInMultiList,
   getMultiAddedDate, getMultiListMeta, setMultiListMeta, metaFolders,
+  getMultiSources, setMultiSources, getListNames,
   type MultiListEntry,
 } from '../../utils/word-lists.ts';
 import { FILTER_SCOPES, SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
@@ -46,8 +47,7 @@ import {
   POS_ABBREV, POS_CHIPS, BANDS, type SortMode, type VocabEntry,
 } from './types.ts';
 import { appendCountChip, appendMasteredChip, buildWordRow } from './row-shared.ts';
-import { buildExportControls, buildQuizButton } from './list-actions.ts';
-import { exportRows } from './export-list.ts';
+import { buildQuizButton } from './list-actions.ts';
 import { qualifyMultiListName } from '../../utils/word-lists.ts';
 
 const SORT_OPTIONS: readonly [SortMode, string][] = [
@@ -99,13 +99,7 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
   statsRow.className = 'ml-stats-row';
   const titleActions = document.createElement('span');
   titleActions.className = 'ml-title-actions';
-  titleActions.append(
-    ...buildExportControls(fmt => exportRows(
-      visible.map(e => ({ word: e.word, translation: cachedVocabMap(e.language)?.get(e.word)?.translation })),
-      listName, fmt,
-    )),
-    buildQuizButton(ctx.lang, () => qualifyMultiListName(listName)),
-  );
+  titleActions.append(buildQuizButton(ctx.lang, () => qualifyMultiListName(listName)));
   titleGroup.append(statsRow, titleActions);
   header.appendChild(titleGroup);
 
@@ -207,7 +201,26 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
     },
   );
 
-  filterDropdownsRow.append(langBadge, posDropdown.wrap, bandDropdown.wrap, folderDropdown.wrap, hideFromDropdown.wrap);
+  // Aggregate lists: single-language lists this one is made of. Their words are members live
+  // (nothing is copied), shown read-only in the list below with the list they came from.
+  const sourceKey = (lang: string, list: string): string => lang + '\u0000' + list;
+  const sourceSelected = new Set(getMultiSources(listName).map(s => sourceKey(s.lang, s.list)));
+  const sourceOptions = LANGUAGES.flatMap(l =>
+    getListNames(l.name).map(list => ({ value: sourceKey(l.name, list), label: `${list} (${l.label})` })));
+  const sourceDropdown = buildChecklistDropdown(
+    'Made of', sourceOptions, sourceSelected,
+    () => {
+      setMultiSources(listName, [...sourceSelected].map(k => {
+        const [lang, list] = k.split('\u0000');
+        return { lang, list };
+      }));
+      ctx.renderSidebar(false);
+      renderMultiPanel(ctx, listName);
+    },
+  );
+  sourceDropdown.wrap.title = 'Build this list from single-language lists instead of copying their words';
+
+  filterDropdownsRow.append(langBadge, posDropdown.wrap, bandDropdown.wrap, folderDropdown.wrap, sourceDropdown.wrap, hideFromDropdown.wrap);
 
   header.appendChild(filterDropdownsRow);
   ctx.panel.appendChild(header);
@@ -392,7 +405,8 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
     selectedKeys.clear(); renderRows();
   });
   bulkRemove.addEventListener('click', () => {
-    const toRemove = visible.filter(e => selectedKeys.has(entryKey(e)));
+    // Words that are here through a source list can only be removed from that list.
+    const toRemove = visible.filter(e => selectedKeys.has(entryKey(e)) && !e.via);
     if (toRemove.length === 0) return;
     toRemove.forEach(e => {
       removeFromMultiList(listName, e.word, e.language);
@@ -523,6 +537,13 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
       });
     });
 
+    const viaBadge = entry.via ? document.createElement('span') : null;
+    if (viaBadge) {
+      viaBadge.className = 'ml-word-via';
+      viaBadge.textContent = `🔗 ${entry.via}`;
+      viaBadge.title = `Comes from the list "${entry.via}" — change it there`;
+    }
+
     return buildWordRow({
       lang: entry.language, word: entry.word, entry: ve,
       mastered: getMastered(entry.language).has(entry.word), filter: filterQuery,
@@ -530,7 +551,8 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
       addedDate: getMultiAddedDate(listName, entry.language, entry.word),
       redraw: renderRows,
       onToggleExpand: () => { expandedKey = expandedKey === key ? null : key; renderRows(); },
-      leading: [check], beforePos: [buildLangBadge([entry.language])], extraActions: [moveBtn, removeBtn],
+      leading: [check], beforePos: [buildLangBadge([entry.language]), ...(viaBadge ? [viaBadge] : [])],
+      extraActions: entry.via ? [] : [moveBtn, removeBtn],
     });
   }
 

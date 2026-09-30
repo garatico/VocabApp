@@ -88,3 +88,19 @@ test('quiz feedback is a live region', async ({ page }) => {
   await open(page, 'light');
   await expect(page.locator('#tableFeedback')).toHaveAttribute('role', 'status');
 });
+
+// Every colour theme (Settings → Appearance) keeps the audit at zero, in both light and dark.
+for (const palette of ['ocean', 'violet', 'rose', 'amber', 'teal', 'slate'] as const) {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`colour theme "${palette}" has no axe violations (${theme})`, async ({ page }) => {
+      await page.addInitScript(p => window.localStorage.setItem('s_palette', p), palette);
+      await open(page, theme);
+      expect(await page.evaluate(() => document.documentElement.dataset.palette)).toBe(palette);
+      for (const tab of ['table', 'mylists', 'settings'] as const) {
+        await page.locator(`.mode-tab[data-mode="${tab}"]`).click();
+        await page.waitForTimeout(300);
+        expect(await violationsOf(page), `${tab}`).toEqual([]);
+      }
+    });
+  }
+}

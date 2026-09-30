@@ -6,6 +6,8 @@
   "permissions": [
     "core:path:default",
     "core:path:allow-resolve-directory",
+    "core:webview:allow-set-webview-zoom",
+    "core:window:allow-set-theme",
     "sql:default",
     "sql:allow-execute",
     {

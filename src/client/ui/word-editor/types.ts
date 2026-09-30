@@ -91,7 +91,7 @@ export interface WordEditorAdapter {
   /** Drops every edit made to `key`, returning the word as it originally is. */
   revertWord?(key: string, lang: string): Promise<WordData>;
   /** Asked before a revert; return false to cancel. Omitted = never ask. */
-  confirmRevert?(key: string): boolean;
+  confirmRevert?(key: string): boolean | Promise<boolean>;
   /** Deletes a word the user added. */
   deleteWord?(key: string, lang: string): Promise<void>;
 }
@@ -112,4 +112,14 @@ export interface WordEditorOptions {
   initialLang?: string;
   /** Renders a language flag next to the picker; omitted = none. */
   langFlag?: (lang: string) => HTMLElement | null;
+  /**
+   * An extra button in the form header, shown only for words `appliesTo` accepts — how My Content sends a
+   * selected verb on to its Conjugations tab. `onClick` gets the word and the language it is being edited in.
+   */
+  hostAction?: {
+    label: string;
+    title?: string;
+    appliesTo: (word: WordData) => boolean;
+    onClick: (word: WordData, lang: string) => void;
+  };
 }

@@ -43,6 +43,16 @@ export interface VisualSettingDef {
 const ON_OFF = [['true', 'On'], ['false', 'Off']] as const;
 
 export const VISUAL_SETTINGS: readonly VisualSettingDef[] = [
+  { key: 'palette', label: 'Color Theme', group: 'appearance', controlId: 'settingPalette', dataAttr: 'palette',
+    storageKey: 'palette', fallback: 'forest', options: [
+      ['forest', 'Forest'],
+      ['ocean', 'Ocean'],
+      ['violet', 'Violet'],
+      ['rose', 'Rose'],
+      ['amber', 'Amber'],
+      ['teal', 'Teal'],
+      ['slate', 'Slate'],
+    ] },
   { key: 'tableCols', label: 'Columns', group: 'layout', controlId: 'settingCols', dataAttr: 'cols',
     storageKey: 'table_cols', fallback: '2', options: [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']] },
   { key: 'rowDensity', label: 'Row Density', group: 'layout', controlId: 'settingTableRowDensity', dataAttr: 'density',
