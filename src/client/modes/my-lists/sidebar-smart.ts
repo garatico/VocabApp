@@ -9,7 +9,7 @@ import type { SidebarKit } from './sidebar-kit.ts';
  */
 
 export function createSmartSection(kit: SidebarKit) {
-  const { ctx, render, sectionHead, buildActionMenu, emojiSpan, emojiItem, makeListDraggable, renderEmptyFolderPlaceholders } = kit;
+  const { ctx, render, sectionHead, buildActionMenu, emojiSpan, styleItem, makeListDraggable, renderEmptyFolderPlaceholders } = kit;
 
   // ── Smart lists ────────────────────────────────────────────────────────────
 
@@ -54,6 +54,7 @@ export function createSmartSection(kit: SidebarKit) {
       li.className = 'ml-list-item ml-list-item--full ml-smart-item'
         + (name === ctx.selectedSmart ? ' active' : '');
       li.dataset.folder = folder;
+      if (rule.color) { li.classList.add('ml-list-item--colored'); li.style.setProperty('--list-color', rule.color); }
       makeListDraggable(li, { kind: 'smart', lang: ctx.lang, name });
 
       const topRow = document.createElement('div');
@@ -77,7 +78,7 @@ export function createSmartSection(kit: SidebarKit) {
       topRow.append(countSpan);
 
       topRow.append(buildActionMenu([
-        emojiItem(rule.emoji, emoji => saveSmartRule(ctx.lang, name, { ...getSmartLists(ctx.lang)[name], emoji })),
+        styleItem({ emoji: rule.emoji, color: rule.color }, style => saveSmartRule(ctx.lang, name, { ...getSmartLists(ctx.lang)[name], ...style })),
         { glyph: '⧉', label: 'Copy', title: 'Duplicate smart list', tone: 'copy', onClick: () => {
           const proposed = suggestSmartCopyName(ctx.lang, name);
           const input = window.prompt(`Name for the copy of "${name}":`, proposed);

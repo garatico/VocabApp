@@ -49,3 +49,22 @@ test('Give Up offers a "Practice missed" run of just the wrong cards', async ({ 
   // The just-answered word is gone from the retried set.
   await expect(page.locator(`.picture-card-input[data-word="${answer}"]`)).toHaveCount(0);
 });
+
+test('Sudden Death marks a card missed the instant a typo can no longer become the answer', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem('s_sudden_death', 'true'));
+  await startMode(page, 'picture');
+
+  const cards = page.locator('.picture-card');
+  const firstInput = cards.first().locator('.picture-card-input');
+  const answer = await firstInput.getAttribute('data-word') ?? '';
+
+  // A prefix of the real answer still leaves the card open.
+  await firstInput.fill(answer.slice(0, 1));
+  await expect(cards.first()).not.toHaveClass(/revealed/);
+  await expect(firstInput).toBeEnabled();
+
+  await firstInput.fill('zzz-definitely-not-the-answer');
+  await expect(cards.first()).toHaveClass(/revealed/);
+  await expect(firstInput).toBeDisabled();
+  await expect(firstInput).not.toHaveValue('zzz-definitely-not-the-answer');
+});

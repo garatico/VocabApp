@@ -182,7 +182,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   // declarations further down, so they can be passed from here.
 
   const { buildActionMenu, closeAllActionMenus, emojiSpan } = createMenuKit();
-  const { emojiItem, openFolderStylePicker, openHideFromPicker } =
+  const { styleItem, openFolderStylePicker, openHideFromPicker } =
     createPickerKit({ render, closeAllActionMenus });
   const { makeListDraggable, makeFolderDropTarget } = createDndKit({ render });
   const { sectionHead, renderEmptyFolderPlaceholders, buildFolderGroup, renderSection } = createFolderKit({
@@ -190,7 +190,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     makeFolderDropTarget, openFolderStylePicker, openHideFromPicker,
   });
   const kit: SidebarKit = {
-    ctx, render, sectionHead, buildActionMenu, emojiSpan, emojiItem,
+    ctx, render, sectionHead, buildActionMenu, emojiSpan, styleItem,
     makeListDraggable, renderEmptyFolderPlaceholders, buildFolderGroup,
   };
   const { renderNav: renderSingleNav }         = createSingleSection(kit);

@@ -10,7 +10,7 @@ import type { SidebarKit } from './sidebar-kit.ts';
  */
 
 export function createSingleSection(kit: SidebarKit) {
-  const { ctx, render, sectionHead, buildActionMenu, emojiSpan, emojiItem, makeListDraggable, renderEmptyFolderPlaceholders } = kit;
+  const { ctx, render, sectionHead, buildActionMenu, emojiSpan, styleItem, makeListDraggable, renderEmptyFolderPlaceholders } = kit;
 
   // ── Single-Language Lists ───────────────────────────────────────────────────
 
@@ -49,6 +49,7 @@ export function createSingleSection(kit: SidebarKit) {
         li.className = 'ml-list-item ml-list-item--full ml-single-item'
           + (name === ctx.selectedList ? ' active' : '');
         li.dataset.folder = folder;
+        if (meta.color) { li.classList.add('ml-list-item--colored'); li.style.setProperty('--list-color', meta.color); }
         makeListDraggable(li, { kind: 'single', lang: ctx.lang, name });
 
         const topRow = document.createElement('div');
@@ -65,7 +66,7 @@ export function createSingleSection(kit: SidebarKit) {
         // Speech/Level dropdown row in panel.ts now, next to this list's own
         // word filters, rather than in this card's gear menu.
         const menu = buildActionMenu([
-          emojiItem(meta.emoji, emoji => setListMeta(ctx.lang, name, { ...getListMeta(ctx.lang, name), emoji })),
+          styleItem({ emoji: meta.emoji, color: meta.color }, style => setListMeta(ctx.lang, name, { ...getListMeta(ctx.lang, name), ...style })),
           { glyph: '⧉', label: 'Copy', title: 'Duplicate list', tone: 'copy', onClick: () => {
             const copied = startCopyList(ctx.lang, name);
             if (copied) { ctx.selectedList = copied; ctx.updateBadge(); render(); }

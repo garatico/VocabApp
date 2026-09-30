@@ -42,6 +42,23 @@ function answerNext(page: Page, value?: string): void {
   page.once('dialog', d => { void (value === undefined ? d.accept() : d.accept(value)); });
 }
 
+/**
+ * Answer a run of `window.confirm`s in order (true = OK, false = Cancel) —
+ * unlike stacking several `page.once('dialog', ...)` calls, which all attach
+ * to the *first* dialog to fire (Node's EventEmitter runs every listener
+ * queued for an event when it fires once, not one listener per future
+ * occurrence), this advances through `answers` one dialog at a time.
+ */
+function answerDialogsInOrder(page: Page, answers: boolean[]): void {
+  let i = 0;
+  const handler = (d: import('@playwright/test').Dialog): void => {
+    const accept = answers[i++] ?? false;
+    void (accept ? d.accept() : d.dismiss());
+    if (i >= answers.length) page.off('dialog', handler);
+  };
+  page.on('dialog', handler);
+}
+
 async function createInline(page: Page, headSelector: string, name: string): Promise<void> {
   await page.locator(`${headSelector} ${NEW_BTN}`).click();
   const input = page.locator('.ml-list-item--editing .ml-list-name-input');
@@ -93,6 +110,7 @@ test('a duplicate name is refused, with a message, and nothing is created', asyn
 test('a list card can be given an emoji from its gear menu', async ({ page }) => {
   await createInline(page, '.ml-single-head', 'Decor');
   await menuAction(page, card(page, 'ml-single-item', 'Decor'), 'emoji');
+  await page.locator('.ml-emoji-tab', { hasText: 'Study' }).click();
   await page.locator('.ml-folder-style-quick button', { hasText: '📚' }).click();
   await expect(card(page, 'ml-single-item', 'Decor').locator('.ml-list-emoji')).toHaveText('📚');
 });
@@ -108,6 +126,7 @@ test('folders: create, give an emoji and colour, choose what to hide from, colla
   // Emoji & colour
   await folderHead.locator('.ml-menu-gear').click();
   await page.locator('.ml-action-menu:not([hidden]) .ml-menu-item--emoji').click();
+  await page.locator('.ml-emoji-tab', { hasText: 'Travel' }).click();
   await page.locator('.ml-folder-style-quick button', { hasText: '✈️' }).click();
   await page.locator('.ml-folder-swatch').nth(1).click();
   await expect(folderHead).toHaveClass(/ml-folder-head--colored/);
@@ -128,6 +147,103 @@ test('folders: create, give an emoji and colour, choose what to hide from, colla
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await expect(page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: 'Trips' }) }).locator('.ml-folder-body')).toBeHidden();
+});
+
+test('folders: rename carries its list, emoji/colour and collapsed state to the new name, and refuses a duplicate', async ({ page }) => {
+  await createInline(page, '.ml-single-head', 'Passport');
+  const folder = await makeFolder(page, '.ml-single-head', 'Trips');
+  await dragOnto(page, card(page, 'ml-single-item', 'Passport'), folder.locator('.ml-folder-head'));
+  await expect(folder.locator('.ml-list-item', { hasText: 'Passport' })).toBeVisible();
+
+  await menuAction(page, folder.locator('.ml-folder-head'), 'emoji');
+  await page.locator('.ml-emoji-tab', { hasText: 'Travel' }).click();
+  await page.locator('.ml-folder-style-quick button', { hasText: '✈️' }).click();
+  await page.mouse.click(5, 5);
+  await folder.locator('.ml-section-toggle-btn').click();
+  await expect(folder.locator('.ml-folder-body')).toBeHidden();
+
+  // A second folder already named "Travel" makes the rename refuse to collide with it.
+  await makeFolder(page, '.ml-single-head', 'Travel');
+  answerNext(page, 'Travel');
+  await menuAction(page, folder.locator('.ml-folder-head'), 'rename');
+  await expect(folder.locator('.ml-folder-head')).toContainText('Trips');
+
+  answerNext(page, 'Travel Plans');
+  await menuAction(page, folder.locator('.ml-folder-head'), 'rename');
+  const renamed = page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: 'Travel Plans' }) });
+  await expect(renamed).toBeVisible();
+  await expect(page.locator('.ml-folder-head', { hasText: 'Trips' })).toHaveCount(0);
+  await expect(renamed.locator('.ml-folder-head')).toContainText('✈️');            // the emoji moved with it
+  await expect(renamed.locator('.ml-folder-body')).toBeHidden();                   // still collapsed
+  await expect(renamed.locator('.ml-list-item', { hasText: 'Passport' })).toHaveCount(1); // present, just inside the collapsed box
+
+  const meta = await page.evaluate(() => (JSON.parse(localStorage.getItem('vq_lists_meta_spanish') ?? '{}') as Record<string, { folders?: string[] }>).Passport);
+  expect(meta?.folders).toEqual(['Travel Plans']);
+});
+
+test('folders: renaming a folder used by a Testing Profile updates that mode’s picker too', async ({ page }) => {
+  await page.locator('.ml-profile-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
+  const row = page.locator('.ml-list-item--editing-wide').first();
+  await row.locator('select').selectOption('table');
+  await row.locator('.ml-list-name-input').last().fill('Drill');
+  await row.locator('.ml-list-name-input').last().press('Enter');
+
+  // Testing Profile folders ask which mode they belong to, via an inline form rather than a plain prompt.
+  await page.locator('.ml-profile-head .ml-new-folder-btn').click();
+  const frow = page.locator('.ml-list-item--editing-wide').first();
+  await frow.locator('select').selectOption('table');
+  await frow.locator('.ml-list-name-input').last().fill('Core');
+  await frow.locator('.ml-list-name-input').last().press('Enter');
+  const folder = page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: 'Core' }) }).first();
+  await expect(folder).toBeVisible();
+  await dragOnto(page, card(page, 'ml-profile-item', 'Drill'), folder.locator('.ml-folder-head'));
+  await expect(folder.locator('.ml-list-item', { hasText: 'Drill' })).toBeVisible();
+
+  answerNext(page, 'Fundamentals');
+  await menuAction(page, folder.locator('.ml-folder-head'), 'rename');
+  const renamed = page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: 'Fundamentals' }) });
+  await expect(renamed).toBeVisible();
+  await expect(renamed.locator('.ml-list-item', { hasText: 'Drill' })).toBeVisible();
+
+  await page.locator('.mode-tab[data-mode="table"]').click();
+  await page.locator('#presetsBtn').click();
+  await expect(page.locator('.preset-picker-folder', { hasText: 'Fundamentals' })).toBeVisible();
+  await expect(page.locator('.preset-picker-apply', { hasText: 'Drill' })).toBeVisible();
+  const stored = await page.evaluate(() => (JSON.parse(localStorage.getItem('vq_presets_table') ?? '{}') as Record<string, { folders?: string[] }>).Drill);
+  expect(stored?.folders).toEqual(['Fundamentals']);
+});
+
+test('folders: delete just ungroups its lists, but can also delete them along with it', async ({ page }) => {
+  await createInline(page, '.ml-single-head', 'Keepsake');
+  const folder = await makeFolder(page, '.ml-single-head', 'Junk');
+  await dragOnto(page, card(page, 'ml-single-item', 'Keepsake'), folder.locator('.ml-folder-head'));
+  await expect(folder.locator('.ml-list-item', { hasText: 'Keepsake' })).toBeVisible();
+
+  // Accept the first confirm (delete the folder), dismiss the second (don't
+  // also delete its lists) — the list survives, just ungrouped.
+  answerDialogsInOrder(page, [true, false]);
+  await menuAction(page, folder.locator('.ml-folder-head'), 'delete');
+  await expect(page.locator('.ml-folder-head', { hasText: 'Junk' })).toHaveCount(0);
+  await expect(card(page, 'ml-single-item', 'Keepsake')).toBeVisible();
+
+  // Recreate the folder around the same list and this time accept both
+  // confirms — the folder AND the list it held are gone.
+  const folder2 = await makeFolder(page, '.ml-single-head', 'Junk');
+  await dragOnto(page, card(page, 'ml-single-item', 'Keepsake'), folder2.locator('.ml-folder-head'));
+  answerDialogsInOrder(page, [true, true]);
+  await menuAction(page, folder2.locator('.ml-folder-head'), 'delete');
+  await expect(page.locator('.ml-folder-head', { hasText: 'Junk' })).toHaveCount(0);
+  await expect(card(page, 'ml-single-item', 'Keepsake')).toHaveCount(0);
+});
+
+test('a list card can be given a custom colour via the native colour input', async ({ page }) => {
+  await createInline(page, '.ml-single-head', 'Hue');
+  await menuAction(page, card(page, 'ml-single-item', 'Hue'), 'emoji');
+  await page.locator('.ml-folder-style-colors input.ml-folder-swatch--custom').fill('#123456');
+  await page.mouse.click(5, 5);
+  await expect(card(page, 'ml-single-item', 'Hue')).toHaveClass(/ml-list-item--colored/);
+  const meta = await page.evaluate(() => (JSON.parse(localStorage.getItem('vq_lists_meta_spanish') ?? '{}') as Record<string, { color?: string }>).Hue);
+  expect(meta?.color).toBe('#123456');
 });
 
 // ═══ Smart lists ═══════════════════════════════════════════════════════════════
@@ -338,6 +454,7 @@ test('visual profiles: emoji, folders (create, file into, drag onto)', async ({ 
   await createInline(page, '.ml-visual-head', 'Bright');
 
   await menuAction(page, card(page, 'ml-visual-item', 'Cosy'), 'emoji');
+  await page.locator('.ml-emoji-tab', { hasText: 'Study' }).click();
   await page.locator('.ml-folder-style-quick button', { hasText: '📚' }).click();
   await expect(card(page, 'ml-visual-item', 'Cosy').locator('.ml-list-emoji')).toHaveText('📚');
   expect((await storedVisual(page, 'Cosy'))?.emoji).toBe('📚');

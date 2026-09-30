@@ -28,6 +28,9 @@ export interface VisualProfile {
   settings?: VisualSettingValues;
   /** Shown before the name in My Lists, like a list's own emoji. */
   emoji?:    string;
+  /** Accent colour for this profile's own sidebar card. Not a display setting — it colours the card
+   *  in My Lists, not anything the profile itself applies to the app. */
+  color?:    string;
   /** Folders it is filed under (scope `visual_profiles`, see folders.ts). Not a display setting. */
   folders?:  string[];
 }

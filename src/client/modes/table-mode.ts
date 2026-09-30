@@ -1,6 +1,6 @@
 import type { Word } from '../types.ts';
 import {
-  slotText, slotMatches, extraMatchedGloss, displayWord, glossWithMeaningNote, DEFAULT_CHINESE_DISPLAY,
+  slotText, slotMatches, slotCouldMatch, extraMatchedGloss, displayWord, glossWithMeaningNote, DEFAULT_CHINESE_DISPLAY,
   primaryGlossForHint, chosenGlosses, grammarHint, genderArticle, genderKey,
   type QuizSlot, type ChineseDisplay,
 } from '../utils/utils.ts';
@@ -240,6 +240,13 @@ export function renderTableMode({
   function checkInput(input: string, entry: Word, dir: DirectionPair): boolean {
     const [, answerSlot] = slotsFor(dir);
     return slotMatches(input, entry, answerSlot, matchMode, entry.language ?? lang, chineseDisplay);
+  }
+
+  /** Sudden Death's own checkInput — could more typing still land on an
+   *  accepted answer, or has this input already strayed off every one? */
+  function couldInputStillMatch(input: string, entry: Word, dir: DirectionPair): boolean {
+    const [, answerSlot] = slotsFor(dir);
+    return slotCouldMatch(input, entry, answerSlot, matchMode, entry.language ?? lang, chineseDisplay);
   }
 
   function checkAllComplete(): boolean {
@@ -565,6 +572,26 @@ export function renderTableMode({
 
             const currentIdx = Number(inp.dataset.idx);
             const next       = allInputs.slice(currentIdx + 1).find(i => !i.disabled);
+            if (next) scrollToNext(next);
+
+            updateProgress();
+
+            if (checkAllComplete() && onComplete) {
+              const cb = onComplete;
+              setTimeout(() => cb(), 300);
+            }
+          } else if (Settings.getSuddenDeath() && inp.value && !couldInputStillMatch(inp.value, w, dir)) {
+            // The first keystroke that can no longer lead anywhere accepted —
+            // same end state as Give Up on just this cell, triggered early
+            // rather than waiting for the learner to submit or give up.
+            inp.value = revealText(w, dir);
+            inp.disabled = true;
+            inp.classList.remove('correct');
+            inp.classList.add('incorrect');
+            syncGenderIndicator();
+
+            const currentIdx = Number(inp.dataset.idx);
+            const next = allInputs.slice(currentIdx + 1).find(i => !i.disabled);
             if (next) scrollToNext(next);
 
             updateProgress();

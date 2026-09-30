@@ -9,7 +9,7 @@ import type { SidebarKit } from './sidebar-kit.ts';
  */
 
 export function createMultiSection(kit: SidebarKit) {
-  const { ctx, render, sectionHead, buildActionMenu, emojiSpan, emojiItem, makeListDraggable, renderEmptyFolderPlaceholders } = kit;
+  const { ctx, render, sectionHead, buildActionMenu, emojiSpan, styleItem, makeListDraggable, renderEmptyFolderPlaceholders } = kit;
 
   // ── Cross-language lists ────────────────────────────────────────────────────
   //
@@ -57,6 +57,7 @@ export function createMultiSection(kit: SidebarKit) {
       li.className = 'ml-list-item ml-list-item--full ml-multi-item'
         + (name === ctx.selectedMultiList ? ' active' : '');
       li.dataset.folder = folder;
+      if (meta.color) { li.classList.add('ml-list-item--colored'); li.style.setProperty('--list-color', meta.color); }
       makeListDraggable(li, { kind: 'multi', name });
 
       // Name on its own line — the flags can run to several, and a word
@@ -79,7 +80,7 @@ export function createMultiSection(kit: SidebarKit) {
       // Folder membership and Hide-from-mode are edited from the Part of
       // Speech/Level dropdown row in multi-panel.ts now, not this gear menu.
       topRow.append(buildActionMenu([
-        emojiItem(meta.emoji, emoji => setMultiListMeta(name, { ...getMultiListMeta(name), emoji })),
+        styleItem({ emoji: meta.emoji, color: meta.color }, style => setMultiListMeta(name, { ...getMultiListMeta(name), ...style })),
         { glyph: '⧉', label: 'Copy', title: 'Duplicate cross-language list', tone: 'copy', onClick: () => {
           const proposed = suggestMultiCopyName(name);
           const input = window.prompt(`Name for the copy of "${name}":`, proposed);

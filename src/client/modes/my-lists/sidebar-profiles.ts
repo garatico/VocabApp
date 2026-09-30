@@ -15,7 +15,7 @@ import { isFolderCollapsed, setFolderCollapsed } from './sidebar-state.ts';
 const PROFILE_MODES: FilterScope[] = ['table', 'picture', 'conjugation'];
 
 export function createProfilesSection(kit: SidebarKit) {
-  const { ctx, render, sectionHead, buildActionMenu, emojiSpan, emojiItem, buildFolderGroup, makeListDraggable } = kit;
+  const { ctx, render, sectionHead, buildActionMenu, emojiSpan, styleItem, buildFolderGroup, makeListDraggable } = kit;
 
   // ── Testing Profiles ──────────────────────────────────────────────────────
   //
@@ -108,6 +108,7 @@ export function createProfilesSection(kit: SidebarKit) {
         const selected = ctx.selectedProfile?.mode === mode && ctx.selectedProfile.name === name;
         const li = document.createElement('li');
         li.className = 'ml-list-item ml-list-item--full ml-profile-item' + (selected ? ' active' : '');
+        if (bundle?.color) { li.classList.add('ml-list-item--colored'); li.style.setProperty('--list-color', bundle.color); }
         makeListDraggable(li, { kind: 'profiles', mode, name });
 
         const topRow = document.createElement('div');
@@ -118,16 +119,21 @@ export function createProfilesSection(kit: SidebarKit) {
         topRow.appendChild(nameSpan);
         // Informational whenever a default language is set, regardless of
         // whether it's locked — a quick visual cue for what this profile is
-        // "for" even when it can still be applied anywhere.
+        // "for" even when it can still be applied anywhere. A profile whose
+        // "+ Languages" picked up extras (Table/Conjugation's Compare mode)
+        // gets one flag per language in play, not just the primary one.
         if (bundle?.language) {
-          const lang = LANGUAGES.find(l => l.name === bundle.language);
-          if (lang) topRow.appendChild(createFlagImg(lang.flagCountry, lang.label));
+          const langNames = [...new Set([bundle.language, ...(bundle.extraLanguages ?? [])])];
+          langNames.forEach(langName => {
+            const lang = LANGUAGES.find(l => l.name === langName);
+            if (lang) topRow.appendChild(createFlagImg(lang.flagCountry, lang.label));
+          });
         }
 
         topRow.append(buildActionMenu([
-          emojiItem(bundle?.emoji, emoji => {
+          styleItem({ emoji: bundle?.emoji, color: bundle?.color }, style => {
             const b = getPreset(mode, name);
-            if (b) savePreset(mode, name, { ...b, emoji });
+            if (b) savePreset(mode, name, { ...b, ...style });
           }),
           { glyph: '⧉', label: 'Copy', title: 'Duplicate profile', tone: 'copy', onClick: () => {
             const proposed = suggestProfileCopyName(mode, name);

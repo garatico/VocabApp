@@ -38,6 +38,26 @@ export function addFolder(scope: string, name: string): boolean {
   return true;
 }
 
+/**
+ * Renames a folder in the registry and carries its emoji/colour over. False (nothing written) if
+ * `newName` is blank, unchanged, or already taken. This alone does not touch any list/rule/profile
+ * that names the folder in its own `folders` array — that rename goes through each section's own
+ * store (see sidebar-folders.ts's renameFolderReferences), since this module has no notion of what a
+ * "scope" actually holds.
+ */
+export function renameFolder(scope: string, oldName: string, newName: string): boolean {
+  const trimmed = newName.trim();
+  if (!trimmed || trimmed === oldName) return false;
+  const folders = getFolderRegistry(scope);
+  if (!folders.includes(oldName) || folders.includes(trimmed)) return false;
+  writeJson(key(scope), folders.map(f => (f === oldName ? trimmed : f)).sort((a, b) => a.localeCompare(b)));
+  const styles = readStyles(scope);
+  if (styles[oldName]) {
+    writeJson(STYLE_PREFIX + scope, { ...styles, [trimmed]: styles[oldName], [oldName]: undefined });
+  }
+  return true;
+}
+
 /** Removing a folder only retires it from the registry — it does not touch
  *  any list/rule/profile that still names it in its own `folders` array
  *  (those just fall back to rendering under an ad-hoc, unregistered group

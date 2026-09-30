@@ -281,6 +281,17 @@ export function renderConjOneAtATime({
       results[idx] = 'correct';
       updateProgress();
       setTimeout(() => advance(), 500);
+    } else if (Settings.getSuddenDeath() && inp.value && !normalize(answer).startsWith(normalize(inp.value))) {
+      // Same end state finish() puts an unanswered item in (see 'missed'
+      // above) — this one just got there early, from an unrecoverable typo
+      // rather than running out of items to answer.
+      inp.value = answer;
+      inp.disabled = true;
+      inp.classList.add('missed');
+      results[idx] = 'missed';
+      revealBtn.hidden = true;
+      updateProgress();
+      setTimeout(() => advance(), 500);
     }
   });
 

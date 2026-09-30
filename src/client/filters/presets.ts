@@ -52,10 +52,11 @@ export interface WordsBundle {
 
 /**
  * Conjugation's own "Tense & Forms" box plus its View and Verbs controls —
- * captured/applied only for FilterScope 'conjugation'. Pronoun toggles are
- * deliberately not part of this: the app itself never persists them (they
- * reset to all-on whenever the language changes), so there is nothing
- * meaningful to save.
+ * captured/applied only for FilterScope 'conjugation'. The live pronoun
+ * toggles themselves reset to all-on whenever the language changes, so
+ * `disabledPronouns` doesn't try to persist the live UI's own transient
+ * on/off state — it's the profile's own choice of which pronoun slots to
+ * leave out whenever *this* profile is applied, same as tenses/regularities.
  */
 export interface ConjugationBundle {
   tenses:       string[]; // #conjTenseChips active tense keys
@@ -63,6 +64,14 @@ export interface ConjugationBundle {
   view:         string;   // #conjViewToggle: grid/full/oneatatime/randomtable/cardmatch
   verbsSize:       string; // #conjSizeSelect value: 5/10/25/50/100/250/500/max/custom
   verbsSizeCustom: string; // #conjSizeCustom value, meaningful only when verbsSize === 'custom'
+  /**
+   * Indices into PRONOUNS[lang] (conjugation/data.ts) — the same slot order
+   * every language's pronoun list uses (1sg/2sg/3sg/1pl/2pl/3pl) — that this
+   * profile leaves switched off. Empty/absent = every slot on, same as a
+   * fresh #conjPronounToggles row. Optional: added after v1, so an older
+   * saved profile with no opinion here just applies with every form on.
+   */
+  disabledPronouns?: number[];
 }
 
 export interface PresetBundle {
@@ -131,6 +140,8 @@ export interface PresetBundle {
   folder?: string;
   /** Optional emoji shown before the profile's name in the sidebar. */
   emoji?: string;
+  /** Optional accent colour for the profile's own sidebar card, same palette/picker as a folder's. */
+  color?: string;
 }
 
 const KEY_PREFIX = 'vq_presets_';
@@ -258,7 +269,10 @@ function captureConjugation(): ConjugationBundle {
   const view = document.querySelector<HTMLElement>('#conjViewToggle .conj-toggle-btn.active')?.dataset.view ?? 'grid';
   const verbsSize       = (document.getElementById('conjSizeSelect') as HTMLSelectElement | null)?.value ?? '100';
   const verbsSizeCustom = (document.getElementById('conjSizeCustom') as HTMLInputElement | null)?.value ?? '';
-  return { tenses, regularities, view, verbsSize, verbsSizeCustom };
+  const disabledPronouns = [...document.querySelectorAll<HTMLElement>('#conjPronounToggles .conj-pronoun-toggle')]
+    .filter(el => el.dataset.enabled === 'false')
+    .map(el => parseInt(el.dataset.pi ?? '0', 10));
+  return { tenses, regularities, view, verbsSize, verbsSizeCustom, disabledPronouns };
 }
 
 /**
@@ -290,6 +304,16 @@ function applyConjugation(bundle: ConjugationBundle): void {
     verbsCustom.value = bundle.verbsSizeCustom;
     verbsCustom.dispatchEvent(new Event('input', { bubbles: true }));
   }
+
+  // Pronoun ("Forms") toggles — click only the ones whose state actually
+  // needs to flip, same as the tense/regularity chips above. Absent/empty
+  // `disabledPronouns` means every slot should be on.
+  const disabled = new Set(bundle.disabledPronouns ?? []);
+  document.querySelectorAll<HTMLButtonElement>('#conjPronounToggles .conj-pronoun-toggle').forEach(btn => {
+    const pi = parseInt(btn.dataset.pi ?? '0', 10);
+    const wantsEnabled = !disabled.has(pi);
+    if ((btn.dataset.enabled !== 'false') !== wantsEnabled) btn.click();
+  });
 }
 
 /** Snapshot the filter/direction state currently in effect for this mode. */
@@ -357,6 +381,7 @@ function normalizeBundle(raw: PresetBundle): PresetBundle {
     // through, so nothing downstream has to know the old shape existed.
     folders: raw.folders ?? (raw.folder ? [raw.folder] : []),
     emoji: typeof raw.emoji === 'string' ? raw.emoji : undefined,
+    color: typeof raw.color === 'string' ? raw.color : undefined,
   };
 }
 
@@ -473,10 +498,11 @@ export function describePreset(bundle: PresetBundle, mode?: FilterScope): string
     parts.push(QUIZ_STYLE_LABELS[bundle.quizStyle] ?? bundle.quizStyle);
   }
   if (bundle.conjugation) {
-    const { tenses, view, verbsSize, verbsSizeCustom } = bundle.conjugation;
+    const { tenses, view, verbsSize, verbsSizeCustom, disabledPronouns } = bundle.conjugation;
     const verbsCount = verbsSize === 'custom' ? (verbsSizeCustom || '?') : verbsSize;
     parts.push(`${verbsSize === 'max' ? 'All' : verbsCount} verbs`);
     if (tenses.length > 0) parts.push(`${tenses.length} tense${tenses.length === 1 ? '' : 's'}`);
+    if (disabledPronouns && disabledPronouns.length > 0) parts.push(`${disabledPronouns.length} form${disabledPronouns.length === 1 ? '' : 's'} off`);
     if (view !== 'grid') parts.push(CONJ_VIEW_LABELS[view] ?? view);
   }
   if (bundle.direction && (mode === undefined || mode === 'table')) {

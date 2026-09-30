@@ -19,7 +19,7 @@ import { attachTooltips    } from '../utils/word-tooltip.ts';
 import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summary.ts';
 import { bindChoiceKeys } from '../ui/choice-keys.ts';
 import { buildScorePills, scorePct } from '../ui/score-pills.ts';
-import { matchesAnswer, displayWord, wordAndAnnotation, genderKey } from '../utils/utils.ts';
+import { matchesAnswer, couldStillMatch, displayWord, wordAndAnnotation, genderKey } from '../utils/utils.ts';
 import { shuffle           } from '../utils/shuffle.ts';
 import { Settings, applyAutofillAttr } from '../settings.ts';
 import { createStopwatch   } from '../ui/stopwatch.ts';
@@ -73,6 +73,11 @@ interface RenderPictureModeOptions {
  */
 function wordIsCorrect(input: string, word: WordWithVisual): boolean {
   return matchesAnswer(input, word, 'en-target', Settings.getMatchMode());
+}
+
+/** Sudden Death's own wordIsCorrect — see utils.ts's couldStillMatch. */
+function wordCouldStillMatch(input: string, word: WordWithVisual): boolean {
+  return couldStillMatch(input, word, 'en-target', Settings.getMatchMode());
 }
 
 // Returns all available visuals for a word, in priority order:
@@ -668,6 +673,20 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
         if (next) next.focus();
 
         updateTypeProgress();
+      } else if (Settings.getSuddenDeath() && inp.value && !wordCouldStillMatch(inp.value, word)) {
+        // Same end state Give Up puts an unanswered card in — reused rather
+        // than a new class, since scoring already treats "not correct" as
+        // missed regardless of which of the two brought it there.
+        inp.value    = displayWord(word, Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang);
+        inp.disabled = true;
+        card.classList.add('revealed');
+        inp.classList.add('revealed');
+
+        const pageInputs = Array.from(grid.querySelectorAll<HTMLInputElement>('input[data-word]'));
+        const next = pageInputs.slice(pageInputs.indexOf(inp) + 1).find(i => !i.disabled);
+        if (next) next.focus();
+
+        updateTypeProgress();
       }
     });
 
@@ -908,6 +927,11 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
       if (nextUnanswered !== -1) {
         setTimeout(() => { idx = nextUnanswered; renderCurrent(); }, 600);
       }
+    } else if (Settings.getSuddenDeath() && inp.value && !wordCouldStillMatch(inp.value, word)) {
+      // Same end state the card's own Give Up puts it in (line ~958 below).
+      state.revealed = true;
+      state.value    = displayWord(word, Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang);
+      renderCurrent();
     }
   });
 

@@ -112,3 +112,42 @@ test('bulk move relocates the word, and Undo brings it back to the source list',
   await expect(page.locator('.ml-panel-title')).toHaveText('MoveSource');
   await expect(page.locator('.ml-word-text')).toHaveText('casa');
 });
+
+test('move to… offers Cross-Language lists too, each showing its own flag(s)', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('vq_lists_multi', JSON.stringify({ Mixed: [] })));
+  await page.reload();
+  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await page.locator('.mode-tab[data-mode="mylists"]').click();
+
+  await createList(page, 'FromSingle');
+  await addWord(page, 'casa');
+
+  // The row's own ⇥ button, not the bulk toolbar — no selection step needed.
+  await page.locator('.ml-move-btn').click();
+  const crossItem = page.locator('.ml-move-popover-item', { hasText: 'Mixed' });
+  await expect(crossItem).toBeVisible();
+  await expect(crossItem.locator('.flag-icon, .lang-badge')).not.toHaveCount(0);
+  await crossItem.click();
+
+  // The word left the single-language list and landed in the cross-language one.
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('vq_lists_multi') ?? '{}'));
+  expect(stored.Mixed).toEqual([{ word: 'casa', language: 'spanish' }]);
+});
+
+test('a Cross-Language list\'s own row can Move/Copy to a single-language list of its own language', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('vq_lists_multi', JSON.stringify({
+    Mixed: [{ word: 'casa', language: 'spanish' }],
+  })));
+  await createList(page, 'Landing');
+  await page.locator('.ml-list-name', { hasText: 'Mixed' }).click();
+  await expect(page.locator('.ml-word-text')).toHaveText('casa');
+
+  await page.locator('.ml-move-btn').click();
+  await page.locator('.ml-move-popover-item', { hasText: 'Landing' }).click();
+
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('vq_lists_spanish') ?? '{}'));
+  expect(stored.Landing).toEqual(['casa']);
+  // Moved (not copied) — the cross-language list's own membership lost it.
+  const multiStored = await page.evaluate(() => JSON.parse(localStorage.getItem('vq_lists_multi') ?? '{}'));
+  expect(multiStored.Mixed ?? []).toEqual([]);
+});

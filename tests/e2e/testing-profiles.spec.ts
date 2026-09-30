@@ -33,3 +33,42 @@ test('saving a profile from Table mode makes it reusable', async ({ page }) => {
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await expect(page.locator('.ml-list-name', { hasText: 'E2E Profile' })).toBeVisible();
 });
+
+/**
+ * A Conjugation profile can turn off specific pronoun ("Forms") slots — see
+ * presets.ts's ConjugationBundle.disabledPronouns and profile-panel.ts's own
+ * Forms chip row, added alongside the pre-existing Tense/Regularity ones.
+ */
+test('a conjugation profile can turn off specific forms, and applying it reflects them live', async ({ page }) => {
+  await disableSimpleMode(page);
+  await page.goto('/');
+  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await page.locator('.mode-tab[data-mode="mylists"]').click();
+
+  const profileHead = page.locator('.ml-profile-head').first();
+  await profileHead.locator('.ml-new-list-btn:not(.ml-new-folder-btn)').click();
+  await page.locator('.ml-list-item--editing select.ml-list-name-input').selectOption('conjugation');
+  const nameInput = page.locator('.ml-list-item--editing input.ml-list-name-input');
+  await nameInput.fill('NoVosotros');
+  await nameInput.press('Enter');
+
+  await page.locator('.ml-list-name', { hasText: 'NoVosotros' }).click();
+  // Spanish's PRONOUNS order is yo/tu/el/nosotros/vosotros/ellos — index 4 is "vosotros".
+  const formsChip = page.locator('.ml-profile-editor-forms-chips .conj-pronoun-toggle').nth(4);
+  await expect(formsChip).toHaveText('vosotros');
+  await expect(formsChip).toHaveClass(/active/);
+  await formsChip.click();
+  await expect(formsChip).not.toHaveClass(/active/);
+
+  const stored = await page.evaluate(() =>
+    (JSON.parse(localStorage.getItem('vq_presets_conjugation') ?? '{}') as
+      Record<string, { conjugation?: { disabledPronouns?: number[] } }>).NoVosotros);
+  expect(stored?.conjugation?.disabledPronouns).toEqual([4]);
+
+  // Applying it on the Conjugation tab turns the live "vosotros" toggle off too.
+  await page.locator('.mode-tab[data-mode="conjugation"]').click();
+  await page.locator('#presetsBtn').click();
+  await page.locator('.preset-picker-row', { hasText: 'NoVosotros' }).locator('.preset-picker-apply').click();
+  const liveToggle = page.locator('#conjPronounToggles .conj-pronoun-toggle').nth(4);
+  await expect(liveToggle).not.toHaveClass(/active/);
+});

@@ -2,12 +2,15 @@
  * multi-panel.ts — the right pane for a cross-language list.
  *
  * Brought to parity with panel.ts/word-list.ts: filter, sort, hide-mastered,
- * POS/Level chips, per-row mastery scale and quiz badge, bulk select. The one
- * thing missing on purpose is "Move to…" — a cross-language entry's mastery
- * and quiz history live under its own language (mastery.ts, session-history.ts
- * are both keyed by `lang`), and there is no single-language destination a
- * mixed-language selection could move to that would mean the same thing for
- * every word in it.
+ * POS/Level chips, per-row mastery scale and quiz badge, bulk select, and a
+ * per-row "Move to…" (see buildRow's own moveBtn). The *bulk* bar still has
+ * no Move to…, on purpose — a cross-language entry's mastery and quiz history
+ * live under its own language (mastery.ts, session-history.ts are both keyed
+ * by `lang`), and a bulk selection can span several languages at once, so
+ * there is no single destination that would mean the same thing for every
+ * word in it. A single row has exactly one language, so that ambiguity
+ * doesn't apply there — move-popover.ts's `sourceLang`/`sourceMulti` options
+ * exist for exactly this row-level case.
  *
  * Every per-word lookup below takes the entry's own `language`, not one
  * `ctx.lang` — that is the whole difference from word-list.ts, and the reason
@@ -34,6 +37,7 @@ import type { ListsCtx } from './context.ts';
 import { fetchVocab, cachedVocabMap } from './vocab-cache.ts';
 import { getMastered, setMasteryLevel, MASTERY_LEVELS } from './mastery.ts';
 import { showUndo } from './undo-toast.ts';
+import { openMovePopover } from './move-popover.ts';
 import { logger } from '../../utils/logger.ts';
 import { buildLangBadge } from '../../ui/lang-badge.ts';
 import { createPager } from './pager.ts';
@@ -487,6 +491,22 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
       syncBulkBar();
     });
 
+    const moveBtn = document.createElement('button');
+    moveBtn.type = 'button'; moveBtn.className = 'ml-move-btn';
+    moveBtn.title = 'Move or copy to another list'; moveBtn.textContent = '⇥';
+    moveBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      openMovePopover(ctx, moveBtn, [entry.word], mode => {
+        // 'move' already removed it from storage via sourceMulti below — a
+        // 'copy' leaves this list's own membership untouched.
+        if (mode === 'move') {
+          const idx = entries.findIndex(x => x.word === entry.word && x.language === entry.language);
+          if (idx !== -1) entries.splice(idx, 1);
+        }
+        ctx.renderSidebar(false); renderRows();
+      }, { sourceLang: entry.language, sourceMulti: listName });
+    });
+
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button'; removeBtn.className = 'ml-remove-btn';
     removeBtn.title = 'Remove from this list'; removeBtn.textContent = '×';
@@ -510,7 +530,7 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
       addedDate: getMultiAddedDate(listName, entry.language, entry.word),
       redraw: renderRows,
       onToggleExpand: () => { expandedKey = expandedKey === key ? null : key; renderRows(); },
-      leading: [check], beforePos: [buildLangBadge([entry.language])], extraActions: [removeBtn],
+      leading: [check], beforePos: [buildLangBadge([entry.language])], extraActions: [moveBtn, removeBtn],
     });
   }
 

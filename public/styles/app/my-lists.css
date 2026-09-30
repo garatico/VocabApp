@@ -1229,6 +1229,28 @@ html.dark .ml-word-band[data-band] {
   border-color: var(--accent);
 }
 
+/* "Is Due" exemption — same shell as .ml-edit-btn; --on (excluded from due)
+   gets a muted/crossed-out look so an excluded word reads differently from
+   the default included state at a glance, not just via its title text. */
+.ml-due-exempt-btn {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  padding: 0.1rem 0.45rem;
+  border-radius: var(--radius-sm);
+  line-height: 1.2;
+  transition: color var(--transition-fast), background var(--transition-fast),
+              border-color var(--transition-fast), opacity var(--transition-fast);
+}
+.ml-due-exempt-btn:hover {
+  color: var(--accent);
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+.ml-due-exempt-btn--on { opacity: 0.55; }
+
 .ml-move-popover {
   position: absolute;
   z-index: 100;
@@ -1255,7 +1277,9 @@ html.dark .ml-word-band[data-band] {
 }
 
 .ml-move-popover-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   width: 100%;
   text-align: left;
   font-size: 0.82rem;
@@ -1270,6 +1294,7 @@ html.dark .ml-word-band[data-band] {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.ml-move-popover-item .lang-badge { flex-shrink: 0; }
 .ml-move-popover-item:hover { background: var(--accent-light); color: var(--accent); }
 
 .ml-move-popover-empty {
@@ -2833,6 +2858,41 @@ button.ml-profile-editor-group-title {
 .ml-folder-style-quick button { border: 1px solid var(--border); background: var(--surface2); border-radius: var(--radius-sm); cursor: pointer; padding: 0.1rem 0.3rem; font-size: 0.95rem; }
 .ml-folder-swatch { width: 1.35rem; height: 1.35rem; border-radius: 50%; border: 2px solid transparent; cursor: pointer; color: var(--text-muted); font-size: 0.7rem; background: var(--surface2); }
 .ml-folder-swatch--on { border-color: var(--text); }
+/* The custom-colour swatch is a real <input type="color">, not a <button> —
+   it opens the OS's own colour dialog (Windows: the classic picker with a
+   "Custom colors" hex/RGB definer) rather than anything drawn in CSS. Reset
+   the native chrome down to the same circle every preset swatch uses. */
+.ml-folder-swatch--custom {
+  padding: 0; -webkit-appearance: none; appearance: none;
+  background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+}
+.ml-folder-swatch--custom::-webkit-color-swatch-wrapper { padding: 0; border-radius: 50%; overflow: hidden; }
+.ml-folder-swatch--custom::-webkit-color-swatch { border: none; border-radius: 50%; }
+.ml-folder-swatch--custom::-moz-color-swatch { border: none; border-radius: 50%; }
+
+/* Emoji picker categories — tabs above the grid (see sidebar-pickers.ts). */
+.ml-emoji-tabs { display: flex; flex-wrap: wrap; gap: 0.2rem; }
+.ml-emoji-tab {
+  border: 1px solid transparent; background: none; cursor: pointer;
+  font-size: 0.66rem; font-weight: 600; color: var(--text-muted);
+  padding: 0.1rem 0.4rem; border-radius: 99px;
+}
+.ml-emoji-tab:hover { background: var(--surface2); }
+.ml-emoji-tab--on { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+
+/* -- List/smart/multi/visual/profile card colour (same picker as a folder's) -- */
+.ml-list-item--colored:not(.active) {
+  border-left-color: color-mix(in srgb, var(--list-color) 65%, transparent);
+  background: color-mix(in srgb, var(--list-color) 16%, var(--surface));
+}
+.ml-list-item--colored:not(.active):hover {
+  background: color-mix(in srgb, var(--list-color) 26%, var(--surface));
+}
+.ml-list-item--colored .ml-list-count {
+  color: color-mix(in srgb, var(--list-color) 70%, var(--text));
+  background: color-mix(in srgb, var(--list-color) 18%, var(--surface2));
+  border-color: color-mix(in srgb, var(--list-color) 45%, var(--border));
+}
 
 /* Long checklist dropdown (Domain): scrolling options + search box */
 .ml-chip-dropdown-scroll {
@@ -2949,8 +3009,8 @@ button.ml-profile-editor-group-title {
 .ml-header { padding: 0.3rem 0.65rem 0.3rem; }
 .ml-list-nav { padding: 0.1rem 0; }
 .ml-single-head, .ml-smart-head, .ml-multi-head, .ml-profile-head { padding-top: 0.3rem; padding-bottom: 0.25rem; }
-.ml-list-item--full { margin-top: 0.14rem; margin-bottom: 0.14rem; padding-top: 0.35rem; padding-bottom: 0.35rem; }
-.ml-folder-body .ml-list-item--full { margin-top: 0.1rem; margin-bottom: 0.1rem; }
+.ml-list-item--full { margin-top: 0.12rem; margin-bottom: 0.12rem; padding-top: 0.32rem; padding-bottom: 0.32rem; }
+.ml-folder-body .ml-list-item--full { margin-top: 0.08rem; margin-bottom: 0.08rem; }
 .ml-folder-head { padding-top: 0.2rem; padding-bottom: 0.2rem; }
 
 /* Manual Additions: rounded, slim card like the filter bar below it */
@@ -3020,6 +3080,13 @@ label.ml-chip-dropdown-group:hover { color: var(--text); }
   color: color-mix(in srgb, var(--ml-head-accent) 60%, var(--text));
 }
 .ml-single-head { margin-top: 0; }
+/* A clear, full-width rule above every section but the first — the coloured
+   left edge alone was easy to miss scrolling fast; this makes "a new section
+   just started" unambiguous regardless of how similar two accent colours are. */
+.ml-smart-head, .ml-multi-head, .ml-profile-head {
+  border-top: 2px solid var(--border-strong);
+  padding-top: calc(0.25rem + 2px);
+}
 .ml-smart-head   { --ml-head-accent: var(--ml-accent-smart); }
 .ml-multi-head   { --ml-head-accent: var(--ml-accent-multi); }
 .ml-profile-head { --ml-head-accent: var(--ml-accent-profile); }
@@ -3045,3 +3112,12 @@ label.ml-chip-dropdown-group:hover { color: var(--text); }
 /* The header bar is tinted now, so its buttons sit on a solid surface to keep their own contrast. */
 .ml-single-head .ml-new-list-btn, .ml-smart-head .ml-new-list-btn,
 .ml-multi-head .ml-new-list-btn, .ml-profile-head .ml-new-list-btn { background: var(--surface); }
+
+/* ── Testing Profiles: less vertical space per mode group ────────────────────
+   Table/Picture/Conjugation each get their own mode-head band plus every
+   profile row inside it — the tallest section once a couple of modes have a
+   handful of profiles each. Tightened on top of .ml-list-item--full's own
+   thinner rows above. */
+.ml-profile-mode-head { padding: 0.25rem 0.85rem 0.1rem; }
+.ml-profile-mode-body .ml-list-item--full { margin-top: 0.05rem; margin-bottom: 0.05rem; padding-top: 0.22rem; padding-bottom: 0.22rem; }
+.ml-profile-mode-body .ml-folder-head { padding-top: 0.14rem; padding-bottom: 0.14rem; }

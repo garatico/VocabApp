@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { startMode } from './helpers.ts';
 
+async function enableSuddenDeath(page: import('@playwright/test').Page): Promise<void> {
+  await page.addInitScript(() => window.localStorage.setItem('s_sudden_death', 'true'));
+}
+
 /**
  * Table mode — default controls are Spanish, "Most Common" pool, Word→Meaning
  * direction, so the quiz is deterministic: the same checked-in vocabulary.db
@@ -37,4 +41,34 @@ test('answering correctly marks the row, and Give Up reveals what was missed', a
   // showing what was typed, and never leaves it blank either.
   await expect(secondInput).not.toHaveValue('zzz-definitely-not-the-answer');
   await expect(secondInput).not.toHaveValue('');
+});
+
+test('Sudden Death marks a cell missed the instant a typo can no longer be corrected into the answer', async ({ page }) => {
+  await enableSuddenDeath(page);
+  await startMode(page, 'table');
+
+  const firstInput = page.locator('input[data-word]').first();
+  await firstInput.fill('zzz-definitely-not-the-answer');
+  await expect(firstInput).toHaveClass(/incorrect/);
+  await expect(firstInput).toBeDisabled();
+  await expect(firstInput).not.toHaveValue('zzz-definitely-not-the-answer');
+  await expect(firstInput).not.toHaveValue('');
+});
+
+test('Sudden Death does not fire while a typed prefix could still become correct', async ({ page }) => {
+  await enableSuddenDeath(page);
+  await startMode(page, 'table');
+
+  const firstInput = page.locator('input[data-word]').first();
+  const firstWordJson = await page.locator('[data-word-json]').first().getAttribute('data-word-json');
+  const firstWord = JSON.parse(firstWordJson ?? '{}');
+  const prefix = String(firstWord.translation).slice(0, 1);
+  await firstInput.fill(prefix);
+  await expect(firstInput).not.toHaveClass(/incorrect/);
+  await expect(firstInput).toBeEnabled();
+
+  // Finishing the word off still resolves it correct, same as with Sudden
+  // Death off — the feature only ever short-circuits a wrong answer.
+  await firstInput.fill(firstWord.translation);
+  await expect(firstInput).toHaveClass(/correct/);
 });

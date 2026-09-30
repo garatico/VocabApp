@@ -59,6 +59,8 @@ export interface SmartRule {
   hiddenModes?: FilterScope[];
   /** Optional emoji shown before the list's name in the sidebar. */
   emoji?: string;
+  /** Optional accent colour for the list's own sidebar card, same palette/picker as a folder's. */
+  color?: string;
 }
 
 export const DEFAULT_SMART_RULE: SmartRule = {

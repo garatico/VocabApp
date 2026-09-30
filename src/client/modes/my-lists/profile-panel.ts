@@ -26,6 +26,7 @@ import { getFolderRegistry } from './folders.ts';
 import { LANGUAGES } from '../../data/languages.ts';
 import { readString, writeString } from '../../utils/storage.ts';
 import { unionTenseDefs } from '../conjugation/controls.ts';
+import { PRONOUNS } from '../conjugation/data.ts';
 import { showToast } from '../../ui/toast.ts';
 
 /** A profile with no `words` yet (saved before that field existed, or a
@@ -681,7 +682,28 @@ export function buildProfileEditorGroups(
       });
       regRow.appendChild(chip);
     });
-    const tenseFormsSection = section('tenseForms', 'Tense & Forms', null, tenseRow, regRow);
+
+    // Same classes the live #conjPronounToggles row uses — which pronoun
+    // slots this profile leaves switched off (see ConjugationBundle's own
+    // doc comment). `primaryLang`'s own pronoun list, since the slot count
+    // and labels ("yo", "tú", …) are language-specific.
+    const disabledPronouns = new Set(conj.disabledPronouns ?? []);
+    const formsRow = document.createElement('div');
+    formsRow.className = 'ml-profile-editor-chips ml-profile-editor-forms-chips';
+    (PRONOUNS[primaryLang] ?? []).forEach((pronoun, i) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'conj-pronoun-toggle' + (disabledPronouns.has(i) ? '' : ' active');
+      chip.dataset.pi = String(i);
+      chip.textContent = pronoun;
+      chip.addEventListener('click', () => {
+        const next = new Set(conj.disabledPronouns ?? []);
+        if (next.has(i)) next.delete(i); else next.add(i);
+        persist({ ...bundle, conjugation: { ...conj, disabledPronouns: [...next] } });
+      });
+      formsRow.appendChild(chip);
+    });
+    const tenseFormsSection = section('tenseForms', 'Tense & Forms', null, tenseRow, regRow, formsRow);
 
     const viewRow = document.createElement('div');
     viewRow.className = 'ml-profile-editor-chips';

@@ -8,6 +8,8 @@
 
 import { getMasteryLevel, setMasteryLevel, MASTERY_LEVELS, getMasteredDate } from './mastery.ts';
 import { quizStrength, wordTally } from '../../utils/session-history.ts';
+import { isDueExempt, setDueExempt } from '../../utils/srs.ts';
+import { Settings } from '../../settings.ts';
 import { buildConjSection, buildNonFiniteSection } from '../../utils/word-tooltip.ts';
 import { POS_ABBREV, type VocabEntry } from './types.ts';
 import { buildAudioButton } from '../../ui/audio-play-button.ts';
@@ -81,6 +83,32 @@ export function buildEditInMyContentButton(lang: string, word: string): HTMLButt
   btn.addEventListener('click', e => {
     e.stopPropagation();
     void import('../my-content-mode.ts').then(m => m.openWordInMyContentEditor(lang, word));
+  });
+  return btn;
+}
+
+/**
+ * A toggle for whether this word is ever surfaced as "due" (the header
+ * badge, History's Due for Review, a Smart List's `due: 'yes'` rule) — see
+ * srs.ts's own doc comment on setDueExempt for why this is a separate flag
+ * from the schedule itself rather than something that clears it. Useful for
+ * a word the learner already knows cold but doesn't want nagged about on a
+ * spaced-repetition cadence (e.g. a name, or a word only relevant for a
+ * specific trip or project).
+ */
+export function buildDueExemptButton(lang: string, word: string, onChange: () => void): HTMLButtonElement {
+  const exempt = isDueExempt(lang, word);
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'ml-due-exempt-btn' + (exempt ? ' ml-due-exempt-btn--on' : '');
+  btn.textContent = exempt ? '🔕' : '🔔';
+  btn.title = exempt
+    ? 'Excluded from "due for review" — click to re-enable'
+    : 'Included in "due for review" — click to exclude this word';
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    setDueExempt(lang, word, !exempt);
+    onChange();
   });
   return btn;
 }
@@ -273,10 +301,14 @@ export function buildWordRow(o: WordRowOptions): HTMLLIElement {
   if (entry?.translation) fillHighlighted(transSpan, entry.translation, o.filter);
 
   const { masteryBtn, quizBadge } = buildMasteryControls(o.lang, o.word, o.redraw);
+  // Master switch: Settings → Session History → "Omit from Due" per word.
+  // Off hides the control entirely rather than just disabling it — there is
+  // nothing to toggle once the feature has no effect on what's due.
+  const dueExemptBtn = Settings.getDueExemptEnabled() ? buildDueExemptButton(o.lang, o.word, o.redraw) : null;
   const editBtn = buildEditInMyContentButton(o.lang, o.word);
   const actions = document.createElement('div');
   actions.className = 'ml-word-actions';
-  actions.append(quizBadge, masteryBtn, editBtn, ...(o.extraActions ?? []));
+  actions.append(quizBadge, masteryBtn, ...(dueExemptBtn ? [dueExemptBtn] : []), editBtn, ...(o.extraActions ?? []));
 
   li.append(...(o.leading ?? []), wordSpan);
   if (audioBtn) li.appendChild(audioBtn);

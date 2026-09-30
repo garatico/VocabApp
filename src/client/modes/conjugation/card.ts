@@ -305,6 +305,9 @@ export function buildCard({
           fresh.value    = answer;
           fresh.disabled = true;
           onProgress();
+        } else if (!correct && Settings.getSuddenDeath() && fresh.value && !normalize(answer).startsWith(normalize(fresh.value))) {
+          fill(fresh, singleRevealBtn, answer, 'missed');
+          onProgress();
         }
       });
 
@@ -330,6 +333,12 @@ export function buildCard({
           if (correct && !was) {
             fresh.value    = expected;
             fresh.disabled = true;
+            let n = (i + 1) % inputs.length;
+            while (inputs[n].disabled && n !== i) n = (n + 1) % inputs.length;
+            if (n !== i) inputs[n].focus();
+            onProgress();
+          } else if (!correct && Settings.getSuddenDeath() && fresh.value && expected && !normalize(expected).startsWith(normalize(fresh.value))) {
+            fill(fresh, revealBtns[i], expected, 'missed');
             let n = (i + 1) % inputs.length;
             while (inputs[n].disabled && n !== i) n = (n + 1) % inputs.length;
             if (n !== i) inputs[n].focus();

@@ -1,7 +1,10 @@
-import { getListNames, getMultiListNames, getListMeta, setListMeta, getMultiListMeta, setMultiListMeta, metaFolders } from '../../utils/word-lists.ts';
-import { getFolderRegistry, addFolder, getFolderStyle } from './folders.ts';
+import { getListNames, getMultiListNames, getListMeta, setListMeta, getMultiListMeta, setMultiListMeta, metaFolders, deleteList, deleteMultiList } from '../../utils/word-lists.ts';
+import { getFolderRegistry, addFolder, renameFolder, removeFolder, getFolderStyle } from './folders.ts';
 import { type ListsCtx } from './context.ts';
-import { getSmartNames, getSmartLists, saveSmartRule } from './smart-lists.ts';
+import { getSmartNames, getSmartLists, saveSmartRule, deleteSmartList } from './smart-lists.ts';
+import { listVisualProfiles, getVisualProfile, saveVisualProfile, deleteVisualProfile } from '../../filters/visual-profiles.ts';
+import { listPresets, getPreset, savePreset, deletePreset } from '../../filters/presets.ts';
+import type { FilterScope } from '../../filters/filter-scope.ts';
 import type { MenuItem } from './sidebar-menu.ts';
 import type { BulkHideFrom } from './sidebar-pickers.ts';
 import { type SidebarSectionId, isSectionCollapsed, setSectionCollapsed, isFolderCollapsed, setFolderCollapsed } from './sidebar-state.ts';
@@ -124,6 +127,104 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
   }
 
   /**
+   * Renaming a folder (folders.ts's renameFolder) only moves the registry entry and its style — it
+   * has no notion of what a "scope" actually holds. This is the other half: walk every list/rule/
+   * profile that could be filed under `oldName` in this section's own store and swap the name in its
+   * `folders` array (and the legacy singular `folder`, folded in the same way metaFolders() does).
+   * `scope` is whatever buildFolderGroup's caller already computed — for Testing Profiles that is
+   * `profiles_<mode>`, which is where the mode this rename applies to comes from.
+   */
+  function renameFolderReferences(sectionId: SidebarSectionId, scope: string, oldName: string, newName: string): void {
+    const swap = (folders: string[]): string[] => folders.map(f => (f === oldName ? newName : f));
+    if (sectionId === 'single') {
+      getListNames(ctx.lang).forEach(n => {
+        const meta = getListMeta(ctx.lang, n);
+        const folders = metaFolders(meta);
+        if (folders.includes(oldName)) setListMeta(ctx.lang, n, { ...meta, folders: swap(folders), folder: undefined });
+      });
+    } else if (sectionId === 'smart') {
+      const rules = getSmartLists(ctx.lang);
+      getSmartNames(ctx.lang).forEach(n => {
+        const folders = rules[n].folders ?? [];
+        if (folders.includes(oldName)) saveSmartRule(ctx.lang, n, { ...rules[n], folders: swap(folders), folder: undefined });
+      });
+    } else if (sectionId === 'multi') {
+      getMultiListNames().forEach(n => {
+        const meta = getMultiListMeta(n);
+        const folders = metaFolders(meta);
+        if (folders.includes(oldName)) setMultiListMeta(n, { ...meta, folders: swap(folders), folder: undefined });
+      });
+    } else if (sectionId === 'visual') {
+      listVisualProfiles().forEach(n => {
+        const profile = getVisualProfile(n);
+        const folders = profile?.folders ?? [];
+        if (profile && folders.includes(oldName)) saveVisualProfile(n, { ...profile, folders: swap(folders) });
+      });
+    } else if (sectionId === 'profiles') {
+      const mode = scope.slice('profiles_'.length) as FilterScope;
+      listPresets(mode).forEach(n => {
+        const bundle = getPreset(mode, n);
+        const folders = bundle?.folders ?? (bundle?.folder ? [bundle.folder] : []);
+        if (bundle && folders.includes(oldName)) savePreset(mode, n, { ...bundle, folders: swap(folders), folder: undefined });
+      });
+    }
+  }
+
+  /**
+   * The other half of deleting a folder: `removeFolder` (folders.ts) only
+   * retires the registry entry and its style. Every list/rule/profile still
+   * naming `folder` in its own `folders` array either loses just that one
+   * tag (falls back to ungrouped — `alsoDeleteMembers` false) or is deleted
+   * outright along with it (`alsoDeleteMembers` true), same per-section
+   * dispatch as renameFolderReferences above.
+   */
+  function deleteFolderReferences(
+    sectionId: SidebarSectionId, scope: string, folder: string, alsoDeleteMembers: boolean,
+  ): void {
+    const drop = (folders: string[]): string[] => folders.filter(f => f !== folder);
+    if (sectionId === 'single') {
+      getListNames(ctx.lang).forEach(n => {
+        const meta = getListMeta(ctx.lang, n);
+        if (!metaFolders(meta).includes(folder)) return;
+        if (alsoDeleteMembers) { deleteList(ctx.lang, n); return; }
+        setListMeta(ctx.lang, n, { ...meta, folders: drop(metaFolders(meta)), folder: undefined });
+      });
+    } else if (sectionId === 'smart') {
+      const rules = getSmartLists(ctx.lang);
+      getSmartNames(ctx.lang).forEach(n => {
+        const folders = rules[n].folders ?? [];
+        if (!folders.includes(folder)) return;
+        if (alsoDeleteMembers) { deleteSmartList(ctx.lang, n); return; }
+        saveSmartRule(ctx.lang, n, { ...rules[n], folders: drop(folders), folder: undefined });
+      });
+    } else if (sectionId === 'multi') {
+      getMultiListNames().forEach(n => {
+        const meta = getMultiListMeta(n);
+        if (!metaFolders(meta).includes(folder)) return;
+        if (alsoDeleteMembers) { deleteMultiList(n); return; }
+        setMultiListMeta(n, { ...meta, folders: drop(metaFolders(meta)), folder: undefined });
+      });
+    } else if (sectionId === 'visual') {
+      listVisualProfiles().forEach(n => {
+        const profile = getVisualProfile(n);
+        const folders = profile?.folders ?? [];
+        if (!profile || !folders.includes(folder)) return;
+        if (alsoDeleteMembers) { deleteVisualProfile(n); return; }
+        saveVisualProfile(n, { ...profile, folders: drop(folders) });
+      });
+    } else if (sectionId === 'profiles') {
+      const mode = scope.slice('profiles_'.length) as FilterScope;
+      listPresets(mode).forEach(n => {
+        const bundle = getPreset(mode, n);
+        const folders = bundle?.folders ?? (bundle?.folder ? [bundle.folder] : []);
+        if (!bundle || !folders.includes(folder)) return;
+        if (alsoDeleteMembers) { deletePreset(mode, n); return; }
+        savePreset(mode, n, { ...bundle, folders: drop(folders), folder: undefined });
+      });
+    }
+  }
+
+  /**
    * Builds one collapsible folder box: a header bar (caret + 📁 + name, plus
    * a bulk "Hide From" dropdown when `bulkHideFrom` applies) atop a nested
    * `<ul>` that owns everything inside it. Toggling collapse is a single
@@ -181,9 +282,40 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
 
     const folderItems: MenuItem[] = [];
     if (style) {
+      // A prompt, not the inline-input rename every list card uses — the head is a mix of caret, icon,
+      // emoji and text rather than one discrete name element, same reasoning as "+ Folder"'s own prompt.
+      folderItems.push({
+        glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename',
+        onClick: () => {
+          const input = window.prompt('Rename folder:', style.folder);
+          const trimmed = input?.trim();
+          if (!trimmed || trimmed === style.folder) return;
+          if (!renameFolder(style.scope, style.folder, trimmed)) {
+            alert(`A folder named "${trimmed}" already exists.`);
+            return;
+          }
+          renameFolderReferences(sectionId, style.scope, style.folder, trimmed);
+          // Carries the collapsed/expanded state over to the new key so renaming doesn't also re-open it.
+          setFolderCollapsed(sectionId, folderKey.slice(0, folderKey.length - style.folder.length) + trimmed, collapsed);
+          render();
+        },
+      });
       folderItems.push({
         glyph: '🎨', label: 'Emoji & Colour', title: "Set this folder's emoji and colour", tone: 'emoji',
         onClick: anchor => openFolderStylePicker(anchor, style.scope, style.folder),
+      });
+      folderItems.push({
+        glyph: '🗑', label: 'Delete', title: 'Delete this folder', tone: 'delete',
+        onClick: () => {
+          if (!window.confirm(`Delete folder "${style.folder}"?`)) return;
+          const alsoDeleteMembers = window.confirm(
+            `Also delete every list inside "${style.folder}"?\n\n`
+            + 'OK — delete the lists too.\nCancel — just remove the folder; its lists stay, ungrouped.',
+          );
+          deleteFolderReferences(sectionId, style.scope, style.folder, alsoDeleteMembers);
+          removeFolder(style.scope, style.folder);
+          render();
+        },
       });
     }
     if (bulkHideFrom) {

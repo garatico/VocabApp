@@ -131,22 +131,46 @@ function glossToTokens(gloss: string, norm: (s?: string) => string = normalise):
 }
 
 /**
+ * `exact`: does `attempt` equal one of `tokens`? `!exact` (used for Sudden
+ * Death's "is this typo doomed yet, or could more typing still land on an
+ * accepted answer" check): is `attempt` a *prefix* of one of them?
+ */
+function tokenCompare(attempt: string, tokens: string[], exact: boolean): boolean {
+  return exact ? tokens.includes(attempt) : tokens.some(t => t.startsWith(attempt));
+}
+
+function isCorrectImpl(
+  input: string, entry: Word, exact: boolean, norm: (s?: string) => string = normalise,
+): boolean {
+  const attempt = norm(input);
+  // Nothing typed yet is always still a valid start (prefix of everything),
+  // never a complete, correct answer.
+  if (!attempt) return !exact;
+
+  if (Array.isArray(entry.glosses) && entry.glosses.length > 0) {
+    return entry.glosses.some(g => tokenCompare(attempt, glossToTokens(g, norm), exact));
+  }
+
+  if (typeof entry.answers === 'string') {
+    return entry.answers.split('|').some(a => tokenCompare(attempt, glossToTokens(a, norm), exact));
+  }
+
+  // No known accepted answers at all — can't call anything wrong either.
+  return !exact;
+}
+
+/**
  * Check whether the user's input matches any accepted gloss for a word entry.
  * Used in forward direction (target language shown, user types English).
  */
 export function isCorrect(input: string, entry: Word): boolean {
-  const attempt = normalise(input);
-  if (!attempt) return false;
+  return isCorrectImpl(input, entry, true);
+}
 
-  if (Array.isArray(entry.glosses) && entry.glosses.length > 0) {
-    return entry.glosses.some(g => glossToTokens(g).includes(attempt));
-  }
-
-  if (typeof entry.answers === 'string') {
-    return entry.answers.split('|').some(a => glossToTokens(a).includes(attempt));
-  }
-
-  return false;
+/** Is `input` still a possible prefix of some accepted gloss — i.e. not yet
+ *  provably wrong? See isCorrectImpl's own `exact` doc. Used by Sudden Death. */
+export function isCorrectPrefix(input: string, entry: Word): boolean {
+  return isCorrectImpl(input, entry, false);
 }
 
 /**
@@ -182,46 +206,56 @@ function reverseTargets(
   return pinyin ? [...wordForms, pinyin] : wordForms;
 }
 
+function isReverseCorrectImpl(
+  input: string, entry: Word, norm: (s?: string) => string,
+  lang: string | null | undefined, display: ChineseDisplay, exact: boolean,
+): boolean {
+  const attempt = norm(input);
+  if (!attempt) return !exact;
+  return tokenCompare(attempt, reverseTargets(entry, norm, lang, display), exact);
+}
+
 /**
  * Check whether the user's input matches the target-language word.
  * Used in reverse direction (English shown, user types the foreign word).
  * Accent-insensitive by default (same leniency as forward direction).
  */
 export function isReverseCorrect(
-  input: string,
-  entry: Word,
-  lang?: string | null,
-  display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
+  input: string, entry: Word, lang?: string | null, display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
 ): boolean {
-  const attempt = normalise(input);
-  if (!attempt) return false;
-  return reverseTargets(entry, normalise, lang, display).includes(attempt);
+  return isReverseCorrectImpl(input, entry, normalise, lang, display, true);
+}
+
+/** Prefix variant — see isCorrectPrefix's own doc comment. */
+export function isReverseCorrectPrefix(
+  input: string, entry: Word, lang?: string | null, display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
+): boolean {
+  return isReverseCorrectImpl(input, entry, normalise, lang, display, false);
 }
 
 /**
  * Strict variants — diacritics are significant (e.g. "esta" ≠ "está").
  */
 export function isCorrectStrict(input: string, entry: Word): boolean {
-  const attempt = normaliseStrict(input);
-  if (!attempt) return false;
-  if (Array.isArray(entry.glosses) && entry.glosses.length > 0) {
-    return entry.glosses.some(g => glossToTokens(g, normaliseStrict).includes(attempt));
-  }
-  if (typeof entry.answers === 'string') {
-    return entry.answers.split('|').some(a => glossToTokens(a, normaliseStrict).includes(attempt));
-  }
-  return false;
+  return isCorrectImpl(input, entry, true, normaliseStrict);
+}
+
+/** Prefix variant — see isCorrectPrefix's own doc comment. */
+export function isCorrectStrictPrefix(input: string, entry: Word): boolean {
+  return isCorrectImpl(input, entry, false, normaliseStrict);
 }
 
 export function isReverseCorrectStrict(
-  input: string,
-  entry: Word,
-  lang?: string | null,
-  display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
+  input: string, entry: Word, lang?: string | null, display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
 ): boolean {
-  const attempt = normaliseStrict(input);
-  if (!attempt) return false;
-  return reverseTargets(entry, normaliseStrict, lang, display).includes(attempt);
+  return isReverseCorrectImpl(input, entry, normaliseStrict, lang, display, true);
+}
+
+/** Prefix variant — see isCorrectPrefix's own doc comment. */
+export function isReverseCorrectStrictPrefix(
+  input: string, entry: Word, lang?: string | null, display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
+): boolean {
+  return isReverseCorrectImpl(input, entry, normaliseStrict, lang, display, false);
 }
 
 /** Which way round the question is asked. */
@@ -261,6 +295,31 @@ export function matchesAnswer(
   return dir === 'en-target'
     ? isReverseCorrect(input, entry, lang, display)
     : isCorrect(input, entry);
+}
+
+/**
+ * Sudden Death's own question: could more typing still land `input` on an
+ * accepted answer, or has it already strayed off every one of them? Same
+ * dispatch as matchesAnswer, one prefix-check step earlier — a cell only gets
+ * marked wrong this way while this is false, never while the full answer
+ * simply hasn't been typed yet (that stays false until it's actually wrong).
+ */
+export function couldStillMatch(
+  input: string,
+  entry: Word,
+  dir:   AnswerDirection,
+  mode:  AnswerMatchMode = 'fuzzy',
+  lang?: string | null,
+  display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
+): boolean {
+  if (mode === 'strict') {
+    return dir === 'en-target'
+      ? isReverseCorrectStrictPrefix(input, entry, lang, display)
+      : isCorrectStrictPrefix(input, entry);
+  }
+  return dir === 'en-target'
+    ? isReverseCorrectPrefix(input, entry, lang, display)
+    : isCorrectPrefix(input, entry);
 }
 
 /**
@@ -359,6 +418,21 @@ export function slotMatches(
   return mode === 'strict'
     ? isReverseCorrectStrict(input, entry, lang, display)
     : isReverseCorrect(input, entry, lang, display);
+}
+
+/** Sudden Death's own slotMatches — see couldStillMatch's doc comment. */
+export function slotCouldMatch(
+  input: string,
+  entry: Word,
+  slot: QuizSlot,
+  mode: AnswerMatchMode = 'fuzzy',
+  lang?: string | null,
+  display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
+): boolean {
+  if (slot === 'english') return mode === 'strict' ? isCorrectStrictPrefix(input, entry) : isCorrectPrefix(input, entry);
+  return mode === 'strict'
+    ? isReverseCorrectStrictPrefix(input, entry, lang, display)
+    : isReverseCorrectPrefix(input, entry, lang, display);
 }
 
 /** Return prompt + hint for display. */
@@ -522,7 +596,11 @@ export function getGlosses(entry: Word): string[] {
  */
 export function chosenGlosses(entry: Word): string[] {
   const glosses = getGlosses(entry);
-  if (entry.pos === 'verb') {
+  // The narrowing below only kicks in when the *first* gloss is itself a "to
+  // X" form. A learner's own gloss reorder (My Content) can deliberately put
+  // a non-infinitive sense (e.g. "can") first — that choice must win over the
+  // narrowing, or the reorder would have no visible effect on the quiz.
+  if (entry.pos === 'verb' && glosses[0]?.toLowerCase().startsWith('to ')) {
     const toForms = glosses.filter(g => g.toLowerCase().startsWith('to '));
     if (toForms.length > 0) return toForms;
   }

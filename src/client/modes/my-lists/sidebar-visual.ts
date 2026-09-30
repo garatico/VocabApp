@@ -13,7 +13,7 @@ import type { SidebarKit } from './sidebar-kit.ts';
  */
 
 export function createVisualSection(kit: SidebarKit) {
-  const { ctx, render, sectionHead, buildActionMenu, emojiSpan, emojiItem, makeListDraggable, renderEmptyFolderPlaceholders } = kit;
+  const { ctx, render, sectionHead, buildActionMenu, emojiSpan, styleItem, makeListDraggable, renderEmptyFolderPlaceholders } = kit;
 
   // ── Visual Profiles ──────────────────────────────────────────────────────
   // Saved display preferences (Theme, Font Size — see visual-profiles.ts),
@@ -60,6 +60,7 @@ export function createVisualSection(kit: SidebarKit) {
           + (name === ctx.selectedVisual ? ' active' : '');
         li.dataset.folder = folder;
         li.title = describeVisualProfile(profile);
+        if (profile.color) { li.classList.add('ml-list-item--colored'); li.style.setProperty('--list-color', profile.color); }
         makeListDraggable(li, { kind: 'visual', name });
 
         const topRow = document.createElement('div');
@@ -70,9 +71,9 @@ export function createVisualSection(kit: SidebarKit) {
         topRow.appendChild(nameSpan);
 
         topRow.append(buildActionMenu([
-          emojiItem(profile.emoji, emoji => {
+          styleItem({ emoji: profile.emoji, color: profile.color }, style => {
             const current = getVisualProfile(name);
-            if (current) saveVisualProfile(name, { ...current, emoji });
+            if (current) saveVisualProfile(name, { ...current, ...style });
           }),
           { glyph: '⧉', label: 'Copy', title: 'Duplicate visual profile', tone: 'copy', onClick: () => {
             const input = window.prompt(`Name for the copy of "${name}":`, suggestCopyName(name));

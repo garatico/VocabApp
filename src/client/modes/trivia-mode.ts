@@ -35,7 +35,7 @@ import { getSelectedDomains, matchesDomainFilter } from '../filters/domain-filte
 import { getEffectiveTriviaQuestions } from '../data/user-content.ts';
 import { normalize } from '../utils/match.ts';
 import { shuffle } from '../utils/shuffle.ts';
-import { applyAutofillAttr } from '../settings.ts';
+import { Settings, applyAutofillAttr } from '../settings.ts';
 import { saveSession, recordOutcome } from '../utils/session-history.ts';
 import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summary.ts';
 import { bindChoiceKeys } from '../ui/choice-keys.ts';
@@ -116,6 +116,14 @@ function isAnswerCorrect(input: string, q: TriviaQuestion): boolean {
   const key = normalize(input);
   if (!key) return false;
   return acceptedAnswers(q).some(a => normalize(a) === key);
+}
+
+/** Sudden Death's own isAnswerCorrect — could more typing still land on an
+ *  accepted answer? Empty input is always still a valid start. */
+function couldAnswerStillMatch(input: string, q: TriviaQuestion): boolean {
+  const key = normalize(input);
+  if (!key) return true;
+  return acceptedAnswers(q).some(a => normalize(a).startsWith(key));
 }
 
 function setProgress(correct: number, total: number, missed = 0): void {
@@ -204,10 +212,18 @@ function renderFillInTable(bank: TriviaQuestion[], container: HTMLElement, lang:
     applyAutofillAttr(inp);
     inp.addEventListener('input', () => {
       if (finished || inp.disabled) return;
-      if (!isAnswerCorrect(inp.value, q)) return;
-      inp.value = canonicalAnswer(q);
-      inp.disabled = true;
-      inp.classList.add('correct');
+      if (isAnswerCorrect(inp.value, q)) {
+        inp.value = canonicalAnswer(q);
+        inp.disabled = true;
+        inp.classList.add('correct');
+      } else if (Settings.getSuddenDeath() && inp.value && !couldAnswerStillMatch(inp.value, q)) {
+        // Same end state Give Up (finish()) puts an unanswered cell in.
+        inp.value = canonicalAnswer(q);
+        inp.disabled = true;
+        inp.classList.add('incorrect');
+      } else {
+        return;
+      }
       updateProgress();
       if (inputs.every(i => i.disabled)) finish();
     });

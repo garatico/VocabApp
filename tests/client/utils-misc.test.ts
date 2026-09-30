@@ -224,6 +224,11 @@ describe('primaryGlossForHint', () => {
     expect(primaryGlossForHint(probar)).toBe('to test');
   });
 
+  it('respects a reordered non-"to X" gloss put first, same as buildGlossDisplay', () => {
+    const poder = word({ word: 'poder', pos: 'verb', glosses: ['can', 'to be able (to)'] });
+    expect(primaryGlossForHint(poder)).toBe('can');
+  });
+
   it('falls back to translation, then word, when there are no glosses', () => {
     expect(primaryGlossForHint(word({ word: 'x', glosses: [], translation: 'y' }))).toBe('y');
     expect(primaryGlossForHint(word({ word: 'x', glosses: [] }))).toBe('x');

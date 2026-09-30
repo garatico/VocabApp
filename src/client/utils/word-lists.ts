@@ -58,6 +58,8 @@ export interface ListMeta {
   hiddenModes?: FilterScope[];
   /** Optional emoji shown before the list's name in the sidebar. */
   emoji?: string;
+  /** Optional accent colour for the list's own sidebar card, same palette/picker as a folder's. */
+  color?: string;
 }
 
 /** `meta.folders` if the caller already migrated, otherwise `[meta.folder]`

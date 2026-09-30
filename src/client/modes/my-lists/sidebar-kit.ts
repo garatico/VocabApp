@@ -21,8 +21,11 @@ export interface SidebarKit {
   buildActionMenu(items: MenuItem[]): HTMLElement;
   /** A list's own emoji, as a span for the front of its name row (or null). */
   emojiSpan(emoji: string | undefined): HTMLElement | null;
-  /** The gear menu's "Emoji" entry. */
-  emojiItem(current: string | undefined, save: (emoji: string | undefined) => void): MenuItem;
+  /** The gear menu's "Emoji & Colour" entry — every card type gets both, same as a folder. */
+  styleItem(
+    current: import('./sidebar-pickers.ts').CardStyle,
+    save: (style: import('./sidebar-pickers.ts').CardStyle) => void,
+  ): MenuItem;
   /** Make a list card draggable onto a folder header. */
   makeListDraggable(li: HTMLElement, item: import('./sidebar-dnd.ts').DraggedListItem): void;
   /** One placeholder row per registered-but-empty folder. */

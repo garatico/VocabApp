@@ -10,8 +10,14 @@
  * of the word list must be able to close a popover it did not open.
  */
 
-import { getListNames, addToList, removeFromList } from '../../utils/word-lists.ts';
+import {
+  getListNames, addToList, removeFromList,
+  getMultiListNames, getMultiListLanguages, addToMultiList, removeFromMultiList,
+} from '../../utils/word-lists.ts';
 import { positionPopover } from '../../utils/popover-position.ts';
+import { createFlagImg } from '../../ui/flag-icon.ts';
+import { buildLangBadge } from '../../ui/lang-badge.ts';
+import { LANGUAGES } from '../../data/languages.ts';
 import type { ListsCtx } from './context.ts';
 
 let activePopover: HTMLElement | null = null;
@@ -41,17 +47,31 @@ export function clickedOutsidePopover(target: Node): boolean {
  * 'copy' — for a word that isn't a member of any particular list to begin
  * with (Browse All Words' own rows), where "move" has no source list to
  * remove the word from and would just be a confusing option to offer.
+ * @param opts.sourceLang The word's own language, when it isn't `ctx.lang` —
+ * a Cross-Language list's own row (multi-panel.ts) passes the entry's own
+ * language here, since a mixed-language list has no single `ctx.lang` of its
+ * own. Defaults to `ctx.lang`. Every single-language destination offered is
+ * in this language — a word can't join a single-language list of a language
+ * it isn't in.
+ * @param opts.sourceMulti The Cross-Language list name, when moving/copying
+ * out of one (multi-panel.ts) rather than out of `ctx.selectedList` — 'move'
+ * removes from this list instead, and it is excluded from the Cross-Language
+ * destinations offered (nothing moves into the list it's already in).
  */
 export function openMovePopover(
   ctx: ListsCtx, anchorBtn: HTMLElement, words: string[],
   onDone: (mode: 'move' | 'copy', listName: string) => void,
-  opts: { copyOnly?: boolean } = {},
+  opts: { copyOnly?: boolean; sourceLang?: string; sourceMulti?: string } = {},
 ): void {
   closePopover();
   let mode: 'move' | 'copy' = opts.copyOnly ? 'copy' : 'move';
-  const otherLists = opts.copyOnly
-    ? getListNames(ctx.lang)
-    : getListNames(ctx.lang).filter(n => n !== ctx.selectedList);
+  const lang = opts.sourceLang ?? ctx.lang;
+  // Excluding the source itself only makes sense for 'move' — a word being
+  // copied (or one with no single source list to begin with) can freely be
+  // added to every list, including the one it's already sitting in.
+  const excludeSingle = !opts.copyOnly && !opts.sourceMulti ? ctx.selectedList : null;
+  const singleTargets = getListNames(lang).filter(n => n !== excludeSingle);
+  const multiTargets = getMultiListNames().filter(n => n !== opts.sourceMulti);
 
   const popover = document.createElement('div');
   popover.className = 'ml-move-popover';
@@ -89,25 +109,51 @@ export function openMovePopover(
     popover.appendChild(tabs);
   }
 
-  if (otherLists.length === 0) {
+  function commit(listName: string, addWord: (word: string) => void): void {
+    words.forEach(word => {
+      if (mode === 'move') {
+        if (opts.sourceMulti) removeFromMultiList(opts.sourceMulti, word, lang);
+        else removeFromList(lang, ctx.selectedList, word);
+      }
+      addWord(word);
+    });
+    onDone(mode, listName);
+    closePopover();
+  }
+
+  function buildItem(listName: string, flag: HTMLElement, addWord: (word: string) => void): HTMLButtonElement {
+    const item = document.createElement('button');
+    item.type = 'button'; item.className = 'ml-move-popover-item';
+    item.append(flag, document.createTextNode(listName));
+    item.addEventListener('click', e => { e.stopPropagation(); commit(listName, addWord); });
+    return item;
+  }
+
+  // A word can't join a single-language list of a language it isn't in, so
+  // every single-language row shows the same flag — still worth showing,
+  // since it's what tells the two groups apart from a Cross-Language list's
+  // own (possibly several) flags right below.
+  const singleLangInfo = LANGUAGES.find(l => l.name === lang);
+
+  if (singleTargets.length === 0 && multiTargets.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'ml-move-popover-empty'; empty.textContent = 'No other lists';
     popover.appendChild(empty);
   } else {
-    otherLists.forEach(listName => {
-      const item = document.createElement('button');
-      item.type = 'button'; item.className = 'ml-move-popover-item';
-      item.textContent = listName;
-      item.addEventListener('click', e => {
-        e.stopPropagation();
-        words.forEach(word => {
-          if (mode === 'move') removeFromList(ctx.lang, ctx.selectedList, word);
-          addToList(ctx.lang, listName, word);
-        });
-        onDone(mode, listName);
-        closePopover();
-      });
-      popover.appendChild(item);
+    singleTargets.forEach(listName => {
+      const flag = singleLangInfo
+        ? createFlagImg(singleLangInfo.flagCountry, singleLangInfo.label)
+        : document.createElement('span');
+      popover.appendChild(buildItem(listName, flag, word => addToList(lang, listName, word)));
+    });
+    if (singleTargets.length > 0 && multiTargets.length > 0) {
+      const sep = document.createElement('div');
+      sep.className = 'ml-move-popover-label'; sep.textContent = 'Cross-Language Lists';
+      popover.appendChild(sep);
+    }
+    multiTargets.forEach(listName => {
+      const flag = buildLangBadge(getMultiListLanguages(listName));
+      popover.appendChild(buildItem(listName, flag, word => addToMultiList(listName, word, lang)));
     });
   }
 

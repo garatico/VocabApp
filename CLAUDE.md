@@ -343,6 +343,28 @@ read from or write to `vocabulary.db`.
   builds one filename → path index and *reports* a name that exists in two
   domains, rather than a stack of `express.static` mounts where one file
   silently shadows the other.
+- **Every exact answer-matcher in `utils/utils.ts` has a prefix twin.** `isCorrect`/
+  `isReverseCorrect`/their `Strict` variants (and the dispatchers `matchesAnswer`/
+  `slotMatches`) share one internal impl parameterized on `exact`; the `!exact` side
+  (`isCorrectPrefix`, `couldStillMatch`, `slotCouldMatch`, …) asks "could more typing
+  still land on an accepted answer" rather than "does this match now" — empty input is
+  always still possible, never correct. This is Sudden Death's plug-in point
+  (`Settings.getSuddenDeath()`): each typed-answer mode's own `input` listener adds an
+  `else if` next to its existing correct-check that marks the cell wrong the moment
+  the prefix check fails, reusing whatever CSS class/state that mode's own Give Up
+  already uses for "wrong" — never a new state. Multiple-choice needs nothing (a click
+  already locks in immediately); Table's free-recall (Double Recall) and Trivia's
+  one-at-a-time (Enter-to-submit, already single-shot) are structurally exempt, not
+  omissions.
+- **A word can opt out of ever being "due"** (`utils/srs.ts`'s `vq_srs_exempt_<lang>`
+  Set, `isDueExempt`/`setDueExempt`) without touching its schedule — `srsDueWords`
+  filters it out, so the header badge, History's Due for Review and a Smart List's
+  `due: 'yes'` rule all stop surfacing it for free. The toggle lives on every word row
+  via `row-shared.ts`'s shared `buildWordRow`, next to the mastery button — gated by
+  `Settings.getDueExemptEnabled()` (Session History section), the master switch: off
+  hides the button (nothing to toggle once it has no effect) and `srsDueWords` stops
+  reading the exemption set at all, rather than deleting it — a word marked exempt
+  earlier resumes being excluded the moment the switch goes back on.
 
 ---
 

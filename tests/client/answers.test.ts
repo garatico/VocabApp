@@ -4,7 +4,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   isCorrect, isReverseCorrect, isCorrectStrict, isReverseCorrectStrict,
-  getGlosses, buildGlossDisplay,
+  isCorrectPrefix, isReverseCorrectPrefix, isCorrectStrictPrefix, isReverseCorrectStrictPrefix,
+  couldStillMatch, getGlosses, buildGlossDisplay,
 } from '../../src/client/utils/utils.js';
 import type { Word } from '../../src/client/types.js';
 
@@ -48,6 +49,49 @@ describe('isCorrect (lenient forward matching)', () => {
 
   it('returns false when no glosses or answers exist', () => {
     expect(isCorrect('anything', word({ word: 'x' }))).toBe(false);
+  });
+});
+
+describe('prefix matching (Sudden Death)', () => {
+  const hablar = word({ word: 'hablar', pos: 'verb', glosses: ['to speak', 'to talk'] });
+
+  it('accepts a partial typed prefix of an accepted answer', () => {
+    expect(isCorrectPrefix('to sp', hablar)).toBe(true);
+    expect(isCorrectPrefix('to t', hablar)).toBe(true);
+  });
+
+  it('accepts the empty string — nothing typed yet is never wrong', () => {
+    expect(isCorrectPrefix('', hablar)).toBe(true);
+  });
+
+  it('accepts a full correct answer too', () => {
+    expect(isCorrectPrefix('to speak', hablar)).toBe(true);
+  });
+
+  it('rejects a prefix that cannot lead to any accepted answer', () => {
+    expect(isCorrectPrefix('to eat', hablar)).toBe(false);
+    expect(isCorrectPrefix('xyz', hablar)).toBe(false);
+  });
+
+  it('reverse direction: accepts a prefix of the target word', () => {
+    expect(isReverseCorrectPrefix('habl', hablar)).toBe(true);
+    expect(isReverseCorrectPrefix('hablar', hablar)).toBe(true);
+    expect(isReverseCorrectPrefix('xyz', hablar)).toBe(false);
+  });
+
+  it('strict variants respect accents the same way the exact strict matchers do', () => {
+    const esta = word({ word: 'esta', glosses: ['this (fem.)'] });
+    expect(isCorrectStrictPrefix('thi', esta)).toBe(true);
+    const w = word({ word: 'está', pos: 'verb' });
+    expect(isReverseCorrectStrictPrefix('est', w)).toBe(true);
+    expect(isReverseCorrectStrictPrefix('esta', w)).toBe(false); // strict: no accent, doesn't match "está"
+  });
+
+  it('couldStillMatch dispatches by direction and match mode like matchesAnswer', () => {
+    expect(couldStillMatch('to sp', hablar, 'target-en')).toBe(true);
+    expect(couldStillMatch('to eat', hablar, 'target-en')).toBe(false);
+    expect(couldStillMatch('habl', hablar, 'en-target')).toBe(true);
+    expect(couldStillMatch('xyz', hablar, 'en-target')).toBe(false);
   });
 });
 
@@ -152,6 +196,14 @@ describe('display helpers', () => {
   it('buildGlossDisplay prefers "to X" forms for verbs', () => {
     const w = word({ pos: 'verb', glosses: ['to speak', 'speech', 'to talk'] });
     expect(buildGlossDisplay(w)).toBe('to speak / to talk');
+  });
+
+  it('buildGlossDisplay respects a reordered non-"to X" gloss put first', () => {
+    // A learner's My Content edit ("poder": move "can" ahead of "to be able
+    // (to)") must show up in the quiz, not get silently overridden by the
+    // "to X" narrowing meant for the data's own default ordering.
+    const w = word({ pos: 'verb', glosses: ['can', 'to be able (to)'] });
+    expect(buildGlossDisplay(w)).toBe('can / to be able');
   });
 
   it('buildGlossDisplay joins all glosses for non-verbs', () => {
