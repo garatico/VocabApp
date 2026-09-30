@@ -11,20 +11,27 @@ import { confirmDialog } from '../../ui/dialog.ts';
  * copy flows.
  */
 
-export function createSmartSection(kit: SidebarKit) {
+export function createSmartSection(kit: SidebarKit, opts: { starter?: boolean } = {}) {
+  /** The Starter Lists section is this same code over the rules flagged `starter` — see starter-lists.ts. */
+  const starter = opts.starter === true;
   const { ctx, render, sectionHead, buildActionMenu, emojiSpan, styleItem, makeListDraggable, renderEmptyFolderPlaceholders } = kit;
 
   // ── Smart lists ────────────────────────────────────────────────────────────
 
   function renderSmartNav(): void {
-    const folderScope = `smart_${ctx.lang}`;
-    const head = sectionHead(
-      'ml-smart-head', 'Smart Lists', 'Create a smart list — a saved query that stays current',
-      () => startCreateSmart(head), folderScope,
-    );
+    const folderScope = starter ? `starter_${ctx.lang}` : `smart_${ctx.lang}`;
+    const allRules = getSmartLists(ctx.lang);
+    const smartNames = getSmartNames(ctx.lang).filter(n => !!allRules[n].starter === starter);
+    // Nothing starter-made left (every one deleted): no empty section to look at.
+    if (starter && smartNames.length === 0) return;
+    const head = starter
+      ? sectionHead('ml-smart-head ml-starter-head', 'Starter Lists', undefined, undefined, folderScope)
+      : sectionHead(
+        'ml-smart-head', 'Smart Lists', 'Create a smart list — a saved query that stays current',
+        () => startCreateSmart(head), folderScope,
+      );
     ctx.listNav.appendChild(head);
 
-    const smartNames = getSmartNames(ctx.lang);
     if (smartNames.length === 0) {
       const hint = document.createElement('li');
       hint.className = 'ml-list-empty ml-smart-hint';
@@ -54,11 +61,12 @@ export function createSmartSection(kit: SidebarKit) {
 
       instances.forEach(folder => {
       const li = document.createElement('li');
-      li.className = 'ml-list-item ml-list-item--full ml-smart-item'
+      li.className = 'ml-list-item ml-list-item--full ml-smart-item' + (starter ? ' ml-starter-item' : '')
         + (name === ctx.selectedSmart ? ' active' : '');
       li.dataset.folder = folder;
       if (rule.color) { li.classList.add('ml-list-item--colored'); li.style.setProperty('--list-color', rule.color); }
-      makeListDraggable(li, { kind: 'smart', lang: ctx.lang, name });
+      // A starter list stays in its own section, so it is not draggable into Smart Lists' folders.
+      if (!starter) makeListDraggable(li, { kind: 'smart', lang: ctx.lang, name });
 
       const topRow = document.createElement('div');
       topRow.className = 'ml-list-row-top';
@@ -97,7 +105,8 @@ export function createSmartSection(kit: SidebarKit) {
           if (getSmartNames(ctx.lang).includes(newName)) {
             alert(`A smart list named "${newName}" already exists.`); return;
           }
-          saveSmartRule(ctx.lang, newName, { ...rule });
+          // A copy is the learner's own list, so it moves to Smart Lists (and out of the starter folders).
+          saveSmartRule(ctx.lang, newName, starter ? { ...rule, starter: false, folders: [], folder: undefined } : { ...rule });
           ctx.selectedSmart = newName; ctx.selectedList = ''; ctx.selectedMultiList = null; ctx.selectedProfile = null; ctx.selectedVisual = null;
           render();
         } },

@@ -15,7 +15,8 @@
  */
 
 import { positionPopover } from '../utils/popover-position.ts';
-import { LANGUAGES } from '../data/languages.ts';
+import { LANGUAGES, flagUrl } from '../data/languages.ts';
+import { Settings } from '../settings.ts';
 import { t } from '../i18n/index.ts';
 
 export interface LanguagePickerOptions {
@@ -99,7 +100,17 @@ export function openLanguagePicker({ anchorEl, exclude, selected, onChange, onCl
     const label       = document.createElement('span');
     label.textContent = missing ? t('controls.noDataYet', '{lang} — no data yet').replace('{lang}', lang.label) : lang.label;
 
+    // The same flag and tint the primary language's dropdown shows (ui/language-dropdown.ts).
+    row.classList.add('lang-picker-row');
+    row.style.setProperty('--lang-tint', `var(${lang.colorVar})`);
+    const flag = document.createElement('img');
+    flag.className = 'lang-dd-flag';
+    flag.alt = '';
+    flag.width = 20; flag.height = 14;
+    flag.src = flagUrl(Settings.getLangFlag(lang.name) || lang.flagCountry);
+
     row.appendChild(cb);
+    row.appendChild(flag);
     row.appendChild(label);
     picker.appendChild(row);
   }
@@ -148,8 +159,10 @@ function positionNear(picker: HTMLElement, anchor: HTMLElement): void {
  */
 export function languagePickerLabel(selected: Set<string>): string {
   if (selected.size === 0) return '+ Languages';
-  const labels = [...selected]
-    .map(name => LANGUAGES.find(l => l.name === name)?.label ?? name);
-  if (labels.length <= 3) return `+ ${labels.join(', ')}`;
-  return t('controls.plusNLanguages', '+ {n} languages').replace('{n}', String(labels.length));
+  if (selected.size === 1) {
+    const name = [...selected][0];
+    return `+ ${LANGUAGES.find(l => l.name === name)?.label ?? name}`;
+  }
+  // Two or more: a count, not a list — names would change the button's width every time one is added.
+  return t('controls.nLanguagesSelected', '{n} selected').replace('{n}', String(selected.size));
 }

@@ -13,9 +13,11 @@ import { bindScriptTypeFilter, getSelectedScriptTypes } from './filters/script-t
 import { bindUIState, bindModeSwitch, getCurrentMode } from './ui/ui-state.ts';
 import { buildFilterUI, initListFilter, syncListFilterUI, filterWords } from './filters/word-filters.ts';
 import { estimateConjugationSize } from './modes/conjugation/verb-filters.ts';
-import { loadWords }                            from './data/data-loader.ts';
+import { loadWordsProgressive }                  from './data/data-loader.ts';
 import { initTheme, type ThemeValue }            from './ui/theme-toggle.ts';
-import { mountUI }                              from './ui/ui.ts';
+import { enhanceLanguageSelect } from './ui/language-dropdown.ts';
+import { proxyToggleAsSelect, proxyToggleAsCycle } from './ui/toggle-proxy.ts';
+import { mountUI, showBackgroundLoading, hideBackgroundLoading } from './ui/ui.ts';
 import { initConjControls, setSelectionChangeCallback } from './modes/conjugation/controls.ts';
 import type { Word }                            from './types.ts';
 import { mergedSizedSlice }                     from './utils/merged-pool.ts';
@@ -546,6 +548,8 @@ function restoreSettings(): void {
 // ── Word list state ───────────────────────────────────────────────────────────
 
 const allWordsByLang: Record<string, Word[]> = {};
+/** Settles once every language still loading in the background is in and the filters are rebuilt over it. */
+let fullVocabPending: Promise<void> = Promise.resolve();
 let currentBaseList: Word[] = [];
 
 async function ensureLoaded(lang: string): Promise<Word[]> {
@@ -559,7 +563,16 @@ async function ensureLoaded(lang: string): Promise<Word[]> {
   // never appeared in any quiz again this session. Cheap to redo — the raw
   // vocab fetch underneath loadWords() is what's actually cached, in
   // data-loader.ts; this is just a map + sort over data already in memory.
-  const raw = await loadWords(lang);
+  //
+  // First paint gets only the most frequent words when a paged source can supply them quickly; the rest
+  // arrives in the background and the filters are rebuilt over the whole language when it does.
+  const { words: raw, complete, full } = await loadWordsProgressive(lang);
+  if (!complete) {
+    showBackgroundLoading();
+    const rebuilt = full.then(() => loadAndBuildFilters(langSelect?.value ?? 'spanish')).catch(() => { /* stays partial */ })
+      .finally(hideBackgroundLoading);
+    fullVocabPending = Promise.all([fullVocabPending, rebuilt]).then(() => undefined);
+  }
   // `??`, not `||`: a My Content word's rank is 0 (see data/user-content.ts's
   // toWord()) specifically so it sorts first — `||` treats 0 as falsy and
   // sent it to the very back instead, alongside genuinely unranked words.
@@ -572,7 +585,13 @@ function getAllWordsForCurrentLang(): Word[] {
   const primary = langSelect?.value ?? 'spanish';
   const extras  = getExtraLanguages();
   if (extras.length === 0) return allWordsByLang[primary] || [];
-  return [primary, ...extras].flatMap(l => (allWordsByLang[l] || []).map(w => ({ ...w, language: l })));
+  // Merged into one frequency order (see utils/merged-pool.ts), not language after language: the top-up
+  // in start-handler.ts takes "the next words" from the front of this, and a per-language concatenation
+  // used it up on the primary language's whole vocabulary before ever reaching the others' next word.
+  // Sort is stable, so a tie in rank keeps the primary language first.
+  return [primary, ...extras]
+    .flatMap(l => (allWordsByLang[l] || []).map(w => ({ ...w, language: l })))
+    .sort((a, b) => (a.rank ?? 9999) - (b.rank ?? 9999));
 }
 
 /** Apply the "Words" size control and the Part-of-Speech filter to one sorted pool. */
@@ -582,10 +601,24 @@ function sizedSlice(sorted: Word[], size: number, isMax: boolean, selected: stri
     : sorted.filter((w) => w.pos == null || selected.includes(w.pos)).slice(0, size);
 }
 
-async function loadAndBuildFilters(lang: string): Promise<void> {
+/**
+ * Rebuilds the word pool and filters for `lang`. Every build is remembered in `fullVocabPending`, so Start
+ * can wait for the pool to exist — first paint no longer sits behind a blocking spinner, which used to be
+ * what stopped a very early click from running against an empty pool.
+ */
+function loadAndBuildFilters(lang: string): Promise<void> {
+  const built = buildFilters(lang);
+  fullVocabPending = Promise.all([fullVocabPending, built.catch(() => { /* reported where it happens */ })]).then(() => undefined);
+  return built;
+}
+
+async function buildFilters(lang: string): Promise<void> {
   const primarySorted = await ensureLoaded(lang);
 
-  const isMax    = sizeSelect?.value === 'max';
+  // Random Sample draws its N from everything the filters leave, not from the N most frequent, so the
+  // pool itself must not be cut to a rank window first; start-handler.ts takes the sample.
+  const sampling = getPoolMode() === 'topn' && document.querySelector('#sizeModeToggle .sort-order-btn.active')?.getAttribute('data-mode') === 'sample';
+  const isMax    = sizeSelect?.value === 'max' || sampling;
   const size     = isMax
     ? Infinity
     : sizeSelect?.value === 'custom'
@@ -819,13 +852,19 @@ bindStartHandler({
     if (getCurrentMode() === 'conjugation') return 'window';
     if (getPoolMode() !== 'topn') return 'window';
     const active = document.querySelector<HTMLElement>('#sizeModeToggle .sort-order-btn.active');
-    return (active?.dataset.mode ?? 'window') as 'window' | 'fill';
+    return (active?.dataset.mode ?? 'window') as 'window' | 'fill' | 'sample';
   },
   getCols: ({ max, fallback }: { max: number; fallback: number }) =>
     Math.max(1, Math.min(max, Settings.getTableCols() || fallback)),
   getDirection:   resolveDirection,
   onModeChange:   updateModeUI,
   getBaseList:    () => currentBaseList,
+  // A quiz drawn from the first 200 words would be short; Start waits for the rest of the vocabulary.
+  whenVocabComplete: async () => {
+    // A build can start another (the partial pool is rebuilt when the rest arrives), so wait until none is left.
+    let seen: Promise<void>;
+    do { seen = fullVocabPending; await seen; } while (seen !== fullVocabPending);
+  },
   // The size-window top-up logic (start-handler.ts) pulls from here when a
   // narrowing filter — verbs-only, illustrated-only — leaves the sized list
   // short. Needs the same per-word `.language` tagging loadAndBuildFilters
@@ -945,9 +984,12 @@ document.getElementById('scriptTypeFilterWrap')
 document.getElementById('sizeModeToggle')?.addEventListener('click', e => {
   const btn = (e.target as HTMLElement).closest<HTMLElement>('.sort-order-btn');
   if (!btn) return;
+  const wasSample = document.querySelector('#sizeModeToggle .sort-order-btn.active')?.getAttribute('data-mode') === 'sample';
   document.querySelectorAll('#sizeModeToggle .sort-order-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   if (btn.dataset.mode) S.set('vq_size_mode', btn.dataset.mode);
+  // Only Random Sample changes what the pool is; the other two just change how it is read at Start.
+  if (wasSample !== (btn.dataset.mode === 'sample')) void loadAndBuildFilters(langSelect?.value ?? 'spanish');
 });
 
 // Pool mode toggle (Top N / Rank Range / Level)
@@ -1230,6 +1272,12 @@ function resetTabOrigin(): void {
   (document.activeElement as HTMLElement | null)?.blur?.();
 }
 
+// The compact controls: a dropdown for Quiz Style and for Words' size mode, and a click-to-cycle button for
+// Direction, each standing in for the (hidden) chip row that still holds the real state. See ui/toggle-proxy.ts.
+proxyToggleAsSelect(document.getElementById('tableStyleToggle'), document.getElementById('tableStyleSelect') as HTMLSelectElement | null, 'style');
+proxyToggleAsSelect(document.getElementById('sizeModeToggle'), document.getElementById('sizeModeSelect') as HTMLSelectElement | null, 'mode');
+proxyToggleAsCycle(document.getElementById('directionToggle'), document.getElementById('directionCycle') as HTMLButtonElement | null, 'direction', 'Direction');
+
 void (async function init(): Promise<void> {
   // Must complete before anything loads vocab (loadAndBuildFilters, below)
   // so vocab-source.ts's registered sqlite source is ready by the time it's
@@ -1263,6 +1311,7 @@ void (async function init(): Promise<void> {
   applyBackground();      // ...page background
   applyOpacity();         // ...and how transparent the cards are
   buildLanguageOptions(); // must precede restoreSettings — it sets .value
+  enhanceLanguageSelect(langSelect);   // flags and colours; the select stays as the source of truth
   restoreSettings();
   syncConjugationAvailability();
   syncScriptDisplayAvailability();

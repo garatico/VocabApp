@@ -388,6 +388,9 @@ export const Settings = {
   getGenderColor: (key: 'masculine' | 'feminine'): string | null => readString(P + 'gender_color_' + key),
 
   /** A My Lists sidebar accent (ML_COLOR_DEFS's keys), or null to use variables.css's own. */
+  /** One controls-bar option's colour (CTL_COLOR_DEFS's keys), or null to use variables.css's own. */
+  getCtlColor: (key: string): string | null => readString(P + 'ctl_color_' + key),
+
   getMlColor: (key: MlColorKey): string | null => readString(P + 'list_color_' + key),
 
   // ── All quizzes ────────────────────────────────────────────────────────────
@@ -483,7 +486,7 @@ export const Settings = {
    * learners never need this, and Testing Profiles' own list shouldn't grow
    * a second kind of entry under it unasked for.
    */
-  getShowVisualProfiles: (): boolean => get('show_visual_profiles', 'false') === 'true',
+  getShowVisualProfiles: (): boolean => get('show_visual_profiles', 'true') === 'true',
   setShowVisualProfiles: (on: boolean): void => set('show_visual_profiles', String(on)),
 
   /**
@@ -879,6 +882,27 @@ export const ML_COLOR_DEFS: readonly [key: MlColorKey, label: string, accentVar:
   ['visual',  'Visual Profiles',      '--ml-accent-visual'],
 ];
 
+/**
+ * The colour of each option in the controls bar's Words, Quiz Style and Direction controls: key (storage
+ * suffix, also the `data-cc` on the option), label, and the CSS variable each overrides. The chip, dropdown
+ * option or button derives its tint, border and text from that one colour (controls-bar.css), so a single
+ * pick per option is enough in both themes.
+ */
+export const CTL_COLOR_DEFS: readonly [key: string, label: string, cssVar: string][] = [
+  ['pool-topn',    'Words: Most Common',       '--cc-pool-topn'],
+  ['pool-range',   'Words: Rank Range',        '--cc-pool-range'],
+  ['pool-band',    'Words: Level',             '--cc-pool-band'],
+  ['size-window',  'Take: By Rank',            '--cc-size-window'],
+  ['size-fill',    'Take: Skip Known',         '--cc-size-fill'],
+  ['size-sample',  'Take: Random Sample',      '--cc-size-sample'],
+  ['style-standard', 'Quiz Style: Standard',   '--cc-style-standard'],
+  ['style-recall', 'Quiz Style: Recall',       '--cc-style-recall'],
+  ['style-double', 'Quiz Style: Double Recall', '--cc-style-double'],
+  ['dir-target-en', 'Direction: Word → Meaning', '--cc-dir-target-en'],
+  ['dir-en-target', 'Direction: Meaning → Word', '--cc-dir-en-target'],
+  ['dir-mixed',    'Direction: Mixed',         '--cc-dir-mixed'],
+];
+
 export const TABLE_COLOR_DEFS: readonly [key: string, label: string, fallbackVar: string][] = [
   ['correct',         'Correct',                     '--correct'],
   ['revealed',        'Revealed (?? button)',         '--warning'],
@@ -956,6 +980,15 @@ export function applyGenderColors(): void {
  * "-light" companion (selected cards, tags) is derived from it against the current surface, so it
  * stays readable in both themes and never needs a second setting.
  */
+/** Apply any saved controls-bar option colours as inline :root properties. */
+export function applyCtlColors(): void {
+  const root = document.documentElement.style;
+  for (const [key, , cssVar] of CTL_COLOR_DEFS) {
+    const hex = Settings.getCtlColor(key);
+    if (hex) root.setProperty(cssVar, hex); else root.removeProperty(cssVar);
+  }
+}
+
 export function applyMlColors(): void {
   for (const [key, , accentVar] of ML_COLOR_DEFS) {
     const hex = Settings.getMlColor(key);

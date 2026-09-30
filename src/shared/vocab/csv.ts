@@ -1,4 +1,5 @@
 import type { Word } from '../types.js';
+import { VOCAB_CSV, csvHeaders } from './csv-schema.js';
 
 /**
  * csv.ts — the admin export CSV format, built directly from the same Word
@@ -17,11 +18,7 @@ function esc(v: unknown): string {
     : s;
 }
 
-const HEADERS = [
-  'rank', 'word', 'translation', 'glosses', 'pos', 'difficulty', 'tags',
-  'notes', 'examples', 'ipa', 'frequency_band', 'gender', 'plural',
-  'infinitive', 'reflexive', 'register',
-];
+const HEADERS = csvHeaders(VOCAB_CSV);   // the columns are declared in csv-schema.ts, which also documents them
 
 export function buildCsv(words: Word[]): string {
   const lines = [HEADERS.join(',')];

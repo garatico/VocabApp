@@ -45,6 +45,8 @@ interface StartHandlerOptions {
   getDirection?:      () => string;
   onModeChange:       () => void;
   getBaseList:        () => Word[];
+  /** Resolves once the whole vocabulary is loaded (it may still be arriving in the background after first paint). */
+  whenVocabComplete?: () => Promise<void>;
   getAllWords?:        () => Word[];
   elements:           StartHandlerElements;
 }
@@ -60,7 +62,7 @@ export function bindStartHandler({
   getFullLang,
   getExtraLanguages,
   getSize,
-  getSizeMode,     // 'window' (literal top N) | 'fill' (always return N unknowns)
+  getSizeMode,     // 'window' (literal top N) | 'fill' (always return N unknowns) | 'sample' (N at random)
   getSelectedClasses,
   getSelectedDomains,
   getSelectedScriptTypes,
@@ -69,6 +71,7 @@ export function bindStartHandler({
   getDirection,
   onModeChange,
   getBaseList,
+  whenVocabComplete,
   getAllWords,      // full unsized word list — used by picture mode
   elements: {
     startBtn,
@@ -94,6 +97,9 @@ export function bindStartHandler({
     try {
       // Apply current filter checkbox state to the base list —
       // do NOT rebuild the filter UI here so user selections are preserved.
+      // Trivia and Guess the Blank draw on their own question banks, not the word pool, so they never need to wait.
+      const usesWordPool = getCurrentMode() !== 'trivia' && getCurrentMode() !== 'guessBlank';
+      if (usesWordPool) await whenVocabComplete?.();
       const fullLang = getFullLang ? getFullLang() : 'spanish';
       let list = filterWords(getBaseList());
 
@@ -215,6 +221,14 @@ export function bindStartHandler({
       // divertir/divertirse redundancy, and the function is a no-op on any
       // word whose shape doesn't match a bare-infinitive/reflexive pair.
       list = dropRedundantReflexives(list);
+
+      // Random Sample: N words picked at random from everything the filters and lists left — the pool
+      // was not cut to a rank window (see app.ts's loadAndBuildFilters). The pick keeps the list's own
+      // order, so the Order setting below still means what it says.
+      if (sizeMode === 'sample' && isFinite(requestedSize) && list.length > requestedSize) {
+        const keep = new Set(shuffleInPlace(list.map((_, i) => i)).slice(0, requestedSize));
+        list = list.filter((_, i) => keep.has(i));
+      }
 
       // Hard cap. Everything above only ever *adds* words — the top-up blocks
       // exist to compensate for narrowing filters. Without this the requested

@@ -27,6 +27,7 @@ import {
 import { buildScorePills, scorePct, buildProgressStatsHtml } from '../ui/score-pills.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
 import type { Word } from '../types.js';
+import { TABLE_CSV, csvHeaders } from '../../shared/vocab/csv-schema.ts';
 
 let tableController:  TableController | null = null;
 let resolvedDirection: TableDirection         = 'target-en';
@@ -952,7 +953,7 @@ function csvEscape(v: string): string {
 }
 
 function csvFor(words: Word[]): string {
-  const headers = ['rank', 'word', 'language', 'part_of_speech', 'translation'];
+  const headers = csvHeaders(TABLE_CSV);   // declared in shared/vocab/csv-schema.ts, which documents them too
   const lines = [headers.join(',')];
   for (const w of words) {
     lines.push([

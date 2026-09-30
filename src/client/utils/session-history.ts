@@ -287,7 +287,7 @@ export function adaptiveKey(
  */
 export type WordOrderSortBy = 'word' | 'meaning';
 
-export function orderWords<T extends { word: string; rank?: number | null; translation?: string }>(
+export function orderWords<T extends { word: string; rank?: number | null; translation?: string; glosses?: string[] }>(
   words: readonly T[],
   order: WordOrder,
   lang: string | ((w: T) => string),
@@ -299,7 +299,12 @@ export function orderWords<T extends { word: string; rank?: number | null; trans
       // 'meaning' falls back to the word itself for anything with no
       // translation recorded, rather than sorting it as an empty string to
       // the very top.
-      const key = (w: T): string => (sortBy === 'meaning' && w.translation) ? w.translation : w.word;
+      // The first *gloss*, not `translation`: reordering or hiding glosses in My Content changes
+      // which sense comes first while `translation` keeps the original primary one.
+      const key = (w: T): string => {
+        if (sortBy !== 'meaning') return w.word;
+        return w.glosses?.[0] || w.translation || w.word;
+      };
       return out.sort((a, b) => key(a).localeCompare(key(b)));
     }
     case 'shuffle':

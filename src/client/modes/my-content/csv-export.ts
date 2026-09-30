@@ -1,5 +1,6 @@
 import { loadWords } from '../../data/data-loader.ts';
 import type { Word } from '../../types.ts';
+import { VOCAB_CSV, csvHeaders } from '../../../shared/vocab/csv-schema.ts';
 
 /**
  * my-content/csv-export.ts — the "Export vocabulary as CSV" download.
@@ -21,13 +22,10 @@ function csvEscape(v: unknown): string {
     : s;
 }
 
-const VOCAB_CSV_HEADERS = [
-  'rank', 'word', 'translation', 'glosses', 'pos', 'difficulty', 'tags',
-  'notes', 'examples', 'ipa', 'frequency_band', 'gender', 'plural',
-  'infinitive', 'reflexive', 'register',
-];
+// Declared in shared/vocab/csv-schema.ts, which is also what the Glossary's "CSV formats" entry shows.
+const VOCAB_CSV_HEADERS = csvHeaders(VOCAB_CSV);
 
-function buildVocabCsv(words: Word[]): string {
+export function buildVocabCsv(words: Word[]): string {
   const lines = [VOCAB_CSV_HEADERS.join(',')];
   for (const w of words) {
     lines.push([

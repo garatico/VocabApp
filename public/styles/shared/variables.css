@@ -102,9 +102,11 @@
   /* My Lists — one accent per list kind (ordinary lists keep --accent),
      so Smart Lists and Cross-Language Lists read as their own section in the
      sidebar rather than three identically-colored groups. */
-  /* Single-Language Lists default to the app accent; Settings can recolour them on their own. */
-  --ml-accent-single:       var(--accent);
-  --ml-accent-single-light: var(--accent-light);
+  /* Single-Language Lists are always the default forest green — a fixed value, NOT var(--accent), so
+     changing the colour theme (Settings → Appearance) leaves them green. Settings can still recolour
+     them on their own. */
+  --ml-accent-single:       #3d6b4f;
+  --ml-accent-single-light: #e8f2ec;
   --ml-accent-smart:       #6444ad;
   --ml-accent-smart-light: #efe9fa;
   --ml-accent-multi:       #0f7d94;
@@ -113,6 +115,15 @@
   --ml-accent-profile-light: #faf0e0;
   --ml-accent-visual:        #b8285f;
   --ml-accent-visual-light:  #fbe6ee;
+  --ml-accent-starter:       #1f4b9a;   /* Starter Lists: their own blue, apart from every other section */
+  --ml-accent-starter-light: #e3edfb;
+
+  /* Quiz controls bar: one colour per option of Words, Quiz Style and Direction (controls-bar.css derives
+     the tint, border and text from it; Settings → Appearance → Quiz Controls Colors overrides each). */
+  --cc-pool-topn: #2f7d55;  --cc-pool-range: #2a62c0;  --cc-pool-band: #a0600b;
+  --cc-size-window: #0f7d94;  --cc-size-fill: #6444ad;  --cc-size-sample: #b8285f;
+  --cc-style-standard: #4d6580;  --cc-style-recall: #c2410c;  --cc-style-double: #8a2f9e;
+  --cc-dir-target-en: #1d7a6b;  --cc-dir-en-target: #a3720a;  --cc-dir-mixed: #5b4fc4;
   /* Sidebar gear-menu item colors (Copy/Rename; Delete uses --danger). */
   --ml-menu-emoji:    #c026d3;
   --ml-menu-hide:     #0e8a9c;
@@ -178,6 +189,8 @@ html.dark {
   --gender-color-masculine: #89cff0;
   --gender-color-feminine:  #f4c2c2;
 
+  --ml-accent-single:       #5a9e72;   /* the dark forest green, whatever the colour theme */
+  --ml-accent-single-light: #18291f;
   --ml-accent-smart:       #b9a4ec;
   --ml-accent-smart-light: #2a2140;
   --ml-accent-multi:       #4fc3d9;
@@ -190,6 +203,13 @@ html.dark {
   --ml-accent-profile-light: #3a2c14;
   --ml-accent-visual:        #f28bb0;
   --ml-accent-visual-light:  #3d1828;
+  --ml-accent-starter:       #7fb0f0;
+  --ml-accent-starter-light: #14263a;
+
+  --cc-pool-topn: #6fcf97;  --cc-pool-range: #7fb0f0;  --cc-pool-band: #e0a855;
+  --cc-size-window: #4fc3d9;  --cc-size-fill: #b9a4ec;  --cc-size-sample: #f28bb0;
+  --cc-style-standard: #a9bdd4;  --cc-style-recall: #fb923c;  --cc-style-double: #d59bea;
+  --cc-dir-target-en: #5fd0bd;  --cc-dir-en-target: #e6c15a;  --cc-dir-mixed: #a89df0;
 
   --shadow:    0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);

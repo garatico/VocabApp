@@ -45,7 +45,7 @@ test('a conjugation profile can turn off specific forms, and applying it reflect
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="mylists"]').click();
 
-  const profileHead = page.locator('.ml-profile-head').first();
+  const profileHead = page.locator('.ml-profile-head:not(.ml-visual-head)').first();
   await profileHead.locator('.ml-new-list-btn:not(.ml-new-folder-btn)').click();
   await page.locator('.ml-list-item--editing select.ml-list-name-input').selectOption('conjugation');
   const nameInput = page.locator('.ml-list-item--editing input.ml-list-name-input');
@@ -77,7 +77,7 @@ test('a conjugation profile lays its forms out like Conjugation mode: yo / tú /
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="mylists"]').click();
-  await page.locator('.ml-profile-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
+  await page.locator('.ml-profile-head:not(.ml-visual-head) .ml-new-list-btn:not(.ml-new-folder-btn)').click();
   await page.locator('.ml-list-item--editing select.ml-list-name-input').selectOption('conjugation');
   const nameInput = page.locator('.ml-list-item--editing input.ml-list-name-input');
   await nameInput.fill('Grid');

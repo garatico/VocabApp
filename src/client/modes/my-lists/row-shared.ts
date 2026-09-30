@@ -14,6 +14,7 @@ import { buildConjSection, buildNonFiniteSection } from '../../utils/word-toolti
 import { POS_ABBREV, type VocabEntry } from './types.ts';
 import { buildAudioButton } from '../../ui/audio-play-button.ts';
 import { fillHighlighted } from '../../utils/dom.ts';
+import { respellSpanishIpa } from '../../utils/respell.ts';
 
 /** Compact fill-level glyphs for the mastery scale, 0..MAX_MASTERY_LEVEL. */
 export const MASTERY_GLYPHS = ['○', '◔', '◑', '◕', '●'];
@@ -202,6 +203,9 @@ export function buildWordDetail(entry: VocabEntry, lang: string, addedDate?: num
   }
   if (entry.ipa) {
     table.appendChild(detailRow('IPA', '/' + entry.ipa + '/'));
+    // Only Spanish carries real IPA; other languages' `ipa` field holds a romanization (pinyin, …).
+    const sounds = lang === 'spanish' ? respellSpanishIpa(entry.ipa) : '';
+    if (sounds) table.appendChild(detailRow('Sounds like', sounds));
   }
   if (entry.examples.length > 0) {
     table.appendChild(detailRow(entry.examples.length > 1 ? 'Examples' : 'Example', entry.examples[0]));

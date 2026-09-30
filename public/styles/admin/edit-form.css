@@ -357,14 +357,16 @@ html.dark .form-group select.we-gender[data-gender="feminine"]  { color: hsl(340
   display: flex;
   gap: 0.35rem;
 }
-.emoji-field #editEmoji {
+.emoji-field > input {
+  flex: 0 0 5rem;
   width: 5rem;
   min-width: 0;
   font-size: 1.4rem;
   text-align: center;
 }
-.emoji-picker-trigger {
-  flex-shrink: 0;
+.emoji-field .emoji-picker-trigger {
+  flex: 0 0 auto;
+  width: auto; /* a locked field also carries .readonly-field, whose width:100% would stretch the button */
   padding: 0 0.6rem;
   font-size: 0.9rem;
 }

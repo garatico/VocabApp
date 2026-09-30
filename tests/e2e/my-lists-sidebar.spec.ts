@@ -165,14 +165,14 @@ test('folders: rename carries its list, emoji/colour and collapsed state to the 
 });
 
 test('folders: renaming a folder used by a Testing Profile updates that mode’s picker too', async ({ page }) => {
-  await page.locator('.ml-profile-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
+  await page.locator('.ml-profile-head:not(.ml-visual-head) .ml-new-list-btn:not(.ml-new-folder-btn)').click();
   const row = page.locator('.ml-list-item--editing-wide').first();
   await row.locator('select').selectOption('table');
   await row.locator('.ml-list-name-input').last().fill('Drill');
   await row.locator('.ml-list-name-input').last().press('Enter');
 
   // Testing Profile folders ask which mode they belong to, via an inline form rather than a plain prompt.
-  await page.locator('.ml-profile-head .ml-new-folder-btn').click();
+  await page.locator('.ml-profile-head:not(.ml-visual-head) .ml-new-folder-btn').click();
   const frow = page.locator('.ml-list-item--editing-wide').first();
   await frow.locator('select').selectOption('table');
   await frow.locator('.ml-list-name-input').last().fill('Core');
@@ -233,7 +233,7 @@ test('a list card can be given a custom colour via the native colour input', asy
 
 // ═══ Smart lists ═══════════════════════════════════════════════════════════════
 test('smart lists: create, rename, copy and delete', async ({ page }) => {
-  await createInline(page, '.ml-smart-head', 'Verbs');
+  await createInline(page, '.ml-smart-head:not(.ml-starter-head)', 'Verbs');
   await expect(card(page, 'ml-smart-item', 'Verbs')).toBeVisible();
 
   await renameInline(page, card(page, 'ml-smart-item', 'Verbs'), 'Verbs2');
@@ -309,7 +309,7 @@ test('only one gear menu is open at a time, and Escape closes it and returns foc
 
 // ═══ Testing profiles ══════════════════════════════════════════════════════════
 test('testing profiles: create in a mode, rename, copy, delete, and a per-mode folder', async ({ page }) => {
-  const profileHead = page.locator('.ml-profile-head').first();
+  const profileHead = page.locator('.ml-profile-head:not(.ml-visual-head)').first();
   await profileHead.locator(NEW_BTN).click();
   await page.locator('.ml-list-item--editing select.ml-list-name-input').selectOption('picture');
   const input = page.locator('.ml-list-item--editing input.ml-list-name-input');
@@ -463,7 +463,7 @@ test('visual profiles: emoji, folders (create, file into, drag onto)', async ({ 
 
 // ═══ Recolouring the list kinds (Settings → Appearance → My Lists Colors) ═══════
 test('list kind colours: a colour chosen in Settings recolours the sidebar, persists, and resets', async ({ page }) => {
-  const accent = (): Promise<string> => page.evaluate(() => getComputedStyle(document.querySelector('.ml-profile-head') as Element).getPropertyValue('--ml-accent-profile').trim());
+  const accent = (): Promise<string> => page.evaluate(() => getComputedStyle(document.querySelector('.ml-profile-head:not(.ml-visual-head)') as Element).getPropertyValue('--ml-accent-profile').trim());
   const original = await accent();
   const rows = page.locator('#settingMlColors .conj-color-row');
   await expect(rows).toHaveCount(5);
@@ -474,9 +474,9 @@ test('list kind colours: a colour chosen in Settings recolours the sidebar, pers
     el.value = '#00aa55'; el.dispatchEvent(new Event('input', { bubbles: true }));
   });
   await expect.poll(accent).toBe('#00aa55');
-  await expect(page.locator('.ml-profile-head')).toHaveCSS('border-left-color', 'rgb(0, 170, 85)');
+  await expect(page.locator('.ml-profile-head:not(.ml-visual-head)')).toHaveCSS('border-left-color', 'rgb(0, 170, 85)');
 
-  // Single-Language Lists too — and it must not recolour the rest of the app (it defaults to the app accent).
+  // Single-Language Lists too — and it must not recolour the rest of the app (it is a fixed default green, not the app accent).
   const appAccent = await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--accent').trim());
   await rows.filter({ hasText: 'Single-Language Lists' }).locator('input[type="color"]').evaluate((el: HTMLInputElement) => {
     el.value = '#cc3366'; el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -487,7 +487,7 @@ test('list kind colours: a colour chosen in Settings recolours the sidebar, pers
   await page.reload();
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="mylists"]').click();
-  await expect(page.locator('.ml-profile-head')).toBeVisible();
+  await expect(page.locator('.ml-profile-head:not(.ml-visual-head)')).toBeVisible();
   await expect.poll(accent).toBe('#00aa55');
 
   await page.locator('#settingResetMlColors').evaluate((el: HTMLElement) => el.click());
@@ -524,7 +524,7 @@ async function makeFolder(page: Page, headSelector: string, name: string): Promi
 test('drag and drop: single, smart and cross-language lists can be dropped onto a folder', async ({ page }) => {
   for (const [head, kind, name, folderName] of [
     ['.ml-single-head', 'ml-single-item', 'Dnd Single', 'FolderS'],
-    ['.ml-smart-head', 'ml-smart-item', 'Dnd Smart', 'FolderM'],
+    ['.ml-smart-head:not(.ml-starter-head)', 'ml-smart-item', 'Dnd Smart', 'FolderM'],
     ['.ml-multi-head', 'ml-multi-item', 'Dnd Multi', 'FolderX'],
   ] as const) {
     await createInline(page, head, name);
@@ -540,7 +540,7 @@ for (const mode of ['table', 'picture', 'conjugation'] as const) {
     const folderName = `F ${mode}`;
 
     // A profile in this mode.
-    await page.locator('.ml-profile-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
+    await page.locator('.ml-profile-head:not(.ml-visual-head) .ml-new-list-btn:not(.ml-new-folder-btn)').click();
     const row = page.locator('.ml-list-item--editing-wide').first();
     await row.locator('select').selectOption(mode);
     await row.locator('.ml-list-name-input').last().fill(profile);
@@ -548,7 +548,7 @@ for (const mode of ['table', 'picture', 'conjugation'] as const) {
     await expect(card(page, 'ml-profile-item', profile)).toBeVisible();
 
     // A folder in the same mode (Testing Profile folders are per mode and ask which).
-    await page.locator('.ml-profile-head .ml-new-folder-btn').click();
+    await page.locator('.ml-profile-head:not(.ml-visual-head) .ml-new-folder-btn').click();
     const frow = page.locator('.ml-list-item--editing-wide').first();
     await frow.locator('select').selectOption(mode);
     await frow.locator('.ml-list-name-input').last().fill(folderName);
@@ -574,20 +574,20 @@ for (const mode of ['table', 'picture', 'conjugation'] as const) {
 
 test('drag and drop: a profile will not go into a folder that belongs to another mode', async ({ page }) => {
   // A mode's folders only show once that mode has a profile, so give Conjugation one.
-  await page.locator('.ml-profile-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
+  await page.locator('.ml-profile-head:not(.ml-visual-head) .ml-new-list-btn:not(.ml-new-folder-btn)').click();
   const other = page.locator('.ml-list-item--editing-wide').first();
   await other.locator('select').selectOption('conjugation');
   await other.locator('.ml-list-name-input').last().fill('AnyConj');
   await other.locator('.ml-list-name-input').last().press('Enter');
   await expect(card(page, 'ml-profile-item', 'AnyConj')).toBeVisible();
 
-  await page.locator('.ml-profile-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
+  await page.locator('.ml-profile-head:not(.ml-visual-head) .ml-new-list-btn:not(.ml-new-folder-btn)').click();
   const row = page.locator('.ml-list-item--editing-wide').first();
   await row.locator('select').selectOption('table');
   await row.locator('.ml-list-name-input').last().fill('OnlyTable');
   await row.locator('.ml-list-name-input').last().press('Enter');
 
-  await page.locator('.ml-profile-head .ml-new-folder-btn').click();
+  await page.locator('.ml-profile-head:not(.ml-visual-head) .ml-new-folder-btn').click();
   const frow = page.locator('.ml-list-item--editing-wide').first();
   await frow.locator('select').selectOption('conjugation');
   await frow.locator('.ml-list-name-input').last().fill('ConjOnly');

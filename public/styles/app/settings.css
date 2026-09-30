@@ -925,3 +925,17 @@ body.simple-mode [data-simple-hide="true"] {
 .bg-preset:hover, .bg-preset:focus-visible { border-color: var(--accent); outline: none; }
 
 .palette-toggle { max-width: 20rem; justify-content: flex-end; }
+
+/* display:flex above beats the UA [hidden] rule; the desktop-only zoom row relies on it. */
+.settings-row[hidden] { display: none; }
+
+/* Glossary → CSV formats: generated tables (settings-search.ts renderCsvDocs). */
+.csv-docs h4 { margin: 1rem 0 0.35rem; font-size: 0.9rem; color: var(--text); }
+.csv-docs-from { margin: 0 0 0.4rem; font-size: 0.82rem; color: var(--text); }
+.csv-docs-list { margin: 0; padding-left: 1.2rem; font-size: 0.82rem; color: var(--text); }
+.csv-docs-list li { margin-bottom: 0.25rem; }
+.csv-docs-scroll { overflow-x: auto; }
+.csv-docs-table { border-collapse: collapse; width: 100%; font-size: 0.8rem; color: var(--text); }
+.csv-docs-table th, .csv-docs-table td { text-align: left; vertical-align: top; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); }
+.csv-docs-table th { font-weight: 700; }
+.csv-docs-name { font-family: monospace; white-space: nowrap; }

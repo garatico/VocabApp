@@ -45,3 +45,24 @@ html.dark #loadingSpinner { background: rgba(26, 25, 23, 0.95); }
   .spinner { width: 28px; height: 28px; }
   #loadingSpinner p { font-size: 11px; }
 }
+
+/* Small corner badge: the vocabulary is still arriving in the background, the app is usable meanwhile. */
+.spinner--small { width: 16px; height: 16px; border-width: 2px; flex-shrink: 0; }
+.bg-loading {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  pointer-events: none;
+}
+.bg-loading[hidden] { display: none; }

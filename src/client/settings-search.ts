@@ -1,3 +1,4 @@
+import { CSV_CONVENTIONS, CSV_FORMATS, BULK_IMPORT_RULES } from '../shared/vocab/csv-schema.ts';
 import { fillHighlighted } from './utils/dom.ts';
 import { foldKey } from './utils/match.ts';
 import { resetAllSettings, snapshotSettings, restoreSettingsSnapshot, type SettingsSnapshot } from './utils/reset-settings.ts';
@@ -28,7 +29,49 @@ import { confirmDialog } from './ui/dialog.ts';
  * UI-language switch re-sorts by the newly-displayed term text, not stale
  * English).
  */
+/**
+ * The Glossary's "CSV formats" entry: one table per exported file and the rules for the imported one,
+ * built from shared/vocab/csv-schema.ts — the same definition the exporters take their header rows
+ * from — so the documentation cannot drift from the files.
+ */
+export function renderCsvDocs(): void {
+  const host = document.getElementById('csvDocs');
+  if (!host || host.childElementCount > 0) return;
+  const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, cls?: string): HTMLElementTagNameMap[K] => {
+    const e = document.createElement(tag);
+    if (text !== undefined) e.textContent = text;
+    if (cls) e.className = cls;
+    return e;
+  };
+  const list = (items: string[]): HTMLUListElement => {
+    const ul = el('ul', undefined, 'csv-docs-list');
+    for (const item of items) ul.append(el('li', item));
+    return ul;
+  };
+
+  host.append(el('h4', 'Rules for every CSV the app writes'), list(CSV_CONVENTIONS));
+
+  for (const fmt of CSV_FORMATS) {
+    host.append(el('h4', fmt.title));
+    host.append(el('p', `${fmt.from}. File name ${fmt.filename}; lines end with ${fmt.lineEnding === 'CRLF' ? 'CR+LF (Windows style)' : 'LF'}.`, 'csv-docs-from'));
+    const table = el('table', undefined, 'csv-docs-table');
+    const head = table.createTHead().insertRow();
+    for (const h of ['Column', 'Contents', 'Written as']) head.append(el('th', h));
+    const body = table.createTBody();
+    for (const col of fmt.columns) {
+      const row = body.insertRow();
+      row.append(el('td', col.name, 'csv-docs-name'), el('td', col.description), el('td', col.format ?? ''));
+    }
+    const wrap = el('div', undefined, 'csv-docs-scroll');
+    wrap.append(table);
+    host.append(wrap);
+  }
+
+  host.append(el('h4', 'What My Lists → Bulk import reads'), list(BULK_IMPORT_RULES));
+}
+
 export function bindGlossary(): void {
+  renderCsvDocs();
   const search = document.getElementById('glossarySearch') as HTMLInputElement | null;
   const list   = document.getElementById('glossaryList');
   const empty  = document.getElementById('glossaryEmpty');

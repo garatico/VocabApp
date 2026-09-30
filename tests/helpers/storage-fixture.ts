@@ -318,7 +318,7 @@ const SETTINGS_NON_DEFAULT: Record<string, string> = {
   // dynamic families: <prefix><language | tense | person | part of speech | element>
   lang_color_spanish: '#c0392b', lang_flag_spanish: 'es', tense_hue_present: '120', person_hue_0: '10',
   pos_hue_verb: '200', table_color_correct: '#2e7d32', gender_color_masculine: '#3366cc',
-  list_color_profile: '#aa3311',
+  list_color_profile: '#aa3311', ctl_color_pool_topn: '#118844',
 };
 
 /** Per-mode choices and panel state written by DOM handlers. */

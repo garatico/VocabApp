@@ -6,7 +6,7 @@ import { getGoals, setGoalTarget, hasLanguageGoal, clearLanguageGoal, type GoalT
 import type { GenderIndicatorStyle, GenderIndicatorVisibility } from './utils/dom.ts';
 import type { ProgressBarPercentMode } from './ui/score-pills.ts';
 import type { StreakWidgetFormat } from './ui/streak-widget.ts';
-import { buildConjColorRows, buildGenderColorRows, buildLangAppearanceRows, buildMlColorRows, buildPosColorRows, buildTableColorRows } from './settings-appearance.ts';
+import { buildConjColorRows, buildCtlColorRows, buildGenderColorRows, buildLangAppearanceRows, buildMlColorRows, buildPosColorRows, buildTableColorRows } from './settings-appearance.ts';
 import { bindGlossary, bindSettingsSearch, snapshotSettingDefaults } from './settings-search.ts';
 import { bindStreakCalendarNav, refreshStreakReadouts } from './settings-streak.ts';
 import { refreshDueBadge } from './ui/due-badge.ts';
@@ -14,7 +14,7 @@ import { spreadOverdueSrs } from './utils/srs.ts';
 import { REVIEW_LIST_NAME } from './utils/review-due.ts';
 import { getList, deleteList } from './utils/word-lists.ts';
 import { showToast } from './ui/toast.ts';
-import { applyPalette, applyBackground, applyOpacity, DUE_SOFT_CAP_MAX, ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applySettingsLinks, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
+import { applyPalette, applyBackground, applyOpacity, applyCtlColors, CTL_COLOR_DEFS, DUE_SOFT_CAP_MAX, ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applySettingsLinks, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
 import { confirmDialog } from './ui/dialog.ts';
 
 /**
@@ -811,6 +811,14 @@ export function bindSettings(): void {
     buildMlColorRows();
   });
 
+  buildCtlColorRows();
+  applyCtlColors();
+  document.getElementById('settingResetCtlColors')?.addEventListener('click', () => {
+    for (const [key] of CTL_COLOR_DEFS) removeKey(P + 'ctl_color_' + key);
+    applyCtlColors();
+    buildCtlColorRows();
+  });
+
   restoreSettingsUI();
 }
 
@@ -1252,7 +1260,7 @@ function restoreSettingsUI(): void {
   });
 
   // Visual Profiles sub-section under Testing Profiles
-  const savedShowVisualProfiles = get('show_visual_profiles', 'false');
+  const savedShowVisualProfiles = get('show_visual_profiles', 'true');
   document.querySelectorAll<HTMLElement>('#settingShowVisualProfiles .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.enabled === savedShowVisualProfiles);
   });

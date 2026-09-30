@@ -44,7 +44,7 @@ export interface WordsBundle {
   poolMode:   string;   // #poolModeToggle: 'topn' | 'range' | 'band'
   size:       string;   // #sizeSelect value: '100' | '250' | '500' | '1000' | 'max' | 'custom'
   customSize: string;   // #sizeCustom value, meaningful only when size === 'custom'
-  sizeMode:   string;   // #sizeModeToggle: 'window' | 'fill'
+  sizeMode:   string;   // #sizeModeToggle: 'window' | 'fill' | 'sample'
   rankFrom:   string;   // #rankFrom value, meaningful only when poolMode === 'range'
   rankTo:     string;   // #rankTo value, meaningful only when poolMode === 'range'
   bands:      string[]; // #bandChips active bands, meaningful only when poolMode === 'band'

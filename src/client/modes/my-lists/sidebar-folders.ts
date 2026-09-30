@@ -105,6 +105,12 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
     });
   }
 
+  /** Smart Lists and Starter Lists share one store; a rule's `starter` flag says which section shows it. */
+  function smartNamesIn(sectionId: 'smart' | 'starter'): string[] {
+    const rules = getSmartLists(ctx.lang);
+    return getSmartNames(ctx.lang).filter(n => !!rules[n].starter === (sectionId === 'starter'));
+  }
+
   function bulkHideFromFor(sectionId: SidebarSectionId, folder: string): BulkHideFrom | undefined {
     if (sectionId === 'single') {
       const names = getListNames(ctx.lang).filter(n => metaFolders(getListMeta(ctx.lang, n)).some(f => isInFolderTree(f, folder)));
@@ -113,9 +119,9 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
         set: modes => names.forEach(n => setListMeta(ctx.lang, n, { ...getListMeta(ctx.lang, n), hiddenModes: modes })),
       };
     }
-    if (sectionId === 'smart') {
+    if (sectionId === 'smart' || sectionId === 'starter') {
       const rules = getSmartLists(ctx.lang);
-      const names = getSmartNames(ctx.lang).filter(n => (rules[n].folders ?? []).some(f => isInFolderTree(f, folder)));
+      const names = smartNamesIn(sectionId).filter(n => (rules[n].folders ?? []).some(f => isInFolderTree(f, folder)));
       return {
         get: () => [...new Set(names.flatMap(n => rules[n].hiddenModes ?? []))],
         set: modes => names.forEach(n => saveSmartRule(ctx.lang, n, { ...getSmartLists(ctx.lang)[n], hiddenModes: modes })),
@@ -152,9 +158,9 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
         const folders = metaFolders(meta);
         if (touches(folders)) setListMeta(ctx.lang, n, { ...meta, folders: swap(folders), folder: undefined });
       });
-    } else if (sectionId === 'smart') {
+    } else if (sectionId === 'smart' || sectionId === 'starter') {
       const rules = getSmartLists(ctx.lang);
-      getSmartNames(ctx.lang).forEach(n => {
+      smartNamesIn(sectionId).forEach(n => {
         const folders = rules[n].folders ?? [];
         if (touches(folders)) saveSmartRule(ctx.lang, n, { ...rules[n], folders: swap(folders), folder: undefined });
       });
@@ -200,9 +206,9 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
         if (alsoDeleteMembers) { deleteList(ctx.lang, n); return; }
         setListMeta(ctx.lang, n, { ...meta, folders: drop(metaFolders(meta)), folder: undefined });
       });
-    } else if (sectionId === 'smart') {
+    } else if (sectionId === 'smart' || sectionId === 'starter') {
       const rules = getSmartLists(ctx.lang);
-      getSmartNames(ctx.lang).forEach(n => {
+      smartNamesIn(sectionId).forEach(n => {
         const folders = rules[n].folders ?? [];
         if (!inside(folders)) return;
         if (alsoDeleteMembers) { deleteSmartList(ctx.lang, n); return; }
@@ -246,6 +252,7 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
   function folderScopeFor(sectionId: SidebarSectionId): string | null {
     if (sectionId === 'single') return `single_${ctx.lang}`;
     if (sectionId === 'smart') return `smart_${ctx.lang}`;
+    if (sectionId === 'starter') return `starter_${ctx.lang}`;
     if (sectionId === 'multi') return 'multi';
     if (sectionId === 'visual') return 'visual_profiles';
     return null; // Testing Profiles passes its per-mode scope explicitly

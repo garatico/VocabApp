@@ -3366,3 +3366,22 @@ body .ml-root-drop.ml-root-drop--armed {
 .ml-profile-editor-tf .conj-tf-side--wide { flex: 2 1 22rem; }
 .ml-profile-editor-tf .conj-tf-side--narrow { flex: 1 1 11rem; }
 .ml-profile-editor-tf .conj-tf-divider { min-height: 4rem; }
+
+/* ── Starter Lists ───────────────────────────────────────────────────────────────────────────────
+   The section is built by the Smart Lists code (sidebar-smart.ts, `starter`), so it carries the smart
+   classes and every rule above applies — re-pointing the smart accent inside it gives it a blue of its
+   own instead of Smart Lists' purple. It is the first section, so it takes the "nothing above me" edge
+   that Single-Language Lists used to have, and Single-Language Lists take the separator every later
+   section has. ── */
+.ml-starter-head, .ml-starter-item, .ml-section-body--starter {
+  --ml-accent-smart: var(--ml-accent-starter);
+  --ml-accent-smart-light: var(--ml-accent-starter-light);
+}
+.ml-section-body--starter { background: color-mix(in srgb, var(--ml-accent-starter) 22%, transparent); }
+
+.ml-single-head {
+  margin-top: 0.5rem;
+  border-top: 2px solid var(--border-strong);
+  padding-top: calc(0.25rem + 2px);
+}
+.ml-starter-head, .ml-single-head:first-child { margin-top: 0; border-top: 0; padding-top: 0.3rem; }

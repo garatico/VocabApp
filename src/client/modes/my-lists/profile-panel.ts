@@ -453,7 +453,7 @@ export function buildProfileEditorGroups(
 
     const sizeModeRow = document.createElement('div');
     sizeModeRow.className = 'ml-profile-editor-chips';
-    ([['window', 'By Rank'], ['fill', 'Skip Known']] as const).forEach(([value, label]) => {
+    ([['window', 'By Rank'], ['fill', 'Skip Known'], ['sample', 'Random Sample']] as const).forEach(([value, label]) => {
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'pos-chip' + (words.sizeMode === value ? ' active' : '');

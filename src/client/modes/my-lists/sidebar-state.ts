@@ -16,7 +16,7 @@ import { readString, writeString } from '../../utils/storage.ts';
 // Settings.getShowVisualProfiles() is on — included here regardless so
 // Collapse All/Expand All still remembers its state for whenever it's
 // switched on.
-export const SIDEBAR_SECTIONS = ['single', 'smart', 'multi', 'profiles', 'visual'] as const;
+export const SIDEBAR_SECTIONS = ['starter', 'single', 'smart', 'multi', 'profiles', 'visual'] as const;
 export type SidebarSectionId = (typeof SIDEBAR_SECTIONS)[number];
 
 export function isSectionCollapsed(id: SidebarSectionId): boolean {

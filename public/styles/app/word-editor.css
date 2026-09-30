@@ -738,14 +738,16 @@ html.dark .word-editor .form-group select.we-gender[data-gender="feminine"] { co
   display: flex;
   gap: 0.35rem;
 }
-.word-editor .emoji-field #editEmoji {
+.word-editor .emoji-field > input {
+  flex: 0 0 5rem;
   width: 5rem;
   min-width: 0;
   font-size: 1.4rem;
   text-align: center;
 }
-.word-editor .emoji-picker-trigger {
-  flex-shrink: 0;
+.word-editor .emoji-field .emoji-picker-trigger {
+  flex: 0 0 auto;
+  width: auto; 
   padding: 0 0.6rem;
   font-size: 0.9rem;
 }

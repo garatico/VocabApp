@@ -9,6 +9,7 @@ import { Router }                                         from 'express';
 import { getDb, getSupportedLanguages, bandFromRank }     from '../../lib/vocab-loader.js';
 import { validateLanguage }                               from './_utils.js';
 import { logger }                                         from '../../lib/logger.js';
+import { VOCAB_CSV, csvHeaders }                            from '../../../shared/vocab/csv-schema.js';
 
 const router = Router();
 
@@ -54,11 +55,7 @@ router.post('/export', (req, res) => {
         : s;
     };
 
-    const headers = [
-      'rank','word','translation','glosses','pos','difficulty','tags',
-      'notes','examples','ipa','frequency_band','gender','plural',
-      'infinitive','reflexive','register',
-    ];
+    const headers = csvHeaders(VOCAB_CSV);   // declared in shared/vocab/csv-schema.ts, which documents them too
     const lines = [headers.join(',')];
 
     for (const row of rows) {

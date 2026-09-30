@@ -28,6 +28,25 @@ export function hideLoading(): void {
   }
 }
 
+// ── Background loading badge ─────────────────────────────────────────────────
+
+/** How many background loads are running, so the badge stays up until the last one finishes. */
+let backgroundLoads = 0;
+
+/** Shows the corner spinner; call `hideBackgroundLoading` once when that load is done. */
+export function showBackgroundLoading(): void {
+  backgroundLoads++;
+  const el = document.getElementById('vocabBgLoading');
+  if (el) el.hidden = false;
+}
+
+export function hideBackgroundLoading(): void {
+  backgroundLoads = Math.max(0, backgroundLoads - 1);
+  if (backgroundLoads > 0) return;
+  const el = document.getElementById('vocabBgLoading');
+  if (el) el.hidden = true;
+}
+
 // ── Error messages ────────────────────────────────────────────────────────────
 
 export function showErrorMessage(message: string): void {

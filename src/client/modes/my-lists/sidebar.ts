@@ -199,6 +199,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   };
   const { renderNav: renderSingleNav }         = createSingleSection(kit);
   const { renderNav: renderSmartNav }          = createSmartSection(kit);
+  const { renderNav: renderStarterNav }        = createSmartSection(kit, { starter: true });
   const { renderNav: renderMultiNav }          = createMultiSection(kit);
   const { renderNav: renderProfilesNav }       = createProfilesSection(kit);
   const { renderNav: renderVisualProfilesNav } = createVisualSection(kit);
@@ -283,6 +284,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     ctx.listNav.innerHTML = '';
     seedStarterLists(ctx.lang);
     browseBtn.classList.toggle('ml-browse-btn--active', ctx.selectedList === BROWSE_ALL_LIST);
+    renderSection('starter', renderStarterNav);
     renderSection('single', renderSingleNav);
     renderSection('smart', renderSmartNav);
     renderSection('multi', renderMultiNav);

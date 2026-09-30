@@ -31,11 +31,17 @@ for (const width of [1400, 1100, 800]) {
   test(`Jump buttons share the pagination row, below Order and the action cluster (${width}px wide)`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     // The widest the bar ever gets: the clock and the Settings shortcuts both switched on.
-    await page.addInitScript(() => {
+    // At 1300px and up Simple Mode puts the whole bar on one line (tested below); this test is about the
+    // two-row layout, so at that width it runs with Simple Mode off.
+    const advanced = width >= 1300;
+    await page.addInitScript((off: boolean) => {
       window.localStorage.setItem('s_table_show_timer', 'true');
       window.localStorage.setItem('s_show_settings_links', 'true');
-    });
+      if (off) window.localStorage.setItem('s_simple_mode', 'false');
+    }, advanced);
     await startMode(page, 'table');
+    // Start now waits for the rest of the vocabulary, so the quiz can take a moment to appear; measure once it has.
+    await expect(page.locator('input[data-word]').first()).toBeVisible();
     await expect(page.locator('#tableJumpTop .jump-btn').first()).toBeVisible();
 
     const b = await boxes(page);
@@ -56,3 +62,24 @@ for (const width of [1400, 1100, 800]) {
     for (const [l, r] of jumpBtns) { expect(l).toBeGreaterThanOrEqual(0); expect(r).toBeLessThanOrEqual(width); }
   });
 }
+
+test('Simple Mode: Order, Jump to Top / Bottom, the pager, Next Gap, Give Up and Retry are all on one line (1400px wide)', async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await startMode(page, 'table');
+  await expect(page.locator('input[data-word]').first()).toBeVisible();
+  await expect(page.locator('#tablePagerTop')).toBeVisible();
+
+  const tops = await page.evaluate(() => {
+    const mid = (sel: string): number | null => {
+      const e = document.querySelector(sel) as HTMLElement | null;
+      if (!e || e.offsetParent === null) return null;
+      const r = e.getBoundingClientRect();
+      return (r.top + r.bottom) / 2;
+    };
+    return Object.fromEntries(['#tableOrderSelect', '#tableJumpTop [data-jump="top"]', '#tablePagerTop', '#tableJumpTop [data-jump="bottom"]',
+      '#tableJumpBtn', '#tableReset', '#tableRetry'].map(s => [s, mid(s)]));
+  });
+  for (const [sel, y] of Object.entries(tops)) expect(y, `${sel} is on screen`).not.toBeNull();
+  const ys = Object.values(tops) as number[];
+  expect(Math.max(...ys) - Math.min(...ys), 'every control shares one line').toBeLessThan(12);
+});

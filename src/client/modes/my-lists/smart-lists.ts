@@ -61,6 +61,9 @@ export interface SmartRule {
   emoji?: string;
   /** Optional accent colour for the list's own sidebar card, same palette/picker as a folder's. */
   color?: string;
+  /** One of the premade lists the app seeds (starter-lists.ts): shown in the Starter Lists section
+   *  rather than under Smart Lists, and otherwise an ordinary smart list. */
+  starter?: boolean;
 }
 
 export const DEFAULT_SMART_RULE: SmartRule = {

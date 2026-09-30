@@ -363,6 +363,54 @@ read from or write to `vocabulary.db`.
   already locks in immediately); Table's free-recall (Double Recall) and Trivia's
   one-at-a-time (Enter-to-submit, already single-shot) are structurally exempt, not
   omissions.
+- **CSV columns are declared once, in `src/shared/vocab/csv-schema.ts`.** Every exporter (My Content, the
+  Admin export, the desktop Admin export, the Table's Export CSV) takes its header row from it, and
+  Settings → Glossary → "CSV formats" renders its tables from it (`renderCsvDocs` in `settings-search.ts`),
+  along with the rules for the one file the app reads (My Lists' Bulk import). **Adding, removing or
+  reordering a CSV column, or changing what a cell holds, means editing that file** — and its `format` /
+  `description` text if the meaning changed. A new CSV (import or export) gets an entry in `CSV_FORMATS` or
+  `BULK_IMPORT_RULES`. `tests/client/csv-schema.test.ts` fails if an exporter drifts from the schema.
+- **Portuguese, French and Italian verb tenses the database lacks are derived on load**
+  (`data/derived-tenses.ts` → `pt-tenses.ts` / `fr-tenses.ts` / `it-tenses.ts`), from the forms each row
+  has, and never replace a form the row does have. Anything the ending can't settle (an unlisted French -oir
+  participle) is left empty rather than guessed. The real fix for a language is still to add the forms to
+  VocabApp-Data; delete the deriver's tense once the data carries it.
+- **First paint doesn't wait for the whole vocabulary** (`loadWordsProgressive` in `data-loader.ts`): the
+  most frequent 200 words arrive at once from a paged source, the rest loads in the background behind a
+  corner spinner (`#vocabBgLoading`), and the filters are rebuilt when it lands. Start waits for it
+  (`whenVocabComplete`), so a quiz is never drawn from the partial pool. Only `app.ts` uses the progressive
+  path; every other loader still gets the whole language.
+- **Starter Lists are Smart Lists with `starter: true`** (`my-lists/starter-lists.ts`), shown in their own
+  section above Single-Language Lists (`createSmartSection(kit, { starter: true })` — the same code, filtered
+  by the flag) and kept out of the Smart Lists section. They are rank-ordered and *capped* (Top 20 words /
+  verbs / nouns / adjectives in "Most Common", 30 per topic in "By Topic"), never open-ended. Folder scope is
+  `starter_<lang>`. Seeded once per language (`ml_starter_seeded_<lang>` = `v2`); the old `'true'` value means
+  the unlimited v1 lists were made, and seeding removes those still exactly as made. Because they live in
+  `vq_smart_*`, not `vq_lists_*`, they never count as learner data for the backup reminder.
+- **Random Sample** is a third value of `#sizeModeToggle` (`data-mode="sample"`, saved in `vq_size_mode`): the
+  pool is NOT cut to a rank window (app.ts `loadAndBuildFilters`), and Start (start-handler.ts) picks N at
+  random from whatever the filters and lists leave, keeping the list's own order. Top N pool only; Conjugation
+  has its own size control and does not offer it.
+- **Single-Language Lists' green is a fixed value** (`--ml-accent-single` in `shared/variables.css`, light and
+  dark), not `var(--accent)`, so a colour theme never recolours them; the Settings colour picker still can.
+- **The Table controls bar is compact and colour-coded.** Quiz Style and Words' take-mode are dropdowns and
+  Direction is a click-to-cycle button, but each is a *proxy* (`ui/toggle-proxy.ts`) for the original chip row,
+  which stays in the page, hidden (`.ctl-proxied`), as the real state — every saved setting, Testing Profile
+  and resume point still reads and writes those buttons. Change the options by editing the chip row. Each
+  option carries `data-cc="<key>"`; `controls-bar.css` derives its tint/border/text from `--cc-<key>`
+  (defaults in `variables.css`, light and dark), and Settings → Appearance → Quiz Controls Colors overrides
+  them (`CTL_COLOR_DEFS` in `settings.ts`, stored as `s_ctl_color_<key>`). **A new option needs a `data-cc`, a
+  `CTL_COLOR_DEFS` row and both theme defaults** — `tests/client/ctl-colors.test.ts` fails otherwise. Language,
+  Words and Quiz Style/Direction have fixed widths on a desktop bar (controls-bar.css), so switching pool mode
+  or picking languages never moves the group beside them; a new control that widens one must widen its basis.
+- **The language dropdown is a listbox over the native select** (`ui/language-dropdown.ts`): each entry and the
+  closed button show the language's flag (SVG — Windows has no flag emoji) and its `--lang-<name>-bg` tint. The
+  `<select id="langSelect">` stays in the page, visually hidden, as the source of truth, so `.value`, `change`
+  listeners and Playwright's `selectOption` all still work; setting `.value` from code repaints the button.
+- **Simple Mode's Table nav bar is one line at 1300px and up** (end of `table.css`): the wrappers dissolve
+  (`display: contents`) and the pieces are ordered Order · Jump to Top · pager · Jump to Bottom · Next Gap ·
+  Give Up · Retry · timer. Below that the two-row grid layout applies. Start does not wait for the background
+  vocabulary in Trivia or Guess the Blank, which use their own question banks.
 - **A word can opt out of ever being "due"** (`utils/srs.ts`'s `vq_srs_exempt_<lang>`
   Set, `isDueExempt`/`setDueExempt`) without touching its schedule — `srsDueWords`
   filters it out, so the header badge, History's Due for Review and a Smart List's

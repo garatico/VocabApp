@@ -1259,3 +1259,25 @@ body.table-ultra-compact-rows #tableWrap .table-word--trouble::before {
 /* The Settings shortcuts in the Table header are opt-in (Settings → Appearance → Advanced), and never
    shown in Simple Mode (data-simple-hide on the group). */
 body.hide-settings-links #tableSettingsLinks { display: none; }
+
+/* ── Simple Mode: the whole top nav on one line ─────────────────────────────────────────────────────
+   Simple Mode hides Select Page, Add to List and Export CSV (and the settings shortcuts), so what is left
+   fits beside everything else: Order, Jump to Top, the pager, Jump to Bottom, then Next Gap, Give Up and
+   Retry with the timer at the far right. The two wrappers dissolve (`display: contents`) so their buttons
+   can be ordered as one row. Below 1300px the pager alone (~500px) no longer leaves room, so the two-row
+   layout above stays. */
+@media (min-width: 1300px) {
+  body.simple-mode #tableJumpTop {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.4rem 0.6rem;
+  }
+  body.simple-mode #tableJumpTop .table-nav-side.table-nav-side--end,
+  body.simple-mode #tableJumpTop .tnav-center { display: contents; }
+  body.simple-mode #tableJumpTop .table-nav-side:not(.table-nav-side--end) { order: 1; flex: 0 0 auto; }
+  body.simple-mode #tableJumpTop .jump-btn[data-jump="top"]    { order: 2; }
+  body.simple-mode #tableJumpTop .table-pager                  { order: 3; }
+  body.simple-mode #tableJumpTop .jump-btn[data-jump="bottom"] { order: 4; }
+  body.simple-mode #tableJumpTop .tnav-right-cluster           { order: 5; margin-left: auto; }
+}

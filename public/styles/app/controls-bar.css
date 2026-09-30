@@ -507,3 +507,137 @@
   .recall-order-select,
   .conj-order-select { max-width: 140px; font-size: 0.7rem; }
 }
+
+/* ── Compact controls ───────────────────────────────────────────────────────────────────────────
+   Quiz Style and Words' size mode are dropdowns and Direction is a click-to-cycle button (see
+   ui/toggle-proxy.ts); the chip rows they stand in for stay in the page, hidden, as the real state. On a
+   desktop-width bar the labels move inside the row too, so the whole bar is one line where it was three:
+   Language, Words and Quiz Style/Direction no longer stack a label above their controls. Below 600px the
+   existing one-control-per-row layout is kept. */
+.ctl-proxied { display: none !important; }
+.ctl-select {
+  min-height: 36px;
+  font-size: 0.78rem;
+  padding: 0.22rem 1.4rem 0.22rem 0.45rem;
+  min-width: 0;
+}
+.ctl-cycle {
+  min-height: 36px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface2);
+  color: var(--text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ctl-cycle:hover { border-color: var(--accent); }
+
+@media (min-width: 600px) {
+  /* Two lines across the whole bar: every group keeps its label on top and its controls underneath, and
+     the groups sit side by side — Language beside its "+ Languages", Words' pool chips beside its two
+     selects, Quiz Style beside Direction — so nothing stacks a second or third control row. */
+  #controls-top { align-items: flex-end; }
+  #controls-top > .control-stack { flex-direction: row; align-items: flex-end; gap: 0.5rem; }
+  .control-stack--inline-labels::before { display: none; }
+  #controls-top .control-stack--inline-labels .control-group--chip { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
+  .words-controls { display: flex; align-items: center; gap: 0.4rem 0.5rem; }
+}
+
+/* ── Colour-coded options, squarer chips, fixed columns ─────────────────────────────────────────
+   Every option of Words, the take-mode dropdown, Quiz Style and Direction carries a `data-cc` naming its
+   colour (--cc-*, variables.css, overridable in Settings). The chip, dropdown option, closed dropdown and
+   cycle button all derive tint, border and text from that one colour, in both themes. */
+[data-cc="pool-topn"]      { --cc: var(--cc-pool-topn); }
+[data-cc="pool-range"]     { --cc: var(--cc-pool-range); }
+[data-cc="pool-band"]      { --cc: var(--cc-pool-band); }
+[data-cc="size-window"]    { --cc: var(--cc-size-window); }
+[data-cc="size-fill"]      { --cc: var(--cc-size-fill); }
+[data-cc="size-sample"]    { --cc: var(--cc-size-sample); }
+[data-cc="style-standard"] { --cc: var(--cc-style-standard); }
+[data-cc="style-recall"]   { --cc: var(--cc-style-recall); }
+[data-cc="style-double"]   { --cc: var(--cc-style-double); }
+[data-cc="dir-target-en"]  { --cc: var(--cc-dir-target-en); }
+[data-cc="dir-en-target"]  { --cc: var(--cc-dir-en-target); }
+[data-cc="dir-mixed"]      { --cc: var(--cc-dir-mixed); }
+
+#controls-top :is(.sort-order-btn, .conj-toggle-btn, .ctl-select, .ctl-cycle)[data-cc] {
+  border-color: color-mix(in srgb, var(--cc) 55%, var(--border-strong));
+  background: color-mix(in srgb, var(--cc) 12%, var(--surface2));
+  color: color-mix(in srgb, var(--cc) 78%, var(--text));
+}
+#controls-top :is(.sort-order-btn, .conj-toggle-btn)[data-cc]:hover { border-color: var(--cc); color: color-mix(in srgb, var(--cc) 78%, var(--text)); }
+#controls-top :is(.sort-order-btn, .conj-toggle-btn).active[data-cc] {
+  background: color-mix(in srgb, var(--cc) 30%, var(--surface2));
+  border-color: var(--cc);
+  color: color-mix(in srgb, var(--cc) 60%, var(--text));
+}
+.ctl-select option[data-cc] {
+  background: color-mix(in srgb, var(--cc) 16%, var(--surface));
+  color: color-mix(in srgb, var(--cc) 80%, var(--text));
+}
+
+/* Squarer, like the selects and "+ Languages" beside them: the same corner radius, not a pill. */
+#controls-top .control-group--chip :is(.sort-order-btn, .conj-toggle-btn),
+#controls-top .chip-toggle :is(.sort-order-btn, .conj-toggle-btn),
+.ctl-cycle { border-radius: var(--radius-sm); }
+
+@media (min-width: 600px) {
+  /* Fixed columns: Language, Words and Quiz Style/Direction each keep the width their widest state needs,
+     so switching pool mode, picking languages or changing a dropdown never shifts the group beside it. */
+  #controls-top > .control-stack:first-child { flex: 0 0 15rem; }
+  #controls-top > #wordsSizeGroup { flex: 0 0 37rem; }
+  #controls-top > .control-stack:has(> #tableStyleGroup) { flex: 0 0 17.5rem; }
+  #controls-top #poolModeToggle .sort-order-btn { padding-left: 0.55rem; padding-right: 0.55rem; }
+  .words-controls { flex-wrap: nowrap; }
+  .ctl-cycle { min-width: 9.5rem; }
+}
+
+/* ── Language dropdown with flags (ui/language-dropdown.ts) ─────────────────────────────────────────
+   A listbox drawn over the native select, which stays in the page — visually hidden — as the source of
+   truth. Each entry, and the closed button, wear the language's own tint and flag. */
+.lang-dd { position: relative; display: inline-block; }
+.lang-dd-native { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; clip: rect(0 0 0 0); pointer-events: none; }
+.lang-dd-trigger {
+  display: flex; align-items: center; gap: 0.45rem;
+  min-height: 36px; min-width: 8.5rem;
+  padding: 0.22rem 0.5rem;
+  font-size: 0.78rem; font-weight: 500; text-align: left;
+  color: var(--text);
+  background: color-mix(in srgb, var(--lang-tint, var(--surface2)) 55%, var(--surface2));
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.lang-dd-trigger:hover { border-color: var(--accent); }
+.lang-dd-chevron { margin-left: auto; color: var(--text-muted); font-size: 0.7rem; }
+.lang-dd-flag { width: 20px; height: 14px; object-fit: cover; border-radius: 2px; flex-shrink: 0; box-shadow: 0 0 0 1px var(--border-strong); }
+.lang-dd-list {
+  position: absolute; z-index: 60; top: calc(100% + 2px); left: 0; min-width: 100%;
+  margin: 0; padding: 0.2rem; list-style: none;
+  max-height: 18rem; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); box-shadow: var(--shadow);
+}
+.lang-dd-list[hidden] { display: none; }
+.lang-dd-list li {
+  display: flex; align-items: center; gap: 0.5rem;
+  margin: 2px 0; padding: 0.35rem 0.5rem;
+  font-size: 0.8rem; white-space: nowrap; color: var(--text);
+  background: color-mix(in srgb, var(--lang-tint, var(--surface2)) 45%, var(--surface));
+  border-radius: var(--radius-sm); cursor: pointer;
+}
+.lang-dd-list li[aria-selected="true"] { font-weight: 700; }
+.lang-dd-list li.lang-dd-active { outline: 2px solid var(--accent); outline-offset: -2px; }
+.lang-dd-list li[aria-disabled="true"] { opacity: 0.55; cursor: not-allowed; }
+
+/* "+ Languages" popover rows: the language's tint behind the row, its flag between the box and the name. */
+.list-picker-row.lang-picker-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  background: color-mix(in srgb, var(--lang-tint, var(--surface2)) 45%, var(--surface));
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  margin: 2px 0;
+}
+.list-picker-row.lang-picker-row.list-picker-row--disabled { opacity: 0.55; }

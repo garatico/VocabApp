@@ -25,11 +25,18 @@ let pending: number | null = null;
 function setZoom(next: number): void {
   zoom = clampZoom(next);
   Settings.setAppZoom(zoom);
+  showZoom();
   if (pending !== null) return;
   pending = window.requestAnimationFrame(() => {
     pending = null;
     getCurrentWebview().setZoom(zoom).catch(err => logger.warn('webview zoom failed', err));
   });
+}
+
+/** Settings' "Window zoom" row: only exists to be shown in the packaged app, where it reads out the level. */
+function showZoom(): void {
+  const el = document.getElementById('settingAppZoomValue');
+  if (el) el.textContent = `${Math.round(zoom * 100)}%`;
 }
 
 const touchDistance = (t: TouchList): number => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
@@ -38,6 +45,10 @@ export function initAppZoom(): void {
   // WebView2's own touch pinch is a visual zoom that would fight this one; leave panning to the page only.
   document.documentElement.style.touchAction = 'pan-x pan-y';
   zoom = clampZoom(Settings.getAppZoom());
+  const row = document.getElementById('settingAppZoomRow');
+  if (row) row.hidden = false;
+  document.getElementById('settingAppZoomReset')?.addEventListener('click', () => setZoom(1));
+  showZoom();
   if (zoom !== 1) getCurrentWebview().setZoom(zoom).catch(err => logger.warn('webview zoom failed', err));
 
   // Touchpad pinch (ctrl+wheel). Not passive: the default would be to scroll or, in a browser, zoom the page.

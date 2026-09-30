@@ -32,6 +32,12 @@
     <p data-i18n="common.loadingVocab">Loading vocabulary...</p>
   </div>
 
+  <!-- Corner indicator while the rest of the vocabulary loads behind the first screen -->
+  <div id="vocabBgLoading" class="bg-loading" role="status" hidden>
+    <span class="spinner spinner--small" aria-hidden="true"></span>
+    <span data-i18n="common.loadingVocabBg">Loading the rest of the vocabulary…</span>
+  </div>
+
   <!-- Error Message -->
   <div id="errorMessage" style="display:none" role="alert" aria-live="polite">
     <span class="error-icon">&#x26A0;&#xFE0F;</span>
@@ -153,10 +159,11 @@
 
           <div class="control-group" id="wordsSizeGroup">
             <label data-i18n="controls.words">Words</label>
+            <div class="words-controls">
             <div class="sort-order-toggle chip-toggle" id="poolModeToggle" title="Most Common: the N most frequent words. Rank Range: a specific slice of the frequency list. Level: every word at the CEFR level(s) you pick." data-i18n-title="controls.poolModeTip">
-              <button type="button" class="sort-order-btn active" data-pool="topn" data-i18n="controls.topN">Most Common</button>
-              <button type="button" class="sort-order-btn" data-pool="range" data-i18n="controls.rankRange">Rank Range</button>
-              <button type="button" class="sort-order-btn" data-pool="band" data-i18n="controls.level">Level</button>
+              <button type="button" class="sort-order-btn active" data-pool="topn" data-cc="pool-topn" data-i18n="controls.topN">Most Common</button>
+              <button type="button" class="sort-order-btn" data-pool="range" data-cc="pool-range" data-i18n="controls.rankRange">Rank Range</button>
+              <button type="button" class="sort-order-btn" data-pool="band" data-cc="pool-band" data-i18n="controls.level">Level</button>
             </div>
             <div class="size-row" id="topNRow">
               <select id="sizeSelect" aria-label="Number of words">
@@ -168,10 +175,12 @@
                 <option value="custom">Custom...</option>
               </select>
               <input type="number" id="sizeCustom" class="custom-count-input" min="1" max="9999" step="1" placeholder="e.g. 750" data-i18n-placeholder="controls.egCustom" style="display:none;"/>
-              <div class="sort-order-toggle chip-toggle" id="sizeModeToggle" data-simple-hide="true" title="By rank: the words ranked 1–N, whatever their status. Skip known: N words that aren't on any of your lists, digging further down the frequency list as needed." data-i18n-title="controls.sizeModeTip">
-                <button type="button" class="sort-order-btn active" data-mode="window" title="Take the words ranked 1–N in frequency order" data-i18n-title="controls.byRankTip" data-i18n="controls.byRank">By Rank</button>
-                <button type="button" class="sort-order-btn" data-mode="fill" title="Always return N words you haven't listed yet, pulling deeper if needed" data-i18n-title="controls.skipKnownTip" data-i18n="controls.skipKnown">Skip Known</button>
+              <div class="sort-order-toggle chip-toggle" id="sizeModeToggle" data-simple-hide="true" title="By rank: the words ranked 1–N, whatever their status. Skip known: N words that aren't on any of your lists, digging further down the frequency list as needed. Random sample: N words picked at random from everything your filters and lists leave." data-i18n-title="controls.sizeModeTip">
+                <button type="button" class="sort-order-btn active" data-mode="window" data-cc="size-window" title="Take the words ranked 1–N in frequency order" data-i18n-title="controls.byRankTip" data-i18n="controls.byRank">By Rank</button>
+                <button type="button" class="sort-order-btn" data-mode="fill" data-cc="size-fill" title="Always return N words you haven't listed yet, pulling deeper if needed" data-i18n-title="controls.skipKnownTip" data-i18n="controls.skipKnown">Skip Known</button>
+                <button type="button" class="sort-order-btn" data-mode="sample" data-cc="size-sample" title="Take N words at random from everything your filters and lists leave — not the N most frequent" data-i18n-title="controls.randomSampleTip" data-i18n="controls.randomSample">Random Sample</button>
               </div>
+              <select id="sizeModeSelect" class="ctl-select" data-simple-hide="true" aria-label="Which words to take" data-i18n-aria-label="controls.sizeModeLabel"></select>
             </div>
             <div class="size-row rank-range-row" id="rankRangeRow" style="display:none">
               <input type="number" id="rankFrom" min="1" step="1" placeholder="From" data-i18n-placeholder="controls.from" value="1" title="First rank in the slice (inclusive)" data-i18n-title="controls.fromTip"/>
@@ -187,6 +196,7 @@
                 <button type="button" class="pos-chip" data-band="C1">C1</button>
                 <button type="button" class="pos-chip" data-band="C2">C2</button>
               </div>
+            </div>
             </div>
           </div>
 
@@ -345,20 +355,22 @@
                row higher than Words' own chips instead of lining up. -->
           <div class="control-stack control-stack--inline-labels">
             <div class="control-group control-group--chip" id="tableStyleGroup" data-simple-hide="true" style="display:none">
-              <label data-i18n="controls.quizStyle">Quiz Style</label>
+              <label for="tableStyleSelect" data-i18n="controls.quizStyle">Quiz Style</label>
+              <select id="tableStyleSelect" class="ctl-select"></select>
               <div class="conj-display-toggle" id="tableStyleToggle">
-                <button class="conj-toggle-btn active" data-style="standard" data-i18n="controls.standard">Standard</button>
-                <button class="conj-toggle-btn" data-style="recall" data-i18n="controls.recall">Recall</button>
-                <button class="conj-toggle-btn" data-style="double" data-i18n="controls.doubleRecall">Double Recall</button>
+                <button class="conj-toggle-btn active" data-style="standard" data-cc="style-standard" data-i18n="controls.standard">Standard</button>
+                <button class="conj-toggle-btn" data-style="recall" data-cc="style-recall" data-i18n="controls.recall">Recall</button>
+                <button class="conj-toggle-btn" data-style="double" data-cc="style-double" data-i18n="controls.doubleRecall">Double Recall</button>
               </div>
             </div>
 
             <div class="control-group control-group--chip" id="directionGroup" data-simple-hide="true">
-              <label data-i18n="controls.direction">Direction</label>
+              <label for="directionCycle" data-i18n="controls.direction">Direction</label>
+              <button type="button" id="directionCycle" class="ctl-cycle"></button>
               <div class="conj-display-toggle" id="directionToggle">
-                <button class="conj-toggle-btn active" data-direction="target-en" data-i18n="controls.wordToMeaning">Word &#x2192; Meaning</button>
-                <button class="conj-toggle-btn"        data-direction="en-target" data-i18n="controls.meaningToWord">Meaning &#x2192; Word</button>
-                <button class="conj-toggle-btn"        data-direction="mixed" data-i18n="controls.mixed">Mixed</button>
+                <button class="conj-toggle-btn active" data-direction="target-en" data-cc="dir-target-en" data-i18n="controls.wordToMeaning">Word &#x2192; Meaning</button>
+                <button class="conj-toggle-btn"        data-direction="en-target" data-cc="dir-en-target" data-i18n="controls.meaningToWord">Meaning &#x2192; Word</button>
+                <button class="conj-toggle-btn"        data-direction="mixed" data-cc="dir-mixed" data-i18n="controls.mixed">Mixed</button>
               </div>
             </div>
           </div>
@@ -1608,6 +1620,17 @@
               </div>
             </div>
 
+            <div class="settings-row" id="settingAppZoomRow" hidden>
+              <div class="settings-label">
+                <span data-i18n="settings.appearance.appZoom">Window zoom</span>
+                <span class="settings-desc" data-i18n="settings.appearance.appZoomDesc">Ctrl + / Ctrl − / pinch zoom the desktop app. The level is remembered; reset it here.</span>
+              </div>
+              <div class="sort-order-toggle">
+                <span id="settingAppZoomValue" aria-live="polite">100%</span>
+                <button type="button" class="sort-order-btn" id="settingAppZoomReset" data-i18n="settings.appearance.appZoomReset">Reset to 100%</button>
+              </div>
+            </div>
+
             </div>
             </div>
 
@@ -1779,6 +1802,22 @@
             <button type="button" id="settingResetMlColors" class="settings-action-btn">Reset to defaults</button>
             <div class="conj-color-list" id="settingMlColors">
               <!-- One row per list kind, built from ML_COLOR_DEFS — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupCtlColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupCtlColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Quiz Controls Colors</span>
+            </button>
+            <div id="settingsGroupCtlColors" class="filter-body">
+
+            <p class="settings-desc">The colour of each option in the controls above the quiz: Words, which words to take, Quiz Style and Direction.</p>
+            <button type="button" id="settingResetCtlColors" class="settings-action-btn">Reset to defaults</button>
+            <div class="conj-color-list" id="settingCtlColors">
+              <!-- One row per option, built from CTL_COLOR_DEFS — see settings.ts -->
             </div>
 
             </div>
@@ -2157,6 +2196,14 @@
             <p class="settings-desc glossary-empty" id="glossaryEmpty" hidden data-i18n="settings.glossary.noMatches">No terms match.</p>
 
             <div id="glossaryList">
+
+            <div class="settings-row settings-row--stack glossary-term" data-category="general" id="glossaryCsvFormats">
+              <div class="settings-label">
+                <span data-i18n="settings.glossary.csvFormats">CSV formats (import &amp; export)</span>
+                <span class="settings-desc" data-i18n="settings.glossary.csvFormatsDesc">What the app's CSV files contain: the columns of each file it writes and the rules for the one it reads. This list is generated from the same definition the exporters use, so it always matches the files.</span>
+                <div class="csv-docs" id="csvDocs"></div>
+              </div>
+            </div>
 
             <div class="settings-row settings-row--stack glossary-term" data-category="table">
               <div class="settings-label">
@@ -2724,8 +2771,8 @@
                 <span class="settings-desc" data-i18n="settings.general.visualProfilesDesc">Show a Visual Profiles section in My Lists — saved bundles of display settings.</span>
               </div>
               <div class="sort-order-toggle" id="settingShowVisualProfiles">
-                <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
-                <button type="button" class="sort-order-btn" data-enabled="true" data-i18n="common.on">On</button>
+                <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
               </div>
             </div>
 

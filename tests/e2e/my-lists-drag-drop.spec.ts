@@ -47,7 +47,7 @@ test('a smart list cannot be dropped onto a single-language list folder', async 
   await page.locator('.ml-single-head .ml-new-folder-btn').click();
 
   // A smart list — same inline name-then-Enter creation flow as a plain list.
-  await page.locator('.ml-smart-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
+  await page.locator('.ml-smart-head:not(.ml-starter-head) .ml-new-list-btn:not(.ml-new-folder-btn)').click();
   const smartNameInput = page.locator('.ml-list-name-input');
   await smartNameInput.fill('DragTestSmart');
   await smartNameInput.press('Enter');
