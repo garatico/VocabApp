@@ -472,6 +472,7 @@ test('turning them on shows them — except the shortcuts, which Simple Mode alw
   });
   await startMode(page, 'table');
   await expect(page.locator('#tableTimerGroup')).toBeVisible();
+  await page.locator('#tableMoreBtn').click();                                                  // the shortcuts live in the ⋯ menu
   await expect(page.locator('#tableSettingsLinks')).toBeVisible();
 });
 

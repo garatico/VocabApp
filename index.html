@@ -709,51 +709,57 @@
             <div id="tableBarTopHintProgress" class="bar-hint-progress"></div>
             <span id="tableStatsTop" class="progress-label"></span>
           </div>
-        </div>
-        <div class="controls-line" id="tableControlsLine">
-          <div id="tableScoreTop" class="quiz-score"></div>
-        </div>
-
-        <div class="table-nav" id="tableJumpTop">
-          <div class="table-nav-side">
-            <span class="inline-order-label" data-i18n="controls.order">Order</span>
-            <select class="table-order-select" id="tableOrderSelect" aria-label="Word order" title="Order of the words in this quiz" data-i18n-aria-label="table.wordOrder" data-i18n-title="table.wordOrder"></select>
-            <div class="sort-order-toggle table-sortby-toggle" id="tableSortByToggle">
-              <button type="button" class="sort-order-btn active" data-sortby="word" data-i18n="table.sortByWord">Word</button>
-              <button type="button" class="sort-order-btn" data-sortby="meaning" data-i18n="table.sortByMeaning">Meaning</button>
-            </div>
+          <div class="tnav-group timer-group" id="tableTimerGroup">
+            <span id="tableStopwatch" class="quiz-stopwatch" title="Time spent on this quiz" data-i18n-title="table.stopwatchTip">0:00</span>
+            <button type="button" id="tableTimerToggle" class="timer-btn" title="Pause timer" aria-label="Pause timer">&#x23F8;</button>
+            <button type="button" id="tableTimerReset" class="timer-btn" title="Reset timer" aria-label="Reset timer">&#x21BA;</button>
           </div>
-          <div class="table-pager" id="tablePagerTop" hidden>
-            <button type="button" class="pager-btn" data-page="prev" aria-label="Previous page" data-i18n-aria-label="table.prevPage">&#x2190;</button>
-            <select class="pager-select" id="tablePagerSelectTop" aria-label="Jump to page" data-i18n-aria-label="table.jumpToPage"></select>
-            <span class="pager-status" id="tablePagerStatusTop"></span>
-            <button type="button" class="pager-btn" data-page="next" aria-label="Next page" data-i18n-aria-label="table.nextPage">&#x2192;</button>
+        </div>
+        <!-- One row: counts on the left, then the pager, the in-quiz actions and a
+             "more" menu for everything that is set up rather than used mid-quiz. -->
+        <div class="tsb-row">
+          <div class="controls-line" id="tableControlsLine">
+            <div id="tableScoreTop" class="quiz-score"></div>
           </div>
-          <div class="table-nav-side table-nav-side--end">
-            <div class="tnav-center">
-              <button type="button" class="jump-btn" data-jump="top" data-i18n="table.jumpToTop">&#x2191; Jump to Top</button>
-              <button type="button" class="jump-btn" data-jump="bottom" data-i18n="table.jumpToBottom">&#x2193; Jump to Bottom</button>
+          <div class="tsb-nav" id="tableJumpTop">
+            <div class="table-pager" id="tablePagerTop" hidden>
+              <button type="button" class="pager-btn" data-page="prev" aria-label="Previous page" data-i18n-aria-label="table.prevPage">&#x2190;</button>
+              <select class="pager-select" id="tablePagerSelectTop" aria-label="Jump to page" data-i18n-aria-label="table.jumpToPage"></select>
+              <span class="pager-status" id="tablePagerStatusTop"></span>
+              <button type="button" class="pager-btn" data-page="next" aria-label="Next page" data-i18n-aria-label="table.nextPage">&#x2192;</button>
             </div>
-            <div class="tnav-right-cluster">
-              <div id="tableSummaryTop" class="tnav-group quiz-summary quiz-summary--inline" style="display:none"></div>
-              <div id="tableControls" class="tnav-group controls-row controls-row--compact">
-                <button id="tableSelectPageBtn" data-simple-hide="true" title="Check every word on this page">☑ Select Page</button>
-                <button id="tableBulkAddBtn" data-simple-hide="true" title="Add every checked word to a list" disabled>+ Add to List(s)</button>
-                <button id="tableJumpBtn" title="Jump to the first word you haven't answered (Ctrl+/)" data-i18n-title="table.jumpNextGapTip" data-i18n="table.jumpNextGap">↓ Next Gap</button>
-                <button id="tableExport" data-simple-hide="true" data-i18n="table.exportCsv">Export CSV</button>
-                <button id="tableReset" data-i18n="table.giveUp">Give Up</button>
-                <button id="tableRetry" title="Restart this same word list from scratch — clears every answer, the timer, and this session's mastery credit for it" data-i18n-title="table.retryTip" data-i18n="table.retry">Retry</button>
-              </div>
-              <div class="tnav-group settings-links" id="tableSettingsLinks" data-simple-hide="true">
-                <span aria-hidden="true">⚙</span>
-                <button type="button" class="settings-link" data-setting-link="settingHintButton" title="Open this setting" data-i18n-title="settings.linkTitle" data-i18n="settings.linkHints">Hints</button>
-                <button type="button" class="settings-link" data-setting-link="settingShowTimer" title="Open this setting" data-i18n-title="settings.linkTitle" data-i18n="settings.linkTimer">Timer</button>
-                <button type="button" class="settings-link" data-setting-link="settingTableRowDensity" title="Open this setting" data-i18n-title="settings.linkTitle" data-i18n="settings.linkDensity">Density</button>
-              </div>
-              <div class="tnav-group timer-group" id="tableTimerGroup">
-                <span id="tableStopwatch" class="quiz-stopwatch" title="Time spent on this quiz" data-i18n-title="table.stopwatchTip">0:00</span>
-                <button type="button" id="tableTimerToggle" class="timer-btn" title="Pause timer" aria-label="Pause timer">&#x23F8;</button>
-                <button type="button" id="tableTimerReset" class="timer-btn" title="Reset timer" aria-label="Reset timer">&#x21BA;</button>
+            <div class="tsb-jump" role="group" aria-label="Jump">
+              <button type="button" class="jump-btn jump-btn--icon" data-jump="top" title="Jump to Top" aria-label="Jump to Top" data-i18n-title="table.jumpToTop" data-i18n-aria-label="table.jumpToTop">&#x2191;</button>
+              <button type="button" class="jump-btn jump-btn--icon" data-jump="bottom" title="Jump to Bottom" aria-label="Jump to Bottom" data-i18n-title="table.jumpToBottom" data-i18n-aria-label="table.jumpToBottom">&#x2193;</button>
+            </div>
+            <div id="tableSummaryTop" class="tnav-group quiz-summary quiz-summary--inline" style="display:none"></div>
+            <div id="tableControls" class="tnav-group controls-row controls-row--compact">
+              <button id="tableJumpBtn" title="Jump to the first word you haven't answered (Ctrl+/)" data-i18n-title="table.jumpNextGapTip" data-i18n="table.jumpNextGap">↓ Next Gap</button>
+              <button id="tableReset" data-i18n="table.giveUp">Give Up</button>
+              <button id="tableRetry" title="Restart this same word list from scratch — clears every answer, the timer, and this session's mastery credit for it" data-i18n-title="table.retryTip" data-i18n="table.retry">Retry</button>
+            </div>
+            <div class="tsb-more" id="tableMore">
+              <button type="button" id="tableMoreBtn" class="tsb-more-btn" aria-haspopup="true" aria-expanded="false" aria-controls="tableMoreMenu" title="More options" aria-label="More options">&#x22EF;</button>
+              <div class="tsb-more-menu" id="tableMoreMenu" hidden>
+                <div class="tsb-more-row">
+                  <span class="inline-order-label" data-i18n="controls.order">Order</span>
+                  <select class="table-order-select" id="tableOrderSelect" aria-label="Word order" title="Order of the words in this quiz" data-i18n-aria-label="table.wordOrder" data-i18n-title="table.wordOrder"></select>
+                </div>
+                <div class="tsb-more-row">
+                  <div class="sort-order-toggle table-sortby-toggle" id="tableSortByToggle">
+                    <button type="button" class="sort-order-btn active" data-sortby="word" data-i18n="table.sortByWord">Word</button>
+                    <button type="button" class="sort-order-btn" data-sortby="meaning" data-i18n="table.sortByMeaning">Meaning</button>
+                  </div>
+                </div>
+                <button type="button" id="tableSelectPageBtn" data-simple-hide="true" title="Check every word on this page">☑ Select Page</button>
+                <button type="button" id="tableBulkAddBtn" data-simple-hide="true" title="Add every checked word to a list" disabled>+ Add to List(s)</button>
+                <button type="button" id="tableExport" data-simple-hide="true" data-i18n="table.exportCsv">Export CSV</button>
+                <div class="tsb-more-row settings-links" id="tableSettingsLinks" data-simple-hide="true">
+                  <span aria-hidden="true">⚙</span>
+                  <button type="button" class="settings-link" data-setting-link="settingHintButton" title="Open this setting" data-i18n-title="settings.linkTitle" data-i18n="settings.linkHints">Hints</button>
+                  <button type="button" class="settings-link" data-setting-link="settingShowTimer" title="Open this setting" data-i18n-title="settings.linkTitle" data-i18n="settings.linkTimer">Timer</button>
+                  <button type="button" class="settings-link" data-setting-link="settingTableRowDensity" title="Open this setting" data-i18n-title="settings.linkTitle" data-i18n="settings.linkDensity">Density</button>
+                </div>
               </div>
             </div>
           </div>
@@ -762,35 +768,12 @@
 
         <div id="tableWrap"></div>
 
-        <div class="table-nav" id="tableJumpBottom">
-          <div class="table-nav-side"></div>
-          <div class="table-pager" id="tablePagerBottom" hidden>
-            <button type="button" class="pager-btn" data-page="prev" aria-label="Previous page" data-i18n-aria-label="table.prevPage">&#x2190;</button>
-            <select class="pager-select" id="tablePagerSelectBottom" aria-label="Jump to page" data-i18n-aria-label="table.jumpToPage"></select>
-            <span class="pager-status" id="tablePagerStatusBottom"></span>
-            <button type="button" class="pager-btn" data-page="next" aria-label="Next page" data-i18n-aria-label="table.nextPage">&#x2192;</button>
-          </div>
-          <div class="table-nav-side table-nav-side--end">
-            <button type="button" class="jump-btn" data-jump="top" data-i18n="table.jumpToTop">&#x2191; Jump to Top</button>
-            <div id="tableSummary" class="quiz-summary quiz-summary--inline" style="display:none"></div>
-          </div>
-        </div>
+        <!-- The pager and Jump buttons live in the sticky bar above, so only the
+             end-of-quiz summary is repeated here. -->
+        <div id="tableSummary" class="quiz-summary quiz-summary--inline" style="display:none"></div>
 
         <div id="tableFeedback" class="feedback" role="status"></div>
 
-        <div class="progressWrap">
-          <div class="progress">
-            <div id="tableBarBottom" class="bar"></div>
-            <div id="tableBarBottomHintedCorrect" class="bar-hinted-correct"></div>
-            <div id="tableBarBottomRevealed" class="bar-revealed"></div>
-            <div id="tableBarBottomHintedRevealed" class="bar-hinted-revealed"></div>
-            <div id="tableBarBottomMissed" class="bar-missed"></div>
-            <div id="tableBarBottomHintedMissed" class="bar-hinted-missed"></div>
-            <div id="tableBarBottomHintProgress" class="bar-hint-progress"></div>
-            <span id="tableStatsBottom" class="progress-label"></span>
-          </div>
-        </div>
-        <div id="tableScoreBottom" class="quiz-score"></div>
       </section>
 
       <section id="pictureArea" hidden>

@@ -5,6 +5,7 @@ import { regularityOf } from './verb-filters.js';
 import { buildGlossDisplay, displayWord } from '../../utils/utils.js';
 import { getWordLists } from '../../utils/word-lists.ts';
 import { openListPicker } from '../../utils/list-picker.ts';
+import { openWordInfoPopover } from '../../utils/word-info-popover.ts';
 import { languageInfo } from '../../data/languages.js';
 import { createFlagImg } from '../../ui/flag-icon.js';
 import { Settings, applyAutofillAttr } from '../../settings.js';
@@ -103,10 +104,19 @@ export function buildCard({
 
   const titleRow = document.createElement('div');
   titleRow.className = 'conj-verb-title-row';
-  titleRow.append(targetEl, starBtn);
+  // Grid: the word, then its translation on the same line (each its own tinted chip), and the star in
+  // the card's top-right corner. Full Conjugation keeps the star where it was (its view header owns it).
+  if (hideVerbName) {
+    titleRow.append(targetEl, starBtn);
+    headMain.append(titleRow, englishEl);
+    englishEl.hidden = true;
+  } else {
+    starBtn.classList.add('conj-card-star--corner');
+    titleRow.append(targetEl, englishEl);
+    headMain.append(titleRow);
+    card.appendChild(starBtn);
+  }
   titleRow.hidden = hideVerbName;
-  headMain.append(titleRow, englishEl);
-  if (hideVerbName) englishEl.hidden = true;
 
   const headSide = document.createElement('div');
   headSide.className = 'conj-head-side';
@@ -153,7 +163,7 @@ export function buildCard({
   tenseEl.title     = TENSE_HELP[tenseKey] ?? '';
   metaRow.appendChild(tenseEl);
 
-  headSide.appendChild(metaRow);
+  if (hideVerbName) headSide.appendChild(metaRow);
 
   // English tense name and Reveal all share the second line.
   const footRow = document.createElement('div');
@@ -163,7 +173,9 @@ export function buildCard({
   tenseEnEl.className = 'conj-card-tense-en';
   tenseEnEl.textContent = tenseEnLabel(tenseKey);
   if (!tenseEnEl.textContent) tenseEnEl.hidden = true;
-  footRow.appendChild(tenseEnEl);
+  // Grid: the tense name rides in the header bar beside Reveal all (English name, regularity and band
+  // are in the word popover); Full Conjugation keeps its own meta row.
+  if (hideVerbName) footRow.appendChild(tenseEnEl); else footRow.appendChild(tenseEl);
 
   const revealAllBtn = document.createElement('button');
   revealAllBtn.type      = 'button';
@@ -183,12 +195,71 @@ export function buildCard({
   function updateHeader(): void {
     const mode = getDisplayMode();
     targetEl.textContent  = displayWord(verb, Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint());
-    englishEl.textContent = buildGlossDisplay(verb);
+    // The gloss count is the Settings one used for question prompts, so the card shows as many
+    // senses as a quiz prompt would, not every sense the word has.
+    englishEl.textContent = buildGlossDisplay(verb, Settings.getQuestionGlossCount());
     // In Full Conjugation the view header carries the verb, so the card's copy
     // stays hidden whatever the target/english toggle says.
     targetEl.hidden  = hideVerbName || mode === 'english';
     englishEl.hidden = hideVerbName || mode === 'target';
     tenseEl.textContent = tenseNativeLabel;
+  }
+
+  // Click the word for what used to sit in the header — tense, regularity, band — plus the usual word
+  // popover (add to list, copy, jump to Browse / Edit). Its conjugation detail is gated on every visible
+  // form being answered, so opening it mid-card never hands over an answer.
+  if (!hideVerbName) {
+    targetEl.classList.add('word-info-trigger');
+    targetEl.addEventListener('click', e => {
+      e.stopPropagation();
+      const extra = document.createElement('div');
+      extra.className = 'conj-info-extra';
+      const chips = document.createElement('div');
+      chips.className = 'conj-info-chips';
+      const tenseChip = document.createElement('span');
+      tenseChip.className   = 'conj-card-tense';
+      tenseChip.textContent = tenseNativeLabel;
+      tenseChip.title       = TENSE_HELP[tenseKey] ?? '';
+      chips.appendChild(tenseChip);
+      const en = tenseEnLabel(tenseKey);
+      if (en) {
+        const enChip = document.createElement('span');
+        enChip.className   = 'conj-card-tense-en';
+        enChip.textContent = en;
+        chips.appendChild(enChip);
+      }
+      if (band) {
+        const b = document.createElement('span');
+        b.className   = 'conj-card-band';
+        b.textContent = band;
+        chips.appendChild(b);
+      }
+      if (cls) {
+        const r = document.createElement('span');
+        r.className   = `conj-card-reg conj-card-reg--${kind.key}`;
+        r.textContent = kind.label;
+        r.title       = regEl.title;
+        chips.appendChild(r);
+      }
+      extra.appendChild(chips);
+      if (TENSE_HELP[tenseKey]) {
+        const help = document.createElement('div');
+        help.className   = 'conj-info-help';
+        help.textContent = TENSE_HELP[tenseKey];
+        extra.appendChild(help);
+      }
+      const pending = isSingleForm(getTenseKey())
+        ? [singleInp]
+        : inputs.filter((_, i) => !pronounRows[i].classList.contains('conj-row-tense-hidden')
+                              && !pronounRows[i].classList.contains('conj-row-hidden'));
+      const revealed = pending.every(i => i.classList.contains('correct')
+                                       || i.classList.contains('revealed')
+                                       || i.classList.contains('missed'));
+      openWordInfoPopover({
+        anchorEl: targetEl, word: verb, lang, revealed, extra, inConjugation: true,
+        hideWordWhenUnrevealed: getDisplayMode() === 'english',
+      });
+    });
   }
 
   const innerGrid = document.createElement('div');

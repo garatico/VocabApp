@@ -37,11 +37,15 @@ export interface WordInfoPopoverOptions {
    *  the same name. Swaps which of "Copy word" / the heading text is the
    *  one gated on `revealed`, since which side is the secret flips with it. */
   hideWordWhenUnrevealed?: boolean;
+  /** Caller-specific context shown above the word detail (Conjugation: tense, regularity, band). */
+  extra?: HTMLElement;
+  /** Hide "Practice in Conjugation mode" — pointless when already there. */
+  inConjugation?: boolean;
   onClose?: () => void;
 }
 
 export function openWordInfoPopover({
-  anchorEl, word, lang, revealed, hideWordWhenUnrevealed = false, onClose,
+  anchorEl, word, lang, revealed, hideWordWhenUnrevealed = false, extra, inConjugation = false, onClose,
 }: WordInfoPopoverOptions): void {
   closeExistingPopover();
 
@@ -52,6 +56,7 @@ export function openWordInfoPopover({
   // "Show all tenses" needs to grow *this* popover, not the hidden hover-
   // tooltip singleton buildConjSection resizes by default — otherwise the
   // wider multi-tense table overflows this box's own max-width untouched.
+  if (extra) popover.appendChild(extra);
   popover.appendChild(buildWordDetailContent(word, lang, revealed, hideWordWhenUnrevealed, expanding => {
     popover.classList.toggle('word-info-popover--wide', expanding);
     positionPopover(popover, anchorEl);
@@ -73,7 +78,7 @@ export function openWordInfoPopover({
   });
   actions.appendChild(addBtn);
 
-  if (word.pos === 'verb') {
+  if (word.pos === 'verb' && !inConjugation) {
     const conjBtn = document.createElement('button');
     conjBtn.type        = 'button';
     conjBtn.className   = 'word-info-action-btn';

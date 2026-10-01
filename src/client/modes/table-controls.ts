@@ -88,7 +88,7 @@ export function syncTableStyleUI(): void {
   // than beside #tableScoreTop, so hiding tableJumpTop already takes it
   // with it — #tableScoreTop stays visible for every style regardless
   // (Recall/Double Recall share it too).
-  ['tableJumpTop', 'tableJumpBottom'].forEach(id => {
+  ['tableJumpTop'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = showStandardOnly ? '' : 'none';
   });
@@ -1118,6 +1118,27 @@ export function bindTableControls(): void {
       jumpToFirstUnanswered();
     }
   });
+
+  // "More" menu: open/close on its button, close on an outside click, Escape, or
+  // once an item has been used (a <select> inside it keeps the menu open).
+  const moreBtn  = document.getElementById('tableMoreBtn');
+  const moreMenu = document.getElementById('tableMoreMenu');
+  if (moreBtn && moreMenu) {
+    const setMoreOpen = (open: boolean): void => {
+      moreMenu.hidden = !open;
+      moreBtn.setAttribute('aria-expanded', String(open));
+    };
+    moreBtn.addEventListener('click', e => { e.stopPropagation(); setMoreOpen(moreMenu.hidden); });
+    document.addEventListener('click', e => {
+      if (!moreMenu.hidden && !document.getElementById('tableMore')?.contains(e.target as Node)) setMoreOpen(false);
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && !moreMenu.hidden) { setMoreOpen(false); moreBtn.focus(); }
+    });
+    moreMenu.addEventListener('click', e => {
+      if ((e.target as Element).closest('button:not(.sort-order-btn)')) setMoreOpen(false);
+    });
+  }
 
   // Jump to top / bottom of the quiz
   ['tableJumpTop', 'tableJumpBottom'].forEach(id => {

@@ -1281,3 +1281,109 @@ body.hide-settings-links #tableSettingsLinks { display: none; }
   body.simple-mode #tableJumpTop .jump-btn[data-jump="bottom"] { order: 4; }
   body.simple-mode #tableJumpTop .tnav-right-cluster           { order: 5; margin-left: auto; }
 }
+
+/* ── Sticky bar, compact layout ───────────────────────────────────────────────
+   Two rows: [progress bar · timer] and [counts · pager · in-quiz actions · ⋯].
+   Everything that is set up rather than used mid-quiz (order, sort, select /
+   add / export, jump, settings shortcuts) lives in the ⋯ menu. New class names
+   (.tsb-*) on purpose, so none of the older .table-nav grid rules reach it. */
+#tableStickyBar .progressWrap { gap: 0.6rem; }
+#tableStickyBar .progressWrap .timer-group { flex: 0 0 auto; margin: 0; padding: 0; border: 0; }
+
+.tsb-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.9rem;
+  margin-top: 0.3rem;
+}
+.tsb-row .controls-line { padding: 0; border: 0; flex: 0 1 auto; min-width: 0; }
+.tsb-row .quiz-score { margin-top: 0; }
+
+.tsb-nav {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem 0.6rem;
+  min-width: 0;
+}
+.tsb-nav .tnav-group,
+.tsb-nav .tnav-group + .tnav-group { margin: 0; padding: 0; border: 0; }
+.tsb-nav .table-pager { margin-left: auto; }
+.tsb-nav #tableControls { margin: 0; padding: 0; border: 0; }
+.tsb-nav #tableControls button { min-height: 0; }
+
+.tsb-more { position: relative; }
+.tsb-more-btn {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm, 4px);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+}
+.tsb-more-btn:hover,
+.tsb-more-btn[aria-expanded="true"] { background: var(--surface2); }
+.tsb-more-menu {
+  position: absolute;
+  top: calc(100% + 0.3rem);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  min-width: 13rem;
+  padding: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.tsb-more-menu[hidden] { display: none; }
+.tsb-more-menu > button {
+  text-align: left;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.55rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.tsb-more-menu > button:hover:not(:disabled) { background: var(--surface2); }
+.tsb-more-row { display: flex; align-items: center; gap: 0.4rem; }
+.tsb-more-row .table-order-select { flex: 1 1 auto; min-width: 0; }
+.tsb-more-row.settings-links { flex-wrap: wrap; padding-top: 0.2rem; border-top: 1px solid var(--border); }
+body.hide-settings-links .tsb-more-row.settings-links { display: none; }
+.tsb-nav .table-pager { gap: 0.35rem; }
+.tsb-nav .pager-btn,
+.tsb-nav .pager-select { min-height: 0; padding-top: 0.2rem; padding-bottom: 0.2rem; font-size: 0.76rem; }
+/* The page select already reads "Page 1 of 3 (1–100)"; on a narrower window the status beside it is the
+   same numbers again, and dropping it is what lets the counts, pager and actions stay on one row. */
+@media (max-width: 1299px) {
+  .tsb-nav .pager-status { display: none; }
+}
+
+/* The sticky bar's bar track used to start at the card's very top edge (padding 0), so its rounded end
+   looked clipped by the edge above it. Give it the same breathing room as the sides. */
+#tableStickyBar { padding-top: 0.5rem; }
+
+/* Jump to Top / Bottom: icon-only, the name is in the tooltip. */
+.tsb-jump { display: inline-flex; gap: 0.25rem; }
+.tsb-nav .jump-btn--icon {
+  min-height: 0;
+  min-width: 1.7rem;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.85rem;
+  line-height: 1.1;
+  text-align: center;
+}
+@media (max-width: 1299px) {
+  #tableStickyBar .quiz-score { font-size: 0.7rem; gap: 0.2rem 0.3rem; }
+  #tableStickyBar .quiz-score .score-pill { padding: 0.08rem 0.35rem; }
+  .tsb-row { column-gap: 0.5rem; }
+  .tsb-nav { gap: 0.3rem 0.4rem; }
+}

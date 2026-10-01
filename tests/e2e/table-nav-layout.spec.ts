@@ -2,84 +2,71 @@ import { test, expect, type Page } from '@playwright/test';
 import { startMode } from './helpers.ts';
 
 /**
- * Table quiz top bar: the Jump to Top / Bottom buttons sit on the pagination row and never overlap Order,
- * the action cluster or the timer beside them, at ordinary and at cramped desktop widths.
+ * Table quiz sticky bar: two rows. Row 1 is the progress bar (and the clock); row 2 is the counts, the pager,
+ * the in-quiz actions and a ⋯ menu that holds everything that is set up rather than used mid-quiz.
  */
 
-interface Box { left: number; right: number; top: number; bottom: number }
+const IN_MENU = ['#tableOrderSelect', '#tableSortByToggle'];
+const ON_ROW = ['#tableScoreTop', '#tablePagerTop', '#tableJumpTop [data-jump="top"]', '#tableJumpTop [data-jump="bottom"]', '#tableJumpBtn', '#tableReset', '#tableRetry', '#tableMoreBtn'];
 
-async function boxes(page: Page): Promise<Record<string, Box>> {
-  return page.evaluate(() => {
-    const box = (sel: string): Box => {
-      const r = (document.querySelector(sel) as HTMLElement).getBoundingClientRect();
-      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
-    };
-    return {
-      order: box('#tableJumpTop .table-nav-side:not(.table-nav-side--end)'),
-      jump: box('#tableJumpTop .tnav-center'),
-      cluster: box('#tableJumpTop .tnav-right-cluster'),
-      pager: box('#tableJumpTop .table-pager'),
-      topBtn: box('#tableJumpTop [data-jump="top"]'),
-      bottomBtn: box('#tableJumpTop [data-jump="bottom"]'),
-    };
-  });
+async function rowTops(page: Page, sels: string[]): Promise<Array<number | null>> {
+  return page.evaluate(s => s.map(sel => {
+    const e = document.querySelector(sel) as HTMLElement | null;
+    if (!e || e.offsetParent === null) return null;
+    const r = e.getBoundingClientRect();
+    return (r.top + r.bottom) / 2;
+  }), sels);
 }
 
-const overlaps = (a: Box, b: Box): boolean => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
-
-for (const width of [1400, 1100, 800]) {
-  test(`Jump buttons share the pagination row, below Order and the action cluster (${width}px wide)`, async ({ page }) => {
+for (const width of [1400, 1100]) {
+  test(`counts, pager, actions and ⋯ share one row (${width}px wide)`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
-    // The widest the bar ever gets: the clock and the Settings shortcuts both switched on.
-    // At 1300px and up Simple Mode puts the whole bar on one line (tested below); this test is about the
-    // two-row layout, so at that width it runs with Simple Mode off.
-    const advanced = width >= 1300;
-    await page.addInitScript((off: boolean) => {
-      window.localStorage.setItem('s_table_show_timer', 'true');
-      window.localStorage.setItem('s_show_settings_links', 'true');
-      if (off) window.localStorage.setItem('s_simple_mode', 'false');
-    }, advanced);
     await startMode(page, 'table');
-    // Start now waits for the rest of the vocabulary, so the quiz can take a moment to appear; measure once it has.
     await expect(page.locator('input[data-word]').first()).toBeVisible();
-    await expect(page.locator('#tableJumpTop .jump-btn').first()).toBeVisible();
+    await expect(page.locator('#tablePagerTop')).toBeVisible();
 
-    const b = await boxes(page);
-    expect(overlaps(b.jump, b.order), 'Jump overlaps Order').toBe(false);
-    expect(overlaps(b.jump, b.cluster), 'Jump overlaps the action cluster').toBe(false);
-    expect(b.jump.top, 'Jump is below Order and the cluster').toBeGreaterThanOrEqual(Math.max(b.order.bottom, b.cluster.bottom) - 1);
-    if (width >= 1100) {
-      // Room for it all: same row as the pager, Jump to Top on its left and Jump to Bottom on its right.
-      expect(Math.abs(b.topBtn.top - b.pager.top), 'Jump to Top shares the pager row').toBeLessThan(b.pager.bottom - b.pager.top);
-      expect(b.topBtn.right, 'Jump to Top is left of the pager').toBeLessThanOrEqual(b.pager.left + 1);
-      expect(b.bottomBtn.left, 'Jump to Bottom is right of the pager').toBeGreaterThanOrEqual(b.pager.right - 1);
-    } else {
-      // Too narrow for one line: the buttons take the row above the pager, and never overlap it.
-      expect(overlaps(b.jump, b.pager), 'Jump overlaps the pager').toBe(false);
-    }
-    // Both buttons are fully inside the page.
-    const jumpBtns = await page.locator('#tableJumpTop .jump-btn').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return [r.left, r.right]; }));
-    for (const [l, r] of jumpBtns) { expect(l).toBeGreaterThanOrEqual(0); expect(r).toBeLessThanOrEqual(width); }
+    const ys = await rowTops(page, ON_ROW);
+    ys.forEach((y, i) => expect(y, `${ON_ROW[i]} is on screen`).not.toBeNull());
+    expect(Math.max(...(ys as number[])) - Math.min(...(ys as number[])), 'one line').toBeLessThan(14);
   });
 }
 
-test('Simple Mode: Order, Jump to Top / Bottom, the pager, Next Gap, Give Up and Retry are all on one line (1400px wide)', async ({ page }) => {
+test('the ⋯ menu holds Order and Sort; opens, and closes on Escape and outside click', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   await startMode(page, 'table');
   await expect(page.locator('input[data-word]').first()).toBeVisible();
-  await expect(page.locator('#tablePagerTop')).toBeVisible();
 
-  const tops = await page.evaluate(() => {
-    const mid = (sel: string): number | null => {
-      const e = document.querySelector(sel) as HTMLElement | null;
-      if (!e || e.offsetParent === null) return null;
-      const r = e.getBoundingClientRect();
-      return (r.top + r.bottom) / 2;
-    };
-    return Object.fromEntries(['#tableOrderSelect', '#tableJumpTop [data-jump="top"]', '#tablePagerTop', '#tableJumpTop [data-jump="bottom"]',
-      '#tableJumpBtn', '#tableReset', '#tableRetry'].map(s => [s, mid(s)]));
-  });
-  for (const [sel, y] of Object.entries(tops)) expect(y, `${sel} is on screen`).not.toBeNull();
-  const ys = Object.values(tops) as number[];
-  expect(Math.max(...ys) - Math.min(...ys), 'every control shares one line').toBeLessThan(12);
+  const menu = page.locator('#tableMoreMenu');
+  await expect(menu).toBeHidden();
+  for (const sel of IN_MENU) await expect(page.locator(sel)).toBeHidden();
+
+  await page.locator('#tableMoreBtn').click();
+  await expect(menu).toBeVisible();
+  await expect(page.locator('#tableMoreBtn')).toHaveAttribute('aria-expanded', 'true');
+  for (const sel of IN_MENU) await expect(page.locator(sel)).toBeVisible();
+  // Fully inside the page.
+  const box = await menu.boundingBox();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(1400);
+
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+
+  await page.locator('#tableMoreBtn').click();
+  await expect(menu).toBeVisible();
+  await page.locator('#tableWrap').click({ position: { x: 5, y: 5 } });
+  await expect(menu).toBeHidden();
+});
+
+test('Jump to Top / Bottom are icon-only buttons on the row, named by their tooltip', async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await startMode(page, 'table');
+  await expect(page.locator('input[data-word]').first()).toBeVisible();
+  for (const [which, name] of [['top', /top/i], ['bottom', /bottom/i]] as const) {
+    const btn = page.locator(`#tableJumpTop [data-jump="${which}"]`);
+    await expect(btn).toBeVisible();
+    await expect(btn).toHaveAttribute('title', name);
+    await expect(btn).toHaveAccessibleName(name);
+    expect((await btn.innerText()).trim().length, 'no text label').toBeLessThanOrEqual(1);
+  }
 });

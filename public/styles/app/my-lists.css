@@ -3396,3 +3396,24 @@ body .ml-root-drop.ml-root-drop--armed {
   border-radius: var(--radius-sm);
 }
 .ml-chip-dropdown-item--lang .lang-badge { flex-shrink: 0; }
+
+/* ── Testing Profiles: a collapsed mode group is a real row, not a sliver ─────
+   With every mode collapsed the section was three 10px labels with ~0 padding —
+   cramped next to its neighbours and a tiny click target. The head is now a
+   fixed-height row whose whole width is the toggle, aligned with the section
+   head's own inset, with a clear divider between groups. */
+.ml-profile-mode-head {
+  padding: 0 0.65rem;
+  min-height: 1.9rem;
+  font-size: 0.7rem;
+}
+.ml-profile-mode-head .ml-section-toggle-btn {
+  flex: 1;
+  align-self: stretch;
+  min-height: 1.9rem;
+  gap: 0.4rem;
+}
+.ml-profile-mode-group + .ml-profile-mode-group {
+  border-top: 1px solid color-mix(in srgb, var(--ml-accent-profile) 25%, transparent);
+}
+.ml-profile-mode-body:not([hidden]) { padding-bottom: 0.2rem; }

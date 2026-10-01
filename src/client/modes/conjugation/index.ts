@@ -1,3 +1,4 @@
+import { attachMoreMenu } from '../../ui/more-menu.ts';
 import type { Word } from '../../types.js';
 import { readString, writeString } from '../../utils/storage.ts';
 import { orderWords, getWordOrderLabels, saveSession, recordOutcome, type WordOrder } from '../../utils/session-history.ts';
@@ -305,7 +306,13 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   const pillsRow = document.createElement('div');
   pillsRow.className = 'conj-progress-pills';
 
-  progressBlock.append(barsWrap, pillsRow);
+  // Forms and Verbs are one slot: this button names the one on show and flips to the other.
+  let progressView: 'forms' | 'verbs' = 'forms';
+  const viewBtn = document.createElement('button');
+  viewBtn.type      = 'button';
+  viewBtn.className = 'conj-cycle-btn';
+
+  progressBlock.append(viewBtn, barsWrap, pillsRow);
 
   /**
    * One labelled progress group: heading, three-segment bar and a side stat,
@@ -313,7 +320,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
    */
   function makeProgressGroup(labelText: string, hint: string): {
     green: HTMLElement; yellow: HTMLElement; red: HTMLElement;
-    stat: HTMLElement; pills: HTMLElement;
+    stat: HTMLElement; pills: HTMLElement; group: HTMLElement; cell: HTMLElement;
   } {
     const group = document.createElement('div');
     group.className = 'quiz-progress-group';
@@ -354,7 +361,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     cell.append(cellLabel, pills);
     pillsRow.appendChild(cell);
 
-    return { green, yellow, red, stat, pills };
+    return { green, yellow, red, stat, pills, group, cell };
   }
 
   // Full Quiz / This Page — which scope the bars below paint. The completion
@@ -362,37 +369,65 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   // it only controls what's displayed.
   let progressScope: 'quiz' | 'page' = 'quiz';
 
-  const scopeToggle = document.createElement('div');
-  scopeToggle.className = 'sort-order-toggle conj-progress-scope-toggle';
-  const scopeQuizBtn = document.createElement('button');
-  scopeQuizBtn.type        = 'button';
-  scopeQuizBtn.className   = 'sort-order-btn active';
-  scopeQuizBtn.textContent = 'Full Quiz';
-  scopeQuizBtn.title       = 'Show progress across every page of this quiz';
-  const scopePageBtn = document.createElement('button');
-  scopePageBtn.type        = 'button';
-  scopePageBtn.className   = 'sort-order-btn';
-  scopePageBtn.textContent = 'This Page';
-  scopePageBtn.title       = 'Show progress for only the page currently on screen';
-  scopeToggle.append(scopeQuizBtn, scopePageBtn);
-  scopeToggle.addEventListener('click', e => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
-    if (!btn) return;
-    scopeToggle.querySelectorAll('.sort-order-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    progressScope = btn === scopePageBtn ? 'page' : 'quiz';
+  const scopeBtn = document.createElement('button');
+  scopeBtn.type      = 'button';
+  scopeBtn.className = 'conj-cycle-btn';
+  function syncScopeBtn(): void {
+    scopeBtn.textContent = (progressScope === 'quiz' ? 'Full Quiz' : 'This Page') + ' ⇄';
+    scopeBtn.dataset.tone = progressScope;
+    scopeBtn.title = progressScope === 'quiz'
+      ? 'Showing progress across every page of this quiz — click for the page on screen'
+      : 'Showing progress for only the page on screen — click for the whole quiz';
+  }
+  syncScopeBtn();
+  scopeBtn.addEventListener('click', () => {
+    progressScope = progressScope === 'quiz' ? 'page' : 'quiz';
+    syncScopeBtn();
     updateProgress();
   });
-  progressBlock.appendChild(scopeToggle);
+  progressBlock.appendChild(scopeBtn);
 
   const formsBar = makeProgressGroup('Forms', 'Progress across every individual conjugation');
   const verbsBar = makeProgressGroup('Verbs', 'Progress across whole verbs — a verb counts once all its forms are done');
+
+  function syncViewBtn(): void {
+    const forms = progressView === 'forms';
+    formsBar.group.hidden = !forms; formsBar.cell.hidden = !forms;
+    verbsBar.group.hidden = forms;  verbsBar.cell.hidden  = forms;
+    viewBtn.textContent = (forms ? 'Forms' : 'Verbs') + ' ⇄';
+    viewBtn.dataset.tone = forms ? 'forms' : 'verbs';
+    viewBtn.title = forms
+      ? 'Showing progress across every individual conjugation — click for whole verbs'
+      : 'Showing progress across whole verbs — click for individual forms';
+  }
+  syncViewBtn();
+  viewBtn.addEventListener('click', () => {
+    progressView = progressView === 'forms' ? 'verbs' : 'forms';
+    syncViewBtn();
+  });
 
   const giveUpBtn = document.createElement('button');
   giveUpBtn.className   = 'conj-giveup-btn';
   giveUpBtn.textContent = 'Give Up';
 
-  progressSection.append(progressBlock, timerGroup, giveUpBtn);
+  // Verb order and the "N verbs × T tenses" summary are set up rather than used mid-quiz: they live in
+  // a ⋯ menu, the same as Table's sticky bar.
+  const moreWrap = document.createElement('div');
+  moreWrap.className = 'tsb-more';
+  const moreBtn = document.createElement('button');
+  moreBtn.type = 'button';
+  moreBtn.className = 'tsb-more-btn';
+  moreBtn.textContent = '⋯';
+  moreBtn.title = 'More options';
+  moreBtn.setAttribute('aria-label', 'More options');
+  moreBtn.setAttribute('aria-haspopup', 'true');
+  const moreMenu = document.createElement('div');
+  moreMenu.className = 'tsb-more-menu conj-more-menu';
+  moreMenu.append(orderRow);
+  moreWrap.append(moreBtn, moreMenu);
+  attachMoreMenu(moreWrap, moreBtn, moreMenu);
+
+  progressSection.append(progressBlock, timerGroup, giveUpBtn, moreWrap);
 
   const cardsGrid = document.createElement('div');
   cardsGrid.className = 'conj-cards-grid';
@@ -1163,7 +1198,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   // moment you scrolled a card grid taller than one screen.
   const stickyBar = document.createElement('div');
   stickyBar.className = 'conj-sticky-bar';
-  stickyBar.append(orderRow, progressSection, fullHeader);
+  stickyBar.append(progressSection, fullHeader);
 
   container.append(stickyBar, cardsGrid);
 

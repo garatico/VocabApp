@@ -2064,3 +2064,208 @@ html:not(.dark) .crt-input.incorrect {
   .crt-answer-cell { width: 40%; }
   .crt-input { font-size: 0.9rem; min-height: 40px; }
 }
+
+/* ── Compact sticky bar (desktop) ─────────────────────────────────────────────
+   The bar stacked five rows (order, two labelled bars, a pills row, the scope
+   toggle, the pager) and took roughly a third of the window. Now:
+     row 1  Order + verb summary ········· pager / page size
+     row 2  Forms [bar] stat  |  Verbs [bar] stat ········ timer · Give Up
+     row 3  Forms chips · Verbs chips ·················· Full Quiz / This Page
+   Below 900px the existing stacked phone layout is kept as it was. */
+@media (min-width: 900px) {
+  .conj-sticky-bar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem 1rem;
+    padding: 0.45rem 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .conj-sticky-bar > .conj-order-row { order: 1; flex: 1 1 auto; border: 0; padding: 0; min-width: 0; }
+  .conj-sticky-bar > .conj-full-header { order: 2; flex: 0 1 auto; padding: 0; border: 0; margin: 0; min-width: 0; }
+  .conj-sticky-bar > .conj-progress-section {
+    order: 3;
+    flex: 1 1 100%;
+    border: 0;
+    padding: 0;
+    gap: 0.9rem;
+  }
+  .conj-progress-section .conj-progress-block {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+    gap: 0.25rem 0.9rem;
+  }
+  .conj-progress-section .conj-progress-bars {
+    flex: 1 1 100%;
+    flex-direction: row;
+    gap: 1rem;
+  }
+  .conj-progress-section .quiz-progress-group {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .conj-progress-section .quiz-progress-group > .progress-group-label { margin: 0; flex: 0 0 auto; }
+  .conj-progress-section .quiz-progress-group > .progressWrap { flex: 1 1 auto; min-width: 0; margin: 0; }
+  .conj-progress-bars .progressWrap .small { flex: 0 0 auto; font-size: 0.7rem; }
+  .conj-progress-section .conj-progress-pills { flex: 1 1 auto; min-width: 0; }
+  .conj-progress-section .conj-progress-scope-toggle { flex: 0 0 auto; margin-left: auto; }
+  .conj-progress-section .conj-giveup-btn { padding: 0.3rem 0.8rem; font-size: 0.8rem; }
+}
+@media (min-width: 900px) {
+  .conj-progress-section .conj-progress-pills { flex: 1 1 0; }
+  .conj-progress-section .conj-progress-scope-toggle .sort-order-btn { padding: 0.15rem 0.5rem; font-size: 0.72rem; }
+}
+/* The scope toggle rides on the bars' row (they flex to make room); the chips get the full row below. */
+@media (min-width: 900px) {
+  .conj-progress-section .conj-progress-bars { order: 1; flex: 1 1 0; min-width: 0; }
+  .conj-progress-section .conj-progress-scope-toggle { order: 2; margin-left: 0; }
+  .conj-progress-section .conj-progress-pills { order: 3; flex: 1 1 100%; }
+}
+
+/* ── One-row progress: Forms/Verbs and Full Quiz/This Page are cycle buttons ──
+   Row 1: [Forms ⇄] [bar] [chips] [Full Quiz ⇄] · timer · Give Up · ⋯   Row 2: pager.
+   Order and the verb summary live in the ⋯ menu. Only one of Forms / Verbs is shown at a time. */
+.quiz-progress-group[hidden],
+.conj-pills-cell[hidden] { display: none !important; }
+.conj-progress-section .progress-group-label { display: none; }   /* the cycle button names the group */
+
+.conj-cycle-btn {
+  flex: 0 0 auto;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm, 4px);
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.conj-cycle-btn:hover { background: var(--surface); }
+
+.conj-more-menu .conj-order-row { flex-wrap: wrap; border: 0; padding: 0; }
+.conj-more-menu .conj-order-count { flex: 1 1 100%; }
+
+@media (min-width: 900px) {
+  .conj-sticky-bar > .conj-progress-section { order: 1; }
+  .conj-sticky-bar > .conj-full-header { order: 2; flex: 1 1 100%; }
+  .conj-progress-section .conj-progress-block {
+    flex: 1 1 0;
+    min-width: 0;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+  }
+  .conj-progress-section .conj-progress-bars { order: 0; flex: 1 1 0; min-width: 0; }
+  .conj-progress-section .conj-progress-pills { order: 0; flex: 0 0 auto; }
+  .conj-progress-section .conj-cycle-btn:last-child { order: 0; margin-left: 0; }
+  .conj-progress-section .conj-pills-cell + .conj-pills-cell { margin-left: 0; padding-left: 0; border-left: 0; }
+  .conj-progress-section .quiz-progress-group { flex: 1 1 auto; }
+}
+
+/* ── Colour-coded cycle buttons: each state has its own tint, so the button says at a glance which view is on ── */
+.conj-cycle-btn[data-tone] {
+  background: color-mix(in srgb, var(--tone) 20%, var(--surface));
+  border-color: color-mix(in srgb, var(--tone) 60%, transparent);
+  color: color-mix(in srgb, var(--tone) 65%, var(--text));
+}
+.conj-cycle-btn[data-tone]:hover { background: color-mix(in srgb, var(--tone) 32%, var(--surface)); }
+.conj-cycle-btn[data-tone="forms"] { --tone: var(--accent); }
+.conj-cycle-btn[data-tone="verbs"] { --tone: var(--ml-accent-smart); }
+.conj-cycle-btn[data-tone="quiz"]  { --tone: var(--ml-accent-multi); }
+.conj-cycle-btn[data-tone="page"]  { --tone: var(--warning); }
+
+/* ── Grid view cards ──────────────────────────────────────────────────────────
+   Header: [word][translation] on one line, each in its own tint; star in the top-right corner. Tense,
+   regularity and band moved into the popover that opens when you click the word. */
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-card-header { padding-right: 2.6rem; }
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-title-row {
+  flex-wrap: wrap;
+  gap: 0.3rem 0.4rem;
+}
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-spanish,
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-english {
+  display: inline-block;
+  padding: 0.12rem 0.5rem;
+  border-radius: 6px;
+  line-height: 1.25;
+}
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-spanish {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-english {
+  margin-top: 0;
+  max-width: 100%;
+  color: color-mix(in srgb, var(--info) 55%, var(--text));
+  background: color-mix(in srgb, var(--info) 14%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--info) 35%, transparent);
+  font-size: 0.8rem;
+}
+.conj-card-star--corner {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.45rem;
+  z-index: 1;
+}
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-spanish.word-info-trigger { cursor: pointer; }
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-spanish.word-info-trigger:hover {
+  background: color-mix(in srgb, var(--accent) 26%, var(--surface));
+}
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-row { padding: 0.28rem 0.55rem; }
+
+/* The extra block at the top of the word popover. */
+.conj-info-extra { display: flex; flex-direction: column; gap: 0.3rem; padding-bottom: 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+.conj-info-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+.conj-info-help { font-size: 0.74rem; color: var(--text-muted); line-height: 1.35; }
+
+/* ── Grid cards: one-line header, bigger rank, tighter spacing ──────────────── */
+.conj-cards-grid:not(.conj-cards-grid--full) { gap: 0.5rem; }
+
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-card-header {
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 2.3rem 0.3rem 2.5rem;   /* left clears the rank, right clears the star */
+  min-height: 2.1rem;
+}
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-head-main { display: flex; align-items: center; min-width: 0; }
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-title-row {
+  flex-wrap: nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-spanish { flex: 0 0 auto; }
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-english {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-head-side {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-head-foot { gap: 0.4rem; flex-wrap: nowrap; }
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-card-tense { margin-left: 0; }
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-reveal-all-btn { padding: 0.12rem 0.5rem; }
+
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-card-rank {
+  top: 1.05rem;                 /* half the header's min-height: centred on the bar, not the card */
+  transform: translateY(-50%);
+  left: 0.55rem;
+  font-size: 0.85rem;
+  margin-top: 0;
+}
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-card-star--corner { top: 0.3rem; }
+/* A fixed bar height, so the rank and star (positioned against the card) can be centred on it exactly. */
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-card-header { height: 2.3rem; min-height: 0; box-sizing: border-box; padding-top: 0; padding-bottom: 0; }
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-spanish { font-size: 1.05rem; }
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-card-rank { top: 1.15rem; }
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-card-star--corner { top: 0.43rem; }
+/* Accent text on its own accent wash fell under the contrast bar in dark mode; pull it toward the page text. */
+.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-spanish { color: color-mix(in srgb, var(--accent) 40%, var(--text)); }
