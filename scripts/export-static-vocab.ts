@@ -25,9 +25,11 @@
 import 'dotenv/config';
 
 import fs   from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { compactWord } from '../src/shared/vocab/compact-word.js';
 import { loadVocabFile, getSupportedLanguages, closeDatabase, clearCache }
   from '../src/server/lib/vocab-loader.js';
 
@@ -67,7 +69,97 @@ export function buildLanguagePayload(language: string): {
   };
 }
 
+/**
+ * One language as JSONL: a word per line, in rank order (loadVocabFile's own:
+ * rank, then word), so a client can start parsing while the file is still
+ * downloading and show the most frequent words first. No envelope — the count
+ * lives in the manifest next to it. Each word is compacted (see compact-word.ts);
+ * the client's parser expands it back.
+ */
+export function buildJsonl(language: string): { jsonl: string; count: number } {
+  const { data, count } = buildLanguagePayload(language);
+  const NL = String.fromCharCode(10);
+  return { jsonl: data.map(w => JSON.stringify(compactWord(w))).join(NL) + (data.length ? NL : ''), count };
+}
+
+/** What a previous export (or a stale `public/data` that vite copied in) leaves in `<dir>/data`. */
+export const OWNED_FILE = /^(?:[a-z-]+\.jsonl|index\.json|vocab-[a-z-]+\.json|asset-manifest\.json)$/;
+
+/**
+ * `--static <dir> [language …]` — writes `<dir>/data/<language>.jsonl` plus the
+ * same `index.json` manifest the full export writes, for the static-only web
+ * build (`npm run build:static`, which points <dir> at dist/ *after* vite has
+ * emptied it). Nothing lands in public/ or anywhere else in the repo tree, so
+ * a stale export can never be copied into a later build.
+ *
+ * It only ever deletes plain files whose names it or the full export produce
+ * (OWNED_FILE), never the directory, so pointing it at the wrong place (`.`, the
+ * repo root) cannot take a database or an images folder with it. The languages
+ * are checked before anything on disk is touched.
+ */
+function mainStatic(dir: string, only: string[]): void {
+  const dataDir = path.join(path.resolve(dir), 'data');
+
+  const available = getSupportedLanguages();
+  const languages = only.length ? only : available;
+  const unknown   = languages.filter(l => !available.includes(l));
+  if (languages.length === 0 || unknown.length) {
+    console.error(languages.length === 0
+      ? 'No languages in the database. Run `npm run data:sync` first.'
+      : `Not in the database: ${unknown.join(', ')}`);
+    process.exit(1);
+  }
+
+  fs.mkdirSync(dataDir, { recursive: true });
+  for (const entry of fs.readdirSync(dataDir, { withFileTypes: true })) {
+    if (entry.isFile() && OWNED_FILE.test(entry.name)) fs.rmSync(path.join(dataDir, entry.name));
+  }
+
+  const index: IndexEntry[] = [];
+  const dataHash = crypto.createHash('sha256');
+  for (const language of languages) {
+    const { jsonl, count } = buildJsonl(language);
+    const file = `${language}.jsonl`;
+    fs.writeFileSync(path.join(dataDir, file), jsonl, 'utf8');
+    dataHash.update(jsonl);
+    const bytes = Buffer.byteLength(jsonl);
+    index.push({ language, words: count, file, bytes });
+    console.log(`  ${language.padEnd(12)} ${String(count).padStart(6)} words  ${(bytes / 1048576).toFixed(2)} MB  -> ${path.join(dir, 'data', file)}`);
+  }
+  fs.writeFileSync(
+    path.join(dataDir, 'index.json'),
+    JSON.stringify({ generatedAt: new Date().toISOString(), languages: index }, null, 2),
+    'utf8',
+  );
+  stampServiceWorker(path.resolve(dir), dataHash.digest('hex').slice(0, 10));
+  closeDatabase();
+}
+
+/**
+ * The service worker serves /data/ stale-while-revalidate and names its caches
+ * after CACHE_VERSION, which vite derives from the *code* it bundled. A deploy
+ * that changes only the vocabulary would keep the same version, so returning
+ * visitors would keep the old words. This runs after vite, so it appends a hash
+ * of the data to the version already stamped into dist/sw.js (replacing a
+ * suffix from an earlier run rather than stacking another one).
+ */
+export function stampServiceWorker(distDir: string, dataId: string): void {
+  const swPath = path.join(distDir, 'sw.js');
+  if (!fs.existsSync(swPath)) return;
+  const sw = fs.readFileSync(swPath, 'utf8');
+  const re = /(const CACHE_VERSION = ')([^']*?)(?:-d[0-9a-f]{10})?(';)/;
+  if (!re.test(sw)) return;
+  fs.writeFileSync(swPath, sw.replace(re, (_m, a: string, id: string, z: string) => `${a}${id}-d${dataId}${z}`), 'utf8');
+}
+
 function main(): void {
+  const staticAt = process.argv.indexOf('--static');
+  if (staticAt !== -1) {
+    const [dir, ...only] = process.argv.slice(staticAt + 1);
+    if (!dir) { console.error('--static needs an output directory, e.g. --static dist'); process.exit(1); }
+    return mainStatic(dir, only);
+  }
+
   fs.mkdirSync(outDir, { recursive: true });
 
   const languages = getSupportedLanguages();

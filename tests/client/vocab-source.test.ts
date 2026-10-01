@@ -50,6 +50,30 @@ describe('loadVocab', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('asks the API for the compact shape and expands the words it gets back', async () => {
+    const compactWordOnWire = {
+      word: 'de', translation: 'of', rank: 1, frequency: { band: 'A1', corpus_frequency: 5 }, linguistic: { ipa: '/de/' },
+    };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: [compactWordOnWire], count: 1, compact: true }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await loadVocab('spanish');
+
+    expect(new URL(fetchMock.mock.calls[0][0] as string, 'http://localhost').searchParams.get('compact')).toBe('1');
+    expect(result.data[0]).toEqual({
+      word: 'de', translation: 'of', rank: 1,
+      frequency: { band: 'A1', corpus_frequency: 5, rank: 1 },
+      linguistic: { ipa: '/de/', reflexive: false },
+      glosses: ['of'], is_function_word: false,
+    });
+  });
+
+  it('leaves a full-shape response (no compact flag) exactly as sent', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: [word], count: 1 }));
+    vi.stubGlobal('fetch', fetchMock);
+    expect((await loadVocab('spanish')).data).toEqual([word]);
+  });
+
   it('falls back to the static export when the API 404s (not retryable)', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse({ error: 'not found' }, 404))

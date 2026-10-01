@@ -15,7 +15,11 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { buildTestApp, teardownTestApp } from './helpers/app.js';
-import { buildLanguagePayload } from '../scripts/export-static-vocab.js';
+import { expandWord } from '../src/shared/vocab/compact-word.js';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { buildLanguagePayload, buildJsonl, OWNED_FILE, stampServiceWorker } from '../scripts/export-static-vocab.js';
 
 let db;
 
@@ -65,5 +69,52 @@ describe('buildLanguagePayload (static export)', () => {
 
   it('throws a clear error for a language with no rows, same as the API 404s', () => {
     expect(() => buildLanguagePayload('klingon')).toThrow(/Language not found/);
+  });
+});
+
+describe('buildJsonl (static web build)', () => {
+  it('is one parseable word per line that expands back to exactly as the whole-language payload', () => {
+    const whole = buildLanguagePayload('spanish');
+    const { jsonl, count } = buildJsonl('spanish');
+    const lines = jsonl.split(String.fromCharCode(10));
+    expect(lines.pop()).toBe('');                       // trailing newline, nothing after it
+    expect(count).toBe(whole.count);
+    expect(lines.map(l => expandWord(JSON.parse(l)))).toEqual(whole.data);
+  });
+});
+
+describe('static export file ownership and service-worker stamp', () => {
+  it('only treats the export\'s own file names as deletable', () => {
+    for (const name of ['spanish.jsonl', 'index.json', 'vocab-spanish.json', 'asset-manifest.json']) {
+      expect(OWNED_FILE.test(name)).toBe(true);
+    }
+    // Things that live in a repo's data/ and must never be removed by a mistyped --static path.
+    for (const name of ['vocabulary.db', 'vocabulary.pre-kaikki_2026-09-30.db', 'images', 'emoji', 'notes.txt', '.env']) {
+      expect(OWNED_FILE.test(name)).toBe(false);
+    }
+  });
+
+  it('appends a data hash to the service worker version, and replaces it on a re-run instead of stacking', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vocab-sw-'));
+    try {
+      const sw = path.join(dir, 'sw.js');
+      fs.writeFileSync(sw, "const CACHE_VERSION = 'abc123def4';\n");
+      stampServiceWorker(dir, '1111111111');
+      expect(fs.readFileSync(sw, 'utf8')).toContain("'abc123def4-d1111111111'");
+      stampServiceWorker(dir, '2222222222');
+      expect(fs.readFileSync(sw, 'utf8')).toContain("'abc123def4-d2222222222'");
+      expect(fs.readFileSync(sw, 'utf8')).not.toContain('d1111111111');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('does nothing when there is no service worker', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vocab-sw-'));
+    try {
+      expect(() => stampServiceWorker(dir, '1111111111')).not.toThrow();
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

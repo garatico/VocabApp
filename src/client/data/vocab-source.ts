@@ -27,6 +27,7 @@
 
 import type { Word } from '../types.ts';
 import { logger } from '../utils/logger.ts';
+import { expandWord } from '../../shared/vocab/compact-word.ts';
 
 export type VocabOrigin = 'api' | 'sqlite' | 'static';
 
@@ -81,8 +82,119 @@ export function registerSqliteVocabSource(source: SqliteVocabSource | null): voi
 /** Remembered after the first success, so we stop probing a dead API. */
 let preferredOrigin: VocabOrigin | null = null;
 
-function apiUrl(lang: string): string    { return `/api/vocab/${lang}`; }
+/** `compact=1` asks for words without the fields expandWord() restores — see shared/vocab/compact-word.ts. */
+function apiUrl(lang: string): string    { return `/api/vocab/${lang}?compact=1`; }
 function staticUrl(lang: string): string { return `/data/vocab-${lang}.json`; }
+function jsonlUrl(lang: string): string  { return `/data/${lang}.jsonl`; }
+
+/**
+ * True in a build with no API behind it (`npm run build:static`, i.e.
+ * `VITE_STATIC_VOCAB=1 vite build`): the web app is then plain static files, so
+ * don't spend a request probing /api first, and a static host's SPA fallback
+ * can't answer it with index.html.
+ */
+const STATIC_ONLY = import.meta.env.VITE_STATIC_VOCAB === '1';
+
+const NEWLINE = String.fromCharCode(10);
+
+/** Words handed over as the first-paint preview; matches data-loader.ts's PREVIEW_SIZE. */
+const PREVIEW_LINES = 200;
+
+interface JsonlStream {
+  /** Resolves as soon as the first PREVIEW_LINES words have been parsed (or at the end, for a smaller language). */
+  preview:   Promise<Word[]>;
+  /** Resolves with every word once the file has been read to the end. */
+  full:      Promise<Word[]>;
+  listeners: Set<(loadedBytes: number) => void>;
+}
+
+/** One request per language, shared by the preview and the whole-language load. */
+const jsonlStreams = new Map<string, JsonlStream>();
+
+/**
+ * Reads `/data/<lang>.jsonl` (written by `export-static-vocab.ts --static dist`),
+ * one word per line in rank order, parsing each line as it arrives. Shared while
+ * it is in flight, so the preview and the full load are the same download. The
+ * entry is dropped as soon as it settles — a failed read so the next caller
+ * tries again, a finished one so a later load (a reload after an update) really
+ * fetches again instead of replaying this session's copy. The caller that wants
+ * the words keeps them (data-loader's cache), so nothing re-reads in normal use.
+ */
+function streamJsonl(lang: string): JsonlStream {
+  const existing = jsonlStreams.get(lang);
+  if (existing) return existing;
+
+  const listeners = new Set<(loadedBytes: number) => void>();
+  let resolvePreview!: (words: Word[]) => void;
+  let rejectPreview!:  (err: unknown) => void;
+  const preview = new Promise<Word[]>((resolve, reject) => { resolvePreview = resolve; rejectPreview = reject; });
+  preview.catch(() => { /* surfaced through `full`; this just keeps an unwatched preview from being an unhandled rejection */ });
+
+  const full = (async (): Promise<Word[]> => {
+    const res = await fetch(jsonlUrl(lang));
+    if (!res.ok || !res.body) throw new Error(`No JSONL for "${lang}" (${res.status})`);
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    const words: Word[] = [];
+    let pending = '';
+    let loaded  = 0;
+    let previewed = false;
+    const take = (line: string): void => {
+      if (!line) return;
+      words.push(expandWord(JSON.parse(line) as Word));
+      if (!previewed && words.length === PREVIEW_LINES) { previewed = true; resolvePreview(words.slice()); }
+    };
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      loaded  += value.byteLength;
+      pending += decoder.decode(value, { stream: true });
+      let from = 0;
+      let nl: number;
+      while ((nl = pending.indexOf(NEWLINE, from)) !== -1) { take(pending.slice(from, nl)); from = nl + 1; }
+      pending = pending.slice(from);
+      listeners.forEach(fn => fn(loaded));
+    }
+    take(pending + decoder.decode());
+    if (!previewed) resolvePreview(words.slice());
+    return words;
+  })();
+  full.catch(err => { rejectPreview(err); jsonlStreams.delete(lang); });
+
+  const stream = { preview, full, listeners };
+  jsonlStreams.set(lang, stream);
+  full.then(() => { if (jsonlStreams.get(lang) === stream) jsonlStreams.delete(lang); }, () => { /* handled above */ });
+  return stream;
+}
+
+async function tryFetchJsonl(lang: string, onProgress?: (loadedBytes: number) => void): Promise<FetchOutcome> {
+  const stream = streamJsonl(lang);
+  if (onProgress) stream.listeners.add(onProgress);
+  try {
+    const data = await stream.full;
+    return { ok: true, data, count: data.length, retryable: false };
+  } catch {
+    return { ok: false, data: [], count: 0, retryable: false };
+  } finally {
+    if (onProgress) stream.listeners.delete(onProgress);
+  }
+}
+
+/** Per-language word counts from the static manifest, fetched once (a failed or empty answer is not kept). */
+let manifestCounts: Promise<Map<string, number>> | null = null;
+function staticWordCount(lang: string): Promise<number | null> {
+  manifestCounts ??= (async () => {
+    const counts = new Map<string, number>();
+    try {
+      const res  = await fetch('/data/index.json');
+      const json = res.ok ? await res.json() as { languages?: { language: string; words: number }[] } : null;
+      json?.languages?.forEach(l => counts.set(l.language, l.words));
+    } catch { /* no manifest — callers treat the count as unknown */ }
+    if (counts.size === 0) manifestCounts = null;   // don't remember a failure: the next call asks again
+    return counts;
+  })();
+  return manifestCounts.then(m => m.get(lang) ?? null);
+}
 
 interface FetchOutcome {
   ok:        boolean;
@@ -137,8 +249,10 @@ async function tryFetch(url: string, onProgress?: (loadedBytes: number) => void)
       // 400) means the URL itself is wrong and won't fix itself on retry.
       return { ok: false, data: [], count: 0, retryable: [502, 503, 504].includes(res.status) };
     }
-    const json = JSON.parse(await readBody(res, onProgress)) as { data?: Word[]; count?: number };
-    const data = Array.isArray(json.data) ? json.data : null;
+    const json = JSON.parse(await readBody(res, onProgress)) as { data?: Word[]; count?: number; compact?: boolean };
+    // Only a response that says it is compact is expanded; a full-shape one
+    // (the static export, a server from before the option) is used as sent.
+    const data = Array.isArray(json.data) ? (json.compact ? json.data.map(w => expandWord(w)) : json.data) : null;
     if (!data) return { ok: false, data: [], count: 0, retryable: false };
     return { ok: true, data, count: json.count ?? data.length, retryable: false };
   } catch {
@@ -195,6 +309,7 @@ const DEFAULT_ORDER: VocabOrigin[] = ['api', 'sqlite', 'static'];
 
 /** preferredOrigin first (if set), then the rest in default order. */
 function tryOrder(): VocabOrigin[] {
+  if (STATIC_ONLY) return ['static'];
   if (!preferredOrigin) return DEFAULT_ORDER;
   return [preferredOrigin, ...DEFAULT_ORDER.filter(o => o !== preferredOrigin)];
 }
@@ -219,9 +334,14 @@ export async function loadVocab(lang: string, callbacks: LoadVocabCallbacks = {}
     }
 
     const url    = origin === 'api' ? apiUrl(lang) : staticUrl(lang);
-    const result = origin === 'api'
-      ? await tryFetchWithRetry(url, callbacks)
-      : await tryFetch(url, callbacks.onProgress);
+    let result: FetchOutcome;
+    if (origin === 'api') {
+      result = await tryFetchWithRetry(url, callbacks);
+    } else {
+      // Static-only builds ship one JSONL per language; everything else,
+      // packaged apps included, still reads the whole-language JSON file.
+      result = STATIC_ONLY ? await tryFetchJsonl(lang, callbacks.onProgress) : await tryFetch(url, callbacks.onProgress);
+    }
     if (!result.ok) continue;
 
     if (preferredOrigin !== origin) {
@@ -259,7 +379,20 @@ export async function loadVocab(lang: string, callbacks: LoadVocabCallbacks = {}
  * yet, and it's simple to add if that changes.
  */
 export async function loadVocabPage(lang: string, params: VocabPageParams = {}): Promise<VocabPageResult> {
-  for (const origin of ['api', 'sqlite'] as const) {
+  for (const origin of (STATIC_ONLY ? ['static'] : ['api', 'sqlite']) as VocabOrigin[]) {
+    if (origin === 'static') {
+      // Only the first-paint slice is on offer: page 1, unfiltered, no bigger
+      // than the preview. Anything else has to wait for the whole language.
+      // The preview is the first lines of the same stream loadVocab reads, so
+      // this costs no extra download.
+      if (params.search || params.pos || params.band || params.domain || (params.page ?? 1) !== 1) continue;
+      try {
+        const [preview, total] = await Promise.all([streamJsonl(lang).preview, staticWordCount(lang)]);
+        const limit = params.limit ?? preview.length;
+        if (total === null || (limit > preview.length && total > preview.length)) continue;
+        return { language: lang, words: preview.slice(0, limit), total, page: 1, pages: Math.ceil(total / Math.max(1, limit)), limit, origin };
+      } catch { continue; }
+    }
     if (origin === 'sqlite') {
       if (!sqliteSource) continue;
       try {
@@ -272,6 +405,7 @@ export async function loadVocabPage(lang: string, params: VocabPageParams = {}):
     }
 
     const qs = new URLSearchParams();
+    qs.set('compact', '1');
     qs.set('page', String(params.page ?? 1));
     if (params.limit)  qs.set('limit',  String(params.limit));
     if (params.search) qs.set('search', params.search);
@@ -280,12 +414,12 @@ export async function loadVocabPage(lang: string, params: VocabPageParams = {}):
     if (params.domain) qs.set('domain', params.domain);
 
     try {
-      const res = await fetch(`${apiUrl(lang)}?${qs.toString()}`);
+      const res = await fetch(`/api/vocab/${lang}?${qs.toString()}`);
       if (!res.ok) continue;
-      const json = await res.json() as { data?: Word[]; count?: number; page?: number; pages?: number; limit?: number };
+      const json = await res.json() as { data?: Word[]; count?: number; page?: number; pages?: number; limit?: number; compact?: boolean };
       if (!Array.isArray(json.data)) continue;
       return {
-        language: lang, words: json.data,
+        language: lang, words: json.compact ? json.data.map(w => expandWord(w)) : json.data,
         total: json.count ?? json.data.length,
         page:  json.page  ?? params.page  ?? 1,
         pages: json.pages ?? 1,
@@ -318,6 +452,18 @@ export function currentOrigin(): VocabOrigin | null {
  * whole dropdown on a transient network error.
  */
 export async function availableLanguages(): Promise<string[] | null> {
+  // Static-only build: there is no /api to ask, and the manifest is regenerated
+  // with every deploy, so the staleness the comment below warns about can't arise.
+  if (STATIC_ONLY) {
+    try {
+      const res = await fetch('/data/index.json');
+      if (res.ok) {
+        const json = await res.json() as { languages?: { language: string }[] };
+        if (Array.isArray(json.languages)) return json.languages.map(l => l.language).filter(Boolean);
+      }
+    } catch { /* nothing to go on */ }
+    return null;
+  }
   try {
     const res = await fetch('/api/languages');
     if (res.ok) {
@@ -361,4 +507,6 @@ export async function availableLanguages(): Promise<string[] | null> {
 /** Reset the remembered source — used by tests and after a manual reload. */
 export function resetOrigin(): void {
   preferredOrigin = null;
+  jsonlStreams.clear();
+  manifestCounts = null;
 }
