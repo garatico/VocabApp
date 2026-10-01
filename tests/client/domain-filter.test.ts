@@ -78,6 +78,9 @@ const COUNTS = [
   { domain: 'clothing', count: 9 }, { domain: 'health', count: 8 }, { domain: 'business', count: 7 },
 ];
 
+/** The domains left for the dropdown once the top-10 pills are taken: COUNTS' 11th and 12th. */
+const NOT_PILLS = ['business', 'health'];
+
 /** Finds the pill for a domain by its formatted label (fmt() capitalizes,
  *  replaces underscores) and clicks it. */
 function clickPill(label: string): void {
@@ -196,7 +199,8 @@ describe('with the filter box in the DOM', () => {
     it('ranks starts-with matches before contains matches', async () => {
       const { bindDomainFilter, updateDomainFilter } = await load();
       bindDomainFilter();
-      updateDomainFilter([...COUNTS, { domain: 'overtime', count: 3 }]);
+      // 'time' must sit below the top 10 or it is a pill, and a pill is not offered again here.
+      updateDomainFilter([...COUNTS.filter(c => c.domain !== 'time'), { domain: 'time', count: 4 }, { domain: 'overtime', count: 3 }]);
       const input = document.getElementById('domainSearchInput') as HTMLInputElement;
       input.value = 'time';
       input.dispatchEvent(new Event('input'));
@@ -209,23 +213,38 @@ describe('with the filter box in the DOM', () => {
       const { bindDomainFilter, updateDomainFilter } = await load();
       bindDomainFilter();
       updateDomainFilter(COUNTS);
-      clickPill('Food');
-
       const input = document.getElementById('domainSearchInput') as HTMLInputElement;
-      input.value = 'foo';
+
+      // 'health' is a dropdown domain (not a pill): found, then picked...
+      input.value = 'heal';
+      input.dispatchEvent(new Event('input'));
+      const item = document.querySelector<HTMLElement>('.domain-suggestion[data-domain="health"]')!;
+      item.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+
+      // ...and once selected it is no longer offered.
+      input.value = 'heal';
       input.dispatchEvent(new Event('input'));
       expect(document.getElementById('domainSuggestions')?.hidden).toBe(true);
     });
 
-    it('an empty query lists every non-selected domain alphabetically', async () => {
+    it('does not offer a domain that already has a pill (regression: top-10 domains were listed twice)', async () => {
+      const { bindDomainFilter, updateDomainFilter } = await load();
+      bindDomainFilter();
+      updateDomainFilter(COUNTS);
+      const input = document.getElementById('domainSearchInput') as HTMLInputElement;
+      input.value = 'foo';                       // 'food' is a top-10 pill
+      input.dispatchEvent(new Event('input'));
+      expect(document.getElementById('domainSuggestions')?.hidden).toBe(true);
+    });
+
+    it('an empty query lists every domain that is neither selected nor a pill, alphabetically', async () => {
       const { bindDomainFilter, updateDomainFilter } = await load();
       bindDomainFilter();
       updateDomainFilter(COUNTS);
       const input = document.getElementById('domainSearchInput') as HTMLInputElement;
       input.dispatchEvent(new Event('focus'));
-      const names = [...document.querySelectorAll('.domain-suggestion span:first-child')].map(s => s.textContent);
-      expect(names).toEqual([...names].sort());
-      expect(names.length).toBe(COUNTS.length);
+      const domains = [...document.querySelectorAll('.domain-suggestion')].map(el => el.getAttribute('data-domain'));
+      expect(domains).toEqual(NOT_PILLS);        // business, health — already alphabetical
     });
 
     it('picking a suggestion adds it as a selected domain and clears the search box', async () => {
@@ -276,8 +295,9 @@ describe('with the filter box in the DOM', () => {
         bindDomainFilter();
         updateDomainFilter(COUNTS);
         const input = document.getElementById('domainSearchInput') as HTMLInputElement;
-        input.value = 'foo';
+        input.value = 'heal';                    // matches 'health', which is not a pill
         input.dispatchEvent(new Event('input'));
+        expect(document.getElementById('domainSuggestions')?.hidden).toBe(false);
         keydown(input, 'Escape');
         expect(document.getElementById('domainSuggestions')?.hidden).toBe(true);
         expect(input.value).toBe('');
