@@ -14,6 +14,7 @@ import { getStreakHistory, today } from '../utils/streak.ts';
 import {
   reviewForecast, bandCoverage, modeAccuracy, activityGrid, LEARNED_BOX,
 } from '../utils/progress-stats.ts';
+import '../styles-lazy/history.css';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

@@ -10,6 +10,7 @@ import { languageInfo } from '../../data/languages.js';
 import { createFlagImg } from '../../ui/flag-icon.js';
 import { Settings, applyAutofillAttr } from '../../settings.js';
 import { CardController, EMPTY_SLOTS, SINGLE_FORM_ROW_LABEL, hiddenPronounSlots, isSingleForm, missingDataSlots } from './helpers.ts';
+import '../../styles-lazy/conjugation.css';
 
 /**
  * conjugation/card.ts — builds one verb's card in the Grid/Full views: its header,

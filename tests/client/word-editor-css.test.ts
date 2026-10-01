@@ -1,5 +1,5 @@
 /**
- * word-editor-css.test.ts — public/styles/app/word-editor.css is generated
+ * word-editor-css.test.ts — src/client/styles-lazy/word-editor.css is generated
  * from the Admin panel's stylesheets (scripts/word-editor-css.mjs). This fails
  * when someone edits an Admin source without regenerating, which would leave
  * My Content's editor styled differently from Admin's.

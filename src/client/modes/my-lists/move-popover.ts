@@ -20,6 +20,7 @@ import { buildLangBadge } from '../../ui/lang-badge.ts';
 import { LANGUAGES } from '../../data/languages.ts';
 import { buildListSection } from '../../ui/list-sections.ts';
 import type { ListsCtx } from './context.ts';
+import '../../styles-lazy/my-lists.css';
 
 let activePopover: HTMLElement | null = null;
 

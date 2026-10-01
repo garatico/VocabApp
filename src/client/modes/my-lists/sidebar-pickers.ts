@@ -1,6 +1,7 @@
 import { getFolderStyle, setFolderStyle, FOLDER_COLORS } from './folders.ts';
 import { SCOPE_LABELS, FILTER_SCOPES, type FilterScope } from '../../filters/filter-scope.ts';
 import type { MenuItem } from './sidebar-menu.ts';
+import '../../styles-lazy/my-lists.css';
 
 /**
  * sidebar-pickers.ts — the small popovers the sidebar opens: pick an emoji and a colour (every

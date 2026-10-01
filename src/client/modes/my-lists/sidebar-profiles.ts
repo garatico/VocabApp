@@ -8,6 +8,7 @@ import { SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
 import type { SidebarKit } from './sidebar-kit.ts';
 import { isFolderCollapsed, setFolderCollapsed } from './sidebar-state.ts';
 import { confirmDialog } from '../../ui/dialog.ts';
+import '../../styles-lazy/my-lists.css';
 
 /**
  * sidebar-profiles.ts — the Testing Profiles section: profiles grouped by mode and folder, and

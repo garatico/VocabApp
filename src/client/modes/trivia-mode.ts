@@ -44,6 +44,8 @@ import { createStopwatch } from '../ui/stopwatch.ts';
 import { languageInfo } from '../data/languages.ts';
 import { hintReveal, hintableLength } from '../utils/hint-reveal.ts';
 import { showLoading, hideLoading } from '../ui/ui.ts';
+import '../styles-lazy/trivia.css';
+import '../styles-lazy/guess-blank.css';
 
 export type TriviaSubMode = 'type' | 'choice' | 'table';
 

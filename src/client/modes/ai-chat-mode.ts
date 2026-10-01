@@ -19,6 +19,7 @@ import { getSavedChats, saveChat, deleteChat, type SavedChat, type Rating } from
 import { exportEvalData } from './ai-chat/eval-contract.ts';
 import { cachedVocabMap, fetchVocab } from './my-lists/vocab-cache.ts';
 import type { VocabEntry } from './my-lists/types.ts';
+import '../styles-lazy/chat.css';
 
 // ── Engine seam ─────────────────────────────────────────────────────────────
 

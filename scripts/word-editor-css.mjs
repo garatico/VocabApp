@@ -1,5 +1,5 @@
 /**
- * word-editor-css.mjs — derives public/styles/app/word-editor.css.
+ * word-editor-css.mjs — derives src/client/styles-lazy/word-editor.css.
  *
  * The shared Word Editor (src/client/ui/word-editor/) was built for the Admin
  * panel, whose stylesheets style bare elements (`button`, `input`, `select`)
@@ -26,7 +26,7 @@ export const SOURCES = [
   'public/styles/admin/word-list.css',
   'public/styles/admin/edit-form.css',
 ];
-export const OUTPUT = 'public/styles/app/word-editor.css';
+export const OUTPUT = 'src/client/styles-lazy/word-editor.css';
 export const SCOPE = '.word-editor';
 
 /** Splits on top-level commas only (not inside (), [] — `:is(a, b)`, `[x="a,b"]`). */

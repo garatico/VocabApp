@@ -1,3 +1,4 @@
+import '../../styles-lazy/my-content-bundle.css';
 /**
  * word-editor/types.ts — the shape the shared Word Editor works in, and the
  * adapter each host (the Admin panel, My Content) supplies.

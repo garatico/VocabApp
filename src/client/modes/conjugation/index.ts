@@ -17,6 +17,7 @@ import { Settings, applyConjDeselectedClass, setOnConjDeselectedChange, setOnSho
 import { buildCard } from './card.ts';
 import { CardController, ConjugationModeOptions, VISIBLE_ROW, clearConjSummary, hiddenPronounSlots, isSingleForm, missingDataSlots, showConjSummary, verbKey } from './helpers.ts';
 import { confirmDialog } from '../../ui/dialog.ts';
+import '../../styles-lazy/conjugation.css';
 
 /**
  * conjugation/index.ts

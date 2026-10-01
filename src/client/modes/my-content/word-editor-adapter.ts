@@ -32,6 +32,7 @@ import type {
   WordData, WordEditorAdapter, WordEditorMeta, WordPage, WordPageQuery,
 } from '../../ui/word-editor/types.ts';
 import { confirmDialog } from '../../ui/dialog.ts';
+import '../../styles-lazy/my-content-bundle.css';
 
 export type WordScope = 'all' | 'edited' | 'custom';
 

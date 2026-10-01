@@ -13,6 +13,7 @@ import { buildWordForm, type WordFormHandle, type WordFormOptions } from './form
 import { escapeHtml, debounce } from './util.ts';
 import type { ChipOption, WordData, WordEditorMeta, WordEditorOptions } from './types.ts';
 import { confirmDialog } from '../dialog.ts';
+import '../../styles-lazy/my-content-bundle.css';
 
 export interface WordEditorHandle {
   /** Appends the filter bar and the list+form layout to `container`. */

@@ -7,6 +7,8 @@ import { showUndo } from './undo-toast.ts';
 import { buildLangBadge } from '../../ui/lang-badge.ts';
 import type { SidebarKit } from './sidebar-kit.ts';
 import { confirmDialog } from '../../ui/dialog.ts';
+import '../../styles-lazy/my-lists.css';
+import '../../styles-lazy/my-content-bundle.css';
 
 /**
  * sidebar-multi.ts — the Cross-Language Lists section: its cards and the create / copy flows.

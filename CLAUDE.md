@@ -210,13 +210,25 @@ read from or write to `vocabulary.db`.
   edits never touch the real vocabulary. Every element id takes an `idPrefix`
   (`''` in Admin, whose e2e spec and styles use the plain ids; `mcwe-` in My
   Content) so two hosts can share a page.
-- **`public/styles/app/word-editor.css` is generated** from the Admin
+- **`src/client/styles-lazy/word-editor.css` is generated** from the Admin
   stylesheets (`admin/inputs|buttons|filter-bar|word-list|edit-form.css`) by
   `scripts/word-editor-css.mjs`, with every selector scoped under
   `.word-editor`. The Admin stylesheets remain the source of truth (they style
   bare elements globally, which the main app cannot). Edit those, then run
   `npm run build:word-editor-css`; `tests/client/word-editor-css.test.ts`
   fails if the checked-in copy is stale.
+- **Stylesheets are split into first-paint and lazy.** `public/styles/app/*.css` (via `styles-entry.css`) is what the first paint downloads;
+  `src/client/styles-lazy/<mode>.css` holds the rules for classes that only a lazily-loaded mode renders (My Lists, My Content + Word Editor,
+  Conjugation, Picture, Trivia, Guess the Blank, Sentence Scramble, History, AI Chat). Each lazy file is `import`ed by every module that uses
+  its classes (Vite then ships it as that mode's own CSS chunk, fetched with the mode — first-load CSS went 50.8 -> ~31 KB gzipped).
+  `my-content-bundle.css` imports `my-content.css` then `word-editor.css`: **two lazy files that can be on screen together must be
+  bundled in order**, because separate CSS chunks do not guarantee a load order. **Order is the hazard:** a moved rule now loads *after*
+  everything in the eager sheets, so it wins ties it used to lose. A rule may only move if no rule that stays shares one of its classes
+  and comes later in the original order, and a moved `@media` block must stay after the base rules it overrides.
+  `tests/client/lazy-css.test.ts` fails if a lazy rule is only about a class that `index.html` or the first-load import graph from
+  `app.ts` uses (it belongs in the eager sheet) or a lazy file is imported by nothing. New styles for a lazy mode go in its lazy file.
+  The split was verified with 144 screenshots (4 viewports/themes x every tab and sub-view) diffed against the pre-split build, plus a
+  computed-style diff per regression: a class used on the first paint but styled only in a lazy file renders unstyled until the mode loads.
 - **Accessibility is a tested bar, not a wish.** `tests/e2e/a11y.spec.ts` runs
   axe-core (WCAG 2.1 A/AA + best-practice) on every tab, light and dark, with and
   without a quiz running, and expects *zero* violations. Colour pairs come from

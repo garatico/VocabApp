@@ -15,6 +15,7 @@ import { POS_ABBREV, type VocabEntry } from './types.ts';
 import { buildAudioButton } from '../../ui/audio-play-button.ts';
 import { fillHighlighted } from '../../utils/dom.ts';
 import { respellSpanishIpa } from '../../utils/respell.ts';
+import '../../styles-lazy/my-lists.css';
 
 /** Compact fill-level glyphs for the mastery scale, 0..MAX_MASTERY_LEVEL. */
 export const MASTERY_GLYPHS = ['○', '◔', '◑', '◕', '●'];

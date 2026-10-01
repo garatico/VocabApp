@@ -23,6 +23,7 @@ import { foldKey as norm } from '../../utils/match.ts';
 import { getList, addToList } from '../../utils/word-lists.ts';
 import type { ListsCtx } from './context.ts';
 import type { VocabEntry } from './types.ts';
+import '../../styles-lazy/my-lists.css';
 
 /** A token we could not resolve on our own, and what we think it might be. */
 interface Ambiguity {

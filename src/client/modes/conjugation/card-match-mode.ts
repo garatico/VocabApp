@@ -32,6 +32,8 @@ import { readString, writeString } from '../../utils/storage.js';
 import { createStopwatch } from '../../ui/stopwatch.js';
 import { showSummary, clearSummary, summaryChip, percent } from '../../ui/quiz-summary.js';
 import { buildScorePills, scorePct } from '../../ui/score-pills.js';
+import '../../styles-lazy/trivia.css';
+import '../../styles-lazy/conjugation.css';
 
 export type ConjMatchPairing = 'pronoun' | 'infinitive';
 

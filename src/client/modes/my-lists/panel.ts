@@ -33,6 +33,7 @@ import { BANDS, POS_CHIPS, type SortMode, type VocabEntry } from './types.ts';
 import { buildLangBadge } from '../../ui/lang-badge.ts';
 import { buildChipDropdown, buildChecklistDropdown, closeAllChipDropdowns } from './chip-dropdown.ts';
 import { getFolderRegistry, addFolder } from './folders.ts';
+import '../../styles-lazy/my-lists.css';
 
 /**
  * The outside-click listener is captured on the document, so it has to be

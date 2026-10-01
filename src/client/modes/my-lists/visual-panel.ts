@@ -18,6 +18,7 @@ import type { FontSize } from '../../settings.ts';
 import { buildChecklistDropdown } from './chip-dropdown.ts';
 import { getFolderRegistry } from './folders.ts';
 import { showToast } from '../../ui/toast.ts';
+import '../../styles-lazy/my-lists.css';
 
 /** A labelled dropdown whose first entry means "this profile doesn't touch that setting". */
 function fieldSection<T extends string>(

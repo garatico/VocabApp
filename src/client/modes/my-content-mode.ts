@@ -12,6 +12,7 @@ import { buildContentTabs, getActiveTab, getCollapsedSections, setActiveTab, set
 import { buildPicturesSection } from './my-content/pictures.ts';
 import { el } from './my-content/shared.ts';
 import { buildTriviaSection } from './my-content/trivia.ts';
+import '../styles-lazy/my-content-bundle.css';
 
 /**
  * my-content-mode.ts — "My Content" tab: a lite, client-only admin panel.

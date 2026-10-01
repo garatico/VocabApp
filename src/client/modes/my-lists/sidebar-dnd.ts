@@ -5,6 +5,7 @@ import { type SidebarSectionId } from './sidebar-state.ts';
 import { getPreset, savePreset } from '../../filters/presets.ts';
 import type { FilterScope } from '../../filters/filter-scope.ts';
 import { folderParent, isInFolderTree } from './folders.ts';
+import '../../styles-lazy/my-lists.css';
 
 /**
  * sidebar-dnd.ts — drag list cards and folders around the sidebar. See the comment inside for

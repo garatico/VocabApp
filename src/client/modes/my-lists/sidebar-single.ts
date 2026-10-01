@@ -6,6 +6,7 @@ import { fetchVocab, cachedVocabMap } from './vocab-cache.ts';
 import { showUndo } from './undo-toast.ts';
 import type { SidebarKit } from './sidebar-kit.ts';
 import { confirmDialog } from '../../ui/dialog.ts';
+import '../../styles-lazy/my-lists.css';
 
 /**
  * sidebar-single.ts — the Single-Language Lists section: its cards and the create / rename /

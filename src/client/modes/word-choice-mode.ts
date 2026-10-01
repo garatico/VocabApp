@@ -29,6 +29,7 @@ import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summ
 import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
 import { languageInfo } from '../data/languages.ts';
+import '../styles-lazy/trivia.css';
 
 export type WordChoiceDirection = 'target-en' | 'en-target' | 'mixed';
 

@@ -30,6 +30,7 @@ import { closePopover, openMovePopover } from './move-popover.ts';
 import { showUndo } from './undo-toast.ts';
 import { POS_CHIPS, type VocabEntry } from './types.ts';
 import { appendCountChip, appendMasteredChip, buildWordRow } from './row-shared.ts';
+import '../../styles-lazy/my-lists.css';
 
 export interface WordListDeps {
   /** Read at render time so the toolbar owns the text and this module doesn't. */

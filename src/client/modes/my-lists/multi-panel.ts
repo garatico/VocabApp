@@ -49,6 +49,7 @@ import {
 import { appendCountChip, appendMasteredChip, buildWordRow } from './row-shared.ts';
 import { buildQuizButton } from './list-actions.ts';
 import { qualifyMultiListName } from '../../utils/word-lists.ts';
+import '../../styles-lazy/my-lists.css';
 
 const SORT_OPTIONS: readonly [SortMode, string][] = [
   ['alpha-asc',   'A → Z'],

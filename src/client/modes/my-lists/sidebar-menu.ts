@@ -1,3 +1,4 @@
+import '../../styles-lazy/my-lists.css';
 
 
 /**

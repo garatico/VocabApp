@@ -23,6 +23,7 @@ import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summ
 import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
 import type { Word } from '../types.ts';
+import '../styles-lazy/sentence-scramble.css';
 
 interface RenderSentenceScrambleModeOptions {
   words:     Word[];

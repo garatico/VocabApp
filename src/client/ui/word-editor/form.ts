@@ -13,6 +13,7 @@
 import { createChipInput, type ChipInputHandle } from './chip-input.ts';
 import { setupEmojiPicker } from './emoji-picker.ts';
 import type { WordData } from './types.ts';
+import '../../styles-lazy/my-content-bundle.css';
 
 /** Fields a host may lock. Names match the concept, not the element id. */
 export type FormField =

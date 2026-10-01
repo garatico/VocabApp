@@ -8,6 +8,7 @@ import { foldKey } from '../../utils/match.ts';
 import type { Word } from '../../types.ts';
 import { PRONOUNS, TENSE_DEFS } from '../conjugation/data.ts';
 import { el } from './shared.ts';
+import '../../styles-lazy/my-content-bundle.css';
 
 /**
  * my-content/conjugations.ts — correct a verb's conjugation table, in the same layout as the Admin

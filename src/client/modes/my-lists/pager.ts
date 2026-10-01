@@ -7,6 +7,7 @@
  */
 
 import { pageCountFor, pageSlice } from '../table-controls.ts';
+import '../../styles-lazy/my-lists.css';
 
 export const LIST_PAGE_SIZE = 100;
 

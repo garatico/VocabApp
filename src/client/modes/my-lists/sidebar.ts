@@ -41,6 +41,7 @@ import { createSmartSection } from './sidebar-smart.ts';
 import { createMultiSection } from './sidebar-multi.ts';
 import { createProfilesSection } from './sidebar-profiles.ts';
 import { createVisualSection } from './sidebar-visual.ts';
+import '../../styles-lazy/my-lists.css';
 
 // createSidebar() runs fresh on every visit to My Lists (see my-lists-mode.ts's
 // renderMyLists, called from app.ts's mode-activation dispatcher) — a plain

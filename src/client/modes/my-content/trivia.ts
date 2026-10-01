@@ -8,6 +8,7 @@ import { languageRows } from './languages.ts';
 import { buildSubsection } from './layout.ts';
 import { MCSortDir, appendDomainChips, buildListPager, buildSortDirToggle, csv, el, field, myContentInitialPageSize, selectInput, textArea, textInput } from './shared.ts';
 import { ALL_LANGS } from './word-search.ts';
+import '../../styles-lazy/my-content-bundle.css';
 
 /**
  * my-content/trivia.ts — add and edit your own Trivia questions.

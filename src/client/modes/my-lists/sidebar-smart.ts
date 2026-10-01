@@ -5,6 +5,7 @@ import { getSmartNames, getSmartLists, saveSmartRule, deleteSmartList, renameSma
 import { cachedVocab, cachedVocabMap, fetchVocab } from './vocab-cache.ts';
 import type { SidebarKit } from './sidebar-kit.ts';
 import { confirmDialog } from '../../ui/dialog.ts';
+import '../../styles-lazy/my-lists.css';
 
 /**
  * sidebar-smart.ts — the Smart Lists section (saved queries): its cards and the create / rename /

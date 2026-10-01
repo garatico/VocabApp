@@ -1,5 +1,6 @@
 import { Settings } from '../../settings.ts';
 import { pageCountFor } from '../table-controls.ts';
+import '../../styles-lazy/my-content-bundle.css';
 
 /**
  * my-content/shared.ts — small DOM builders and widgets the My Content sections

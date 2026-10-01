@@ -7,6 +7,7 @@ import {
 } from '../../filters/visual-profiles.ts';
 import type { SidebarKit } from './sidebar-kit.ts';
 import { confirmDialog } from '../../ui/dialog.ts';
+import '../../styles-lazy/my-lists.css';
 
 /**
  * sidebar-visual.ts — the Visual Profiles section (saved Theme and Font Size bundles). A row

@@ -33,6 +33,7 @@ import { readString, readJson, writeJson, isStringArray } from '../utils/storage
 import { percent } from '../ui/quiz-summary.ts';
 import { buildLangBadge } from '../ui/lang-badge.ts';
 import type { SessionDirection } from '../utils/session-history.ts';
+import '../styles-lazy/history.css';
 
 const MODE_LABELS: Record<QuizMode, string> = {
   table:        'Table',

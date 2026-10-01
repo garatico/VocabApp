@@ -1,5 +1,6 @@
 import { readString, writeString, readJson, writeJson, isStringArray } from '../../utils/storage.ts';
 import { el } from './shared.ts';
+import '../../styles-lazy/my-content-bundle.css';
 
 /**
  * my-content/layout.ts — the tab's chrome: collapsible sections, the

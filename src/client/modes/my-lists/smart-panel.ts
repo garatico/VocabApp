@@ -33,6 +33,7 @@ import { buildQuizButton } from './list-actions.ts';
 import { qualifySmartListName } from '../../utils/word-lists.ts';
 import { getFolderRegistry, addFolder } from './folders.ts';
 import { FILTER_SCOPES, SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
+import '../../styles-lazy/my-lists.css';
 
 /** Same display formatting as the Table/Picture Domains filter — see domain-filter.ts's fmt(). */
 function fmtDomain(d: string): string {

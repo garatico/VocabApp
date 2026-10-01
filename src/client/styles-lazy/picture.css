@@ -1,0 +1,459 @@
+/* Lazy-loaded: rules for classes that only picture's own modules use. Moved out of public/styles/app/picture.css so the first paint does not
+   download them; every module that renders these classes imports this file (see tests/client/lazy-css.test.ts). */
+/* ── Empty state ────────────────────────────────────────────── */
+
+.picture-empty {
+  padding: 3rem 2rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.picture-empty p {
+  margin: 0.4rem 0;
+  font-size: 1rem;
+}
+
+/* ── Card grid ──────────────────────────────────────────────── */
+
+.picture-grid {
+  display: grid;
+  /* Was minmax(200px, ...) which packed 6-7 narrow cards across a wide
+     window and left the photos small. 5 per row on a desktop viewport gives
+     each image noticeably more space; auto-fill still collapses the count
+     gracefully as the window narrows. Bumped from 240px to 260px so a card
+     with cycler arrows still leaves the picture itself roughly as large as
+     a single-visual card's — the arrows take space from the row now
+     instead of overlaying the image. */
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
+  padding: 1rem 0;
+}
+
+@media (min-width: 1200px) {
+  .picture-grid { grid-template-columns: repeat(5, 1fr); }
+}
+
+@media (min-width: 1700px) {
+  /* Beyond 5 the cards start growing rather than multiplying, which is the
+     point — bigger images, not more of them. */
+  .picture-grid { grid-template-columns: repeat(5, 1fr); max-width: 1800px; }
+}
+
+/* ── SVG image area ─────────────────────────────────────────── */
+
+.picture-card-img {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  /* The outer .picture-card already has a border, but it wraps the word
+     input too — this frames the image area on its own, so a slow or broken
+     image still reads as "a picture belongs here" rather than a bare gap. */
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+/* Shown on .picture-card-img while its <img> hasn't fired load/error yet —
+   see buildVisualFrame() in picture-mode.ts. Removed once the image
+   resolves either way, so a slow network never leaves a bare empty box. */
+
+.picture-card-img.pm-img-loading::after {
+  content: '';
+  position: absolute;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 3px solid var(--border-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: pm-spin 0.7s linear infinite;
+}
+
+/* Emoji fallback — centred, large, no text-shadow clutter */
+
+.picture-card-emoji {
+  font-size: 5.5rem;
+  line-height: 1;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* width/height: 100%, not auto capped by max-width/max-height — object-fit
+   only has something to resolve once the box has a definite size. Auto
+   sizing left every image at its own source resolution, so a small photo
+   sat tiny in the same square a big one filled edge to edge. Overridden by
+   .vc-row .picture-card-img img below for a multi-visual card (every card
+   goes through buildVisualFrame(), so that's the common case in practice),
+   kept in sync so nothing regresses if a single-visual card ever changes. */
+
+.picture-card-img img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+/* ── Text input ─────────────────────────────────────────────── */
+
+.picture-card-input {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: inherit;
+  text-align: center;
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast),
+              background   var(--transition-fast);
+}
+
+.picture-card-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.picture-card-input.correct {
+  background: var(--correct-light);
+  border-color: var(--correct);
+  color: var(--correct);
+  font-weight: 600;
+  cursor: default;
+}
+
+.picture-card-input.revealed {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--text);        /* full contrast — you need to read this */
+  font-style: italic;        /* italic is enough to signal "revealed, not typed" */
+  cursor: default;
+}
+
+.picture-card-input:disabled {
+  cursor: default;
+}
+
+/* ── Controls bar (Give Up) ─────────────────────────────────── */
+
+.picture-controls-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ================================================================
+   Visual cycler — per-card prev/next arrows (all modes)
+   buildVisualFrame() in picture-mode.ts builds:
+     .vc-frame            column: the row below, then the dots
+       .vc-row             row: prev arrow · .picture-card-img · next arrow
+         .picture-card-img  the bordered box — holds only the current visual
+       .vc-dots
+   The arrows and dots used to be mounted *inside* .picture-card-img, so once
+   that box got its own border they ended up sitting inside the frame, partly
+   over the photo. Now they sit outside it — beside and below the border,
+   never over it.
+================================================================ */
+
+/* Neither this nor .vc-row constrains height — .picture-card never had an
+   explicit height of its own; it was always the aspect-ratio:1 square
+   (resolved from *width*) that gave the card its height, bottom-up. Adding
+   height:100% anywhere in this chain asks a box with no definite height of
+   its own to hand one down, which resolves to nothing and collapsed the
+   square into whatever the image's intrinsic size happened to be. */
+
+.vc-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.vc-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;           /* arrow · picture · arrow, none of them overlapping */
+}
+
+/* Inside a cycler's row, .picture-card-img shares the row with two arrows
+   instead of taking the full card width — shrinks to fit rather than
+   forcing the row wider than the card. Still square (aspect-ratio:1, set on
+   the base rule above) — width alone still resolves it, same as the
+   single-visual case, just against the row's narrower available width. */
+
+.vc-row .picture-card-img {
+  width: auto;
+  /* flex-basis: 0, not auto — an auto basis on a box whose only sizing
+     hint is aspect-ratio (no intrinsic content size yet) left the browser
+     resolving height first from cross-axis stretch and deriving width from
+     that, backwards from what's wanted here. A zero basis forces width to
+     come purely from the flex distribution, so aspect-ratio then derives
+     height from *that* — a reliable square instead of a stretched one. */
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* width/height: 100% — matches .picture-card-img img above, which .vc-row
+   .picture-card-img overrides the width of; object-fit still needs both
+   set to resolve against the box's own (now auto) size. */
+
+.vc-row .picture-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Arrows sit *beside* the framed picture, in normal flow — not floated over
+   it, which is what put them back inside the border they're meant to sit
+   outside of. They keep their space when faded out, so showing them on
+   hover doesn't shift the layout. */
+
+.vc-arrow {
+  position: static;
+  flex: 0 0 auto;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.12s, color 0.12s, border-color 0.12s;
+  user-select: none;
+}
+
+/* .vc-prev / .vc-next need no positioning now — the flex order in .vc-row
+   (prev, picture, next) already puts them on the right sides. */
+
+/* Show arrows on card hover */
+
+.picture-card:hover .vc-arrow,
+.fc-card:hover .vc-arrow,
+.pm-click-card:hover .vc-arrow {
+  opacity: 1;
+}
+
+/* Always visible on touch devices, and larger — 1.6rem (25.6px) is fine for
+   a mouse pointer but under the ~32px a fingertip can reliably hit, and
+   there's no hover state on touch to help a near-miss. */
+
+@media (hover: none) {
+  .vc-arrow { opacity: 1; width: 2.1rem; height: 2.1rem; font-size: 0.85rem; }
+}
+
+.vc-arrow:hover {
+  background: var(--accent, #4f8ef7);
+  border-color: var(--accent, #4f8ef7);
+  color: #fff;
+}
+
+/* Dot indicators */
+
+.vc-dots {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  margin-top: 4px;
+  min-height: 6px;
+}
+
+.vc-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--border, #d1d5db);
+  transition: background 0.15s;
+  display: inline-block;
+}
+
+.vc-dot-active {
+  background: var(--accent, #4f8ef7);
+}
+
+/* Flashcard: arrows always visible, slightly larger */
+
+.fc-card .vc-arrow {
+  width: 2rem;
+  height: 2rem;
+  font-size: 0.9rem;
+  opacity: 1;
+}
+
+/* Click mode: always visible */
+
+.pm-click-card .vc-arrow {
+  opacity: 1;
+  width: 1.4rem;
+  height: 1.4rem;
+  font-size: 0.65rem;
+}
+
+/* ================================================================
+   Flashcard (carousel) mode
+================================================================ */
+
+.fc-wrap {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0.5rem 0 1rem;
+}
+
+/* ── Top bar: give-up + counter ─────────────────────────────── */
+
+.fc-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+/* Type from .ui-stat. */
+
+/* ── Arrow + card row ───────────────────────────────────────── */
+
+.fc-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.fc-arrow {
+  flex-shrink: 0;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  border: 2px solid var(--border, #d1d5db);
+  background: var(--surface2, #f9fafb);
+  color: var(--text, #111);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+              transform 0.1s;
+  user-select: none;
+}
+
+.fc-arrow:hover:not(:disabled) {
+  background: var(--accent, #4f8ef7);
+  border-color: var(--accent, #4f8ef7);
+  color: #fff;
+}
+
+.fc-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ── The card itself ────────────────────────────────────────── */
+
+.fc-card-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.fc-card {
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.fc-card.correct  { border-color: var(--correct); background: var(--correct-light); }
+
+.fc-card.revealed { border-color: var(--border); border-style: dashed; }
+
+.fc-card .picture-card-img {
+  width: 160px;
+  height: 160px;
+}
+
+/* The fixed 160x160 above is sized for a single-visual card, where
+   .picture-card-img is .fc-card's only child. Inside a cycler's row it
+   shares the width with two arrows instead — this has to out-specificity
+   the rule above (both are 2 classes) so aspect-ratio can square the box
+   against whatever width the row actually leaves it, not a fixed size
+   arrows have to be laid out around. */
+
+.fc-card .vc-row .picture-card-img {
+  width: auto;
+  height: auto;
+}
+
+.fc-card .picture-card-emoji {
+  font-size: 6rem;
+}
+
+/* width/height: 100% — see .picture-card-img img above. Last in the cascade
+   at equal specificity, so this is the one that actually wins in Flashcard
+   mode over .vc-visual img. */
+
+.fc-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ── Input row ──────────────────────────────────────────────── */
+
+.fc-input-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.fc-input {
+  width: min(320px, 100%);
+  font-size: 1.1rem;
+  padding: 0.55rem 0.75rem;
+  text-align: center;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .picture-controls-bar { padding: 0.5rem 0; margin-bottom: 0.6rem; }
+}
+
+@media (max-width: 599px) {
+  .picture-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.85rem;
+    padding: 0.75rem 0;
+  }
+  .picture-controls-bar { gap: 0.75rem; }
+}
+
+@media (max-width: 420px) {
+  .picture-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.65rem;
+  }
+  .picture-card-emoji { font-size: 4rem; }
+}
+
+/* Keyboard focus on a picture card needs to be as visible as on any button. */
+
+.pm-click-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

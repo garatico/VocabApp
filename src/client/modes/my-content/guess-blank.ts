@@ -9,6 +9,7 @@ import { buildSubsection } from './layout.ts';
 import { MCSortDir, buildListPager, buildSortDirToggle, el, field, lines, myContentInitialPageSize, selectInput, textArea, textInput } from './shared.ts';
 import { appendChipGroup } from './trivia.ts';
 import { ALL_LANGS } from './word-search.ts';
+import '../../styles-lazy/my-content-bundle.css';
 
 /**
  * my-content/guess-blank.ts — add and edit your own Guess the Blank questions.

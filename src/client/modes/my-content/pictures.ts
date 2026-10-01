@@ -6,6 +6,7 @@ import { buildLangBadge } from '../../ui/lang-badge.ts';
 import type { Word } from '../../types.ts';
 import { el, field, textInput } from './shared.ts';
 import { buildWordSearchUI } from './word-search.ts';
+import '../../styles-lazy/my-content-bundle.css';
 
 /**
  * my-content/pictures.ts — choose your own picture for a word (photo, SVG or emoji).

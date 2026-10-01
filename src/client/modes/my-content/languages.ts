@@ -3,6 +3,7 @@ import { buildLangBadge } from '../../ui/lang-badge.ts';
 import { openLanguagePicker } from '../../ui/language-picker.ts';
 import { readString, readJson, writeJson, isStringArray } from '../../utils/storage.ts';
 import { el } from './shared.ts';
+import '../../styles-lazy/my-content-bundle.css';
 
 /**
  * my-content/languages.ts — which languages My Content's forms and lists show:

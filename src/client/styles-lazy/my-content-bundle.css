@@ -1,0 +1,3 @@
+/* my-content, then word-editor: one lazy file so word-editor stays last, as it was in the single stylesheet. */
+@import "./my-content.css";
+@import "./word-editor.css";

@@ -40,6 +40,7 @@ import { fillHighlighted } from '../../utils/dom.ts';
 import { openMovePopover, closePopover, clickedOutsidePopover } from './move-popover.ts';
 import { BANDS, POS_ABBREV, POS_CHIPS, type VocabEntry } from './types.ts';
 import { buildChipDropdown, closeAllChipDropdowns } from './chip-dropdown.ts';
+import '../../styles-lazy/my-lists.css';
 
 /** Words per page — matches Table mode's own default page size, so a
  *  learner already used to that number doesn't have to learn a new one. */

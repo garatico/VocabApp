@@ -40,6 +40,7 @@ import { fitToScreen } from '../utils/fit-to-screen.ts';
 import { getMultiListLanguages } from '../utils/word-lists.ts';
 import { buildLangBadge } from '../ui/lang-badge.ts';
 import { SCOPE_LABELS } from '../filters/filter-scope.ts';
+import '../styles-lazy/my-lists.css';
 
 // Mastery is read by the quiz modes through this module, which is where it
 // lived before the split; re-exported so those imports did not have to move.

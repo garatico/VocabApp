@@ -5,6 +5,7 @@ import { foldKey } from '../../utils/match.ts';
 import { fillHighlighted } from '../../utils/dom.ts';
 import type { Word } from '../../types.ts';
 import { el, textInput } from './shared.ts';
+import '../../styles-lazy/my-content-bundle.css';
 
 /**
  * my-content/word-search.ts — the word search box used by the word editor and

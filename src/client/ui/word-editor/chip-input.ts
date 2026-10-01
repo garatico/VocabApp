@@ -1,3 +1,4 @@
+import '../../styles-lazy/my-content-bundle.css';
 /**
  * chip-input.ts — a container holding rendered chips plus one trailing text
  * field: type a value, press Enter/comma to turn it into a chip, click a

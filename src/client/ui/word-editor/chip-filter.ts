@@ -7,6 +7,7 @@
  */
 
 import type { ChipOption } from './types.ts';
+import '../../styles-lazy/my-content-bundle.css';
 
 export interface ChipFilterHandle {
   /** The `.filter-field` to place in the filter bar. */

@@ -43,16 +43,6 @@
   max-height: 1600px;
 }
 
-/* ── Left pane: lang selector + list nav ────────────────────── */
-.ml-left-pane {
-  display: flex;
-  flex-direction: column;
-  width: 440px;
-  flex-shrink: 0;
-  border-right: 1px solid var(--border);
-  overflow: hidden;
-}
-
 /* ── Language selector row ───────────────────────────────────── */
 .ml-lang-row {
   display: flex;
@@ -80,42 +70,6 @@
   min-width: 0;
 }
 
-/* ── Header: Lists title + New button ────────────────────────── */
-.ml-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  padding: 0.45rem 0.65rem 0.35rem;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-/* Backup/restore used to be bare icons (⭳/⭱) — hard to tell apart at a
-   glance. Text label needs a bit more room than the plain icon buttons, and
-   a pill shape (rather than the same small-radius rect every other icon
-   button uses) makes the pair read as its own distinct control at a glance.
-   Both buttons also carry .ml-icon-btn (for the shared hover behaviour), so
-   this has to out-specificity .ml-icon-btn's own border:none/background:none
-   — a bare .ml-text-btn rule here previously lost that fight since
-   .ml-icon-btn is declared later in this file at the same specificity, which
-   is why Backup/Restore never actually showed a border or fill before. */
-.ml-icon-btn.ml-text-btn {
-  font-size: 0.68rem;
-  font-weight: 600;
-  padding: 0.22rem 0.6rem;
-  white-space: nowrap;
-  background: var(--surface2);
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-}
-.ml-icon-btn.ml-text-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-light);
-}
-
 /* Type from .ui-label, which also gives it the primary text colour. */
 .ml-sidebar-title { --ui-label-size: 0.7rem; }
 
@@ -131,151 +85,6 @@
 }
 .ml-new-list-btn:hover { background: var(--accent); color: var(--on-accent); }
 
-.ml-list-nav {
-  list-style: none;
-  margin: 0;
-  padding: 0.25rem 0;
-  flex: 1;
-  overflow-y: auto;
-}
-
-.ml-list-empty {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-.ml-list-item {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.42rem 0.75rem;
-  cursor: pointer;
-  font-size: 0.88rem;
-  font-weight: 500;
-  color: var(--text);
-  user-select: none;
-  transition: background var(--transition-fast);
-  border-left: 2px solid transparent;
-}
-/* Same `[hidden]`-vs-class-`display` cascade tie this codebase hits
-   elsewhere (see my-content.css/conjugation.css/streak-widget.css) —
-   `[hidden]` and the rule above have equal specificity, so without this a
-   folder- or section-collapsed row (sidebar.ts's renderSection()) would
-   keep rendering flex despite JS setting `row.hidden = true`. */
-.ml-list-item[hidden] { display: none; }
-.ml-list-item:hover { background: var(--surface2); }
-.ml-list-item.active {
-  background: var(--accent-light);
-  color: var(--accent);
-  font-weight: 700;
-  border-left-color: var(--accent);
-}
-.ml-list-item--editing {
-  padding: 0.3rem 0.5rem;
-  gap: 0.25rem;
-  cursor: default;
-}
-.ml-list-item--editing:hover { background: transparent; }
-
-.ml-list-name {
-  flex: 1;
-  min-width: 0;
-  /* Wrap to a second line instead of truncating at the first ellipsis —
-     list names are user-written and were being cut off mid-word. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  line-height: 1.25;
-}
-
-/* Row actions sit on top of the name rather than squeezing it. Hidden until
-   hover (see .ml-list-actions), so the name gets the full width at rest. */
-.ml-list-item {
-  position: relative;
-}
-.ml-list-actions {
-  position: absolute;
-  right: 0.4rem;
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--surface2);
-  border-radius: var(--radius-sm, 6px);
-  padding: 0.1rem 0.15rem;
-  box-shadow: 0 0 0 4px var(--surface2);
-}
-.ml-list-item.active .ml-list-actions {
-  background: var(--accent-light);
-  box-shadow: 0 0 0 4px var(--accent-light);
-}
-.ml-list-item:focus-within .ml-list-actions { opacity: 1; }
-
-/* Browse All Words — a single static entry above every section, not one
-   more card in a list of them, so it gets its own bottom border rather than
-   blending into Single-Language Lists right below it. */
-.ml-browse-item {
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.6rem;
-  margin-bottom: 0.25rem;
-}
-
-/* Keyboard focus on the card itself (Tab, or the sidebar's arrow-key nav —
-   see sidebar.ts) — outline rather than a background change, so it reads as
-   "this is where the keyboard is" distinctly from .active ("this is what's
-   open"), which can be true of two different cards at once. */
-.ml-list-item:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-}
-
-.ml-list-count {
-  font-size: 0.66rem;
-  font-family: 'DM Mono', monospace;
-  color: var(--text-muted);
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 99px;
-  padding: 0.05rem 0.45rem;
-  flex-shrink: 0;
-}
-.ml-list-item.active .ml-list-count {
-  background: var(--accent-light);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-/* Idle-state count pills, tinted per section — the plain grey pill read as
-   the same "just a number" no matter which kind of list it was on. Lighter
-   than the .active state above (which stays solid/saturated for "this is
-   selected"), but still clearly that section's own colour rather than a
-   colourless default. */
-.ml-single-item  .ml-list-count {
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 16%, var(--surface2));
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
-}
-.ml-smart-item   .ml-list-count {
-  color: var(--ml-accent-smart);
-  background: color-mix(in srgb, var(--ml-accent-smart) 16%, var(--surface2));
-  border-color: color-mix(in srgb, var(--ml-accent-smart) 40%, var(--border));
-}
-.ml-multi-item   .ml-list-count {
-  color: var(--ml-accent-multi);
-  background: color-mix(in srgb, var(--ml-accent-multi) 16%, var(--surface2));
-  border-color: color-mix(in srgb, var(--ml-accent-multi) 40%, var(--border));
-}
-
-.ml-list-actions {
-  display: flex;
-  gap: 0.15rem;
-  flex-shrink: 0;
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-}
-.ml-list-item:hover .ml-list-actions { opacity: 1; }
-
 .ml-icon-btn {
   background: none;
   border: none;
@@ -287,115 +96,6 @@
   line-height: 1;
 }
 .ml-icon-btn:hover { background: var(--border); color: var(--text); }
-.ml-icon-btn--danger:hover { color: var(--danger); background: var(--danger-light); }
-
-/* ── Ordinary-list rows: name on top, labeled actions below ─────
-   Copy/Rename/Delete carry text now (not just glyphs), so they get their own
-   row instead of floating over the name — a labeled button set is too wide
-   to float without spilling past the pane's edge. */
-.ml-list-item--full {
-  flex-direction: column;
-  align-items: stretch;
-  /* The one gap that governs spacing between every row a card has — name,
-     optional meta row, actions — so a 2-row card (Single-Language) and a
-     3-row one (Cross-Language's extra flags+count row) read with the same
-     rhythm instead of the extra row making things look more cramped.
-     Row-specific margins used to fight this: a 3-row card was getting this
-     gap *plus* a margin on top, so its rows sat closer together than a
-     2-row card's despite having more content to fit. */
-  gap: 0.85rem;
-}
-/* .ml-list-item (below, "sidebar rows" section) sets its own gap for the
-   inline editing rows (rename/create) that share this base class without
-   --full — same class count as this rule, so without the extra specificity
-   here its later position in the file let that generic 0.45rem silently
-   cap this card gap back down below what was actually set above. */
-.ml-list-item.ml-list-item--full {
-  gap: 0.85rem;
-}
-.ml-list-row-top {
-  display: flex;
-  /* flex-start rather than center: a wrapped two-line name used to pull the
-     count pill down to vertically center against it. This pins the count to
-     the card's top-right corner regardless of how many lines the name takes. */
-  align-items: flex-start;
-  gap: 0.3rem;
-}
-/* Second row for a Cross-Language list's flags + count — see sidebar.ts.
-   Its own row rather than crowding onto the name line, which could already
-   be running two lines long on its own (.ml-list-name below). Spacing above
-   and below it comes entirely from .ml-list-item--full's own gap. */
-.ml-list-row-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-.ml-list-actions--full {
-  position: static;
-  opacity: 1;
-  background: none;
-  box-shadow: none;
-  padding: 0;
-  /* More room between Copy/Rename/Delete themselves too — tight enough
-     before that they read as one run-on control rather than three. */
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-.ml-list-item.active .ml-list-actions--full {
-  background: none;
-  box-shadow: none;
-}
-
-.ml-icon-btn--labeled {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.28rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.22rem 0.5rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  background: var(--surface);
-}
-.ml-icon-btn--labeled:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-light);
-}
-.ml-icon-btn--labeled.ml-icon-btn--danger:hover {
-  border-color: var(--danger);
-  color: var(--danger);
-  background: var(--danger-light);
-}
-
-.ml-list-name-input {
-  flex: 1;
-  min-width: 0;
-  padding: 0.2rem 0.35rem;
-  font-size: 0.8rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-  color: var(--text);
-}
-
-/* ── Right pane: word panel ──────────────────────────────────── */
-.ml-panel {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 0.65rem 1rem;
-  gap: 0.5rem;
-  overflow-y: auto;
-}
-
-.ml-panel-empty {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  padding: 1rem 0;
-}
 
 .ml-panel-header {
   display: flex;
@@ -413,202 +113,11 @@
   flex-wrap: wrap;
 }
 
-/* Cross-Language list header's second line: flags + word count, below the
-   title rather than sharing its line — mirrors the same split on its
-   sidebar card (.ml-list-row-meta). */
-.ml-panel-meta-row {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.15rem;
-}
-
-.ml-panel-count {
-  font-size: 0.68rem;
-  color: var(--text-muted);
-  font-family: 'DM Mono', monospace;
-}
-
-.ml-panel-list-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-}
-/* Small filled dot ahead of "Selected List:" — a quick visual anchor for
-   which list this panel belongs to, echoing the active-row accent used in
-   the sidebar rather than introducing a second color language. */
-.ml-panel-selected-dot {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-light);
-}
-
-.ml-panel-flag {
-  font-size: 0.9rem;
-}
-
-.ml-export-format-label {
-  font-size: 0.66rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.ml-panel-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-/* ── Browse All Words pager (see browse-panel.ts) ── */
-.ml-browse-pager {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.5rem 0;
-}
-.ml-browse-pager[hidden] { display: none; }
-.ml-browse-page-select { flex: 1; min-width: 0; }
-.ml-browse-pager .ml-icon-btn.ml-text-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.ml-browse-pager .ml-icon-btn.ml-text-btn:disabled:hover {
-  border-color: var(--border-strong);
-  color: inherit;
-  background: var(--surface2);
-}
-.ml-browse-rank-input {
-  width: 4.5rem;
-  padding: 0.2rem 0.4rem;
-  font-size: 0.75rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-  color: var(--text);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-.ml-browse-rank-input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--focus-ring);
-}
-/* Pushes the rank-jump group to the right of Prev/page-select/Next, rather
-   than crowding in immediately after Next. */
-.ml-browse-rank-input { margin-left: auto; }
-
 .ml-panel-title {
   font-size: 1rem;
   font-weight: 700;
   color: var(--text);
   margin: 0;
-}
-
-.ml-search {
-  padding: 0.2rem 0.4rem;
-  font-size: 0.75rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-  color: var(--text);
-  flex: 1;
-  min-width: 80px;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-.ml-search:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--focus-ring);
-}
-
-
-/* ── POS filter chip row ─────────────────────────────────────── */
-.ml-pos-row {
-  display: flex;
-  /* Was flex-wrap: wrap — with all 8 POS chips plus "All" present (Browse
-     All Words shows every part of speech, unlike the narrower per-band
-     filtering elsewhere), "Article" used to spill onto a second row. A
-     horizontal scrollbar was tried and rejected — this row should just fit —
-     so instead the row sits closer to the left edge and chips are sized
-     tighter (below) to close the rest of the gap. .ml-band-row below matches
-     this same left padding (it used to sit further right, misaligning the
-     two rows' chips even though .ml-band-label's own fixed min-width already
-     lines up the *labels*) rather than each row picking its own inset. */
-  flex-wrap: nowrap;
-  overflow-x: hidden;
-  align-items: center;
-  gap: 0.2rem;
-  padding: 0.35rem 0.85rem 0.1rem 0.4rem;
-}
-.ml-pos-row .pos-chip {
-  flex-shrink: 0;
-  font-size: 0.71rem;
-  padding: 0.15rem 0.4rem;
-}
-/* Level chips get the same tighter sizing — without this they fell back to
-   .pos-chip's base 0.78rem/0.2rem-0.55rem size while Part of Speech chips
-   sat at 0.71rem/0.15rem-0.4rem right above them, visibly larger for no
-   reason. Placed here rather than by .ml-band-row's own definition further
-   down: the mobile breakpoint's own `.ml-pos-row .pos-chip, .ml-band-row
-   .pos-chip` override further below in this file needs to out-rank this at
-   equal specificity by coming later in the cascade — if this sat after that
-   media query instead, it would win there too and Level chips would stop
-   responding to the mobile breakpoint that Part of Speech chips still do. */
-.ml-band-row .pos-chip {
-  flex-shrink: 0;
-  font-size: 0.71rem;
-  padding: 0.15rem 0.4rem;
-}
-
-/* ── Add-words search ────────────────────────────────────────── */
-/* Tinted background + its own border/radius so this reads as its own card,
-   distinct from the plain-background existing-list area (header, toolbar,
-   word list) below it — the two used to run together with only a thin
-   border between them. */
-.ml-add-section {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.5rem 0.6rem 0.6rem;
-  margin-bottom: 0.12rem;
-}
-
-/* Now a flex item in .ml-add-top-row (see below) rather than a heading row of
-   its own — sharing the line with the search box and Bulk Import toggle
-   saves the height that standalone row used to cost. */
-.ml-add-heading {
-  flex-shrink: 0;
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.ml-toolbar-label { margin-right: -0.15rem; }
-
-/* ── Heading + search box + bulk-import toggle, side by side ── */
-.ml-add-top-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.ml-add-top-row .ml-add-row {
-  flex: 1;
-  min-width: 0;
 }
 
 /* ── Bulk import ── */
@@ -630,72 +139,6 @@
   border-style: solid;
 }
 
-.ml-bulk-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  margin-top: 0.4rem;
-  padding: 0.5rem;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-}
-.ml-bulk-panel[hidden] { display: none; }
-
-.ml-bulk-input {
-  width: 100%;
-  box-sizing: border-box;
-  resize: vertical;
-  padding: 0.4rem 0.5rem;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.8rem;
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-}
-
-.ml-bulk-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-.ml-bulk-file { font-size: 0.72rem; color: var(--text-muted); max-width: 60%; }
-
-.ml-bulk-add {
-  margin-left: auto;
-  padding: 0.28rem 0.8rem;
-  background: var(--accent);
-  color: var(--on-accent);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-sm);
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.ml-bulk-add:hover { background: var(--accent-hover); }
-
-.ml-bulk-report {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.74rem;
-  color: var(--text-muted);
-  min-height: 1rem;
-}
-.ml-bulk-report:empty { display: none; }
-
-/* ── Variation picker (bulk import near-matches) ── */
-.ml-variation-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.45);
-}
-
 .ml-variation-dialog {
   width: min(560px, 100%);
   max-height: 80vh;
@@ -710,45 +153,6 @@
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 
-.ml-variation-title {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--text);
-}
-.ml-variation-sub {
-  font-size: 0.76rem;
-  color: var(--text-muted);
-}
-
-.ml-variation-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  margin-top: 0.3rem;
-}
-
-.ml-variation-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border);
-}
-.ml-variation-row:last-child { border-bottom: none; }
-
-.ml-variation-token {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.ml-variation-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
 .ml-variation-option {
   padding: 0.25rem 0.6rem;
   background: var(--surface2);
@@ -761,120 +165,6 @@
 .ml-variation-option:hover {
   border-color: var(--accent);
   color: var(--accent);
-}
-.ml-variation-option--picked {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
-}
-
-.ml-variation-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 0.4rem;
-}
-.ml-variation-skip {
-  padding: 0.3rem 0.8rem;
-  background: transparent;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-.ml-variation-add {
-  padding: 0.3rem 0.9rem;
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-sm);
-  color: var(--on-accent);
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.ml-variation-add:hover { background: var(--accent-hover); }
-
-.ml-add-row {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.2rem 0.45rem;
-  transition: border-color var(--transition-fast);
-}
-.ml-add-row:focus-within {
-  border-color: var(--accent);
-  background: var(--surface);
-}
-
-.ml-add-icon {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--accent);
-  flex-shrink: 0;
-  line-height: 1;
-  user-select: none;
-}
-
-.ml-add-input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  font-size: 0.9rem;
-  color: var(--text);
-  outline: none;
-  min-width: 0;
-  padding: 0.1rem 0;
-}
-.ml-add-input::placeholder { color: var(--text-muted); }
-
-.ml-add-results {
-  list-style: none;
-  margin: 0.3rem 0 0;
-  padding: 0.2rem 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-  overflow-y: auto;
-  max-height: 200px;
-  box-shadow: var(--shadow-sm);
-}
-
-.ml-add-result-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.32rem 0.6rem;
-  font-size: 0.88rem;
-  color: var(--text);
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-.ml-add-result-item:hover { background: var(--surface2); }
-
-.ml-add-result-word {
-  font-weight: 600;
-  flex: 0 0 auto;
-  min-width: 90px;
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ml-add-result-trans {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-style: italic;
-  padding-left: 0.4rem;
 }
 
 .ml-add-btn {
@@ -942,52 +232,6 @@ html.dark .ml-word-pos[data-pos] {
   color: hsl(var(--pos-hue) 62% 70%);
 }
 
-/* Smaller variant used inside add-search results */
-.ml-word-pos--result {
-  font-size: 0.58rem;
-  padding: 0.08rem 0.28rem;
-}
-
-/* ── Level (CEFR band) badge, Smart List rows ────────────────────
-   Same pill metrics as .ml-word-pos above (font-size, padding,
-   border-radius, left alignment) — this used to reuse .ml-word-rank (the
-   plain right-aligned monospace frequency-rank number), which is why it
-   looked larger and unstyled next to the POS pill on the same row. Sits in
-   the rank column (unlike .ml-word-pos, which owns the pos column) since
-   Smart List rows don't otherwise show a rank number. */
-.ml-word-band {
-  grid-column: rank;
-  justify-self: start;
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  font-family: 'DM Mono', monospace;
-  padding: 0.1rem 0.35rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  background: var(--surface2);
-  white-space: nowrap;
-  line-height: 1.5;
-}
-/* Same hue-per-level convention as tooltip.css's .tt-band, so a word's Level
-   badge reads the same color whether you're looking at a Smart List row or
-   its hover card. */
-.ml-word-band[data-band="A1"] { --pos-hue: 142; }
-.ml-word-band[data-band="A2"] { --pos-hue: 100; }
-.ml-word-band[data-band="B1"] { --pos-hue:  60; }
-.ml-word-band[data-band="B2"] { --pos-hue:  35; }
-.ml-word-band[data-band="C1"] { --pos-hue:  15; }
-.ml-word-band[data-band="C2"] { --pos-hue:   0; }
-.ml-word-band[data-band] {
-  color:        hsl(var(--pos-hue) 55% 32%);
-  border-color: hsl(var(--pos-hue) 50% 45% / 0.5);
-  background:   hsl(var(--pos-hue) 55% 50% / 0.16);
-}
-html.dark .ml-word-band[data-band] {
-  color: hsl(var(--pos-hue) 65% 72%);
-}
-
 /* ── Export button ───────────────────────────────────────────── */
 
 /* Inline on the title row next to Export/Export Format, not its own
@@ -1032,15 +276,6 @@ html.dark .ml-word-band[data-band] {
   border-color: var(--accent);
 }
 
-/* ── Add-all bar (top of search results) ────────────────────── */
-.ml-add-all-bar {
-  display: flex;
-  align-items: center;
-  padding: 0.25rem 0.55rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface2);
-}
-
 .ml-add-all-btn {
   font-size: 0.72rem;
   font-weight: 700;
@@ -1053,22 +288,6 @@ html.dark .ml-word-band[data-band] {
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 .ml-add-all-btn:hover { background: var(--accent); color: var(--on-accent); }
-
-/* ── Existing words list ─────────────────────────────────────── */
-.ml-word-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.ml-word-empty {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  padding: 0.5rem 0;
-}
 
 /* Grid, not flex — a row's columns (word/POS/rank/translation) need to line
    up at the same x position from one row to the next regardless of how long
@@ -1112,27 +331,6 @@ html.dark .ml-word-band[data-band] {
   padding-right: 0.5rem;
 }
 
-.ml-word-text {
-  grid-column: word;
-  font-weight: 600;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 1rem;
-}
-
-.ml-word-trans {
-  grid-column: trans;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.88rem;
-  color: var(--text-muted);
-  font-style: italic;
-}
-
 /* Word row actions are always visible — they used to fade in on row hover,
    which made them undiscoverable (and unusable on touch). */
 .ml-remove-btn {
@@ -1155,23 +353,6 @@ html.dark .ml-word-band[data-band] {
 }
 
 
-.ml-sort-select {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.3rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-  color: var(--text);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.ml-sort-select:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--focus-ring);
-}
-
-
 /* ── Move-to-list button + popover ──────────────────────────── */
 .ml-word-actions {
   grid-column: actions;
@@ -1185,7 +366,6 @@ html.dark .ml-word-band[data-band] {
    all) never shifts the columns after them. See .ml-word-item's own
    comment for why this has to be explicit rather than DOM-order. */
 .ml-word-item > .audio-play-btn { grid-column: audio; justify-self: start; }
-.ml-word-check { grid-column: check; }
 /* Slightly stronger on row hover, but never hidden */
 .ml-word-item:hover .ml-word-actions :is(.ml-move-btn, .ml-mastery-btn, .ml-remove-btn) {
   border-color: var(--text-muted);
@@ -1209,48 +389,6 @@ html.dark .ml-word-band[data-band] {
   border-color: var(--accent);
 }
 
-/* Jump to this word's editor on My Content — same shell as .ml-move-btn,
-   just its own glyph. */
-.ml-edit-btn {
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  cursor: pointer;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  padding: 0.1rem 0.45rem;
-  border-radius: var(--radius-sm);
-  line-height: 1.2;
-  transition: color var(--transition-fast), background var(--transition-fast),
-              border-color var(--transition-fast);
-}
-.ml-edit-btn:hover {
-  color: var(--accent);
-  background: var(--accent-light);
-  border-color: var(--accent);
-}
-
-/* "Is Due" exemption — same shell as .ml-edit-btn; --on (excluded from due)
-   gets a muted/crossed-out look so an excluded word reads differently from
-   the default included state at a glance, not just via its title text. */
-.ml-due-exempt-btn {
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  cursor: pointer;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  padding: 0.1rem 0.45rem;
-  border-radius: var(--radius-sm);
-  line-height: 1.2;
-  transition: color var(--transition-fast), background var(--transition-fast),
-              border-color var(--transition-fast), opacity var(--transition-fast);
-}
-.ml-due-exempt-btn:hover {
-  color: var(--accent);
-  background: var(--accent-light);
-  border-color: var(--accent);
-}
-.ml-due-exempt-btn--on { opacity: 0.55; }
-
 .ml-move-popover {
   position: absolute;
   z-index: 100;
@@ -1265,50 +403,6 @@ html.dark .ml-word-band[data-band] {
   overflow: hidden;
 }
 
-/* Only rendered for a multi-word move (the bulk toolbar's own button, which
-   — unlike a row's own ⇥ — isn't anchored next to the word(s) it acts on,
-   so the popover needs to say how many are about to move. */
-.ml-move-popover-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  padding: 0.35rem 0.55rem 0.2rem;
-  white-space: nowrap;
-}
-
-.ml-move-popover-item {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  width: 100%;
-  text-align: left;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--text);
-  padding: 0.32rem 0.55rem;
-  border: none;
-  background: none;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.ml-move-popover-item .lang-badge { flex-shrink: 0; }
-.ml-move-popover-item:hover { background: var(--accent-light); color: var(--accent); }
-
-.ml-move-popover-empty {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  font-style: italic;
-  padding: 0.4rem 0.55rem;
-}
-
-/* On mobile, always show actions */
-@media (max-width: 767px) {
-  .ml-word-actions { opacity: 1; }
-}
-
 
 /* ── Stats row ───────────────────────────────────────────────── */
 .ml-stats-row {
@@ -1320,129 +414,6 @@ html.dark .ml-word-band[data-band] {
   padding: 0.05rem 0;
 }
 
-/* Bigger, capitalized, and a distinct color from the POS/Level pill filters
-   (.pos-chip) below — these two are read-only facts about the current view,
-   not togglable filters, so they should not look like more buttons in the
-   same row. */
-.ml-stat-chip {
-  display: inline-block;
-  font-size: 0.76rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  border-radius: 999px;
-  padding: 0.2rem 0.7rem;
-  white-space: nowrap;
-  line-height: 1.5;
-}
-/* Neutral pill — sits ahead of Ranks/Mastered as the plain fact ("this many
-   words total"), so it deliberately doesn't compete with their accent/green
-   for attention, while still reading as the same kind of chip. */
-.ml-stat-chip--count {
-  color: var(--text);
-  background: var(--surface2);
-  border: 1px solid var(--border-strong);
-}
-.ml-stat-chip--ranks {
-  color: var(--accent);
-  background: var(--accent-light);
-  border: 1px solid var(--accent);
-}
-.ml-stat-chip--mastered {
-  color: var(--correct);
-  background: var(--correct-light);
-  border: 1px solid var(--correct);
-}
-/* "None Mastered" — still shown (see row-shared.ts), but dimmed rather than
-   the same celebratory green as an actual count, so an empty list doesn't
-   look like it has achieved something. */
-.ml-stat-chip--mastered-empty {
-  color: var(--text-muted);
-  background: var(--surface2);
-  border-color: var(--border-strong);
-}
-
-/* ── Export format selector ──────────────────────────────────── */
-.ml-export-format-sel {
-  font-size: 0.67rem;
-  padding: 0.12rem 0.25rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-  color: var(--text-muted);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.ml-export-format-sel:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
-/* ── Rank badge on word rows ─────────────────────────────────── */
-.ml-word-rank {
-  grid-column: rank;
-  font-size: 0.8rem;
-  font-weight: 600;
-  font-family: 'DM Mono', monospace;
-  color: var(--text-muted);
-  opacity: 0.8;
-  text-align: right;
-}
-
-/* ── Search result keyboard focus ───────────────────────────── */
-.ml-add-result-item.focused {
-  background: var(--accent-light);
-  color: var(--accent);
-}
-.ml-add-result-item.focused .ml-add-result-trans { color: var(--accent); opacity: 0.8; }
-
-/* ── Word preview ────────────────────────────────────────────── */
-.ml-word-detail {
-  grid-column: 1 / -1;
-  display: none;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.4rem 0.5rem 0.2rem;
-  margin-top: 0.25rem;
-  border-top: 1px dashed var(--border);
-  font-size: 0.82rem;
-}
-.ml-word-item--expanded .ml-word-detail { display: flex; }
-.ml-word-item--expanded { background: var(--accent-light); }
-.ml-word-item--expanded .ml-word-text { color: var(--accent); }
-
-/* Labeled fact table — Added/Mastered/Sense/Glosses/IPA/Example(s), one per
-   row, label dimmed and left of its value (see row-shared.ts's detailRow) —
-   rather than every fact reading as the same flat wrapped run of text. */
-.ml-detail-table {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 0.6rem;
-  row-gap: 0.3rem;
-}
-.ml-detail-row {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: subgrid;
-}
-.ml-detail-label {
-  color: var(--text-muted);
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  white-space: nowrap;
-  padding-top: 0.1rem;
-}
-.ml-detail-value {
-  color: var(--text);
-  line-height: 1.4;
-}
-.ml-detail-none {
-  color: var(--text-muted);
-  font-style: italic;
-}
-
 /* Matched substring in a search result — see dom.ts's fillHighlighted. Not
    scoped to My Lists specifically (a bare element selector, like the rest of
    this app's few global element-level rules), since My Content's own word
@@ -1452,23 +423,6 @@ mark.search-match {
   color: inherit;
   border-radius: 3px;
   padding: 0 1px;
-}
-
-/* ── Conjugation, shown on demand (see buildWordDetail) ───────── */
-.ml-detail-conj-btn {
-  font-size: 0.74rem;
-  font-weight: 600;
-  padding: 0.2rem 0.55rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--accent);
-  cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
-}
-.ml-detail-conj-btn:hover {
-  background: var(--accent-light);
-  border-color: var(--accent);
 }
 .ml-detail-conj {
   flex-basis: 100%;
@@ -1498,12 +452,6 @@ mark.search-match {
 .ml-detail-conj .tt-conj-table td {
   border: 1px solid var(--border);
 }
-
-/* ── Move popover: mode tabs ─────────────────────────────────── */
-.ml-move-popover-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-}
 .ml-move-tab {
   flex: 1;
   font-size: 0.72rem;
@@ -1518,146 +466,10 @@ mark.search-match {
 .ml-move-tab:first-child { border-right: 1px solid var(--border); }
 .ml-move-tab.active { background: var(--accent); color: var(--on-accent); }
 .ml-move-tab:not(.active):hover { background: var(--border); color: var(--text); }
-
-/* ── Mastery button ──────────────────────────────────────────── */
-.ml-mastery-btn {
-  background: var(--surface);
-  border: 1.5px solid var(--border-strong);
-  border-radius: 50%;
-  width: 26px;
-  height: 26px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  flex-shrink: 0;
-  transition: background var(--transition-fast), color var(--transition-fast),
-              border-color var(--transition-fast);
-  line-height: 1;
-}
-.ml-mastery-btn:hover {
-  border-color: var(--correct);
-  color: var(--correct);
-  background: var(--correct-light);
-}
-
-/* Leveled fill — New (grey) through Mastered (green), so the glyph and the
-   colour both read as "how far along the scale". */
-.ml-mastery-btn[data-level="1"] { --mh: 0;   }  /* red    */
-.ml-mastery-btn[data-level="2"] { --mh: 35;  }  /* amber  */
-.ml-mastery-btn[data-level="3"] { --mh: 80;  }  /* yellow-green */
-.ml-mastery-btn[data-level="4"] { --mh: 142; }  /* green  */
-.ml-mastery-btn[data-level]:not([data-level="0"]) {
-  color:        hsl(var(--mh) 60% 30%);
-  border-color: hsl(var(--mh) 55% 42%);
-  background:   hsl(var(--mh) 60% 88%);
-}
-html.dark .ml-mastery-btn[data-level]:not([data-level="0"]) {
-  color:      hsl(var(--mh) 65% 75%);
-  background: hsl(var(--mh) 45% 20%);
-}
-
-/* ── Quiz-history badge ──────────────────────────────────────────
-   Read-only companion to the mastery button: what quizzes have actually
-   shown for this word (session-history.ts's quizStrength), as opposed to the
-   learner's own rating next to it. Same red→green ramp as the mastery button
-   so the two read as the same kind of scale at a glance. */
-.ml-quiz-badge {
-  flex-shrink: 0;
-  font-size: 0.62rem;
-  font-family: 'DM Mono', monospace;
-  font-weight: 700;
-  padding: 0.12rem 0.4rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  background: var(--surface2);
-  min-width: 2.1rem;
-  text-align: center;
-  line-height: 1.5;
-}
-.ml-quiz-badge[data-strength="1"] { --qh: 0;   }
-.ml-quiz-badge[data-strength="2"] { --qh: 35;  }
-.ml-quiz-badge[data-strength="3"] { --qh: 80;  }
-.ml-quiz-badge[data-strength="4"] { --qh: 142; }
-.ml-quiz-badge[data-strength]:not([data-strength="0"]) {
-  color:        hsl(var(--qh) 60% 32%);
-  border-color: hsl(var(--qh) 55% 45% / 0.55);
-  background:   hsl(var(--qh) 60% 50% / 0.12);
-}
-html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
-  color: hsl(var(--qh) 65% 72%);
-}
-
-/* ── Mastered word row ─────────────────────────────────────────
-   Strikethrough used to mark this, but that reads as "wrong" or "removed"
-   elsewhere in the app (a struck-through price, a deleted item) — the
-   opposite of what mastering a word means. A green accent bar (the same
-   inset-shadow technique my-content.css's active-search-result uses, so it
-   never shifts the row's own padding/layout) plus a small ✓ read as
-   "done, in a good way" instead. */
-.ml-word-item--mastered {
-  background: var(--surface2);
-  box-shadow: inset 3px 0 0 var(--correct);
-}
-.ml-word-item--mastered .ml-word-text {
-  color: var(--text-muted);
-}
-.ml-word-item--mastered .ml-word-text::before {
-  content: '✓ ';
-  color: var(--correct);
-  font-weight: 700;
-}
-.ml-word-item--mastered .ml-word-trans,
-.ml-word-item--mastered .ml-word-rank {
-  opacity: 0.5;
-}
-
-/* ── Hide mastered toggle ────────────────────────────────────── */
-.ml-hide-mastered-btn {
-  font-size: 0.68rem;
-  font-weight: 600;
-  padding: 0.15rem 0.5rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-  transition: background var(--transition-fast), color var(--transition-fast),
-              border-color var(--transition-fast);
-}
-.ml-hide-mastered-btn:hover {
-  background: var(--surface2);
-  color: var(--text);
-}
-.ml-hide-mastered-btn--active {
-  background: var(--correct-light);
-  border-color: var(--correct);
-  color: var(--correct);
-}
-
-/* ── Bulk paste feedback toast ───────────────────────────────── */
-.ml-bulk-feedback {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--accent);
-  padding: 0.15rem 0.3rem;
-  animation: ml-fade-out 2.5s ease forwards;
-  pointer-events: none;
-  white-space: nowrap;
-}
 @keyframes ml-fade-out {
   0%,  60% { opacity: 1; }
   100%      { opacity: 0; }
 }
-
-/* ── Responsive ── */
 @media (max-width: 767px) {
   #myListsWrap {
     flex-direction: column;
@@ -1670,232 +482,29 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
     min-height: 0;
     max-height: none;
   }
-  .ml-left-pane {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    /* Was 220px — barely enough to see one or two lists before its own
-       inner scroll kicked in, on top of Smart lists, Cross-Language lists
-       and Testing Profiles all sharing the same box below it. */
-    max-height: 340px;
-  }
-  .ml-list-actions { opacity: 1; }
-
-  /* Always-visible action buttons with proper tap targets */
-  .ml-word-actions { opacity: 1; gap: 0.25rem; }
-  .ml-mastery-btn  { width: 28px; height: 28px; font-size: 0.8rem; }
   .ml-move-btn     { font-size: 1rem; padding: 0.2rem 0.4rem; }
-  .ml-edit-btn     { font-size: 1rem; padding: 0.2rem 0.4rem; }
   .ml-remove-btn   { opacity: 1; font-size: 1.1rem; padding: 0.1rem 0.4rem; }
 
   /* Title group: allow wrapping so quiz/export buttons don't overflow */
   .ml-panel-title-group { gap: 0.4rem; }
   .ml-panel-title { font-size: 0.92rem; }
-  .ml-export-format-sel { font-size: 0.65rem; max-width: 7rem; }
-
-  /* Controls row: let filter take full width, sort + toggle on second line */
-  .ml-panel-controls { flex-wrap: wrap; gap: 0.35rem; }
-  .ml-search         { flex: 1 1 100%; }
-  .ml-sort-select    { flex: 1; }
-
-  /* Slightly taller word rows for touch */
-  .ml-word-item { padding: 0.5rem 0.6rem; }
-
-  /* The word list used to just grow with its content, so on a phone you
-     scrolled past the sidebar, header, filters and add-section every time
-     before reaching more than a couple of words. Giving it its own bounded,
-     scrollable viewport — the same idea desktop already uses via
-     calc(100vh - 140px) — means most of the screen is actual words. */
-  .ml-word-list {
-    min-height: 58vh;
-    max-height: 68vh;
-  }
-
-  /* A slow drag across word/translation text was being read as a text
-     selection instead of a scroll gesture, which is what made the list feel
-     like it wasn't responding to touch. */
-  .ml-word-item {
-    touch-action: pan-y;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-
-  /* Add-words input */
-  .ml-add-input { font-size: 0.9rem; min-height: 40px; }
-
-  /* Bulk-import toggle drops below the search box rather than squeezing it */
-  .ml-add-top-row { flex-wrap: wrap; }
-  .ml-add-top-row .ml-add-row { flex: 1 1 100%; }
-
-  /* POS and Level chip rows: the global .pos-chip mobile rule (class-filter.css)
-     bumps chips up to 36px tall for tap targets, which is right for a single
-     filter row but was too much when POS *and* Level stack on top of it here
-     — full labels like "Prepositions" and "Conjunctions" wrapped across several
-     lines and ate the vertical space item 1 above is trying to reclaim. Kept
-     compact but still comfortably tappable. */
-  .ml-pos-row, .ml-band-row { gap: 0.28rem; }
-  .ml-pos-row .pos-chip, .ml-band-row .pos-chip {
-    font-size: 0.7rem;
-    padding: 0.2rem 0.55rem;
-    min-height: 30px;
-  }
-
-  /* Panel padding */
-  .ml-panel { padding: 0.5rem 0.75rem; }
 }
 
 @media (max-width: 599px) {
-  /* Collapse left pane, but not as tight as before */
-  .ml-left-pane { max-height: 280px; }
 
   /* Title group: Export/Format/Quiz wrap onto their own line below the title
      (.ml-panel-title-group already flex-wraps) rather than squeezing. */
   .ml-panel-title-group { row-gap: 0.35rem; }
   .ml-export-btn { min-height: 36px; padding: 0.2rem 0.5rem; font-size: 0.68rem; }
-
-  /* Hide rank badge on narrow screens — the grid template itself has to
-     drop that column too (not just size it to 0), or `column-gap` still
-     reserves space either side of it even at zero width, undoing the point
-     of reclaiming the space (a fixed grid-template-columns list is a
-     property of the row, not of any one cell's content). */
-  .ml-word-rank { display: none; }
-  .ml-word-item {
-    grid-template-columns:
-      [check] 18px [word] minmax(90px, 1fr) [audio] 22px [pos] 58px
-      [trans] minmax(90px, 1.3fr) [actions] auto;
-  }
-
-  /* Word text slightly smaller */
-  .ml-word-text  { font-size: 0.95rem; }
-  .ml-word-trans { font-size: 0.82rem; }
-
-  /* Stat chips: more compact */
-  .ml-stat-chip { font-size: 0.63rem; padding: 0.08rem 0.45rem; }
-
-  /* Add-section */
-  .ml-add-section { margin-bottom: 0.12rem; }
 }
 
 @media (max-width: 480px) {
-  /* Hide format selector -- default export fine on mobile */
-  .ml-export-format-sel,
-  .ml-export-format-label { display: none; }
 
   .ml-panel-title { font-size: 0.88rem; }
-  .ml-panel-count { display: none; }
-
-  /* Panel: minimal padding */
-  .ml-panel { padding: 0.4rem 0.5rem; gap: 0.35rem; }
 }
-
-/* ═══════════════════════════════════════════════════════════════
-   List toolbar — filter / sort / hide-mastered
-   Moved out of the panel header so it sits directly above the word
-   list it acts on, and sticks there while the list scrolls.
-   ═══════════════════════════════════════════════════════════════ */
-.ml-list-toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 0.85rem 0.4rem;
-  margin-top: 0.08rem;
-  margin-bottom: 0.15rem;
-  background: var(--surface2);
-  /* Rounded on all sides now, matching .ml-add-section's card look above it,
-     rather than the old top/bottom-only hairlines that ran edge-to-edge. */
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  backdrop-filter: blur(6px);
-}
-
-.ml-list-toolbar .ml-panel-controls {
-  flex: 1;
-  gap: 0.5rem;
-}
-
-/* The bulk-select bar used to sit beside the filter/sort controls in the same
-   row, competing for width with them — it declared width:100% while being a
-   flex sibling of another flex:1 item, so it got squeezed down to whatever
-   space was left and its own buttons wrapped raggedly (the last one or two
-   stranded alone on a second line). Giving it the wrap point instead means it
-   always gets the toolbar's full width to lay its buttons out in. */
-.ml-list-toolbar { flex-wrap: wrap; }
-.ml-list-toolbar .ml-bulk-bar {
-  flex: 1 1 100%;
-  margin-top: 0.35rem;
-}
-
-/* The filter is the primary control here, so give it real presence. */
-.ml-list-toolbar .ml-search {
-  font-size: 0.84rem;
-  padding: 0.32rem 0.6rem 0.32rem 1.9rem;
-  border-radius: 99px;
-  background: var(--bg) url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E") no-repeat 0.55rem center / 0.85rem;
-}
-
-.ml-list-toolbar .ml-sort-select,
-.ml-list-toolbar .ml-hide-mastered-btn {
-  font-size: 0.78rem;
-  padding: 0.35rem 0.55rem;
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
-}
-
-/* ── General polish ──────────────────────────────────────────── */
-
-/* Let the word list own the vertical space and scroll on its own, so the
-   header and toolbar stay put instead of scrolling away with it. */
-.ml-panel {
-  display: flex;
-  flex-direction: column;
-}
-.ml-word-list {
-  flex: 1;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-  /* Marks out "the words live here" as its own bordered region, distinct
-     from the sticky toolbar sitting above it. */
-  margin: 0.4rem 0.85rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-}
-
-/* Cross-Language Lists' own Add Vocabulary box: a language picker ahead of
-   the search box, sized to its own content rather than sharing the search
-   box's flex:1 (the base .ml-lang-select rule is meant for the sidebar's
-   full-width language row, not a compact inline picker). */
-.ml-multi-add-lang { flex: 0 0 auto; width: 150px; }
 
 .ml-panel-header {
   padding-bottom: 0.5rem;
-}
-
-/* Sidebar rows: more breathing room now that names can run to two lines. */
-.ml-list-item {
-  padding-top: 0.42rem;
-  padding-bottom: 0.42rem;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-/* Add-results dropdown — clearer separation from the page behind it. */
-.ml-add-results {
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.18));
-  max-height: 340px;
-  overflow-y: auto;
-}
-.ml-add-result-item {
-  transition: background var(--transition-fast);
-}
-.ml-add-result-item:hover,
-.ml-add-result-item.focused {
-  background: var(--accent-light);
 }
 
 /* The + button is the thing people aim at — make it a real target. */
@@ -1911,43 +520,6 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
   background: var(--accent);
   color: var(--on-accent);
 }
-
-/* min-width guard so this stays a "narrow desktop, still side-by-side" rule
-   — without it, `.ml-left-pane { width: 240px }` also matched at true mobile
-   widths (a max-width query has no lower bound of its own) and silently
-   overrode the 767px rule below's `width: 100%`, since it comes later in the
-   cascade at equal specificity. That left the stacked sidebar 240px wide on
-   a 375px screen with ~120px of dead space beside it. */
-@media (min-width: 768px) and (max-width: 900px) {
-  /* Only the toolbar needs to wrap here. The stacked single-column layout
-     kicks in at 767px below, which already handles .ml-left-pane. */
-  .ml-list-toolbar {
-    flex-wrap: wrap;
-    padding: 0.5rem 0.6rem;
-  }
-  .ml-left-pane { width: 260px; }
-}
-
-@media (max-width: 767px) {
-  /* Toolbar wrapping still applies once stacked — the rule above no longer
-     covers this range now that it has a floor. */
-  .ml-list-toolbar {
-    flex-wrap: wrap;
-    padding: 0.5rem 0.6rem;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   CEFR level chips
-   ═══════════════════════════════════════════════════════════════ */
-.ml-band-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  /* Left padding matches .ml-pos-row's — see that rule's own comment. */
-  padding: 0.35rem 0.85rem 0.1rem 0.4rem;
-}
 /* Type from .ui-label. */
 .ml-band-label {
   --ui-label-size: 0.62rem;
@@ -1960,7 +532,6 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
   display: inline-block;
   min-width: 108px;
 }
-.ml-band-chip { font-family: 'DM Mono', monospace; letter-spacing: 0.02em; }
 
 /* ═══════════════════════════════════════════════════════════════
    Filter dropdowns — Part of Speech / Level / Folders / Hide from
@@ -2032,81 +603,6 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
   background: var(--surface2);
   border-radius: var(--radius-sm, 4px);
 }
-.ml-chip-dropdown-new-folder {
-  margin-top: 0.3rem;
-  padding: 0.25rem 0.4rem;
-  font-size: 0.74rem;
-  background: none;
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-sm, 4px);
-  color: var(--text-muted);
-  cursor: pointer;
-  align-self: flex-start;
-}
-.ml-chip-dropdown-new-folder:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   Multi-select
-   ═══════════════════════════════════════════════════════════════ */
-.ml-word-check {
-  flex-shrink: 0;
-  width: 15px;
-  height: 15px;
-  margin-right: 0.15rem;
-  cursor: pointer;
-  accent-color: var(--accent);
-}
-
-.ml-bulk-bar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  width: 100%;
-  margin-top: 0.5rem;
-  padding: 0.4rem 0.5rem;
-  background: var(--accent-light);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-sm);
-}
-.ml-bulk-count {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--accent);
-  margin-right: 0.3rem;
-  white-space: nowrap;
-}
-.ml-bulk-btn {
-  font-size: 0.72rem;
-  padding: 0.25rem 0.5rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
-}
-.ml-bulk-btn:hover { background: var(--surface2); border-color: var(--accent); }
-.ml-bulk-btn--danger:hover {
-  background: var(--danger-light);
-  border-color: var(--danger);
-  color: var(--danger);
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   Chunked rendering sentinel
-   ═══════════════════════════════════════════════════════════════ */
-.ml-chunk-sentinel {
-  padding: 0.7rem 0.85rem;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  text-align: center;
-  font-style: italic;
-}
 
 /* ═══════════════════════════════════════════════════════════════
    Undo toast
@@ -2160,29 +656,6 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
   .ml-undo-toast { animation: none; }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Smart lists — saved queries, not stored word sets
-   ═══════════════════════════════════════════════════════════════ */
-.ml-profile-mode-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem;
-  padding: 0.4rem 0.85rem 0.15rem;
-  font-size: 0.62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--ml-accent-profile);
-}
-.ml-profile-mode-head .ml-new-list-btn {
-  text-transform: none;
-  letter-spacing: normal;
-  border-color: var(--ml-accent-profile);
-  color: var(--ml-accent-profile);
-}
-.ml-profile-mode-head .ml-new-list-btn:hover { background: var(--ml-accent-profile); color: #fff; }
-
 .ml-profile-mode-tag {
   font-size: 0.64rem;
   font-weight: 700;
@@ -2194,174 +667,10 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
   border-radius: 999px;
   padding: 0.12rem 0.55rem;
 }
-
-.ml-single-head,
-.ml-smart-head,
-.ml-multi-head,
-.ml-profile-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem;
-  padding: 0.55rem 0.65rem 0.3rem;
-  margin-top: 0.4rem;
-  border-top: 1px solid var(--border);
-  font-size: 0.64rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
-/* The very first section head has nothing above it to separate from. */
-.ml-single-head { margin-top: 0; border-top: none; }
-
-/* "+ Folder" and "+ New" (sidebar.ts's sectionHead()) share one flex group
-   so the head's own `justify-content: space-between` (label vs. actions)
-   only ever pushes *that* pair apart — without this they were themselves
-   two separate flex children of the head, so space-between spread all three
-   (label, +Folder, +New) evenly across the row instead of keeping the two
-   buttons next to each other. */
-.ml-section-head-btns {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-/* Collapse/expand toggle wrapping the head's own label (see sidebar.ts's
-   renderSection()) — plain button reset so it reads as the same label text
-   it's wrapping, not a button, plus the disclosure caret. */
-.ml-section-toggle-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0;
-  font: inherit;
-  color: inherit;
-  text-transform: inherit;
-  letter-spacing: inherit;
-  cursor: pointer;
-}
 .ml-section-caret {
   display: inline-block;
   font-size: 0.7em;
   width: 0.8em;
-}
-
-/* A section's rows, all nested inside one real <ul> (sidebar.ts's
-   renderSection()) so collapsing the section is a single `hidden` flip on
-   this element instead of one per row. */
-.ml-section-body {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.ml-section-body[hidden] { display: none; }
-
-/* A folder within a section (see sidebar.ts's buildFolderGroup(), used by
-   both renderSection()'s generic pass and renderProfilesNav()'s bespoke
-   per-mode one) — a visually distinct box so a folder reads as its own
-   container the individual list cards sit *inside*, not just another card
-   among them. Dashed border (vs. the solid one on `.ml-list-item--full`)
-   and a muted fill keep it from being confused with an actual list, even
-   though the same list can render inside more than one such box at once
-   (once per folder it belongs to — see metaFolders()/renderSingleNav() etc). */
-.ml-folder-group {
-  margin: 0.3rem 0.55rem 0.35rem;
-  padding: 0.05rem 0 0.35rem;
-  border: 1.5px dashed var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface2);
-}
-.ml-folder-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem;
-  padding: 0.3rem 0.6rem 0.15rem;
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: var(--text-muted);
-}
-/* Bulk "Hide From" for every list currently in this folder at once (see
-   sidebar.ts's bulkHideFromFor) — the same dropdown control panel.ts/
-   multi-panel.ts use per-list, just shrunk to fit the folder header's
-   smaller, muted row instead of the full-size filter row it normally sits
-   in. Testing Profiles folders never pass one (a profile already belongs to
-   exactly one mode), so this simply doesn't render there. */
-.ml-folder-hide-from .ml-chip-dropdown-toggle {
-  font-size: 0.66rem;
-  font-weight: 600;
-  padding: 0.12rem 0.45rem;
-  text-transform: none;
-  letter-spacing: normal;
-}
-.ml-folder-body {
-  list-style: none;
-  margin: 0;
-  padding: 0 0.15rem;
-}
-.ml-folder-body[hidden] { display: none; }
-
-/* ── Drag-and-drop: a list card onto a folder header (sidebar.ts's
-   makeListDraggable/makeFolderDropTarget) — Single-Language, Smart and
-   Cross-Language Lists only, see makeFolderDropTarget's own comment for
-   why Testing Profiles isn't included. ── */
-.ml-list-item--dragging {
-  opacity: 0.4;
-}
-.ml-folder-head--drop-target {
-  background: var(--accent-light);
-  outline: 2px dashed var(--accent);
-  outline-offset: -2px;
-  border-radius: var(--radius-sm);
-}
-/* Rows inside a folder box already have the box's own border/padding for
-   separation, so their individual card margins are trimmed down from the
-   ungrouped default — otherwise the folder box read as mostly empty space. */
-.ml-folder-body .ml-list-item--full {
-  margin: 0.16rem 0.15rem;
-}
-
-/* ── Per-card settings panel (Folder, Hide from, language lock) — toggled by
-   the "⚙" button, same expand-in-place shape as My Content's own row
-   editors rather than a popover. */
-.ml-settings-panel {
-  padding: 0.5rem 0.65rem 0.6rem;
-  border-top: 1px dashed var(--border);
-  margin-top: 0.3rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  cursor: default;
-}
-.ml-settings-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.72rem;
-}
-.ml-settings-label {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: var(--text-muted);
-  font-weight: 600;
-}
-.ml-settings-folder-input {
-  font-size: 0.72rem;
-  padding: 0.2rem 0.4rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text);
-  min-width: 0;
-  flex: 1;
-}
-.ml-settings-row--hide {
-  flex-wrap: wrap;
 }
 .ml-settings-hide-item {
   display: flex;
@@ -2372,118 +681,12 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
   white-space: nowrap;
 }
 
-.ml-smart-hint {
-  font-size: 0.7rem;
-  font-style: italic;
-  opacity: 0.75;
-}
-.ml-smart-item .ml-list-name { font-weight: 500; }
-
 .ml-smart-desc {
   margin: 0.15rem 0 0.5rem;
   padding: 0 0.85rem;
   font-size: 0.74rem;
   color: var(--text-muted);
 }
-
-/* ── Per-section accent: each list kind gets its own recognizable color, so
-   the sidebar reads as four distinct sections rather than one undifferentiated
-   list. Single-Language Lists use the app's baseline --accent, the other
-   three each have their own hue (variables.css). ── */
-.ml-single-head  { color: var(--accent); }
-.ml-smart-head   { color: var(--ml-accent-smart); }
-.ml-multi-head   { color: var(--ml-accent-multi); }
-.ml-profile-head { color: var(--ml-accent-profile); }
-
-.ml-single-head .ml-new-list-btn { border-color: var(--accent); color: var(--accent); }
-.ml-single-head .ml-new-list-btn:hover { background: var(--accent); color: var(--on-accent); }
-
-.ml-smart-head .ml-new-list-btn {
-  border-color: var(--ml-accent-smart);
-  color: var(--ml-accent-smart);
-}
-.ml-smart-head .ml-new-list-btn:hover { background: var(--ml-accent-smart); color: #fff; }
-
-.ml-multi-head .ml-new-list-btn {
-  border-color: var(--ml-accent-multi);
-  color: var(--ml-accent-multi);
-}
-.ml-multi-head .ml-new-list-btn:hover { background: var(--ml-accent-multi); color: #fff; }
-
-.ml-profile-head .ml-new-list-btn {
-  border-color: var(--ml-accent-profile);
-  color: var(--ml-accent-profile);
-}
-.ml-profile-head .ml-new-list-btn:hover { background: var(--ml-accent-profile); color: #fff; }
-
-/* ── List cards ──────────────────────────────────────────────────────────
-   Every kind of list — Single-Language, Smart, Cross-Language, Testing
-   Profile — renders as the same card shape: a bordered, rounded box with the
-   name/meta on top and Copy/Rename/Delete below, spaced apart from its
-   neighbors rather than running together as bare rows. */
-.ml-list-item--full {
-  margin: 0.22rem 0.55rem;
-  /* Bottom trimmed back down — the larger title→actions gap above (see the
-     other .ml-list-item--full rule's own `gap`) already pushed the actions
-     row visually closer to the card's bottom edge than intended. */
-  padding: 0.45rem 0.6rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left-width: 3px;
-  border-radius: var(--radius-sm);
-}
-.ml-list-item--full:hover { background: var(--surface2); }
-.ml-list-item--full.active { box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); }
-
-/* A slight shade of each section's own color, at rest — not only once a
-   card is hovered or selected — so the four sections read as distinct
-   zones at a glance. */
-.ml-single-item  { background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
-.ml-smart-item   { background: color-mix(in srgb, var(--ml-accent-smart) 6%, var(--surface));
-                    border-left-color: color-mix(in srgb, var(--ml-accent-smart) 45%, transparent); }
-.ml-multi-item   { background: color-mix(in srgb, var(--ml-accent-multi) 6%, var(--surface));
-                    border-left-color: color-mix(in srgb, var(--ml-accent-multi) 45%, transparent); }
-.ml-profile-item { background: color-mix(in srgb, var(--ml-accent-profile) 6%, var(--surface));
-                    border-left-color: color-mix(in srgb, var(--ml-accent-profile) 45%, transparent); }
-
-.ml-smart-item.active {
-  background: var(--ml-accent-smart-light);
-  color: var(--ml-accent-smart);
-  border-left-color: var(--ml-accent-smart);
-}
-.ml-multi-item.active {
-  background: var(--ml-accent-multi-light);
-  color: var(--ml-accent-multi);
-  border-left-color: var(--ml-accent-multi);
-}
-.ml-profile-item.active {
-  background: var(--ml-accent-profile-light);
-  color: var(--ml-accent-profile);
-  border-left-color: var(--ml-accent-profile);
-}
-
-.ml-smart-item.active .ml-list-actions,
-.ml-smart-item.active .ml-list-count {
-  background: var(--ml-accent-smart-light);
-  box-shadow: 0 0 0 4px var(--ml-accent-smart-light);
-}
-.ml-smart-item.active .ml-list-count { border-color: var(--ml-accent-smart); color: var(--ml-accent-smart); }
-
-.ml-multi-item.active .ml-list-actions,
-.ml-multi-item.active .ml-list-count {
-  background: var(--ml-accent-multi-light);
-  box-shadow: 0 0 0 4px var(--ml-accent-multi-light);
-}
-.ml-multi-item.active .ml-list-count { border-color: var(--ml-accent-multi); color: var(--ml-accent-multi); }
-
-.ml-profile-item.active .ml-list-actions {
-  background: var(--ml-accent-profile-light);
-  box-shadow: 0 0 0 4px var(--ml-accent-profile-light);
-}
-
-/* A profile row has no dedicated right-panel of its own before it's opened,
-   so its card is clickable the same way every other kind's is. */
-.ml-profile-item { cursor: pointer; }
 
 .ml-smart-editor {
   display: flex;
@@ -2494,67 +697,6 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
-
-/* ── Smart Lists' rule editor, split into collapsible groups (Filters /
-   Refine / Manual Additions / Limit & Order) — same shape and collapse
-   mechanics as Testing Profiles' .ml-profile-editor-group below, themed to
-   Smart Lists' own accent color, so the word-list preview beneath the
-   editor can claim back whatever height a collapsed group frees up. ── */
-.ml-smart-editor-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.55rem 0.7rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--ml-accent-smart);
-  border-radius: var(--radius-sm);
-}
-button.ml-smart-editor-group-title {
-  width: 100%;
-  justify-content: flex-start;
-  font-size: 0.68rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--ml-accent-smart);
-}
-.ml-smart-editor-group-body:not(.filter-body--collapsed) {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-/* ── Manual word additions (inside the "Manual Additions" group) ── */
-.ml-smart-manual-chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
-}
-.ml-smart-manual-empty {
-  font-size: 0.76rem;
-  font-style: italic;
-  color: var(--text-muted);
-}
-.ml-smart-manual-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  cursor: default;
-}
-.ml-smart-manual-remove {
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0;
-  line-height: 1;
-  font-size: 0.9rem;
-  color: inherit;
-  opacity: 0.6;
-  cursor: pointer;
-}
-.ml-smart-manual-remove:hover { opacity: 1; }
 
 /* ── Testing Profiles' inline editor — same "expand in place" idea as
    .ml-smart-editor above, its own section/chip shapes since a profile
@@ -2737,48 +879,6 @@ button.ml-profile-editor-group-title {
 .ml-profile-editor-number {
   width: 5.5rem;
 }
-.ml-profile-editor-hint {
-  font-size: 0.74rem;
-  font-style: italic;
-  color: var(--text-muted);
-}
-.ml-profile-editor-actions {
-  display: flex;
-  gap: 0.4rem;
-  padding-top: 0.2rem;
-}
-.ml-profile-editor-actions .ml-text-btn {
-  border-color: var(--ml-accent-profile);
-  color: var(--ml-accent-profile);
-}
-.ml-profile-editor-actions .ml-text-btn:hover { background: var(--ml-accent-profile); color: #fff; }
-.ml-smart-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-}
-.ml-smart-row .ml-band-label {
-  min-width: 72px;
-  margin-right: 0.1rem;
-}
-.ml-smart-row .ml-sort-select { font-size: 0.75rem; }
-
-/* ── Gear action menu (Copy / Rename / Delete) ─────────────────────────── */
-.ml-menu-wrap { margin-left: auto; flex-shrink: 0; }
-.ml-menu-gear {
-  font-size: 0.9rem;
-  line-height: 1;
-  padding: 0.2rem 0.4rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text-muted);
-  cursor: pointer;
-}
-.ml-menu-gear:hover, .ml-menu-gear[aria-expanded="true"] {
-  color: var(--accent); border-color: var(--accent); background: var(--accent-light);
-}
 .ml-action-menu {
   position: fixed;
   z-index: 1000;
@@ -2792,106 +892,12 @@ button.ml-profile-editor-group-title {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 .ml-action-menu[hidden] { display: none; }
-.ml-menu-item {
-  --tone: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.6rem;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--tone);
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-}
-.ml-menu-item:hover, .ml-menu-item:focus-visible {
-  background: color-mix(in srgb, var(--tone) 14%, transparent);
-  outline: none;
-}
-.ml-menu-item--settings { --tone: var(--ml-menu-settings); }
-.ml-menu-item--copy     { --tone: var(--ml-menu-copy); }
-.ml-menu-item--rename   { --tone: var(--ml-menu-rename); }
-.ml-menu-item--delete   { --tone: var(--danger); }
-
-/* Testing Profiles: collapsible per-mode group */
-.ml-profile-mode-group { list-style: none; }
-.ml-profile-mode-head .ml-section-toggle-btn {
-  color: inherit; font: inherit; text-transform: inherit; letter-spacing: inherit;
-}
-.ml-profile-mode-body { list-style: none; margin: 0; padding: 0; }
-.ml-profile-mode-body[hidden] { display: none; }
-
-.ml-list-row-top { align-items: center; }
-
-.ml-list-row-top .ml-list-name { text-align: left; }
-
-/* Cards stretch their rows full-width so name sits left, count + gear right. */
-.ml-list-item.ml-list-item--full { align-items: stretch; }
-
-/* -- Folder colour + emoji ------------------------------------------------ */
-.ml-folder-head--colored {
-  border-left: 3px solid var(--folder-color);
-  background: color-mix(in srgb, var(--folder-color) 10%, transparent);
-}
-/* Mixed toward the text colour: a folder's colour is user data, and a dark
-   purple or pale yellow used as text fails contrast on one theme or the other. */
-.ml-folder-head--colored .ml-section-toggle-btn { color: color-mix(in srgb, var(--folder-color) 45%, var(--text)); }
-.ml-folder-style-btn {
-  margin-left: auto;
-  border: 0; background: none; cursor: pointer;
-  font-size: 0.75rem; opacity: 0.45; padding: 0.1rem 0.25rem;
-}
-.ml-folder-head:hover .ml-folder-style-btn, .ml-folder-style-btn:focus-visible { opacity: 1; }
 .ml-folder-style-pop {
   position: fixed; z-index: 1001; width: 14.5rem;
   display: flex; flex-direction: column; gap: 0.55rem;
   padding: 0.6rem; background: var(--surface);
   border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
-}
-.ml-folder-style-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); }
-.ml-folder-style-row input { flex: 1; min-width: 0; font-size: 1rem; padding: 0.15rem 0.35rem; }
-.ml-folder-style-quick, .ml-folder-style-colors { display: flex; flex-wrap: wrap; gap: 0.3rem; }
-.ml-folder-style-quick button { border: 1px solid var(--border); background: var(--surface2); border-radius: var(--radius-sm); cursor: pointer; padding: 0.1rem 0.3rem; font-size: 0.95rem; }
-.ml-folder-swatch { width: 1.35rem; height: 1.35rem; border-radius: 50%; border: 2px solid transparent; cursor: pointer; color: var(--text-muted); font-size: 0.7rem; background: var(--surface2); }
-.ml-folder-swatch--on { border-color: var(--text); }
-/* The custom-colour swatch is a real <input type="color">, not a <button> —
-   it opens the OS's own colour dialog (Windows: the classic picker with a
-   "Custom colors" hex/RGB definer) rather than anything drawn in CSS. Reset
-   the native chrome down to the same circle every preset swatch uses. */
-.ml-folder-swatch--custom {
-  padding: 0; -webkit-appearance: none; appearance: none;
-  background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
-}
-.ml-folder-swatch--custom::-webkit-color-swatch-wrapper { padding: 0; border-radius: 50%; overflow: hidden; }
-.ml-folder-swatch--custom::-webkit-color-swatch { border: none; border-radius: 50%; }
-.ml-folder-swatch--custom::-moz-color-swatch { border: none; border-radius: 50%; }
-
-/* Emoji picker categories — tabs above the grid (see sidebar-pickers.ts). */
-.ml-emoji-tabs { display: flex; flex-wrap: wrap; gap: 0.2rem; }
-.ml-emoji-tab {
-  border: 1px solid transparent; background: none; cursor: pointer;
-  font-size: 0.66rem; font-weight: 600; color: var(--text-muted);
-  padding: 0.1rem 0.4rem; border-radius: 99px;
-}
-.ml-emoji-tab:hover { background: var(--surface2); }
-.ml-emoji-tab--on { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
-
-/* -- List/smart/multi/visual/profile card colour (same picker as a folder's) -- */
-.ml-list-item--colored:not(.active) {
-  border-left-color: color-mix(in srgb, var(--list-color) 65%, transparent);
-  background: color-mix(in srgb, var(--list-color) 16%, var(--surface));
-}
-.ml-list-item--colored:not(.active):hover {
-  background: color-mix(in srgb, var(--list-color) 26%, var(--surface));
-}
-.ml-list-item--colored .ml-list-count {
-  color: color-mix(in srgb, var(--list-color) 70%, var(--text));
-  background: color-mix(in srgb, var(--list-color) 18%, var(--surface2));
-  border-color: color-mix(in srgb, var(--list-color) 45%, var(--border));
 }
 
 /* Long checklist dropdown (Domain): scrolling options + search box */
@@ -2908,76 +914,9 @@ button.ml-profile-editor-group-title {
 }
 .ml-chip-dropdown-empty { padding: 0.3rem; font-size: 0.75rem; color: var(--text-muted); }
 
-/* Smart list: words pinned by hand */
-.ml-word-item--manual {
-  background: color-mix(in srgb, var(--ml-accent-smart) 12%, transparent);
-  box-shadow: inset 3px 0 0 var(--ml-accent-smart);
-}
-.ml-word-manual-tag {
-  flex-shrink: 0; margin-left: auto;
-  padding: 0.05rem 0.45rem; border-radius: 99px;
-  font-size: 0.65rem; font-weight: 700;
-  color: var(--ml-accent-smart);
-  border: 1px solid var(--ml-accent-smart);
-  background: var(--ml-accent-smart-light);
-}
-
 /* My Lists sits flush under the top settings bar — the bar's usual bottom
    margin (a gap before the quiz area in the other modes) is dead space here. */
 #controls:has(~ #myListsArea:not([hidden])) { margin-bottom: 0; }
-
-/* Sidebar sections: a slight wash of each list type's own colour behind the
-   whole section (head + cards), so the four kinds read as distinct zones. */
-.ml-single-head, .ml-section-body--single { background: color-mix(in srgb, var(--accent) 4%, transparent); }
-.ml-smart-head,  .ml-section-body--smart  { background: color-mix(in srgb, var(--ml-accent-smart) 4.5%, transparent); }
-.ml-multi-head,  .ml-section-body--multi  { background: color-mix(in srgb, var(--ml-accent-multi) 4.5%, transparent); }
-.ml-profile-head, .ml-section-body--profiles, .ml-section-body--visual {
-  background: color-mix(in srgb, var(--ml-accent-profile) 4.5%, transparent);
-}
-/* 1px top padding stops the first card's margin collapsing out of the body,
-   which left an unwashed strip between the head row and the cards. */
-.ml-section-body { padding: 1px 0 0.25rem; }
-
-/* "This smart list has manual additions" marker (sidebar card + editor title) */
-.ml-manual-badge {
-  flex-shrink: 0;
-  padding: 0.05rem 0.4rem; border-radius: 99px;
-  font-size: 0.65rem; font-weight: 700; white-space: nowrap;
-  color: var(--ml-accent-smart);
-  border: 1px solid var(--ml-accent-smart);
-  background: var(--ml-accent-smart-light);
-}
-.ml-smart-manual-box { margin: 0 0 0.4rem; }
-
-
-/* Smart list Manual Additions: label, input and words dropdown on one line */
-.ml-smart-manual-row {
-  display: flex; align-items: center; gap: 0.6rem;
-  padding: 0.5rem 0.85rem;
-}
-.ml-smart-manual-label { white-space: nowrap; flex-shrink: 0; }
-.ml-smart-manual-row .ml-add-row { flex: 1; min-width: 0; }
-.ml-chip-dropdown-panel--right { left: auto; right: 0; }
-.ml-manual-dd-panel { width: 22rem; max-width: min(22rem, calc(100vw - 2rem)); }
-.ml-manual-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0.3rem; font-size: 0.78rem; }
-.ml-manual-item:hover { background: var(--surface2); border-radius: var(--radius-sm, 4px); }
-.ml-manual-item-word { font-weight: 600; }
-.ml-manual-item-trans { flex: 1; min-width: 0; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ml-smart-manual-remove {
-  border: 0; background: none; cursor: pointer; color: var(--text-muted);
-  font-size: 1rem; line-height: 1; padding: 0 0.3rem; border-radius: var(--radius-sm, 4px);
-}
-.ml-smart-manual-remove:hover { color: var(--danger); background: var(--danger-light); }
-
-/* Per-list emoji, and the gear menu's "Emoji" entry */
-.ml-list-emoji { flex-shrink: 0; margin-right: 0.1rem; }
-.ml-menu-item--emoji { --tone: var(--ml-menu-emoji); }
-
-/* Manual Additions: one slim line */
-.ml-smart-manual-row { padding: 0.2rem 0.85rem; gap: 0.5rem; }
-.ml-smart-manual-box { margin: 0; }
-.ml-smart-manual-box .ml-add-row { padding-top: 0.2rem; padding-bottom: 0.2rem; }
-.ml-smart-manual-box .ml-chip-dropdown-toggle { padding-top: 0.2rem; padding-bottom: 0.2rem; }
 
 /* ── Title row: stats after the title, actions at the far right ─────────── */
 .ml-title-actions {
@@ -2985,43 +924,9 @@ button.ml-profile-editor-group-title {
   margin-left: auto;
 }
 .ml-panel-title-group .ml-stats-row { min-height: 0; padding: 0; flex-wrap: nowrap; }
-
-/* ── Sidebar header: title + Browse All Words + Collapse/Backup/Restore ─── */
-.ml-header { justify-content: flex-start; gap: 0.3rem; }
-.ml-header .ml-sidebar-title { margin-right: 0.15rem; }
-.ml-header .ml-icon-btn.ml-text-btn { padding: 0.2rem 0.5rem; }
-.ml-icon-btn.ml-text-btn.ml-browse-btn--active {
-  background: var(--accent-light); border-color: var(--accent); color: var(--accent);
-}
-
-/* Folder gear menu: "Hide From" entry */
-.ml-menu-item--hide { --tone: var(--ml-menu-hide); }
-
-/* ── Tighter vertical rhythm ─────────────────────────────────────────────── */
-.ml-panel { gap: 0.25rem; padding-top: 0.5rem; padding-bottom: 0.5rem; }
 .ml-panel-header { gap: 0.2rem; padding-bottom: 0.25rem; }
 .ml-filter-dropdowns-row { padding: 0.1rem 0.85rem 0.2rem 0.4rem; gap: 0.4rem; }
-.ml-add-section { padding: 0.35rem 0.6rem 0.4rem; margin-bottom: 0; }
-.ml-list-toolbar { padding: 0.4rem 0.85rem 0.3rem; margin-top: 0; margin-bottom: 0.1rem; }
-.ml-list-toolbar .ml-bulk-bar { margin-top: 0.2rem; }
-.ml-smart-manual-row { padding-top: 0.15rem; padding-bottom: 0.15rem; }
 .ml-lang-row { padding: 0.3rem 0.65rem; }
-.ml-header { padding: 0.3rem 0.65rem 0.3rem; }
-.ml-list-nav { padding: 0.1rem 0; }
-.ml-single-head, .ml-smart-head, .ml-multi-head, .ml-profile-head { padding-top: 0.3rem; padding-bottom: 0.25rem; }
-.ml-list-item--full { margin-top: 0.12rem; margin-bottom: 0.12rem; padding-top: 0.32rem; padding-bottom: 0.32rem; }
-.ml-folder-body .ml-list-item--full { margin-top: 0.08rem; margin-bottom: 0.08rem; }
-.ml-folder-head { padding-top: 0.2rem; padding-bottom: 0.2rem; }
-
-/* Manual Additions: rounded, slim card like the filter bar below it */
-.ml-smart-manual-box {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  margin: 0.1rem 0;
-  padding: 0;
-}
-.ml-smart-manual-box .ml-smart-manual-row { padding: 0.15rem 0.6rem; }
 
 /* Checklist dropdown extras: group headings, badges, hints */
 .ml-chip-dropdown-group {
@@ -3037,124 +942,6 @@ label.ml-chip-dropdown-group { display: flex; align-items: center; gap: 0.4rem; 
 label.ml-chip-dropdown-group:hover { color: var(--text); }
 .ml-chip-dropdown-group--empty { font-style: italic; opacity: 0.75; }
 
-/* Visual Profile panel (visual-panel.ts): setting cards in a responsive grid, one setting per line */
-.ml-vp-current { align-self: flex-start; }
-.ml-vp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-@media (max-width: 560px) { .ml-vp-grid { grid-template-columns: minmax(0, 1fr); } }
-.ml-vp-card { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; min-width: 0;
-  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
-.ml-vp-card-title { display: flex; flex-direction: column; margin: 0 0 4px; font-size: 0.95em; font-weight: 600; }
-.ml-vp-card-hint { font-size: 0.8em; font-weight: 400; opacity: 0.8; }
-.ml-vp-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 0;
-  border-top: 1px solid var(--border); font-size: 0.9em; cursor: pointer; }
-.ml-vp-card-title + .ml-vp-row { border-top: 0; }
-.ml-vp-row-label { min-width: 0; }
-.ml-vp-select { flex: 0 1 9em; min-width: 0; }
-
-/* ── Visual Profiles get their own colour (rose), so they read as a fifth kind of list rather than
-   a second Testing Profiles. Every rule that uses the profile accent inside these elements picks it
-   up through the variable, so nothing else here needs to know about it. ── */
-/* Single-Language Lists have no accent of their own in the rules above — they use the app's --accent —
-   so, like Visual Profiles, they get theirs by re-pointing that variable inside their own section. */
-.ml-single-head, .ml-section-body--single {
-  --accent: var(--ml-accent-single);
-  --accent-light: var(--ml-accent-single-light);
-}
-.ml-visual-head, .ml-visual-item, .ml-section-body--visual, .ml-visual-panel {
-  --ml-accent-profile: var(--ml-accent-visual);
-  --ml-accent-profile-light: var(--ml-accent-visual-light);
-}
-
-/* ── Stronger colour in the sidebar ─────────────────────────────────────────────────────────────
-   Each kind's wash behind its section and its cards was 4–6%, which on most screens is close to
-   invisible. The section's header bar is now its own, clearly stronger band with an accent edge, so
-   it reads as the title of an option group; its label is darkened (light theme) or lightened (dark)
-   toward the text colour so the stronger tint does not cost contrast. ── */
-.ml-single-head, .ml-smart-head, .ml-multi-head, .ml-profile-head {
-  --ml-head-accent: var(--accent);
-  border-top: 0;
-  border-left: 4px solid var(--ml-head-accent);
-  margin-top: 0.5rem;
-  padding-left: 0.6rem;
-  background: color-mix(in srgb, var(--ml-head-accent) 22%, var(--surface));
-  color: color-mix(in srgb, var(--ml-head-accent) 60%, var(--text));
-}
-.ml-single-head { margin-top: 0; }
-/* A clear, full-width rule above every section but the first — the coloured
-   left edge alone was easy to miss scrolling fast; this makes "a new section
-   just started" unambiguous regardless of how similar two accent colours are. */
-.ml-smart-head, .ml-multi-head, .ml-profile-head {
-  border-top: 2px solid var(--border-strong);
-  padding-top: calc(0.25rem + 2px);
-}
-.ml-smart-head   { --ml-head-accent: var(--ml-accent-smart); }
-.ml-multi-head   { --ml-head-accent: var(--ml-accent-multi); }
-.ml-profile-head { --ml-head-accent: var(--ml-accent-profile); }
-
-.ml-section-body--single   { background: color-mix(in srgb, var(--accent) 10%, transparent); }
-.ml-section-body--smart    { background: color-mix(in srgb, var(--ml-accent-smart) 11%, transparent); }
-.ml-section-body--multi    { background: color-mix(in srgb, var(--ml-accent-multi) 11%, transparent); }
-.ml-section-body--profiles, .ml-section-body--visual { background: color-mix(in srgb, var(--ml-accent-profile) 11%, transparent); }
-
-.ml-single-item  { background: color-mix(in srgb, var(--accent) 11%, var(--surface));
-                   border-left-color: color-mix(in srgb, var(--accent) 65%, transparent); }
-.ml-smart-item   { background: color-mix(in srgb, var(--ml-accent-smart) 13%, var(--surface));
-                   border-left-color: color-mix(in srgb, var(--ml-accent-smart) 65%, transparent); }
-.ml-multi-item   { background: color-mix(in srgb, var(--ml-accent-multi) 13%, var(--surface));
-                   border-left-color: color-mix(in srgb, var(--ml-accent-multi) 65%, transparent); }
-.ml-profile-item { background: color-mix(in srgb, var(--ml-accent-profile) 13%, var(--surface));
-                   border-left-color: color-mix(in srgb, var(--ml-accent-profile) 65%, transparent); }
-.ml-single-item.active { background: var(--accent-light); }
-.ml-smart-item.active   { background: var(--ml-accent-smart-light); }
-.ml-multi-item.active   { background: var(--ml-accent-multi-light); }
-.ml-profile-item.active { background: var(--ml-accent-profile-light); }
-
-/* The header bar is tinted now, so its buttons sit on a solid surface to keep their own contrast. */
-.ml-single-head .ml-new-list-btn, .ml-smart-head .ml-new-list-btn,
-.ml-multi-head .ml-new-list-btn, .ml-profile-head .ml-new-list-btn { background: var(--surface); }
-
-/* ── Testing Profiles: less vertical space per mode group ────────────────────
-   Table/Picture/Conjugation each get their own mode-head band plus every
-   profile row inside it — the tallest section once a couple of modes have a
-   handful of profiles each. Tightened on top of .ml-list-item--full's own
-   thinner rows above. */
-.ml-profile-mode-head { padding: 0.25rem 0.85rem 0.1rem; }
-.ml-profile-mode-body .ml-list-item--full { margin-top: 0.05rem; margin-bottom: 0.05rem; padding-top: 0.22rem; padding-bottom: 0.22rem; }
-.ml-profile-mode-body .ml-folder-head { padding-top: 0.14rem; padding-bottom: 0.14rem; }
-
-/* A word that is in an aggregate list because of one of its source lists. It lives inside the meaning cell
-   (multi-panel.ts), after the meaning, so it never takes a grid column of its own. */
-.ml-word-via {
-  display: inline-block;
-  margin-left: 0.5rem;
-  vertical-align: middle;
-  font-size: 0.68rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-  max-width: 9rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Nested folders: each level steps in */
-.ml-folder-body .ml-folder-group { margin-left: 0.6rem; }
-
-/* Dragging: the strip that takes a list or folder out of its folder, and a folder being dragged */
-.ml-root-drop { display: none; }
-body .ml-root-drop.ml-root-drop--armed {
-  display: block;
-  margin: 0.2rem 0;
-  padding: 0.35rem 0.6rem;
-  border: 1px dashed var(--border);
-  border-radius: 6px;
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  text-align: center;
-  list-style: none;
-}
-.ml-root-drop--over { border-color: var(--accent); color: var(--text); background: var(--surface2); }
-.ml-folder-head--dragging { opacity: 0.5; }
-
 /* ── Move / Copy popover: as wide as its longest list name, with collapsible sections coloured to
    match the sidebar's Single-Language and Cross-Language sections ── */
 .ml-move-popover {
@@ -3163,9 +950,6 @@ body .ml-root-drop.ml-root-drop--armed {
   max-height: min(70vh, 26rem);
   overflow-y: auto;
 }
-.ml-move-popover-item { overflow: visible; text-overflow: clip; }
-.ml-move-section--single { --sec: var(--ml-accent-single); --sec-light: var(--ml-accent-single-light); }
-.ml-move-section--multi  { --sec: var(--ml-accent-multi);  --sec-light: var(--ml-accent-multi-light); }
 .ml-move-section-head {
   display: flex; align-items: center; gap: 0.35rem;
   width: 100%;
@@ -3182,14 +966,6 @@ body .ml-root-drop.ml-root-drop--armed {
 .ml-move-section-head:hover { background: color-mix(in srgb, var(--sec) 40%, var(--surface)); }
 .ml-move-section-body { background: color-mix(in srgb, var(--sec) 8%, var(--bg)); }
 .ml-move-section-body[hidden] { display: none; }
-.ml-move-section .ml-move-popover-item:hover { background: var(--sec-light); color: var(--text); }
-
-/* ── Deselect: the close button at the top-right of the open panel ── */
-.ml-panel-close-wrap {
-  position: sticky; top: 0; z-index: 6;
-  align-self: flex-end;
-  height: 0; overflow: visible;
-}
 .ml-panel-close {
   position: relative; top: -0.15rem;
   width: 1.5rem; height: 1.5rem;
@@ -3198,30 +974,6 @@ body .ml-root-drop.ml-root-drop--armed {
   font-size: 0.8rem; line-height: 1; cursor: pointer;
 }
 .ml-panel-close:hover { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-
-/* ── Sidebar: brighter section bars and expanded sections, darker folders, lighter per level ──
-   The section bar is a stronger band of its section's colour with a more vivid label; the section's
-   body (its cards and folders) is a brighter wash of the same colour when expanded. Open folders are
-   darkened against that wash so they stand out from it, and every level of subfolder inside is a
-   shade lighter than the one around it, so depth reads at a glance. ── */
-.ml-single-head, .ml-smart-head, .ml-multi-head, .ml-profile-head {
-  background: color-mix(in srgb, var(--ml-head-accent) 32%, var(--surface));
-  color: color-mix(in srgb, var(--ml-head-accent) 50%, var(--text));
-}
-.ml-section-body--single   { background: color-mix(in srgb, var(--accent) 22%, transparent); }
-.ml-section-body--smart    { background: color-mix(in srgb, var(--ml-accent-smart) 22%, transparent); }
-.ml-section-body--multi    { background: color-mix(in srgb, var(--ml-accent-multi) 22%, transparent); }
-.ml-section-body--profiles, .ml-section-body--visual { background: color-mix(in srgb, var(--ml-accent-profile) 22%, transparent); }
-
-.ml-folder-group { --fd: 20%; background: color-mix(in srgb, black var(--fd), var(--surface2)); }
-.ml-folder-body .ml-folder-group { --fd: 15%; }
-.ml-folder-body .ml-folder-body .ml-folder-group { --fd: 11%; }
-.ml-folder-body .ml-folder-body .ml-folder-body .ml-folder-group { --fd: 7%; }
-.ml-folder-body .ml-folder-body .ml-folder-body .ml-folder-body .ml-folder-group { --fd: 4%; }
-.ml-folder-head { color: var(--text); }
-.ml-section-body > .ml-list-empty { color: var(--text); }
-/* Keep the panel's own header (Export / Quiz buttons) clear of the close button. */
-.ml-panel-close-wrap + * { padding-right: 2rem; box-sizing: border-box; }
 
 /* ── My Lists top bar: the language picker and the open list's title, in #controls ── */
 .ml-topbar {
@@ -3234,79 +986,31 @@ body .ml-root-drop.ml-root-drop--armed {
   flex: 0 1 15rem; min-width: 9rem;
 }
 .ml-topbar .ml-lang-select { font-size: 0.85rem; padding: 0.3rem 0.45rem; min-height: 36px; }
-.ml-topbar-title {
-  flex: 1 1 0; min-width: 0; margin: 0;
-  font-size: 1.05rem; font-weight: 700; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.ml-topbar-title--none { font-weight: 500; color: var(--text-muted); }
-/* The panel's own title and flag moved up into the bar (the elements stay, for anything that reads them). */
-.ml-panel .ml-panel-title, .ml-panel .ml-panel-flag { display: none; }
 
 /* The panel's stats chips, moved up beside the title in the top bar. */
 .ml-topbar { flex-wrap: wrap; }
-.ml-topbar-title { flex: 0 1 auto; max-width: 40%; }
-.ml-topbar .ml-stats-row { flex: 0 1 auto; min-height: 0; padding: 0; }
 
 /* The deselect button: squarer than the round one it started as. */
 .ml-panel-close { border-radius: var(--radius-sm); width: 1.6rem; height: 1.6rem; }
-
-/* Thinner padding on the filter box and on each row of words. */
-.ml-list-toolbar { padding: 0.3rem 0.6rem 0.25rem; gap: 0.4rem; }
-.ml-list-toolbar .ml-panel-controls { gap: 0.4rem; }
-.ml-list-toolbar .ml-search { padding-top: 0.16rem; padding-bottom: 0.16rem; }
-.ml-list-toolbar .ml-sort-select, .ml-list-toolbar .ml-hide-mastered-btn { padding: 0.2rem 0.5rem; }
-.ml-list-toolbar .ml-bulk-bar { margin-top: 0.2rem; padding: 0.22rem 0.5rem; }
-.ml-word-item { padding: 0.18rem 0.6rem; }
-
-/* The bulk bar is hidden until something is selected; its display:flex was overriding [hidden]. */
-.ml-bulk-bar[hidden] { display: none; }
 
 /* The list's controls (Part of Speech, Level, Folders…) share one row with Export / Quiz / the X. */
 .ml-panel-header { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; }
 .ml-panel-header .ml-filter-dropdowns-row { order: 1; flex: 1 1 auto; min-width: 0; }
 .ml-panel-header .ml-panel-title-group { order: 2; flex: 0 0 auto; margin-left: auto; }
-/* Narrower side margins, so it all fits. */
-.ml-panel { padding-left: 0.5rem; padding-right: 0.5rem; }
-/* A thinner Add Vocabulary box. */
-.ml-add-section { padding: 0.25rem 0.5rem 0.3rem; }
-.ml-add-row { padding-top: 0.1rem; padding-bottom: 0.1rem; }
 /* The deselect button: an exact square, its X centred. */
 .ml-panel-close {
   display: grid; place-items: center;
   box-sizing: border-box; width: 1.6rem; height: 1.6rem; padding: 0; line-height: 0;
 }
 .ml-panel-close svg { display: block; }
-/* A rule between the title and its stats. */
-.ml-topbar .ml-stats-row { border-left: 1px solid var(--border-strong); padding-left: 0.75rem; margin-left: 0.1rem; }
 
 .ml-panel-header .ml-filter-dropdowns-row { flex: 1 1 0; min-width: 16rem; }
 
-/* Subfolders: a bit lighter than before, still one shade lighter per level. */
-.ml-folder-body .ml-folder-group { --fd: 11%; }
-.ml-folder-body .ml-folder-body .ml-folder-group { --fd: 7%; }
-.ml-folder-body .ml-folder-body .ml-folder-body .ml-folder-group { --fd: 4%; }
-.ml-folder-body .ml-folder-body .ml-folder-body .ml-folder-body .ml-folder-group { --fd: 2%; }
-
 /* Emoji & colour picker: wider, rectangular colour swatches, a labelled custom colour. */
 .ml-folder-style-pop { width: 21rem; }
-.ml-folder-style-quick button { min-width: 2rem; height: 2rem; font-size: 1.15rem; }
-.ml-folder-style-quick--all { max-height: 11rem; overflow-y: auto; }
-.ml-folder-swatch { width: 2.6rem; height: 1.5rem; border-radius: var(--radius-sm); }
-.ml-folder-swatch--none { width: auto; padding: 0 0.6rem; font-size: 0.7rem; font-weight: 600; }
-.ml-folder-swatch--custom { width: 2.6rem; padding: 0; }
-.ml-folder-swatch--custom::-webkit-color-swatch-wrapper { border-radius: var(--radius-sm); }
-.ml-folder-swatch--custom::-webkit-color-swatch { border-radius: var(--radius-sm); }
-.ml-folder-swatch--custom::-moz-color-swatch { border-radius: var(--radius-sm); }
-.ml-folder-custom { display: flex; align-items: center; gap: 0.5rem; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); cursor: pointer; }
-
-.ml-menu-item--export { --tone: var(--ml-menu-copy); }
 /* Everything in the header row — the list's controls and Quiz — on one centre line. */
 .ml-panel-header .ml-filter-dropdowns-row { align-items: center; margin: 0; }
 .ml-panel-header .ml-title-actions { display: flex; align-items: center; }
-
-/* ── Header row: every control the same height, on the first line, with less space above and below ── */
-.ml-panel { padding-top: 0.4rem; }
 .ml-panel-header { --ml-hdr-h: 1.75rem; align-items: flex-start; padding-bottom: 0.3rem; }
 .ml-panel-header .ml-chip-dropdown-toggle,
 .ml-panel-header .ml-quiz-btn,
@@ -3315,32 +1019,9 @@ body .ml-root-drop.ml-root-drop--armed {
   display: inline-flex; align-items: center; justify-content: center;
   padding-top: 0; padding-bottom: 0; margin: 0; line-height: 1;
 }
-.ml-panel-close { width: var(--ml-hdr-h); padding: 0; top: 0; }
-.ml-panel-close-wrap { top: 0.4rem; }
 .ml-panel-header .ml-title-actions { height: var(--ml-hdr-h); }
-
-/* ── Gear menu: an entry that opens a submenu beneath it ── */
-.ml-menu-item--parent { width: 100%; }
-.ml-menu-chevron { margin-left: auto; font-size: 0.7rem; }
-.ml-submenu { display: flex; flex-direction: column; margin-left: 1.1rem; border-left: 2px solid var(--border); }
-.ml-submenu[hidden] { display: none; }
-.ml-menu-subitem { font-weight: 500; }
-.ml-panel { --ml-hdr-h: 1.75rem; }
 .ml-panel-header .ml-chip-dropdown { display: inline-flex; margin: 0; }
 .ml-panel-header .ml-filter-dropdowns-row { padding: 0; }
-/* A fixed gap between the panel's blocks, so the ✕ (in a zero-height sticky wrapper ahead of the header)
-   can sit exactly where the header row starts. */
-.ml-panel { gap: 0.4rem; }
-.ml-panel-close { top: 0.4rem; }
-.ml-panel-close-wrap { top: 0; }
-
-/* The rules between a word row's columns: clearly visible, not a faint tint. */
-/* (Not on the part-of-speech pill, which has its own rounded border: the rank column's left rule
-   stands in for the divider after it.) */
-.ml-word-text, .ml-word-rank {
-  border-right: 2px solid var(--border-strong);
-}
-.ml-word-rank { border-left: 2px solid var(--border-strong); padding-left: 0.5rem; }
 
 /* ── Testing Profile editor: much less vertical space ──
    Each section's label and its controls share a line (wrapping only when they must), the primary
@@ -3371,49 +1052,9 @@ body .ml-root-drop.ml-root-drop--armed {
 .ml-profile-editor-tf .conj-tf-side--narrow { flex: 1 1 11rem; }
 .ml-profile-editor-tf .conj-tf-divider { min-height: 4rem; }
 
-/* ── Starter Lists ───────────────────────────────────────────────────────────────────────────────
-   The section is built by the Smart Lists code (sidebar-smart.ts, `starter`), so it carries the smart
-   classes and every rule above applies — re-pointing the smart accent inside it gives it a blue of its
-   own instead of Smart Lists' purple. It is the first section, so it takes the "nothing above me" edge
-   that Single-Language Lists used to have, and Single-Language Lists take the separator every later
-   section has. ── */
-.ml-starter-head, .ml-starter-item, .ml-section-body--starter {
-  --ml-accent-smart: var(--ml-accent-starter);
-  --ml-accent-smart-light: var(--ml-accent-starter-light);
-}
-.ml-section-body--starter { background: color-mix(in srgb, var(--ml-accent-starter) 22%, transparent); }
-
-.ml-single-head {
-  margin-top: 0.5rem;
-  border-top: 2px solid var(--border-strong);
-  padding-top: calc(0.25rem + 2px);
-}
-.ml-starter-head, .ml-single-head:first-child { margin-top: 0; border-top: 0; padding-top: 0.3rem; }
-
 /* Made of: a list's language leads its row as a flag, and the row wears that language's tint. */
 .ml-chip-dropdown-item--lang {
   background: color-mix(in srgb, var(--lang-tint, var(--surface2)) 45%, var(--surface));
   border-radius: var(--radius-sm);
 }
 .ml-chip-dropdown-item--lang .lang-badge { flex-shrink: 0; }
-
-/* ── Testing Profiles: a collapsed mode group is a real row, not a sliver ─────
-   With every mode collapsed the section was three 10px labels with ~0 padding —
-   cramped next to its neighbours and a tiny click target. The head is now a
-   fixed-height row whose whole width is the toggle, aligned with the section
-   head's own inset, with a clear divider between groups. */
-.ml-profile-mode-head {
-  padding: 0 0.65rem;
-  min-height: 1.9rem;
-  font-size: 0.7rem;
-}
-.ml-profile-mode-head .ml-section-toggle-btn {
-  flex: 1;
-  align-self: stretch;
-  min-height: 1.9rem;
-  gap: 0.4rem;
-}
-.ml-profile-mode-group + .ml-profile-mode-group {
-  border-top: 1px solid color-mix(in srgb, var(--ml-accent-profile) 25%, transparent);
-}
-.ml-profile-mode-body:not([hidden]) { padding-bottom: 0.2rem; }

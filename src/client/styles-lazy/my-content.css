@@ -1,0 +1,1740 @@
+/* Lazy-loaded: rules for classes that only my-content's own modules use. Moved out of public/styles/app/my-content.css so the first paint does not
+   download them; every module that renders these classes imports this file (see tests/client/lazy-css.test.ts). */
+.mc-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 0.9rem 1rem 1.2rem;
+}
+
+.mc-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.mc-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mc-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  /* Fills the card's own width (up to main's page-wide cap) rather than an
+     arbitrary character count — this used to be capped at 60ch, which on a
+     wide screen left most of the card empty beside a short paragraph. */
+  max-width: 100%;
+}
+
+.mc-backup-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.mc-import-status--error {
+  color: var(--danger);
+}
+
+.mc-lang-picker-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.mc-lang-dropdown-btn {
+  min-width: 9rem;
+}
+
+/* ── Content-type tabs: Words / Trivia Questions / Guess the Blank /
+   Pictures — one visible at a time, switched by buildContentTabs in
+   my-content-mode.ts. Same look and mechanics as the app's own top-level
+   .mode-tabs/.mode-tab (mode-tabs.css) — a scaled-down copy rather than a
+   shared class, since this tab strip sits nested inside a card instead of
+   flush against the page edge, which changes a couple of the geometry
+   details (no seamless top-of-page join, smaller everything). ── */
+
+.mc-tabs-outer {
+  display: flex;
+  flex-direction: column;
+}
+
+.mc-tabs {
+  display: flex;
+  gap: 0.15rem;
+  flex-wrap: wrap;
+}
+
+.mc-tab-btn {
+  padding: 0.45rem 0.9rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  white-space: nowrap;
+  margin-bottom: -1px;
+  position: relative;
+}
+
+.mc-tab-btn:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+.mc-tab-btn.active {
+  background: var(--surface);
+  border-color: var(--border-strong);
+  border-bottom-color: var(--surface);
+  color: var(--accent);
+  font-weight: 700;
+  z-index: 1;
+}
+
+/* Accent stripe at the top of the active tab — same treatment as .mode-tab. */
+
+.mc-tab-btn.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.mc-tabs-wrap {
+  border: 1px solid var(--border-strong);
+  border-radius: 0 var(--radius) var(--radius) var(--radius);
+  background: var(--surface);
+  padding: 0.9rem 0.95rem;
+}
+
+.mc-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* Same `[hidden]`-vs-class-`display` cascade note as .mc-subsection-body
+   below — nothing here sets `display` on this class today, but a future
+   rule that did would need the same `[hidden]` override. */
+
+.mc-tab-panel[hidden] {
+  display: none;
+}
+
+.mc-tab-desc {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* ── Subsection — a labeled, independently collapsible block inside a tab
+   panel (e.g. Words' "Add a new word" and "Edit an existing word") — a
+   <div>/<h4> pair toggled the same way buildContentTabs' own panels are
+   built, via buildCollapsible in my-content-mode.ts (shared so the two
+   can't drift apart). ── */
+
+.mc-subsections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.mc-subsection {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.mc-subsection-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.7rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.mc-subsection-header:hover {
+  background: var(--surface2);
+}
+
+.mc-subsection-header:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.mc-subsection-chevron {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+
+.mc-subsection--collapsed .mc-subsection-chevron {
+  transform: rotate(-90deg);
+}
+
+.mc-subsection-title {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mc-subsection-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0 0.8rem 0.75rem;
+}
+
+/* Same `[hidden]`-vs-class-`display` cascade tie as .mc-word-results/
+   .mc-word-detail/.mc-stock-gallery elsewhere in this file: a plain class
+   selector setting `display` ties with the browser's own `[hidden] {
+   display: none }` and (being declared later in this stylesheet) wins,
+   so collapsing a subsection via `bodyWrap.hidden = true` did nothing visible. */
+
+.mc-subsection-body[hidden] {
+  display: none;
+}
+
+.mc-subsection-desc {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* The actual form/list content passed into buildSubsection as `body` — kept
+   separate from .mc-subsection-body (which also lays out the description
+   paragraph above it) so each can change independently. */
+
+.mc-subsection-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* ── Add form ── */
+
+.mc-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.mc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* `flex: 1 1 180px` only makes sense as a *row* sizing (grow to at least
+   180px wide, alongside its siblings in .mc-form) — scoped here rather than
+   on bare .mc-field because a field appended standalone into a *column*
+   flex parent (Example sentences/Additional senses, below .mc-form) would
+   otherwise apply that same 180px and flex-grow:1 to its *height* instead,
+   stretching the field to fill the column and leaving a huge empty gap
+   under its textarea before whatever comes next. */
+
+.mc-form > .mc-field {
+  flex: 1 1 180px;
+  min-width: 140px;
+}
+
+/* Same `[hidden]`-vs-class-`display` cascade tie as .mc-section-body and
+   friends elsewhere in this file: `display: flex` above wins over the
+   browser's own `[hidden] { display: none }` (same specificity, declared
+   later), so a `.mc-field` hidden via the `hidden` property — the
+   already-edited-words filter row, shown only once there's enough of them
+   to need filtering — rendered anyway instead of disappearing. */
+
+.mc-field[hidden] {
+  display: none;
+}
+
+.mc-field-label {
+  font-weight: 600;
+}
+
+.mc-input {
+  font-size: 0.85rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+}
+
+.mc-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.mc-textarea {
+  resize: vertical;
+  min-height: 3.2rem;
+  line-height: 1.4;
+}
+
+/* ── Overridable-note control — shows a word or gloss's own default value,
+   then gates the editable input behind an Override checkbox, so it's never
+   ambiguous whether what's showing is the default or a learner's own edit
+   (see buildOverridableNote in my-content-mode.ts). Shared by the Word
+   disambiguator field (once per word) and each gloss's own meaning
+   disambiguator (once per sense, inline in the Glosses list below) — a flex
+   row that wraps, so it degrades gracefully whether it has a whole .mc-form
+   row's width (word disambiguator) or a narrow slice of a gloss row. ── */
+
+.mc-disambig-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+}
+
+/* flex: 1 1 260px rather than .mc-field's own 180px — the default-value
+   text plus the checkbox need more width to stay legible on one line. */
+
+.mc-disambig-field {
+  flex: 1 1 260px;
+}
+
+.mc-disambig-default {
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.mc-disambig-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mc-disambig-checkbox {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.mc-disambig-inline .mc-input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mc-disambig-inline .mc-input {
+  flex: 1 1 140px;
+  min-width: 100px;
+}
+
+/* ── Per-language rows — one per app language, in every add form, so which
+   language an input belongs to is never ambiguous and several can be
+   filled in at once. ── */
+
+.mc-lang-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.mc-lang-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.mc-lang-row--current {
+  background: var(--accent-light);
+  border-radius: var(--radius-sm);
+  margin: -0.05rem -0.3rem;
+  padding: 0.05rem 0.3rem;
+}
+
+.mc-lang-row-label {
+  flex: 0 0 90px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.mc-lang-row-current .mc-lang-row-label,
+.mc-lang-row--current .mc-lang-row-label {
+  color: var(--accent);
+}
+
+.mc-lang-row .mc-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mc-lang-row-inputs {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mc-lang-row-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mc-lang-row-inputs .mc-input {
+  flex: 1 1 50%;
+  min-width: 0;
+}
+
+/* Row titles use the shared .lang-badge (ui/lang-badge.ts) for the
+   language flag, styled by that component's own CSS — nothing to add here. */
+
+/* ── Buttons ── */
+
+.mc-btn {
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--on-accent);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.mc-btn:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+.mc-btn--secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.mc-btn--secondary:hover { background: var(--surface2); }
+
+.mc-btn--danger {
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--danger-border);
+}
+
+.mc-btn--danger:hover { background: var(--danger-hover); }
+
+.mc-btn--sm {
+  font-size: 0.74rem;
+  padding: 0.28rem 0.6rem;
+}
+
+.mc-save-row {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.4rem 0;
+}
+
+/* ── Sort/filter toolbar above the Add-a-word / Edit-a-word lists ──
+   Sort, every Part-of-speech chip and every Level chip all sit as direct
+   children of one flex-wrap row (see buildMCListToolbar) rather than three
+   stacked sub-rows, so the browser can wrap at any chip boundary and keep
+   the line as full as it fits instead of bouncing a whole label+chips
+   group down together. The chips reuse .pos-chip (class-filter.css) — the
+   same pill badges My Lists' own Part of Speech/Level filters use — rather
+   than a plain dropdown, so filtering reads and behaves the same way in
+   both places; sizing matches .ml-pos-row/.ml-band-row's own tight chips
+   (my-lists.css) for the same reason those exist: fitting this many pills
+   on a line at all needs it. */
+
+.mc-list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.mc-list-toolbar-select {
+  min-width: 7.5rem;
+  margin-right: 0.4rem;
+}
+
+.mc-toolbar-group-label {
+  margin-left: 0.15rem;
+}
+
+.mc-list-toolbar .pos-chip {
+  flex-shrink: 0;
+  font-size: 0.71rem;
+  padding: 0.15rem 0.35rem;
+}
+
+/* ── Frequency rank field (Add a New Word / Edit an Existing Word) ──
+   A number input plus a CEFR "quick pick" — picking a level just seeds the
+   number (see buildFrequencyControl), it isn't a persisted mode of its own. */
+
+.mc-freq-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.mc-freq-number {
+  width: 6rem;
+  flex: none;
+}
+
+.mc-freq-cefr {
+  flex: none;
+}
+
+.mc-freq-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  min-width: 2rem;
+}
+
+/* ── List of existing entries ──
+   Styled to match .ml-word-item (my-lists.css) — a dense grid row with a
+   border-bottom divider, rather than a bordered card per row — so My
+   Content's word lists read like the same table List mode uses instead of a
+   visually distinct widget. */
+
+.mc-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.mc-empty {
+  margin: 0;
+  padding: 0.5rem 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Base shape stays flex — Trivia/Guess-the-Blank/Picture rows below have
+   varying child counts (a thumbnail before the text, in Pictures' case)
+   that a fixed column template can't safely accommodate. Only the divider
+   styling is shared; the grid layout below is opt-in via .mc-row--wordlist. */
+
+.mc-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.15rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.mc-row-wrap:last-child .mc-row:not(.mc-row--expanded) {
+  border-bottom: none;
+}
+
+/* Add a New Word / Edit an Existing Word rows only — badge, word/meta, date
+   and actions each in their own named column so they line up row to row,
+   the same reasoning as .ml-word-item in my-lists.css. */
+
+.mc-row--wordlist {
+  display: grid;
+  grid-template-columns: [badge] auto [main] 1fr [date] auto [actions] auto;
+  column-gap: 0.6rem;
+}
+
+.mc-row-badge {
+  grid-column: badge;
+}
+
+.mc-row-actions {
+  grid-column: actions;
+}
+
+/* Edit an Existing Word's own rows: flag / word / changes-summary / date /
+   actions, all on one thinner row instead of a title stacked over a second
+   line — a faint vertical rule between each populated column reads as a
+   table, same idea as .ml-word-text/.ml-word-pos/.ml-word-rank's own
+   border-right in my-lists.css. */
+
+.mc-row--overrides {
+  display: grid;
+  grid-template-columns:
+    [badge] auto [word] minmax(60px, 120px) [meaning] minmax(70px, 140px)
+    [pos] auto [band] auto [rank] auto
+    /* minmax(0, 1fr), not a bare 1fr: a grid track's automatic minimum size
+       is its content's own min-content width, which for nowrap ellipsis
+       text (.mc-row-changes) is effectively "however long the full summary
+       text is" — the same overflow-hidden/ellipsis CSS that's supposed to
+       truncate it never gets the chance to, since the track just grows to
+       fit instead. Left as a bare 1fr, a long override summary pushed date/
+       actions out past the row's own width instead of the text itself
+       eliding — the actual cause of the date column being unreadable. */
+    [changes] minmax(0, 1fr) [date] auto [actions] auto;
+  column-gap: 0.6rem;
+  padding: 0.3rem 0.15rem;
+}
+
+/* Effective Part of Speech / CEFR Level / Frequency Rank for this row's word
+   — the override's own value if it set one, else the real word's (see
+   buildWordOverrideRow's effPos/effBand/effRank) — reusing my-lists.css's
+   own .ml-word-pos/.ml-word-band/.ml-word-rank pill styling (same
+   [data-pos]/[data-band] hue coding as everywhere else in the app) rather
+   than a third copy of that color system just for this row. Each hides
+   itself when there's nothing to show, same as .ml-word-rank already does.
+   The extra specificity on grid-column below isn't decorative: .ml-word-pos/
+   .ml-word-band/.ml-word-rank each set their own grid-column against
+   my-lists.css's own named grid lines (band lands in *its* "rank" column,
+   there being no rank column on a Smart List row) — same names this row's
+   grid happens to reuse, so band's placement would otherwise depend on
+   which stylesheet loads second rather than picking the column meant here. */
+
+.mc-row-pos,
+.mc-row-band,
+.mc-row-rank {
+  flex-shrink: 0;
+}
+
+.mc-row--overrides .mc-row-pos  { grid-column: pos;  }
+
+.mc-row--overrides .mc-row-band { grid-column: band; }
+
+.mc-row--overrides .mc-row-rank { grid-column: rank; }
+
+.mc-row-word,
+.mc-row-meaning,
+.mc-row-changes {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-right: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  padding-right: 0.6rem;
+}
+
+.mc-row-word {
+  grid-column: word;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+/* The word's current meaning/translation (override's own if it set one,
+   else the real word's — see buildWordOverrideRow's effMeaning) — plain
+   text, not a pill, since unlike pos/band/rank there's no fixed small
+   vocabulary to color-code here. */
+
+.mc-row-meaning {
+  grid-column: meaning;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.mc-row-changes {
+  grid-column: changes;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Overrides-list rows (Pictures, word edits) that reopen their editor on
+   click — Remove stops propagation so it doesn't also trigger this. */
+
+.mc-row--clickable {
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.mc-row--clickable:hover {
+  background: var(--surface2);
+}
+
+/* Word rows (Add a New Word / Edit an Existing Word) that expand their
+   editor in place below — wraps .mc-row (the always-visible title/meta +
+   Remove strip, unchanged and shared with every other .mc-row in this file)
+   and, only while expanded, a sibling .mc-row-detail underneath it. Grouped
+   in its own wrapper rather than nesting the detail inside .mc-row itself so
+   .mc-row's own grid layout (badge/word/date beside Remove) never has to
+   change for the sake of this one caller. */
+
+.mc-row-wrap .mc-row--expanded {
+  background: var(--surface2);
+  border-bottom-color: transparent;
+}
+
+/* Same body area a word's inline editor renders into (renderWordEditorBody)
+   as My Lists' own .ml-word-detail — a sibling of the row itself, directly
+   under it, not a panel living elsewhere on the page. */
+
+.mc-row-detail {
+  padding: 0.75rem 0.85rem 0.9rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+/* Added/last-edited date — quiet, right-aligned before the actions column;
+   an em dash for a pre-existing entry with no recoverable timestamp (see
+   formatMCDate in my-content-mode.ts) rather than nothing rendering in its
+   place. */
+
+.mc-row-date {
+  grid-column: date;
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Once a list runs past one page, it scrolls in place rather than growing
+   the whole tab — see MC_LIST_PAGE_SIZE / buildListPager. A persistent,
+   always-visible scrollbar (rather than each platform's own default —
+   Windows' overlay scrollbar only appears on hover, and stays thin enough
+   that its thumb barely conveys how much is left below the fold) so a
+   learner can tell at a glance, without first hovering to find out, that
+   this box scrolls at all and roughly how far through it they are. */
+
+.mc-scroll-list {
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) var(--surface2);
+}
+
+/* A word's expanded editor (.mc-row-detail) has a lot more fields than any
+   other row in this list — translation/pos/notes/domains plus glosses,
+   examples, synonyms, antonyms — so the list's normal cap leaves most of it
+   scrolling inside its own cramped box. Relaxed only while a row is open
+   (see renderOverridesList/renderAddedList's own class toggle), not
+   permanently, so a long *list* of rows still scrolls at the same height as
+   always once nothing is expanded. */
+
+.mc-scroll-list--has-expanded {
+  max-height: 760px;
+}
+
+.mc-scroll-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.mc-scroll-list::-webkit-scrollbar-track {
+  background: var(--surface2);
+  border-radius: 999px;
+}
+
+.mc-scroll-list::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 2px solid var(--surface2);
+}
+
+.mc-scroll-list::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* .table-pager/.pager-btn/.pager-status (table.css) and .pager-select
+   (controls-bar.css) do the actual pager styling — this just centers the
+   page-size select next to that nav group, the one piece Table mode's own
+   pager doesn't have (its page size comes from the WORDS control bar). */
+
+.mc-list-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.mc-list-pager-size {
+  min-width: 8rem;
+}
+
+.mc-row-main {
+  grid-column: main;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.mc-row-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.mc-row-meta {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.mc-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--surface2);
+}
+
+.mc-thumb--emoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+/* ── Word search panel — shared by Pictures and Gloss Order: search a
+   language's vocabulary for words eligible for that section's override, then
+   hand off to a section-specific detail view. See buildWordSearchUI in
+   my-content-mode.ts. `.mc-word-panel-outer` is the search UI plus the detail
+   panel below it; `.mc-word-panel` (nested inside it) is just the language
+   picker, search box and results list that buildWordSearchUI itself owns —
+   same layout, kept as two names because they're two different things a
+   reader might want to select independently. ── */
+
+.mc-word-panel-outer,
+.mc-word-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* `display: flex` above and the browser's own `[hidden] { display: none }`
+   are equal specificity, so without this the later (author) rule would win
+   and a hidden .mc-word-panel — Edit an Existing Word hides its search box
+   once a row is open, see buildEditWordSubsection — would keep rendering
+   anyway. Same fix as .mc-field[hidden] below for the same reason. */
+
+.mc-word-panel[hidden] {
+  display: none;
+}
+
+/* Same label styling and select sizing as the Sort/Part of speech/Level
+   toolbar above it (.ml-band-label, .mc-list-toolbar-select) — two controls
+   that size and align differently right next to each other reads as
+   unrelated, even though both are "choose from a fixed list" selects. */
+
+.mc-word-lang-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.mc-word-lang-select {
+  min-width: 7.5rem;
+  max-width: 200px;
+}
+
+/* Edit an Existing Word: the language picker (.mc-word-lang-row) and Sort
+   (.mc-sort-control) next to it, on one row — both are single compact
+   controls (unlike Part of Speech/Level/Domains below, each of which is its
+   own full-width wrapping chip row), so they naturally sit side by side
+   without needing either one to flex or shrink. */
+
+.mc-edit-top-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 1rem;
+}
+
+.mc-edit-top-row .mc-word-lang-row {
+  margin-bottom: 0;
+}
+
+.mc-sort-control {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Part of Speech/Level and Domains each get their own full-width line below
+   the language+Sort row above — .mc-list-toolbar is already a wrapping flex
+   row in its own right (shared with Add a New Word's own toolbar), this
+   just adds the vertical spacing between one such line and the next. */
+
+.mc-edit-filter-row {
+  margin-top: 0.5rem;
+}
+
+.mc-edit-filter-row:empty {
+  margin-top: 0;
+}
+
+/* Search box + clear (✕) button, so a query can be dismissed in one click
+   rather than selecting and deleting it by hand. */
+
+.mc-word-search-row {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.mc-word-search-row .mc-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.mc-word-search-clear {
+  flex-shrink: 0;
+  width: 2.1rem;
+  font-size: 0.85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.mc-word-search-clear:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.mc-word-search-clear[hidden] {
+  display: none;
+}
+
+/* "Showing 20 of 143 matches" — only appears once results are actually
+   capped, so refining the search is a hint rather than a permanent fixture. */
+
+.mc-word-results-count {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.mc-word-results-count[hidden] {
+  display: none;
+}
+
+.mc-word-results {
+  list-style: none;
+  margin: 0;
+  padding: 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+/* `hidden` is set/cleared straight from my-content-mode.ts to show and hide
+   these two — but `display: flex`/`column` above wins the cascade over the
+   browser's own `[hidden] { display: none }` (same specificity, declared
+   later), so a "hidden" results list or detail panel still rendered as an
+   empty bordered box. Restated here, scoped to `[hidden]`, so hiding one
+   actually removes it instead of leaving a blank placeholder behind. */
+
+.mc-word-results[hidden],
+.mc-word-detail[hidden] {
+  display: none;
+}
+
+.mc-word-result {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.mc-word-result:hover {
+  background: var(--surface2);
+}
+
+.mc-word-result-word {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.mc-word-result-trans {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mc-word-result-flag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--correct);
+  flex-shrink: 0;
+}
+
+/* The result whose word is currently open in the detail panel below —
+   without this, nothing on screen said which of several similar-looking
+   matches you were actually editing. */
+
+.mc-word-result--active {
+  background: var(--accent-light);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* Arrow-key cursor, independent of --active (you can arrow past results
+   without opening each one) — a visible ring rather than a fill, so it
+   never gets confused with the "currently open" highlight above. */
+
+.mc-word-result--kbd-focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* ── Detail panel for the currently-selected word — shared shell for both
+   Pictures and Gloss Order; the content inside it (.mc-pic-options vs
+   .mc-gloss-list) is section-specific. ── */
+
+.mc-word-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface2);
+}
+
+/* Clickable/collapsible, like every section header elsewhere in this tab
+   (see .mc-section-header) — toggles .mc-word-detail-body's `hidden`
+   without rebuilding it, so collapsing a word never loses anything typed
+   into its form. */
+
+.mc-word-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.mc-word-detail-header:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.mc-word-detail-chevron {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform var(--transition-fast);
+}
+
+.mc-word-detail--collapsed .mc-word-detail-chevron {
+  transform: rotate(-90deg);
+}
+
+/* The form/glosses/buttons below the header — a flex column of its own so
+   the 0.7rem gap that used to come from .mc-word-detail's own flex (back
+   when these were its direct children) still applies between them. */
+
+.mc-word-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+/* Same `[hidden]`-vs-class-`display` cascade tie as .mc-word-detail and
+   friends above. */
+
+.mc-word-detail-body[hidden] {
+  display: none;
+}
+
+.mc-pic-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.mc-pic-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem;
+  min-width: 84px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.mc-pic-option:hover {
+  border-color: var(--border-strong);
+}
+
+.mc-pic-option--selected {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.mc-pic-option-img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+}
+
+.mc-pic-option-emoji {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+.mc-pic-option-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.mc-pic-option--selected .mc-pic-option-label {
+  color: var(--text);
+}
+
+/* ── Custom picture: URL / file / stock gallery, for words with no
+   built-in visual (or when none of them is the right one). ── */
+
+.mc-pic-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.mc-pic-custom-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.mc-pic-custom-row .mc-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Gloss order list — Gloss Order section's detail view: each of a word's
+   glosses in its current effective order, with up/down buttons to move one
+   at a time. See buildGlossOrderSearchPanel in my-content-mode.ts. ── */
+
+.mc-gloss-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* Explains what the per-gloss checkbox actually does (setGlossHidden) — the
+   checkbox itself only ever carried an aria-label, nothing visible. */
+
+.mc-gloss-list-hint {
+  margin: -0.1rem 0 0.4rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.mc-gloss-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+/* Position among this word's senses (see my-content-mode.ts) — a quiet
+   label, not a badge that competes with the gloss text for attention. */
+
+.mc-gloss-rank {
+  flex-shrink: 0;
+  width: 1.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+/* Where a reordered sense originally sat (see my-content-mode.ts's
+   originalIndex) — a small quiet tag, only shown once a sense has actually
+   moved, so it reads as "here's where this used to be" rather than
+   duplicating the rank badge on every row. */
+
+.mc-gloss-original {
+  flex-shrink: 0;
+  font-size: 0.66rem;
+  font-weight: 600;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: var(--surface2);
+  white-space: nowrap;
+}
+
+/* Unchecking hides the gloss from every quiz mode (see setGlossHidden) —
+   struck through and dimmed here so a hidden gloss still reads as present,
+   just turned off, rather than looking like the checkbox failed to apply. */
+
+.mc-gloss-checkbox {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.mc-gloss-item--hidden {
+  opacity: 0.55;
+}
+
+.mc-gloss-item--hidden .mc-gloss-item-text {
+  text-decoration: line-through;
+}
+
+.mc-gloss-item-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.88rem;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* Replaces .mc-gloss-item-text in place while editing an added gloss —
+   same flex slot, sized like the other inline inputs on this row. */
+
+.mc-gloss-edit-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.88rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* Per-sense meaning disambiguator — a compact .mc-disambig-inline (see
+   above), independent of the word disambiguator field up in .mc-form. Sized
+   down from that one's own defaults since it sits inline in a gloss row
+   rather than owning a whole form-field's width. */
+
+.mc-gloss-note-field {
+  flex: 1 1 220px;
+  font-size: 0.74rem;
+  gap: 0.3rem 0.5rem;
+}
+
+.mc-gloss-note-field .mc-input {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.5rem;
+  flex-basis: 100px;
+}
+
+.mc-gloss-item-controls {
+  display: flex;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.mc-gloss-move-btn {
+  font-size: 0.8rem;
+  line-height: 1;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.mc-gloss-move-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.mc-gloss-move-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* A learner-added sense (see addGlossOverride) has nothing to hide — this
+   sits where the checkbox does on a real gloss, marking the row as "yours"
+   without implying it can be toggled off the same way. */
+
+.mc-gloss-item-added-tag {
+  flex-shrink: 0;
+  width: 15px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.mc-gloss-remove-btn:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ── Add a gloss — sits under the list, same row shape as the add form ── */
+
+.mc-gloss-add-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.mc-gloss-add-row .mc-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Stock image picker — pictures section's "choose from bundled photos"
+   gallery. Collapsed behind a toggle by default (see buildStockImagePicker
+   in my-content-mode.ts); the grid itself scrolls rather than growing the
+   page indefinitely since data/images/ holds dozens of photos. ── */
+
+.mc-stock-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mc-stock-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 0.5rem;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+/* Same `[hidden]`-vs-class-`display` cascade tie as .mc-pic-results/.mc-pic-detail
+   above — without this, toggling the gallery closed left a full 320px-tall
+   empty grid behind, taking up as much room as the picture options above it. */
+
+.mc-stock-gallery[hidden] {
+  display: none;
+}
+
+.mc-stock-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.mc-stock-item:hover {
+  background: var(--surface2);
+}
+
+.mc-stock-item--selected {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.mc-stock-thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.mc-stock-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.mc-stock-item--selected .mc-stock-label {
+  color: var(--text);
+  font-weight: 600;
+}
+
+@media (max-width: 599px) {
+  .mc-form { flex-direction: column; align-items: stretch; }
+  .mc-field { min-width: 0; }
+  .mc-lang-row { flex-wrap: wrap; }
+  .mc-lang-row-label { flex: 1 1 100%; }
+  .mc-lang-row-inputs { flex-direction: column; }
+  .mc-gloss-item { flex-wrap: wrap; }
+  .mc-gloss-note-field { flex: 1 1 100%; order: 1; }
+  .mc-gloss-item-controls { order: 2; }
+}
+
+/* ── Shared Word Editor inside My Content (ui/word-editor/, scoped .word-editor) ── */
+
+.mc-we { margin-top: 0.25rem; }
+
+/* The editor's own height assumes the Admin page; here it sits under My
+   Content's header and tabs, so give it a fixed, generous height. */
+
+.mc-we .editor-layout { height: clamp(520px, 78vh, 900px); }
+
+.mc-we .filter-bar { flex-wrap: wrap; }
+
+.mc-we .mc-we-scope { flex: 0 0 auto; }
+
+/* ── Conjugations tab: tense chips and a card of editable forms per tense ── */
+
+.mc-conj-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.4rem 0; }
+
+.mc-conj-chip {
+  font: inherit; font-size: 0.74rem; font-weight: 600; padding: 0.22rem 0.6rem; cursor: pointer;
+  background: var(--surface2); color: var(--text); border: 1px solid var(--border-strong); border-radius: 999px;
+}
+
+.mc-conj-chip--on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+.mc-conj-chip--changed:not(.mc-conj-chip--on) { border-color: var(--accent); color: var(--accent); }
+
+.mc-conj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.6rem; margin: 0.5rem 0; }
+
+.mc-conj-card {
+  display: flex; flex-direction: column; gap: 0.25rem; padding: 0.5rem 0.6rem;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+
+.mc-conj-card--changed { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+
+.mc-conj-card-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+
+.mc-conj-row { display: grid; grid-template-columns: 7.5rem 1fr; align-items: center; gap: 0.4rem; font-size: 0.8rem; }
+
+.mc-conj-row:only-child { grid-template-columns: 1fr; }
+
+.mc-conj-pronoun { color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.mc-conj-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem; }
+
+/* ── Conjugations tab: the Admin panel's Conjugation editor (styles/admin/conjugation.css), same layout
+   and colour rules — a verb list beside a table of coloured tense columns — under .mcc-* names so the
+   app's own Conjugation-mode styles are left alone. The per-tense and per-person hues are the app's
+   own [data-tense] / [data-pi] maps (conjugation.css). ── */
+
+.mcc { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.mcc-filter-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem;
+  padding: 0.5rem 0.75rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+}
+
+.mcc-filter-field { display: flex; align-items: center; gap: 0.4rem; }
+
+.mcc-filter-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+
+.mcc-divider { width: 1px; align-self: stretch; background: var(--border); }
+
+.mcc-select, .mcc-search {
+  font: inherit; font-size: 0.85rem; padding: 0.3rem 0.5rem;
+  background: var(--surface2); color: var(--text); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+}
+
+.mcc-search { flex: 1; min-width: 10rem; }
+
+.mcc-edited-toggle { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.8rem; color: var(--text-muted); cursor: pointer; }
+
+.mcc-layout { display: flex; gap: 1.25rem; height: min(72vh, 680px); min-height: 420px; }
+
+.mcc-verb-panel {
+  width: 300px; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+}
+
+.mcc-verb-panel-header {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+  padding: 0.65rem 0.9rem; border-bottom: 1px solid var(--border); background: var(--surface2);
+}
+
+.mcc-verb-panel-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+
+.mcc-count { font-size: 0.78rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+.mcc-verb-list { flex: 1; min-height: 0; overflow-y: auto; padding: 0.25rem 0; }
+
+.mcc-verb-list-empty { padding: 1.5rem 1rem; text-align: center; font-size: 0.85rem; color: var(--text-muted); }
+
+.mcc-verb-item {
+  display: flex; align-items: baseline; gap: 0.5rem; padding: 0.35rem 0.9rem; cursor: pointer;
+  border-left: 3px solid transparent;
+}
+
+.mcc-verb-item:hover { background: var(--surface2); }
+
+.mcc-verb-item.active { background: var(--accent-light); border-left-color: var(--accent); }
+
+.mcc-verb-rank { min-width: 2.2rem; font-size: 0.7rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+.mcc-verb-key { font-weight: 700; color: var(--accent); }
+
+.mcc-verb-translation { font-size: 0.8rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.mcc-badge-edited {
+  margin-left: auto; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 0.05rem 0.4rem; border-radius: 999px; background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent);
+}
+
+.mcc-pager { flex-shrink: 0; display: flex; gap: 0.4rem; align-items: center; padding: 0.5rem; border-top: 1px solid var(--border); background: var(--surface2); }
+
+.mcc-page-select { flex: 1; min-width: 0; }
+
+.mcc-table-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+.mcc-empty-state {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-muted);
+}
+
+.mcc-empty-state[hidden], .mcc-table-card[hidden] { display: none; }
+
+.mcc-hint-icon { font-size: 2rem; }
+
+.mcc-table-card {
+  display: flex; flex-direction: column; height: 100%; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+}
+
+.mcc-table-header {
+  flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+  padding: 1rem 1.25rem 0.9rem; border-bottom: 1px solid var(--border); background: var(--surface2);
+}
+
+.mcc-verb-name { font-size: 1.3rem; font-weight: 700; color: var(--text); }
+
+.mcc-verb-meta { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+.mcc-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: flex-end; }
+
+.mcc-btn {
+  font: inherit; font-size: 0.8rem; font-weight: 600; padding: 0.35rem 0.8rem; cursor: pointer;
+  background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); border-radius: var(--radius-sm);
+}
+
+.mcc-btn:hover:not(:disabled) { background: var(--accent-hover); }
+
+.mcc-btn:disabled { opacity: 0.5; cursor: default; }
+
+.mcc-btn--secondary { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
+
+.mcc-btn--secondary:hover:not(:disabled) { background: var(--surface2); }
+
+.mcc-btn--ghost { background: none; color: var(--text-muted); border-color: transparent; }
+
+.mcc-btn--ghost:hover:not(:disabled) { background: var(--surface2); color: var(--text); }
+
+.mcc-btn--danger { background: var(--surface); color: var(--danger); border-color: var(--danger-border); }
+
+.mcc-btn--danger:hover:not(:disabled) { background: var(--danger-hover); }
+
+.mcc-btn[hidden] { display: none; }
+
+.mcc-chips-row {
+  flex-shrink: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem;
+  padding: 0.75rem 1.25rem; background: var(--surface2); border-bottom: 1px solid var(--border);
+}
+
+.mcc-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+.mcc-chips-actions { flex-shrink: 0; display: flex; gap: 0.3rem; }
+
+.mcc-chips-actions .mcc-btn { padding: 0.25rem 0.6rem; font-size: 0.72rem; }
+
+.mcc-chip {
+  padding: 0.3rem 0.75rem; border-radius: 999px; font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  border: 1px solid hsl(var(--tense-hue, 145) 50% 45% / 0.45);
+  background: hsl(var(--tense-hue, 145) 60% 50% / 0.10);
+  color: hsl(var(--tense-hue, 145) 55% 32%);
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+html.dark .mcc-chip:not(.active) { color: hsl(var(--tense-hue, 145) 62% 72%); }
+
+.mcc-chip.active { background: hsl(var(--tense-hue, 145) 45% 42%); border-color: hsl(var(--tense-hue, 145) 45% 42%); color: #fff; }
+
+.mcc-chip--changed:not(.active) { box-shadow: inset 0 -3px 0 var(--accent); }
+
+.mcc-table-scroll { flex: 1; min-height: 0; overflow: auto; }
+
+.mcc-table { width: 100%; border-collapse: collapse; }
+
+.mcc-table thead tr { background: var(--surface2); border-bottom: 2px solid var(--border); }
+
+.mcc-th-pronoun, .mcc-th-form {
+  padding: 0.55rem 1rem; text-align: left; font-size: 0.78rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); white-space: nowrap;
+}
+
+.mcc-th-pronoun { width: 180px; position: sticky; left: 0; z-index: 2; background: var(--surface2); }
+
+.mcc-th-form[data-tense] { color: hsl(var(--tense-hue, 145) 55% 32%); background: hsl(var(--tense-hue, 145) 60% 50% / 0.14); }
+
+html.dark .mcc-th-form[data-tense] { color: hsl(var(--tense-hue, 145) 62% 72%); }
+
+.mcc-table tbody tr { border-bottom: 1px solid var(--border); }
+
+.mcc-table tbody tr:last-child { border-bottom: none; }
+
+.mcc-table tbody tr:hover { background: var(--surface2); }
+
+.mcc-pronoun {
+  padding: 0.35rem 1rem; font-size: 0.92rem; font-weight: 600; color: var(--text-muted); white-space: nowrap;
+  width: 180px; position: sticky; left: 0; z-index: 1; background: var(--surface);
+}
+
+.mcc-pronoun[data-pi] { color: hsl(var(--pronoun-hue, 0) 55% 30%); background: hsl(var(--pronoun-hue, 0) 60% 92%); }
+
+html.dark .mcc-pronoun[data-pi] { color: hsl(var(--pronoun-hue, 0) 65% 75%); background: hsl(var(--pronoun-hue, 0) 35% 20%); }
+
+.mcc-input-cell { padding: 0.3rem 0.6rem; }
+
+.mcc-input {
+  width: 100%; max-width: 200px; box-sizing: border-box; padding: 0.3rem 0.6rem; font: inherit; font-size: 0.95rem;
+  background: var(--surface2); color: var(--text); border: 1.5px solid var(--border); border-radius: var(--radius-sm); outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.mcc-input[data-tense] { border-color: hsl(var(--tense-hue, 145) 50% 45% / 0.5); background: hsl(var(--tense-hue, 145) 60% 50% / 0.08); }
+
+html.dark .mcc-input[data-tense] { background: hsl(var(--tense-hue, 145) 45% 30% / 0.14); }
+
+.mcc-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); background: var(--surface); }
+
+/* A form that no longer matches the real vocabulary. */
+
+.mcc-input--changed { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+
+.mcc-extra-forms { flex-shrink: 0; display: flex; flex-wrap: wrap; gap: 1.25rem; padding: 0.9rem 1.25rem; border-top: 1px solid var(--border); background: var(--surface2); }
+
+.mcc-extra-forms[hidden] { display: none; }
+
+.mcc-extra-group { display: flex; flex-direction: column; gap: 0.3rem; min-width: 180px; flex: 1; }
+
+.mcc-extra-group label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: hsl(var(--tense-hue, 145) 55% 32%); }
+
+html.dark .mcc-extra-group label { color: hsl(var(--tense-hue, 145) 62% 72%); }
+
+.mcc-extra-group .mcc-input { max-width: none; }
+
+@media (max-width: 700px) {
+  .mcc-layout { flex-direction: column; height: auto; }
+  .mcc-verb-panel { width: 100%; max-height: 220px; }
+  .mcc-th-pronoun, .mcc-pronoun { width: 130px; }
+}
+
+#myContentArea .mc-wrap { padding-top: 0.35rem; gap: 0.5rem; }
+
+.mc-tabs-wrap { padding-top: 0.6rem; }
+
+.mc-lang-dropdown[hidden] { display: none; }
+
+.mc-topbar .mc-tabs { flex-wrap: wrap; gap: 0.25rem; }
+
+.mc-topbar .mc-tab-btn { border-radius: var(--radius-sm); border-bottom: 1px solid var(--border); padding: 0.4rem 0.85rem; }
+
+.mc-topbar .mc-tab-btn.active { border-bottom-color: var(--accent); }
+
+.mc-topbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-left: auto; }
+
+/* With the tabs no longer attached to it, the panel is a plain card, and every top control is snugger. */
+
+.mc-tabs-wrap { border-radius: var(--radius); padding: 0.4rem 0.6rem 0.6rem; }
+
+#myContentArea .mc-wrap { padding-top: 0.3rem; }
+
+.mc-we .filter-bar { padding-bottom: 0.3rem; margin-bottom: 0.3rem; gap: 0.3rem; }
+
+.mc-we .filter-bar select, .mc-we .filter-bar input[type="text"], .mc-we .filter-bar button { height: 1.75rem; }
+
+.mcc-filter-bar { padding: 0.3rem 0.55rem; gap: 0.4rem; }
+
+.mcc { gap: 0.45rem; }
+
+/* Snug enough that the tabs and the buttons share one line at a normal window width. */
+
+.mc-topbar .mc-tab-btn { padding: 0.3rem 0.65rem; font-size: 0.8rem; }
+
+.mc-topbar .mc-btn { padding: 0.28rem 0.6rem; font-size: 0.74rem; white-space: nowrap; }
+
+.mc-topbar .mc-lang-dropdown-btn { padding: 0.28rem 0.6rem; font-size: 0.74rem; }
+
+.mc-topbar .mc-lang-picker-label { font-size: 0.72rem; }
+
+/* ── The editor fits the window (see utils/fit-to-screen.ts): #myContentWrap is given the height that is
+   left, and everything inside passes it down so the word list, the form and the conjugation table scroll
+   on their own instead of the page. Phones keep the stacked, page-scrolling layout. ── */
+
+@media (min-width: 768px) {
+  #myContentWrap .mc-wrap { height: 100%; box-sizing: border-box; min-height: 0; }
+  #myContentWrap .mc-tabs-wrap { flex: 1 1 0; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+  #myContentWrap .mc-tab-panel:not([hidden]) { flex: 1 1 auto; min-height: 0; }
+  #myContentWrap .mc-we { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; margin-top: 0; }
+  #myContentWrap .mc-we .editor-layout { flex: 1 1 auto; height: auto; min-height: 0; }
+  #myContentWrap .mcc { flex: 1 1 auto; min-height: 0; }
+  #myContentWrap .mcc-layout { flex: 1 1 auto; height: auto; min-height: 0; }
+}

@@ -17,63 +17,12 @@
 #conjSummaryTop  { margin-bottom: 0.6rem; }
 #conjSummaryBottom { margin-top: 0.6rem; }
 
-/* ── Controls block inside the main filter bar ── */
-/* Layout + separator come from .mode-filter-panel (controls-bar.css) */
-
-/* Display + Tense sit side-by-side on one row */
-.conj-top-controls {
-  display: flex;
-  align-items: flex-end;   /* bottoms of the two controls align */
-  gap: 1.25rem;
-  flex-wrap: wrap;
-}
-
 /* Each labeled group: label stacked above its control */
 .conj-control-group {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
-
-/* Tense sits on its own row below Display, spanning the panel like the other
-   filter blocks */
-.conj-control-group--full {
-  width: 100%;
-  flex: 1 1 100%;
-}
-.conj-control-group--full .conj-display-toggle {
-  width: 100%;
-  max-width: none;
-}
-/* Segments share the width evenly when the toggle spans the panel */
-.conj-control-group--full .conj-display-toggle .conj-toggle-btn {
-  flex: 1;
-  justify-content: center;
-}
-
-/* Stack the top controls so Display and Tense each get a full-width row.
-   The gap must match .mode-filter-panel's, or the Display box sits at a
-   different distance from its neighbours than every other filter box. */
-.conj-top-controls {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.5rem;
-}
-
-/* Segmented display toggle */
-/* .conj-display-toggle and .conj-toggle-btn share rules with .sort-order-toggle/.sort-order-btn
-   defined in controls-bar.css — only overrides belong here. */
-
-/* Tense select — matches display toggle height */
-
-/* ── Empty state ── */
-.conj-empty {
-  text-align: center;
-  padding: 3rem 1rem;
-  color: var(--text-muted);
-}
-.conj-empty p        { margin-bottom: 0.5rem; }
-.conj-empty-hint     { font-size: 0.875rem; }
 
 /* ── Sticky bar: Order + Progress + Pager together ──
    One card, like Table mode's #tableStickyBar, so the verb-order control,
@@ -138,28 +87,6 @@
   overflow: hidden;
   box-shadow: var(--shadow, 0 2px 8px rgba(0,0,0,.06));
   min-width: 0;
-}
-
-.conj-card-header {
-  padding: 0.65rem 0.9rem 0.55rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface2);
-}
-.conj-verb-spanish {
-  font-family: 'DM Mono', monospace;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--accent);
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-}
-.conj-verb-english {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-top: 0.1rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ── Inner 2-col pronoun grid ── */
@@ -480,12 +407,9 @@
   border-style: dashed;
   cursor: default;
 }
-
-/* ── Responsive ── */
 @media (max-width: 640px) {
   /* Single column only on genuinely small screens. Desktop keeps two. */
   .conj-cards-grid        { grid-template-columns: 1fr; }
-  .conj-top-controls      { gap: 0.5rem; }
   .conj-pronoun           { width: 62px; font-size: 0.72rem; }
   .conj-drill-input       { font-size: 0.82rem; }
   .conj-progress-section  { flex-wrap: wrap; }
@@ -494,8 +418,6 @@
 }
 
 @media (max-width: 480px) {
-  /* Stack Display and Tense vertically on very small screens */
-  .conj-top-controls   { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
   .conj-display-toggle { width: 100%; }
   .conj-toggle-btn     { flex: 1; justify-content: center; }
 }
@@ -517,30 +439,6 @@
   flex-wrap: wrap;
   gap: 0.4rem;
 }
-.conj-set-summary-pills {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-}
-/* Same three colors the Regularity filter chips use for '.active' above
-   (see .conj-reg-chip[data-reg="…"].active) — the pill badges reuse rather
-   than duplicate that palette so the two stay visually tied together. */
-.conj-set-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.12rem 0.55rem;
-  border-radius: 99px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  line-height: 1.4;
-  white-space: nowrap;
-  border: 1px solid currentColor;
-  background: color-mix(in srgb, currentColor 12%, transparent);
-}
-.conj-set-pill[data-reg="regular"]   { color: var(--correct, #3d6b4f); }
-.conj-set-pill[data-reg="ortho"]     { color: var(--text-muted); }
-.conj-set-pill[data-reg="irregular"] { color: var(--danger, #b4453c); }
 
 /* ═══════════════════════════════════════════════════════════════
    Merged Tense + Forms box
@@ -733,11 +631,6 @@ html:not(.dark) .conj-tense-chip.active {
   color:        hsl(var(--tense-hue, 145) 75% 24%);
   box-shadow: inset 3px 0 0 hsl(var(--tense-hue, 145) 70% 34%);
 }
-html:not(.dark) .conj-card-tense {
-  color:      hsl(var(--tense-hue, 145) 75% 24%);
-  background: hsl(var(--tense-hue, 145) 70% 38% / 0.22);
-  border-color: hsl(var(--tense-hue, 145) 70% 38% / 0.6);
-}
 /* Forms (the yo/tú/él.../nosotros... pronoun toggles): brighter, more
    saturated backgrounds than the fix above — a request on top of it, since
    every pronoun is active by default and six simultaneously-tinted boxes
@@ -822,12 +715,6 @@ html:not(.dark) .crt-input.incorrect {
 .conj-size-estimate:empty { display: none; }
 .conj-size-estimate--warning { color: var(--danger); }
 
-/* Selection changed but the grid has not been rebuilt yet. */
-.conj-tf-summary--pending {
-  color: var(--warning, #b7791f);
-  font-weight: 600;
-}
-
 .conj-tf-body {
   display: flex;
   align-items: flex-start;
@@ -836,64 +723,11 @@ html:not(.dark) .crt-input.incorrect {
 }
 .conj-tf-body.filter-body--collapsed { display: none; }
 
-/* ═══════════════════════════════════════════════════════════════
-   Card header — two columns
-   The right half carried nothing before; on a half-width card that
-   is a lot of empty space next to a six-row conjugation table.
-   ═══════════════════════════════════════════════════════════════ */
-.conj-card-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-}
-.conj-head-main { min-width: 0; flex: 1; }
-.conj-head-side {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.3rem;
-  flex-shrink: 0;
-}
-
-.conj-card-band {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  border-radius: 99px;
-  padding: 0.05rem 0.4rem;
-}
-
-.conj-reveal-all-btn {
-  font-family: 'Sora', sans-serif;
-  font-size: 0.68rem;
-  font-weight: 600;
-  padding: 0.22rem 0.55rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text-muted);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background var(--transition-fast),
-              border-color var(--transition-fast),
-              color var(--transition-fast);
-}
-.conj-reveal-all-btn:hover:not(:disabled) {
-  background: var(--surface2);
-  border-color: hsl(var(--tense-hue, 145) 45% 45%);
-  color: hsl(var(--tense-hue, 145) 55% 32%);
-}
-.conj-reveal-all-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
 @media (max-width: 767px) {
   .conj-tense-chips { grid-template-columns: 1fr 1fr; }
   .conj-tf-body     { flex-direction: column; gap: 0.6rem; }
   .conj-tf-divider  { width: 100%; height: 1px; flex: 0 0 1px; }
   .conj-tf-summary  { display: none; }
-  .conj-head-side   { gap: 0.25rem; }
 }
 
 
@@ -907,33 +741,6 @@ html:not(.dark) .crt-input.incorrect {
 /* The badge itself is .ui-rank-badge, shared with table mode; the card only
    has to provide the containing block. */
 .conj-card { position: relative; }
-
-.conj-card-tense-en {
-  font-size: 0.6rem;
-  font-style: italic;
-  color: var(--text-muted);
-  text-align: right;
-  line-height: 1.1;
-}
-
-/* ── Card header right side ───────────────────────────────────
-   Band, regularity and tense used to stack, making every card three
-   rows taller than its conjugation table needed. They are all one-word
-   labels, so they sit on a single line. */
-.conj-head-meta {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-}
-.conj-head-foot {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.4rem;
-}
-.conj-card-tense { margin-left: 0; }
 
 /* ── Regularity filter chips ──────────────────────────────────
    Same shape as the tense chips, tinted with the same colours the
@@ -990,22 +797,6 @@ html:not(.dark) .crt-input.incorrect {
   padding: 0.3rem 0.35rem;
 }
 
-/* Regularity pill. Three buckets rather than the 26 raw classes. */
-.conj-card-reg {
-  font-size: 0.6rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.08rem 0.42rem;
-  border-radius: 99px;
-  border: 1px solid currentColor;
-  white-space: nowrap;
-}
-.conj-card-reg--regular   { color: var(--correct, #3d6b4f); }
-.conj-card-reg--ortho     { color: var(--text-muted); }
-.conj-card-reg--stem      { color: var(--warning, #b7791f); }
-.conj-card-reg--irregular { color: var(--danger, #b4453c); }
-
 /* ── Tense chips: native name over the English ──────────────── */
 .conj-tense-chip {
   display: flex;
@@ -1023,21 +814,7 @@ html:not(.dark) .crt-input.incorrect {
 
 @media (max-width: 640px) {
   .conj-card-rank     { font-size: 0.55rem; }
-  .conj-card-tense-en { display: none; }
 }
-
-/* ── Add to list ── */
-
-/* Centred, not baseline: the star is a circle now, and baseline-aligning a
-   round button against 1.2rem type sat it visibly low. */
-.conj-verb-title-row {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-width: 0;
-}
-
-.conj-verb-title-row .conj-verb-spanish { min-width: 0; }
 
 /* ── Full Conjugation ──
 
@@ -1058,77 +835,11 @@ html:not(.dark) .crt-input.incorrect {
   flex-wrap: wrap;
 }
 
-.conj-full-title {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.conj-full-word {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.conj-full-gloss {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Matches table.css's .pager-status — same "N of M" role, styled the same
-   way so Conjugation's pager reads as the same control as Table's rather
-   than a different-looking one that happens to do the same thing. */
-.conj-full-count {
-  flex: none;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Matches table.css's .pager-btn. Also reused for the unrelated "Collapse
-   all" button (conj-collapse-all-btn), which keeps this same look on
-   purpose — it sits in the same header row as Prev/Next. */
-.conj-full-nav {
-  flex: none;
-  min-width: 2.4rem;
-  padding: 0.35rem 0.75rem;
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text);
-  background: var(--surface2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
-}
-
-.conj-full-nav:hover:not(:disabled) {
-  border-color: var(--accent);
-  background: var(--accent-light);
-  color: var(--accent);
-}
-.conj-full-nav:disabled { opacity: 0.35; cursor: default; }
-
 /* The grid stacks verb blocks; the horizontal row is inside each one. */
 .conj-cards-grid--full {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
-}
-
-.conj-verb-block {
-  border: 1px solid var(--border);
-  border-radius: var(--radius, 12px);
-  background: var(--surface2);
-  overflow: hidden;
 }
 
 .conj-verb-block-head {
@@ -1138,28 +849,6 @@ html:not(.dark) .crt-input.incorrect {
   padding: 0.45rem 0.7rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
-}
-
-.conj-full-rank {
-  margin-left: auto;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-}
-
-.conj-verb-collapse-btn {
-  flex: 0 0 auto;
-  font-size: 0.9rem;
-  line-height: 1;
-}
-
-.conj-verb-block-head--clickable {
-  cursor: pointer;
-}
-/* The star and rank stay their own click targets (add-to-list, no action) —
-   only the header background itself hints "click to collapse". */
-.conj-verb-block-head--clickable:hover {
-  background: var(--surface3, var(--surface2));
 }
 
 /* Collapsed: the header stays (so the verb is still identifiable and its
@@ -1278,130 +967,6 @@ html:not(.dark) .crt-input.incorrect {
   color: hsl(var(--pronoun-hue, 210) 65% 70%);
 }
 
-/* Falls back to stacking on narrow screens. A horizontal scroll containing
-   text inputs is miserable on a phone: focusing a field scrolls the row and
-   you lose your place mid-answer. Each card gets its own border back too —
-   stacked full-width, there is no shared row edge to borrow from, and the
-   hidden-label trick above only makes sense side by side. */
-@media (max-width: 640px) {
-  .conj-verb-row {
-    flex-direction: column;
-    overflow-x: visible;
-    gap: 0.6rem;
-    padding: 0.6rem;
-  }
-  .conj-verb-row .conj-card {
-    width: 100%;
-    border: 1px solid var(--border);
-    border-radius: var(--radius, 12px);
-    background: var(--surface2);
-  }
-  .conj-verb-row .conj-card:not(:first-child) .conj-pronoun { visibility: visible; }
-}
-
-/* ── Pager ── */
-.conj-full-size-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.conj-full-size { min-height: 32px; }
-
-
-/* In Full Conjugation each card is one tense, so its pronouns run down a
-   single column and the tenses are the columns of the chart. The card's
-   normal 2×3 inner grid squeezed each input to about 9rem minus a 72px
-   pronoun label, which left a sliver too narrow to read what you typed. */
-.conj-cards-grid--full .conj-inner-grid {
-  grid-template-columns: 1fr;
-  grid-template-rows: none;
-  grid-auto-flow: row;
-}
-
-/* The 2-column border rules are positional and mean nothing in one column:
-   nth-child(n+4) drew a divider down the middle of rows 4-6, and 3 and 6 were
-   the bottom of each half-column. In a single column only the last row ends it. */
-.conj-cards-grid--full .conj-inner-grid .conj-row {
-  border-left: none;
-}
-.conj-cards-grid--full .conj-inner-grid .conj-row:nth-child(3) {
-  border-bottom: 1px solid var(--border);
-}
-.conj-cards-grid--full .conj-inner-grid .conj-row:last-child,
-.conj-cards-grid--full .conj-inner-grid .conj-row:nth-last-child(2):has(+ .conj-row-tense-hidden) {
-  border-bottom: none;
-}
-
-@media (max-width: 640px) {
-  /*
-   * One column here too.
-   *
-   * This used to put the 2×3 grid back, on the reasoning that a stacked card
-   * has the full width of the screen rather than one column of a scrolling
-   * row. The full width of a phone is still only ~360px, and half of that
-   * minus a 72px pronoun label leaves an input too narrow to read — the same
-   * mistake Grid view had, made a second time for the same wrong reason.
-   *
-   * Both views are one pronoun per row on a phone now, so a card reads the
-   * same wherever it appears.
-   */
-  .conj-cards-grid--full .conj-card { width: 100%; }
-}
-
-/* ── Add-to-list star ──
-   Matches Table mode's .known-btn (table.css) — square, em-sized, accent
-   when active — rather than its own circular/amber look. The two modes'
-   stars used to disagree for no reason other than having been built
-   separately; this is the one place that mattered enough to unify. */
-.conj-card-star,
-.conj-full-star {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.7em;
-  min-height: 1.7em;
-  padding: 0;
-  font-size: 0.85rem;
-  line-height: 1;
-  color: var(--text-muted);
-  background: transparent;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  opacity: 1;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
-}
-
-.conj-card-star:hover,
-.conj-full-star:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: var(--accent-light);
-}
-
-.conj-card-star:focus-visible,
-.conj-full-star:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--focus-ring);
-}
-
-/* In a list — filled, so it reads as a state and not just a hover. Same
-   accent Table mode's .known-btn--active uses, not a separate color. */
-.conj-card-star.known-btn--active,
-.conj-full-star.known-btn--active {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: var(--accent-light);
-}
-
 /* ================================================================
    TENSE & FORMS ON A PHONE
 
@@ -1481,84 +1046,6 @@ html:not(.dark) .crt-input.incorrect {
 @media (max-width: 380px) {
   .conj-tense-chips { grid-template-columns: 1fr; }
 }
-
-/* ================================================================
-   The verb name row is hidden by an attribute, so it needs a rule.
-
-   buildCard sets `titleRow.hidden = true` in Full Conjugation, where
-   the view header already carries the verb. The browser's own
-   `[hidden] { display: none }` loses to the author `display: flex`
-   above, so the row kept rendering: the verb name and its star
-   appeared on all eight cards of the same verb, and the star sat on
-   top of the A1 badge.
-
-   That star is the add-to-list control, filled because the verb is
-   on one of your lists. One per verb is the intent — the one in the
-   Full Conjugation header.
-================================================================ */
-.conj-verb-title-row[hidden] { display: none; }
-
-/* ── Full Conjugation card width ──
-   15rem could not hold the header: rank, level, regularity, tense
-   and Reveal all, plus a pronoun label and an input on every row. The
-   badges wrap now rather than being clipped, and the column is wide
-   enough for the input to show what you typed. */
-.conj-cards-grid--full .conj-card {
-  width: min(19rem, 82vw);
-}
-
-.conj-cards-grid--full .conj-card-header {
-  padding: 0.55rem 0.7rem;
-}
-
-.conj-cards-grid--full .conj-head-meta,
-.conj-cards-grid--full .conj-head-foot {
-  flex-wrap: wrap;
-  row-gap: 0.25rem;
-}
-
-/* .conj-head-side keeps flex-shrink: 0 in Grid mode so a long word in
-   .conj-head-main can't squeeze the badge column. In Full Conjugation,
-   titleRow is hidden and .conj-head-main carries nothing, so that same
-   flex-shrink: 0 just meant .conj-head-side always rendered at its full
-   natural width — never narrower than the card — which meant the wrap
-   above never actually had a reason to trigger: a native tense name like
-   "Preterito Indefinido" or "Subjuntivo Presente" sits on one line wider
-   than the card and Reveal all gets pushed past the clipped edge with it.
-   Letting the column shrink to the row's real width is what makes that
-   wrap fire. */
-.conj-cards-grid--full .conj-head-side {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-/* headMain carries the verb name/gloss (hidden here — the verb block header
-   above has them) and nothing else, so it would otherwise reserve an empty
-   flex column next to the tense name. Full width for headSide instead, which
-   is what makes the card read as a tense column header rather than half of
-   one. */
-.conj-cards-grid--full .conj-head-main {
-  display: none;
-}
-
-/* The input is the point of the card; it gets what is left. */
-.conj-cards-grid--full .conj-row {
-  grid-template-columns: minmax(0, auto) minmax(4.5rem, 1fr) auto;
-  padding-inline: 0.5rem;
-}
-
-/* A fixed width, not width: auto — .conj-row is its own grid on every row
-   (not one grid shared down the card), so an auto width sized each row's
-   pronoun column to that row's own text. "yo" and "ellos / ellas" ended up
-   with different-width columns, which shifted the input's start position
-   and width from row to row instead of lining them up. */
-.conj-cards-grid--full .conj-pronoun {
-  width: 5.5rem;
-}
-
-/* ================================================================
-   CONJUGATION ON A PHONE — grid cards and the progress block
-================================================================ */
 @media (max-width: 640px) {
   /* ── One pronoun per row, in both views ──
      The 2×3 inner grid halves an already-narrow card, so the input was
@@ -1570,35 +1057,6 @@ html:not(.dark) .crt-input.incorrect {
      the two-column grid and reintroduce the problem. */
   .conj-cards-grid {
     grid-template-columns: 1fr;
-  }
-
-  .conj-inner-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: none;
-    grid-auto-flow: row;
-  }
-
-  .conj-inner-grid .conj-row {
-    border-left: none;
-  }
-  .conj-inner-grid .conj-row:nth-child(3) {
-    border-bottom: 1px solid var(--border);
-  }
-  .conj-inner-grid .conj-row:last-child {
-    border-bottom: none;
-  }
-
-  /* Let the gloss use the width it has instead of being cut at the
-     card edge — there is room for two lines here. */
-  .conj-verb-english {
-    white-space: normal;
-    overflow: visible;
-  }
-
-  .conj-head-meta,
-  .conj-head-foot {
-    flex-wrap: wrap;
-    row-gap: 0.25rem;
   }
 }
 
@@ -1729,14 +1187,6 @@ html:not(.dark) .crt-input.incorrect {
   .conj-tf-header > button { flex: 0 0 auto; }
 }
 
-/* ================================================================
-   PAGER AND PROGRESS ON A PHONE
-================================================================ */
-
-/* Long label on a wide screen, short one on a narrow screen. Both are
-   always in the DOM; only one is ever displayed. */
-.conj-full-count--short { display: none; }
-
 @media (max-width: 599px) {
   /* ── Pager: one line ──
      Prev, the count, the page size and Next used to wrap onto two rows,
@@ -1745,32 +1195,6 @@ html:not(.dark) .crt-input.incorrect {
     flex-wrap: nowrap;
     gap: 0.4rem;
     padding: 0.45rem 0.5rem;
-  }
-
-  .conj-full-count--long  { display: none; }
-  .conj-full-count--short { display: inline; }
-
-  .conj-full-count {
-    flex: 1 1 auto;
-    min-width: 0;
-    text-align: center;
-    font-size: 0.72rem;
-  }
-
-  .conj-full-nav {
-    flex: 0 0 auto;
-    padding: 0.35rem 0.5rem;
-    font-size: 0.72rem;
-    min-height: 40px;
-  }
-
-  /* The label is a tooltip's worth of text next to a self-explanatory
-     number; the select keeps the title attribute. */
-  .conj-full-size-label { flex: 0 0 auto; font-size: 0; gap: 0; }
-  .conj-full-size {
-    font-size: 0.74rem;
-    min-height: 40px;
-    padding-inline: 0.4rem 1.1rem;
   }
 
   /* ── Progress: shorter ──
@@ -1835,243 +1259,6 @@ html:not(.dark) .crt-input.incorrect {
     line-height: 1.3;
   }
 }
-
-/* ================================================================
-   ONE AT A TIME — one-at-a-time-mode.ts. A single flashcard: verb,
-   tense, pronoun, one input. Reuses .conj-verb-spanish/.conj-drill-input/
-   .conj-pronoun/.conj-giveup-btn/.conj-reveal-btn — only the card shell
-   and larger prompt sizing below are new.
-================================================================ */
-
-.coat-wrap {
-  max-width: 480px;
-  margin: 0 auto;
-}
-
-.coat-card {
-  text-align: center;
-  padding: 1.5rem 1rem;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  margin-top: 0.75rem;
-  /* data-tense (set by one-at-a-time-mode.ts's renderItem) drives
-     --tense-hue via the shared block above — same color a card's tense
-     carries in Full Conjugation and Random Table. */
-  border-top: 3px solid hsl(var(--tense-hue, 145) 45% 45%);
-}
-
-.coat-tense {
-  font-size: 0.8rem;
-  color: hsl(var(--tense-hue, 145) 45% 42%);
-  margin-top: 0.3rem;
-}
-
-.coat-pronoun {
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin-top: 0.5rem;
-  color: hsl(var(--pronoun-hue, 210) 55% 30%);
-}
-
-@media (prefers-color-scheme: dark) {
-  .coat-tense   { color: hsl(var(--tense-hue, 145) 60% 68%); }
-  .coat-pronoun { color: hsl(var(--pronoun-hue, 210) 65% 70%); }
-}
-:root[data-theme="dark"] .coat-tense   { color: hsl(var(--tense-hue, 145) 60% 68%); }
-:root[data-theme="dark"] .coat-pronoun { color: hsl(var(--pronoun-hue, 210) 65% 70%); }
-
-.coat-input-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 1rem;
-}
-
-.coat-input {
-  flex: 0 1 260px;
-  font-size: 1.15rem;
-  text-align: center;
-  padding: 0.6rem 0.8rem;
-}
-
-/* ================================================================
-   CARD MATCH — card-match-mode.ts. Two columns of trivia.css's .tv-option
-   cards; a correct pair locks with .tv-option--correct, a wrong pick
-   flashes .tv-option--wrong before clearing.
-================================================================ */
-
-.cm-wrap {
-  max-width: 720px;
-  margin: 0 auto;
-}
-
-.cm-round-label {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-right: auto;
-}
-
-.cm-feedback {
-  margin-top: 0.5rem;
-}
-
-.cm-columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-top: 0.75rem;
-}
-
-.cm-col {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.cm-card {
-  width: 100%;
-}
-
-@media (max-width: 599px) {
-  .coat-pronoun { font-size: 1.1rem; }
-  .coat-input   { flex: 1 1 auto; }
-  .cm-columns   { gap: 0.5rem; }
-  .cm-card      { font-size: 0.9rem; padding: 0.65rem 0.5rem; min-height: 44px; }
-}
-
-/* ================================================================
-   RANDOM TABLE — random-table-mode.ts. Every blank at once, table-mode.ts's
-   own bordered/tinted look applied to conjugation forms instead of words.
-================================================================ */
-
-.crt-wrap {
-  max-width: 900px;
-  margin: 0 auto;
-  overflow-x: auto;
-}
-
-/* .table-pager itself is generic (table.css) — just spacing it to sit
-   comfortably above/below this table instead of Standard style's. */
-.crt-pager { margin: 0.6rem 0; }
-
-.crt-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.95rem;
-  border: 2px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  margin-top: 0.75rem;
-}
-.crt-table th {
-  font-family: 'Sora', sans-serif;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  text-align: left;
-  color: var(--text-muted);
-  background: var(--surface2);
-  padding: 0.5rem 0.75rem;
-  border-bottom: 2px solid var(--border-strong);
-}
-.crt-table td {
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-.crt-table tr:last-child td { border-bottom: none; }
-.crt-table tr:nth-child(even) td { background: var(--surface2); }
-
-/* Column dividers — Pronoun/Verb/Tense/Your Answer read as one run-on row
-   without them, especially once the zebra stripe and the Tense stripe
-   (below) are the only other separators. Both header and body cells split
-   the same way; the last column needs none since the table's own outer
-   border already closes it off. */
-.crt-table th:not(:last-child),
-.crt-table td:not(:last-child) {
-  border-right: 1px solid var(--border-strong);
-}
-
-/* Tense and person color coding — rows carry data-tense/data-pi (set by
-   random-table-mode.ts), which define --tense-hue/--pronoun-hue (see the
-   shared blocks above); the cells here just read them. Text color plus a
-   left-edge stripe, not a background tint, so the coding stays legible over
-   the alternating .crt-table row stripe rather than fighting it. */
-.crt-pronoun {
-  font-weight: 600;
-  color: hsl(var(--pronoun-hue, 210) 55% 30%);
-  white-space: nowrap;
-}
-.crt-verb {
-  font-weight: 700;
-  color: var(--accent);
-}
-.crt-tense {
-  color: hsl(var(--tense-hue, 145) 50% 38%);
-  font-size: 0.85rem;
-  white-space: nowrap;
-  border-left: 3px solid hsl(var(--tense-hue, 145) 45% 45%);
-  padding-left: 0.6rem;
-}
-@media (prefers-color-scheme: dark) {
-  .crt-pronoun { color: hsl(var(--pronoun-hue, 210) 65% 68%); }
-  .crt-tense   { color: hsl(var(--tense-hue, 145) 65% 68%); }
-}
-:root[data-theme="dark"] .crt-pronoun { color: hsl(var(--pronoun-hue, 210) 65% 68%); }
-:root[data-theme="dark"] .crt-tense   { color: hsl(var(--tense-hue, 145) 65% 68%); }
-.crt-answer-cell { width: 32%; }
-
-/* Same look and answer-state colours as .conj-drill-input. */
-.crt-input {
-  width: 100%;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.95rem;
-  padding: 0.4rem 0.6rem;
-  box-sizing: border-box;
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: 4px;
-  color: var(--text);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-.crt-input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--focus-ring);
-}
-.crt-input.correct {
-  background-color: var(--correct-light);
-  border-color: var(--correct);
-  color: var(--correct);
-  font-weight: 600;
-}
-.crt-input.incorrect {
-  background-color: var(--incorrect-light);
-  border-color: var(--incorrect);
-  color: var(--incorrect);
-  font-weight: 600;
-}
-
-@media (max-width: 599px) {
-  .crt-table { font-size: 0.8rem; }
-  .crt-table th, .crt-table td { padding: 0.4rem 0.5rem; }
-  .crt-tense { white-space: normal; }
-  .crt-answer-cell { width: 40%; }
-  .crt-input { font-size: 0.9rem; min-height: 40px; }
-}
-
-/* ── Compact sticky bar (desktop) ─────────────────────────────────────────────
-   The bar stacked five rows (order, two labelled bars, a pills row, the scope
-   toggle, the pager) and took roughly a third of the window. Now:
-     row 1  Order + verb summary ········· pager / page size
-     row 2  Forms [bar] stat  |  Verbs [bar] stat ········ timer · Give Up
-     row 3  Forms chips · Verbs chips ·················· Full Quiz / This Page
-   Below 900px the existing stacked phone layout is kept as it was. */
 @media (min-width: 900px) {
   .conj-sticky-bar {
     flex-direction: row;
@@ -2110,19 +1297,6 @@ html:not(.dark) .crt-input.incorrect {
   .conj-progress-section .quiz-progress-group > .progress-group-label { margin: 0; flex: 0 0 auto; }
   .conj-progress-section .quiz-progress-group > .progressWrap { flex: 1 1 auto; min-width: 0; margin: 0; }
   .conj-progress-bars .progressWrap .small { flex: 0 0 auto; font-size: 0.7rem; }
-  .conj-progress-section .conj-progress-pills { flex: 1 1 auto; min-width: 0; }
-  .conj-progress-section .conj-progress-scope-toggle { flex: 0 0 auto; margin-left: auto; }
-  .conj-progress-section .conj-giveup-btn { padding: 0.3rem 0.8rem; font-size: 0.8rem; }
-}
-@media (min-width: 900px) {
-  .conj-progress-section .conj-progress-pills { flex: 1 1 0; }
-  .conj-progress-section .conj-progress-scope-toggle .sort-order-btn { padding: 0.15rem 0.5rem; font-size: 0.72rem; }
-}
-/* The scope toggle rides on the bars' row (they flex to make room); the chips get the full row below. */
-@media (min-width: 900px) {
-  .conj-progress-section .conj-progress-bars { order: 1; flex: 1 1 0; min-width: 0; }
-  .conj-progress-section .conj-progress-scope-toggle { order: 2; margin-left: 0; }
-  .conj-progress-section .conj-progress-pills { order: 3; flex: 1 1 100%; }
 }
 
 /* ── One-row progress: Forms/Verbs and Full Quiz/This Page are cycle buttons ──
@@ -2130,142 +1304,3 @@ html:not(.dark) .crt-input.incorrect {
    Order and the verb summary live in the ⋯ menu. Only one of Forms / Verbs is shown at a time. */
 .quiz-progress-group[hidden],
 .conj-pills-cell[hidden] { display: none !important; }
-.conj-progress-section .progress-group-label { display: none; }   /* the cycle button names the group */
-
-.conj-cycle-btn {
-  flex: 0 0 auto;
-  background: var(--surface2);
-  color: var(--text);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm, 4px);
-  font-size: 0.74rem;
-  font-weight: 600;
-  line-height: 1.2;
-  padding: 0.2rem 0.55rem;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.conj-cycle-btn:hover { background: var(--surface); }
-
-.conj-more-menu .conj-order-row { flex-wrap: wrap; border: 0; padding: 0; }
-.conj-more-menu .conj-order-count { flex: 1 1 100%; }
-
-@media (min-width: 900px) {
-  .conj-sticky-bar > .conj-progress-section { order: 1; }
-  .conj-sticky-bar > .conj-full-header { order: 2; flex: 1 1 100%; }
-  .conj-progress-section .conj-progress-block {
-    flex: 1 1 0;
-    min-width: 0;
-    flex-wrap: nowrap;
-    gap: 0.5rem;
-  }
-  .conj-progress-section .conj-progress-bars { order: 0; flex: 1 1 0; min-width: 0; }
-  .conj-progress-section .conj-progress-pills { order: 0; flex: 0 0 auto; }
-  .conj-progress-section .conj-cycle-btn:last-child { order: 0; margin-left: 0; }
-  .conj-progress-section .conj-pills-cell + .conj-pills-cell { margin-left: 0; padding-left: 0; border-left: 0; }
-  .conj-progress-section .quiz-progress-group { flex: 1 1 auto; }
-}
-
-/* ── Colour-coded cycle buttons: each state has its own tint, so the button says at a glance which view is on ── */
-.conj-cycle-btn[data-tone] {
-  background: color-mix(in srgb, var(--tone) 20%, var(--surface));
-  border-color: color-mix(in srgb, var(--tone) 60%, transparent);
-  color: color-mix(in srgb, var(--tone) 65%, var(--text));
-}
-.conj-cycle-btn[data-tone]:hover { background: color-mix(in srgb, var(--tone) 32%, var(--surface)); }
-.conj-cycle-btn[data-tone="forms"] { --tone: var(--accent); }
-.conj-cycle-btn[data-tone="verbs"] { --tone: var(--ml-accent-smart); }
-.conj-cycle-btn[data-tone="quiz"]  { --tone: var(--ml-accent-multi); }
-.conj-cycle-btn[data-tone="page"]  { --tone: var(--warning); }
-
-/* ── Grid view cards ──────────────────────────────────────────────────────────
-   Header: [word][translation] on one line, each in its own tint; star in the top-right corner. Tense,
-   regularity and band moved into the popover that opens when you click the word. */
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-card-header { padding-right: 2.6rem; }
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-title-row {
-  flex-wrap: wrap;
-  gap: 0.3rem 0.4rem;
-}
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-spanish,
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-english {
-  display: inline-block;
-  padding: 0.12rem 0.5rem;
-  border-radius: 6px;
-  line-height: 1.25;
-}
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-spanish {
-  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-}
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-english {
-  margin-top: 0;
-  max-width: 100%;
-  color: color-mix(in srgb, var(--info) 55%, var(--text));
-  background: color-mix(in srgb, var(--info) 14%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--info) 35%, transparent);
-  font-size: 0.8rem;
-}
-.conj-card-star--corner {
-  position: absolute;
-  top: 0.4rem;
-  right: 0.45rem;
-  z-index: 1;
-}
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-spanish.word-info-trigger { cursor: pointer; }
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-spanish.word-info-trigger:hover {
-  background: color-mix(in srgb, var(--accent) 26%, var(--surface));
-}
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-row { padding: 0.28rem 0.55rem; }
-
-/* The extra block at the top of the word popover. */
-.conj-info-extra { display: flex; flex-direction: column; gap: 0.3rem; padding-bottom: 0.5rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
-.conj-info-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
-.conj-info-help { font-size: 0.74rem; color: var(--text-muted); line-height: 1.35; }
-
-/* ── Grid cards: one-line header, bigger rank, tighter spacing ──────────────── */
-.conj-cards-grid:not(.conj-cards-grid--full) { gap: 0.5rem; }
-
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-card-header {
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.3rem 2.3rem 0.3rem 2.5rem;   /* left clears the rank, right clears the star */
-  min-height: 2.1rem;
-}
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-head-main { display: flex; align-items: center; min-width: 0; }
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-title-row {
-  flex-wrap: nowrap;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-spanish { flex: 0 0 auto; }
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-english {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-head-side {
-  flex-direction: row;
-  align-items: center;
-  gap: 0.4rem;
-}
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-head-foot { gap: 0.4rem; flex-wrap: nowrap; }
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-card-tense { margin-left: 0; }
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-reveal-all-btn { padding: 0.12rem 0.5rem; }
-
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-card-rank {
-  top: 1.05rem;                 /* half the header's min-height: centred on the bar, not the card */
-  transform: translateY(-50%);
-  left: 0.55rem;
-  font-size: 0.85rem;
-  margin-top: 0;
-}
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-card-star--corner { top: 0.3rem; }
-/* A fixed bar height, so the rank and star (positioned against the card) can be centred on it exactly. */
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-card-header { height: 2.3rem; min-height: 0; box-sizing: border-box; padding-top: 0; padding-bottom: 0; }
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-spanish { font-size: 1.05rem; }
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-card-rank { top: 1.15rem; }
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-card-star--corner { top: 0.43rem; }
-/* Accent text on its own accent wash fell under the contrast bar in dark mode; pull it toward the page text. */
-.conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-spanish { color: color-mix(in srgb, var(--accent) 40%, var(--text)); }

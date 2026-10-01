@@ -12,6 +12,7 @@ import type { FilterScope } from '../../filters/filter-scope.ts';
 import type { MenuItem } from './sidebar-menu.ts';
 import type { BulkHideFrom } from './sidebar-pickers.ts';
 import { type SidebarSectionId, isSectionCollapsed, setSectionCollapsed, isFolderCollapsed, setFolderCollapsed } from './sidebar-state.ts';
+import '../../styles-lazy/my-lists.css';
 
 /**
  * sidebar-folders.ts — the structure around the list cards: section heads, the collapsible

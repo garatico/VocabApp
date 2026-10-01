@@ -8,6 +8,7 @@
  */
 import { EMOJI_CATEGORIES, ALL_EMOJIS, type EmojiEntry } from './emoji-data.ts';
 import { escapeHtml } from './util.ts';
+import '../../styles-lazy/my-content-bundle.css';
 
 function matchesSearch(entry: EmojiEntry, needle: string): boolean {
   return entry.keywords.some(k => k.includes(needle)) || entry.char === needle;

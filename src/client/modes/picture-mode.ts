@@ -25,6 +25,8 @@ import { Settings, applyAutofillAttr } from '../settings.ts';
 import { createStopwatch   } from '../ui/stopwatch.ts';
 import { enableInputWheelScroll, renderWordWithGender, applyGenderContainer } from '../utils/dom.ts';
 import type { Word }        from '../types.ts';
+import '../styles-lazy/picture.css';
+import '../styles-lazy/conjugation.css';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 

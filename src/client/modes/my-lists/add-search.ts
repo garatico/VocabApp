@@ -19,6 +19,7 @@ import { foldKey as norm } from '../../utils/match.ts';
 import { getList, addToList } from '../../utils/word-lists.ts';
 import type { ListsCtx } from './context.ts';
 import { POS_ABBREV, type VocabEntry } from './types.ts';
+import '../../styles-lazy/my-lists.css';
 
 export interface AddSearchUI {
   /** The input row — the caller appends the bulk-import controls after it. */
