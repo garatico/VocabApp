@@ -239,6 +239,8 @@ read from or write to `vocabulary.db`.
   ~18 s of CPU per language for 7% more, and starved the rest of the server).
   Nothing per-request (timestamps!) may go in that body, or the ETag — and the
   service worker's "vocabulary updated" check that compares it — breaks.
+- **Words can travel "compact"** (`src/shared/vocab/compact-word.ts`): `compactWord` drops what the client can restore — `frequency.rank` (== `rank`), `glosses` when it is just `[translation]`, `reflexive:false`, `is_function_word:false` — and `expandWord` puts it back, so the in-memory `Word` is unchanged. It is **opt-in on the API** (`?compact=1`; the response says `compact:true` and the client expands only then) because a service-worker-cached older client cannot expand, and always on in the static JSONL. A field `shapeWordRow` always emits that is derivable or defaulted can be added to the pair; **`register` must not** (absent means unknown, not neutral). `tests/compact-word.test.js` pins the round trip on the real shaper's output and `tests/compact-api.test.js` the opt-in. Worth ~10% of the gzipped transfer.
+- **A static-only web build exists** (`npm run build:static` = `VITE_STATIC_VOCAB=1 vite build`, then `export-static-vocab.ts --static dist`): no `/api`, one rank-ordered JSONL per language written straight into `dist/data/` (never `public/`), streamed by `vocab-source.ts`'s `streamJsonl` so the first 200 words paint while the rest downloads. Packaged builds still use the whole-file JSON.
 - **First visit asks "where are you starting?"** `utils/level-plan.ts` maps four
   plain-language levels onto the Words controls (Most Common 100, or CEFR bands
   A2 / B1+B2 / C1+C2); `ui/level-picker.ts` applies a plan by *clicking the real

@@ -20,6 +20,7 @@
 import zlib from 'zlib';
 import crypto from 'crypto';
 import type { Request, Response } from 'express';
+import { compactWord } from '../../shared/vocab/compact-word.js';
 
 interface Encoded {
   etag: string;
@@ -28,7 +29,14 @@ interface Encoded {
   br:   Buffer | null;
 }
 
-const entries = new WeakMap<object, Encoded>();
+/**
+ * Two variants per loaded vocabulary: the full words, and `?compact=1` (see
+ * shared/vocab/compact-word.ts — ~10% less on the wire, expanded by the client).
+ * Compact is opt-in per request so a client cached from before it existed, which
+ * cannot expand, keeps receiving the shape it knows.
+ */
+const entries        = new WeakMap<object, Encoded>();
+const compactEntries = new WeakMap<object, Encoded>();
 
 /** Tail of the compression queue — see build(). */
 let compressionQueue: Promise<void> = Promise.resolve();
@@ -60,7 +68,12 @@ export function publicTags<T extends { tags?: string[] }>(words: T[]): T[] {
       : w);
 }
 
-function build(vocab: VocabLike): Encoded {
+/** `words` run through compactWord when `compact`, otherwise untouched. */
+export function compactIf<T extends object>(compact: boolean, words: T[]): T[] {
+  return compact ? words.map(w => compactWord(w as Parameters<typeof compactWord>[0]) as T) : words;
+}
+
+function build(vocab: VocabLike, compact: boolean): Encoded {
   // metadata is deliberately stable (no "now"): anything that changes per
   // request defeats the ETag. `cacheAge` stays as a field for existing
   // consumers and is the age at build time, i.e. 0.
@@ -69,7 +82,8 @@ function build(vocab: VocabLike): Encoded {
     language: vocab.language,
     count:    vocab.words.length,
     metadata: { timestamp: new Date(vocab.loadedAt).toISOString(), cacheAge: 0 },
-    data:     publicTags(vocab.words as { tags?: string[] }[]),
+    ...(compact ? { compact: true } : {}),
+    data:     compactIf(compact, publicTags(vocab.words as { tags?: string[] }[])),
   }));
   const etag = `"${crypto.createHash('sha1').update(raw).digest('base64url')}"`;
   const entry: Encoded = { etag, raw, gzip: null, br: null };
@@ -102,9 +116,10 @@ function build(vocab: VocabLike): Encoded {
   return entry;
 }
 
-function entryFor(vocab: VocabLike): Encoded {
-  let e = entries.get(vocab.words);
-  if (!e) { e = build(vocab); entries.set(vocab.words, e); }
+function entryFor(vocab: VocabLike, compact: boolean): Encoded {
+  const cache = compact ? compactEntries : entries;
+  let e = cache.get(vocab.words);
+  if (!e) { e = build(vocab, compact); cache.set(vocab.words, e); }
   return e;
 }
 
@@ -112,8 +127,8 @@ function entryFor(vocab: VocabLike): Encoded {
  * Send the whole-language response. Handles conditional requests (304) and
  * serves the best precompressed form the client accepts, when ready.
  */
-export function sendVocab(req: Request, res: Response, vocab: VocabLike, maxAgeSeconds: number): void {
-  const e = entryFor(vocab);
+export function sendVocab(req: Request, res: Response, vocab: VocabLike, maxAgeSeconds: number, compact = false): void {
+  const e = entryFor(vocab, compact);
 
   res.set({
     'Cache-Control': `public, max-age=${maxAgeSeconds}`,

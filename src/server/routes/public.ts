@@ -13,7 +13,7 @@ import { loadVocabFile, getSupportedLanguages, getDb, getWordColumnFlags, shapeD
 import { loadTriviaQuestions, loadGuessBlankQuestions } from '../lib/content-loader.js';
 import { createBetterSqlite3Adapter } from '../lib/storage/better-sqlite3-adapter.js';
 import { getWordPage } from '../../shared/vocab/queries.js';
-import { sendVocab, publicTags } from '../lib/vocab-response.js';
+import { sendVocab, publicTags, compactIf } from '../lib/vocab-response.js';
 
 export function makePublicRoutes(nodeEnv: string): Router {
   const router = Router();
@@ -35,11 +35,13 @@ export function makePublicRoutes(nodeEnv: string): Router {
   router.get('/vocab/:language', async (req, res, next) => {
     try {
       const language = req.params['language'];
+      // Opt-in: only a client that expands (vocab-source.ts) asks for it.
+      const compact  = req.query['compact'] === '1';
 
       if (req.query['page'] === undefined) {
         // Built once per loaded copy, precompressed, with a content-hash ETag —
         // see lib/vocab-response.ts.
-        sendVocab(req, res, loadVocabFile(language), vocabMaxAge);
+        sendVocab(req, res, loadVocabFile(language), vocabMaxAge, compact);
         return;
       }
 
@@ -63,7 +65,8 @@ export function makePublicRoutes(nodeEnv: string): Router {
         pages:    result.pages,
         limit:    result.limit,
         metadata: { timestamp: new Date().toISOString() },
-        data:     publicTags(result.words),
+        ...(compact ? { compact: true } : {}),
+        data:     compactIf(compact, publicTags(result.words)),
       });
     } catch (error) {
       next(error);
