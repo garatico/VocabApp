@@ -176,14 +176,25 @@ function changeSelection(mutate: () => void): void {
 
 // ── Dropdown ───────────────────────────────────────────────────────────────────
 
-function showDropdown(query: string): void {
-  if (!dropdownEl) return;
+/**
+ * The dropdown's candidate pool: everything that isn't already a pill and
+ * isn't already selected, i.e. the "remaining domains" the module comment
+ * promises — a top-10 domain has its pill, so it has no business showing up
+ * again in the search results underneath it. Exported bare (no DOM) so this
+ * is the part worth testing.
+ */
+export function computeDropdownPool(
+  allByCount: { domain: string; count: number }[],
+  pillDomains: string[],
+  selected: ReadonlySet<string>,
+  query: string,
+): { domain: string; count: number }[] {
+  const pills = new Set(pillDomains);
+  const candidates = allByCount.filter(({ domain }) => !selected.has(domain) && !pills.has(domain));
   const q = query.trim().toLowerCase();
 
-  let pool: { domain: string; count: number }[];
   if (q) {
-    // All non-selected domains, ranked: starts-with first, then contains
-    const candidates = allByCount.filter(({ domain }) => !selected.has(domain));
+    // Ranked: starts-with first, then contains
     const startsWith = candidates.filter(({ domain }) =>
       fmt(domain).toLowerCase().startsWith(q)
     );
@@ -191,15 +202,17 @@ function showDropdown(query: string): void {
       const label = fmt(domain).toLowerCase();
       return !label.startsWith(q) && label.includes(q);
     });
-    pool = [...startsWith, ...contains];
-  } else {
-    // Empty query: full list of all non-selected domains, alphabetical
-    pool = allByCount
-      .filter(({ domain }) => !selected.has(domain))
-      .slice()
-      .sort((a, b) => a.domain.localeCompare(b.domain));
+    return [...startsWith, ...contains];
   }
 
+  // Empty query: full list, alphabetical
+  return candidates.slice().sort((a, b) => a.domain.localeCompare(b.domain));
+}
+
+function showDropdown(query: string): void {
+  if (!dropdownEl) return;
+
+  const pool = computeDropdownPool(allByCount, pillDomains, selected, query);
   if (pool.length === 0) { hideDropdown(); return; }
 
   dropdownEl.innerHTML = '';
