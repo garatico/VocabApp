@@ -2,10 +2,14 @@ services:
   - type: web
     name: vocab-app
     runtime: node
-    buildCommand: npm install --include=dev && npm run export:vocab && npm run build
+    buildCommand: npm install --include=dev && NODE_OPTIONS=--max-old-space-size=384 npm run export:vocab && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3000
+      # Keep at most two languages in memory (~230 MB for all eight is more than a 512 MB host
+      # gives Node, which died with exit 134 / "heap out of memory"). Raise or remove on a bigger plan.
+      - key: VOCAB_CACHE_MAX_LANGUAGES
+        value: 2

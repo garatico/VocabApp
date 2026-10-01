@@ -165,6 +165,18 @@ function checkGrammaticalNumberColumn(conn: Database.Database): void {
 // Per-language in-memory cache
 const vocabCache = new Map<string, VocabData>();
 
+/**
+ * How many languages may sit in memory at once. Unset (the default) keeps every language
+ * loaded, which is fastest but costs about 230 MB of heap for the full database — more than
+ * a small host (512 MB) can give Node, which then dies with exit 134 ("heap out of memory").
+ * Set VOCAB_CACHE_MAX_LANGUAGES=2 there: the least recently used language is dropped when a
+ * new one loads, and is simply read from SQLite again if it is asked for later.
+ */
+function maxCachedLanguages(): number {
+  const n = Number(process.env.VOCAB_CACHE_MAX_LANGUAGES);
+  return Number.isInteger(n) && n > 0 ? n : Infinity;
+}
+
 // Running count of JSON parse failures since process start — incremented via
 // shapeDeps.reportIssue below, since the parsing itself now happens in
 // src/shared/vocab/shape-word.ts.
@@ -313,6 +325,9 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
   if (vocabCache.has(lang)) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const cached = vocabCache.get(lang)!; // safe: has() checked above
+    // Re-insert so Map order is least → most recently used (see maxCachedLanguages).
+    vocabCache.delete(lang);
+    vocabCache.set(lang, cached);
     return { ...cached, cacheAge: Date.now() - cached.loadedAt };
   }
 
@@ -351,6 +366,12 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
     };
 
     vocabCache.set(lang, vocabData);
+    const max = maxCachedLanguages();
+    while (vocabCache.size > max) {
+      const oldest = vocabCache.keys().next().value as string;
+      vocabCache.delete(oldest);
+      logger.info(`  evicted ${oldest} (VOCAB_CACHE_MAX_LANGUAGES=${max})`);
+    }
     return { ...vocabData, cacheAge: 0 };
 
   } catch (error) {
@@ -432,7 +453,11 @@ export async function preloadAll(): Promise<{ language: string; status: string; 
   logger.info('Pre-loading vocabularies from SQLite...');
   const results: { language: string; status: string; error?: string }[] = [];
 
-  for (const lang of getSupportedLanguages()) {
+  // With a cache limit there is no point loading more than fit — the extras would just evict
+  // each other. Spanish first: it is the language most people open.
+  const max = maxCachedLanguages();
+  const langs = getSupportedLanguages().sort((a, b) => Number(b === 'spanish') - Number(a === 'spanish'));
+  for (const lang of Number.isFinite(max) ? langs.slice(0, max) : langs) {
     try {
       loadVocabFile(lang);
       results.push({ language: lang, status: 'loaded' });

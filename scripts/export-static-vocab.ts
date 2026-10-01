@@ -28,7 +28,7 @@ import fs   from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { loadVocabFile, getSupportedLanguages, closeDatabase }
+import { loadVocabFile, getSupportedLanguages, closeDatabase, clearCache }
   from '../src/server/lib/vocab-loader.js';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -94,6 +94,12 @@ function main(): void {
       `  ${language.padEnd(12)} ${String(payload.count).padStart(6)} words  `
       + `${(bytes / 1048576).toFixed(2)} MB  -> public/data/${file}`,
     );
+
+    // This language is on disk now. loadVocabFile() keeps every language it has
+    // loaded, so without this the whole database sits in memory by the last one —
+    // over 256 MB for 180,000 words, which is more heap than a small host's build
+    // step gets (Node exits 134, "JavaScript heap out of memory").
+    clearCache(language);
   }
 
   const manifest = {
