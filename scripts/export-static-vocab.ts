@@ -125,6 +125,9 @@ function mainStatic(dir: string, only: string[]): void {
     const bytes = Buffer.byteLength(jsonl);
     index.push({ language, words: count, file, bytes });
     console.log(`  ${language.padEnd(12)} ${String(count).padStart(6)} words  ${(bytes / 1048576).toFixed(2)} MB  -> ${path.join(dir, 'data', file)}`);
+    // On disk now: don't keep it cached while the rest load (see the same line in main() — the whole
+    // database held at once is more heap than a small host's build has).
+    clearCache(language);
   }
   fs.writeFileSync(
     path.join(dataDir, 'index.json'),
