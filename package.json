@@ -33,7 +33,7 @@
     "build:native": "tsx scripts/build-native.ts native"
   },
   "dependencies": {
-    "@mlc-ai/web-llm": "^0.2.84",
+    "@mlc-ai/web-llm": "0.2.84",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-fs": "^2.5.2",
     "@tauri-apps/plugin-sql": "^2.4.1",

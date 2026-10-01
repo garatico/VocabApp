@@ -776,7 +776,10 @@ const { updateModeUI } = bindModeSwitch({
     // Dynamically imported: this pulls in @mlc-ai/web-llm (14MB package),
     // which used to ship in the main bundle for every user even though this
     // tab is dev/desktop-only and gated behind a runtime WebGPU check.
-    chat: () => { if (chatWrap) void import('./modes/ai-chat-mode.ts').then(m => m.renderAiChat(chatWrap, langSelect?.value ?? 'spanish')); },
+    // The `import.meta.env.DEV` guard matches the tab's own gate below: in a
+    // production build it folds to `false`, so the bundler drops this import and
+    // with it the chat chunk and the WebLLM worker (~6 MB) from dist/ entirely.
+    chat: () => { if (import.meta.env.DEV && chatWrap) void import('./modes/ai-chat-mode.ts').then(m => m.renderAiChat(chatWrap, langSelect?.value ?? 'spanish')); },
     trivia: updateTriviaDomainFilter,
     // Built fresh per visit like History/My Lists — cheap, and a word/trivia
     // question/picture added elsewhere in this same session (there isn't
