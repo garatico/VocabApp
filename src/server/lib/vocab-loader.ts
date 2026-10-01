@@ -12,6 +12,7 @@
 import Database from 'better-sqlite3';
 import path     from 'path';
 import fs       from 'fs';
+import v8       from 'node:v8';
 import { dataDir } from './paths.js';
 import {
   checkDatabase, REBUILD_INSTRUCTION,
@@ -176,6 +177,27 @@ function maxCachedLanguages(): number {
   const n = Number(process.env.VOCAB_CACHE_MAX_LANGUAGES);
   return Number.isInteger(n) && n > 0 ? n : Infinity;
 }
+
+/** Measured: the full 180,000-word database is about 230 MB of live heap, i.e. ~1.3 KB a word. */
+const HEAP_BYTES_PER_WORD = 1400;
+/** How much of Node's heap limit the cache may take; the rest is for requests, a language mid-load, the app. */
+const HEAP_SHARE_FOR_CACHE = 0.3;
+
+/**
+ * How many words may sit in the cache at once. It follows Node's real heap limit, so the server
+ * protects itself without anyone having to know the host's memory: on a 512 MB host (heap limit
+ * ~256 MB, where preloading everything died with exit 134) that is about 70,000 words — Spanish
+ * and a few small languages — and on a normal machine it is more than the whole database, so
+ * nothing changes there. VOCAB_CACHE_MAX_WORDS overrides it; VOCAB_CACHE_MAX_LANGUAGES, if set,
+ * applies as well (whichever is tighter).
+ */
+function cacheWordBudget(): number {
+  const explicit = Number(process.env.VOCAB_CACHE_MAX_WORDS);
+  if (Number.isInteger(explicit) && explicit > 0) return explicit;
+  return Math.floor(v8.getHeapStatistics().heap_size_limit * HEAP_SHARE_FOR_CACHE / HEAP_BYTES_PER_WORD);
+}
+
+const cachedWords = (): number => [...vocabCache.values()].reduce((n, v) => n + v.words.length, 0);
 
 // Running count of JSON parse failures since process start — incremented via
 // shapeDeps.reportIssue below, since the parsing itself now happens in
@@ -366,11 +388,14 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
     };
 
     vocabCache.set(lang, vocabData);
+    // Drop least-recently-used languages until it fits, but never the one just loaded: a language
+    // bigger than the whole budget is still served, it just stays alone.
     const max = maxCachedLanguages();
-    while (vocabCache.size > max) {
+    const budget = cacheWordBudget();
+    while (vocabCache.size > 1 && (vocabCache.size > max || cachedWords() > budget)) {
       const oldest = vocabCache.keys().next().value as string;
       vocabCache.delete(oldest);
-      logger.info(`  evicted ${oldest} (VOCAB_CACHE_MAX_LANGUAGES=${max})`);
+      logger.info(`  evicted ${oldest} (cache limit: ${max === Infinity ? 'no language cap' : max + ' languages'}, ~${budget.toLocaleString('en-US')} words)`);
     }
     return { ...vocabData, cacheAge: 0 };
 
@@ -448,18 +473,38 @@ export function getDbInfo(): Record<string, unknown> {
   return info;
 }
 
-/** Load all supported languages into cache at startup. */
+/** Words per language, from SQLite — a cheap count, used to decide what preloading can afford. */
+function languageWordCounts(): Map<string, number> {
+  const rows = ensureDb().prepare('SELECT language, COUNT(*) AS n FROM words GROUP BY language').all() as { language: string; n: number }[];
+  return new Map(rows.map(r => [r.language, r.n]));
+}
+
+/** Load as many supported languages into the cache at startup as its budget allows. */
 export async function preloadAll(): Promise<{ language: string; status: string; error?: string }[]> {
   logger.info('Pre-loading vocabularies from SQLite...');
   const results: { language: string; status: string; error?: string }[] = [];
 
-  // With a cache limit there is no point loading more than fit — the extras would just evict
-  // each other. Spanish first: it is the language most people open.
-  const max = maxCachedLanguages();
-  const langs = getSupportedLanguages().sort((a, b) => Number(b === 'spanish') - Number(a === 'spanish'));
-  for (const lang of Number.isFinite(max) ? langs.slice(0, max) : langs) {
+  // Only load what fits: the extras would just evict each other, and loading everything at
+  // startup is what ran a 512 MB host out of heap. Spanish first (the language most people open),
+  // then the smallest languages first so as many as possible fit; the rest load on first request.
+  const budget = cacheWordBudget();
+  const maxLangs = maxCachedLanguages();
+  const sizes = languageWordCounts();
+  const langs = getSupportedLanguages().sort((a, b) =>
+    Number(b === 'spanish') - Number(a === 'spanish') || (sizes.get(a) ?? 0) - (sizes.get(b) ?? 0) || a.localeCompare(b));
+  logger.info(`  cache budget ~${budget.toLocaleString('en-US')} words`);
+  let loadedWords = 0;
+  let loadedLangs = 0;
+  for (const lang of langs) {
+    const size = sizes.get(lang) ?? 0;
+    if (loadedLangs > 0 && (loadedLangs >= maxLangs || loadedWords + size > budget)) {
+      logger.info(`  later ${lang} (${size.toLocaleString('en-US')} words) — loads on first request`);
+      continue;
+    }
     try {
       loadVocabFile(lang);
+      loadedWords += size;
+      loadedLangs++;
       results.push({ language: lang, status: 'loaded' });
       logger.info(`  ok ${lang}`);
     } catch (error) {

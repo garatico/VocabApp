@@ -18,6 +18,7 @@
  */
 
 import zlib from 'zlib';
+import v8 from 'node:v8';
 import crypto from 'crypto';
 import type { Request, Response } from 'express';
 import { compactWord } from '../../shared/vocab/compact-word.js';
@@ -62,10 +63,13 @@ const PROVENANCE_TAGS = new Set([
 
 /** Public-facing copy of a word's tags, without the provenance ones. */
 export function publicTags<T extends { tags?: string[] }>(words: T[]): T[] {
-  return words.map(w =>
-    w.tags && w.tags.some(t => PROVENANCE_TAGS.has(t))
-      ? { ...w, tags: w.tags.filter(t => !PROVENANCE_TAGS.has(t)) }
-      : w);
+  return words.map(stripProvenance);
+}
+
+function stripProvenance<T extends { tags?: string[] }>(w: T): T {
+  return w.tags && w.tags.some(t => PROVENANCE_TAGS.has(t))
+    ? { ...w, tags: w.tags.filter(t => !PROVENANCE_TAGS.has(t)) }
+    : w;
 }
 
 /** `words` run through compactWord when `compact`, otherwise untouched. */
@@ -73,18 +77,60 @@ export function compactIf<T extends object>(compact: boolean, words: T[]): T[] {
   return compact ? words.map(w => compactWord(w as Parameters<typeof compactWord>[0]) as T) : words;
 }
 
-function build(vocab: VocabLike, compact: boolean): Encoded {
+/** Words per piece when serialising: small enough that no copy of the whole language ever exists at once. */
+const SERIALIZE_BATCH = 500;
+
+/**
+ * The response body, byte-for-byte what JSON.stringify of the whole envelope would give, but built a
+ * few hundred words at a time. Stringifying one object holding a tag-stripped (and, for compact,
+ * compacted) copy of all 45,000 Spanish words kept that copy plus a ~25 MB string alive together —
+ * over 100 MB of extra peak on a host whose Node heap is ~256 MB. Here each word's copy is garbage
+ * as soon as its piece is encoded, and the only large allocation is the final Buffer.
+ */
+export function serializeVocab(vocab: VocabLike, compact: boolean): Buffer {
   // metadata is deliberately stable (no "now"): anything that changes per
   // request defeats the ETag. `cacheAge` stays as a field for existing
   // consumers and is the age at build time, i.e. 0.
-  const raw = Buffer.from(JSON.stringify({
+  const head = JSON.stringify({
     success:  true,
     language: vocab.language,
     count:    vocab.words.length,
     metadata: { timestamp: new Date(vocab.loadedAt).toISOString(), cacheAge: 0 },
     ...(compact ? { compact: true } : {}),
-    data:     compactIf(compact, publicTags(vocab.words as { tags?: string[] }[])),
-  }));
+  });
+  const words = vocab.words as { tags?: string[] }[];
+  const chunks: Buffer[] = [Buffer.from(head.slice(0, -1) + ',"data":[')];
+  for (let i = 0; i < words.length; i += SERIALIZE_BATCH) {
+    const pieces: string[] = [];
+    for (let j = i; j < Math.min(i + SERIALIZE_BATCH, words.length); j++) {
+      const word = stripProvenance(words[j]);
+      pieces.push(JSON.stringify(compact ? compactWord(word as Parameters<typeof compactWord>[0]) : word));
+    }
+    chunks.push(Buffer.from((i ? ',' : '') + pieces.join(',')));
+  }
+  chunks.push(Buffer.from(']}'));
+  return Buffer.concat(chunks);
+}
+
+/**
+ * Brotli settings for the precompressed copy. Quality 10 with a 16 MB window is the smallest (Spanish
+ * ~2.0 MB) but takes ~15 s of CPU and, measured on a 256 MB-heap host, ~130 MB of native memory on top
+ * of the process — enough to push a 512 MB host over its limit. Quality 8 with a 4 MB window is 22%
+ * bigger (~2.5 MB, still smaller than gzip-9's 2.9 MB), takes well under a second, and needs a
+ * fraction of the memory. So: the heavy setting only where there is room (a heap limit over 1.5 GB,
+ * i.e. not a small host); the light one everywhere else.
+ */
+function brotliParams(inputSize: number): zlib.BrotliOptions['params'] {
+  const roomy = v8.getHeapStatistics().heap_size_limit > 1.5 * 1024 ** 3;
+  return {
+    [zlib.constants.BROTLI_PARAM_QUALITY]:   roomy ? 10 : 8,
+    [zlib.constants.BROTLI_PARAM_LGWIN]:     roomy ? 24 : 22,
+    [zlib.constants.BROTLI_PARAM_SIZE_HINT]: inputSize,
+  };
+}
+
+function build(vocab: VocabLike, compact: boolean): Encoded {
+  const raw = serializeVocab(vocab, compact);
   const etag = `"${crypto.createHash('sha1').update(raw).digest('base64url')}"`;
   const entry: Encoded = { etag, raw, gzip: null, br: null };
 
@@ -98,14 +144,7 @@ function build(vocab: VocabLike, compact: boolean): Encoded {
     zlib.gzip(raw, { level: 9 }, (gzErr, gz) => {
       if (!gzErr) entry.gzip = gz;
       zlib.brotliCompress(raw, {
-        params: {
-          // 10, not 11: on Spanish (~10 MB) q11 is 748 kB for ~18 s of CPU, q10 is
-          // 800 kB for ~6 s. That extra 7% was not worth a core for three times
-          // as long on a server that also has requests to answer.
-          [zlib.constants.BROTLI_PARAM_QUALITY]:   10,
-          [zlib.constants.BROTLI_PARAM_LGWIN]:     24,
-          [zlib.constants.BROTLI_PARAM_SIZE_HINT]: raw.length,
-        },
+        params: brotliParams(raw.length),
       }, (brErr, br) => {
         if (!brErr) entry.br = br;
         resolve();

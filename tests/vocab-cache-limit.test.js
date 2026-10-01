@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { createTestDb } from './helpers/db.js';
-import { setDb, clearCache, reloadDb, loadVocabFile, getDbInfo } from '../src/server/lib/vocab-loader.js';
+import { setDb, clearCache, reloadDb, loadVocabFile, getDbInfo, preloadAll } from '../src/server/lib/vocab-loader.js';
 
 let db;
 beforeEach(() => {
@@ -20,6 +20,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   delete process.env.VOCAB_CACHE_MAX_LANGUAGES;
+  delete process.env.VOCAB_CACHE_MAX_WORDS;
   if (db?.open) db.close();
   reloadDb();
 });
@@ -52,5 +53,49 @@ describe('vocab cache limit', () => {
     loadVocabFile('german');
     expect(loadVocabFile('french').words.length).toBe(1);
     expect(cached()).toBe(1);
+  });
+});
+
+/**
+ * Without VOCAB_CACHE_MAX_LANGUAGES set (a host created by hand ignores render.yaml, and the server then
+ * preloaded all eight languages and died with exit 134), the cache sizes itself from Node's heap limit.
+ * VOCAB_CACHE_MAX_WORDS overrides that number, which is what these use.
+ */
+describe('vocab cache word budget', () => {
+  const spanishWords = () => { const n = loadVocabFile('spanish').words.length; clearCache(); return n; };
+
+  it('evicts the least recently used language when the words no longer fit', () => {
+    const n = spanishWords();
+    process.env.VOCAB_CACHE_MAX_WORDS = String(n);          // room for spanish alone
+    loadVocabFile('spanish');
+    loadVocabFile('french');                                // n + 1 words > n
+    const names = JSON.stringify(getDbInfo().languages ?? []);
+    expect(cached()).toBe(1);
+    expect(names).toContain('french');
+    expect(names).not.toContain('spanish');
+  });
+
+  it('still serves a language bigger than the whole budget — it just stays alone', () => {
+    process.env.VOCAB_CACHE_MAX_WORDS = '1';
+    expect(loadVocabFile('spanish').words.length).toBeGreaterThan(1);
+    expect(cached()).toBe(1);
+    loadVocabFile('french');
+    expect(cached()).toBe(1);
+  });
+
+  it('preloads Spanish first and only what fits, leaving the rest for the first request', async () => {
+    const n = spanishWords();
+    process.env.VOCAB_CACHE_MAX_WORDS = String(n + 1);      // spanish + one single-word language
+    const results = await preloadAll();
+    expect(results.map(r => r.language)).toEqual(['spanish', 'french']);   // german (n + 2) does not fit
+    expect(cached()).toBe(2);
+    expect(loadVocabFile('german').words.length).toBe(1);   // ...and is still served on demand
+  });
+
+  it('with a roomy budget (or none configured on a big machine) preloads everything, as before', async () => {
+    process.env.VOCAB_CACHE_MAX_WORDS = '1000000';
+    const results = await preloadAll();
+    expect(results.length).toBe(4);                         // spanish, portuguese, french, german in the test DB
+    expect(cached()).toBe(4);
   });
 });
