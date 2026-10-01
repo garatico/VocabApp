@@ -3,7 +3,6 @@ import { renderTableRecallMode }          from './modes/table-recall-mode.ts';
 import { filterWords }                    from './filters/word-filters.ts';
 import { applyDomainFilter }              from './filters/domain-filter.ts';
 import { applyScriptTypeFilter }          from './filters/script-type-filter.ts';
-import { hasVisual }                      from './data/visual-map.ts';
 import { shuffleInPlace }                from './utils/shuffle.ts';
 import { orderWords }                     from './utils/session-history.ts';
 import { estimateConjugationSize, isOwnInfinitive, hasAnyForms, dropRedundantReflexives, regularityOf } from './modes/conjugation/verb-filters.ts';
@@ -115,6 +114,13 @@ export function bindStartHandler({
       // instead of silently shrinking to 99 once the renderer drops one.
       const modeAtStart = getCurrentMode();
       const verbsOnly   = modeAtStart === 'conjugation';
+
+      // Only picture mode asks whether a word has a picture, and the table behind that answer
+      // is ~30 KB — so it is fetched here, for that mode, instead of with the first paint.
+      // (app.ts also prefetches the mode when idle, so this is normally already cached.)
+      const hasVisual: typeof import('./data/visual-map.ts').hasVisual = modeAtStart === 'picture'
+        ? (await import('./data/visual-map.ts')).hasVisual
+        : () => false;
 
       // ConjRegularityScope's 'beforeTopN': narrow to the checked Regularity
       // buckets before anything below decides how many verbs are "enough" —
