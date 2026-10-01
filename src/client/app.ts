@@ -44,7 +44,7 @@ import { initMissedAdd } from './ui/quiz-summary.ts';
 import { offerResume } from './ui/resume-banner.ts';
 import { bindBackupSettings, maybeRemindBackup } from './ui/backup-settings.ts';
 import { initDiceButton } from './ui/dice-widget.ts';
-import { applyTranslations } from './i18n/index.ts';
+import { applyTranslations, ensureDictionary } from './i18n/index.ts';
 import { initShortcuts }                         from './ui/shortcuts-overlay.ts';
 import { openLanguagePicker, languagePickerLabel } from './ui/language-picker.ts';
 import { openPresetPicker }                      from './ui/preset-picker.ts';
@@ -809,8 +809,16 @@ setOnFilterVisibilityChange(() => updateModeUI(false));
 
 // Apply the saved UI language to the static chrome on load, and again live
 // whenever the App language setting changes — see i18n/index.ts.
-applyTranslations();
-setOnUILanguageChange(() => applyTranslations());
+// A failed dictionary load (see ensureDictionary) is said out loud rather than leaving the
+// interface quietly in English.
+const translateUI = (): void => {
+  void ensureDictionary().then(loaded => {
+    applyTranslations();
+    if (!loaded) showToast('Could not load the interface language. Check your connection, or reload the page.', 'error');
+  });
+};
+translateUI();
+setOnUILanguageChange(translateUI);
 
 bindStartHandler({
   getLang:     () => isoCode(langSelect?.value),

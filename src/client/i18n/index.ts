@@ -1,5 +1,5 @@
 import { Settings, type UILanguage } from '../settings.ts';
-import { es } from './es.ts';
+import { logger } from '../utils/logger.ts';
 
 /**
  * i18n/index.ts — translates the app's own interface chrome.
@@ -10,8 +10,48 @@ import { es } from './es.ts';
  * the first time each element is translated, so re-running this after
  * switching back to English restores the exact original markup rather than
  * needing a page reload.
+ *
+ * Dictionaries are separate chunks, fetched only when their language is
+ * selected — an English user never downloads the Spanish one (~54 KB). Startup
+ * and a language switch (app.ts) call `ensureDictionary()` and translate when it
+ * resolves. It is not started at module load: settings.ts sits in an import
+ * cycle with this file, so `Settings` is not yet defined then. `t()` stays
+ * synchronous and falls back to English until the chunk lands.
  */
-const DICTS: Partial<Record<UILanguage, Record<string, string>>> = { spanish: es };
+const DICTS: Partial<Record<UILanguage, Record<string, string>>> = {};
+const LOADERS: Partial<Record<UILanguage, () => Promise<Record<string, string>>>> = {
+  spanish: () => import('./es.ts').then(m => m.es),
+};
+const loading = new Map<UILanguage, Promise<boolean>>();
+
+/** Pause before the one automatic retry of a failed dictionary chunk. */
+const DICTIONARY_RETRY_MS = 1500;
+
+/**
+ * Resolves true once the current UI language's dictionary is loaded (immediately
+ * for English), false if it could not be — after one automatic retry. A failure
+ * is not remembered, so the next call (another language switch) tries again;
+ * the caller decides how to tell the user. The usual cause is a chunk whose
+ * hashed name is gone: a tab left open across a deploy.
+ */
+export function ensureDictionary(): Promise<boolean> {
+  const lang = Settings.getUILanguage();
+  const load = LOADERS[lang];
+  if (!load || DICTS[lang]) return Promise.resolve(true);
+  let pending = loading.get(lang);
+  if (!pending) {
+    const attempt = (): Promise<Record<string, string>> =>
+      load().catch(() => new Promise<Record<string, string>>((resolve, reject) => {
+        setTimeout(() => load().then(resolve, reject), DICTIONARY_RETRY_MS);
+      }));
+    pending = attempt()
+      .then(dict => { DICTS[lang] = dict; return true; })
+      .catch(err => { logger.error(`could not load the ${lang} interface text:`, err); return false; })
+      .finally(() => { loading.delete(lang); });
+    loading.set(lang, pending);
+  }
+  return pending;
+}
 
 function lookup(key: string): string | undefined {
   const lang = Settings.getUILanguage();
