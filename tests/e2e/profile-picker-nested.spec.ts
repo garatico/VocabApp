@@ -42,7 +42,7 @@ test('picker folders nest: click through each level, show leaf names, stay insid
   const over = await page.evaluate(() => {
     const pop = document.querySelector('#presetPickerPopover') as HTMLElement;
     const right = pop.getBoundingClientRect().right;
-    return [...pop.children].map(e => e.getBoundingClientRect().right - right).filter(d => d > 0.5);
+    return Array.from(pop.children).map(e => e.getBoundingClientRect().right - right).filter(d => d > 0.5);
   });
   expect(over, 'nothing passes the popover edge').toEqual([]);
 });
