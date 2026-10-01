@@ -240,11 +240,6 @@ function captureRow(row: HTMLElement): () => void {
   return () => { ops.forEach(op => op()); minutes?.(); };
 }
 
-/** The stable name of a row for links: its first control's id (`settingHintButton`). */
-function settingKeyOf(row: HTMLElement): string | null {
-  return row.querySelector<HTMLElement>('[id^="setting"]')?.id ?? null;
-}
-
 // ── Which section you were in ─────────────────────────────────────────────
 
 const LAST_SECTION_KEY = 's_settings_section';

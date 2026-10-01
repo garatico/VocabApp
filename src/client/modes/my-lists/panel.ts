@@ -12,13 +12,13 @@
  */
 
 import {
-  getList, getListMeta, setListMeta, metaFolders,
+  getListMeta, setListMeta, metaFolders,
   getListSources, setListSources, getListSourceCandidates,
 } from '../../utils/word-lists.ts';
 import { FILTER_SCOPES, SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
 import { BROWSE_ALL_LIST, NO_SELECTION, deselectAll, type ListsCtx } from './context.ts';
 import { renderBrowsePanel } from './browse-panel.ts';
-import { cachedVocab, cachedVocabMap, fetchVocab } from './vocab-cache.ts';
+import { cachedVocab, fetchVocab } from './vocab-cache.ts';
 import { logger } from '../../utils/logger.ts';
 import { createAddSearch } from './add-search.ts';
 import { createBulkImport } from './bulk-import.ts';

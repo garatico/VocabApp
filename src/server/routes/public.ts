@@ -13,7 +13,7 @@ import { loadVocabFile, getSupportedLanguages, getDb, getWordColumnFlags, shapeD
 import { loadTriviaQuestions, loadGuessBlankQuestions } from '../lib/content-loader.js';
 import { createBetterSqlite3Adapter } from '../lib/storage/better-sqlite3-adapter.js';
 import { getWordPage } from '../../shared/vocab/queries.js';
-import { sendVocab } from '../lib/vocab-response.js';
+import { sendVocab, publicTags } from '../lib/vocab-response.js';
 
 export function makePublicRoutes(nodeEnv: string): Router {
   const router = Router();
@@ -63,7 +63,7 @@ export function makePublicRoutes(nodeEnv: string): Router {
         pages:    result.pages,
         limit:    result.limit,
         metadata: { timestamp: new Date().toISOString() },
-        data:     result.words,
+        data:     publicTags(result.words),
       });
     } catch (error) {
       next(error);

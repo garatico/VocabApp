@@ -39,6 +39,27 @@ interface VocabLike {
   loadedAt: number;
 }
 
+/**
+ * Tags the pipeline stamps on every row to record where it came from
+ * (`kaikki`, `corpus`, `rare`, `backfilled` …). They are admin bookkeeping: the
+ * learner app reads exactly one tag (`function_word`), and these were ~1 MB of
+ * the ~10 MB Spanish response. Admin routes read the database directly and
+ * still see them. Stripped by allow-list inversion — anything not named here
+ * (including `function_word` and user-visible tags) is kept.
+ */
+const PROVENANCE_TAGS = new Set([
+  'kaikki', 'corpus', 'rare', 'backfilled', 'pos-fixed', 'form-homograph',
+  'curated', 'handcurated', 'hardcoded', 'inflected-form', 'name-homograph',
+]);
+
+/** Public-facing copy of a word's tags, without the provenance ones. */
+export function publicTags<T extends { tags?: string[] }>(words: T[]): T[] {
+  return words.map(w =>
+    w.tags && w.tags.some(t => PROVENANCE_TAGS.has(t))
+      ? { ...w, tags: w.tags.filter(t => !PROVENANCE_TAGS.has(t)) }
+      : w);
+}
+
 function build(vocab: VocabLike): Encoded {
   // metadata is deliberately stable (no "now"): anything that changes per
   // request defeats the ETag. `cacheAge` stays as a field for existing
@@ -48,7 +69,7 @@ function build(vocab: VocabLike): Encoded {
     language: vocab.language,
     count:    vocab.words.length,
     metadata: { timestamp: new Date(vocab.loadedAt).toISOString(), cacheAge: 0 },
-    data:     vocab.words,
+    data:     publicTags(vocab.words as { tags?: string[] }[]),
   }));
   const etag = `"${crypto.createHash('sha1').update(raw).digest('base64url')}"`;
   const entry: Encoded = { etag, raw, gzip: null, br: null };
