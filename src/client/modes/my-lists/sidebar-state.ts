@@ -29,8 +29,10 @@ export function setSectionCollapsed(id: SidebarSectionId, collapsed: boolean): v
 /** Same idea, one level deeper — a folder within a section (see
  *  renderSection()'s own folder regrouping). Keyed by section + folder name
  *  so two sections can each have a same-named folder collapsed independently. */
-export function isFolderCollapsed(sectionId: SidebarSectionId, folder: string): boolean {
-  return readString(`ml_sidebar_folder_collapsed_${sectionId}_${folder}`) === 'true';
+/** `whenUnset`: what a folder that has never been opened or closed counts as (the sidebar opens them). */
+export function isFolderCollapsed(sectionId: SidebarSectionId, folder: string, whenUnset = false): boolean {
+  const saved = readString(`ml_sidebar_folder_collapsed_${sectionId}_${folder}`);
+  return saved === null ? whenUnset : saved === 'true';
 }
 export function setFolderCollapsed(sectionId: SidebarSectionId, folder: string, collapsed: boolean): void {
   writeString(`ml_sidebar_folder_collapsed_${sectionId}_${folder}`, String(collapsed));

@@ -21,26 +21,26 @@ test('picker folders collapse and expand, and the choice is remembered', async (
   const apply = (name: string) => page.locator('.preset-picker-apply', { hasText: name });
 
   await open();
+  // Folders start closed: you click in to see what is inside.
+  await expect(heading).toHaveAttribute('aria-expanded', 'false');
+  await expect(apply('Basics')).toHaveCount(0);
+  await expect(apply('Solo')).toBeVisible();                               // profiles outside the folder are always listed
+
+  await heading.click();                                                   // open it
   await expect(heading).toHaveAttribute('aria-expanded', 'true');
   await expect(apply('Basics')).toBeVisible();
   await expect(apply('Verbs')).toBeVisible();
-
-  await heading.click();                                                   // fold it
-  await expect(heading).toHaveAttribute('aria-expanded', 'false');
-  await expect(apply('Basics')).toHaveCount(0);
-  await expect(apply('Verbs')).toHaveCount(0);
-  await expect(apply('Solo')).toBeVisible();                               // profiles outside the folder are untouched
   await expect(page.locator('.preset-picker-popover')).toBeVisible();      // and the picker stayed open
 
   // Remembered: close the picker and open it again.
   await page.keyboard.press('Escape');
   await open();
-  await expect(heading).toHaveAttribute('aria-expanded', 'false');
-  await expect(apply('Basics')).toHaveCount(0);
-  // The same memory My Lists' Testing Profiles box uses, so the two agree.
-  expect(await page.evaluate(() => localStorage.getItem('ml_sidebar_folder_collapsed_profiles_profiles:table:Starter'))).toBe('true');
-
-  await heading.click();                                                   // unfold it
   await expect(heading).toHaveAttribute('aria-expanded', 'true');
   await expect(apply('Basics')).toBeVisible();
+  // The same memory My Lists' Testing Profiles box uses, so the two agree.
+  expect(await page.evaluate(() => localStorage.getItem('ml_sidebar_folder_collapsed_profiles_profiles:table:Starter'))).toBe('false');
+
+  await heading.click();                                                   // fold it again
+  await expect(heading).toHaveAttribute('aria-expanded', 'false');
+  await expect(apply('Basics')).toHaveCount(0);
 });

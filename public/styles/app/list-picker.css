@@ -33,6 +33,7 @@
 }
 
 .preset-picker-row { padding: 0; gap: 0.15rem; }
+.preset-picker-popover { overflow-x: hidden; }
 .preset-picker-apply {
   flex: 1;
   min-width: 0;
@@ -440,7 +441,9 @@
 .preset-picker-folder--none { --folder-color: var(--text-muted); }
 /* A folder heading is a button: click to fold or unfold its profiles. */
 button.preset-picker-folder {
-  width: calc(100% - 0.5rem); margin-left: 0.25rem; margin-right: 0.25rem;
+  --indent: 0rem;
+  box-sizing: border-box;
+  width: calc(100% - 0.5rem - var(--indent)); margin-left: calc(0.25rem + var(--indent)); margin-right: 0.25rem;
   font-family: inherit; text-align: left; cursor: pointer; border-top: 0; border-right: 0; border-bottom: 0;
 }
 button.preset-picker-folder:hover { background: color-mix(in srgb, var(--folder-color) 24%, var(--surface2)); }

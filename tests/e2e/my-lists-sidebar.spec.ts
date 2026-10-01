@@ -566,6 +566,8 @@ for (const mode of ['table', 'picture', 'conjugation'] as const) {
     await page.locator('#presetsBtn').click();
     const heading = page.locator('.preset-picker-folder', { hasText: folderName });
     await expect(heading).toBeVisible();
+    await expect(page.locator('.preset-picker-apply', { hasText: profile })).toHaveCount(0);   // folders start closed
+    await heading.click();
     await expect(page.locator('.preset-picker-apply', { hasText: profile })).toBeVisible();
     const order = await page.locator('.preset-picker-folder, .preset-picker-apply').evaluateAll(els => els.map(e => e.textContent ?? ''));
     expect(order.findIndex(t => t.includes(folderName))).toBeLessThan(order.findIndex(t => t.includes(profile)));

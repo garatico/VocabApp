@@ -28,7 +28,9 @@ import {
 import { currentLangValue } from '../filters/filter-lang.ts';
 import { Settings } from '../settings.ts';
 import { buildProfileEditorGroups } from '../modes/my-lists/profile-panel.ts';
-import { getFolderRegistry, getFolderStyle } from '../modes/my-lists/folders.ts';
+import {
+  getFolderRegistry, getFolderStyle, withAncestors, childFolders, folderLeaf, isInFolderTree,
+} from '../modes/my-lists/folders.ts';
 import { isFolderCollapsed, setFolderCollapsed } from '../modes/my-lists/sidebar-state.ts';
 import { confirmDialog } from './dialog.ts';
 
@@ -366,19 +368,28 @@ export function openPresetPicker({ anchorEl, mode, onApply }: PresetPickerOption
       const folders = bundle?.folders ?? (bundle?.folder ? [bundle.folder] : []);
       (folders.length > 0 ? folders : ['']).forEach(f => byFolder.set(f, [...(byFolder.get(f) ?? []), name]));
     });
-    const folderNames = [...new Set([...getFolderRegistry(scope), ...byFolder.keys()])]
-      .filter(f => f && (byFolder.get(f)?.length ?? 0) > 0).sort((a, b) => a.localeCompare(b));
+    // A folder's name is its whole path ("Spanish/Verbs"), so the picker draws a tree: a folder shows only
+    // its own profiles and its direct subfolders, each opened by its own click — never the full path flat.
+    // A level with nothing in it or beneath it is skipped, but an ancestor of a filled folder is kept.
+    const filled = [...byFolder.entries()].filter(([f, n]) => f && n.length > 0).map(([f]) => f);
+    const allFolders = withAncestors([...getFolderRegistry(scope), ...byFolder.keys()])
+      .filter(f => filled.some(x => isInFolderTree(x, f)));
+    const profilesIn = (folder: string): string[] =>
+      [...new Set(filled.filter(f => isInFolderTree(f, folder)).flatMap(f => byFolder.get(f) ?? []))];
 
-    folderNames.forEach(folder => {
+    const renderFolder = (folder: string, depth: number): void => {
       const style = getFolderStyle(scope, folder);
       // The same collapsed/expanded memory as the folder's box in My Lists' Testing Profiles, so the two agree.
       const stateKey = `profiles:${mode}:${folder}`;
-      const collapsed = isFolderCollapsed('profiles', stateKey);
+      // Closed until opened, so each level is a click deeper rather than the whole tree at once.
+      const collapsed = isFolderCollapsed('profiles', stateKey, true);
+      const leaf = folderLeaf(folder);
       const head = document.createElement('button');
       head.type = 'button';
       head.className = 'preset-picker-folder';
+      head.style.setProperty('--indent', `${depth * 0.9}rem`);   // narrows the bar as it shifts, so it never passes the window's edge
       head.setAttribute('aria-expanded', String(!collapsed));
-      head.title = collapsed ? `Show the profiles in "${folder}"` : `Hide the profiles in "${folder}"`;
+      head.title = collapsed ? `Show what is in "${folder}"` : `Hide what is in "${folder}"`;
       if (style.color) head.style.setProperty('--folder-color', style.color);
       head.addEventListener('click', e => {
         e.stopPropagation();
@@ -395,14 +406,23 @@ export function openPresetPicker({ anchorEl, mode, onApply }: PresetPickerOption
       icon.textContent = style.emoji ?? '📁';
       const label = document.createElement('span');
       label.className = 'preset-picker-folder-name';
-      label.textContent = folder;
+      label.textContent = leaf;
       const count = document.createElement('span');
       count.className = 'preset-picker-folder-count';
-      count.textContent = String(byFolder.get(folder)?.length ?? 0);
+      count.textContent = String(profilesIn(folder).length);
       head.append(caret, icon, label, count);
       picker.appendChild(head);
-      if (!collapsed) (byFolder.get(folder) ?? []).forEach(renderRow);
-    });
+      if (collapsed) return;
+      const rowsStart = picker.childElementCount;
+      (byFolder.get(folder) ?? []).forEach(renderRow);
+      for (let i = rowsStart; i < picker.children.length; i++) {
+        (picker.children[i] as HTMLElement).style.marginLeft = `${(depth + 1) * 0.9}rem`;
+      }
+      childFolders(allFolders, folder).forEach(c => renderFolder(c, depth + 1));
+    };
+
+    const folderNames = childFolders(allFolders, '');
+    folderNames.forEach(f => renderFolder(f, 0));
 
     const unfiled = byFolder.get('') ?? [];
     if (folderNames.length > 0 && unfiled.length > 0) {
