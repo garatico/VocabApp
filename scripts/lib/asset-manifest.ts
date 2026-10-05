@@ -16,12 +16,31 @@
 
 import fs   from 'node:fs';
 import path from 'node:path';
+import Database from 'better-sqlite3';
 
 export interface AssetManifest {
   /** Concept keys (e.g. "dog") that have a real file in data/svgs/. */
   svgConcepts: string[];
   /** language -> slugs that have a real .wav file in data/audio/<language>/. */
   audioSlugs: Record<string, string[]>;
+  /** `meta.built_at` of data/vocabulary.db: lets the packaged app tell a newer bundled db from its own copy. */
+  dbBuiltAt?: string | null;
+}
+
+/** The pipeline's build stamp inside a vocabulary.db, or null when the file or the stamp is absent. */
+export function readDbBuiltAt(dbPath: string): string | null {
+  if (!fs.existsSync(dbPath)) return null;
+  try {
+    const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+    try {
+      const row = db.prepare("SELECT value FROM meta WHERE key = 'built_at'").get() as { value?: string } | undefined;
+      return row?.value ?? null;
+    } finally {
+      db.close();
+    }
+  } catch {
+    return null;
+  }
 }
 
 export function buildAssetManifest(dataDir: string): AssetManifest {
@@ -46,7 +65,7 @@ export function buildAssetManifest(dataDir: string): AssetManifest {
     }
   }
 
-  return { svgConcepts, audioSlugs };
+  return { svgConcepts, audioSlugs, dbBuiltAt: readDbBuiltAt(path.join(dataDir, 'vocabulary.db')) };
 }
 
 export function writeAssetManifest(dataDir: string, outPath: string): AssetManifest {

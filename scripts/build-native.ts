@@ -173,6 +173,9 @@ function buildWeb(stepNo: number, total: number, exportVocabJson = true): void {
   stageAssets();
 
   step(stepNo + 2, total, 'Build the web bundle');
+  // Vite does not overwrite a file that already sits in dist/: a stale data/asset-manifest.json from an
+  // earlier build survived and shipped without the new dbBuiltAt, so the app never saw an update.
+  fs.rmSync(path.join(root, 'dist'), { recursive: true, force: true });
   run('npx vite build', 'Vite build');
   console.log(`\n  dist/ is ${(dirSize(path.join(root, 'dist')) / 1048576).toFixed(1)} MB`);
 }
@@ -389,7 +392,7 @@ fn main() {
   write('capabilities/main.json', JSON.stringify({
     $schema: '../gen/schemas/desktop-schema.json',
     identifier: 'main-capability',
-    description: "Local SQLite access for the embedded vocabulary db, and the narrow filesystem access needed to copy it from the bundled resource into the app's writable data dir on first launch.",
+    description: "Local SQLite access for the embedded vocabulary db, and the narrow filesystem access needed to copy it from the bundled resource into the app's writable data dir on first launch, and again when the installer carries newer data.",
     windows: ['main'],
     permissions: [
       'core:path:default',
@@ -398,6 +401,7 @@ fn main() {
       'sql:allow-execute',
       { identifier: 'fs:allow-exists',     allow: [{ path: '$APPDATA' }, { path: '$APPDATA/**' }] },
       { identifier: 'fs:allow-mkdir',      allow: [{ path: '$APPDATA' }, { path: '$APPDATA/**' }] },
+      { identifier: 'fs:allow-remove',     allow: [{ path: '$APPDATA' }, { path: '$APPDATA/**' }] },
       { identifier: 'fs:allow-copy-file',  allow: [{ path: '$RESOURCE/**' }, { path: '$APPDATA' }, { path: '$APPDATA/**' }] },
     ],
   }, null, 2) + '\n');
