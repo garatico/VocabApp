@@ -34,6 +34,8 @@
     "build:native": "tsx scripts/build-native.ts native"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
     "@mlc-ai/web-llm": "0.2.84",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-fs": "^2.5.2",
@@ -49,6 +51,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@capacitor/cli": "^8.5.2",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
     "@tauri-apps/cli": "^2.11.4",

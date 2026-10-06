@@ -488,7 +488,9 @@ if (target === 'android' || target === 'native') {
     process.exit(1);
   }
   run('npx cap sync android', 'Capacitor sync');
-  const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
-  run(`cd android && ${gradlew} assembleDebug`, 'Gradle build');
+  // A bare `gradlew.bat` is not found: the shell this runs under does not search the current directory.
+  // Full path, forward slashes (valid for both cmd and a POSIX shell), quoted for spaces.
+  const gradlew = path.join(root, 'android', process.platform === 'win32' ? 'gradlew.bat' : 'gradlew').replace(/\\/g, '/');
+  run(`cd android && "${gradlew}" assembleDebug`, 'Gradle build');
   console.log('\n  APK: android/app/build/outputs/apk/debug/app-debug.apk');
 }
