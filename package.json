@@ -13,7 +13,7 @@
     "dev:fe": "vite",
     "dev:admin": "cross-env NODE_ENV=development PORT=3000 tsx src/server/index.ts",
     "build": "vite build",
-    "build:static": "cross-env VITE_STATIC_VOCAB=1 vite build && tsx scripts/export-static-vocab.ts --static dist",
+    "build:static": "tsx scripts/build-static.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",

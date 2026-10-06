@@ -1,15 +1,24 @@
+# The web app is deployed as a static site: `npm run build:static` writes plain files to dist/
+# (the app, one JSONL per language, photos, emoji), and Render's CDN serves them. There is no Node
+# process, so there is nothing to run out of memory — the old web-service setup held every language
+# in RAM and kept being restarted for exceeding a small instance's limit.
+#
+# The admin panel is not part of this deploy (it is dev-only and needs the API).
 services:
   - type: web
-    name: vocab-app
-    runtime: node
-    buildCommand: npm install --include=dev && NODE_OPTIONS=--max-old-space-size=384 npm run export:vocab && npm run build
-    startCommand: npm start
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: 3000
-      # Keep at most two languages in memory (~230 MB for all eight is more than a 512 MB host
-      # gives Node, which died with exit 134 / "heap out of memory"). Raise or remove on a bigger plan.
-      - key: VOCAB_CACHE_MAX_LANGUAGES
-        value: 2
+    runtime: static
+    name: vocab-app-static
+    buildCommand: npm install --include=dev && NODE_OPTIONS=--max-old-space-size=384 npm run build:static
+    staticPublishPath: dist
+    headers:
+      # Hashed bundles never change under the same name.
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      # The service worker and manifest must be revalidated or an update never reaches anyone.
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
