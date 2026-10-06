@@ -458,9 +458,6 @@
   body #controls:not(:has(#controlsBody.filter-body--collapsed)) {
     padding-top: 3.1rem;
   }
-  /* With no filter body there is nothing for the collapse trigger to collapse, and it sat on top of the
-     first label in the row below it ("LAN▾GUAGE"). */
-  body #controls:has(#controlsBody[hidden]) #controlsCollapseBtn { display: none; }
   body #controls #controlsCollapseBtn.controls-collapse-btn { top: 1rem; }
   #controls-top > .control-group:first-child,
   #controls-top > .control-stack:first-child { padding-right: 0; padding-left: 0; }

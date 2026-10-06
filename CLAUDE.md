@@ -402,6 +402,7 @@ read from or write to `vocabulary.db`.
   `starter_<lang>`. Seeded once per language (`ml_starter_seeded_<lang>` = `v2`); the old `'true'` value means
   the unlimited v1 lists were made, and seeding removes those still exactly as made. Because they live in
   `vq_smart_*`, not `vq_lists_*`, they never count as learner data for the backup reminder.
+- **Start collapses the controls panel** (Settings → Appearance → "Collapse controls on Start", `collapse_controls_on_start`, on by default): `start-handler.ts` calls `setSectionOpen('controlsBody', false)` (`filters/section-collapse.ts`) once a quiz has actually been built, then scrolls to the top. `setSectionOpen` deliberately does **not** save — only a learner's own click on ▾ is remembered in `s_section_open_controlsBody`, otherwise the next visit would open with the setup form shut. The ▾ itself carries `hidden` on tabs with no filter form (`ui-state.ts`); `shortcuts.css` has an explicit `[hidden]` rule for it because its class `display` otherwise wins over the attribute.
 - **Random Sample** is a third value of `#sizeModeToggle` (`data-mode="sample"`, saved in `vq_size_mode`): the
   pool is NOT cut to a rank window (app.ts `loadAndBuildFilters`), and Start (start-handler.ts) picks N at
   random from whatever the filters and lists leave, keeping the list's own order. Top N pool only; Conjugation

@@ -27,7 +27,7 @@
   <a class="skip-link" href="#controls">Skip to quiz controls</a>
 
   <!-- Loading Spinner -->
-  <div id="loadingSpinner">
+  <div id="loadingSpinner" role="status">
     <div class="spinner"></div>
     <p data-i18n="common.loadingVocab">Loading vocabulary...</p>
   </div>
@@ -1606,6 +1606,17 @@
                 <button type="button" class="sort-order-btn active" data-size="medium">M</button>
                 <button type="button" class="sort-order-btn" data-size="large">L</button>
                 <button type="button" class="sort-order-btn" data-size="xl">XL</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.appearance.collapseOnStart">Collapse controls on Start</span>
+                <span class="settings-desc" data-i18n="settings.appearance.collapseOnStartDesc">Closes the quiz setup panel when a quiz starts. Open it again with the ▾ in its corner.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingCollapseOnStart">
+                <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
               </div>
             </div>
 

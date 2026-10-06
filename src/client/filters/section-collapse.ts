@@ -39,6 +39,17 @@ const BLOCK_SELECTOR = '#classFilter, #listFilter, #domainFilterWrap, #scriptFil
 /** Controls inside a section that must keep their own click behaviour. */
 const INTERACTIVE = 'button, input, select, textarea, a, label';
 
+/**
+ * Open or close one section from code, without saving it. A learner's own click is remembered
+ * (toggle() above); a collapse the app does for them — the controls closing when a quiz starts — is
+ * not, or the next visit would open with the setup form already shut.
+ */
+export function setSectionOpen(targetId: string, open: boolean): void {
+  const btn = document.querySelector<HTMLElement>(`[data-collapse="${targetId}"]`);
+  const body = document.getElementById(targetId);
+  if (btn && body) apply(btn, body, open);
+}
+
 export function initSectionCollapse(): void {
   document.querySelectorAll<HTMLButtonElement>('[data-collapse]').forEach(btn => {
     const targetId = btn.dataset.collapse;

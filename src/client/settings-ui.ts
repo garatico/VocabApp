@@ -666,6 +666,14 @@ export function bindSettings(): void {
     set('due_exempt_enabled', btn.dataset.enabled ?? 'true');
   });
 
+  // Collapse the controls panel when a quiz starts (see start-handler.ts)
+  document.getElementById('settingCollapseOnStart')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingCollapseOnStart', btn);
+    set('collapse_controls_on_start', btn.dataset.enabled ?? 'true');
+  });
+
   // Sessions to keep (see getMaxSessionsKept)
   document.getElementById('settingMaxSessionsKept')?.addEventListener('change', e => {
     const n = Number((e.target as HTMLInputElement).value);
@@ -1296,6 +1304,12 @@ function restoreSettingsUI(): void {
   });
   const dueCapInput = document.getElementById('settingDueSoftCap') as HTMLInputElement | null;
   if (dueCapInput) dueCapInput.value = String(Settings.getDueSoftCap());
+
+  // Collapse controls on Start
+  const savedCollapseOnStart = String(Settings.getCollapseControlsOnStart());
+  document.querySelectorAll<HTMLElement>('#settingCollapseOnStart .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedCollapseOnStart);
+  });
 
   // "Omit from Due" per word
   const savedDueExempt = String(Settings.getDueExemptEnabled());

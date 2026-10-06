@@ -52,6 +52,11 @@
   z-index: 2;
   justify-content: center;
 }
+/* ui-state.ts sets `hidden` on this button for the tabs with no filter form (Settings, History, My Lists…):
+   there is nothing for it to collapse. The rule above gives it a display, and a class rule beats the
+   browser's own [hidden] { display: none }, so it stayed on screen — on Settings it sat on the Simple
+   Mode toggle, and on My Lists on the Language label. */
+#controlsCollapseBtn.controls-collapse-btn[hidden] { display: none; }
 #controlsCollapseBtn.controls-collapse-btn:hover {
   background: var(--surface2);
   border-color: var(--accent);

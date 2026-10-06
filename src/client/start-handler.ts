@@ -11,6 +11,7 @@ import { Settings } from './settings.ts';
 
 import type { Word } from './types.ts';
 import { confirmDialog } from './ui/dialog.ts';
+import { setSectionOpen } from './filters/section-collapse.ts';
 
 /** Above this many cards, Start Quiz confirms before building the grid — a
  *  safety net alongside app.ts's live pre-quiz estimate (same threshold). */
@@ -433,6 +434,13 @@ export function bindStartHandler({
       }
 
       onModeChange();
+
+      // The quiz is what they came for: close the setup panel (not remembered — see setSectionOpen) and
+      // bring the page back to the top, where the quiz now begins.
+      if (Settings.getCollapseControlsOnStart()) {
+        setSectionOpen('controlsBody', false);
+        window.scrollTo({ top: 0 });
+      }
 
     } catch (err) {
       output.style.display = 'block';

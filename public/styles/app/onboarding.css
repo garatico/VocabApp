@@ -73,4 +73,9 @@
 .onboarding-level:hover { border-color: var(--accent); background: var(--surface2); }
 .onboarding-level:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .onboarding-level-label { font-weight: 700; font-size: 0.85rem; color: var(--accent); }
+/* Hovered, the card's background lifts to --surface2, where the plain accent falls under the contrast bar in
+   dark mode; pulled toward the text colour like other accent text on a tinted fill. Reached for real once the
+   controls collapse on Start and a card slides under a pointer that was on the Start button. */
+.onboarding-level:hover .onboarding-level-label,
+.onboarding-level:focus-visible .onboarding-level-label { color: color-mix(in srgb, var(--accent) 45%, var(--text)); }
 .onboarding-level-blurb { font-size: 0.75rem; color: var(--text-muted); line-height: 1.35; }

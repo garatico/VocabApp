@@ -288,6 +288,8 @@ export const es: Record<string, string> = {
   'settings.streak.calendar': 'Actividad',
   'settings.general.inlineProfileEditing': 'Edición de perfiles en línea',
   'settings.general.confirmRemoveWordOverride': 'Confirmar antes de quitar la edición de una palabra',
+  'settings.appearance.collapseOnStart': 'Contraer los controles al empezar',
+  'settings.appearance.collapseOnStartDesc': 'Cierra el panel de configuración del quiz cuando empieza. Vuelve a abrirlo con la ▾ de su esquina.',
   'settings.appearance.settingsLinks': 'Atajos a Ajustes en los quizzes',
   'settings.appearance.settingsLinksDesc': 'Muestra los enlaces ⚙ Pistas / Temporizador / Densidad en el encabezado del quiz de Tabla.',
   'settings.changedOnly':       'Cambiados',
