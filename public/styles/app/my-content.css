@@ -45,3 +45,9 @@
 /* Keep the tabs and buttons clear of the streak / dice cluster pinned at the bar's top-right corner. */
 #controls:has(#myContentBar:not([hidden])) { padding-right: 10.5rem; }
 #controls:has(#myContentBar:not([hidden])) { padding-left: 2.6rem; padding-right: 10rem; }
+
+/* Phones: the corner buttons have a row of their own (controls-bar.css), so nothing is reserved beside them.
+   The 10rem + 2.6rem above left the section buttons 156px to wrap in — one tall column of small pills. */
+@media (max-width: 599px) {
+  #controls:has(#myContentBar:not([hidden])) { padding-left: 0.6rem; padding-right: 0.6rem; }
+}

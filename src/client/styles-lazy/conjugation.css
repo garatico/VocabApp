@@ -1101,3 +1101,20 @@ html:not(.dark) .conj-card-tense {
 /* Accent text on its own accent wash fell under the contrast bar in dark mode; pull it toward the page text. */
 
 .conj-cards-grid:not(.conj-cards-grid--full) .conj-verb-spanish { color: color-mix(in srgb, var(--accent) 40%, var(--text)); }
+
+/* Phones: the one-line header has ~260px between the rank and the star, and the tense badge plus Reveal all
+   alone take ~155 of it, which squeezed the verb's translation to "b…". Two lines instead: the verb and its
+   translation on the first, the badge and Reveal all (right-aligned) on the second. */
+@media (max-width: 599px) {
+  .conj-cards-grid:not(.conj-cards-grid--full) .conj-card-header {
+    height: auto;
+    min-height: 2.3rem;
+    flex-wrap: wrap;
+    row-gap: 0.2rem;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+  }
+  .conj-cards-grid:not(.conj-cards-grid--full) .conj-head-main { flex: 1 1 100%; }
+  .conj-cards-grid:not(.conj-cards-grid--full) .conj-head-side { flex: 1 1 100%; justify-content: flex-end; }
+}
+

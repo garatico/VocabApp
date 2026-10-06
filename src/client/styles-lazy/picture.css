@@ -444,6 +444,23 @@
     padding: 0.75rem 0;
   }
   .picture-controls-bar { gap: 0.75rem; }
+
+  /* Two columns leave a card ~100px wide. With an arrow either side of the picture (2 x 2.1rem + gaps) a
+     multi-image card showed a ~60px thumbnail beside single-image cards at full size. The arrows sit
+     over the picture's edges instead, so every card gets the whole width. */
+  .vc-row { position: relative; }
+  .vc-row .picture-card-img { flex: 1 1 100%; }
+  .vc-row .vc-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    width: 1.9rem;
+    height: 1.9rem;
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+  }
+  .vc-row .vc-prev { left: 0.2rem; }
+  .vc-row .vc-next { right: 0.2rem; }
 }
 
 @media (max-width: 420px) {

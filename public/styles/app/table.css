@@ -1387,3 +1387,26 @@ body.hide-settings-links .tsb-more-row.settings-links { display: none; }
   .tsb-row { column-gap: 0.5rem; }
   .tsb-nav { gap: 0.3rem 0.4rem; }
 }
+
+/* ── Sticky bar on a phone ────────────────────────────────────────────────────
+   The older phone rules above (#tableControls button { flex: 1 1 100% } below 480px, 44px pager arrows)
+   were written for the full-height nav bar this replaced, and now fight the compact one: Next Gap, Give
+   Up and Retry each took a whole row, so the pinned bar was ~270px — a third of the screen, hiding the
+   rows scrolling under it. Here the three actions share one line and the pager is a normal button height. */
+@media (max-width: 599px) {
+  .tsb-nav #tableControls { display: flex; flex: 1 1 0; flex-wrap: nowrap; gap: 0.3rem; min-width: 0; }
+  .tsb-nav #tableControls button {
+    flex: 1 1 auto;     /* by label length, not equal thirds: "↓ Next Gap" is longer than "Retry" */
+    min-width: 0;
+    min-height: 32px;
+    padding: 0.3rem 0.25rem;
+    font-size: 0.68rem;
+    white-space: nowrap;
+  }
+  .tsb-nav .table-pager .pager-btn { min-height: 36px; min-width: 40px; }
+}
+
+@media (max-width: 360px) {
+  .tsb-nav #tableControls { gap: 0.2rem; }
+  .tsb-nav #tableControls button { font-size: 0.64rem; padding-inline: 0.2rem; }
+}

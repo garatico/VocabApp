@@ -703,6 +703,13 @@ html.dark .pos-chip[data-band]:not(.active):hover {
   box-shadow: none;
 }
 
+/* Phones: no room to share a row. Every pill takes a full row, and Start Quiz sits under them at full
+   width — beside the Domain pill it squeezed "DOMAIN" to "DOMAI…" and left a small tap target. */
+@media (max-width: 599px) {
+  .filters-row > #domainFilterWrap { flex: 1 1 100%; max-width: none; }
+  .filters-row > #startBtn { flex: 1 1 100%; margin-left: 0; min-height: 44px; }
+}
+
 /* Applied profile, at the head of the summary strip */
 .filters-summary-profile { padding-right: 0.7rem; border-right: 1px solid var(--border-strong); }
 .filters-summary-profile-name {

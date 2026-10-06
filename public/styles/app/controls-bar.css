@@ -314,6 +314,10 @@
    * which needs the extra room in #controls-top's own padding.
    */
   #controls     { padding-right: 1rem; }
+  /* Trivia and Guess the Blank hide the Profiles pill, and their 6rem reservation (above) has higher
+     specificity than the line above, so it survived on phones: 96px of dead space down the right side.
+     The corner has its own row at this width, so nothing needs reserving beside it. */
+  #controls.controls--no-profiles { padding-right: 1rem; }
   #controls-top { padding-right: 7.5rem; }
 
   /* Same reasoning, left side, for the collapse-controls trigger — its own
@@ -427,6 +431,7 @@
 
 @media (max-width: 480px) {
   #controls     { padding: 0.5rem 0.6rem 0.55rem; }
+  #controls.controls--no-profiles { padding-right: 0.6rem; }
   #controls-top { padding-right: 0; padding-left: 0; }
   /* Profiles drops to an icon-only 36px pill at this width (shortcuts.css) —
      less to clear than the labeled version above 480px. Same first-child
@@ -435,6 +440,37 @@
   #controls-top > .control-group:first-child,
   #controls-top > .control-stack:first-child { padding-right: 5.5rem; padding-left: 2.5rem; }
   .size-row { width: 100%; }
+}
+
+/*
+ * Phones: the corner (streak, dice, profiles, ?) gets its own row.
+ *
+ * It used to sit beside the first control and the first group reserved a guessed width for it
+ * (7.5rem, then 5.5rem). The corner is now four buttons — about 12rem — so Language slid under
+ * it and the dropdown's arrow was covered. Every tab without a filter form already gives the
+ * corner a row of its own (streak-widget.css), so the expanded bar does the same instead of
+ * guessing a width that the next added button breaks. The collapse trigger shares that row.
+ */
+@media (max-width: 599px) {
+  /* Also for the tabs that hide #controlsBody and put a bar of their own in #controls (My Lists' language
+     row): it started at the same height as the corner and ran under it. Tabs with nothing but the corner
+     (History, Settings) are unchanged — the 3.1rem min-height they already have is exactly this padding. */
+  body #controls:not(:has(#controlsBody.filter-body--collapsed)) {
+    padding-top: 3.1rem;
+  }
+  /* With no filter body there is nothing for the collapse trigger to collapse, and it sat on top of the
+     first label in the row below it ("LAN▾GUAGE"). */
+  body #controls:has(#controlsBody[hidden]) #controlsCollapseBtn { display: none; }
+  body #controls #controlsCollapseBtn.controls-collapse-btn { top: 1rem; }
+  #controls-top > .control-group:first-child,
+  #controls-top > .control-stack:first-child { padding-right: 0; padding-left: 0; }
+
+  /* Each mode's own controls sit in a stack of their own and are shown or hidden one by one with an
+     inline display:none, so on any other tab a stack is left empty — zero height, but a flex item, so
+     the column's gap still counted it: five of them were ~40px of blank space above Quiz Style. */
+  #controls-top > .control-stack:not(:has(> :not([style*="display: none"]):not([style*="display:none"]):not([hidden]))) {
+    display: none;
+  }
 }
 
 /* ── Pager page-jump dropdown ──────────────────────────────────
