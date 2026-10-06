@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### October 2026
+
+- **The website is now a static site.** `render.yaml` publishes `dist/` from `npm run build:static`
+  (app, one JSONL per language, photos shrunk to 800 px, emoji). There is no Node process in production;
+  the old web service held every language in memory and was restarted repeatedly for exceeding a small
+  instance's limit (~800 MB measured with all six languages loaded).
+- **Android app** (Capacitor 8): `npm run build:android` produces a debug APK (~48 MB). Needs JDK 21–24
+  and the Android SDK — see CLAUDE.md. Fixed the Gradle step of `build-native.ts`, which could never run on
+  Windows (`gradlew.bat` was invoked without a path).
+- **Phone layout pass.** The streak/dice/profiles/`?` corner has its own row on phones; the sticky Table
+  bar went from ~270 px to ~150 px; Start Quiz is full width; Picture Quiz carousel arrows overlay the
+  picture; Conjugation card headers wrap instead of squeezing the translation; My Content's section buttons
+  use the full width; Trivia / Guess the Blank no longer reserve dead space on the right.
+- **Collapse controls on Start** (Settings → Appearance, on by default): the setup panel closes when a quiz
+  starts so the quiz is on screen. Not remembered between visits.
+- Fixed: the controls panel's collapse button stayed visible on Settings, History and My Lists (it sat on
+  top of the Simple Mode toggle and the Language label); unselected Conjugation tense chips rendered as
+  default grey buttons on a dark page; the onboarding level buttons failed contrast when hovered in dark
+  mode; the loading overlay now announces itself to screen readers (`role="status"`).
+- Removed `chicken.jpg`, a 1-byte file. `npm run lint` no longer descends into `src-tauri/target` and
+  `android/` (it reported hundreds of errors in generated code).
+- Docs: README and the Picture Quiz guide rewritten to match the current layout and asset pipeline.
+
 ### Added
 - **`scripts/data/backfill_curated.py`** (`npm run backfill:dry` / `npm run
   backfill`): fills `pos` and `glosses` on curated entries that were being

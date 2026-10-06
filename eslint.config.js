@@ -179,5 +179,5 @@ export default [
   },
 
   // Global ignores
-  { ignores: ['node_modules/**', 'dist/**', 'coverage/**', 'test-results/**', 'src-tauri/target/**', 'src-tauri/gen/**', 'mobile/node_modules/**'] },
+  { ignores: ['node_modules/**', 'dist/**', 'coverage/**', 'test-results/**', 'src-tauri/target/**', 'src-tauri/gen/**', 'android/**', 'mobile/node_modules/**'] },
 ];

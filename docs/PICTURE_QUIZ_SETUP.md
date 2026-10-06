@@ -1,277 +1,64 @@
-# Picture Guessing Quiz Mode — Setup & Usage Guide
+# Picture Quiz — where the pictures come from
 
-## What's New
+Picture Quiz shows a picture and asks for the word. It has three sub-modes, chosen in the controls bar
+before Start (`#pictureStyleGroup`): **type** the word, **flashcard**, and **click** the matching picture.
+The code is `src/client/modes/picture-mode.ts`; its styles are `src/client/styles-lazy/picture.css`.
 
-Your VocabApp now has a **Picture Guessing Quiz Mode** that lets users learn vocabulary by matching SVG pictures to words. SVGs live on disk, organized by language!
+## What a word can show
 
----
+A *concept* (say "dog") groups the words that mean it in every language — `perro`, `cachorro`, `cão`,
+`cane`, `chien`, `Hund`, `hond` — and carries up to three kinds of visual:
 
-## ✅ What Was Implemented
+| Kind | Where it lives | URL | Notes |
+|---|---|---|---|
+| Photo | `data/images/<domain>/<name>.jpg` | `/images/<name>.jpg` | Wikipedia photos; preferred when there is one |
+| OpenMoji SVG | `data/emoji/<domain>/<hex>.svg` | `/emoji/<hex>.svg` | e.g. `1F436.svg` for 🐶 |
+| Shared custom SVG | `data/svgs/<concept>.svg` | `/svgs/<concept>.svg` | named by **English concept**, not by word |
+| Emoji character | in `visual-map.ts` | — | the always-available last resort |
 
-### 1. **Filesystem-Based SVG Storage**
-- SVGs stored in `data/svgs/[language]/` folders
-- Auto-detected by word name: `data/svgs/spanish/manzana.svg`
-- No database column needed—simple filesystem checks
-- Express serves SVGs from `/svgs/` route
+A concept may have several visuals; the card then shows arrows (on phones they sit over the picture's
+edges) and dots to cycle through them. **A picture that fails to load is skipped automatically**, falling
+through to the next visual and finally the emoji — so a missing or corrupt file degrades gracefully
+instead of leaving a broken image.
 
-### 2. **SVG Loader Utility**
-- `backend/src/lib/svg-loader.js` — Auto-detection functions
-- `hasSvg(language, word)` — Check if SVG exists
-- `getSvgUrl(language, word)` — Get serving URL
-- `ensureSvgDirs()` — Create folder structure on startup
+The `<domain>` folders (`animals/`, `food/`, `nature/`) are only filing. URLs are **flat**: two files with
+the same name in different domains collide, and the server reports the clash (`lib/flat-static.ts`).
 
-### 3. **API Updates**
-- All vocabulary endpoints now include `svg_url` field
-- Returns URL path for words with SVGs (e.g., `/svgs/spanish/manzana.svg`)
-- Auto-detection from filesystem—no database migration needed
+## The two concept maps
 
-### 4. **Frontend Quiz Mode**
-- New "Picture Quiz" tab in the quiz interface
-- Multiple choice interface with 4 options per question
-- Loads SVGs via `<img>` tags from server
-- Real-time score tracking
-- Summary screen with accuracy percentage
-- Responsive design for mobile and desktop
+Words are tied to concepts in two places, which are separate on purpose and **must agree**:
 
----
+- `src/client/data/visual-map.ts` — the quiz's own map: concept → `imageUrl` / `svgUrl` / `emoji` and the
+  words in each language. Lookup lowercases and strips diacritics, so `árbol`, `Árbol` and `arbol` match
+  and German capitals (`Bär`) are fine.
+- `src/shared/assets/svg-concepts.ts` — word → shared-SVG concept, used by the server
+  (`lib/svg-loader.ts`, which also checks the file exists) and by the desktop app, which has no
+  filesystem to ask and checks a build-time manifest instead (`client/tauri/asset-resolver.ts`).
 
-## 🚀 Getting Started
+## Adding a picture
 
-### Step 1: Folder Structure
+1. Put the file in the right folder: a photo in `data/images/<domain>/`, an OpenMoji SVG in
+   `data/emoji/<domain>/`, or a custom SVG in `data/svgs/` named by English concept (`dog.svg`).
+2. Add the words to the concept in `visual-map.ts` (and in `svg-concepts.ts` for a shared SVG).
+3. Reload — nothing else to register. The API's `svg_url` field is derived from the files and the map, so
+   there is no database column to migrate.
 
-The app automatically creates SVG folders on startup:
-```
-data/svgs/
-├── spanish/
-├── portuguese/
-├── italian/
-└── french/
-```
+## How the files reach the browser
 
-No manual setup needed! But you can pre-create them if you prefer.
+- **Dev / Node server:** Express serves `/images`, `/emoji` (flat, via `flat-static.ts`), `/svgs` and
+  `/audio`. Photos are resized to WebP on the first request that accepts one and cached; the originals are
+  never touched (`lib/image-optimizer.ts`).
+- **Static web build** (`npm run build:static`, what the hosted site deploys): the same folders are copied
+  flat into `public/` and the photos shrunk to 800 px wide in place, keeping their names
+  (`scripts/build-static.ts`).
+- **Desktop / Android builds:** `scripts/build-native.ts` stages them the same way
+  (`scripts/lib/asset-flatten.ts`).
 
-### Step 2: Add SVG Files
+## Troubleshooting
 
-1. Create SVG files with **word names as filenames**
-2. Place them in the language folder
-
-Examples:
-```
-data/svgs/spanish/manzana.svg
-data/svgs/spanish/gato.svg
-data/svgs/portuguese/maçã.svg
-data/svgs/italian/casa.svg
-```
-
-### Step 3: Start Using the Quiz
-
-1. Open the public quiz app
-2. Click the **Picture Quiz** tab
-3. Select your language and word count
-4. Click **Start Quiz**
-5. Guess the word by clicking the correct option
-6. Track your score and see the final accuracy
-
----
-
-## 📐 Creating SVG Files
-
-### Simple Emoji-Based SVG (Easiest)
-Save as `data/svgs/spanish/manzana.svg`:
-```xml
-<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <text x="50" y="60" text-anchor="middle" font-size="60">🍎</text>
-</svg>
-```
-
-### Colored Shapes
-```xml
-<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <rect x="20" y="30" width="60" height="50" fill="#FF6B6B" rx="5"/>
-</svg>
-```
-
-### Using Paths (More Complex)
-```xml
-<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <path d="M50,10 L90,90 L10,90 Z" fill="#FFD700"/>
-  <circle cx="50" cy="50" r="15" fill="white"/>
-</svg>
-```
-
-### Online SVG Generators
-- [Adobe Express](https://www.adobe.com/products/express/)
-- [Gravit Designer](https://www.gravit.io/)
-- [Inkscape](https://inkscape.org/) (free, desktop)
-- Simple Google Drawings → Export as SVG
-
----
-
-## 📊 File Structure
-
-```
-VocabApp/
-├── data/
-│   └── svgs/                        (SVG storage)
-│       ├── spanish/                 (language folders)
-│       │   ├── manzana.svg
-│       │   ├── gato.svg
-│       │   └── ...
-│       ├── portuguese/
-│       ├── italian/
-│       └── french/
-├── backend/
-│   ├── src/
-│   │   ├── lib/
-│   │   │   ├── svg-loader.js        (new: SVG utilities)
-│   │   │   └── vocab-loader.js      (updated: svg_url detection)
-│   │   ├── routes/admin.routes.js   (updated: svg_url support)
-│   │   ├── app.js                   (updated: /svgs route)
-│   │   └── index.js                 (updated: ensureSvgDirs)
-│   └── public/
-│       ├── index.html               (updated: picture tab + area)
-│       ├── src/
-│       │   ├── picture-mode.js      (updated: load SVGs via <img>)
-│       │   ├── ui-state.js          (updated: mode switching)
-│       │   ├── app.js               (updated: picture-mode)
-│       │   └── start-handler.js     (updated: picture handler)
-│       └── styles/app/
-│           └── picture.css          (new: styling)
-```
-
----
-
-## 🎮 How It Works
-
-### Quiz Flow
-
-1. **Selection Phase**: User picks language, word count, filters
-2. **Picture Display**: SVG picture shows, 4 options appear
-3. **User Input**: Click correct answer
-4. **Feedback**: Instant feedback (✓ Correct / ✗ Wrong with answer)
-5. **Next**: Auto-advance or click Next button
-6. **Summary**: Final score and accuracy %
-
-### Scoring
-
-- **Correct**: Word displayed correctly
-- **Incorrect**: Wrong answer or Skip
-- **Accuracy**: `(Correct / Total Answered) × 100%`
-
----
-
-## 🔄 Future Enhancements
-
-Optional additions for later:
-
-1. **Free-text input mode** instead of multiple choice
-2. **Picture upload UI** in admin panel (drag & drop)
-3. **Auto-convert images to SVG** (Potrace, etc.)
-4. **Picture galleries** in the admin panel
-5. **Adjectives/Verbs with pictures** (currently nouns only)
-6. **Spaced repetition** based on picture difficulty
-7. **Leaderboard** for accuracy scores
-
----
-
-## ❓ Troubleshooting
-
-### SVG Files Not Being Found
-
-Check file naming and location:
-- File: `data/svgs/spanish/manzana.svg` (lowercase, matches word key exactly)
-- Restart the app so `ensureSvgDirs()` runs
-- Check browser console for 404 errors on `/svgs/` requests
-
-### No Words Appearing in Picture Quiz
-- SVG files haven't been added yet
-- Check that filenames match word keys exactly (case-sensitive!)
-- Verify word `pos = 'noun'` in database
-
-### Cache Issues
-- Clear the language cache in **DB Admin** tab
-- Restart the app
-- Hard refresh browser (Ctrl+Shift+R)
-
-### SVG Displays Broken or Doesn't Load
-- Validate SVG syntax (use https://www.w3schools.com/graphics/svg_intro.asp)
-- Check file permissions on SVG files
-- Ensure SVG has proper XML declaration: `<?xml version="1.0"?>`
-- Check browser DevTools Network tab for 404s
-
----
-
-## 📝 Naming Convention
-
-SVG files must match **word keys exactly** (case-sensitive):
-
-| Word Key | SVG Filename | Full Path |
-|----------|-------------|-----------|
-| `manzana` | `manzana.svg` | `data/svgs/spanish/manzana.svg` |
-| `gato` | `gato.svg` | `data/svgs/spanish/gato.svg` |
-| `maçã` | `maçã.svg` | `data/svgs/portuguese/maçã.svg` |
-
----
-
-## API Response Example
-
-```json
-{
-  "word": "manzana",
-  "display": "Manzana",
-  "pos": "noun",
-  "glosses": ["apple"],
-  "svg_url": "/svgs/spanish/manzana.svg",
-  "linguistic": {...},
-  "frequency": {...},
-  "domains": []
-}
-```
-
----
-
-## Testing Checklist
-
-- [ ] App starts and creates SVG directories
-- [ ] Can place SVG files in `data/svgs/[lang]/[word].svg`
-- [ ] Picture Quiz tab appears in quiz interface
-- [ ] Can start a picture quiz with words that have SVGs
-- [ ] SVGs load and display correctly
-- [ ] Multiple choice options show
-- [ ] Correct answer is marked correctly
-- [ ] Score updates properly
-- [ ] Summary shows accurate %
-- [ ] Works on mobile (responsive)
-
----
-
-## ⚡ Quick Start Example
-
-1. Create a simple SVG file:
-   ```bash
-   mkdir -p data/svgs/spanish
-   ```
-
-2. Create `data/svgs/spanish/apple.svg`:
-   ```xml
-   <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-     <text x="50" y="65" text-anchor="middle" font-size="70">🍎</text>
-   </svg>
-   ```
-
-3. Start the app—directories auto-create
-4. Open quiz → Picture Quiz tab
-5. Words with SVGs auto-appear!
-
----
-
-## Support
-
-For issues or questions:
-1. Check browser console for errors (F12)
-2. Verify SVG filename matches word key exactly
-3. Check file location: `data/svgs/[language]/[word].svg`
-4. Restart the app and clear cache
-5. Validate SVG syntax at https://www.w3schools.com/graphics/svg_intro.asp
-
-Enjoy visual vocabulary learning! 🎨📚
+- **A word shows only an emoji:** it has no photo or SVG yet — add the file and the concept entry above.
+- **A picture is broken or blank:** check the file is a real image (a zero-byte or one-byte file is skipped
+  silently by the fall-through) and that the name in the map matches the filename exactly, extension
+  included.
+- **404 on `/images/…` in the static build:** the file was not under `data/images/<domain>/` when the build
+  ran, or two domains held the same filename and the second was dropped (the build logs the clash).
