@@ -7,8 +7,14 @@
  * lives here now; add to it rather than writing another local copy.
  */
 
+/**
+ * Accents off, so "cafe" matches "café". Kana voicing marks stay on: Unicode
+ * files dakuten/handakuten (゛゜, and half-width ﾞﾟ) under Diacritic, but they
+ * change the consonant — stripped, かぎ "key" graded as かき "oyster" and ガラス
+ * "glass" as カラス "crow". NFC afterwards puts か + ゛ back together as が.
+ */
 export function stripDiacritics(s: string): string {
-  return s.normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  return s.normalize('NFD').replace(/(?![゙゚ﾞﾟ])\p{Diacritic}/gu, '').normalize('NFC');
 }
 
 /**

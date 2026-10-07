@@ -5,6 +5,17 @@ import { describe, it, expect } from 'vitest';
 import { stripDiacritics, normalize, levenshtein } from '../../src/client/utils/match.js';
 
 describe('stripDiacritics', () => {
+  it('keeps kana voicing marks, which change the word', () => {
+    expect(stripDiacritics('かぎ')).not.toBe(stripDiacritics('かき'));   // key / oyster
+    expect(stripDiacritics('ガラス')).toBe('ガラス');                    // glass, not カラス crow
+    expect(stripDiacritics('ぱん')).not.toBe(stripDiacritics('ばん'));
+    expect(stripDiacritics('ｶﾞﾗｽ')).not.toBe(stripDiacritics('ｶﾗｽ'));     // half-width forms too
+  });
+
+  it('a decomposed が (か + combining ゛) matches the precomposed one', () => {
+    expect(stripDiacritics('が')).toBe('が');
+  });
+
   it('removes Spanish accents', () => {
     expect(stripDiacritics('canción')).toBe('cancion');
     expect(stripDiacritics('árbol')).toBe('arbol');
