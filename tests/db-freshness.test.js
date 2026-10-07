@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { needsRefresh, backupName, stampTime } from '../src/client/tauri/db-freshness.ts';
+import { needsRefresh, backupName, stampTime, uniqueBackupName } from '../src/client/tauri/db-freshness.ts';
 import { readDbBuiltAt, buildAssetManifest } from '../scripts/lib/asset-manifest.ts';
 
 describe('needsRefresh: the packaged app keeps its own db copy unless the installer has newer data', () => {
@@ -55,5 +55,16 @@ describe('the asset manifest carries the bundled db stamp', () => {
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('uniqueBackupName', () => {
+  it('keeps the name when nothing holds it', () => {
+    expect(uniqueBackupName('vocabulary.unknown.bak.db', () => false)).toBe('vocabulary.unknown.bak.db');
+  });
+
+  it('never overwrites an earlier backup: numbers the next one instead', () => {
+    const taken = new Set(['vocabulary.unknown.bak.db', 'vocabulary.unknown.2.bak.db']);
+    expect(uniqueBackupName('vocabulary.unknown.bak.db', n => taken.has(n))).toBe('vocabulary.unknown.3.bak.db');
   });
 });

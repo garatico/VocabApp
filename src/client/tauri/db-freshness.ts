@@ -28,6 +28,19 @@ export function needsRefresh(localBuiltAt: string | null | undefined, bundledBui
   return local === null || bundled > local;
 }
 
+/**
+ * `name`, made unique against `taken` by a number before `.bak.db` — so a second backup with the same
+ * stamp (two "unknown"s, when the stamp could not be read twice) never overwrites the first, which may
+ * be the one holding the learner's edits.
+ */
+export function uniqueBackupName(name: string, taken: (candidate: string) => boolean): string {
+  if (!taken(name)) return name;
+  for (let n = 2; ; n++) {
+    const candidate = name.replace(/\.bak\.db$/, `.${n}.bak.db`);
+    if (!taken(candidate)) return candidate;
+  }
+}
+
 /** A file-name-safe version of a stamp, for the backup of the copy being replaced. */
 export function backupName(localBuiltAt: string | null | undefined): string {
   const safe = (localBuiltAt ?? 'unknown').replace(/[^0-9A-Za-z]+/g, '-').replace(/^-|-$/g, '') || 'unknown';

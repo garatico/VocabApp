@@ -17,7 +17,7 @@
 import { appDataDir, resolveResource, join } from '@tauri-apps/api/path';
 import { exists, mkdir, copyFile, remove } from '@tauri-apps/plugin-fs';
 import Database from '@tauri-apps/plugin-sql';
-import { needsRefresh, backupName } from './db-freshness.js';
+import { needsRefresh, backupName, uniqueBackupName } from './db-freshness.js';
 
 const DB_FILENAME = 'vocabulary.db';
 const BUNDLED_RESOURCE_PATH = `data/${DB_FILENAME}`;
@@ -46,7 +46,7 @@ export async function ensureLocalDb(): Promise<string> {
   if (bundledBuiltAt) {
     const localBuiltAt = await localStamp(localPath);
     if (needsRefresh(localBuiltAt, bundledBuiltAt)) {
-      await copyFile(localPath, await join(dataDir, backupName(localBuiltAt)));
+      await backupLocalDb(localPath, dataDir, localBuiltAt);
       await replaceLocalDb(localPath, resourcePath);
     }
   }
@@ -77,6 +77,27 @@ async function localStamp(localPath: string): Promise<string | null> {
   } finally {
     try { await db?.close(); } catch { /* nothing to close */ }
   }
+}
+
+/**
+ * Keep the copy being replaced, edits and all. The -wal goes with it under the backup's name, since SQLite
+ * replays `<file>-wal` when that file is opened: writes not yet folded into the main file (a crash before
+ * the last connection closed) would otherwise be in neither the backup nor the new copy, which
+ * replaceLocalDb then deletes the -wal from. Never overwrites an earlier backup.
+ */
+async function backupLocalDb(localPath: string, dataDir: string, localBuiltAt: string | null): Promise<void> {
+  const existing = new Set<string>();
+  const taken = (name: string): boolean => existing.has(name);
+  // exists() is async; check the few candidates up front rather than threading async through the namer.
+  let name = backupName(localBuiltAt);
+  for (;;) {
+    const candidate = uniqueBackupName(name, taken);
+    if (!(await exists(await join(dataDir, candidate)))) { name = candidate; break; }
+    existing.add(candidate);
+  }
+  const backupPath = await join(dataDir, name);
+  await copyFile(localPath, backupPath);
+  if (await exists(localPath + '-wal')) await copyFile(localPath + '-wal', backupPath + '-wal');
 }
 
 /** Overwrite the local copy; a leftover -wal/-shm from the old file must not be replayed onto the new one. */
