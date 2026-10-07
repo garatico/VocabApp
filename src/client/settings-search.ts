@@ -50,10 +50,10 @@ export function renderCsvDocs(): void {
     return ul;
   };
 
-  host.append(el('h4', 'Rules for every CSV the app writes'), list(CSV_CONVENTIONS));
+  host.append(el('h3', 'Rules for every CSV the app writes'), list(CSV_CONVENTIONS));
 
   for (const fmt of CSV_FORMATS) {
-    host.append(el('h4', fmt.title));
+    host.append(el('h3', fmt.title));
     host.append(el('p', `${fmt.from}. File name ${fmt.filename}; lines end with ${fmt.lineEnding === 'CRLF' ? 'CR+LF (Windows style)' : 'LF'}.`, 'csv-docs-from'));
     const table = el('table', undefined, 'csv-docs-table');
     const head = table.createTHead().insertRow();
@@ -68,7 +68,7 @@ export function renderCsvDocs(): void {
     host.append(wrap);
   }
 
-  host.append(el('h4', 'What My Lists → Bulk import reads'), list(BULK_IMPORT_RULES));
+  host.append(el('h3', 'What My Lists → Bulk import reads'), list(BULK_IMPORT_RULES));
 }
 
 export function bindGlossary(): void {

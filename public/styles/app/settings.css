@@ -956,6 +956,7 @@ body.simple-mode [data-advanced="true"] { display: none !important; }
    the width of the whole Settings page — 1,450px on a 375px screen — instead of scrolling inside the card. */
 .csv-sheet-scroll, .csv-guide-raw pre, .csv-guide-example pre { width: 0; min-width: 100%; box-sizing: border-box; }
 .csv-sheet-scroll { overflow-x: auto; border: 1px solid var(--border-strong); border-radius: 4px; }
+.csv-sheet-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .csv-sheet { border-collapse: collapse; font-size: 0.76rem; color: var(--text); white-space: nowrap; }
 .csv-sheet th, .csv-sheet td { border: 1px solid var(--border); padding: 0.25rem 0.5rem; text-align: left; }
 .csv-sheet td { max-width: 14rem; overflow: hidden; text-overflow: ellipsis; background: var(--bg); }
@@ -1000,7 +1001,7 @@ body.simple-mode [data-advanced="true"] { display: none !important; }
 .help-tip .settings-link { white-space: normal; text-align: left; }
 
 /* Glossary → CSV formats: generated tables (settings-search.ts renderCsvDocs). */
-.csv-docs h4 { margin: 1rem 0 0.35rem; font-size: 0.9rem; color: var(--text); }
+.csv-docs h3 { margin: 1rem 0 0.35rem; font-size: 0.9rem; color: var(--text); }
 .csv-docs-from { margin: 0 0 0.4rem; font-size: 0.82rem; color: var(--text); }
 .csv-docs-list { margin: 0; padding-left: 1.2rem; font-size: 0.82rem; color: var(--text); }
 .csv-docs-list li { margin-bottom: 0.25rem; }

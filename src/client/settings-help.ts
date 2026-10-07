@@ -57,7 +57,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, cls?: 
 /** One format: where it comes from, a spreadsheet picture, and the raw text behind it. */
 function formatCard(format: CsvFormat): HTMLElement {
   const card = el('div', undefined, 'csv-guide-card');
-  card.append(el('h4', format.title, 'csv-guide-title'));
+  card.append(el('h2', format.title, 'csv-guide-title'));
   card.append(el('p', `${format.from}. Saved as ${format.filename}.`, 'csv-guide-from'));
 
   const header = csvHeaders(format);
@@ -65,7 +65,7 @@ function formatCard(format: CsvFormat): HTMLElement {
   const table = el('table', undefined, 'csv-sheet');
   table.setAttribute('aria-label', `${format.title}: the header row and two example rows`);
   const letters = table.createTHead().insertRow();
-  letters.append(el('th', '', 'csv-sheet-corner'));
+  letters.append(el('td', '', 'csv-sheet-corner'));   // a plain cell: an empty header is announced as nothing
   header.forEach((_, i) => letters.append(el('th', columnLetter(i), 'csv-sheet-letter')));
   const body = table.createTBody();
   [header, ...rows].forEach((cells, r) => {
@@ -75,6 +75,10 @@ function formatCard(format: CsvFormat): HTMLElement {
     cells.forEach(c => { const td = el('td', c); td.title = c; tr.append(td); });
   });
   const scroll = el('div', undefined, 'csv-sheet-scroll');
+  // It scrolls sideways, so it must be reachable by keyboard to scroll at all.
+  scroll.tabIndex = 0;
+  scroll.setAttribute('role', 'region');
+  scroll.setAttribute('aria-label', `${format.title}, example rows (scrolls sideways)`);
   scroll.append(table);
   card.append(scroll);
 
@@ -88,7 +92,7 @@ function formatCard(format: CsvFormat): HTMLElement {
 /** What Bulk import takes, and the one shape it doesn't. */
 function bulkImportCard(): HTMLElement {
   const card = el('div', undefined, 'csv-guide-card');
-  card.append(el('h4', 'My Lists → Bulk import', 'csv-guide-title'));
+  card.append(el('h2', 'My Lists → Bulk import', 'csv-guide-title'));
   card.append(el('p', 'Words only — one list of them, in any of these shapes. Paste it or pick a .csv / .txt file.', 'csv-guide-from'));
   const grid = el('div', undefined, 'csv-guide-examples');
   const example = (label: string, text: string, ok = true): void => {

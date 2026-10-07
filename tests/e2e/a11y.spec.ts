@@ -105,3 +105,17 @@ for (const palette of ['ocean', 'violet', 'rose', 'amber', 'teal', 'slate'] as c
     });
   }
 }
+
+// Settings → Help & Tips is collapsed by default, so the tab test above never reaches its tips, CSV sheets
+// and examples. Open it, with every disclosure inside it open too.
+for (const theme of ['light', 'dark'] as const) {
+  test(`Settings → Help & Tips, opened, has no axe violations (${theme})`, async ({ page }) => {
+    await open(page, theme);
+    await page.locator('.mode-tab[data-mode="settings"]').click();
+    await page.locator('.settings-nav-link[href="#settings-sec-help"]').click();
+    await expect(page.locator('#csvGuide table.csv-sheet').first()).toBeVisible();
+    await page.locator('#settings-sec-help details').evaluateAll(ds => ds.forEach(d => { (d as HTMLDetailsElement).open = true; }));
+    await page.waitForTimeout(300);
+    expect(await violationsOf(page)).toEqual([]);
+  });
+}
