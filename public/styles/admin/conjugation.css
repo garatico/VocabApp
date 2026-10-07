@@ -177,7 +177,7 @@
   transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
 }
 .conj-tense-chip:not(.active) {
-  color:        hsl(var(--tense-hue) 55% 32%);
+  color:        hsl(var(--tense-hue) 55% 25%);
   border-color: hsl(var(--tense-hue) 50% 45% / 0.45);
   background:   hsl(var(--tense-hue) 60% 50% / 0.10);
 }
@@ -242,7 +242,7 @@ html.dark .conj-tense-chip:not(.active) { color: hsl(var(--tense-hue) 62% 72%); 
 }
 /* Colored via the same [data-tense]/--tense-hue map as the table's own
    column headers (.conj-th-form) — see renderExtraForms()'s own comment. */
-.conj-extra-form-group label[data-tense] { color: hsl(var(--tense-hue) 55% 32%); }
+.conj-extra-form-group label[data-tense] { color: hsl(var(--tense-hue) 55% 25%); }
 html.dark .conj-extra-form-group label[data-tense] { color: hsl(var(--tense-hue) 62% 72%); }
 
 /* ── Table itself ──
@@ -293,7 +293,7 @@ html.dark .conj-extra-form-group label[data-tense] { color: hsl(var(--tense-hue)
    above read (set by renderTable() in admin-conjugation.ts), so a column
    always matches the chip that produced it at a glance. */
 .conj-th-form[data-tense] {
-  color:      hsl(var(--tense-hue) 55% 32%);
+  color:      hsl(var(--tense-hue) 55% 25%);
   background: hsl(var(--tense-hue) 60% 50% / 0.14);
 }
 html.dark .conj-th-form[data-tense] { color: hsl(var(--tense-hue) 62% 72%); }

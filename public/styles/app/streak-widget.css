@@ -185,7 +185,8 @@ body #controls:has(#controlsBody[hidden]) #controlsCollapseBtn.controls-collapse
 .due-badge[hidden] { display: none; }
 .due-badge {
   border-color: var(--accent);
-  color: var(--accent);
+  /* Pulled toward the text colour: the plain accent on the dark corner was 4.43:1. */
+  color: color-mix(in srgb, var(--accent) 80%, var(--text));
   white-space: nowrap;      /* "N due" stays on one line inside its box */
   flex-shrink: 0;
 }

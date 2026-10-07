@@ -366,7 +366,7 @@
 .table-view-cell-readonly[data-band] {
   background: hsl(var(--pos-hue) 60% 50% / 0.14);
   border-color: hsl(var(--pos-hue) 50% 45% / 0.4);
-  color: hsl(var(--pos-hue) 55% 32%);
+  color: hsl(var(--pos-hue) 55% 25%);
   font-style: normal;
   font-weight: 600;
 }
@@ -398,13 +398,13 @@ html.dark .table-view-cell-readonly[data-band] {
 .table-view-cell-select[data-gender="masculine"] {
   background: hsl(210 60% 50% / 0.14);
   border-color: hsl(210 50% 45% / 0.4);
-  color: hsl(210 55% 32%);
+  color: hsl(210 55% 25%);
   font-weight: 600;
 }
 .table-view-cell-select[data-gender="feminine"] {
   background: hsl(340 60% 50% / 0.14);
   border-color: hsl(340 50% 45% / 0.4);
-  color: hsl(340 55% 32%);
+  color: hsl(340 55% 25%);
   font-weight: 600;
 }
 html.dark .table-view-cell-select[data-gender="masculine"] { color: hsl(210 62% 72%); }

@@ -40,7 +40,7 @@
   min-width: 0;
   flex: 1 1 auto;
 }
-.edit-form-word { font-size: 1rem; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+.edit-form-word { font-size: 1rem; font-weight: 700; color: color-mix(in srgb, var(--accent) 80%, var(--text)); flex-shrink: 0; }   /* plain accent was 4.43:1 in dark */
 .edit-form-word-meta {
   font-size: 0.74rem;
   color: var(--text-muted);
@@ -298,7 +298,7 @@
 .form-group input.we-band[data-band] {
   background: hsl(var(--pos-hue) 60% 50% / 0.14);
   border-color: hsl(var(--pos-hue) 50% 45% / 0.4);
-  color: hsl(var(--pos-hue) 55% 32%);
+  color: hsl(var(--pos-hue) 55% 25%);
   font-weight: 600;
 }
 html.dark .form-group select.we-pos[data-pos],
@@ -336,13 +336,13 @@ html.dark .form-group input.we-band[data-band] {
 .form-group select.we-gender[data-gender="masculine"] {
   background: hsl(210 60% 50% / 0.14);
   border-color: hsl(210 50% 45% / 0.4);
-  color: hsl(210 55% 32%);
+  color: hsl(210 55% 25%);
   font-weight: 600;
 }
 .form-group select.we-gender[data-gender="feminine"] {
   background: hsl(340 60% 50% / 0.14);
   border-color: hsl(340 50% 45% / 0.4);
-  color: hsl(340 55% 32%);
+  color: hsl(340 55% 25%);
   font-weight: 600;
 }
 html.dark .form-group select.we-gender[data-gender="masculine"] { color: hsl(210 62% 72%); }

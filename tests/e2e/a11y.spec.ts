@@ -165,3 +165,31 @@ for (const theme of ['light', 'dark'] as const) {
     expect(await violationsOf(page)).toEqual([]);              // the naming dialog
   });
 }
+
+// States reached only by using the app: a finished quiz's summary, History with a session in it, words
+// due (the 🔁 badge), and My Content's Word Editor with a word open. Among them they had unnamed selects
+// in the Word Editor (labels without `for`), white text on dark mode's light result fills, and several
+// pill colours under 4.5:1.
+for (const theme of ['light', 'dark'] as const) {
+  test(`quiz summary, History with data, due badge and the Word Editor have no axe violations (${theme})`, async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await open(page, theme);
+
+    await page.locator('#startBtn').click();
+    await page.locator('#tableWrap input[type="text"]').first().fill('the');
+    await page.locator('#tableReset').click();                        // Give Up: summary, and missed words fall due
+    await expect(page.locator('.progress-pct').first()).toBeVisible();
+    expect(await violationsOf(page)).toEqual([]);
+
+    await page.locator('.mode-tab[data-mode="history"]').click();
+    await page.waitForTimeout(800);
+    expect(await violationsOf(page)).toEqual([]);
+
+    await page.locator('.mode-tab[data-mode="myContent"]').click();
+    const item = page.locator('[id^="mcwe-"] .word-item').first();
+    await item.click();
+    await expect(page.locator('#mcwe-editPos')).toBeVisible();
+    expect(await violationsOf(page)).toEqual([]);
+  });
+}

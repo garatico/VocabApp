@@ -243,7 +243,7 @@ html.dark .word-editor button:hover:not(:disabled) { box-shadow: 0 4px 12px rgba
 }
 .word-editor .filter-chip[data-pos]:not(.active),
 .word-editor .filter-chip[data-band]:not(.active) {
-  color:        hsl(var(--pos-hue) 55% 32%);
+  color:        hsl(var(--pos-hue) 55% 25%);
   border-color: hsl(var(--pos-hue) 50% 45% / 0.45);
   background:   hsl(var(--pos-hue) 60% 50% / 0.10);
 }
@@ -440,7 +440,7 @@ html.dark .word-editor .filter-chip[data-band]:not(.active) {
 .word-editor .badge-pos {
   --pos-hue: 217; 
   background: hsl(var(--pos-hue) 60% 50% / 0.14);
-  color:      hsl(var(--pos-hue) 55% 32%);
+  color:      hsl(var(--pos-hue) 55% 25%);
   border: 1px solid hsl(var(--pos-hue) 50% 45% / 0.4);
 }
 html.dark .word-editor .badge-pos { color: hsl(var(--pos-hue) 62% 72%); }
@@ -453,7 +453,7 @@ html.dark .word-editor .badge-pos { color: hsl(var(--pos-hue) 62% 72%); }
 .word-editor .badge-band {
   --band-hue: 217; 
   background: hsl(var(--band-hue) 60% 50% / 0.14);
-  color:      hsl(var(--band-hue) 55% 32%);
+  color:      hsl(var(--band-hue) 55% 25%);
   border: 1px solid hsl(var(--band-hue) 50% 45% / 0.4);
 }
 html.dark .word-editor .badge-band { color: hsl(var(--band-hue) 62% 72%); }
@@ -518,7 +518,7 @@ html.dark .word-editor .badge-edited { color: hsl(35 85% 65%); }
   min-width: 0;
   flex: 1 1 auto;
 }
-.word-editor .edit-form-word { font-size: 1rem; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+.word-editor .edit-form-word { font-size: 1rem; font-weight: 700; color: color-mix(in srgb, var(--accent) 80%, var(--text)); flex-shrink: 0; }
 .word-editor .edit-form-word-meta {
   font-size: 0.74rem;
   color: var(--text-muted);
@@ -698,7 +698,7 @@ html.dark .word-editor .badge-edited { color: hsl(35 85% 65%); }
 .word-editor .form-group input.we-band[data-band] {
   background: hsl(var(--pos-hue) 60% 50% / 0.14);
   border-color: hsl(var(--pos-hue) 50% 45% / 0.4);
-  color: hsl(var(--pos-hue) 55% 32%);
+  color: hsl(var(--pos-hue) 55% 25%);
   font-weight: 600;
 }
 html.dark .word-editor .form-group select.we-pos[data-pos],
@@ -720,13 +720,13 @@ html.dark .word-editor .form-group input.we-band[data-band] {
 .word-editor .form-group select.we-gender[data-gender="masculine"] {
   background: hsl(210 60% 50% / 0.14);
   border-color: hsl(210 50% 45% / 0.4);
-  color: hsl(210 55% 32%);
+  color: hsl(210 55% 25%);
   font-weight: 600;
 }
 .word-editor .form-group select.we-gender[data-gender="feminine"] {
   background: hsl(340 60% 50% / 0.14);
   border-color: hsl(340 50% 45% / 0.4);
-  color: hsl(340 55% 32%);
+  color: hsl(340 55% 25%);
   font-weight: 600;
 }
 html.dark .word-editor .form-group select.we-gender[data-gender="masculine"] { color: hsl(210 62% 72%); }

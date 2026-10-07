@@ -73,7 +73,9 @@
   padding: 0.05em 0.45em;
   border-radius: 3px;
   font-weight: 700;
-  color: #fff;
+  /* Not #fff: in dark mode the result fills are light (#4caf50 green, white on it 2.77:1). --on-accent is
+     white in light themes and near-black in dark, as the solid fills it sits on flip. */
+  color: var(--on-accent);
 }
 .progress-pct--correct  { background: var(--correct); }
 .progress-pct--revealed { background: color-mix(in srgb, var(--warning) 85%, var(--text) 15%); }

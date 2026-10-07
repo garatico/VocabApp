@@ -259,6 +259,16 @@ export function buildWordForm(options: WordFormOptions = {}): WordFormHandle {
     </div>
   `;
 
+  // Each field's <label> names the control in its own .form-group. The template's labels had no `for`, so
+  // the selects and read-only fields (Part of Speech, Gender, Register, CEFR Band…) had no accessible name
+  // at all — axe's critical `select-name`/`label`. Done here, once, so a field added later is covered too.
+  host.querySelectorAll<HTMLLabelElement>('.form-group > label:not([for])').forEach(label => {
+    if (!label.textContent?.trim()) return;   // the blank spacer above Reflexive, whose checkbox has its own label
+    const control = label.parentElement?.querySelector<HTMLElement>(
+      'input:not([type="hidden"]):not([type="checkbox"]), select, textarea');
+    if (control?.id) label.htmlFor = control.id;
+  });
+
   const q = <T extends HTMLElement>(name: string): T => host.querySelector<T>(`[id="${id(name)}"]`) as T;
 
   const emptyState = q<HTMLElement>('formPanelEmpty');

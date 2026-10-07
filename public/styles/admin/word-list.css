@@ -231,7 +231,7 @@
 .badge-pos {
   --pos-hue: 217; /* fallback for a pos not in the list above */
   background: hsl(var(--pos-hue) 60% 50% / 0.14);
-  color:      hsl(var(--pos-hue) 55% 32%);
+  color:      hsl(var(--pos-hue) 55% 25%);
   border: 1px solid hsl(var(--pos-hue) 50% 45% / 0.4);
 }
 html.dark .badge-pos { color: hsl(var(--pos-hue) 62% 72%); }
@@ -252,7 +252,7 @@ html.dark .badge-pos { color: hsl(var(--pos-hue) 62% 72%); }
 .badge-band {
   --band-hue: 217; /* fallback for a band not in the list above */
   background: hsl(var(--band-hue) 60% 50% / 0.14);
-  color:      hsl(var(--band-hue) 55% 32%);
+  color:      hsl(var(--band-hue) 55% 25%);
   border: 1px solid hsl(var(--band-hue) 50% 45% / 0.4);
 }
 html.dark .badge-band { color: hsl(var(--band-hue) 62% 72%); }
