@@ -38,6 +38,7 @@ import { onActivity } from './utils/streak.ts';
 import { showToast } from './ui/toast.ts';
 import { initStreakWidget } from './ui/streak-widget.ts';
 import { initDueBadge } from './ui/due-badge.ts';
+import { initStorageWarning } from './ui/storage-warning.ts';
 import { renderLevelChoices } from './ui/level-picker.ts';
 import { initGlobalShortcuts } from './ui/global-shortcuts.ts';
 import { initMissedAdd } from './ui/quiz-summary.ts';
@@ -1358,6 +1359,7 @@ void (async function init(): Promise<void> {
   bindSettings();
   initStreakWidget();
   initDueBadge();
+  initStorageWarning();
   initMissedAdd();
   bindBackupSettings();
   maybeRemindBackup();

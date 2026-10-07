@@ -62,12 +62,27 @@ export function readString(key: string, fallback: string | null = null): string 
   }
 }
 
+/**
+ * Hear about a write that did not land. Almost no caller checks writeString's result (a lost
+ * preference is fine), but a lost list edit is not, and with no listener a full storage quota meant
+ * the learner's changes vanished on reload without a word. One listener: ui/storage-warning.ts.
+ */
+let onWriteFailed: ((key: string, quota: boolean) => void) | null = null;
+export function onWriteFailure(listener: ((key: string, quota: boolean) => void) | null): void { onWriteFailed = listener; }
+
+/** The storage is full (as opposed to blocked outright). Chrome/Safari and Firefox name it differently. */
+export function isQuotaError(err: unknown): boolean {
+  const name = (err as { name?: string } | null)?.name ?? '';
+  return name === 'QuotaExceededError' || name === 'NS_ERROR_DOM_QUOTA_REACHED';
+}
+
 /** Store a string. Returns whether it actually landed. */
 export function writeString(key: string, value: string): boolean {
   try {
     localStorage.setItem(key, value);
     return true;
-  } catch {
+  } catch (err) {
+    try { onWriteFailed?.(key, isQuotaError(err)); } catch { /* a listener's failure must not become the caller's */ }
     return false;
   }
 }
