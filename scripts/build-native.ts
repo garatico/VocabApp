@@ -32,10 +32,21 @@ import fs   from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { copyFlattened } from './lib/asset-flatten.js';
-import { writeAssetManifest } from './lib/asset-manifest.js';
-import { dataDir } from '../src/server/lib/paths.js';
+import { writeAssetManifest, readDbBuiltAt } from './lib/asset-manifest.js';
+import { dataDir as liveDataDir } from '../src/server/lib/paths.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+/**
+ * Everything a native build ships comes from this repo's data/: the database, the
+ * assets staged into public/, and the manifest that says which of them exist. Never
+ * DATA_DIR — a portable build has to be self-contained (see scripts/sync-data.ts;
+ * run `npm run data:sync` first to bring the database up to date). The database and
+ * manifest used to come from DATA_DIR while the files were staged from data/, and
+ * DATA_DIR holds no svgs: the manifest listed none, so the app never showed the ones
+ * it shipped.
+ */
+const dataRoot = path.join(root, 'data');
 
 type Target = 'web' | 'windows' | 'android' | 'native' | 'check';
 
@@ -100,7 +111,7 @@ function checkTarget(target: 'windows' | 'android'): boolean {
 const STAGED = ['images', 'emoji', 'svgs'];
 
 function stageAssets(): void {
-  const dataDir   = path.join(root, 'data');
+  const dataDir   = dataRoot;
   const publicDir = path.join(root, 'public');
   let total = 0;
 
@@ -115,6 +126,20 @@ function stageAssets(): void {
          + clashes.slice(0, 5).join(', '));
     }
   }
+
+  // Audio keeps its language folders — they are part of the URL (/audio/<language>/<slug>.wav,
+  // as the server serves it), unlike the arbitrary domain folders flattened above. It used to
+  // be listed in the asset manifest but never staged, so every play button fetched a 404.
+  const audioSrc  = path.join(dataDir, 'audio');
+  const audioDest = path.join(publicDir, 'audio');
+  fs.rmSync(audioDest, { recursive: true, force: true });
+  if (fs.existsSync(audioSrc)) {
+    fs.cpSync(audioSrc, audioDest, { recursive: true });
+    const files = fs.readdirSync(audioDest, { recursive: true }).filter(f => String(f).endsWith('.wav')).length;
+    total += files;
+    console.log(`  ${'audio'.padEnd(8)} ${String(files).padStart(4)} files -> public/audio/`);
+  }
+
   const mb = dirSize(publicDir) / 1048576;
   console.log(`  ${total} files staged, public/ now ${mb.toFixed(1)} MB`);
 }
@@ -195,17 +220,17 @@ function stageTauriResources(): void {
   const resourcesDir = path.join(root, 'src-tauri', 'resources');
   fs.mkdirSync(resourcesDir, { recursive: true });
 
-  const dbSrc  = path.join(dataDir, 'vocabulary.db');
+  const dbSrc  = path.join(dataRoot, 'vocabulary.db');
   const dbDest = path.join(resourcesDir, 'vocabulary.db');
   if (!fs.existsSync(dbSrc)) {
-    console.error(`  vocabulary.db not found at ${dbSrc} — set DATA_DIR, or build it in VocabApp-Data first.`);
+    console.error(`  vocabulary.db not found at ${dbSrc} — run \`npm run data:sync\` to copy it from VocabApp-Data.`);
     process.exit(1);
   }
   fs.copyFileSync(dbSrc, dbDest);
   console.log(`  vocabulary.db  ${(fs.statSync(dbDest).size / 1048576).toFixed(1)} MB -> src-tauri/resources/`);
 
   const manifestPath = path.join(root, 'public', 'data', 'asset-manifest.json');
-  const manifest = writeAssetManifest(dataDir, manifestPath);
+  const manifest = writeAssetManifest(dataRoot, manifestPath);
   console.log(`  asset-manifest.json  ${manifest.svgConcepts.length} svg concepts, `
     + `${Object.values(manifest.audioSlugs).reduce((n, s) => n + s.length, 0)} audio files -> public/data/`);
 }
@@ -430,6 +455,19 @@ fn main() {
 
 const target = (process.argv[2] ?? 'check') as Target;
 
+/** Say so, up front, when VocabApp-Data (DATA_DIR) has a newer database than the one this build ships. */
+function warnIfDataBehind(): void {
+  const shipped = readDbBuiltAt(path.join(dataRoot, 'vocabulary.db'));
+  const live    = readDbBuiltAt(path.join(liveDataDir, 'vocabulary.db'));
+  if (live && shipped && live > shipped) {
+    warn(`data/vocabulary.db (built ${shipped}) is older than DATA_DIR's (built ${live}).`);
+    warn('This build ships the older one. Run `npm run data:sync` first to ship the latest.');
+  } else if (shipped) {
+    ok(`data/vocabulary.db built ${shipped}`);
+  }
+}
+if (target !== 'check') warnIfDataBehind();
+
 if (target === 'check') {
   console.log(`\n${bar}\n  Native build prerequisites\n${bar}`);
   console.log('\n  Windows (Tauri)');
@@ -460,9 +498,13 @@ if (target === 'windows' || target === 'native') {
   // the JSON export has to stay for that target even though windows doesn't
   // need it. The unused JSON just sits in the Tauri bundle unread in that
   // case; only a windows-only build actually skips producing it.
-  buildWeb(1, 5, target === 'native');
-  step(4, 5, 'Stage the embedded db + asset manifest for Tauri');
+  // Before the web build, not after: vite copies public/ into dist/ as it stands, so a
+  // manifest written afterwards never reached the package — dist/ shipped the previous
+  // build's, with the previous database's dbBuiltAt, and an installed app compared against
+  // that could keep its old copy of the data.
+  step(1, 5, 'Stage the embedded db + asset manifest for Tauri');
   stageTauriResources();
+  buildWeb(2, 5, target === 'native');
   step(5, 5, 'Package with Tauri');
   scaffoldTauri();
   run('npx tauri build', 'Tauri build');

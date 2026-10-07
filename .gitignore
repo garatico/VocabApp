@@ -93,6 +93,7 @@ public/data/
 public/images/
 public/emoji/
 public/svgs/
+public/audio/
 
 # Native build output
 # Tauri build output and generated files.
