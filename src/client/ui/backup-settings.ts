@@ -44,7 +44,7 @@ export function bindBackupSettings(): void {
         window.setTimeout(() => location.reload(), 1200);
       } catch (err) {
         logger.warn('full restore failed', err);
-        alert((err as Error).message || 'Could not read that backup file.');
+        showToast((err as Error).message || 'Could not read that backup file.', 'error');
       } finally {
         input.value = '';
       }

@@ -6,9 +6,10 @@ import { fetchVocab, cachedVocabMap } from './vocab-cache.ts';
 import { showUndo } from './undo-toast.ts';
 import { buildLangBadge } from '../../ui/lang-badge.ts';
 import type { SidebarKit } from './sidebar-kit.ts';
-import { confirmDialog } from '../../ui/dialog.ts';
+import { confirmDialog, askText } from '../../ui/dialog.ts';
 import '../../styles-lazy/my-lists.css';
 import '../../styles-lazy/my-content-bundle.css';
+import { showToast } from '../../ui/toast.ts';
 
 /**
  * sidebar-multi.ts — the Cross-Language Lists section: its cards and the create / copy flows.
@@ -92,25 +93,22 @@ export function createMultiSection(kit: SidebarKit) {
           await Promise.all([...new Set(entries.map(e => e.language))].map(fetchVocab));
           return entries.map(e => ({ word: e.word, translation: cachedVocabMap(e.language)?.get(e.word)?.translation }));
         }, name),
-        { glyph: '⧉', label: 'Copy', title: 'Duplicate cross-language list', tone: 'copy', onClick: () => {
-          const proposed = suggestMultiCopyName(name);
-          const input = window.prompt(`Name for the copy of "${name}":`, proposed);
-          if (input === null) return;
-          const newName = input.trim();
+        { glyph: '⧉', label: 'Copy', title: 'Duplicate cross-language list', tone: 'copy', onClick: async () => {
+          const newName = await askText({ title: `Copy "${name}"`, message: 'Name for the copy:', initial: suggestMultiCopyName(name), confirmLabel: 'Copy' });
           if (!newName) return;
-          if (!createMultiList(newName)) { alert(`A cross-language list named "${newName}" already exists.`); return; }
+          if (!createMultiList(newName)) { showToast(`A cross-language list named "${newName}" already exists.`, 'error'); return; }
           for (const entry of getMultiList(name)) addToMultiList(newName, entry.word, entry.language);
           ctx.selectedMultiList = newName; ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedProfile = null; ctx.selectedVisual = null;
           render();
         } },
-        { glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename', onClick: () => {
-          const newName = window.prompt('Rename cross-language list:', name);
-          if (!newName?.trim() || newName.trim() === name) return;
-          if (renameMultiList(name, newName.trim())) {
-            if (ctx.selectedMultiList === name) ctx.selectedMultiList = newName.trim();
+        { glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename', onClick: async () => {
+          const newName = await askText({ title: 'Rename cross-language list', initial: name, confirmLabel: 'Rename' });
+          if (!newName || newName === name) return;
+          if (renameMultiList(name, newName)) {
+            if (ctx.selectedMultiList === name) ctx.selectedMultiList = newName;
             render();
           } else {
-            alert(`A cross-language list named "${newName.trim()}" already exists.`);
+            showToast(`A cross-language list named "${newName}" already exists.`, 'error');
           }
         } },
         { glyph: '🗑', label: 'Delete', title: 'Delete list', tone: 'delete', onClick: async () => {
@@ -166,7 +164,7 @@ export function createMultiSection(kit: SidebarKit) {
     cancelBtn.type = 'button'; cancelBtn.className = 'ml-icon-btn'; cancelBtn.textContent = '✕';
     function confirmCreate(): void {
       const name = inp.value.trim(); if (!name) { li.remove(); return; }
-      if (!createMultiList(name)) { alert(`A cross-language list named "${name}" already exists.`); return; }
+      if (!createMultiList(name)) { showToast(`A cross-language list named "${name}" already exists.`, 'error'); return; }
       ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedProfile = null; ctx.selectedVisual = null;
       ctx.selectedMultiList = name;
       render();

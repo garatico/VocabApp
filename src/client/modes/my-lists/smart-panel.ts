@@ -36,6 +36,7 @@ import { qualifySmartListName } from '../../utils/word-lists.ts';
 import { getFolderRegistry, addFolder } from './folders.ts';
 import { FILTER_SCOPES, SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
 import '../../styles-lazy/my-lists.css';
+import { askText } from '../../ui/dialog.ts';
 
 /** Same display formatting as the Table/Picture Domains filter — see domain-filter.ts's fmt(). */
 function fmtDomain(d: string): string {
@@ -110,12 +111,12 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
   newFolderBtn.type = 'button';
   newFolderBtn.className = 'ml-chip-dropdown-new-folder';
   newFolderBtn.textContent = '+ new folder…';
-  newFolderBtn.addEventListener('click', e => {
+  newFolderBtn.addEventListener('click', async e => {
     e.stopPropagation();
-    const folderName = window.prompt('New folder name:');
-    if (!folderName?.trim()) return;
-    addFolder(smartFolderScope, folderName.trim());
-    folderSelected.add(folderName.trim());
+    const folderName = await askText({ title: 'New folder', placeholder: 'Folder name', confirmLabel: 'Create' });
+    if (!folderName) return;
+    addFolder(smartFolderScope, folderName);
+    folderSelected.add(folderName);
     syncFolders();
     ctx.renderPanel(); // rebuild so the new folder shows as a selectable option
   });

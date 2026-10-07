@@ -4,8 +4,9 @@ import { exportMenuItems } from './list-actions.ts';
 import { getSmartNames, getSmartLists, saveSmartRule, deleteSmartList, renameSmartList, evaluateSmart, DEFAULT_SMART_RULE, type SmartRule } from './smart-lists.ts';
 import { cachedVocab, cachedVocabMap, fetchVocab } from './vocab-cache.ts';
 import type { SidebarKit } from './sidebar-kit.ts';
-import { confirmDialog } from '../../ui/dialog.ts';
+import { confirmDialog, askText } from '../../ui/dialog.ts';
 import '../../styles-lazy/my-lists.css';
+import { showToast } from '../../ui/toast.ts';
 
 /**
  * sidebar-smart.ts — the Smart Lists section (saved queries): its cards and the create / rename /
@@ -97,14 +98,11 @@ export function createSmartSection(kit: SidebarKit, opts: { starter?: boolean } 
           const vm = cachedVocabMap(ctx.lang);
           return (rule ? evaluateSmart(ctx.lang, rule, vocab) : []).map(w => ({ word: w, translation: vm?.get(w)?.translation }));
         }, `${name}-${ctx.lang}`),
-        { glyph: '⧉', label: 'Copy', title: 'Duplicate smart list', tone: 'copy', onClick: () => {
-          const proposed = suggestSmartCopyName(ctx.lang, name);
-          const input = window.prompt(`Name for the copy of "${name}":`, proposed);
-          if (input === null) return;
-          const newName = input.trim();
+        { glyph: '⧉', label: 'Copy', title: 'Duplicate smart list', tone: 'copy', onClick: async () => {
+          const newName = await askText({ title: `Copy "${name}"`, message: 'Name for the copy:', initial: suggestSmartCopyName(ctx.lang, name), confirmLabel: 'Copy' });
           if (!newName) return;
           if (getSmartNames(ctx.lang).includes(newName)) {
-            alert(`A smart list named "${newName}" already exists.`); return;
+            showToast(`A smart list named "${newName}" already exists.`, 'error'); return;
           }
           // A copy is the learner's own list, so it moves to Smart Lists (and out of the starter folders).
           saveSmartRule(ctx.lang, newName, starter ? { ...rule, starter: false, folders: [], folder: undefined } : { ...rule });
@@ -165,7 +163,7 @@ export function createSmartSection(kit: SidebarKit, opts: { starter?: boolean } 
     function confirmCreate(): void {
       const name = inp.value.trim(); if (!name) { li.remove(); return; }
       if (getSmartNames(ctx.lang).includes(name)) {
-        alert(`A smart list named "${name}" already exists.`); return;
+        showToast(`A smart list named "${name}" already exists.`, 'error'); return;
       }
       saveSmartRule(ctx.lang, name, { ...DEFAULT_SMART_RULE });
       ctx.selectedList = ''; ctx.selectedMultiList = null; ctx.selectedProfile = null; ctx.selectedVisual = null;
@@ -193,7 +191,7 @@ export function createSmartSection(kit: SidebarKit, opts: { starter?: boolean } 
       if (renameSmartList(ctx.lang, oldName, newName)) {
         if (ctx.selectedSmart === oldName) ctx.selectedSmart = newName;
         render();
-      } else { alert(`A smart list named "${newName}" already exists.`); inp.focus(); }
+      } else { showToast(`A smart list named "${newName}" already exists.`, 'error'); inp.focus(); }
     }
     function done(): void { inp.replaceWith(nameSpan); okBtn.remove(); }
     okBtn.addEventListener('click', confirmRename);

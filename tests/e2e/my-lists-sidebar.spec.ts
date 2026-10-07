@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
-import { disableSimpleMode, confirmNext, rowAction } from './helpers.ts';
+import { disableSimpleMode, confirmNext, rowAction, answerTextNext } from './helpers.ts';
 
 /**
  * My Lists sidebar — every section's create / rename / copy / delete, plus folders, the emoji and
@@ -37,10 +37,8 @@ async function menuAction(page: Page, gearOwner: Locator, tone: 'rename' | 'copy
   await page.locator(`.ml-action-menu:not([hidden]) .ml-menu-item--${tone}`).click();
 }
 
-/** Answer the next window.prompt / confirm. */
-function answerNext(page: Page, value?: string): void {
-  page.once('dialog', d => { void (value === undefined ? d.accept() : d.accept(value)); });
-}
+/** Answer the next naming dialog (ui/dialog.ts askText). */
+const answerNext = answerTextNext;
 
 async function createInline(page: Page, headSelector: string, name: string): Promise<void> {
   await page.locator(`${headSelector} ${NEW_BTN}`).click();
@@ -66,7 +64,7 @@ test('single-language lists: create, rename, copy, delete and undo', async ({ pa
   await expect(card(page, 'ml-single-item', 'Beta')).toBeVisible();
   await expect(card(page, 'ml-single-item', 'Alpha')).toHaveCount(0);
 
-  answerNext(page, 'Beta (copy)');
+  await answerNext(page, 'Beta (copy)');
   await menuAction(page, card(page, 'ml-single-item', 'Beta'), 'copy');
   await expect(card(page, 'ml-single-item', 'Beta (copy)')).toBeVisible();
 
@@ -83,10 +81,8 @@ test('a duplicate name is refused, with a message, and nothing is created', asyn
   await createInline(page, '.ml-single-head', 'Same');
   await expect(card(page, 'ml-single-item', 'Same')).toBeVisible();
 
-  let alertText = '';
-  page.once('dialog', d => { alertText = d.message(); void d.accept(); });
   await createInline(page, '.ml-single-head', 'Same');
-  await expect.poll(() => alertText).toMatch(/already exists/i);
+  await expect(page.locator('.toast-error')).toContainText(/already exists/i);
   await expect(page.locator('.ml-list-item.ml-single-item', { has: page.locator('.ml-list-name', { hasText: exactly('Same') }) })).toHaveCount(1);
 });
 
@@ -100,7 +96,7 @@ test('a list card can be given an emoji from its gear menu', async ({ page }) =>
 
 // ═══ Folders (single-language scope) ═══════════════════════════════════════════
 test('folders: create, give an emoji and colour, choose what to hide from, collapse and remember', async ({ page }) => {
-  answerNext(page, 'Trips');
+  await answerNext(page, 'Trips');
   await page.locator('.ml-single-head .ml-new-folder-btn').click();
   const folderHead = page.locator('.ml-folder-head', { hasText: 'Trips' });
   await expect(folderHead).toBeVisible();
@@ -147,11 +143,11 @@ test('folders: rename carries its list, emoji/colour and collapsed state to the 
 
   // A second folder already named "Travel" makes the rename refuse to collide with it.
   await makeFolder(page, '.ml-single-head', 'Travel');
-  answerNext(page, 'Travel');
+  await answerNext(page, 'Travel');
   await menuAction(page, folder.locator('.ml-folder-head'), 'rename');
   await expect(folder.locator('.ml-folder-head')).toContainText('Trips');
 
-  answerNext(page, 'Travel Plans');
+  await answerNext(page, 'Travel Plans');
   await menuAction(page, folder.locator('.ml-folder-head'), 'rename');
   const renamed = page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: 'Travel Plans' }) });
   await expect(renamed).toBeVisible();
@@ -182,7 +178,7 @@ test('folders: renaming a folder used by a Testing Profile updates that mode’s
   await dragOnto(page, card(page, 'ml-profile-item', 'Drill'), folder.locator('.ml-folder-head'));
   await expect(folder.locator('.ml-list-item', { hasText: 'Drill' })).toBeVisible();
 
-  answerNext(page, 'Fundamentals');
+  await answerNext(page, 'Fundamentals');
   await menuAction(page, folder.locator('.ml-folder-head'), 'rename');
   const renamed = page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: 'Fundamentals' }) });
   await expect(renamed).toBeVisible();
@@ -239,7 +235,7 @@ test('smart lists: create, rename, copy and delete', async ({ page }) => {
   await renameInline(page, card(page, 'ml-smart-item', 'Verbs'), 'Verbs2');
   await expect(card(page, 'ml-smart-item', 'Verbs2')).toBeVisible();
 
-  answerNext(page, 'Verbs2 (copy)');
+  await answerNext(page, 'Verbs2 (copy)');
   await menuAction(page, card(page, 'ml-smart-item', 'Verbs2'), 'copy');
   await expect(card(page, 'ml-smart-item', 'Verbs2 (copy)')).toBeVisible();
 
@@ -254,11 +250,11 @@ test('cross-language lists: create, rename, copy, delete and undo', async ({ pag
   await createInline(page, '.ml-multi-head', 'Zoo');
   await expect(card(page, 'ml-multi-item', 'Zoo')).toBeVisible();
 
-  answerNext(page, 'Zoo2');
+  await answerNext(page, 'Zoo2');
   await menuAction(page, card(page, 'ml-multi-item', 'Zoo'), 'rename');
   await expect(card(page, 'ml-multi-item', 'Zoo2')).toBeVisible();
 
-  answerNext(page, 'Zoo2 (copy)');
+  await answerNext(page, 'Zoo2 (copy)');
   await menuAction(page, card(page, 'ml-multi-item', 'Zoo2'), 'copy');
   await expect(card(page, 'ml-multi-item', 'Zoo2 (copy)')).toBeVisible();
 
@@ -278,7 +274,7 @@ test('copying a cross-language list copies its words, not just its name', async 
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await expect(card(page, 'ml-multi-item', 'Pets').locator('.ml-list-count')).toHaveText('2 words');
 
-  answerNext(page, 'Pets (copy)');
+  await answerNext(page, 'Pets (copy)');
   await menuAction(page, card(page, 'ml-multi-item', 'Pets'), 'copy');
   const copy = card(page, 'ml-multi-item', 'Pets (copy)');
   await expect(copy).toBeVisible();
@@ -322,7 +318,7 @@ test('testing profiles: create in a mode, rename, copy, delete, and a per-mode f
   await renameInline(page, card(page, 'ml-profile-item', 'Fast', group), 'Faster');
   await expect(card(page, 'ml-profile-item', 'Faster', group)).toBeVisible();
 
-  answerNext(page, 'Faster (copy)');
+  await answerNext(page, 'Faster (copy)');
   await menuAction(page, card(page, 'ml-profile-item', 'Faster', group), 'copy');
   await expect(card(page, 'ml-profile-item', 'Faster (copy)', group)).toBeVisible();
 
@@ -444,7 +440,7 @@ test('visual profiles: emoji, folders (create, file into, drag onto)', async ({ 
   await expect(card(page, 'ml-visual-item', 'Cosy').locator('.ml-list-emoji')).toHaveText('📚');
   expect((await storedVisual(page, 'Cosy'))?.emoji).toBe('📚');
 
-  answerNext(page, 'Reading');
+  await answerNext(page, 'Reading');
   await page.locator('.ml-visual-head .ml-new-folder-btn').click();
   const folder = page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: 'Reading' }) });
   await expect(folder).toBeVisible();
@@ -514,7 +510,7 @@ async function dragOnto(page: Page, source: Locator, target: Locator): Promise<v
 
 /** Make a folder in a section through its head's "+ Folder" (a plain prompt). */
 async function makeFolder(page: Page, headSelector: string, name: string): Promise<Locator> {
-  answerNext(page, name);
+  await answerNext(page, name);
   await page.locator(`${headSelector} .ml-new-folder-btn`).click();
   const group = page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: name }) }).first();
   await expect(group).toBeVisible();
@@ -653,11 +649,11 @@ test('arrow keys move between cards and Enter opens the focused one', async ({ p
 // ═══ Nested folders and aggregate lists ════════════════════════════════════════
 test('folders nest: a subfolder sits inside its parent, and renaming the parent carries it', async ({ page }) => {
   await createInline(page, '.ml-single-head', 'Passport');
-  answerNext(page, 'Trips');
+  await answerNext(page, 'Trips');
   await page.locator('.ml-single-head .ml-new-folder-btn').click();
   const trips = page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: 'Trips' }) }).first();
 
-  answerNext(page, 'Asia');
+  await answerNext(page, 'Asia');
   await menuAction(page, trips.locator('.ml-folder-head').first(), 'copy');   // "Add Subfolder"
   const asia = trips.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: 'Asia' }) });
   await expect(asia).toBeVisible();
@@ -665,7 +661,7 @@ test('folders nest: a subfolder sits inside its parent, and renaming the parent 
   await dragOnto(page, card(page, 'ml-single-item', 'Passport'), asia.locator('.ml-folder-head'));
   await expect(asia.locator('.ml-list-item', { hasText: 'Passport' })).toBeVisible();
 
-  answerNext(page, 'Journeys');
+  await answerNext(page, 'Journeys');
   await menuAction(page, trips.locator('.ml-folder-head').first(), 'rename');
   const journeys = page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: 'Journeys' }) }).first();
   await expect(journeys.locator('.ml-folder-group', { hasText: 'Asia' })).toBeVisible();

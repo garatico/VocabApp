@@ -4,7 +4,7 @@ import {
   folderLeaf, folderParent, isInFolderTree, moveFolderPath, withAncestors, childFolders, FOLDER_SEP,
 } from './folders.ts';
 import { type ListsCtx } from './context.ts';
-import { askChoice } from '../../ui/dialog.ts';
+import { askChoice, askText } from '../../ui/dialog.ts';
 import { getSmartNames, getSmartLists, saveSmartRule, deleteSmartList } from './smart-lists.ts';
 import { listVisualProfiles, getVisualProfile, saveVisualProfile, deleteVisualProfile } from '../../filters/visual-profiles.ts';
 import { listPresets, getPreset, savePreset, deletePreset } from '../../filters/presets.ts';
@@ -13,6 +13,7 @@ import type { MenuItem } from './sidebar-menu.ts';
 import type { BulkHideFrom } from './sidebar-pickers.ts';
 import { type SidebarSectionId, isSectionCollapsed, setSectionCollapsed, isFolderCollapsed, setFolderCollapsed } from './sidebar-state.ts';
 import '../../styles-lazy/my-lists.css';
+import { showToast } from '../../ui/toast.ts';
 
 /**
  * sidebar-folders.ts — the structure around the list cards: section heads, the collapsible
@@ -65,13 +66,13 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
       const folderBtn = document.createElement('button');
       folderBtn.type = 'button'; folderBtn.className = 'ml-new-list-btn ml-new-folder-btn';
       folderBtn.title = 'Create a new folder'; folderBtn.textContent = '+ Folder';
-      folderBtn.addEventListener('click', () => {
+      folderBtn.addEventListener('click', async () => {
         // A function scope means the caller needs more than a name (Testing
         // Profiles asks which mode the folder belongs to) and drives it itself.
         if (typeof folderScope === 'function') { folderScope(); return; }
-        const name = window.prompt('New folder name:');
-        if (!name?.trim()) return;
-        if (!addFolder(folderScope, name)) { alert(`A folder named "${name.trim()}" already exists.`); return; }
+        const name = await askText({ title: 'New folder', placeholder: 'Folder name', confirmLabel: 'Create' });
+        if (!name) return;
+        if (!addFolder(folderScope, name)) { showToast(`A folder named "${name.trim()}" already exists.`, 'error'); return; }
         render();
       });
       btnGroup.appendChild(folderBtn);
@@ -272,7 +273,7 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
     if (dest === path || isInFolderTree(newParent, path)) return;
     addFolder(scope, path); // a level that only exists as someone's parent isn't registered yet
     if (!renameFolder(scope, path, dest)) {
-      alert(`A folder named "${leaf}" already exists there.`);
+      showToast(`A folder named "${leaf}" already exists there.`, 'error');
       return;
     }
     renameFolderReferences(sectionId, scope, path, dest);
@@ -328,13 +329,13 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
 
     const folderItems: MenuItem[] = [];
     if (style) {
-      // A prompt, not the inline-input rename every list card uses — the head is a mix of caret, icon,
-      // emoji and text rather than one discrete name element, same reasoning as "+ Folder"'s own prompt.
+      // A dialog, not the inline-input rename every list card uses — the head is a mix of caret, icon,
+      // emoji and text rather than one discrete name element, same reasoning as "+ Folder"'s own dialog.
       folderItems.push({
         glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename',
-        onClick: () => {
+        onClick: async () => {
           // Only the last level is edited; the folder stays under the same parent.
-          const input = window.prompt('Rename folder:', folderLeaf(style.folder));
+          const input = await askText({ title: 'Rename folder', initial: folderLeaf(style.folder), confirmLabel: 'Rename' });
           const leaf = input?.trim().split(FOLDER_SEP).join('-');
           if (!leaf || leaf === folderLeaf(style.folder)) return;
           const parent = folderParent(style.folder);
@@ -342,7 +343,7 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
           // A level that only exists because a subfolder sits under it isn't registered yet.
           addFolder(style.scope, style.folder);
           if (!renameFolder(style.scope, style.folder, renamed)) {
-            alert(`A folder named "${leaf}" already exists here.`);
+            showToast(`A folder named "${leaf}" already exists here.`, 'error');
             return;
           }
           renameFolderReferences(sectionId, style.scope, style.folder, renamed);
@@ -353,12 +354,12 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
       });
       folderItems.push({
         glyph: '📁', label: 'Add Subfolder', title: 'Create a folder inside this one', tone: 'copy',
-        onClick: () => {
-          const input = window.prompt(`New folder inside "${folderLeaf(style.folder)}":`);
+        onClick: async () => {
+          const input = await askText({ title: `New folder inside "${folderLeaf(style.folder)}"`, placeholder: 'Folder name', confirmLabel: 'Create' });
           const leaf = input?.trim().split(FOLDER_SEP).join('-');
           if (!leaf) return;
           if (!addFolder(style.scope, style.folder + FOLDER_SEP + leaf)) {
-            alert(`A folder named "${leaf}" already exists here.`);
+            showToast(`A folder named "${leaf}" already exists here.`, 'error');
             return;
           }
           setFolderCollapsed(sectionId, folderKey, false);

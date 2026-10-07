@@ -64,7 +64,6 @@ test('discarding the offer forgets the quiz', async ({ page }) => {
 
 test('giving up discards the saved quiz', async ({ page }) => {
   await startQuizAndAnswerFirstWord(page);
-  page.once('dialog', d => d.accept());
   await page.locator('#tableReset').click();
   expect(await page.evaluate(() => localStorage.getItem('vq_resume_table'))).toBeNull();
 

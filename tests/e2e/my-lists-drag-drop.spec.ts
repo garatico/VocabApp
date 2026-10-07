@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, answerTextNext } from './helpers.ts';
 
 /**
  * My Lists — dragging a list card onto a folder header adds it to that
@@ -23,7 +23,7 @@ test('dragging a single-language list onto a folder adds it there', async ({ pag
   await nameInput.press('Enter');
 
   // Create a folder to drop it into.
-  page.once('dialog', dialog => dialog.accept('DragTestFolder'));
+  await answerTextNext(page, 'DragTestFolder');
   await page.locator('.ml-single-head .ml-new-folder-btn').click();
 
   const listCard = page.locator('.ml-single-item', { has: page.locator('.ml-list-name', { hasText: /^DragTestList$/ }) });
@@ -43,7 +43,7 @@ test('dragging a single-language list onto a folder adds it there', async ({ pag
 
 test('a smart list cannot be dropped onto a single-language list folder', async ({ page }) => {
   // Folder to try (wrongly) dropping into.
-  page.once('dialog', dialog => dialog.accept('SingleOnlyFolder'));
+  await answerTextNext(page, 'SingleOnlyFolder');
   await page.locator('.ml-single-head .ml-new-folder-btn').click();
 
   // A smart list — same inline name-then-Enter creation flow as a plain list.

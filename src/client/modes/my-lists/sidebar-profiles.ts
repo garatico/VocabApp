@@ -7,8 +7,9 @@ import { modesWithPresets, listPresets, getPreset, deletePreset, renamePreset, d
 import { SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
 import type { SidebarKit } from './sidebar-kit.ts';
 import { isFolderCollapsed, setFolderCollapsed } from './sidebar-state.ts';
-import { confirmDialog } from '../../ui/dialog.ts';
+import { confirmDialog, askText } from '../../ui/dialog.ts';
 import '../../styles-lazy/my-lists.css';
+import { showToast } from '../../ui/toast.ts';
 
 /**
  * sidebar-profiles.ts — the Testing Profiles section: profiles grouped by mode and folder, and
@@ -138,14 +139,11 @@ export function createProfilesSection(kit: SidebarKit) {
             const b = getPreset(mode, name);
             if (b) savePreset(mode, name, { ...b, ...style });
           }),
-          { glyph: '⧉', label: 'Copy', title: 'Duplicate profile', tone: 'copy', onClick: () => {
-            const proposed = suggestProfileCopyName(mode, name);
-            const input = window.prompt(`Name for the copy of "${name}":`, proposed);
-            if (input === null) return;
-            const newName = input.trim();
+          { glyph: '⧉', label: 'Copy', title: 'Duplicate profile', tone: 'copy', onClick: async () => {
+            const newName = await askText({ title: `Copy "${name}"`, message: 'Name for the copy:', initial: suggestProfileCopyName(mode, name), confirmLabel: 'Copy' });
             if (!newName) return;
             if (!duplicatePreset(mode, name, newName)) {
-              alert(`A profile named "${newName}" already exists for ${SCOPE_LABELS[mode]}.`); return;
+              showToast(`A profile named "${newName}" already exists for ${SCOPE_LABELS[mode]}.`, 'error'); return;
             }
             ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedMultiList = null; ctx.selectedVisual = null;
             ctx.selectedProfile = { mode, name: newName };
@@ -234,7 +232,7 @@ export function createProfilesSection(kit: SidebarKit) {
       const name = inp.value.trim(); if (!name) { li.remove(); return; }
       const mode = modeSel.value as FilterScope;
       if (getPreset(mode, name)) {
-        alert(`A profile named "${name}" already exists for ${SCOPE_LABELS[mode]}.`); return;
+        showToast(`A profile named "${name}" already exists for ${SCOPE_LABELS[mode]}.`, 'error'); return;
       }
       savePreset(mode, name, { ...BLANK_BUNDLE });
       ctx.selectedList = ''; ctx.selectedSmart = null; ctx.selectedMultiList = null; ctx.selectedVisual = null;
@@ -277,7 +275,7 @@ export function createProfilesSection(kit: SidebarKit) {
       const name = inp.value.trim(); if (!name) { li.remove(); return; }
       const mode = modeSel.value as FilterScope;
       if (!addFolder(`profiles_${mode}`, name)) {
-        alert(`A folder named "${name}" already exists for ${SCOPE_LABELS[mode]}.`); return;
+        showToast(`A folder named "${name}" already exists for ${SCOPE_LABELS[mode]}.`, 'error'); return;
       }
       render();
     }
@@ -305,7 +303,7 @@ export function createProfilesSection(kit: SidebarKit) {
         }
         render();
       } else {
-        alert(`A profile named "${newName}" already exists for this tab.`);
+        showToast(`A profile named "${newName}" already exists for this tab.`, 'error');
         inp.focus();
       }
     }

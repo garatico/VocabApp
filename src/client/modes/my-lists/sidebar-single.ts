@@ -5,8 +5,9 @@ import { exportMenuItems } from './list-actions.ts';
 import { fetchVocab, cachedVocabMap } from './vocab-cache.ts';
 import { showUndo } from './undo-toast.ts';
 import type { SidebarKit } from './sidebar-kit.ts';
-import { confirmDialog } from '../../ui/dialog.ts';
+import { confirmDialog, askText } from '../../ui/dialog.ts';
 import '../../styles-lazy/my-lists.css';
+import { showToast } from '../../ui/toast.ts';
 
 /**
  * sidebar-single.ts — the Single-Language Lists section: its cards and the create / rename /
@@ -76,8 +77,8 @@ export function createSingleSection(kit: SidebarKit) {
             const vm = cachedVocabMap(ctx.lang);
             return getList(ctx.lang, name).map(w => ({ word: w, translation: vm?.get(w)?.translation }));
           }, `${name}-${ctx.lang}`),
-          { glyph: '⧉', label: 'Copy', title: 'Duplicate list', tone: 'copy', onClick: () => {
-            const copied = startCopyList(ctx.lang, name);
+          { glyph: '⧉', label: 'Copy', title: 'Duplicate list', tone: 'copy', onClick: async () => {
+            const copied = await startCopyList(ctx.lang, name);
             if (copied) { ctx.selectedList = copied; ctx.updateBadge(); render(); }
           } },
           { glyph: '✏', label: 'Rename', title: 'Rename', tone: 'rename', onClick: () => {
@@ -130,18 +131,15 @@ export function createSingleSection(kit: SidebarKit) {
   }
 
   /**
-   * Prompt for a name before copying — cancelling the prompt cancels the copy
+   * Ask for a name before copying — cancelling the dialog cancels the copy
    * entirely, rather than silently creating "X (copy)" and leaving the user to
    * notice and rename it after the fact.
    */
-  function startCopyList(lang: string, sourceName: string): string | null {
-    const proposed = suggestCopyName(lang, sourceName);
-    const input = window.prompt(`Name for the copy of "${sourceName}":`, proposed);
-    if (input === null) return null;               // Cancelled
-    const newName = input.trim();
-    if (!newName) return null;
+  async function startCopyList(lang: string, sourceName: string): Promise<string | null> {
+    const newName = await askText({ title: `Copy "${sourceName}"`, message: 'Name for the copy:', initial: suggestCopyName(lang, sourceName), confirmLabel: 'Copy' });
+    if (!newName) return null;                     // Cancelled, or left blank
     if (getListNames(lang).includes(newName)) {
-      alert(`A list named "${newName}" already exists.`);
+      showToast(`A list named "${newName}" already exists.`, 'error');
       return null;
     }
     createList(lang, newName);
@@ -161,7 +159,7 @@ export function createSingleSection(kit: SidebarKit) {
     function confirmCreate(): void {
       const name = inp.value.trim(); if (!name) { li.remove(); return; }
       if (!createList(ctx.lang, name)) {
-        alert(`A list named "${name}" already exists.`); return;
+        showToast(`A list named "${name}" already exists.`, 'error'); return;
       }
       ctx.selectedList = name; ctx.updateBadge(); render();
     }
@@ -185,7 +183,7 @@ export function createSingleSection(kit: SidebarKit) {
       if (renameList(ctx.lang, oldName, newName)) {
         if (ctx.selectedList === oldName) ctx.selectedList = newName;
         ctx.updateBadge(); render();
-      } else { alert(`A list named "${newName}" already exists.`); inp.focus(); }
+      } else { showToast(`A list named "${newName}" already exists.`, 'error'); inp.focus(); }
     }
     function done(): void { inp.replaceWith(nameSpan); okBtn.remove(); }
     okBtn.addEventListener('click', confirmRename);

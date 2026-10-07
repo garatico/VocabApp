@@ -42,6 +42,7 @@ import { createMultiSection } from './sidebar-multi.ts';
 import { createProfilesSection } from './sidebar-profiles.ts';
 import { createVisualSection } from './sidebar-visual.ts';
 import '../../styles-lazy/my-lists.css';
+import { showToast } from '../../ui/toast.ts';
 
 // createSidebar() runs fresh on every visit to My Lists (see my-lists-mode.ts's
 // renderMyLists, called from app.ts's mode-activation dispatcher) — a plain
@@ -123,7 +124,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
         showUndo(summary, null, 6000);
       } catch (err) {
         logger.warn('list restore failed', err);
-        alert((err as Error).message || 'Could not read that backup file.');
+        showToast((err as Error).message || 'Could not read that backup file.', 'error');
       }
       restoreInput.value = '';
     };

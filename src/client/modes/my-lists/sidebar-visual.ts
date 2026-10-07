@@ -8,6 +8,7 @@ import {
 import type { SidebarKit } from './sidebar-kit.ts';
 import { confirmDialog } from '../../ui/dialog.ts';
 import '../../styles-lazy/my-lists.css';
+import { showToast } from '../../ui/toast.ts';
 
 /**
  * sidebar-visual.ts — the Visual Profiles section (saved Theme and Font Size bundles). A row
@@ -83,7 +84,7 @@ export function createVisualSection(kit: SidebarKit) {
             const newName = await askText({ title: `Copy "${name}"`, message: 'Name for the copy:', initial: suggestCopyName(name), confirmLabel: 'Copy' });
             if (!newName) return;
             if (!duplicateVisualProfile(name, newName)) {
-              alert(`A visual profile named "${newName}" already exists.`); return;
+              showToast(`A visual profile named "${newName}" already exists.`, 'error'); return;
             }
             select(newName);
             render();
@@ -132,7 +133,7 @@ export function createVisualSection(kit: SidebarKit) {
     function confirmCreate(): void {
       const name = inp.value.trim(); if (!name) { li.remove(); return; }
       if (listVisualProfiles().includes(name)) {
-        alert(`A visual profile named "${name}" already exists.`); return;
+        showToast(`A visual profile named "${name}" already exists.`, 'error'); return;
       }
       saveVisualProfile(name, captureCurrentVisualProfile());
       select(name);
@@ -159,7 +160,7 @@ export function createVisualSection(kit: SidebarKit) {
       if (renameVisualProfile(oldName, newName)) {
         if (ctx.selectedVisual === oldName) ctx.selectedVisual = newName;
         render();
-      } else { alert(`A visual profile named "${newName}" already exists.`); inp.focus(); }
+      } else { showToast(`A visual profile named "${newName}" already exists.`, 'error'); inp.focus(); }
     }
     function done(): void { inp.replaceWith(nameSpan); okBtn.remove(); }
     okBtn.addEventListener('click', confirmRename);

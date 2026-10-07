@@ -63,6 +63,21 @@ async function answerNextDialog(page: Page, pick: '.app-dialog-choice' | '.app-d
 export function confirmNext(page: Page): Promise<void> { return answerNextDialog(page, '.app-dialog-choice'); }
 export function cancelNext(page: Page): Promise<void> { return answerNextDialog(page, '.app-dialog-cancel'); }
 
+/** Answer the next in-app text dialog (askText — naming a folder, a copy, a rename) with `value`, the
+ *  moment it appears. Like confirmNext, register it before the click that raises the dialog. */
+export async function answerTextNext(page: Page, value: string): Promise<void> {
+  await page.evaluate(text => {
+    const watcher = new MutationObserver(() => {
+      const input = document.querySelector<HTMLInputElement>('.app-dialog-input');
+      if (!input) return;
+      watcher.disconnect();
+      input.value = text;
+      document.querySelector<HTMLElement>('.app-dialog .app-dialog-choice')?.click();
+    });
+    watcher.observe(document.body, { childList: true, subtree: true });
+  }, value);
+}
+
 /**
  * Click Start Quiz, opening the controls first if the last quiz collapsed them. Starting a quiz closes the setup
  * panel (Settings -> Appearance -> "Collapse controls on Start", on by default), so a second Start in the same test

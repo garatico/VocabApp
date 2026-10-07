@@ -35,6 +35,7 @@ import { buildLangBadge } from '../../ui/lang-badge.ts';
 import { buildChecklistDropdown, closeAllChipDropdowns } from './chip-dropdown.ts';
 import { getFolderRegistry, addFolder } from './folders.ts';
 import '../../styles-lazy/my-lists.css';
+import { askText } from '../../ui/dialog.ts';
 
 /**
  * The outside-click listener is captured on the document, so it has to be
@@ -165,12 +166,12 @@ function renderPanelBody(ctx: ListsCtx): void {
     btn.type = 'button';
     btn.className = 'ml-chip-dropdown-new-folder';
     btn.textContent = '+ new folder…';
-    btn.addEventListener('click', e => {
+    btn.addEventListener('click', async e => {
       e.stopPropagation();
-      const name = window.prompt('New folder name:');
-      if (!name?.trim()) return;
-      addFolder(scope, name.trim());
-      onAdd(name.trim());
+      const name = await askText({ title: 'New folder', placeholder: 'Folder name', confirmLabel: 'Create' });
+      if (!name) return;
+      addFolder(scope, name);
+      onAdd(name);
     });
     return btn;
   }

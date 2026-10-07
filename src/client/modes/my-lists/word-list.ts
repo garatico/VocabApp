@@ -34,6 +34,7 @@ import {
   createCellReader, applyColumnFilters, applyColumnSort, type ColumnHeader, type ColumnItem,
 } from './column-header.ts';
 import '../../styles-lazy/my-lists.css';
+import { showToast } from '../../ui/toast.ts';
 
 export interface WordListDeps {
   /** Where the "12 Verbs · ranks #4–#900" chips go. */
@@ -207,7 +208,7 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
   bulkMove.addEventListener('click', () => {
     if (selectedWords.size === 0) return;
     const others = getListNames(ctx.lang).filter(n => n !== ctx.selectedList);
-    if (others.length === 0) { alert('No other list to move to. Create one first.'); return; }
+    if (others.length === 0) { showToast('No other list to move to. Create one first.', 'error'); return; }
     const words = [...selectedWords].filter(w => !derivedWords.has(w));
     if (words.length === 0) return;
     // Snapshotted now, not read live inside the Undo closure below: moving

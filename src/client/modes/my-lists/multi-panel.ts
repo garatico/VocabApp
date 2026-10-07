@@ -53,6 +53,7 @@ import {
 import { buildQuizButton } from './list-actions.ts';
 import { qualifyMultiListName } from '../../utils/word-lists.ts';
 import '../../styles-lazy/my-lists.css';
+import { askText } from '../../ui/dialog.ts';
 
 /** Closes the Part of Speech/Level/Folders/Hide-from dropdowns on an outside
  *  click — same "remove before the next render installs its replacement"
@@ -117,12 +118,12 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
     btn.type = 'button';
     btn.className = 'ml-chip-dropdown-new-folder';
     btn.textContent = '+ new folder…';
-    btn.addEventListener('click', e => {
+    btn.addEventListener('click', async e => {
       e.stopPropagation();
-      const name = window.prompt('New folder name:');
-      if (!name?.trim()) return;
-      addFolder(scope, name.trim());
-      onAdd(name.trim());
+      const name = await askText({ title: 'New folder', placeholder: 'Folder name', confirmLabel: 'Create' });
+      if (!name) return;
+      addFolder(scope, name);
+      onAdd(name);
     });
     return btn;
   }
