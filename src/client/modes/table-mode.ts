@@ -10,7 +10,7 @@ import { openListPicker }        from '../utils/list-picker.ts';
 import { openWordInfoPopover }   from '../utils/word-info-popover.ts';
 import { Settings, applyAutofillAttr } from '../settings.ts';
 import { getMisses, type MissCounts } from '../utils/session-history.ts';
-import { flagUrl }               from '../data/languages.ts';
+import { flagUrl, isoCode }      from '../data/languages.ts';
 import { renderWordWithGender, applyGenderContainer, enableInputWheelScroll, shouldShowGenderIndicator } from '../utils/dom.ts';
 import { hintPrefix, hintableLength } from '../utils/hint-reveal.ts';
 
@@ -457,6 +457,9 @@ export function renderTableMode({
         const gKey = genderKey(w);
         const indicatorStyle = Settings.getGenderIndicatorStyle();
         wordDiv.classList.add('spanish-word');
+        // Language of parts (WCAG 3.1.2): a screen reader voices "casa" in Spanish only if it is told to.
+        // English explicitly too — with the interface in Spanish the page itself is lang="es".
+        wordDiv.lang = wordIsPrompt ? isoCode(wordLang) : 'en';
         wordDiv.dataset.wordJson = JSON.stringify(w);
         // Read by attachTooltips below: in en-target direction the visible
         // cell shows the English prompt, so word.word (the tooltip heading)
@@ -501,6 +504,8 @@ export function renderTableMode({
         inp.dataset.hints = String(snap?.hintsShown ?? 0);
         inp.dataset.selected = String(snap?.selected ?? false);
         inp.placeholder  = PLACEHOLDER_FOR[slotsFor(dir)[1]];
+        // The language being typed: spellcheck, on-screen keyboards and screen readers follow it.
+        inp.lang         = slotsFor(dir)[1] === 'word' ? isoCode(wordLang) : 'en';
         // Own index into allInputs — read back below instead of re-deriving
         // it with allInputs.indexOf(inp) on every answer.
         inp.dataset.idx  = String(allInputs.length);

@@ -41,7 +41,7 @@ import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summ
 import { bindChoiceKeys } from '../ui/choice-keys.ts';
 import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
-import { languageInfo } from '../data/languages.ts';
+import { languageInfo, isoCode } from '../data/languages.ts';
 import { hintReveal, hintableLength } from '../utils/hint-reveal.ts';
 import { showLoading, hideLoading } from '../ui/ui.ts';
 import '../styles-lazy/trivia.css';
@@ -205,6 +205,7 @@ function renderFillInTable(bank: TriviaQuestion[], container: HTMLElement, lang:
     const qTd = document.createElement('td');
     qTd.className = 'tv-qa-question';
     qTd.textContent = q.questionTarget;
+    qTd.lang = isoCode(lang.split('+')[0]);
 
     const aTd = document.createElement('td');
     aTd.className = 'tv-qa-answer-cell';
@@ -487,6 +488,7 @@ export async function renderTriviaMode({
     difficultyEl.textContent = DIFFICULTY_LABELS[q.difficulty];
     difficultyEl.className = `gb-difficulty gb-difficulty--${q.difficulty}`;
     promptWord.textContent = q.questionTarget;
+    promptWord.lang = isoCode(lang.split('+')[0]);   // the question is in the language being studied
 
     if (subMode === 'choice') {
       renderChoiceOptions(i, q, prior);

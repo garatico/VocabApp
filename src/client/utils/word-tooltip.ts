@@ -15,6 +15,7 @@ import { logger } from './logger.js';
 import { languageInfo, LANGUAGES, flagUrl } from '../data/languages.js';
 import { Settings } from '../settings.js';
 import { createFlagImg } from '../ui/flag-icon.js';
+import { isoCode } from '../data/languages.ts';
 
 /** Build a tense-key -> display-label map for the given language. */
 function tenseLabels(lang: string): Record<string, string> {
@@ -447,6 +448,7 @@ export function buildWordDetailContent(
       word, Settings.getShowDisambiguatorOnHover(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang,
     );
     renderWordWithGender(heading, base, annotation, gKey, indicatorStyle);
+    heading.lang = isoCode(lang);   // the word, voiced in its own language
   }
   applyGenderContainer(heading, gKey, indicatorStyle);
   wrap.appendChild(heading);
@@ -503,6 +505,7 @@ function populateTooltip(word: Word, revealed: boolean, lang: string, hideWordWh
       word, Settings.getShowDisambiguatorOnHover(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang,
     );
     renderWordWithGender(heading, base, annotation, gKey, indicatorStyle);
+    heading.lang = isoCode(lang);   // the word, voiced in its own language
   }
   applyGenderContainer(heading, gKey, indicatorStyle);
   tt.appendChild(heading);

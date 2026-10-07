@@ -193,3 +193,29 @@ for (const theme of ['light', 'dark'] as const) {
     expect(await violationsOf(page)).toEqual([]);
   });
 }
+
+// Language of parts (WCAG 3.1.2), which axe can't judge: a target-language word must say so, or a screen
+// reader voices "casa" with English pronunciation. English beside it says so too, since with the interface
+// in Spanish the page itself is lang="es". What's typed carries the language being typed.
+test('quiz words and answer boxes carry the language they are in', async ({ page }) => {
+  await open(page, 'light');
+  await page.locator('#startBtn').click();
+  const firstWord = page.locator('#tableWrap .spanish-word').first();
+  const firstInput = page.locator('#tableWrap input[type="text"]').first();
+  await expect(firstWord).toHaveAttribute('lang', 'es');     // Word → Meaning: Spanish shown, English typed
+  await expect(firstInput).toHaveAttribute('lang', 'en');
+
+  await page.locator('#directionToggle [data-direction="en-target"]').evaluate((b: HTMLElement) => b.click());
+  await page.locator('#startBtn').evaluate((b: HTMLElement) => b.click());
+  await expect(page.locator('#tableWrap .spanish-word').first()).toHaveAttribute('lang', 'en');
+  await expect(page.locator('#tableWrap input[type="text"]').first()).toHaveAttribute('lang', 'es');
+
+  await page.locator('.mode-tab[data-mode="mylists"]').click();
+  await page.locator('.ml-single-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
+  await page.locator('.ml-list-name-input').fill('Lang');
+  await page.locator('.ml-list-name-input').press('Enter');
+  await page.locator('.ml-add-input').fill('casa');
+  await page.locator('.ml-add-result-word', { hasText: /^casa$/ }).locator('xpath=..').locator('.ml-add-btn').click();
+  await page.locator('.ml-add-input').fill('');
+  await expect(page.locator('.ml-word-item .ml-word-text').first()).toHaveAttribute('lang', 'es');
+});

@@ -16,6 +16,7 @@ import { buildAudioButton } from '../../ui/audio-play-button.ts';
 import { fillHighlighted } from '../../utils/dom.ts';
 import { respellSpanishIpa } from '../../utils/respell.ts';
 import '../../styles-lazy/my-lists.css';
+import { isoCode } from '../../data/languages.ts';
 
 /** Compact fill-level glyphs for the mastery scale, 0..MAX_MASTERY_LEVEL. */
 export const MASTERY_GLYPHS = ['○', '◔', '◑', '◕', '●'];
@@ -407,6 +408,7 @@ export function buildRowCells(o: RowCellsOptions): RowCells {
   // not on this line, which they widened unpredictably from row to row.
   const wordSpan = document.createElement('span');
   wordSpan.className = 'ml-word-text';
+  wordSpan.lang = isoCode(o.lang);   // voiced in its own language by a screen reader (WCAG 3.1.2)
   fillHighlighted(wordSpan, o.word, o.filter);
 
   const posLabel = POS_ABBREV[entry?.pos ?? ''] ?? '';
