@@ -104,11 +104,12 @@ export function saveSession(lang: string, entry: SessionRecord): SessionRecord[]
     const next = [...prior, entry].slice(-Settings.getMaxSessionsKept());
     // A dropped write (quota) is fine — history is a nicety, never fail a session.
     writeJson(SESSION_PREFIX + lang.toLowerCase(), next);
-    // entry.correct, not entry.total — the settings copy promises a
-    // celebration for words *answered*, and total is the size of the batch
-    // requested, which still counts every word left undone by a Give Up.
-    recordActivity(lang, entry.correct, entry.seconds);
   }
+  // Outside the history switch: it promises only that sessions stop being logged to History, but the
+  // streak and daily goals (streak.ts, their own keys) used to stop counting with it.
+  // entry.correct, not entry.total — the settings copy promises a celebration for words *answered*,
+  // and total is the size of the batch requested, which still counts every word left undone by a Give Up.
+  recordActivity(lang, entry.correct, entry.seconds);
   return prior.filter(s => s.mode === entry.mode);
 }
 

@@ -231,3 +231,14 @@ describe('orderWords', () => {
     ]);
   });
 });
+
+describe('history switched off', () => {
+  it('stops logging sessions, but the streak and daily goal still count the work', async () => {
+    const { getTodayProgress, getStreak } = await import('../../src/client/utils/streak.js');
+    store.set('s_history_enabled', 'false');
+    saveSession('spanish', session({ correct: 12 }));
+    expect(getSessions('spanish')).toHaveLength(0);
+    expect(getTodayProgress('spanish')).toBe(12);
+    expect(getStreak()).toBe(1);
+  });
+});
