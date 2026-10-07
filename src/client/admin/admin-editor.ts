@@ -14,7 +14,7 @@ import { logger } from '../utils/logger.js';
 import { langFlagImg } from './admin-languages.js';
 import { readString, writeString } from '../utils/storage.ts';
 import { createWordEditor } from '../ui/word-editor/word-editor.ts';
-import { debounce } from '../ui/word-editor/util.ts';
+import { debounce } from '../utils/debounce.ts';
 import type { WordData, WordEditorAdapter, WordPage } from '../ui/word-editor/types.ts';
 
 // The admin data client speaks the server's Word type; the editor speaks

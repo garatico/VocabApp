@@ -64,6 +64,15 @@ interface RenderPictureModeOptions {
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
 
+/** The empty state every Picture Quiz layout shows when no word in the pool has a visual. */
+function renderNoPictures(container: HTMLElement, withHint = true): void {
+  container.innerHTML = `
+      <div class="picture-empty">
+        <p>📷 No pictures available for the current word set.</p>${withHint ? `
+        <p>Try selecting a different language or expanding the word count.</p>` : ''}
+      </div>`;
+}
+
 /**
  * The learner is shown a picture and types the target-language word — the same
  * question Table mode asks in its `en-target` direction, so it is graded by the
@@ -633,11 +642,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
   clearPictureSummary();
 
   if (wordsWithVisuals.length === 0) {
-    container.innerHTML = `
-      <div class="picture-empty">
-        <p>📷 No pictures available for the current word set.</p>
-        <p>Try selecting a different language or expanding the word count.</p>
-      </div>`;
+    renderNoPictures(container);
     return;
   }
 
@@ -788,11 +793,7 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
   clearPictureSummary();
 
   if (wordsWithVisuals.length === 0) {
-    container.innerHTML = `
-      <div class="picture-empty">
-        <p>📷 No pictures available for the current word set.</p>
-        <p>Try selecting a different language or expanding the word count.</p>
-      </div>`;
+    renderNoPictures(container);
     return;
   }
 
@@ -982,10 +983,7 @@ function renderClickMode(
   distractorPool: WordWithVisual[] = wordsWithVisuals,
 ): void {
   if (wordsWithVisuals.length === 0) {
-    container.innerHTML = `
-      <div class="picture-empty">
-        <p>📷 No pictures available for the current word set.</p>
-      </div>`;
+    renderNoPictures(container, false);
     return;
   }
 

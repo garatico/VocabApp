@@ -44,16 +44,6 @@ export function fillHighlighted(el: HTMLElement, text: string, query: string): v
 }
 
 /**
- * Fill `el` with `base`, followed by `disambiguator` (when present and
- * `show`) in parentheses on its own line, inside a `.word-disambiguator`
- * span — the DOM-node counterpart to utils.ts's displayWord(), for callers
- * whose element can style the parenthetical smaller and stack it below the
- * word (an <input>'s value can't hold a styled sub-span or a line break, so
- * revealed-answer inputs still use plain displayWord() text). `el` must lay
- * its children out as a column (table.css's `.spanish-word`) for the two
- * text nodes this produces to actually stack rather than run inline.
- */
-/**
  * Fill `el` with `base` — wrapped in a colored pill span when `style` is
  * 'word-bg' and `key` is set, plain text otherwise — followed by
  * `annotation` (when present) in parentheses inside a `.word-disambiguator`

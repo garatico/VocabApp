@@ -22,6 +22,7 @@
 
 import { showStatus } from './admin-api.js';
 import { escapeHtml } from '../utils/html.ts';
+import { debounce } from '../utils/debounce.ts';
 import { getAdminDataClient } from './admin-data-client.js';
 import { langFlagImg } from './admin-languages.js';
 import type { WordUpdateBody } from '../../shared/vocab/write.js';
@@ -157,11 +158,6 @@ let verbsByWord = new Map<string, VerbWord>();
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function currentLang(): string { return conjLangSelect.value; }
-
-function debounce<Args extends unknown[]>(fn: (...args: Args) => void, ms: number): (...args: Args) => void {
-  let t: ReturnType<typeof setTimeout>;
-  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
-}
 
 /** Keeps the flag next to #conjLangSelect in sync — <option> can't hold
  *  an <img> itself, so this is the closest a native select gets to one. */

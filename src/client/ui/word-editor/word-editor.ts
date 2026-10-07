@@ -11,7 +11,7 @@
 import { buildChipFilter } from './chip-filter.ts';
 import { buildWordForm, type WordFormHandle, type WordFormOptions } from './form.ts';
 import { escapeHtml } from '../../utils/html.ts';
-import { debounce } from './util.ts';
+import { debounce } from '../../utils/debounce.ts';
 import type { ChipOption, WordData, WordEditorMeta, WordEditorOptions } from './types.ts';
 import { confirmDialog } from '../dialog.ts';
 import '../../styles-lazy/my-content-bundle.css';

@@ -31,10 +31,11 @@
 
 import { showStatus } from './admin-api.js';
 import { escapeHtml } from '../utils/html.ts';
+import { debounce } from '../utils/debounce.ts';
 import { getAdminDataClient } from './admin-data-client.js';
 import type { BatchUpdateItem } from '../../shared/vocab/write.js';
 import { logger } from '../utils/logger.js';
-import { readString, writeString } from '../utils/storage.ts';
+import { readString, writeString, readJson, isStringArray, isNumberRecord } from '../utils/storage.ts';
 import { langFlagImg } from './admin-languages.js';
 import { confirmDialog } from '../ui/dialog.ts';
 import { nextSort, sortArrow, ariaSort, compareCells, cellMatches } from '../utils/column-view.ts';
@@ -139,10 +140,7 @@ const COLUMNS: ColumnDef[] = [
 const VISIBLE_COLUMNS_KEY = 'admin_table_hidden_columns';
 
 function loadHiddenColumns(): Set<string> {
-  try {
-    const raw = readString(VISIBLE_COLUMNS_KEY);
-    return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
-  } catch { return new Set(); }
+  return new Set(readJson<string[]>(VISIBLE_COLUMNS_KEY, [], isStringArray));
 }
 function saveHiddenColumns(hidden: Set<string>): void {
   writeString(VISIBLE_COLUMNS_KEY, JSON.stringify([...hidden]));
@@ -158,15 +156,12 @@ const COLUMN_ORDER_KEY = 'admin_table_column_order';
 
 function loadColumnOrder(): string[] {
   const known = COLUMNS.map(c => c.key);
-  try {
-    const raw = readString(COLUMN_ORDER_KEY);
-    const saved = raw ? (JSON.parse(raw) as string[]).filter(k => known.includes(k)) : [];
-    // A column added (or renamed) since this was last saved has no saved
-    // position — appended at the end in COLUMNS' own order rather than
-    // silently dropped.
-    const missing = known.filter(k => !saved.includes(k));
-    return [...saved, ...missing];
-  } catch { return known; }
+  const saved = readJson<string[]>(COLUMN_ORDER_KEY, [], isStringArray).filter(k => known.includes(k));
+  // A column added (or renamed) since this was last saved has no saved
+  // position — appended at the end in COLUMNS' own order rather than
+  // silently dropped.
+  const missing = known.filter(k => !saved.includes(k));
+  return [...saved, ...missing];
 }
 function saveColumnOrder(order: string[]): void {
   writeString(COLUMN_ORDER_KEY, JSON.stringify(order));
@@ -203,10 +198,7 @@ function reorderColumn(key: string, targetKey: string): void {
 const WIDTHS_KEY = 'admin_table_col_widths';
 
 function loadWidths(): Record<string, number> {
-  try {
-    const raw = readString(WIDTHS_KEY);
-    return raw ? JSON.parse(raw) as Record<string, number> : {};
-  } catch { return {}; }
+  return readJson<Record<string, number>>(WIDTHS_KEY, {}, isNumberRecord);
 }
 function saveWidths(widths: Record<string, number>): void {
   writeString(WIDTHS_KEY, JSON.stringify(widths));
@@ -275,11 +267,6 @@ const columnFilters = new Map<string, string>();
 // answers (admin-editor.ts's DEFAULT_POS_OPTIONS) — replaced wholesale with
 // the DB's actual set once loadMeta() resolves, same as that select is.
 let posOptions: string[] = ['adjective', 'adverb', 'article', 'conjunction', 'noun', 'preposition', 'pronoun', 'verb'];
-
-function debounce<Args extends unknown[]>(fn: (...args: Args) => void, ms: number): (...args: Args) => void {
-  let t: ReturnType<typeof setTimeout>;
-  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
-}
 
 /** Keeps the flag next to #tableLangSelect in sync — <option> can't hold
  *  an <img> itself, so this is the closest a native select gets to one. */
