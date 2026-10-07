@@ -143,7 +143,7 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
   for (const e of vocab) {
     for (const d of e.domains) domainCounts.set(d, (domainCounts.get(d) ?? 0) + 1);
   }
-  const domainList = [...domainCounts.keys()].sort((a, b) => domainCounts.get(b)! - domainCounts.get(a)!);
+  const domainList = [...domainCounts.keys()].sort((a, b) => (domainCounts.get(b) ?? 0) - (domainCounts.get(a) ?? 0));
 
   // ── Rule editor ────────────────────────────────────────────────────────────
 

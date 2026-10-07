@@ -94,13 +94,13 @@ export function applyTranslations(root: ParentNode = document): void {
   }
 
   root.querySelectorAll<HTMLElement>('[data-i18n]').forEach(el => {
-    const key = el.dataset.i18n!;
+    const key = el.dataset.i18n ?? '';
     const orig = withOriginal(el, 'text', () => el.textContent ?? '');
     el.textContent = lookup(key) ?? orig;
   });
 
   root.querySelectorAll<HTMLElement>('[data-i18n-html]').forEach(el => {
-    const key = el.dataset.i18nHtml!;
+    const key = el.dataset.i18nHtml ?? '';
     const orig = withOriginal(el, 'html', () => el.innerHTML);
     // Safe: both the fallback and every dictionary value are hardcoded
     // strings this app ships, never data from the page or a user.
@@ -108,19 +108,19 @@ export function applyTranslations(root: ParentNode = document): void {
   });
 
   root.querySelectorAll<HTMLElement>('[data-i18n-title]').forEach(el => {
-    const key = el.dataset.i18nTitle!;
+    const key = el.dataset.i18nTitle ?? '';
     const orig = withOriginal(el, 'title', () => el.getAttribute('title') ?? '');
     el.setAttribute('title', lookup(key) ?? orig);
   });
 
   root.querySelectorAll<HTMLElement>('[data-i18n-placeholder]').forEach(el => {
-    const key = el.dataset.i18nPlaceholder!;
+    const key = el.dataset.i18nPlaceholder ?? '';
     const orig = withOriginal(el, 'placeholder', () => (el as HTMLInputElement).placeholder ?? '');
     (el as HTMLInputElement).placeholder = lookup(key) ?? orig;
   });
 
   root.querySelectorAll<HTMLElement>('[data-i18n-aria-label]').forEach(el => {
-    const key = el.dataset.i18nAriaLabel!;
+    const key = el.dataset.i18nAriaLabel ?? '';
     const orig = withOriginal(el, 'ariaLabel', () => el.getAttribute('aria-label') ?? '');
     el.setAttribute('aria-label', lookup(key) ?? orig);
   });

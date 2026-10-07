@@ -86,7 +86,7 @@ function moveControlsIntoPopovers(): void {
     const box = document.getElementById(id);
     const btn = box ? collapseButton(box) : null;
     const body = btn ? document.getElementById(btn.dataset.collapse ?? '') : null;
-    if (!box || !body) return;
+    if (!box || !btn || !body) return;
 
     const head = body.querySelector<HTMLElement>('.filter-popover-head') ?? document.createElement('div');
     head.className = 'filter-popover-head';
@@ -99,10 +99,10 @@ function moveControlsIntoPopovers(): void {
 
     // The pill keeps a small count of what is selected (Domains already has
     // its own in its label).
-    if (id !== 'domainFilterWrap' && !btn!.querySelector('.filters-pill-count')) {
+    if (id !== 'domainFilterWrap' && !btn.querySelector('.filters-pill-count')) {
       const count = document.createElement('span');
       count.className = 'filters-pill-count';
-      btn!.appendChild(count);
+      btn.appendChild(count);
     }
   });
 }

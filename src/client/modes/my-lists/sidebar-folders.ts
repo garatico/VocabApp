@@ -422,7 +422,8 @@ export function createFolderKit(deps: CreateFolderKitDeps) {
           o.sectionId, o.keyFor(path), folderLeaf(path), o.bulkFor?.(path),
           o.scope ? { scope: o.scope, folder: path } : undefined,
         );
-        const body = group.querySelector<HTMLUListElement>('.ml-folder-body')!;
+        const body = group.querySelector<HTMLUListElement>('.ml-folder-body');
+        if (!body) return;
         into.appendChild(group);
         build(path, body);
         o.fillFolder(path, body);

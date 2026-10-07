@@ -291,7 +291,9 @@ function buildEditor(defaultLang: string): ConjugationEditor {
         decorate(input, orig);
         input.addEventListener('input', () => decorate(input, orig));
         inputs.push(input);
-        (cellsByTense.get(d.key) ?? cellsByTense.set(d.key, []).get(d.key)!)[i] = input;
+        let tenseCells = cellsByTense.get(d.key);
+        if (!tenseCells) { tenseCells = []; cellsByTense.set(d.key, tenseCells); }
+        tenseCells[i] = input;
         td.appendChild(input);
         tr.appendChild(td);
       });

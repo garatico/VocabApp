@@ -541,10 +541,12 @@ export function renderTableRecallMode({
 
         cellRefs.set(key, { tdWord, wordDiv, inputEl, wordRevealBtn, transRevealBtn, wordHintBtn, transHintBtn, gKey, indicatorStyle });
 
-        if (wordState.has(key))       paintWordCell(w, wordState.get(key)!);
-        else if (wordHints.get(key))  paintWordHint(w, wordHints.get(key)!);
-        if (transState.has(key))      paintTransCell(w, transState.get(key)!);
-        else if (transHints.get(key)) paintTransHint(w, transHints.get(key)!);
+        const savedWord = wordState.get(key), savedWordHint = wordHints.get(key);
+        const savedTrans = transState.get(key), savedTransHint = transHints.get(key);
+        if (savedWord !== undefined)      paintWordCell(w, savedWord);
+        else if (savedWordHint)           paintWordHint(w, savedWordHint);
+        if (savedTrans !== undefined)     paintTransCell(w, savedTrans);
+        else if (savedTransHint)          paintTransHint(w, savedTransHint);
 
         tr.append(tdWord, tdInput);
       }
@@ -933,7 +935,7 @@ export function renderTableRecallMode({
         if (!transState.has(key)) { transState.set(key, 'incorrect'); paintTransCell(w, 'incorrect'); }
       } else if (!transState.has(key)) {
         // 'recall' style: translation always mirrors the word's own state.
-        const wState = wordState.get(key)!;
+        const wState = wordState.get(key) ?? 'incorrect';   // set just above if it was missing
         transState.set(key, wState);
         paintTransCell(w, wState);
       }

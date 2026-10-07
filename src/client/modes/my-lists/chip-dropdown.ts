@@ -192,7 +192,7 @@ export function buildChecklistDropdown(
   interface GroupEntry { head: HTMLElement; items: HTMLElement[]; values: string[]; box: HTMLInputElement }
   const groupEls: GroupEntry[] = [];
   search?.addEventListener('input', () => {
-    const q = foldKey(search!.value.trim());
+    const q = foldKey((search?.value ?? '').trim());
     let shown = 0;
     itemEls.forEach(({ el, text }) => {
       const hit = !q || text.includes(q);

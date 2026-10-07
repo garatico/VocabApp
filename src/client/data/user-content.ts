@@ -722,7 +722,7 @@ export function removeWordOverride(lang: string, word: string): void {
  *  of the ordering over one stale name. */
 export function applyGlossOrder(glosses: string[], order: string[]): string[] {
   const rank = new Map(order.map((g, i) => [g, i]));
-  const known   = glosses.filter(g => rank.has(g)).sort((a, b) => rank.get(a)! - rank.get(b)!);
+  const known   = glosses.filter(g => rank.has(g)).sort((a, b) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0));
   const unknown = glosses.filter(g => !rank.has(g));
   return [...known, ...unknown];
 }
@@ -749,7 +749,8 @@ export function pickWordOverride(overrides: Record<string, WordOverride>, word: 
 export function applyWordOverrideRecord(w: Word, o: WordOverride | null | undefined): Word {
   if (!o) return w;
   const withAdded = o.addedGlosses?.length ? [...w.glosses, ...o.addedGlosses] : w.glosses;
-  const visible = o.hiddenGlosses?.length ? withAdded.filter(g => !o.hiddenGlosses!.includes(g)) : withAdded;
+  const hidden = o.hiddenGlosses;
+  const visible = hidden?.length ? withAdded.filter(g => !hidden.includes(g)) : withAdded;
   const synonyms = o.synonyms ?? w.relations?.synonyms;
   const antonyms = o.antonyms ?? w.relations?.antonyms;
   // Merged rather than replaced: a gloss the override doesn't mention keeps
@@ -859,12 +860,12 @@ function buildUserContentBackup(): UserContentBackup {
     const wordOverrides  = getWordOverrides(l);
     const guessBlank     = getUserGuessBlankQuestions(l);
     const conjOverrides  = getConjOverrides(l);
-    if (Object.keys(conjOverrides).length) backup.conjOverrides![l] = conjOverrides;
+    if (Object.keys(conjOverrides).length) (backup.conjOverrides ??= {})[l] = conjOverrides;
     if (words.length)                      backup.words[l]          = words;
     if (trivia.length)                     backup.trivia[l]         = trivia;
     if (Object.keys(pics).length)          backup.pictures[l]       = pics;
-    if (Object.keys(wordOverrides).length) backup.wordOverrides![l] = wordOverrides;
-    if (guessBlank.length)                 backup.guessBlank![l]    = guessBlank;
+    if (Object.keys(wordOverrides).length) (backup.wordOverrides ??= {})[l] = wordOverrides;
+    if (guessBlank.length)                 (backup.guessBlank ??= {})[l]    = guessBlank;
   }
   return backup;
 }

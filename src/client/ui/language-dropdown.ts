@@ -163,11 +163,12 @@ export function enhanceLanguageSelect(target: HTMLSelectElement | null): void {
   // Code that sets `select.value` (restoring a saved language) does not fire an event, so repaint on the setter.
   const proto = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
   if (proto?.get && proto.set) {
+    const getValue = proto.get, setValue = proto.set;
     Object.defineProperty(select, 'value', {
       configurable: true,
-      get() { return proto.get!.call(this); },
+      get() { return getValue.call(this); },
       set(v: string) {
-        proto.set!.call(this, v);
+        setValue.call(this, v);
         items().forEach(li => li.setAttribute('aria-selected', String(li.dataset['value'] === v)));
         paintTrigger();
       },

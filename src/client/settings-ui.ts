@@ -415,8 +415,9 @@ export function bindSettings(): void {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
     if (!btn?.dataset.show) return;
     activateToggle('settingShowDisambiguatorAll', btn);
+    const show = btn.dataset.show;
     DISAMBIGUATOR_TOGGLES.forEach(({ id, key }) => {
-      set(key, btn.dataset.show!);
+      set(key, show);
       document.querySelectorAll<HTMLElement>(`#${id} .sort-order-btn`).forEach(b => {
         b.classList.toggle('active', b.dataset.show === btn.dataset.show);
       });
@@ -537,7 +538,7 @@ export function bindSettings(): void {
       btn.classList.toggle('active');
       const modes = new Set(
         Array.from(document.querySelectorAll<HTMLElement>(`#${elId} .sort-order-btn.active`))
-          .map(b => b.dataset.hideMode!),
+          .flatMap(b => b.dataset.hideMode ?? []),
       );
       setHiddenFilterModes(legacyKey, modes);
       onFilterVisibilityChange?.();
@@ -1261,7 +1262,7 @@ function restoreSettingsUI(): void {
   ] as const).forEach(([elId, legacyKey, applicable]) => {
     const hidden = getHiddenFilterModes(legacyKey, applicable);
     document.querySelectorAll<HTMLElement>(`#${elId} .sort-order-btn`).forEach(b => {
-      b.classList.toggle('active', hidden.has(b.dataset.hideMode!));
+      b.classList.toggle('active', hidden.has(b.dataset.hideMode ?? ''));
     });
   });
 

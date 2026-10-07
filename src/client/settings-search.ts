@@ -84,14 +84,14 @@ export function bindGlossary(): void {
   const groupedOrder = rows.slice();
 
   const termSpan = (row: HTMLElement): HTMLElement =>
-    row.querySelector<HTMLElement>('.settings-label > span:first-child')!;
+    row.querySelector<HTMLElement>('.settings-label > span:first-child') ?? document.createElement('span');
   const descSpan = (row: HTMLElement): HTMLElement | null =>
     row.querySelector<HTMLElement>('.settings-desc');
 
   let activeCategory = 'all';
 
   function applyFilters(): void {
-    const q = foldKey(search!.value);
+    const q = foldKey(search?.value ?? '');
     let anyVisible = false;
     for (const row of rows) {
       const term = termSpan(row);
@@ -107,7 +107,7 @@ export function bindGlossary(): void {
       // already flattens whatever <mark> a previous search wrapped it in,
       // so this is safe to call unconditionally rather than needing a
       // separately-cached "original" copy.
-      fillHighlighted(term, term.textContent ?? '', search!.value);
+      fillHighlighted(term, term.textContent ?? '', search?.value ?? '');
     }
     if (empty) empty.hidden = anyVisible;
   }
@@ -127,7 +127,7 @@ export function bindGlossary(): void {
     const ordered = sortKey === 'az'
       ? rows.slice().sort((a, b) => foldKey(termSpan(a).textContent ?? '').localeCompare(foldKey(termSpan(b).textContent ?? '')))
       : groupedOrder;
-    ordered.forEach(row => list!.appendChild(row));
+    ordered.forEach(row => list?.appendChild(row));
   }
 
   sortToggle.addEventListener('click', e => {
@@ -551,7 +551,7 @@ export function bindSettingsSearch(): void {
 
   function applySearch(): void {
     revertForcedOpen();
-    const raw = input!.value;
+    const raw = input?.value ?? '';
     const q = foldKey(raw.trim());
 
     if (!q && !changedOnly) {

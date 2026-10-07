@@ -88,7 +88,7 @@ function removeLegacyStarters(lang: string): void {
     const r = rules[name];
     if (!r || r.starter) continue;
     const untouched = sameSet(r.domains, domains) && r.emoji === emoji
-      && (r.folders ?? []).length === 1 && r.folders![0] === LEGACY_STARTER_FOLDER
+      && r.folders?.length === 1 && r.folders[0] === LEGACY_STARTER_FOLDER
       && r.limit === 0 && r.mastered === 'any' && r.listed === 'any'
       && r.bands.length === 0 && r.pos.length === 0 && r.manualWords.length === 0
       && !r.wordStartsWith && !r.meaningContains;
