@@ -267,3 +267,18 @@ describe('GET /api/vocab/:language', () => {
     });
   });
 });
+
+describe('GET /api/vocab/:language — junk paging numbers', () => {
+  it('?page=abc falls back to page 1 instead of failing the request', async () => {
+    const res = await request(app).get('/api/vocab/spanish?page=abc&limit=nope');
+    expect(res.status).toBe(200);
+    expect(res.body.page).toBe(1);
+    expect(res.body.limit).toBe(100);
+    expect(res.body.data).toHaveLength(3);
+  });
+
+  it('a fractional page is truncated to a whole one', async () => {
+    const res = await request(app).get('/api/vocab/spanish?page=1&limit=2.9');
+    expect(res.body.limit).toBe(2);
+  });
+});

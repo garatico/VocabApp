@@ -8,6 +8,7 @@ import { showStatus } from './admin-api.js';
 import { getAdminDataClient } from './admin-data-client.js';
 import type { LangStat } from '../../shared/vocab/stats.js';
 import { langFlagImg } from './admin-languages.js';
+import { escapeHtml } from '../utils/html.ts';
 
 // Spanish first, then alphabetical. Any language absent from this list still
 // appears — it just sorts alphabetically after the ones named here.
@@ -25,10 +26,6 @@ function sortLangs(pairs: [string, LangStat][]): [string, LangStat][] {
 
 const refreshStatsBtn = document.getElementById('refreshStatsBtn') as HTMLButtonElement;
 const statsContainer  = document.getElementById('statsContainer')  as HTMLElement;
-
-function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
 
 function coverageBar(pct: number, color = 'var(--accent)'): string {
   return (
@@ -55,7 +52,7 @@ function buildSection(lang: string, s: LangStat): HTMLElement {
     const pct = s.total ? Math.round((n / s.total) * 100) : 0;
     return (
       '<div class="pos-row">' +
-        '<span class="pos-name">' + esc(label) + '</span>' +
+        '<span class="pos-name">' + escapeHtml(label) + '</span>' +
         '<span class="pos-count">' + n.toLocaleString() + '</span>' +
         coverageBar(pct) +
       '</div>'
@@ -83,7 +80,7 @@ function buildSection(lang: string, s: LangStat): HTMLElement {
     const pct = Math.round((count / maxCount) * 100);
     return (
       '<div class="domain-row">' +
-        '<span class="domain-name">' + esc(domain) + '</span>' +
+        '<span class="domain-name">' + escapeHtml(domain) + '</span>' +
         '<span class="domain-count">' + count + '</span>' +
         coverageBar(pct, 'var(--info)') +
       '</div>'
@@ -140,7 +137,7 @@ function buildSection(lang: string, s: LangStat): HTMLElement {
 
       '<div class="stat-subsection">' +
         '<div class="stat-subsection-title">Domains' +
-          (domainSubtitle ? ' <span class="stat-sublabel">+ ' + esc(domainSubtitle) + '</span>' : '') +
+          (domainSubtitle ? ' <span class="stat-sublabel">+ ' + escapeHtml(domainSubtitle) + '</span>' : '') +
         '</div>' +
         '<div class="domain-breakdown">' + (domainRows || '<span class="stat-empty">No domain data</span>') + '</div>' +
       '</div>' +

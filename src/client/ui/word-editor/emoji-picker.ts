@@ -7,7 +7,7 @@
  * admin to already know or copy-paste the character they want.
  */
 import { EMOJI_CATEGORIES, ALL_EMOJIS, type EmojiEntry } from './emoji-data.ts';
-import { escapeHtml } from './util.ts';
+import { escapeHtml } from '../../utils/html.ts';
 import '../../styles-lazy/my-content-bundle.css';
 
 function matchesSearch(entry: EmojiEntry, needle: string): boolean {

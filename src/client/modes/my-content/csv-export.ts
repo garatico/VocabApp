@@ -1,6 +1,6 @@
 import { loadWords } from '../../data/data-loader.ts';
 import type { Word } from '../../types.ts';
-import { VOCAB_CSV, csvHeaders } from '../../../shared/vocab/csv-schema.ts';
+import { buildCsv } from '../../../shared/vocab/csv.ts';
 
 /**
  * my-content/csv-export.ts — the "Export vocabulary as CSV" download.
@@ -14,41 +14,8 @@ import { VOCAB_CSV, csvHeaders } from '../../../shared/vocab/csv-schema.ts';
 // the real Admin panel is dev+localhost-gated regardless, so that route was
 // never reachable there. This one needs nothing but what the page already has.
 
-function csvEscape(v: unknown): string {
-  if (v == null) return '';
-  const s = String(v);
-  return (s.includes(',') || s.includes('"') || s.includes('\n'))
-    ? '"' + s.replace(/"/g, '""') + '"'
-    : s;
-}
-
-// Declared in shared/vocab/csv-schema.ts, which is also what the Glossary's "CSV formats" entry shows.
-const VOCAB_CSV_HEADERS = csvHeaders(VOCAB_CSV);
-
-export function buildVocabCsv(words: Word[]): string {
-  const lines = [VOCAB_CSV_HEADERS.join(',')];
-  for (const w of words) {
-    lines.push([
-      csvEscape(w.rank ?? ''),
-      csvEscape(w.word),
-      csvEscape(w.translation),
-      csvEscape(w.glosses.join('|')),
-      csvEscape(w.pos),
-      csvEscape(w.difficulty),
-      csvEscape(w.tags.join('|')),
-      csvEscape(w.notes),
-      csvEscape(w.examples.join('|')),
-      csvEscape(w.linguistic?.ipa),
-      csvEscape(w.frequency?.band),
-      csvEscape(w.linguistic?.gender),
-      csvEscape(w.linguistic?.plural),
-      csvEscape(w.linguistic?.infinitive),
-      csvEscape(w.linguistic?.reflexive ? 'true' : ''),
-      csvEscape(w.linguistic?.register),
-    ].join(','));
-  }
-  return lines.join('\n');
-}
+/** The vocabulary CSV — the same builder the Tauri admin export uses. */
+export const buildVocabCsv = (words: Word[]): string => buildCsv(words);
 
 export async function downloadVocabCsv(lang: string): Promise<void> {
   const words = await loadWords(lang);

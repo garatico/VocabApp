@@ -83,6 +83,17 @@ export const TABLE_CSV: CsvFormat = {
 
 export const CSV_FORMATS: CsvFormat[] = [VOCAB_CSV, TABLE_CSV];
 
+/**
+ * One CSV cell, RFC 4180: quoted (with `"` doubled) when it holds a comma, a
+ * quote, or a line break of either kind; `null`/`undefined` become empty.
+ * Every exporter uses this one, so they all quote the same way.
+ */
+export function csvCell(v: unknown): string {
+  if (v == null) return '';
+  const s = String(v);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
 /** The header row of `format`, exactly as the exporters write it. */
 export const csvHeaders = (format: CsvFormat): string[] => format.columns.map(c => c.name);
 

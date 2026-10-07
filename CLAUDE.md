@@ -379,7 +379,8 @@ read from or write to `vocabulary.db`.
   one-at-a-time (Enter-to-submit, already single-shot) are structurally exempt, not
   omissions.
 - **CSV columns are declared once, in `src/shared/vocab/csv-schema.ts`.** Every exporter (My Content, the
-  Admin export, the desktop Admin export, the Table's Export CSV) takes its header row from it, and
+  Admin export, the desktop Admin export, the Table's Export CSV) takes its header row from it and quotes every
+  cell with its `csvCell` (never a local escaper — there were four, none of which quoted `\r`), and
   Settings → Glossary → "CSV formats" renders its tables from it (`renderCsvDocs` in `settings-search.ts`),
   along with the rules for the one file the app reads (My Lists' Bulk import). **Adding, removing or
   reordering a CSV column, or changing what a cell holds, means editing that file** — and its `format` /

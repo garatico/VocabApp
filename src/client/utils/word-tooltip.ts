@@ -401,16 +401,17 @@ function appendRevealedDetail(
   if (syns.length || ants.length) {
     const rel = document.createElement('div');
     rel.className = 'tt-relations';
-    if (syns.length) {
-      const s = document.createElement('span');
-      s.innerHTML = `<em>syn:</em> ${syns.join(', ')}`;
-      rel.appendChild(s);
-    }
-    if (ants.length) {
-      const a = document.createElement('span');
-      a.innerHTML = `<em>ant:</em> ${ants.join(', ')}`;
-      rel.appendChild(a);
-    }
+    // Text nodes, not innerHTML: relations are editable in My Content and
+    // arrive in restored backups, so they are learner-supplied text.
+    const relationLine = (label: string, words: string[]): HTMLSpanElement => {
+      const span = document.createElement('span');
+      const em = document.createElement('em');
+      em.textContent = label;
+      span.append(em, ` ${words.join(', ')}`);
+      return span;
+    };
+    if (syns.length) rel.appendChild(relationLine('syn:', syns));
+    if (ants.length) rel.appendChild(relationLine('ant:', ants));
     container.appendChild(rel);
   }
 }

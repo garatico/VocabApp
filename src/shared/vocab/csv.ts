@@ -1,40 +1,48 @@
-import type { Word } from '../types.js';
-import { VOCAB_CSV, csvHeaders } from './csv-schema.js';
+import { VOCAB_CSV, csvHeaders, csvCell } from './csv-schema.js';
 
 /**
- * csv.ts — the admin export CSV format, built directly from the same Word
- * shape shape-word.ts already produces (glosses/examples/tags are already
- * arrays, frequency.band is already computed) rather than a second
- * GROUP_CONCAT-based query and formatter — src/server/routes/admin/export.ts
- * keeps its own existing query for the web/hosted path unchanged; this is
- * what the Tauri path (no separate route to hit) uses instead, reusing
- * loadAllWordsForLanguage's output directly.
+ * csv.ts — the vocabulary CSV (VOCAB_CSV), built from the shaped word that
+ * shape-word.ts produces. Used by the Tauri admin export and by My Content's
+ * "Export vocabulary as CSV"; src/server/routes/admin/export.ts keeps its own
+ * GROUP_CONCAT query but writes the same cells through the same csvCell.
  */
-function esc(v: unknown): string {
-  if (v == null) return '';
-  const s = String(v);
-  return (s.includes(',') || s.includes('"') || s.includes('\n'))
-    ? '"' + s.replace(/"/g, '""') + '"'
-    : s;
+
+/** The fields the vocabulary CSV reads — satisfied by both the server's and the client's `Word`. */
+export interface VocabCsvWord {
+  rank?:       number | null;
+  word:        string;
+  translation: string;
+  glosses:     string[];
+  pos:         string | null;
+  difficulty:  string | number | null;
+  tags:        string[];
+  notes:       string;
+  examples:    string[];
+  linguistic?: {
+    ipa?: string | null; gender?: string | null; plural?: string | null;
+    infinitive?: string | null; reflexive?: boolean | null; register?: string | null;
+  } | null;
+  frequency?: { band?: string | null } | null;
 }
 
 const HEADERS = csvHeaders(VOCAB_CSV);   // the columns are declared in csv-schema.ts, which also documents them
 
-export function buildCsv(words: Word[]): string {
+export function buildCsv(words: readonly VocabCsvWord[]): string {
   const lines = [HEADERS.join(',')];
   for (const w of words) {
+    const l = w.linguistic;
     lines.push([
-      esc(w.rank), esc(w.word), esc(w.translation),
-      esc(w.glosses.join('|')),
-      esc(w.pos), esc(w.difficulty),
-      esc(w.tags.join('|')),
-      esc(w.notes),
-      esc(w.examples.join('|')),
-      esc(w.linguistic.ipa ?? null), esc(w.frequency.band), esc(w.linguistic.gender ?? null),
-      esc(w.linguistic.plural ?? null), esc(w.linguistic.infinitive ?? null),
-      esc(w.linguistic.reflexive ? 'true' : ''),
-      esc(w.linguistic.register ?? null),
-    ].join(','));
+      w.rank, w.word, w.translation,
+      w.glosses.join('|'),
+      w.pos, w.difficulty,
+      w.tags.join('|'),
+      w.notes,
+      w.examples.join('|'),
+      l?.ipa, w.frequency?.band, l?.gender,
+      l?.plural, l?.infinitive,
+      l?.reflexive ? 'true' : '',
+      l?.register,
+    ].map(csvCell).join(','));
   }
   return lines.join('\n');
 }

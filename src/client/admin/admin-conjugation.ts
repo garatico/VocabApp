@@ -20,7 +20,8 @@
  * so sending only the edited tense would wipe out every other one.
  */
 
-import { escapeHtml, showStatus } from './admin-api.js';
+import { showStatus } from './admin-api.js';
+import { escapeHtml } from '../utils/html.ts';
 import { getAdminDataClient } from './admin-data-client.js';
 import { langFlagImg } from './admin-languages.js';
 import type { WordUpdateBody } from '../../shared/vocab/write.js';

@@ -538,3 +538,19 @@ describe('hide timing', () => {
     expect(tooltipEl().classList.contains('visible')).toBe(true);
   });
 });
+
+describe('buildWordDetailContent — synonyms/antonyms', () => {
+  it('renders relations as text, never as markup (they are learner-editable)', async () => {
+    const { buildWordDetailContent } = await load();
+    const evil = '<img src=x onerror="window.__pwned=1">';
+    const word = baseWord({ relations: { synonyms: [evil, 'charlar'], antonyms: ['callar'] } } as Partial<Word>);
+    const el = buildWordDetailContent(word, 'spanish', true);
+    const rel = el.querySelector('.tt-relations');
+    expect(rel).not.toBeNull();
+    expect(rel?.querySelector('img')).toBeNull();
+    const spans = rel?.querySelectorAll(':scope > span') ?? [];
+    expect(spans[0]?.textContent).toBe(`syn: ${evil}, charlar`);
+    expect(spans[0]?.querySelector('em')?.textContent).toBe('syn:');
+    expect(spans[1]?.textContent).toBe('ant: callar');
+  });
+});

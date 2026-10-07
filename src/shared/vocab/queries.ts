@@ -46,6 +46,11 @@ export interface WordPageResult {
   words: Word[];
 }
 
+/** `n` truncated to a whole number, or `fallback` when it is absent or not finite. */
+function wholeOr(n: number | undefined, fallback: number): number {
+  return n !== undefined && Number.isFinite(n) ? Math.trunc(n) : fallback;
+}
+
 /**
  * A filtered, paginated slice of one language's words — the same
  * search/pos/band/domain filters and page/limit clamping admin/words.ts's
@@ -58,8 +63,11 @@ export async function getWordPage(
   columnFlags: WordSelectColumnFlags,
   shapeDeps: ShapeWordDeps,
 ): Promise<WordPageResult> {
-  const page  = Math.max(1, params.page ?? 1);
-  const limit = Math.min(200, Math.max(1, params.limit ?? 100));
+  // Routes pass parseInt() of a query string straight through, so `?page=abc`
+  // arrives as NaN — and Math.max(1, NaN) is NaN, which reached SQLite as
+  // `LIMIT NaN` and failed the request. Anything non-finite takes the default.
+  const page  = Math.max(1, wholeOr(params.page, 1));
+  const limit = Math.min(200, Math.max(1, wholeOr(params.limit, 100)));
   const offset = (page - 1) * limit;
 
   const { where, params: whereParams } = buildWordFilters(params);

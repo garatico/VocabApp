@@ -4,7 +4,8 @@
  * DB Admin tab — cache management and CSV export.
  */
 
-import { escapeHtml, showStatus } from './admin-api.js';
+import { showStatus } from './admin-api.js';
+import { escapeHtml } from '../utils/html.ts';
 import { getAdminDataClient } from './admin-data-client.js';
 import type { DbInfo } from './admin-data-client.js';
 import { langFlagImgHtml } from './admin-languages.js';

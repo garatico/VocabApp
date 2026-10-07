@@ -341,3 +341,69 @@ describe('POST /api/admin/export', () => {
     expect(res.status).toBe(400);
   });
 });
+
+// POST /api/admin/vocab (batch) — mutating, so it runs last.
+
+describe('POST /api/admin/vocab (batch)', () => {
+  it('updates every listed word in one call and reports the count', async () => {
+    const res = await request(app)
+      .post('/api/admin/vocab?lang=spanish')
+      .send({ updates: [
+        { word: 'casa',   data: { notes: 'batch casa' } },
+        { word: 'bonito', data: { notes: 'batch bonito' } },
+      ] });
+    expect(res.status).toBe(200);
+    expect(res.body.updated).toBe(2);
+    const casa = await request(app).get('/api/admin/vocab/casa?lang=spanish');
+    expect(casa.body.word.notes).toBe('batch casa');
+  });
+
+  it('skips unknown words and items without a word or data, rather than failing', async () => {
+    const res = await request(app)
+      .post('/api/admin/vocab?lang=spanish')
+      .send({ updates: [
+        null, 'casa', { word: 'casa' }, { data: { notes: 'x' } },
+        { word: 'no-such-word', data: { notes: 'x' } },
+        { word: 'hablar', data: { notes: 'batch hablar' } },
+      ] });
+    expect(res.status).toBe(200);
+    expect(res.body.updated).toBe(1);
+    expect(res.body.message).toBe('Updated 1 of 6 words');
+  });
+
+  it('rejects the whole batch with 400 when an item has a malformed array field', async () => {
+    const res = await request(app)
+      .post('/api/admin/vocab?lang=spanish')
+      .send({ updates: [
+        { word: 'casa',  data: { notes: 'should not be written' } },
+        { word: 'hablar', data: { glosses: 'not-an-array' } },
+      ] });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/hablar: glosses must be an array/);
+    const casa = await request(app).get('/api/admin/vocab/casa?lang=spanish');
+    expect(casa.body.word.notes).not.toBe('should not be written');
+  });
+
+  it('returns 400 when updates is not an array (or the body is empty)', async () => {
+    expect((await request(app).post('/api/admin/vocab?lang=spanish').send({ updates: {} })).status).toBe(400);
+    expect((await request(app).post('/api/admin/vocab?lang=spanish').send({})).status).toBe(400);
+  });
+});
+
+describe('admin paging tolerates junk numbers', () => {
+  it('?page=abc&limit=xyz falls back to the defaults instead of failing', async () => {
+    const res = await request(app).get('/api/admin/vocab?lang=spanish&page=abc&limit=xyz');
+    expect(res.status).toBe(200);
+    expect(res.body.page).toBe(1);
+    expect(res.body.limit).toBe(100);
+  });
+});
+
+describe('POST /api/admin/export — quoting', () => {
+  it('quotes a cell holding a comma, a quote or a line break, so the row stays one record', async () => {
+    const note = 'one, "two"\nthree';
+    await request(app).post('/api/admin/vocab/casa?lang=spanish').send({ notes: note });
+    const res = await request(app).post('/api/admin/export').send({ lang: 'spanish' });
+    expect(res.text).toContain('"one, ""two""\nthree"');
+  });
+});

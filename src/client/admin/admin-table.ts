@@ -29,7 +29,8 @@
  * cover narrowing the *set* of words loaded.
  */
 
-import { escapeHtml, showStatus } from './admin-api.js';
+import { showStatus } from './admin-api.js';
+import { escapeHtml } from '../utils/html.ts';
 import { getAdminDataClient } from './admin-data-client.js';
 import type { BatchUpdateItem } from '../../shared/vocab/write.js';
 import { logger } from '../utils/logger.js';

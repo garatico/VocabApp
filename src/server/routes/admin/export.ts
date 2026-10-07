@@ -9,7 +9,7 @@ import { Router }                                         from 'express';
 import { getDb, getSupportedLanguages, bandFromRank }     from '../../lib/vocab-loader.js';
 import { validateLanguage }                               from './_utils.js';
 import { logger }                                         from '../../lib/logger.js';
-import { VOCAB_CSV, csvHeaders }                            from '../../../shared/vocab/csv-schema.js';
+import { VOCAB_CSV, csvHeaders, csvCell }                   from '../../../shared/vocab/csv-schema.js';
 
 const router = Router();
 
@@ -47,14 +47,7 @@ router.post('/export', (req, res) => {
       FROM words w WHERE w.language=? ORDER BY COALESCE(w.rank,9999), w.word
     `).all(lang) as ExportRow[];
 
-    const esc = (v: unknown): string => {
-      if (v == null) return '';
-      const s = String(v);
-      return (s.includes(',') || s.includes('"') || s.includes('\n'))
-        ? '"' + s.replace(/"/g, '""') + '"'
-        : s;
-    };
-
+    const esc = csvCell;
     const headers = csvHeaders(VOCAB_CSV);   // declared in shared/vocab/csv-schema.ts, which documents them too
     const lines = [headers.join(',')];
 

@@ -27,7 +27,7 @@ import {
 import { buildScorePills, scorePct, buildProgressStatsHtml } from '../ui/score-pills.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
 import type { Word } from '../types.js';
-import { TABLE_CSV, csvHeaders } from '../../shared/vocab/csv-schema.ts';
+import { TABLE_CSV, csvHeaders, csvCell } from '../../shared/vocab/csv-schema.ts';
 
 let tableController:  TableController | null = null;
 let resolvedDirection: TableDirection         = 'target-en';
@@ -946,12 +946,6 @@ function jumpToFirstUnanswered(): void {
 
 // ── CSV export ─────────────────────────────────────────────────────────────────
 
-function csvEscape(v: string): string {
-  return (v.includes(',') || v.includes('"') || v.includes('\n'))
-    ? '"' + v.replace(/"/g, '""') + '"'
-    : v;
-}
-
 function csvFor(words: Word[]): string {
   const headers = csvHeaders(TABLE_CSV);   // declared in shared/vocab/csv-schema.ts, which documents them too
   const lines = [headers.join(',')];
@@ -962,7 +956,7 @@ function csvFor(words: Word[]): string {
       w.language ?? quizLang,
       w.pos ?? '',
       buildGlossDisplay(w),
-    ].map(csvEscape).join(','));
+    ].map(csvCell).join(','));
   }
   return lines.join('\r\n');
 }

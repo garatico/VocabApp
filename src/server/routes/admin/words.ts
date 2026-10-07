@@ -25,6 +25,18 @@ function wordUpdateDeps(): ApplyWordUpdateDeps {
   return { supportsDisambiguator: supportsDisambiguator(), onWarning: (msg) => logger.warn(msg) };
 }
 
+/** What's wrong with a word-update body's array fields, if anything — every
+ *  write route checks the same three, so a bad item can't reach the transaction. */
+function bodyErrors(body: WordUpdateBody): string[] {
+  const errors: string[] = [];
+  if (body.glosses  !== undefined && !Array.isArray(body.glosses))  errors.push('glosses must be an array');
+  if (body.examples !== undefined && !Array.isArray(body.examples)) errors.push('examples must be an array');
+  if (body.domains  !== undefined && !Array.isArray(body.domains))  errors.push('domains must be an array');
+  return errors;
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+
 // ── Routes ─────────────────────────────────────────────────────────────────────
 
 // GET /vocab
@@ -71,13 +83,10 @@ router.post('/vocab/:word', async (req, res) => {
     const lang = validateLanguage(req.query['lang'] as string | undefined) || 'spanish';
     const body = req.body as WordUpdateBody | null;
 
-    if (!body || typeof body !== 'object')
+    if (!isObject(body))
       return res.status(400).json({ error: 'Body must be a JSON object' });
 
-    const errors: string[] = [];
-    if (body.glosses  !== undefined && !Array.isArray(body.glosses))  errors.push('glosses must be an array');
-    if (body.examples !== undefined && !Array.isArray(body.examples)) errors.push('examples must be an array');
-    if (body.domains  !== undefined && !Array.isArray(body.domains))  errors.push('domains must be an array');
+    const errors = bodyErrors(body);
     if (errors.length) return res.status(400).json({ error: errors.join('; ') });
 
     const wordRow = db.prepare('SELECT id FROM words WHERE word = ? AND language = ?')
@@ -106,10 +115,7 @@ router.put('/vocab/:word', async (req, res) => {
     if (!word) return res.status(400).json({ error: 'Word key is required' });
 
     const body = (req.body ?? {}) as WordUpdateBody;
-    const errors: string[] = [];
-    if (body.glosses  !== undefined && !Array.isArray(body.glosses))  errors.push('glosses must be an array');
-    if (body.examples !== undefined && !Array.isArray(body.examples)) errors.push('examples must be an array');
-    if (body.domains  !== undefined && !Array.isArray(body.domains))  errors.push('domains must be an array');
+    const errors = bodyErrors(body);
     if (errors.length) return res.status(400).json({ error: errors.join('; ') });
 
     const existing = db.prepare('SELECT id FROM words WHERE word = ? AND language = ?').get(word, lang);
@@ -135,19 +141,27 @@ router.post('/vocab', async (req, res) => {
   try {
     const db   = getDb();
     const lang = validateLanguage(req.query['lang'] as string | undefined) || 'spanish';
-    const { updates } = req.body as { updates: BatchUpdateItem[] };
+    const { updates } = (req.body ?? {}) as { updates?: unknown };
 
     if (!Array.isArray(updates))
       return res.status(400).json({ error: 'updates must be an array' });
 
+    // Items without a word or data are skipped (and counted as not updated),
+    // as they always were — but a null item used to throw on destructuring,
+    // and a malformed array field used to fail mid-transaction with a 500.
+    const items = (updates as unknown[]).filter((u): u is BatchUpdateItem =>
+      isObject(u) && typeof u['word'] === 'string' && u['word'] !== '' && isObject(u['data']));
+    const itemErrors = items.flatMap(u => bodyErrors(u.data).map(e => `${u.word}: ${e}`));
+    if (itemErrors.length) return res.status(400).json({ error: itemErrors.join('; ') });
+
     let updated = 0;
     const adapter = createBetterSqlite3Adapter(db);
     const deps    = wordUpdateDeps();
+    const findId  = db.prepare('SELECT id FROM words WHERE word = ? AND language = ?');
 
     await adapter.transaction(async tx => {
-      for (const { word, data } of updates) {
-        if (!word || !data) continue;
-        const row = db.prepare('SELECT id FROM words WHERE word = ? AND language = ?').get(word, lang) as { id: number } | undefined;
+      for (const { word, data } of items) {
+        const row = findId.get(word, lang) as { id: number } | undefined;
         if (!row) continue;
 
         await applyWordUpdate(tx, row.id, word, data, deps);

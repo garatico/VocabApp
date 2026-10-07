@@ -5,6 +5,8 @@
  * Imported by every other admin module.
  */
 
+import { escapeHtml } from '../utils/html.ts';
+
 /**
  * Fetch a /api/admin endpoint.
  * Throws an Error (with the server's error message if available) on non-2xx responses.
@@ -65,9 +67,3 @@ export function showStatus(message: string, type: 'info' | 'success' | 'error' |
   setTimeout(() => toast.remove(), ms);
 }
 
-/** Safely escape a string for insertion into innerHTML. */
-export function escapeHtml(text: string): string {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}

@@ -15,7 +15,7 @@
  */
 import { languageInfo, flagUrl } from '../data/languages.ts';
 import { createFlagImg } from '../ui/flag-icon.ts';
-import { escapeHtml } from './admin-api.js';
+import { escapeHtml } from '../utils/html.ts';
 
 export { languageInfo } from '../data/languages.ts';
 
