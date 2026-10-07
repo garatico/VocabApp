@@ -62,6 +62,11 @@ body.simple-mode [data-simple-hide="true"] {
   align-items: center;
   gap: 0.5rem;
 }
+/* On a phone the toolbar wraps, but its items could also shrink, and a shrunk Theme item split its
+   width into equal thirds (controls-bar.css's flex:1 buttons) too narrow for "System" — it read
+   "Syster". Items keep their own width and wrap instead; buttons are sized by their labels. */
+.settings-toolbar-item { flex-shrink: 0; }
+.settings-toolbar-item .sort-order-btn { flex: 1 1 auto; }
 .settings-toolbar-label {
   font-family: 'Sora', sans-serif;
   font-size: 0.72rem;

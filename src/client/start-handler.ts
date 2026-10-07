@@ -435,6 +435,11 @@ export function bindStartHandler({
 
       onModeChange();
 
+      // Starting a quiz without picking a level is choosing the defaults: the welcome card has done
+      // its job, and left open it sat between the controls and the quiz. Its own ✕ remembers that.
+      const onboardingCard = document.getElementById('onboardingCard');
+      if (onboardingCard && !onboardingCard.hidden) document.getElementById('onboardingDismiss')?.click();
+
       // The quiz is what they came for: close the setup panel (not remembered — see setSectionOpen) and
       // bring the page back to the top, where the quiz now begins.
       if (Settings.getCollapseControlsOnStart()) {

@@ -67,3 +67,23 @@ test('the choices work from the keyboard', async ({ page }) => {
   const on = await page.locator('#bandChips .pos-chip.active').evaluateAll(cs => cs.map(c => (c as HTMLElement).dataset['band']));
   expect(on).toEqual(['C1', 'C2']);
 });
+
+test('starting a quiz without choosing puts the card away for good', async ({ page }) => {
+  await expect(page.locator('#onboardingCard')).toBeVisible();
+  await page.locator('#startBtn').click();
+  await expect(page.locator('#tableWrap input[type="text"]').first()).toBeVisible();
+  await expect(page.locator('#onboardingCard')).toBeHidden();
+
+  await page.reload();
+  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await expect(page.locator('#onboardingCard')).toBeHidden();
+});
+
+test('every level description can be read in full (buttons are nowrap app-wide)', async ({ page }) => {
+  const blurbs = page.locator('.onboarding-level-blurb');
+  await expect(blurbs).toHaveCount(4);
+  const overflowing = await blurbs.evaluateAll(els => els
+    .filter(el => el.scrollWidth > (el.parentElement as HTMLElement).clientWidth)
+    .map(el => el.textContent));
+  expect(overflowing).toEqual([]);
+});
