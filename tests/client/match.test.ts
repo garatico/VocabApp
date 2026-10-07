@@ -42,8 +42,11 @@ describe('normalize', () => {
     expect(normalize('room 101')).toBe('room 101');
   });
 
-  it('trims surrounding whitespace', () => {
+  it('trims surrounding whitespace and collapses runs of it', () => {
     expect(normalize('  casa  ')).toBe('casa');
+    expect(normalize('new  york')).toBe('new york');
+    expect(normalize('hola , mundo')).toBe('hola mundo');
+    expect(normalize('una\tcasa')).toBe('una casa');
   });
 
   it('handles null/undefined/empty safely', () => {

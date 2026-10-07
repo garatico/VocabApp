@@ -27,8 +27,12 @@ export function foldKey(s: string): string {
   return stripDiacritics(String(s || '').toLowerCase().trim());
 }
 
+/**
+ * `foldKey` with punctuation dropped and runs of spaces collapsed to one — so "new  york" (a double space
+ * typed by accident) and "hola , mundo" (punctuation removed beside a space) still match their answers.
+ */
 export function normalize(s: string): string {
-  return stripDiacritics(String(s || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').trim());
+  return stripDiacritics(String(s || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim());
 }
 
 export function levenshtein(a: string, b: string): number {
