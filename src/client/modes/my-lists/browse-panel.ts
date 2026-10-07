@@ -24,37 +24,37 @@
  * view opens; sort order and the search text are local to this view instead,
  * since "added"/"recently added" (two of the ordinary list's six sort
  * options) have no meaning for the whole vocabulary.
+ *
+ * Above the rows is a spreadsheet-style header (the Admin panel's Table View
+ * does the same): each column - Word, POS, Rank, Definition, Percent,
+ * Mastered - has a button that sorts by it (ascending, descending, off) and a
+ * box that filters it. The rules for both live in utils/column-view.ts, which
+ * the Admin grid now uses too. Rank, Percent and Mastered are numbers, so
+ * their boxes also take `>100`, `<=50`, `=7` or a range `10-50`.
  */
 
-import { foldKey as norm } from '../../utils/match.ts';
 import type { ListsCtx } from './context.ts';
 import { cachedVocab, fetchVocab } from './vocab-cache.ts';
 import { getMastered } from './mastery.ts';
-import { buildMasteryControls, appendCountChip, appendMasteredChip, buildWordDetail, buildEditInMyContentButton } from './row-shared.ts';
-import { buildAudioButton } from '../../ui/audio-play-button.ts';
+import { buildRowCells, buildActionsCell, appendCountChip, appendMasteredChip, buildWordDetail, buildEditInMyContentButton } from './row-shared.ts';
+import {
+  createColumnHeader, createCellReader, applyColumnFilters, applyColumnSort, ACTIONS_WIDTH, type ColumnItem,
+} from './column-header.ts';
+import type { SortState } from '../../utils/column-view.ts';
 import { buildLangBadge } from '../../ui/lang-badge.ts';
 import { logger } from '../../utils/logger.ts';
 import { pageCountFor, pageSlice } from '../table-controls.ts';
-import { readString, writeString } from '../../utils/storage.ts';
-import { fillHighlighted } from '../../utils/dom.ts';
 import { openMovePopover, closePopover, clickedOutsidePopover } from './move-popover.ts';
-import { BANDS, POS_ABBREV, POS_CHIPS, type VocabEntry } from './types.ts';
-import { buildChipDropdown, closeAllChipDropdowns } from './chip-dropdown.ts';
+import type { VocabEntry } from './types.ts';
+import { closeAllChipDropdowns } from './chip-dropdown.ts';
 import '../../styles-lazy/my-lists.css';
 
 /** Words per page — matches Table mode's own default page size, so a
  *  learner already used to that number doesn't have to learn a new one. */
 const BROWSE_PAGE_SIZE = 100;
 
-type BrowseSortMode = 'rank-asc' | 'rank-desc' | 'alpha-asc' | 'alpha-desc';
-const VALID_SORT_MODES: readonly BrowseSortMode[] = ['rank-asc', 'rank-desc', 'alpha-asc', 'alpha-desc'];
-
-const SORT_OPTIONS: readonly [BrowseSortMode, string][] = [
-  ['rank-asc',   'Most Frequent First'],
-  ['rank-desc',  'Least Frequent First'],
-  ['alpha-asc',  'A → Z'],
-  ['alpha-desc', 'Z → A'],
-];
+/** No column selected (the third click) is the vocabulary's own order: most frequent first. */
+const DEFAULT_SORT: SortState = { key: 'rank', dir: 'asc' };
 
 // Remembered across visits (see ml_ prefix in storage.ts) — unlike the
 // ordinary list view, this one has no per-list identity to key state off
@@ -62,7 +62,6 @@ const SORT_OPTIONS: readonly [BrowseSortMode, string][] = [
 // shared across languages the same way the view itself is per-language but
 // otherwise identical everywhere.
 const SORT_KEY   = 'ml_browse_sort';
-const FILTER_KEY = 'ml_browse_filter';
 
 /** Same reasoning as panel.ts's own module-level outsideClickHandler: has to
  *  be removed before the next render installs its replacement, or every
@@ -92,71 +91,30 @@ export function renderBrowsePanel(ctx: ListsCtx): void {
 
   // ── Filter / sort toolbar ──────────────────────────────────────────────
 
-  const controlsGroup = document.createElement('div');
-  controlsGroup.className = 'ml-panel-controls';
-
-  const filterLabel = document.createElement('span');
-  filterLabel.className = 'ui-label ml-toolbar-label'; filterLabel.textContent = 'Filter';
-  const filterInp = document.createElement('input');
-  filterInp.type = 'text'; filterInp.placeholder = 'Filter by word, translation or gloss…';
-  filterInp.className = 'ml-search';
-  filterInp.title = 'Accent-insensitive — searches word, translation and glosses';
-  filterInp.value = readString(FILTER_KEY) ?? '';
+  // Sort and per-column filters live in the column header above the list (column-header.ts, shared with every
+  // other list type). Its sort is remembered across visits; its filters are not. POS and CEFR share the
+  // selection the other list views use (ctx.selectedPos / ctx.selectedBands).
+  const columns = createColumnHeader({
+    hasCheckbox: false,
+    storageKey: SORT_KEY,
+    initialSort: DEFAULT_SORT,
+    posSet: ctx.selectedPos,
+    bandSet: ctx.selectedBands,
+    onChange: () => render(true),
+  });
 
   // A pending "jump to this word" target (see context.ts's focusWord) wins
   // over whatever filter/expansion was left from a previous visit — it's
   // one-shot, so it's cleared the moment it's read here.
   const scrollToFocusWord = ctx.focusWord !== null;
   if (ctx.focusWord !== null) {
-    filterInp.value = ctx.focusWord;
-    writeString(FILTER_KEY, ctx.focusWord);
+    columns.reset(DEFAULT_SORT);
+    columns.setFilter('word', ctx.focusWord);
     ctx.expandedWord = ctx.focusWord;
     ctx.focusWord = null;
   }
 
-  const sortLabel = document.createElement('span');
-  sortLabel.className = 'ui-label ml-toolbar-label'; sortLabel.textContent = 'Sort';
-  const sortSel = document.createElement('select');
-  sortSel.className = 'ml-sort-select'; sortSel.title = 'Sort order';
-  const savedSort = readString(SORT_KEY);
-  let sortMode: BrowseSortMode = (VALID_SORT_MODES as readonly string[]).includes(savedSort ?? '')
-    ? (savedSort as BrowseSortMode) : 'rank-asc';
-  SORT_OPTIONS.forEach(([value, label]) => {
-    const opt = document.createElement('option');
-    opt.value = value; opt.textContent = label; opt.selected = value === sortMode;
-    sortSel.appendChild(opt);
-  });
-  sortSel.addEventListener('change', () => {
-    sortMode = sortSel.value as BrowseSortMode;
-    writeString(SORT_KEY, sortMode);
-    render(true);
-  });
-
-  controlsGroup.append(filterLabel, filterInp, sortLabel, sortSel);
-
-  // ── Part of Speech / Level — dropdowns, shared with the ordinary list view
-  //    (see ctx.selectedPos/ctx.selectedBands). Same chip markup/colouring as
-  //    before, just collapsed behind a summary button — see chip-dropdown.ts.
-
-  const filterDropdownsRow = document.createElement('div');
-  filterDropdownsRow.className = 'ml-filter-dropdowns-row';
-
-  const posDropdown = buildChipDropdown(
-    'Part of Speech', 'pos', POS_CHIPS.filter(c => c.value), ctx.selectedPos, () => render(true),
-  );
-  const posChipBtns = posDropdown.chips;
-  const bandDropdown = buildChipDropdown(
-    'Level', 'band', BANDS.map(b => ({ value: b, label: b })), ctx.selectedBands, () => render(true),
-  );
-
-  filterDropdownsRow.append(posDropdown.wrap, bandDropdown.wrap);
-  header.append(controlsGroup, filterDropdownsRow);
   ctx.panel.appendChild(header);
-
-  filterInp.addEventListener('input', () => {
-    writeString(FILTER_KEY, filterInp.value);
-    render(true);
-  });
 
   // ── Pager ────────────────────────────────────────────────────────────────
   // Built once, before the list itself, so page N is right there above what
@@ -203,11 +161,7 @@ export function renderBrowsePanel(ctx: ListsCtx): void {
     let idx = ranked.findIndex(e => e.rank >= target);
     if (idx === -1) idx = ranked.length - 1;
 
-    sortMode = 'rank-asc';
-    sortSel.value = 'rank-asc';
-    writeString(SORT_KEY, sortMode);
-    filterInp.value = '';
-    writeString(FILTER_KEY, '');
+    columns.reset(DEFAULT_SORT);
     pageIndex = Math.floor(idx / BROWSE_PAGE_SIZE);
     render();
   }
@@ -240,11 +194,17 @@ export function renderBrowsePanel(ctx: ListsCtx): void {
     pageSel.value = String(pageIndex);
   }
 
+  // ── Column header ───────────────────────────────────────────────────────────────────────────────
+  // Above the list, on the same named grid tracks as its rows. Rows here are list items, not a <table>.
+  ctx.panel.appendChild(columns.el);
+
   // ── Word list ──────────────────────────────────────────────────────────
 
   const listEl = document.createElement('ul');
   listEl.className = 'ml-word-list';
   ctx.panel.appendChild(listEl);
+
+  columns.attach(listEl, ACTIONS_WIDTH);
 
   // Starts with whatever is cached so the panel renders immediately, then is
   // replaced when the fetch lands — same pattern as panel.ts's own allVocab.
@@ -252,29 +212,21 @@ export function renderBrowsePanel(ctx: ListsCtx): void {
   let visible: VocabEntry[] = [];
   let pageIndex = 0;
 
-  function sortEntries(entries: VocabEntry[]): VocabEntry[] {
-    const F = 9999;
-    switch (sortMode) {
-      case 'rank-asc':   return [...entries].sort((a, b) => (a.rank ?? F) - (b.rank ?? F));
-      case 'rank-desc':  return [...entries].sort((a, b) => (b.rank ?? F) - (a.rank ?? F));
-      case 'alpha-asc':  return [...entries].sort((a, b) => norm(a.word).localeCompare(norm(b.word)));
-      case 'alpha-desc': return [...entries].sort((a, b) => norm(b.word).localeCompare(norm(a.word)));
-    }
-  }
+  /** A browse row is already a vocabulary entry: it is its own item for the column filters and sort. */
+  const columnItem = (e: VocabEntry): ColumnItem => ({ lang: ctx.lang, word: e.word, entry: e });
 
   /** Per-chip counts, always over the *whole* vocabulary regardless of the
    *  current filter/search — "if you clicked this chip, you'd see N words,"
    *  same as the ordinary list view's own updateChipCounts. */
   function updateChipCounts(): void {
-    const counts: Record<string, number> = {};
+    const pos: Record<string, number> = {};
+    const band: Record<string, number> = {};
     for (const e of allWords) {
-      if (e.pos) counts[e.pos] = (counts[e.pos] ?? 0) + 1;
+      if (e.pos) pos[e.pos] = (pos[e.pos] ?? 0) + 1;
+      if (e.band) band[e.band] = (band[e.band] ?? 0) + 1;
     }
-    for (const [pos, btn] of posChipBtns) {
-      const n = counts[pos] ?? 0;
-      const chipDef = POS_CHIPS.find(c => c.value === pos);
-      btn.textContent = `${chipDef?.label ?? pos} (${n})`;
-    }
+    columns.setCounts('pos', pos);
+    columns.setCounts('band', band);
   }
 
   function renderStats(words: VocabEntry[]): void {
@@ -321,18 +273,14 @@ export function renderBrowsePanel(ctx: ListsCtx): void {
   function render(resetPage = false): void {
     if (resetPage) pageIndex = 0;
 
-    const q = norm(filterInp.value);
-    const filtered = allWords.filter(e => {
-      if (ctx.selectedPos.size > 0 && !ctx.selectedPos.has(e.pos ?? '')) return false;
-      if (ctx.selectedBands.size > 0 && !ctx.selectedBands.has(e.band ?? '')) return false;
-      if (!q) return true;
-      if (norm(e.word).includes(q) || norm(e.translation).includes(q)) return true;
-      return e.glosses.some(g => norm(g).includes(q));
-    });
+    const read = createCellReader();
+    const filtered = applyColumnFilters(allWords, columns, columnItem, read);
 
     renderStats(filtered);
     updateChipCounts();
-    visible = sortEntries(filtered);
+    visible = applyColumnSort(filtered, columns, columnItem, read)
+      ?? applyColumnSort(filtered, { sort: DEFAULT_SORT, filters: new Map(), sets: { pos: new Set(), band: new Set(), mastered: new Set() } }, columnItem, read)
+      ?? filtered;
     listEl.innerHTML = '';
 
     if (allWords.length === 0) {
@@ -346,7 +294,7 @@ export function renderBrowsePanel(ctx: ListsCtx): void {
     if (visible.length === 0) {
       const empty = document.createElement('li');
       empty.className = 'ml-word-empty';
-      empty.textContent = filterInp.value ? 'No matches.' : 'No words match the current filters.';
+      empty.textContent = columns.hasFilters() ? 'No matches.' : 'No words match the current filters.';
       listEl.appendChild(empty);
       pagerRow.hidden = true;
       return;
@@ -354,52 +302,26 @@ export function renderBrowsePanel(ctx: ListsCtx): void {
 
     const pages = pageCountFor(visible.length, BROWSE_PAGE_SIZE);
     pageIndex = Math.min(Math.max(0, pageIndex), pages - 1);
-    const mastered = getMastered(ctx.lang);
-    pageSlice(visible, BROWSE_PAGE_SIZE, pageIndex).forEach(entry => listEl.appendChild(buildRow(entry, mastered)));
+    pageSlice(visible, BROWSE_PAGE_SIZE, pageIndex).forEach(entry => listEl.appendChild(buildRow(entry)));
     updatePager(pages, visible.length);
+    columns.sync();
   }
 
-  function buildRow(entry: VocabEntry, mastered: Set<string>): HTMLLIElement {
-    const isMastered = mastered.has(entry.word);
+  function buildRow(entry: VocabEntry): HTMLLIElement {
     const li = document.createElement('li');
-    li.className = 'ml-word-item'
-      + (entry.word === ctx.expandedWord ? ' ml-word-item--expanded' : '')
-      + (isMastered ? ' ml-word-item--mastered' : '');
+    li.className = 'ml-word-item' + (entry.word === ctx.expandedWord ? ' ml-word-item--expanded' : '');
 
-    // Word/meaning disambiguators moved into the expanded detail below (see
-    // row-shared.ts's buildWordDetail) rather than inline here — this is
-    // the one panel with no per-list membership to fall back on, so keeping
-    // every row's columns the same width regardless of which words happen
-    // to carry a disambiguator matters even more here than elsewhere.
-    const wordSpan = document.createElement('span');
-    wordSpan.className = 'ml-word-text';
-    fillHighlighted(wordSpan, entry.word, filterInp.value);
-
-    const audioBtn = buildAudioButton(entry.audioUrl);
-
-    const posSpan = document.createElement('span');
-    posSpan.className = 'ml-word-pos';
-    posSpan.textContent = POS_ABBREV[entry.pos ?? ''] ?? '';
-    if (posSpan.textContent && entry.pos) posSpan.dataset.pos = entry.pos; else posSpan.hidden = true;
-
-    const transSpan = document.createElement('span');
-    transSpan.className = 'ml-word-trans';
-    if (entry.translation) fillHighlighted(transSpan, entry.translation, filterInp.value);
-
-    const rankBadge = document.createElement('span');
-    rankBadge.className = 'ml-word-rank';
-    if (entry.rank != null) rankBadge.textContent = '#' + entry.rank;
-    else rankBadge.hidden = true;
-
-    const actionsDiv = document.createElement('div');
-    actionsDiv.className = 'ml-word-actions';
-    // Your own rating and quiz history — per word/language, not per list, so
-    // these still apply here exactly as they do on an ordinary list's row.
-    const { masteryBtn, quizBadge } = buildMasteryControls(ctx.lang, entry.word, render);
+    // The data cells are the same ones every list's rows use (row-shared.ts), so the column header sits over
+    // them the same way.
+    const { cells } = buildRowCells({
+      lang: ctx.lang, word: entry.word, entry,
+      filter: columns.filters.get('word') ?? '', transFilter: columns.filters.get('definition') ?? '',
+      redraw: render,
+    });
 
     const addBtn = document.createElement('button');
     addBtn.type = 'button'; addBtn.className = 'ml-move-btn';
-    addBtn.title = 'Add to a list'; addBtn.textContent = '+';
+    addBtn.title = 'Add to a list'; addBtn.dataset.label = 'Add to a list'; addBtn.textContent = '+';
     addBtn.addEventListener('click', e => {
       e.stopPropagation();
       openMovePopover(ctx, addBtn, [entry.word], () => { /* nothing else to redraw here */ }, { copyOnly: true });
@@ -407,12 +329,7 @@ export function renderBrowsePanel(ctx: ListsCtx): void {
 
     const editBtn = buildEditInMyContentButton(ctx.lang, entry.word);
 
-    actionsDiv.append(quizBadge, masteryBtn, editBtn, addBtn);
-
-    li.appendChild(wordSpan);
-    if (audioBtn) li.appendChild(audioBtn);
-    li.appendChild(posSpan);
-    li.append(rankBadge, transSpan, actionsDiv);
+    li.append(...cells, buildActionsCell([editBtn, addBtn]));
 
     // ── Preview row (collapsed unless expanded) ────────────────────────────
     const detail = entry.word === ctx.expandedWord

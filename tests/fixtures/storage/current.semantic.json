@@ -58,6 +58,7 @@
     "filterExpanded": "false",
     "ml_browse_filter": "{}",
     "ml_browse_sort": "rank",
+    "ml_col_widths": "{\"word\":180,\"trans\":260}",
     "ml_profile_group_open_table": "true",
     "ml_sidebar_folder_collapsed_single_Trips": "true",
     "ml_sidebar_section_collapsed_smart": "true",

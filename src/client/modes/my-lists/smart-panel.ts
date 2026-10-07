@@ -20,7 +20,6 @@ import { foldKey as norm } from '../../utils/match.ts';
 import { readString, writeString } from '../../utils/storage.ts';
 import type { ListsCtx } from './context.ts';
 import { cachedVocab, cachedVocabMap } from './vocab-cache.ts';
-import { getMastered } from './mastery.ts';
 import {
   getSmartLists, saveSmartRule, evaluateSmart, type SmartRule,
 } from './smart-lists.ts';
@@ -29,6 +28,9 @@ import { BANDS, POS_CHIPS } from './types.ts';
 import { buildChecklistDropdown, buildChipDropdown } from './chip-dropdown.ts';
 import { createPager } from './pager.ts';
 import { buildWordRow } from './row-shared.ts';
+import {
+  createColumnHeader, createCellReader, applyColumnFilters, applyColumnSort, ACTIONS_WIDTH, type ColumnItem,
+} from './column-header.ts';
 import { buildQuizButton } from './list-actions.ts';
 import { qualifySmartListName } from '../../utils/word-lists.ts';
 import { getFolderRegistry, addFolder } from './folders.ts';
@@ -460,53 +462,9 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
   // Narrows what is *shown* of the rule's result; the rule itself, the
   // "N words" count and "Save as list" are unaffected. Local state, not ctx's,
   // so it doesn't leak into whichever list is opened next.
-  let filterQuery = '';
-  let sortMode = 'rule';
-  let hideMastered = false;
-
-  const toolbar = document.createElement('div');
-  toolbar.className = 'ml-list-toolbar';
-  const controlsGroup = document.createElement('div');
-  controlsGroup.className = 'ml-panel-controls';
-
-  const filterLabel = document.createElement('span');
-  filterLabel.className = 'ui-label ml-toolbar-label'; filterLabel.textContent = 'Filter';
-  const filterInp = document.createElement('input');
-  filterInp.type = 'text'; filterInp.placeholder = 'Filter by word, translation or gloss…';
-  filterInp.className = 'ml-search';
-  filterInp.title = 'Accent-insensitive — searches word, translation and glosses';
-  filterInp.addEventListener('input', () => { filterQuery = filterInp.value; pager.reset(); refresh(); });
-
-  const sortLabel = document.createElement('span');
-  sortLabel.className = 'ui-label ml-toolbar-label'; sortLabel.textContent = 'Sort';
-  const sortSel = document.createElement('select');
-  sortSel.className = 'ml-sort-select'; sortSel.title = 'Sort order';
-  ([
-    ['rule',       "Rule's order"],
-    ['alpha-asc',  'A → Z'],
-    ['alpha-desc', 'Z → A'],
-    ['rank-asc',   'Easiest first'],
-    ['rank-desc',  'Hardest first'],
-  ] as const).forEach(([value, label]) => {
-    const opt = document.createElement('option');
-    opt.value = value; opt.textContent = label;
-    sortSel.appendChild(opt);
-  });
-  sortSel.addEventListener('change', () => { sortMode = sortSel.value; pager.reset(); refresh(); });
-
-  const hideMasteredBtn = document.createElement('button');
-  hideMasteredBtn.type = 'button';
-  hideMasteredBtn.className = 'ml-hide-mastered-btn';
-  hideMasteredBtn.textContent = 'Hide mastered';
-  hideMasteredBtn.title = 'Hide words you have marked as mastered';
-  hideMasteredBtn.addEventListener('click', () => {
-    hideMastered = !hideMastered;
-    hideMasteredBtn.classList.toggle('ml-hide-mastered-btn--active', hideMastered);
-    pager.reset(); refresh();
-  });
-
-  controlsGroup.append(filterLabel, filterInp, sortLabel, sortSel, hideMasteredBtn);
-  toolbar.appendChild(controlsGroup);
+  // Column sort / filters over the list (column-header.ts, shared by every list type). `pager` and `refresh`
+  // are declared further down; this only runs on a click.
+  const columns = createColumnHeader({ hasCheckbox: false, onChange: () => { pager.reset(); refresh(); } });
 
   // Manual Additions sit on their own, directly above the filter bar — they
   // are about which words are in the list, not a rule setting.
@@ -515,16 +473,17 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
   // Always open — no collapse toggle, unlike the rule editor's groups.
   manualBox.appendChild(manualWordsSection());
   ctx.panel.appendChild(manualBox);
-  ctx.panel.appendChild(toolbar);
 
   // Paged rather than capped: a rule that matches a thousand words used to
   // stop at the first 400 with "…and N more".
   const pager = createPager(() => refresh());
   ctx.panel.appendChild(pager.el);
+  ctx.panel.appendChild(columns.el);
 
   const listEl = document.createElement('ul');
   listEl.className = 'ml-word-list';
   ctx.panel.appendChild(listEl);
+  columns.attach(listEl, ACTIONS_WIDTH);
 
   // ── Evaluate ───────────────────────────────────────────────────────────────
 
@@ -562,29 +521,26 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
       return;
     }
 
-    const mastered = getMastered(ctx.lang);
-    const q = norm(filterQuery);
-    let shown = words.filter(w => {
-      if (hideMastered && mastered.has(w)) return false;
-      if (!q) return true;
-      if (norm(w).includes(q)) return true;
+    const read = createCellReader();
+    const columnInfo = (w: string): ColumnItem => ({ lang: ctx.lang, word: w, entry: vm?.get(w) });
+    // How many words of each kind the rule matched, beside the values in the POS and CEFR checklists.
+    const posCounts: Record<string, number> = {};
+    const bandCounts: Record<string, number> = {};
+    for (const w of words) {
       const e = vm?.get(w);
-      return !!e && (norm(e.translation).includes(q) || e.glosses.some(g => norm(g).includes(q)));
-    });
-    if (sortMode !== 'rule') {
-      const F = 9999;
-      const rank = (w: string): number => vm?.get(w)?.rank ?? F;
-      shown = [...shown].sort(
-        sortMode === 'alpha-asc'  ? (a, b) => norm(a).localeCompare(norm(b))
-        : sortMode === 'alpha-desc' ? (a, b) => norm(b).localeCompare(norm(a))
-        : sortMode === 'rank-asc'   ? (a, b) => rank(a) - rank(b)
-        : (a, b) => rank(b) - rank(a),
-      );
+      if (e?.pos) posCounts[e.pos] = (posCounts[e.pos] ?? 0) + 1;
+      if (e?.band) bandCounts[e.band] = (bandCounts[e.band] ?? 0) + 1;
     }
+    columns.setCounts('pos', posCounts);
+    columns.setCounts('band', bandCounts);
+
+    let shown = applyColumnFilters(words, columns, columnInfo, read);
+    // A column picked in the header; otherwise the rule's own order.
+    shown = applyColumnSort(shown, columns, columnInfo, read) ?? shown;
     if (shown.length === 0) {
       const none = document.createElement('li');
       none.className = 'ml-word-empty';
-      none.textContent = filterQuery ? 'No matches.' : 'No words match the current filters.';
+      none.textContent = columns.hasFilters() ? 'No matches.' : 'No words match the current filters.';
       listEl.appendChild(none);
       return;
     }
@@ -593,7 +549,8 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
     const manual = new Set(rule.manualWords.map(w => w.toLowerCase()));
     pager.slice(shown).forEach(word => {
       const li = buildWordRow({
-        lang: ctx.lang, word, entry: vm?.get(word), mastered: mastered.has(word), filter: filterQuery,
+        lang: ctx.lang, word, entry: vm?.get(word),
+        filter: columns.filters.get('word') ?? '', transFilter: columns.filters.get('definition') ?? '',
         expanded: word === ctx.expandedWord,
         addedDate: null, // a smart list has no "added" date — its words are matched, not added
         redraw: refresh,
@@ -605,10 +562,13 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
         tag.className = 'ml-word-manual-tag';
         tag.textContent = '✋ Manual';
         tag.title = 'Added by hand under Manual Additions — not chosen by the rule';
-        li.querySelector('.ml-word-actions')?.before(tag);
+        // Inside the meaning cell, not a cell of its own: a row is a fixed grid of named columns, and an
+        // extra child with no column pushes every cell after it out from under its header.
+        li.querySelector('.ml-word-trans')?.appendChild(tag);
       }
       listEl.appendChild(li);
     });
+    columns.sync();
   }
 
   freezeBtn.addEventListener('click', () => {

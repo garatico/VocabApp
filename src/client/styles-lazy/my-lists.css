@@ -1272,53 +1272,9 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
    never shifts the row's own padding/layout) plus a small ✓ read as
    "done, in a good way" instead. */
 
-.ml-word-item--mastered {
-  background: var(--surface2);
-  box-shadow: inset 3px 0 0 var(--correct);
-}
-
-.ml-word-item--mastered .ml-word-text {
-  color: var(--text-muted);
-}
-
-.ml-word-item--mastered .ml-word-text::before {
-  content: '✓ ';
-  color: var(--correct);
-  font-weight: 700;
-}
-
-.ml-word-item--mastered .ml-word-trans,
-.ml-word-item--mastered .ml-word-rank {
-  opacity: 0.5;
-}
-
-/* ── Hide mastered toggle ────────────────────────────────────── */
-
-.ml-hide-mastered-btn {
-  font-size: 0.68rem;
-  font-weight: 600;
-  padding: 0.15rem 0.5rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-  transition: background var(--transition-fast), color var(--transition-fast),
-              border-color var(--transition-fast);
-}
-
-.ml-hide-mastered-btn:hover {
-  background: var(--surface2);
-  color: var(--text);
-}
-
-.ml-hide-mastered-btn--active {
-  background: var(--correct-light);
-  border-color: var(--correct);
-  color: var(--correct);
-}
+/* The toolbar above the table holds only the bulk-action bar now (the filters are in the column header), so it is a
+   grey box only while something is selected. */
+.ml-list-toolbar:not(:has(> .ml-bulk-bar:not([hidden]))) { display: none; }
 
 /* ── Bulk paste feedback toast ───────────────────────────────── */
 
@@ -1492,8 +1448,7 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
   background: var(--bg) url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E") no-repeat 0.55rem center / 0.85rem;
 }
 
-.ml-list-toolbar .ml-sort-select,
-.ml-list-toolbar .ml-hide-mastered-btn {
+.ml-list-toolbar .ml-sort-select {
   font-size: 0.78rem;
   padding: 0.35rem 0.55rem;
   border-radius: var(--radius-sm);
@@ -2648,7 +2603,7 @@ body .ml-root-drop.ml-root-drop--armed {
 
 .ml-list-toolbar .ml-search { padding-top: 0.16rem; padding-bottom: 0.16rem; }
 
-.ml-list-toolbar .ml-sort-select, .ml-list-toolbar .ml-hide-mastered-btn { padding: 0.2rem 0.5rem; }
+.ml-list-toolbar .ml-sort-select { padding: 0.2rem 0.5rem; }
 
 .ml-list-toolbar .ml-bulk-bar { margin-top: 0.2rem; padding: 0.22rem 0.5rem; }
 
@@ -2790,3 +2745,377 @@ body .ml-root-drop.ml-root-drop--armed {
 }
 
 .ml-profile-mode-body:not([hidden]) { padding-bottom: 0.2rem; }
+
+/* ── Word table: the column header and its rows are one object (column-header.ts) ────────────────────────────
+   ColumnHeader.attach wraps the header and the list in one .ml-table box, which owns the border, the corners and
+   the background; the header sits on top of the rows in that same box, parted from them by the same hairline that
+   parts one row from the next. The header and every row of the list share one set of named grid tracks, so a
+   header sits exactly over its column. Each column is a real cell in every row (.ml-cell-<column>, row-shared.ts)
+   and in the header, with a divider on its right edge — the cells' own borders, stretched to the full height of
+   the row and of the header (filter boxes included), so they run unbroken. The learner's resized widths arrive as
+   --ml-w-<column> variables on both; unset, each column has its default. The actions track is a fixed width, not
+   auto: the header has no buttons to size it (--ml-actions-w). Lists with no checkbox (Browse, Smart) drop the
+   first track. */
+
+.ml-table {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0.4rem 0.85rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  --ml-line: color-mix(in srgb, var(--border-strong) 75%, transparent);
+}
+/* The list's own box (margin, border, background — my-lists.css) is the table's now. */
+.ml-table > .ml-word-list {
+  margin: 0;
+  border: none;
+  border-radius: 0 0 calc(var(--radius-sm) - 1px) calc(var(--radius-sm) - 1px);
+  background: transparent;
+}
+
+.ml-word-list--cols .ml-word-item,
+.ml-colhead {
+  display: grid;
+  grid-template-columns:
+    [check]    18px
+    [word]     var(--ml-w-word, minmax(100px, 220px))
+    [audio]    22px
+    [pos]      var(--ml-w-pos, 64px)
+    [band]     var(--ml-w-band, 50px)
+    [rank]     var(--ml-w-rank, 56px)
+    [trans]    var(--ml-w-trans, minmax(120px, 1fr))
+    [pct]      var(--ml-w-pct, 64px)
+    [mastered] var(--ml-w-mastered, 82px)
+    [actions]  var(--ml-actions-w, 44px);
+  column-gap: 0;
+  align-items: stretch;
+}
+
+.ml-word-list--cols.ml-word-list--nocheck .ml-word-item,
+.ml-colhead--nocheck {
+  grid-template-columns:
+    [word]     var(--ml-w-word, minmax(100px, 220px))
+    [audio]    22px
+    [pos]      var(--ml-w-pos, 64px)
+    [band]     var(--ml-w-band, 50px)
+    [rank]     var(--ml-w-rank, 56px)
+    [trans]    var(--ml-w-trans, minmax(120px, 1fr))
+    [pct]      var(--ml-w-pct, 64px)
+    [mastered] var(--ml-w-mastered, 82px)
+    [actions]  var(--ml-actions-w, 44px);
+}
+
+/* Rows: the cells carry the padding the grid's gap used to, and the divider on their right edge. */
+.ml-word-list--cols .ml-word-item { padding-top: 0; padding-bottom: 0; }
+.ml-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0.2rem 0.45rem;
+}
+.ml-cell > * { min-width: 0; }
+.ml-word-list--cols:not(.ml-cols--compact) .ml-cell { border-right: 1px solid var(--ml-line); }
+/* Word and the audio button are one column to the eye (the audio button has no header of its own): the divider
+   is after the audio cell, not after each. */
+.ml-word-list--cols:not(.ml-cols--compact) .ml-cell-word { border-right: none; }
+/* The old per-element column rules (my-lists.css) drew their own bars — a divider after the word and the POS, and a
+   2px bar either side of the rank number — before the cells existed; the cell's divider is the only one now. */
+.ml-cell > :is(.ml-word-text, .ml-word-rank) { border: none; padding-left: 0; padding-right: 0; }
+.ml-cell > .ml-word-pos { padding-right: 0.35rem; }
+
+.ml-cell-word     { grid-column: word; }
+.ml-cell-audio    { grid-column: audio;    justify-content: center; padding-left: 0.1rem; padding-right: 0.1rem; }
+.ml-cell-pos      { grid-column: pos;      gap: 0.3rem; }
+.ml-cell-band     { grid-column: band; }
+.ml-cell-rank     { grid-column: rank;     justify-content: flex-end; }
+.ml-cell-trans    { grid-column: trans; }
+.ml-cell-pct      { grid-column: pct;      justify-content: center; }
+.ml-cell-mastered { grid-column: mastered; justify-content: center; }
+.ml-cell-word .ml-word-text,
+.ml-cell-trans .ml-word-trans { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 0.15rem; }
+.ml-word-list--cols .ml-word-check { align-self: center; }
+
+/* The row's actions: one "⋯" button and the menu it opens (row-shared.ts buildActionsCell). The menu is
+   position: fixed — placed from the button when it opens — so the list's own scrolling cannot clip it. */
+.ml-word-list--cols .ml-word-actions { align-self: center; justify-content: center; padding: 0 0.3rem; }
+.ml-row-menu-btn {
+  width: 28px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.ml-row-menu-btn:hover,
+.ml-row-menu-btn[aria-expanded="true"] { background: var(--surface2); color: var(--text); border-color: var(--text-muted); }
+.ml-row-menu-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ml-row-menu {
+  position: fixed;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  min-width: 13rem;
+  padding: 0.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md, 0 4px 16px rgba(0, 0, 0, 0.25));
+}
+.ml-row-menu[hidden] { display: none; }
+.ml-row-menu > button {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  height: auto;
+  padding: 0.4rem 0.6rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+}
+.ml-row-menu > button::after { content: attr(data-label); font-size: 0.8rem; font-weight: 500; }
+.ml-row-menu > button:hover { background: var(--surface2); }
+.ml-row-menu > .ml-remove-btn { color: var(--danger); }
+.ml-row-menu > .ml-remove-btn:hover { background: var(--danger-light); }
+/* The mastery button used to sit in the actions cell and take its hover outline from there. */
+.ml-word-item:hover .ml-cell-mastered button { border-color: var(--text-muted); }
+
+.ml-colhead {
+  margin: 0;
+  /* The list below reserves room for its scrollbar (scrollbar-gutter: stable); --ml-sbw is how much, set by
+     ColumnHeader.sync, so the header's columns end where the rows' do. */
+  padding: 0 calc(0.6rem + var(--ml-sbw, 0px)) 0 0.6rem;
+  /* Part of the table: no box of its own, just the hairline that parts it from the first row, drawn like the one
+     between rows. */
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: calc(var(--radius-sm) - 1px) calc(var(--radius-sm) - 1px) 0 0;
+  background: transparent;
+}
+.ml-colhead[hidden] { display: none; }
+
+.ml-colhead-col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.3rem 0.45rem 0.35rem;
+  border-right: 1px solid var(--ml-line);
+}
+.ml-colhead-col--word { border-right: none; }
+.ml-colhead-col--audio { padding: 0; }
+.ml-colhead-col--rank .ml-colhead-sort { justify-content: flex-end; }
+.ml-colhead-col--percent .ml-colhead-sort,
+.ml-colhead-col--mastered .ml-colhead-sort { justify-content: center; }
+
+.ml-colhead-sort {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.1rem;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ml-colhead-sort:hover { color: var(--text); }
+.ml-colhead-sort--active { color: color-mix(in srgb, var(--accent) 45%, var(--text)); }
+.ml-colhead-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ml-colhead-arrow { font-size: 0.6rem; }
+
+.ml-colhead-filter {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.18rem 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  color: var(--text);
+  font-size: 0.72rem;
+}
+.ml-colhead-filter:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--focus-ring); }
+
+/* POS / CEFR / Mastered: a checklist behind a button that reads "All" or "3 of 11". */
+.ml-colhead-choice { width: 100%; }
+.ml-colhead-choice .ml-chip-dropdown-toggle {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 0;
+  padding: 0.18rem 0.3rem;
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  font-size: 0.72rem;
+  text-align: left;
+}
+.ml-colhead-choice .ml-colhead-choice--narrowed {
+  border-color: var(--accent);
+  color: color-mix(in srgb, var(--accent) 45%, var(--text));
+}
+.ml-colhead-choice .ml-chip-dropdown-item-hint { margin-left: auto; padding-left: 0.8rem; }
+/* Each value in a checklist wears the pill it has in the rows (POS and CEFR reuse the row pills' own colour rules in
+   my-lists.css; the mastery levels have theirs below), so a colour in the list is the colour you will see in the table. */
+.ml-colhead-opt { font-size: 0.7rem; padding: 0.1rem 0.5rem; }
+.ml-colhead-opt.ml-word-pos { border-right: 1px solid; }
+.ml-colhead-opt.ml-word-pos[data-pos] { border-right-color: hsl(var(--pos-hue) 55% 45% / 0.45); }
+
+.ml-level-pill {
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: var(--surface2);
+  white-space: nowrap;
+  line-height: 1.5;
+}
+.ml-level-pill[data-level="1"] { --mh: 0;   }
+.ml-level-pill[data-level="2"] { --mh: 35;  }
+.ml-level-pill[data-level="3"] { --mh: 80;  }
+.ml-level-pill[data-level="4"] { --mh: 142; }
+.ml-level-pill[data-level]:not([data-level="0"]) {
+  color:        hsl(var(--mh) 60% 30%);
+  border-color: hsl(var(--mh) 55% 42%);
+  background:   hsl(var(--mh) 60% 88%);
+}
+html.dark .ml-level-pill[data-level]:not([data-level="0"]) {
+  color:      hsl(var(--mh) 65% 75%);
+  background: hsl(var(--mh) 45% 20%);
+}
+
+/* The Mastered list sits at the right of the table; open it leftwards so it stays on screen. */
+.ml-colhead-col--mastered .ml-chip-dropdown-panel { left: auto; right: 0; }
+.ml-colhead--filters-off :is(.ml-colhead-filter, .ml-colhead-choice) { display: none; }
+
+/* Drag the right edge of a header to resize its column; double-click it to fit the column to its content. */
+.ml-colhead-resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -5px;
+  width: 9px;
+  cursor: col-resize;
+  z-index: 3;
+}
+.ml-colhead-resize::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 1px;
+  background: transparent;
+}
+.ml-colhead-resize:hover::after { background: var(--accent); width: 2px; left: 3px; }
+
+/* "Sort & filter": opens the stacked header in the compact layout. It sits on top of the table and is not there at
+   all in the wide one, where the filters are always showing. */
+.ml-colhead-toggle { display: none; }
+.ml-table.ml-cols--compact > .ml-colhead-toggle {
+  display: flex;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: calc(var(--radius-sm) - 1px) calc(var(--radius-sm) - 1px) 0 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ml-table.ml-cols--compact > .ml-colhead-toggle:hover { color: var(--text); }
+.ml-table.ml-cols--compact > .ml-colhead-toggle[aria-expanded="true"] { color: var(--accent); }
+
+/* Compact: the columns cannot line up in a narrow list (a phone, or a window beside the 440px sidebar), so the
+   header becomes a stacked list — a sort button beside its filter, in two or three columns where there is room —
+   behind the Columns button, and the rows keep a compact grid of their own. No dividers, no resizing.
+   ColumnHeader sets .ml-cols--compact on both, from the list's own width (column-header.ts). */
+.ml-table > .ml-word-list.ml-cols--compact { margin: 0; }
+.ml-word-list--cols.ml-cols--compact .ml-word-item {
+  grid-template-columns:
+    [check]    18px
+    [word]     minmax(48px, 1fr)
+    [audio]    20px
+    [pos]      38px
+    [band]     var(--ml-band-w, 34px)
+    [rank]     var(--ml-rank-w, 40px)
+    [trans]    minmax(50px, 1.3fr)
+    [pct]      38px
+    [mastered] 28px
+    [actions]  30px;
+  column-gap: 0.25rem;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+}
+.ml-word-list--cols.ml-cols--compact.ml-word-list--nocheck .ml-word-item {
+  grid-template-columns:
+    [word]     minmax(48px, 1fr)
+    [audio]    20px
+    [pos]      38px
+    [band]     var(--ml-band-w, 34px)
+    [rank]     var(--ml-rank-w, 40px)
+    [trans]    minmax(50px, 1.3fr)
+    [pct]      38px
+    [mastered] 28px
+    [actions]  30px;
+}
+.ml-cols--compact .ml-cell { padding: 0.1rem 0; }
+.ml-word-list--cols.ml-cols--compact .ml-word-actions { padding: 0; }
+
+.ml-table.ml-cols--compact > .ml-colhead { border-radius: 0; }
+.ml-colhead.ml-cols--compact {
+  /* One column on a phone, two or three where the list is wider — each cell is a sort button beside its filter. */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.35rem 0.9rem;
+  padding: 0.4rem 0.5rem;
+}
+.ml-colhead.ml-cols--compact[hidden] { display: none; }
+/* The cells carry inline grid-column names that exist only in the full grid's template; here they would each
+   invent a column to sit in. */
+.ml-cols--compact .ml-colhead-col {
+  grid-column: auto !important;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0;
+  border-right: none;
+}
+.ml-cols--compact .ml-colhead-col--audio,
+.ml-cols--compact .ml-colhead-resize { display: none; }
+.ml-cols--compact .ml-colhead-col--rank .ml-colhead-sort,
+.ml-cols--compact .ml-colhead-col--percent .ml-colhead-sort,
+.ml-cols--compact .ml-colhead-col--mastered .ml-colhead-sort { justify-content: flex-start; }
+.ml-cols--compact .ml-colhead-sort { flex: 0 0 6.5rem; min-height: 32px; font-size: 0.72rem; }
+.ml-cols--compact .ml-colhead-filter,
+.ml-cols--compact .ml-colhead-choice { flex: 1; min-height: 32px; font-size: 0.85rem; }
+.ml-cols--compact .ml-colhead-col--mastered .ml-chip-dropdown-panel { left: 0; right: auto; }
+
+@media (max-width: 599px) {
+  /* The rank number is already hidden on a phone (my-lists.css's own rule); its track collapses with it, and so
+     does the CEFR badge, which the checklist in the header still filters by. */
+  .ml-word-list--cols { --ml-rank-w: 0px; --ml-band-w: 0px; }
+  .ml-word-list--cols .ml-cell-band { display: none; }
+  /* Browse's page selector was squeezed to ~26px between Prev/Next and the rank jump; the jump wraps below. */
+  .ml-browse-pager { flex-wrap: wrap; }
+  .ml-browse-page-select { flex: 1 1 8rem; }
+}

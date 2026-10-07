@@ -338,7 +338,7 @@ const UI_STATE_RAW: Record<string, string> = {
   admin_word_list_page_size: '50', admin_table_hidden_columns: JSON.stringify(['notes']),
   admin_table_column_order: JSON.stringify(['word', 'translation']), admin_table_col_widths: JSON.stringify({ word: 120 }),
   admin_table_page_size: '100', admin_table_page_size_custom: '75',
-  ml_browse_filter: JSON.stringify({}), ml_profile_group_open_table: 'true',
+  ml_browse_filter: JSON.stringify({}), ml_col_widths: JSON.stringify({ word: 180, trans: 260 }), ml_profile_group_open_table: 'true',
   ml_sidebar_folder_collapsed_single_Trips: 'true', ml_smart_group_open_Starter: 'true',
 };
 

@@ -36,6 +36,8 @@ import { logger } from '../utils/logger.js';
 import { readString, writeString } from '../utils/storage.ts';
 import { langFlagImg } from './admin-languages.js';
 import { confirmDialog } from '../ui/dialog.ts';
+import { nextSort, sortArrow, ariaSort, compareCells, cellMatches } from '../utils/column-view.ts';
+import { autoFitWidth, attachDragResize } from '../utils/column-resize.ts';
 
 interface Frequency {
   band?: string | null;
@@ -386,45 +388,23 @@ function colEl(key: string): HTMLTableColElement | undefined {
  *  times you clicked it. */
 function updateSortIndicators(): void {
   theadRow.querySelectorAll<HTMLElement>('th').forEach(th => {
-    const key    = th.dataset.col;
-    const active = sortKey === key;
+    const key    = th.dataset.col ?? '';
+    const state  = { key: sortKey, dir: sortDir };
     const arrow  = th.querySelector<HTMLElement>('.table-view-sort-arrow');
-    if (arrow) arrow.textContent = active ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
-    th.classList.toggle('table-view-th--sorted', active);
-    th.setAttribute('aria-sort', active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none');
+    if (arrow) arrow.textContent = sortArrow(state, key);
+    th.classList.toggle('table-view-th--sorted', sortKey === key);
+    th.setAttribute('aria-sort', ariaSort(state, key));
   });
 }
 
 // ── Column auto-size (double-click the resize handle) ───────────────────────
 
-/** Canvas 2D context reused across calls purely to avoid re-creating one on
- *  every double-click — text measurement itself is stateless. */
-let measureCtx: CanvasRenderingContext2D | null = null;
-
-function getMeasureCtx(): CanvasRenderingContext2D {
-  if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d');
-  return measureCtx as CanvasRenderingContext2D;
-}
-
-/** Widest cell wins, header label included — measured with canvas text
- *  metrics rather than a real DOM element because doing this for every row
- *  on the page, on every double-click, would mean forcing a layout/reflow
- *  per row instead of one cheap measureText() call each. */
+/** Widest cell wins, header label included — see utils/column-resize.ts (shared with My Lists' word lists). */
 function autoSizeColumn(col: ColumnDef): void {
-  const ctx = getMeasureCtx();
   const sample = tbody.querySelector<HTMLElement>('.table-view-cell-input, .table-view-cell-readonly');
   const font = sample ? getComputedStyle(sample).font : getComputedStyle(theadRow).font;
-  ctx.font = font;
 
-  let maxWidth = ctx.measureText(col.label).width + 24; // + sort arrow / affordance
-  rows.forEach(w => {
-    const text = col.get(w);
-    if (!text) return;
-    const width = ctx.measureText(text).width;
-    if (width > maxWidth) maxWidth = width;
-  });
-
-  const next = Math.max(50, Math.min(480, Math.round(maxWidth) + 28)); // + cell padding
+  const next = autoFitWidth({ font, label: col.label, cells: [...rows.values()].map(w => col.get(w)), min: 50, max: 480 });
   col.width = next;
   const c = colEl(col.key);
   if (c) c.style.width = `${next}px`;
@@ -476,10 +456,9 @@ function buildHeaderRow(): void {
     labelBtn.addEventListener('click', () => {
       // asc -> desc -> unsorted, cycling — the third click returns to
       // whatever order the server sent (rank, then word), same as never
-      // having clicked at all.
-      if (sortKey !== col.key) { sortKey = col.key; sortDir = 'asc'; }
-      else if (sortDir === 'asc') { sortDir = 'desc'; }
-      else { sortKey = null; }
+      // having clicked at all. The rule is shared with My Lists' Browse All
+      // Words (utils/column-view.ts).
+      ({ key: sortKey, dir: sortDir } = nextSort({ key: sortKey, dir: sortDir }, col.key));
       updateSortIndicators();
       renderRows();
     });
@@ -498,27 +477,18 @@ function buildHeaderRow(): void {
     // Not the drag-to-reorder handle — resizing is its own mousedown-driven
     // drag (below), which a native HTML5 drag starting from the same
     // pointer-down would otherwise fight with.
-    handle.draggable = false;
-    handle.addEventListener('mousedown', e => {
-      e.preventDefault();
-      e.stopPropagation();
-      const startX = e.clientX;
-      const startWidth = col.width;
-      function onMove(ev: MouseEvent): void {
-        const next = Math.max(50, startWidth + (ev.clientX - startX));
+    attachDragResize(handle, {
+      getWidth: () => col.width,
+      setWidth: next => {
         col.width = next;
         const c = colEl(col.key);
         if (c) c.style.width = `${next}px`;
-      }
-      function onUp(): void {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
+      },
+      onDone: () => {
         const widths = loadWidths();
         widths[col.key] = col.width;
         saveWidths(widths);
-      }
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
+      },
     });
     handle.addEventListener('dblclick', e => {
       e.preventDefault();
@@ -662,7 +632,7 @@ function visibleWords(): string[] {
       for (const [key, needle] of columnFilters) {
         const col = COLUMNS.find(c => c.key === key);
         if (!col) continue;
-        if (!col.get(w).toLowerCase().includes(needle.toLowerCase())) return false;
+        if (!cellMatches(col.get(w), needle, { numeric: col.numeric })) return false;
       }
       return true;
     });
@@ -671,20 +641,10 @@ function visibleWords(): string[] {
   if (sortKey) {
     const col = COLUMNS.find(c => c.key === sortKey);
     if (col) {
-      const dir = sortDir === 'asc' ? 1 : -1;
       words.sort((wa, wb) => {
         const a = rows.get(wa); const b = rows.get(wb);
         if (!a || !b) return 0;
-        const av = col.get(a); const bv = col.get(b);
-        if (col.numeric) {
-          const an = av === '' ? null : Number(av);
-          const bn = bv === '' ? null : Number(bv);
-          if (an == null && bn == null) return 0;
-          if (an == null) return 1;   // blanks sort last regardless of direction
-          if (bn == null) return -1;
-          return (an - bn) * dir;
-        }
-        return av.localeCompare(bv) * dir;
+        return compareCells(col.get(a), col.get(b), Boolean(col.numeric), sortDir);
       });
     }
   }

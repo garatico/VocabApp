@@ -35,6 +35,13 @@ export interface MasteryControls {
  * session-history.ts are both keyed by the word's actual language.
  * `onChange` re-renders whatever list the row belongs to.
  */
+/** A word's quiz record as a whole percentage, or null when it has never been quizzed. */
+export function percentFromTally(t: { correct: number; wrong: number } | undefined): number | null {
+  if (!t) return null;
+  const total = t.correct + t.wrong;
+  return total === 0 ? null : Math.round((t.correct / total) * 100);
+}
+
 export function buildMasteryControls(lang: string, word: string, onChange: () => void): MasteryControls {
   const level = getMasteryLevel(lang, word);
   const masteryBtn = document.createElement('button');
@@ -60,8 +67,7 @@ export function buildMasteryControls(lang: string, word: string, onChange: () =>
     quizBadge.textContent = '–';
     quizBadge.title = 'No quiz history yet for this word';
   } else {
-    const total = tally.correct + tally.wrong;
-    const pct   = Math.round((tally.correct / total) * 100);
+    const pct   = percentFromTally(tally) ?? 0;
     quizBadge.textContent = pct + '%';
     quizBadge.title = `Quiz record: ${tally.correct} correct, ${tally.wrong} missed (${pct}%)`;
   }
@@ -81,6 +87,7 @@ export function buildEditInMyContentButton(lang: string, word: string): HTMLButt
   btn.type = 'button';
   btn.className = 'ml-edit-btn';
   btn.title = 'Edit in My Content';
+  btn.dataset.label = 'Edit in My Content';
   btn.textContent = '✎';
   btn.addEventListener('click', e => {
     e.stopPropagation();
@@ -104,6 +111,7 @@ export function buildDueExemptButton(lang: string, word: string, onChange: () =>
   btn.type = 'button';
   btn.className = 'ml-due-exempt-btn' + (exempt ? ' ml-due-exempt-btn--on' : '');
   btn.textContent = exempt ? '🔕' : '🔔';
+  btn.dataset.label = exempt ? 'Include in due review' : 'Exclude from due review';
   btn.title = exempt
     ? 'Excluded from "due for review" — click to re-enable'
     : 'Included in "due for review" — click to exclude this word';
@@ -253,9 +261,10 @@ export interface WordRowOptions {
   lang: string;
   word: string;
   entry: VocabEntry | undefined;
-  mastered: boolean;
-  /** Search text to highlight in the word and its translation. */
+  /** Text to highlight in the word — what is typed in the Word column's filter box. */
   filter: string;
+  /** Text to highlight in the translation — the Definition column's filter box. */
+  transFilter?: string;
   /** Whether this row's detail (glosses, IPA, examples…) is open. */
   expanded: boolean;
   addedDate?: number | null;
@@ -271,18 +280,128 @@ export interface WordRowOptions {
   extraActions?: HTMLElement[];
 }
 
+// ── The row's actions menu ────────────────────────────────────────────────────
+
+let rowMenuListenersInstalled = false;
+
+/** Close every open row menu. */
+export function closeRowMenus(): void {
+  document.querySelectorAll<HTMLElement>('.ml-row-menu:not([hidden])').forEach(menu => {
+    menu.hidden = true;
+    menu.parentElement?.querySelector('.ml-row-menu-btn')?.setAttribute('aria-expanded', 'false');
+  });
+}
+
+function installRowMenuListeners(): void {
+  if (rowMenuListenersInstalled) return;
+  rowMenuListenersInstalled = true;
+  // One set for the whole page, not one per row. The menu is `position: fixed` so the list's own scrolling
+  // cannot clip it, which also means it would be left behind by a scroll or a resize — so those close it.
+  document.addEventListener('click', e => {
+    if (!(e.target as Element | null)?.closest?.('.ml-word-actions')) closeRowMenus();
+  }, true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeRowMenus(); });
+  document.addEventListener('scroll', closeRowMenus, true);
+  window.addEventListener('resize', closeRowMenus);
+}
+
 /**
- * One word row — the same for Single-Language, Cross-Language and Smart lists:
- * word, audio, POS, rank, translation, quiz badge, mastery, edit-in-My-Content,
- * plus a click-to-expand detail (glosses, IPA, examples…). A list type only
- * supplies what is genuinely its own through `leading`/`beforePos`/`extraActions`.
+ * The actions cell of a word row: one "⋯" button that opens a small menu of what used to be a row of icon
+ * buttons (due reminders, edit, move, remove / add to a list). The buttons are the same elements with the same
+ * handlers; they are just laid out as labelled menu items — the label is each button's `data-label`, or its
+ * `title`.
  */
-export function buildWordRow(o: WordRowOptions): HTMLLIElement {
+export function buildActionsCell(items: HTMLElement[]): HTMLElement {
+  installRowMenuListeners();
+  const wrap = document.createElement('div');
+  wrap.className = 'ml-word-actions';
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'ml-row-menu-btn';
+  btn.textContent = '⋯';
+  btn.title = 'Actions';
+  btn.setAttribute('aria-label', 'Actions');
+  btn.setAttribute('aria-haspopup', 'menu');
+  btn.setAttribute('aria-expanded', 'false');
+
+  const menu = document.createElement('div');
+  menu.className = 'ml-row-menu';
+  menu.setAttribute('role', 'menu');
+  menu.hidden = true;
+  for (const item of items) {
+    item.dataset.label ??= item.title;
+    item.setAttribute('role', 'menuitem');
+    menu.appendChild(item);
+  }
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const wasOpen = !menu.hidden;
+    closeRowMenus();
+    if (wasOpen) return;
+    menu.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    // Under the button, right-aligned with it; above it when there is no room below.
+    const r = btn.getBoundingClientRect();
+    const h = menu.offsetHeight;
+    const w = menu.offsetWidth;
+    const x = Math.max(4, Math.min(window.innerWidth - w - 4, r.right - w));
+    const y = r.bottom + 4 + h > window.innerHeight ? Math.max(4, r.top - h - 4) : r.bottom + 4;
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
+    // A transformed ancestor (My Lists' own panel animates in with one) makes `fixed` relative to itself, not the
+    // window: measure where the menu actually landed and shift it by the difference.
+    const got = menu.getBoundingClientRect();
+    if (Math.abs(got.left - x) > 0.5 || Math.abs(got.top - y) > 0.5) {
+      menu.style.left = `${x - (got.left - x)}px`;
+      menu.style.top = `${y - (got.top - y)}px`;
+    }
+  });
+  // After the item's own handler has run (it may open a popover anchored on the item, which must still be in
+  // place while it measures), not before.
+  menu.addEventListener('click', () => { setTimeout(closeRowMenus, 0); }, true);
+
+  wrap.append(btn, menu);
+  return wrap;
+}
+
+/** A cell of a word row: one box per column, always present (even empty) so the column dividers run unbroken. */
+function cell(key: string, ...children: (HTMLElement | null)[]): HTMLElement {
+  const c = document.createElement('div');
+  c.className = `ml-cell ml-cell-${key}`;
+  for (const child of children) if (child) c.appendChild(child);
+  return c;
+}
+
+export interface RowCellsOptions {
+  lang: string;
+  word: string;
+  entry: VocabEntry | undefined;
+  /** Text to highlight in the word / in the translation. */
+  filter: string;
+  transFilter?: string;
+  /** Redraw the list — after a mastery change. */
+  redraw: () => void;
+  /** Right before the POS tag, inside its cell (e.g. a Cross-Language row's flag). */
+  beforePos?: HTMLElement[];
+}
+
+export interface RowCells {
+  /** In column order: word, audio, pos, band, rank, trans, pct, mastered. */
+  cells: HTMLElement[];
+  masteryBtn: HTMLButtonElement;
+  quizBadge: HTMLSpanElement;
+}
+
+/**
+ * The data cells of one word row — Word, audio, POS, CEFR level, Rank, Definition, Percent, Mastered — the same
+ * for every list type and for Browse All Words. Each is a cell of the row's grid (`.ml-cell-<column>`), which the
+ * list's column header (column-header.ts) sits over: the header sorts, filters and resizes these columns, and
+ * the dividers between them run through every row, so a cell exists even when it has nothing in it.
+ */
+export function buildRowCells(o: RowCellsOptions): RowCells {
   const { entry } = o;
-  const li = document.createElement('li');
-  li.className = 'ml-word-item'
-    + (o.expanded ? ' ml-word-item--expanded' : '')
-    + (o.mastered ? ' ml-word-item--mastered' : '');
 
   // Word/meaning disambiguators live in the expanded detail (buildWordDetail),
   // not on this line, which they widened unpredictably from row to row.
@@ -290,12 +409,14 @@ export function buildWordRow(o: WordRowOptions): HTMLLIElement {
   wordSpan.className = 'ml-word-text';
   fillHighlighted(wordSpan, o.word, o.filter);
 
-  const audioBtn = buildAudioButton(entry?.audioUrl);
-
   const posLabel = POS_ABBREV[entry?.pos ?? ''] ?? '';
   const posSpan = document.createElement('span');
   posSpan.className = 'ml-word-pos'; posSpan.textContent = posLabel;
   if (posLabel && entry?.pos) posSpan.dataset.pos = entry.pos; else posSpan.hidden = true;
+
+  const bandSpan = document.createElement('span');
+  bandSpan.className = 'ml-word-band';
+  if (entry?.band) { bandSpan.textContent = entry.band; bandSpan.dataset.band = entry.band; } else bandSpan.hidden = true;
 
   const rankBadge = document.createElement('span');
   rankBadge.className = 'ml-word-rank';
@@ -303,21 +424,50 @@ export function buildWordRow(o: WordRowOptions): HTMLLIElement {
 
   const transSpan = document.createElement('span');
   transSpan.className = 'ml-word-trans';
-  if (entry?.translation) fillHighlighted(transSpan, entry.translation, o.filter);
+  if (entry?.translation) fillHighlighted(transSpan, entry.translation, o.transFilter ?? '');
 
   const { masteryBtn, quizBadge } = buildMasteryControls(o.lang, o.word, o.redraw);
+
+  const cells = [
+    cell('word', wordSpan),
+    cell('audio', buildAudioButton(entry?.audioUrl)),
+    cell('pos', ...(o.beforePos ?? []), posSpan),
+    cell('band', bandSpan),
+    cell('rank', rankBadge),
+    cell('trans', transSpan),
+    cell('pct', quizBadge),
+    cell('mastered', masteryBtn),
+  ];
+  return { cells, masteryBtn, quizBadge };
+}
+
+/**
+ * One word row — the same for Single-Language, Cross-Language and Smart lists:
+ * word, audio, POS, CEFR level, rank, translation, quiz badge, mastery, edit-in-My-Content,
+ * plus a click-to-expand detail (glosses, IPA, examples…). A list type only
+ * supplies what is genuinely its own through `leading`/`beforePos`/`extraActions`.
+ *
+ * The row is a grid whose columns the list's column header (column-header.ts) sits over, so the list it
+ * goes in must have that header attached (`columns.attach(listEl)`) — that is what gives it the template.
+ */
+export function buildWordRow(o: WordRowOptions): HTMLLIElement {
+  const { entry } = o;
+  const li = document.createElement('li');
+  li.className = 'ml-word-item' + (o.expanded ? ' ml-word-item--expanded' : '');
+
+  const { cells } = buildRowCells({
+    lang: o.lang, word: o.word, entry, filter: o.filter, transFilter: o.transFilter,
+    redraw: o.redraw, beforePos: o.beforePos,
+  });
+
   // Master switch: Settings → Session History → "Omit from Due" per word.
   // Off hides the control entirely rather than just disabling it — there is
   // nothing to toggle once the feature has no effect on what's due.
   const dueExemptBtn = Settings.getDueExemptEnabled() ? buildDueExemptButton(o.lang, o.word, o.redraw) : null;
   const editBtn = buildEditInMyContentButton(o.lang, o.word);
-  const actions = document.createElement('div');
-  actions.className = 'ml-word-actions';
-  actions.append(quizBadge, masteryBtn, ...(dueExemptBtn ? [dueExemptBtn] : []), editBtn, ...(o.extraActions ?? []));
+  const actions = buildActionsCell([...(dueExemptBtn ? [dueExemptBtn] : []), editBtn, ...(o.extraActions ?? [])]);
 
-  li.append(...(o.leading ?? []), wordSpan);
-  if (audioBtn) li.appendChild(audioBtn);
-  li.append(...(o.beforePos ?? []), posSpan, rankBadge, transSpan, actions);
+  li.append(...(o.leading ?? []), ...cells, actions);
 
   const detail = (o.expanded && entry)
     ? buildWordDetail(entry, o.lang, o.addedDate)

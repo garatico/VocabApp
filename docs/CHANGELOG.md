@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### October 2026
 
+- **My Lists word lists are spreadsheet-style tables.** Every list type (Single-Language, Cross-Language, Smart,
+  Browse All Words) has a column header — Word, POS, CEFR, Rank, Definition, Percent, Mastered — with a sort button
+  and a filter per column. Text and number columns take a box (numbers understand `>100`, `<=50`, `10-50`); POS, CEFR
+  and Mastered are checklists where each value starts on and unticking one turns it off. Columns resize by dragging
+  their edge and fit their content on a double-click, and the choice is remembered. The header and rows are one
+  object with unbroken dividers; each row's actions are one `⋯` menu. They replace the broad filter box, the Sort
+  dropdown, the Part of Speech / Level dropdowns and the Hide mastered button. A narrow list (a phone, or a window
+  beside the sidebar) gets a compact layout behind a Columns button.
+- The Admin Table View and these lists now share their sort / filter rules (`utils/column-view.ts`) and their
+  resize / fit logic (`utils/column-resize.ts`); blank cells sort last in text columns as well as numeric ones.
 - **The website is now a static site.** `render.yaml` publishes `dist/` from `npm run build:static`
   (app, one JSONL per language, photos shrunk to 800 px, emoji). There is no Node process in production;
   the old web service held every language in memory and was restarted repeatedly for exceeding a small

@@ -73,7 +73,6 @@ export interface ListsCtx {
    *  and clears it on render so a later, unrelated visit doesn't inherit
    *  it. */
   focusWord: string | null;
-  hideMastered: boolean;
   /** Empty means "no filter", not "nothing matches". */
   readonly selectedPos: Set<string>;
   readonly selectedBands: Set<string>;
@@ -112,7 +111,6 @@ export function createContext(
     sortMode:      'alpha-asc',
     expandedWord:  null,
     focusWord:     null,
-    hideMastered:  false,
     selectedPos:   new Set<string>(),
     selectedBands: new Set<string>(),
     listNav,

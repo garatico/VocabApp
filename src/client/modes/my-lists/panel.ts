@@ -23,15 +23,16 @@ import { logger } from '../../utils/logger.ts';
 import { createAddSearch } from './add-search.ts';
 import { createBulkImport } from './bulk-import.ts';
 import { createWordList } from './word-list.ts';
+import { createColumnHeader, ACTIONS_WIDTH } from './column-header.ts';
 import { renderSmartPanel } from './smart-panel.ts';
 import { renderMultiPanel } from './multi-panel.ts';
 import { renderProfilePanel } from './profile-panel.ts';
 import { renderVisualPanel } from './visual-panel.ts';
 import { buildQuizButton } from './list-actions.ts';
 import { closePopover, clickedOutsidePopover } from './move-popover.ts';
-import { BANDS, POS_CHIPS, type SortMode, type VocabEntry } from './types.ts';
+import type { VocabEntry } from './types.ts';
 import { buildLangBadge } from '../../ui/lang-badge.ts';
-import { buildChipDropdown, buildChecklistDropdown, closeAllChipDropdowns } from './chip-dropdown.ts';
+import { buildChecklistDropdown, closeAllChipDropdowns } from './chip-dropdown.ts';
 import { getFolderRegistry, addFolder } from './folders.ts';
 import '../../styles-lazy/my-lists.css';
 
@@ -42,15 +43,6 @@ import '../../styles-lazy/my-lists.css';
  * the elements of a panel that no longer existed.
  */
 let outsideClickHandler: ((e: MouseEvent) => void) | null = null;
-
-const SORT_OPTIONS: readonly [SortMode, string][] = [
-  ['alpha-asc',   'A → Z'],
-  ['alpha-desc',  'Z → A'],
-  ['rank-asc',    'Easiest first'],
-  ['rank-desc',   'Hardest first'],
-  ['added-desc',  'Recently added'],
-  ['added-asc',   'Oldest first'],
-];
 
 /** Whether anything is open in the panel: a real list, a smart list, a profile or Browse All Words. */
 function hasSelection(ctx: ListsCtx): boolean {
@@ -144,44 +136,19 @@ function renderPanelBody(ctx: ListsCtx): void {
 
   // ── Filter / sort toolbar ──────────────────────────────────────────────────
 
-  const controlsGroup = document.createElement('div');
-  controlsGroup.className = 'ml-panel-controls';
-
-  const filterLabel = document.createElement('span');
-  filterLabel.className = 'ui-label ml-toolbar-label'; filterLabel.textContent = 'Filter';
-
-  const filterInp = document.createElement('input');
-  filterInp.type = 'text'; filterInp.placeholder = 'Filter by word, translation or gloss…';
-  filterInp.className = 'ml-search';
-  filterInp.title = 'Accent-insensitive — searches word, translation and glosses';
-
-  const sortLabel = document.createElement('span');
-  sortLabel.className = 'ui-label ml-toolbar-label'; sortLabel.textContent = 'Sort';
-
-  const sortSel = document.createElement('select');
-  sortSel.className = 'ml-sort-select'; sortSel.title = 'Sort order';
-  SORT_OPTIONS.forEach(([value, label]) => {
-    const opt = document.createElement('option');
-    opt.value = value; opt.textContent = label; opt.selected = value === ctx.sortMode;
-    sortSel.appendChild(opt);
-  });
-  sortSel.addEventListener('change', () => {
-    ctx.sortMode = sortSel.value as SortMode; wordList.render();
+  // Column sort / filters over the list (shared by every list type — column-header.ts). Its onChange redraws
+  // the list; the word list it belongs to is created further down, which is fine: this only runs on a click.
+  // POS and CEFR share the selection Add Vocabulary's results are narrowed by (ctx.selectedPos/Bands), so a
+  // change there redraws both.
+  const columns = createColumnHeader({
+    hasCheckbox: true,
+    posSet: ctx.selectedPos,
+    bandSet: ctx.selectedBands,
+    // A list with no column selected is alphabetical (ctx.sortMode), which the Word column shows.
+    initialSort: { key: 'word', dir: 'asc' },
+    onChange: () => { add.refresh(); wordList.render(); },
   });
 
-  const hideMasteredBtn = document.createElement('button');
-  hideMasteredBtn.type = 'button';
-  hideMasteredBtn.className = 'ml-hide-mastered-btn';
-  hideMasteredBtn.textContent = 'Hide mastered';
-  hideMasteredBtn.title = 'Hide words you have marked as mastered';
-  hideMasteredBtn.addEventListener('click', () => {
-    ctx.hideMastered = !ctx.hideMastered;
-    hideMasteredBtn.classList.toggle('ml-hide-mastered-btn--active', ctx.hideMastered);
-    wordList.render();
-  });
-  controlsGroup.appendChild(filterLabel); controlsGroup.appendChild(filterInp);
-  controlsGroup.appendChild(sortLabel); controlsGroup.appendChild(sortSel);
-  controlsGroup.appendChild(hideMasteredBtn);
 
   // ── Part of Speech / Level / Folders / Hide from — dropdowns, one row ───────
   // POS and Level keep the exact chip markup/colouring they always had (see
@@ -191,16 +158,6 @@ function renderPanelBody(ctx: ListsCtx): void {
 
   const filterDropdownsRow = document.createElement('div');
   filterDropdownsRow.className = 'ml-filter-dropdowns-row';
-
-  const posDropdown = buildChipDropdown('Part of Speech', 'pos', POS_CHIPS.filter(c => c.value), ctx.selectedPos, () => {
-    add.refresh(); wordList.render();
-  });
-  const posChipBtns = posDropdown.chips;
-
-  const bandDropdown = buildChipDropdown(
-    'Level', 'band', BANDS.map(b => ({ value: b, label: b })), ctx.selectedBands,
-    () => { add.refresh(); wordList.render(); },
-  );
 
   const singleFolderScope = `single_${ctx.lang}`;
   function buildFolderFooter(scope: string, onAdd: (name: string) => void): HTMLElement {
@@ -262,7 +219,7 @@ function renderPanelBody(ctx: ListsCtx): void {
   );
   sourceDropdown.wrap.title = 'Build this list from other lists instead of copying their words';
 
-  filterDropdownsRow.append(posDropdown.wrap, bandDropdown.wrap, folderDropdown.wrap, sourceDropdown.wrap, hideFromDropdown.wrap);
+  filterDropdownsRow.append(folderDropdown.wrap, sourceDropdown.wrap, hideFromDropdown.wrap);
 
   panelHeader.appendChild(titleGroup);
   panelHeader.appendChild(filterDropdownsRow);
@@ -313,22 +270,20 @@ function renderPanelBody(ctx: ListsCtx): void {
   // ── Word list ──────────────────────────────────────────────────────────────
 
   const wordList = createWordList(ctx, {
-    filterInput: filterInp,
     statsRow,
-    posChipBtns,
     refreshCount,
     refreshAddResults: () => { if (add.input.value.trim()) add.refresh(); },
+    columns,
   });
 
   const listToolbar = document.createElement('div');
   listToolbar.className = 'ml-list-toolbar';
-  listToolbar.appendChild(controlsGroup);
   listToolbar.appendChild(wordList.bulkBar);
   ctx.panel.appendChild(listToolbar);
   ctx.panel.appendChild(wordList.pagerEl);
+  ctx.panel.appendChild(columns.el);
   ctx.panel.appendChild(wordList.listEl);
-
-  filterInp.addEventListener('input', () => wordList.render());
+  columns.attach(wordList.listEl, ACTIONS_WIDTH);
 
   // ── Dismissal ──────────────────────────────────────────────────────────────
 

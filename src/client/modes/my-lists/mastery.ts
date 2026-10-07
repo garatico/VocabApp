@@ -118,6 +118,17 @@ export function getMasteryLevel(lang: string, word: string): number {
   return getMastered(lang).has(word) ? MAX_MASTERY_LEVEL : 0;
 }
 
+/**
+ * getMasteryLevel for many words at once: reads the saved levels and the legacy set once, then answers
+ * from memory. getMasteryLevel itself parses both from storage on every call, which is fine for one row
+ * and ruinous for a column over a whole language's vocabulary.
+ */
+export function masteryLevelLookup(lang: string): (word: string) => number {
+  const levels = getMasteryLevels(lang);
+  const legacy = getMastered(lang);
+  return word => (word in levels ? levels[word] : legacy.has(word) ? MAX_MASTERY_LEVEL : 0);
+}
+
 export function setMasteryLevel(lang: string, word: string, level: number): void {
   const clamped = Math.max(0, Math.min(MAX_MASTERY_LEVEL, level));
   const levels = getMasteryLevels(lang);

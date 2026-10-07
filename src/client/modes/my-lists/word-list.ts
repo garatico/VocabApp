@@ -28,21 +28,22 @@ import { cachedVocabMap } from './vocab-cache.ts';
 import { getMastered, setMasteryLevel, MASTERY_LEVELS } from './mastery.ts';
 import { closePopover, openMovePopover } from './move-popover.ts';
 import { showUndo } from './undo-toast.ts';
-import { POS_CHIPS, type VocabEntry } from './types.ts';
+import type { VocabEntry } from './types.ts';
 import { appendCountChip, appendMasteredChip, buildWordRow } from './row-shared.ts';
+import {
+  createCellReader, applyColumnFilters, applyColumnSort, type ColumnHeader, type ColumnItem,
+} from './column-header.ts';
 import '../../styles-lazy/my-lists.css';
 
 export interface WordListDeps {
-  /** Read at render time so the toolbar owns the text and this module doesn't. */
-  filterInput: HTMLInputElement;
   /** Where the "12 Verbs · ranks #4–#900" chips go. */
   statsRow: HTMLElement;
-  /** POS chips, so their counts can be kept current. */
-  posChipBtns: Map<string, HTMLButtonElement>;
   /** Repaint the "N words" badge in the panel header. */
   refreshCount(): void;
   /** Re-run the add-search query, if one is active. */
   refreshAddResults(): void;
+  /** The column header over the list: its filters narrow the rows and its sort overrides the Sort dropdown. */
+  columns: ColumnHeader;
 }
 
 export interface WordListUI {
@@ -58,7 +59,7 @@ export interface WordListUI {
 }
 
 export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
-  const { filterInput, statsRow, posChipBtns } = deps;
+  const { statsRow } = deps;
 
   const listEl = document.createElement('ul');
   listEl.className = 'ml-word-list';
@@ -246,7 +247,12 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
 
   // ── Sort ───────────────────────────────────────────────────────────────────
 
+  const columnInfo = (w: string): ColumnItem => ({ lang: ctx.lang, word: w, entry: cachedVocabMap(ctx.lang)?.get(w) });
+
   function sortWords(words: string[]): string[] {
+    // A column picked in the header wins over the Sort dropdown (picking in the dropdown puts it away).
+    const byColumn = applyColumnSort(words, deps.columns, columnInfo, createCellReader());
+    if (byColumn) return byColumn;
     const vm = cachedVocabMap(ctx.lang); const F = 9999;
     switch (ctx.sortMode) {
       case 'alpha-asc':  return [...words].sort((a, b) => norm(a).localeCompare(norm(b)));
@@ -308,49 +314,31 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
   function updateChipCounts(): void {
     const vm = cachedVocabMap(ctx.lang);
     if (!vm) return;
-    const allWords = getList(ctx.lang, ctx.selectedList);
-    const counts: Record<string, number> = {};
-    for (const w of allWords) {
-      const pos = vm.get(w)?.pos;
-      if (pos) counts[pos] = (counts[pos] ?? 0) + 1;
+    const pos: Record<string, number> = {};
+    const band: Record<string, number> = {};
+    for (const w of getList(ctx.lang, ctx.selectedList)) {
+      const e = vm.get(w);
+      if (e?.pos) pos[e.pos] = (pos[e.pos] ?? 0) + 1;
+      if (e?.band) band[e.band] = (band[e.band] ?? 0) + 1;
     }
-    for (const [pos, btn] of posChipBtns) {
-      const n = counts[pos] ?? 0;
-      const chipDef = POS_CHIPS.find(c => c.value === pos);
-      btn.textContent = `${chipDef?.label ?? pos} (${n})`;
-    }
+    deps.columns.setCounts('pos', pos);
+    deps.columns.setCounts('band', band);
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
   function render(): void {
     closePopover(); listEl.innerHTML = '';
-    const filter = filterInput.value;
     const vm = cachedVocabMap(ctx.lang);
-    const q  = norm(filter);
-    const mastered = getMastered(ctx.lang);
-
     derivedWords = getDerivedWords(ctx.lang, ctx.selectedList);
-    const filtered = getList(ctx.lang, ctx.selectedList).filter(w => {
-      if (ctx.hideMastered && mastered.has(w)) return false;
-      const e = vm?.get(w);
-      if (ctx.selectedPos.size > 0 && !ctx.selectedPos.has(e?.pos ?? '')) return false;
-      if (ctx.selectedBands.size > 0 && !ctx.selectedBands.has(e?.band ?? '')) return false;
-      if (!q) return true;
-      if (norm(w).includes(q)) return true;
-      if (!e) return false;
-      // Glosses are searched too — a word's translation is only one of
-      // several English senses, and the rest were previously unreachable.
-      return norm(e.translation).includes(q)
-          || e.glosses.some(g => norm(g).includes(q));
-    });
+    const matching = getList(ctx.lang, ctx.selectedList);
+    const filtered = applyColumnFilters(matching, deps.columns, columnInfo, createCellReader());
 
     renderStats(filtered);
     updateChipCounts();
     visibleWords  = sortWords(filtered);
     const sig = [
-      ctx.lang, ctx.selectedList, filter, [...ctx.selectedPos].join(), [...ctx.selectedBands].join(),
-      ctx.sortMode, ctx.hideMastered,
+      ctx.lang, ctx.selectedList, deps.columns.signature(),
     ].join('|');
     if (sig !== lastListingSig) { pager.reset(); lastListingSig = sig; }
     syncBulkBar();
@@ -365,21 +353,23 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
       // reads as if adding words had silently failed rather than as a filter
       // doing its job.
       const hasWords = getList(ctx.lang, ctx.selectedList).length > 0;
-      empty.textContent = filter
+      empty.textContent = deps.columns.hasFilters()
         ? 'No matches.'
         : hasWords
           ? 'No words match the current filters.'
           : 'No words in this list yet.';
-      listEl.appendChild(empty); return;
+      listEl.appendChild(empty);
+      deps.columns.sync();
+      return;
     }
 
-    pager.slice(visibleWords).forEach(word => listEl.appendChild(buildRow(word, vm, mastered)));
+    pager.slice(visibleWords).forEach(word => listEl.appendChild(buildRow(word, vm)));
+    deps.columns.sync();
   }
 
   function buildRow(
     word: string,
     vm: Map<string, VocabEntry> | undefined,
-    mastered: Set<string>,
   ): HTMLLIElement {
     const entry = vm?.get(word);
     const check = document.createElement('input');
@@ -446,14 +436,19 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
       viaBadge.title = `Comes from the list "${via}" — change it there`;
     }
 
-    return buildWordRow({
-      lang: ctx.lang, word, entry, mastered: mastered.has(word), filter: filterInput.value,
+    const row = buildWordRow({
+      lang: ctx.lang, word, entry,
+      filter: deps.columns.filters.get('word') ?? '', transFilter: deps.columns.filters.get('definition') ?? '',
       expanded: word === ctx.expandedWord,
       addedDate: word === ctx.expandedWord ? getAddedDate(ctx.lang, ctx.selectedList, word) : null,
       redraw: render,
       onToggleExpand: () => { ctx.expandedWord = ctx.expandedWord === word ? null : word; render(); },
-      leading: [check], beforePos: viaBadge ? [viaBadge] : [], extraActions: via ? [] : [moveBtn, removeBtn],
+      leading: [check], extraActions: via ? [] : [moveBtn, removeBtn],
     });
+    // "Comes from" sits inside the meaning cell rather than as a cell of its own: a row is a fixed grid of named
+    // columns, and an extra child with no column pushes every cell after it out from under its header.
+    if (viaBadge) row.querySelector('.ml-word-trans')?.appendChild(viaBadge);
+    return row;
   }
 
   return { listEl, pagerEl: pager.el, bulkBar, render, sortWords };

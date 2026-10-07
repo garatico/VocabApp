@@ -31,7 +31,7 @@ import {
   type MultiListEntry,
 } from '../../utils/word-lists.ts';
 import { FILTER_SCOPES, SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
-import { buildChipDropdown, buildChecklistDropdown, closeAllChipDropdowns } from './chip-dropdown.ts';
+import { buildChecklistDropdown, closeAllChipDropdowns } from './chip-dropdown.ts';
 import { getFolderRegistry, addFolder } from './folders.ts';
 import { foldKey as norm } from '../../utils/match.ts';
 import type { ListsCtx } from './context.ts';
@@ -44,21 +44,15 @@ import { buildLangBadge } from '../../ui/lang-badge.ts';
 import { createPager } from './pager.ts';
 import { LANGUAGES } from '../../data/languages.ts';
 import {
-  POS_ABBREV, POS_CHIPS, BANDS, type SortMode, type VocabEntry,
+  POS_ABBREV, type VocabEntry,
 } from './types.ts';
 import { appendCountChip, appendMasteredChip, buildWordRow } from './row-shared.ts';
+import {
+  createColumnHeader, createCellReader, applyColumnFilters, applyColumnSort, ACTIONS_WIDTH, type ColumnItem,
+} from './column-header.ts';
 import { buildQuizButton } from './list-actions.ts';
 import { qualifyMultiListName } from '../../utils/word-lists.ts';
 import '../../styles-lazy/my-lists.css';
-
-const SORT_OPTIONS: readonly [SortMode, string][] = [
-  ['alpha-asc',   'A → Z'],
-  ['alpha-desc',  'Z → A'],
-  ['rank-asc',    'Easiest first'],
-  ['rank-desc',   'Hardest first'],
-  ['added-desc',  'Recently added'],
-  ['added-asc',   'Oldest first'],
-];
 
 /** Closes the Part of Speech/Level/Folders/Hide-from dropdowns on an outside
  *  click — same "remove before the next render installs its replacement"
@@ -77,13 +71,13 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
 
   // ── Filter/sort/select state — local to this render, like panel.ts's own
   //    closures, since a cross-language list has no ctx fields of its own. ──
-  let filterQuery   = '';
-  let sortMode: SortMode = 'added-desc';
-  let hideMastered  = false;
   let expandedKey: string | null = null;
   const selectedKeys = new Set<string>();
-  const selectedPos   = new Set<string>();
-  const selectedBands = new Set<string>();
+
+  // Column sort / filters over the list (column-header.ts, shared by every list type).
+  const columns = createColumnHeader({ hasCheckbox: true, onChange: () => renderRows() });
+  const columnInfo = (e: MultiListEntry): ColumnItem =>
+    ({ lang: e.language, word: e.word, entry: cachedVocabMap(e.language)?.get(e.word) });
 
   // ── Header ───────────────────────────────────────────────────────────────
   const header = document.createElement('div');
@@ -110,52 +104,12 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
 
   // ── Filter / sort toolbar ──────────────────────────────────────────────────
 
-  const controlsGroup = document.createElement('div');
-  controlsGroup.className = 'ml-panel-controls';
-
-  const filterLabel = document.createElement('span');
-  filterLabel.className = 'ui-label ml-toolbar-label'; filterLabel.textContent = 'Filter';
-  const filterInp = document.createElement('input');
-  filterInp.type = 'text'; filterInp.placeholder = 'Filter by word, translation or gloss…';
-  filterInp.className = 'ml-search';
-  filterInp.title = 'Accent-insensitive — searches word, translation and glosses';
-  filterInp.addEventListener('input', () => { filterQuery = filterInp.value; renderRows(); });
-
-  const sortLabel = document.createElement('span');
-  sortLabel.className = 'ui-label ml-toolbar-label'; sortLabel.textContent = 'Sort';
-  const sortSel = document.createElement('select');
-  sortSel.className = 'ml-sort-select'; sortSel.title = 'Sort order';
-  SORT_OPTIONS.forEach(([value, label]) => {
-    const opt = document.createElement('option');
-    opt.value = value; opt.textContent = label; opt.selected = value === sortMode;
-    sortSel.appendChild(opt);
-  });
-  sortSel.addEventListener('change', () => { sortMode = sortSel.value as SortMode; renderRows(); });
-
-  const hideMasteredBtn = document.createElement('button');
-  hideMasteredBtn.type = 'button';
-  hideMasteredBtn.className = 'ml-hide-mastered-btn';
-  hideMasteredBtn.textContent = 'Hide mastered';
-  hideMasteredBtn.title = 'Hide words you have marked as mastered';
-  hideMasteredBtn.addEventListener('click', () => {
-    hideMastered = !hideMastered;
-    hideMasteredBtn.classList.toggle('ml-hide-mastered-btn--active', hideMastered);
-    renderRows();
-  });
-  controlsGroup.append(filterLabel, filterInp, sortLabel, sortSel, hideMasteredBtn);
 
   // ── Part of Speech / Level / Folders / Hide from — dropdowns, one row ───────
   // Same chip-dropdown treatment as panel.ts — see that file's own comment.
 
   const filterDropdownsRow = document.createElement('div');
   filterDropdownsRow.className = 'ml-filter-dropdowns-row';
-
-  const posDropdown = buildChipDropdown(
-    'Part of Speech', 'pos', POS_CHIPS.filter(c => c.value), selectedPos, renderRows,
-  );
-  const bandDropdown = buildChipDropdown(
-    'Level', 'band', BANDS.map(b => ({ value: b, label: b })), selectedBands, renderRows,
-  );
 
   const multiFolderScope = 'multi';
   function buildFolderFooter(scope: string, onAdd: (name: string) => void): HTMLElement {
@@ -221,7 +175,7 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
   );
   sourceDropdown.wrap.title = 'Build this list from single-language lists instead of copying their words';
 
-  filterDropdownsRow.append(langBadge, posDropdown.wrap, bandDropdown.wrap, folderDropdown.wrap, sourceDropdown.wrap, hideFromDropdown.wrap);
+  filterDropdownsRow.append(langBadge, folderDropdown.wrap, sourceDropdown.wrap, hideFromDropdown.wrap);
 
   header.appendChild(filterDropdownsRow);
   ctx.panel.appendChild(header);
@@ -361,7 +315,7 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
 
   const listToolbar = document.createElement('div');
   listToolbar.className = 'ml-list-toolbar';
-  listToolbar.append(controlsGroup, bulkBar);
+  listToolbar.append(bulkBar);
   ctx.panel.appendChild(listToolbar);
 
   // ── Word list ────────────────────────────────────────────────────────────
@@ -370,10 +324,12 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
   let lastListingSig = '';
   const pager = createPager(() => renderRows());
   ctx.panel.appendChild(pager.el);
+  ctx.panel.appendChild(columns.el);
 
   const listEl = document.createElement('ul');
   listEl.className = 'ml-word-list';
   ctx.panel.appendChild(listEl);
+  columns.attach(listEl, ACTIONS_WIDTH);
 
   let visible: MultiListEntry[] = [];
 
@@ -425,29 +381,20 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
   // ── Sort / filter / render ──────────────────────────────────────────────────
 
   function sortEntries(list: MultiListEntry[]): MultiListEntry[] {
-    const F = 9999;
-    const rankOf = (e: MultiListEntry) => cachedVocabMap(e.language)?.get(e.word)?.rank ?? F;
-    switch (sortMode) {
-      case 'alpha-asc':  return [...list].sort((a, b) => norm(a.word).localeCompare(norm(b.word)));
-      case 'alpha-desc': return [...list].sort((a, b) => norm(b.word).localeCompare(norm(a.word)));
-      case 'rank-asc':   return [...list].sort((a, b) => rankOf(a) - rankOf(b));
-      case 'rank-desc':  return [...list].sort((a, b) => rankOf(b) - rankOf(a));
-      case 'added-asc':  return [...list];
-      case 'added-desc': return [...list].reverse();
-    }
+    // A column picked in the header; otherwise the list's own order, most recently added first.
+    return applyColumnSort(list, columns, columnInfo, createCellReader()) ?? [...list].reverse();
   }
 
   function updateChipCounts(list: MultiListEntry[]): void {
-    const counts: Record<string, number> = {};
+    const pos: Record<string, number> = {};
+    const band: Record<string, number> = {};
     for (const e of list) {
-      const pos = cachedVocabMap(e.language)?.get(e.word)?.pos;
-      if (pos) counts[pos] = (counts[pos] ?? 0) + 1;
+      const ve = cachedVocabMap(e.language)?.get(e.word);
+      if (ve?.pos) pos[ve.pos] = (pos[ve.pos] ?? 0) + 1;
+      if (ve?.band) band[ve.band] = (band[ve.band] ?? 0) + 1;
     }
-    posDropdown.wrap.querySelectorAll<HTMLButtonElement>('.pos-chip[data-pos]').forEach(btn => {
-      const pos = btn.dataset.pos ?? '';
-      const chipDef = POS_CHIPS.find(c => c.value === pos);
-      btn.textContent = `${chipDef?.label ?? pos} (${counts[pos] ?? 0})`;
-    });
+    columns.setCounts('pos', pos);
+    columns.setCounts('band', band);
   }
 
   function renderStats(list: MultiListEntry[]): void {
@@ -459,22 +406,12 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
 
   function renderRows(): void {
     listEl.innerHTML = '';
-    const q = norm(filterQuery);
-    const filtered = entries.filter(e => {
-      if (hideMastered && getMastered(e.language).has(e.word)) return false;
-      const ve = cachedVocabMap(e.language)?.get(e.word);
-      if (selectedPos.size > 0 && !selectedPos.has(ve?.pos ?? '')) return false;
-      if (selectedBands.size > 0 && !selectedBands.has(ve?.band ?? '')) return false;
-      if (!q) return true;
-      if (norm(e.word).includes(q)) return true;
-      if (!ve) return false;
-      return norm(ve.translation).includes(q) || ve.glosses.some(g => norm(g).includes(q));
-    });
+    const filtered = applyColumnFilters(entries, columns, columnInfo, createCellReader());
 
     renderStats(filtered);
     updateChipCounts(filtered);
     visible = sortEntries(filtered);
-    const sig = [filterQuery, [...selectedPos].join(), [...selectedBands].join(), sortMode, hideMastered].join('|');
+    const sig = columns.signature();
     if (sig !== lastListingSig) { pager.reset(); lastListingSig = sig; }
     syncBulkBar();
 
@@ -484,11 +421,13 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
       empty.className = 'ml-word-empty';
       empty.textContent = entries.length === 0
         ? 'No words yet — search above, or use the ★ button on any word.'
-        : (filterQuery ? 'No matches.' : 'No words match the current filters.');
+        : (columns.hasFilters() ? 'No matches.' : 'No words match the current filters.');
       listEl.appendChild(empty);
+      columns.sync();
       return;
     }
     pager.slice(visible).forEach(e => listEl.appendChild(buildRow(e)));
+    columns.sync();
   }
 
   function buildRow(entry: MultiListEntry): HTMLLIElement {
@@ -547,7 +486,7 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
 
     const row = buildWordRow({
       lang: entry.language, word: entry.word, entry: ve,
-      mastered: getMastered(entry.language).has(entry.word), filter: filterQuery,
+      filter: columns.filters.get('word') ?? '', transFilter: columns.filters.get('definition') ?? '',
       expanded: key === expandedKey,
       addedDate: getMultiAddedDate(listName, entry.language, entry.word),
       redraw: renderRows,
