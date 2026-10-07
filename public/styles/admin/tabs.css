@@ -46,9 +46,13 @@
   position: relative;
 }
 
-.tab-btn:hover {
+/* `:not(:disabled)` matches buttons.css's global `button:hover:not(:disabled)` (accent fill), which otherwise
+   outranks a plain `.tab-btn:hover` and painted a hovered tab dark green — the active tab's green label on
+   it fell to 1.4:1, an inactive tab's dark label nearly as low. */
+.tab-btn:hover:not(:disabled) {
   background: var(--border);
   color: var(--text);
+  box-shadow: none;
 }
 
 .tab-btn.active {
@@ -59,6 +63,12 @@
   font-weight: 700;
   font-size: 0.82rem;
   z-index: 1;
+  box-shadow: 0 -2px 6px rgba(0,0,0,0.08);
+}
+
+.tab-btn.active:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--accent);
   box-shadow: 0 -2px 6px rgba(0,0,0,0.08);
 }
 

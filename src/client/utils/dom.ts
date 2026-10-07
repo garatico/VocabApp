@@ -162,3 +162,19 @@ export function enableInputWheelScroll(input: HTMLInputElement, listenOn: HTMLEl
     e.preventDefault();
   }, { passive: false });
 }
+
+/**
+ * Make a clickable non-button (a list row built as a <div>) work from the keyboard: focusable, announced
+ * as a button, and Enter or Space runs `onActivate` like a click. The Word Editor's word list and the
+ * admin verb list were click-only, so a keyboard user could not open a word at all.
+ */
+export function makeActivatable(el: HTMLElement, onActivate: () => void): void {
+  el.tabIndex = 0;
+  el.setAttribute('role', 'button');
+  el.addEventListener('click', onActivate);
+  el.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();   // Space would otherwise scroll the list
+    onActivate();
+  });
+}

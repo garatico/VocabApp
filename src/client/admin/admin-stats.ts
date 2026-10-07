@@ -156,7 +156,9 @@ function buildTabs(langs: string[], activeLang: string): HTMLElement {
     btn.type = 'button';
     btn.className = 'stat-lang-tab' + (lang === activeLang ? ' active' : '');
     btn.dataset.lang = lang;
-    btn.appendChild(langFlagImg(lang));
+    const flag = langFlagImg(lang);
+    flag.alt = '';   // decorative: the language's name is right beside it
+    btn.appendChild(flag);
     btn.append(' ' + (lang.charAt(0).toUpperCase() + lang.slice(1)));
     bar.appendChild(btn);
   });

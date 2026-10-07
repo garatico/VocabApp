@@ -249,3 +249,31 @@ for (const theme of ['light', 'dark'] as const) {
     expect(await violationsOf(page)).toEqual([]);
   });
 }
+
+// The Admin panel had never been audited: 82 issues, mostly one missing <main>, plus tabs whose hover style
+// lost to the global button hover (1.4:1), an unnamed select and a verb list no keyboard could reach.
+for (const theme of ['light', 'dark'] as const) {
+  test(`every Admin tab has no axe violations (${theme})`, async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.addInitScript(t => window.localStorage.setItem('theme', t), theme);
+    await page.emulateMedia({ colorScheme: theme });
+    await page.goto('/admin');
+    await expect(page.locator('#wordList .word-item').first()).toBeVisible();
+    for (const tab of ['editor', 'conjugation', 'dbadmin', 'statistics', 'documentation', 'settings']) {
+      await page.locator(`.tab-btn[data-tab="${tab}"]`).click();   // the pointer stays on it: the hover state is audited too
+      await page.waitForTimeout(800);
+      if (tab === 'editor') await page.locator('#wordList .word-item').first().click();
+      expect(await violationsOf(page), tab).toEqual([]);
+    }
+  });
+}
+
+test('a word can be opened in the Word Editor from the keyboard', async ({ page }) => {
+  await page.goto('/admin');
+  const first = page.locator('#wordList .word-item').first();
+  await expect(first).toBeVisible();
+  await first.focus();
+  await page.keyboard.press('Enter');
+  await expect(first).toHaveClass(/active/);
+  await expect(page.locator('#editWord')).not.toHaveValue('');
+});

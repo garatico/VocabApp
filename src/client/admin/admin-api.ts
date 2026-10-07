@@ -53,6 +53,8 @@ export function showStatus(message: string, type: 'info' | 'success' | 'error' |
     container = document.createElement('div');
     container.id = 'adminToastContainer';
     container.className = 'admin-toast-container';
+    container.setAttribute('role', 'status');   // messages are announced, and the container is a landmark-free live region
+    container.setAttribute('aria-live', 'polite');
     document.body.appendChild(container);
   }
 

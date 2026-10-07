@@ -26,6 +26,7 @@ import { debounce } from '../utils/debounce.ts';
 import { getAdminDataClient } from './admin-data-client.js';
 import { langFlagImg } from './admin-languages.js';
 import type { WordUpdateBody } from '../../shared/vocab/write.js';
+import { makeActivatable } from '../utils/dom.ts';
 
 // ── Pronoun & tense data ──────────────────────────────────────────────────────
 
@@ -268,7 +269,7 @@ async function loadVerbs(): Promise<void> {
     }).join('');
 
     conjVerbList.querySelectorAll<HTMLElement>('.word-item').forEach(item => {
-      item.addEventListener('click', () => {
+      makeActivatable(item, () => {
         const verb = verbsByWord.get(item.dataset.word ?? '');
         if (verb) selectVerb(verb);
       });

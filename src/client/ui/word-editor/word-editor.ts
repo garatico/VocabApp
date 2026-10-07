@@ -15,6 +15,7 @@ import { debounce } from '../../utils/debounce.ts';
 import type { ChipOption, WordData, WordEditorMeta, WordEditorOptions } from './types.ts';
 import { confirmDialog } from '../dialog.ts';
 import '../../styles-lazy/my-content-bundle.css';
+import { makeActivatable } from '../../utils/dom.ts';
 
 export interface WordEditorHandle {
   /** Appends the filter bar and the list+form layout to `container`. */
@@ -253,7 +254,7 @@ export function createWordEditor(
         <span class="word-item-key">${escapeHtml(word.word)}</span>${translation}
         <span class="word-item-badges">${badges}</span>
       `;
-      item.addEventListener('click', () => {
+      makeActivatable(item, () => {
         wordList.querySelectorAll('.word-item').forEach(w => w.classList.remove('active'));
         item.classList.add('active');
         currentWord = word;

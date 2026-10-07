@@ -11,8 +11,8 @@
 <body>
   <div class="container">
 
-    <div class="tabs">
-      <span class="tabs-brand">VocabApp Admin</span>
+    <div class="tabs" role="navigation" aria-label="Admin sections">
+      <h1 class="tabs-brand">VocabApp Admin</h1>
       <button class="tab-btn active" data-tab="editor">Words</button>
       <button class="tab-btn" data-tab="conjugation">Conjugation</button>
       <button class="tab-btn" data-tab="dbadmin">DB Admin</button>
@@ -22,7 +22,7 @@
       <a href="/" class="tab-btn tab-exit-link" title="Leave the admin panel and return to the main app">↩ Back to App</a>
     </div>
 
-    <div class="tabs-wrap">
+    <div class="tabs-wrap" role="main">
     <!-- ═══════════════════ WORDS TAB (Word Editor / Table View) ═══════════════════ -->
     <div id="editor" class="tab-content active">
 
@@ -191,7 +191,7 @@
       <div class="filter-bar">
         <div class="filter-field">
           <span class="filter-label">Language</span>
-          <select id="conjLangSelect">
+          <select id="conjLangSelect" aria-label="Language">
             <option value="spanish">Spanish</option>
             <option value="portuguese">Portuguese</option>
             <option value="italian">Italian</option>
