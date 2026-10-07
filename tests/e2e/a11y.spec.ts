@@ -219,3 +219,19 @@ test('quiz words and answer boxes carry the language they are in', async ({ page
   await page.locator('.ml-add-input').fill('');
   await expect(page.locator('.ml-word-item .ml-word-text').first()).toHaveAttribute('lang', 'es');
 });
+
+test('the other quiz modes mark their target-language text too', async ({ page }) => {
+  await open(page, 'light');
+  const start = async (tab: string): Promise<void> => {
+    await page.locator(`.mode-tab[data-mode="${tab}"]`).click();
+    await page.locator('#startBtn').evaluate((b: HTMLElement) => b.click());
+  };
+  await start('picture');
+  await expect(page.locator('.picture-card-input').first()).toHaveAttribute('lang', 'es');
+  await start('conjugation');
+  await expect(page.locator('.conj-card').first()).toHaveAttribute('lang', 'es');
+  await start('guessBlank');
+  await expect(page.locator('.gb-clues')).toHaveAttribute('lang', 'es');
+  await start('sentenceScramble');
+  await expect(page.locator('.ss-bank-row')).toHaveAttribute('lang', 'es');
+});

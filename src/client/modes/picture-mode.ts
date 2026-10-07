@@ -28,6 +28,7 @@ import type { Word }        from '../types.ts';
 import '../styles-lazy/picture.css';
 import '../styles-lazy/conjugation.css';
 import { advanceLater } from '../utils/advance-later.ts';
+import { isoCode } from '../data/languages.ts';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -661,6 +662,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
     const inp = document.createElement('input');
     inp.type        = 'text';
     inp.className   = 'picture-card-input';
+    inp.lang        = isoCode(lang.split('+')[0]);   // typed in the language being studied
     inp.placeholder = '…';
     inp.dataset.word = word.word;
     applyAutofillAttr(inp);
@@ -846,6 +848,7 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
   const inp = document.createElement('input');
   inp.type        = 'text';
   inp.className   = 'picture-card-input fc-input';
+  inp.lang        = isoCode(lang.split('+')[0]);
   inp.placeholder = '…';
   applyAutofillAttr(inp);
   enableInputWheelScroll(inp);

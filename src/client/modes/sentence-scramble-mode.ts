@@ -25,6 +25,7 @@ import { createStopwatch } from '../ui/stopwatch.ts';
 import type { Word } from '../types.ts';
 import '../styles-lazy/sentence-scramble.css';
 import { advanceLater } from '../utils/advance-later.ts';
+import { isoCode } from '../data/languages.ts';
 
 interface RenderSentenceScrambleModeOptions {
   words:     Word[];
@@ -162,9 +163,11 @@ export function renderSentenceScrambleMode({
 
   const answerRow = document.createElement('div');
   answerRow.className = 'ss-answer-row';
+  answerRow.lang = isoCode(lang.split('+')[0]);   // the sentence's words, voiced in their own language
 
   const bankRow = document.createElement('div');
   bankRow.className = 'ss-bank-row';
+  bankRow.lang = isoCode(lang.split('+')[0]);
 
   const actionRow = document.createElement('div');
   actionRow.className = 'ss-action-row';

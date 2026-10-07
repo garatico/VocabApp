@@ -25,7 +25,7 @@ import { saveSession, recordOutcome } from '../utils/session-history.ts';
 import { showSummary, clearSummary, summaryChip, percent } from '../ui/quiz-summary.ts';
 import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
-import { languageInfo } from '../data/languages.ts';
+import { languageInfo, isoCode } from '../data/languages.ts';
 import { hintReveal, hintableLength } from '../utils/hint-reveal.ts';
 import { showLoading, hideLoading } from '../ui/ui.ts';
 import '../styles-lazy/guess-blank.css';
@@ -209,6 +209,7 @@ export async function renderGuessBlankMode({
 
   const cluesList = document.createElement('ul');
   cluesList.className = 'gb-clues';
+  cluesList.lang = isoCode(lang.split('+')[0]);   // the clues are in the language being studied
 
   const moreClueBtn = document.createElement('button');
   moreClueBtn.type = 'button';

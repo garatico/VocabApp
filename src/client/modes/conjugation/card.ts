@@ -11,6 +11,7 @@ import { createFlagImg } from '../../ui/flag-icon.js';
 import { Settings, applyAutofillAttr } from '../../settings.js';
 import { CardController, EMPTY_SLOTS, SINGLE_FORM_ROW_LABEL, hiddenPronounSlots, isSingleForm, missingDataSlots } from './helpers.ts';
 import '../../styles-lazy/conjugation.css';
+import { isoCode } from '../../data/languages.ts';
 
 /**
  * conjugation/card.ts — builds one verb's card in the Grid/Full views: its header,
@@ -52,6 +53,7 @@ export function buildCard({
   const getTenseKey = (): string => tenseKey;
   const card = document.createElement('div');
   card.className = 'conj-card';
+  card.lang = isoCode(lang.split('+')[0]);   // the verb, its pronouns and forms: voiced, spell-checked and typed in its own language
 
   // Header is a two-column row: the verb and its meaning on the left, the
   // tense and the reveal control on the right. The right half used to be

@@ -39,6 +39,7 @@ import { showSummary, clearSummary, summaryChip, percent } from '../../ui/quiz-s
 import { buildScorePills, scorePct } from '../../ui/score-pills.js';
 import { Settings, applyAutofillAttr } from '../../settings.js';
 import '../../styles-lazy/conjugation.css';
+import { isoCode } from '../../data/languages.ts';
 
 export interface ConjRandomTableOptions {
   words:      Word[];
@@ -264,6 +265,7 @@ export function renderConjRandomTable({
     const inp = document.createElement('input');
     inp.type = 'text';
     inp.className = 'crt-input';
+    inp.lang = isoCode(lang.split('+')[0]);
     applyAutofillAttr(inp);
     inp.setAttribute('autocorrect', 'off');
     inp.setAttribute('autocapitalize', 'off');

@@ -38,6 +38,7 @@ import { Settings, applyAutofillAttr } from '../../settings.js';
 import '../../styles-lazy/trivia.css';
 import '../../styles-lazy/conjugation.css';
 import { advanceLater } from '../../utils/advance-later.ts';
+import { isoCode } from '../../data/languages.ts';
 
 export interface ConjOneAtATimeOptions {
   words:      Word[];
@@ -220,6 +221,7 @@ export function renderConjOneAtATime({
   const inp = document.createElement('input');
   inp.type = 'text';
   inp.className = 'conj-drill-input coat-input';
+  inp.lang = isoCode(lang.split('+')[0]);
   applyAutofillAttr(inp);
   inp.setAttribute('autocorrect', 'off');
   inp.setAttribute('autocapitalize', 'off');
