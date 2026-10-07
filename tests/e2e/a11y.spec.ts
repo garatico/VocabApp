@@ -235,3 +235,17 @@ test('the other quiz modes mark their target-language text too', async ({ page }
   await start('sentenceScramble');
   await expect(page.locator('.ss-bank-row')).toHaveAttribute('lang', 'es');
 });
+
+// The error banner only shows when something fails to load — which is exactly what CI sees (no vocabulary
+// there), and where its contrast failure surfaced. Show it on purpose.
+for (const theme of ['light', 'dark'] as const) {
+  test(`the error banner has no axe violations (${theme})`, async ({ page }) => {
+    await open(page, theme);
+    await page.evaluate(async (path: string) => {
+      const ui = await import(/* @vite-ignore */ path) as { showErrorMessage(m: string): void };
+      ui.showErrorMessage('Failed to load vocabulary. Please try again.');
+    }, '/src/client/ui/ui.ts');   // the dev server serves source modules by path
+    await expect(page.locator('#errorMessage')).toBeVisible();
+    expect(await violationsOf(page)).toEqual([]);
+  });
+}

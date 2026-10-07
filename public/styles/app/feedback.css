@@ -5,7 +5,9 @@
 #errorMessage {
   background-color: var(--incorrect-light);
   border: 1px solid var(--incorrect);
-  color: var(--incorrect);
+  /* Pulled toward the text colour: plain --incorrect on --incorrect-light failed 4.5:1 in light mode (axe,
+     seen only in CI, where the vocabulary can't load and this banner is what the page shows). */
+  color: color-mix(in srgb, var(--incorrect) 65%, var(--text));
   padding: 12px 16px;
   border-radius: var(--radius-sm);
   display: flex;
