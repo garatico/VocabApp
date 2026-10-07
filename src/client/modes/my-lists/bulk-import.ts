@@ -49,12 +49,22 @@ export function findVariations(token: string, vocab: VocabEntry[]): VocabEntry[]
   const t = norm(token);
   if (t.length < 3) return [];
   const stem = t.slice(0, Math.max(3, t.length - 3));
+  // A vocabulary word shorter than 3 letters is never a stem: "a", "de" and "ha"
+  // prefix half the language, and since vocab is in frequency order they used
+  // to fill the six slots ahead of the real candidates ("amigos" → a, …).
   return vocab
-    .filter(e => {
-      const w = norm(e.word);
-      return w !== t && (w.startsWith(stem) || t.startsWith(w.slice(0, Math.max(3, w.length - 2))));
-    })
-    .slice(0, 6);
+    .map(e => ({ e, w: norm(e.word) }))
+    .filter(({ w }) => w !== t && (w.startsWith(stem) || (w.length >= 3 && t.startsWith(w.slice(0, Math.max(3, w.length - 2))))))
+    // Closest first — the longest shared beginning — then frequency (sort is stable).
+    .sort((a, b) => sharedPrefix(b.w, t) - sharedPrefix(a.w, t))
+    .slice(0, 6)
+    .map(({ e }) => e);
+}
+
+function sharedPrefix(a: string, b: string): number {
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  return i;
 }
 
 /**

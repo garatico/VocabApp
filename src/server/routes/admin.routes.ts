@@ -3,7 +3,7 @@
  *
  * Thin router that gates all admin routes behind three checks:
  *   1. The app's environment must be 'development'
- *   2. Request must originate from localhost
+ *   2. Request must originate from localhost, and not from another site's page
  *   3. Bearer token must match ADMIN_SECRET (if set in env)
  *
  * Check 1 reads the environment `createApp` was given. It used to read
@@ -24,6 +24,7 @@ import wordRoutes   from './admin/words.js';
 import dbRoutes     from './admin/db.js';
 import exportRoutes from './admin/export.js';
 import { adminAuth } from '../middleware/admin-auth.js';
+import { originAllowed } from '../middleware/cors.js';
 
 function localhostOnly(req: Request, res: Response, next: NextFunction): void {
   const ip = req.ip ?? req.socket.remoteAddress ?? '';
@@ -47,8 +48,24 @@ export function makeAdminRoutes(nodeEnv: string): express.Router {
     next();
   }
 
+  // "From localhost" includes the browser of whoever is running the app, while
+  // it is on any other site. CORS only stops that site reading the answer, not
+  // sending the request, and with no ADMIN_SECRET (the default) a bodyless
+  // POST /db/reload or /cache/clear needs nothing more. A browser always says
+  // where a cross-site request came from, so one from anywhere else stops
+  // here — DNS rebinding included. No Origin header (curl, same-origin GET) passes.
+  function sameSiteOnly(req: Request, res: Response, next: NextFunction): void {
+    const origin = req.headers.origin;
+    if (origin && !originAllowed(origin, nodeEnv)) {
+      res.status(403).json({ error: 'Admin requests must come from the app itself' });
+      return;
+    }
+    next();
+  }
+
   router.use(developmentOnly);
   router.use(localhostOnly);
+  router.use(sameSiteOnly);
   router.use(adminAuth);
   router.use(wordRoutes);
   router.use(dbRoutes);

@@ -31,7 +31,7 @@ const ALLOWED_ORIGINS = new Set([
 /** Hostnames allowed in development (any port). */
 const DEV_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]']);
 
-function originAllowed(rawOrigin: string, nodeEnv: string): boolean {
+export function originAllowed(rawOrigin: string, nodeEnv: string): boolean {
   let url: URL;
   try {
     url = new URL(rawOrigin);

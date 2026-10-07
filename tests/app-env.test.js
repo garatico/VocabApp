@@ -76,6 +76,29 @@ describe('admin gate reads the app environment, not the ambient one', () => {
   });
 });
 
+describe('admin gate refuses requests sent from another site', () => {
+  it('a POST from another origin is refused before it reaches the route', async () => {
+    const res = await request(devApp()).post('/api/admin/cache/clear').set('Origin', 'https://evil.example');
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/come from the app itself/);
+  });
+
+  it('a lookalike hostname is still another site', async () => {
+    const res = await request(devApp()).get('/api/admin/stats').set('Origin', 'http://localhost.evil.com');
+    expect(res.status).toBe(403);
+  });
+
+  it('the app itself (the Vite dev server on any localhost port) gets through', async () => {
+    const res = await request(devApp()).post('/api/admin/cache/clear').set('Origin', 'http://localhost:5173');
+    expect(res.status).toBe(200);
+  });
+
+  it('a request with no Origin (curl, a same-origin GET) gets through', async () => {
+    const res = await request(devApp()).get('/api/admin/stats');
+    expect(res.status).toBe(200);
+  });
+});
+
 describe('CORS reads the app environment', () => {
   it('a development app echoes a localhost origin on any port', async () => {
     const res = await request(devApp())

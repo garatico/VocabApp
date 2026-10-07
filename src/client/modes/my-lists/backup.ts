@@ -14,7 +14,7 @@ import {
   getListNames, getListOwn, createList, addToList,
   getMultiListNames, getMultiListOwn, createMultiList, addToMultiList, type MultiListEntry,
 } from '../../utils/word-lists.ts';
-import { getMastered, saveMastered, getMasteryLevels, setMasteryLevel } from './mastery.ts';
+import { getMastered, saveMastered, getMasteryLevels, setMasteryLevel, MAX_MASTERY_LEVEL } from './mastery.ts';
 import { LANGUAGE_NAMES } from '../../data/languages.ts';
 
 const BACKUP_VERSION = 4;
@@ -84,15 +84,26 @@ export function downloadBackup(): void {
   document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
+// A backup is a file the learner picked: any of its parts can be the wrong shape.
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const strings = (arr: unknown[]): string[] => arr.filter((w): w is string => typeof w === 'string' && w !== '');
+
 /** Merge a backup back in. Returns a short human summary. */
 export function applyBackup(raw: string): string {
-  const data = JSON.parse(raw) as ListsBackup;
-  if (!data || typeof data !== 'object' || !data.lists) {
-    throw new Error('That file does not look like a VocabApp list backup.');
+  const notABackup = 'That file does not look like a VocabApp list backup.';
+  let data: ListsBackup;
+  try {
+    data = JSON.parse(raw) as ListsBackup;
+  } catch {
+    // The raw SyntaxError ("Unexpected token < in JSON at position 0") is what
+    // the learner used to see after picking the wrong file.
+    throw new Error(notABackup);
   }
+  if (!isObject(data) || !isObject(data.lists)) throw new Error(notABackup);
   let restored = 0; let renamed = 0; let words = 0;
 
   for (const [l, lists] of Object.entries(data.lists)) {
+    if (!isObject(lists)) continue;
     for (const [name, wordArr] of Object.entries(lists)) {
       if (!Array.isArray(wordArr)) continue;
       let target = name;
@@ -103,21 +114,25 @@ export function applyBackup(raw: string): string {
         renamed++;
       }
       createList(l, target);
-      wordArr.forEach(w => { addToList(l, target, w); words++; });
+      strings(wordArr).forEach(w => { addToList(l, target, w); words++; });
       restored++;
     }
   }
   // Mastery. v2 stores one array per language; v1 nested it per list, so flatten.
-  for (const [l, blob] of Object.entries(data.mastery ?? {})) {
+  for (const [l, blob] of Object.entries(isObject(data.mastery) ? data.mastery : {})) {
+    const restoredWords = Array.isArray(blob) ? strings(blob)
+      : isObject(blob) ? Object.values(blob).flatMap(arr => (Array.isArray(arr) ? strings(arr) : []))
+      : [];
     const merged = getMastered(l);
-    if (Array.isArray(blob)) {
-      blob.forEach(w => merged.add(w));
-    } else if (blob && typeof blob === 'object') {
-      Object.values(blob).forEach(arr => {
-        if (Array.isArray(arr)) arr.forEach(w => merged.add(w));
-      });
-    }
+    restoredWords.forEach(w => merged.add(w));
     saveMastered(l, merged);
+    // A word restored as mastered but holding an explicit lower level here
+    // would read as mastered *and* as Learning — the level wins in
+    // getMasteryLevel. Higher wins, as with the levels below, so raise it.
+    const levels = getMasteryLevels(l);
+    for (const w of restoredWords) {
+      if (w in levels && levels[w] < MAX_MASTERY_LEVEL) setMasteryLevel(l, w, MAX_MASTERY_LEVEL);
+    }
   }
 
   // Mastery levels (the New/Learning/Familiar/Confident/Mastered scale) —
@@ -126,8 +141,8 @@ export function applyBackup(raw: string): string {
   // progress that has since been lost, not roll back progress made since the
   // backup was taken. setMasteryLevel keeps the boolean Set above in sync
   // too, so a word restored to the max level here also ends up in `mastery`.
-  for (const [l, levels] of Object.entries(data.masteryLevels ?? {})) {
-    if (!levels || typeof levels !== 'object') continue;
+  for (const [l, levels] of Object.entries(isObject(data.masteryLevels) ? data.masteryLevels : {})) {
+    if (!isObject(levels)) continue;
     const current = getMasteryLevels(l);
     for (const [w, level] of Object.entries(levels)) {
       if (typeof level !== 'number') continue;
@@ -137,7 +152,7 @@ export function applyBackup(raw: string): string {
   }
 
   // Cross-language lists. Absent entirely in v1/v2 files — nothing to add.
-  for (const [name, entries] of Object.entries(data.multiLists ?? {})) {
+  for (const [name, entries] of Object.entries(isObject(data.multiLists) ? data.multiLists : {})) {
     if (!Array.isArray(entries)) continue;
     let target = name;
     if (getMultiListNames().includes(target)) {
