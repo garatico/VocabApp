@@ -27,6 +27,7 @@ import { enableInputWheelScroll, renderWordWithGender, applyGenderContainer } fr
 import type { Word }        from '../types.ts';
 import '../styles-lazy/picture.css';
 import '../styles-lazy/conjugation.css';
+import { advanceLater } from '../utils/advance-later.ts';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -1143,7 +1144,7 @@ function renderClickMode(
         // Auto-advance, but only off the end of unanswered questions — going
         // back to review should not immediately bounce you forward again.
         const delay = opt.word === word.word ? 650 : 1100;
-        setTimeout(() => advance(), delay);
+        advanceLater(() => idx, advance, delay);
       });
 
       clickGrid.appendChild(card);

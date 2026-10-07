@@ -24,6 +24,7 @@ import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
 import type { Word } from '../types.ts';
 import '../styles-lazy/sentence-scramble.css';
+import { advanceLater } from '../utils/advance-later.ts';
 
 interface RenderSentenceScrambleModeOptions {
   words:     Word[];
@@ -294,7 +295,7 @@ export function renderSentenceScrambleMode({
     answerRow.classList.toggle('ss-answer-row--wrong', !right);
 
     const delay = right ? 650 : 1800;
-    setTimeout(() => advance(), delay);
+    advanceLater(() => idx, advance, delay);
   }
 
   function advance(): void {

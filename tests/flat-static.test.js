@@ -9,7 +9,7 @@
  * a pipeline run that created a new domain needed a restart.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { Buffer } from 'node:buffer';
 import fs from 'fs';
 import os from 'os';
@@ -100,6 +100,19 @@ describe('flatStatic', () => {
     const res = await request(app).get('/images/hammer.jpg');
     expect(res.status).toBe(200);
     expect(bodyText(res)).toBe('HAMMER');
+  });
+
+  it('rescans on a miss even in the same millisecond as the startup scan, when the cooldown is 0', async () => {
+    const now = Date.now();
+    const spy = vi.spyOn(Date, 'now').mockReturnValue(now);
+    try {
+      const app = appFor(root);
+      write('tools/saw.jpg', 'SAW');
+      const res = await request(app).get('/images/saw.jpg');
+      expect(res.status).toBe(200);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('picks up a whole new domain directory, not just a new file', async () => {

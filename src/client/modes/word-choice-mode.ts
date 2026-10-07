@@ -30,6 +30,7 @@ import { buildScorePills, scorePct } from '../ui/score-pills.ts';
 import { createStopwatch } from '../ui/stopwatch.ts';
 import { languageInfo } from '../data/languages.ts';
 import '../styles-lazy/trivia.css';
+import { advanceLater } from '../utils/advance-later.ts';
 
 export type WordChoiceDirection = 'target-en' | 'en-target' | 'mixed';
 
@@ -252,7 +253,7 @@ export function renderWordChoiceMode({
     renderQuestion(i);
 
     const delay = opt.correct ? 650 : 1400;
-    setTimeout(() => advance(), delay);
+    advanceLater(() => idx, advance, delay);
   }
 
   function advance(): void {

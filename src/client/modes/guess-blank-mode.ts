@@ -29,6 +29,7 @@ import { languageInfo } from '../data/languages.ts';
 import { hintReveal, hintableLength } from '../utils/hint-reveal.ts';
 import { showLoading, hideLoading } from '../ui/ui.ts';
 import '../styles-lazy/guess-blank.css';
+import { advanceLater } from '../utils/advance-later.ts';
 
 interface RenderGuessBlankModeOptions {
   container:   HTMLElement;
@@ -383,7 +384,7 @@ export async function renderGuessBlankMode({
     hintBtn.disabled = true;
 
     const delay = right ? 650 : 1800;
-    setTimeout(() => advance(), delay);
+    advanceLater(() => idx, advance, delay);
   }
 
   function advance(): void {

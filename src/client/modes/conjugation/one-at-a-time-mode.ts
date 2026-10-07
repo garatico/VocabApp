@@ -37,6 +37,7 @@ import { buildScorePills, scorePct } from '../../ui/score-pills.js';
 import { Settings, applyAutofillAttr } from '../../settings.js';
 import '../../styles-lazy/trivia.css';
 import '../../styles-lazy/conjugation.css';
+import { advanceLater } from '../../utils/advance-later.ts';
 
 export interface ConjOneAtATimeOptions {
   words:      Word[];
@@ -282,7 +283,7 @@ export function renderConjOneAtATime({
       inp.classList.add('correct');
       results[idx] = 'correct';
       updateProgress();
-      setTimeout(() => advance(), 500);
+      advanceLater(() => idx, advance, 500);
     } else if (Settings.getSuddenDeath() && inp.value && !normalize(answer).startsWith(normalize(inp.value))) {
       // Same end state finish() puts an unanswered item in (see 'missed'
       // above) — this one just got there early, from an unrecoverable typo
@@ -293,7 +294,7 @@ export function renderConjOneAtATime({
       results[idx] = 'missed';
       revealBtn.hidden = true;
       updateProgress();
-      setTimeout(() => advance(), 500);
+      advanceLater(() => idx, advance, 500);
     }
   });
 

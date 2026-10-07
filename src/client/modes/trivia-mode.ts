@@ -46,6 +46,7 @@ import { hintReveal, hintableLength } from '../utils/hint-reveal.ts';
 import { showLoading, hideLoading } from '../ui/ui.ts';
 import '../styles-lazy/trivia.css';
 import '../styles-lazy/guess-blank.css';
+import { advanceLater } from '../utils/advance-later.ts';
 
 export type TriviaSubMode = 'type' | 'choice' | 'table';
 
@@ -613,7 +614,7 @@ export async function renderTriviaMode({
     hintBtn.disabled = true;
 
     const delay = right ? 650 : 1600;
-    setTimeout(() => advance(), delay);
+    advanceLater(() => idx, advance, delay);
   }
 
   function advance(): void {

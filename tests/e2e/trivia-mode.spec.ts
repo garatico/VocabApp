@@ -34,6 +34,21 @@ test('reviewing an answered question via Back shows the resolved state, not a bl
   await expect(feedback).toHaveClass(/bad/);
 });
 
+test('clicking Next straight after answering moves on once, not twice', async ({ page }) => {
+  await startMode(page, 'trivia');
+  const counter = page.locator('.tv-counter');
+  const total = /\/\s*(\d+)/.exec(await counter.textContent() ?? '')?.[1];
+
+  await page.locator('.recall-input').fill('zzz-definitely-not-the-answer');
+  await page.locator('.recall-input').press('Enter');
+  await expect(page.locator('.tv-feedback')).toHaveClass(/bad/);
+  // Before the 1.6s auto-advance fires. It used to fire anyway and skip question 2 unseen.
+  await page.locator('.tv-nav-btn', { hasText: 'Next' }).click();
+  await expect(counter).toHaveText(`2 / ${total}`);
+  await page.waitForTimeout(2000);
+  await expect(counter).toHaveText(`2 / ${total}`);
+});
+
 test('Give Up offers a "Practice missed" run of just the wrong answers', async ({ page }) => {
   await startMode(page, 'trivia');
 

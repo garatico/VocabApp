@@ -120,8 +120,10 @@ export function flatStatic(root: string, options: FlatStaticOptions = {}) {
 
     let file = index.get(name);
 
-    // A miss may just mean the pipeline wrote the file after the last scan.
-    if (!file && Date.now() - lastScanAt > cooldown) {
+    // A miss may just mean the pipeline wrote the file after the last scan. `>=`, not `>`: with a
+    // cooldown of 0 ("always rescan") a request in the same millisecond as the last scan was refused
+    // one, which made the "file written after startup" test fail on a fast CI runner.
+    if (!file && Date.now() - lastScanAt >= cooldown) {
       rescan('miss');
       file = index.get(name);
     }
