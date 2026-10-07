@@ -80,7 +80,7 @@ export async function answerTextNext(page: Page, value: string): Promise<void> {
 
 /**
  * Click Start Quiz, opening the controls first if the last quiz collapsed them. Starting a quiz closes the setup
- * panel (Settings -> Appearance -> "Collapse controls on Start", on by default), so a second Start in the same test
+ * panel when Settings -> Appearance -> "Collapse controls on Start" is on (off by default), so a second Start in the same test
  * has to reopen it, as a person would.
  */
 export async function startQuiz(page: Page): Promise<void> {

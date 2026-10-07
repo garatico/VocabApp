@@ -11,6 +11,7 @@ import {
   holdsTimedMinutes, resetColourGroup, resetGoal, resetTimedMinutes, timedMinutesChanged,
 } from './settings-extras.ts';
 import { confirmDialog } from './ui/dialog.ts';
+import { renderCsvGuide } from './settings-help.ts';
 
 /**
  * settings-search.ts — the Settings screen's Glossary tab and the search box
@@ -72,6 +73,7 @@ export function renderCsvDocs(): void {
 
 export function bindGlossary(): void {
   renderCsvDocs();
+  renderCsvGuide();
   const search = document.getElementById('glossarySearch') as HTMLInputElement | null;
   const list   = document.getElementById('glossaryList');
   const empty  = document.getElementById('glossaryEmpty');

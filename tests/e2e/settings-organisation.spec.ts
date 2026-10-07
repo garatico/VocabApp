@@ -31,7 +31,7 @@ test('the nav is grouped under five headings, in the same order as the sections 
     'settings-sec-appearance',
     'settings-sec-filters', 'settings-sec-chinese', 'settings-sec-glossary',
     'settings-sec-streak', 'settings-sec-history',
-    'settings-sec-general',
+    'settings-sec-general', 'settings-sec-help',
   ]);
 });
 
@@ -153,8 +153,8 @@ test('advanced-only groups sit together in one Advanced fold per section, closed
 
 test('the nav uses one icon set, keeps every label on one line, and shares each section colour', async ({ page }) => {
   await openSettings(page);
-  await expect(page.locator('.settings-nav-link svg.settings-icon')).toHaveCount(12);
-  await expect(page.locator('.settings-section > .settings-collapse-btn svg.settings-icon')).toHaveCount(12);
+  await expect(page.locator('.settings-nav-link svg.settings-icon')).toHaveCount(13);
+  await expect(page.locator('.settings-section > .settings-collapse-btn svg.settings-icon')).toHaveCount(13);
 
   const heights = await page.locator('.settings-nav-link').evaluateAll(links => links.map(l => (l as HTMLElement).getBoundingClientRect().height));
   for (const h of heights) expect(h).toBeLessThan(36);                    // a wrapped label would be ~50px
@@ -164,7 +164,7 @@ test('the nav uses one icon set, keeps every label on one line, and shares each 
     return [getComputedStyle(a).getPropertyValue('--sec').trim(), getComputedStyle(sec).getPropertyValue('--sec').trim()];
   }));
   for (const [link, section] of pairs) expect(link).toBe(section);
-  expect(new Set(pairs.map(p => p[0])).size).toBe(12);                  // every section has its own colour
+  expect(new Set(pairs.map(p => p[0])).size).toBe(13);                  // every section has its own colour
 });
 
 test('a changed row can be reset on its own, and a whole section from its head', async ({ page }) => {
@@ -209,8 +209,8 @@ test('the Glossary explains what the trimmed descriptions no longer do', async (
   for (const term of ['Progress bar label', 'Row density', 'Answer matching and typo tolerance', 'Simple Mode', 'Gloss cutoff']) {
     await expect(page.locator('.glossary-term', { hasText: term })).toHaveCount(1);
   }
-  // No setting description is a paragraph any more.
-  const long = await page.evaluate(() => Array.from(document.querySelectorAll('.settings-section:not(.settings-section--glossary) .settings-desc'))
+  // No setting description is a paragraph any more. The Glossary and Help & Tips are explanation, not settings.
+  const long = await page.evaluate(() => Array.from(document.querySelectorAll('.settings-section:not(.settings-section--glossary):not(.settings-section--help) .settings-desc'))
     .map(e => (e.textContent ?? '').length).filter(n => n > 130).length);
   expect(long).toBe(0);
 });

@@ -72,16 +72,16 @@
    Testing Profiles and the shortcuts button, all three now laid out by that
    flex row itself (see streak-widget.css's .controls-corner) rather than
    each with its own hand-placed `right: Nrem`. */
-#controls { position: relative; padding-right: 11rem; }
+#controls { position: relative; padding-right: calc(var(--corner-w, 11rem) + 0.25rem); }
 /* Trivia and Guess the Blank hide the Profiles pill (ui-state.ts) — nothing
    there to reserve room for beyond the streak counter and the ? button, so
    give that space back to controls-top instead of leaving it wasted down
    the whole card. */
-#controls.controls--no-profiles { padding-right: 6rem; }
+#controls.controls--no-profiles { padding-right: calc(var(--corner-w, 6rem) + 0.25rem); }
 /* Same idea, opposite corner: the collapse-controls trigger (shortcuts.css)
    is one 30px button, not a whole cluster, so it needs far less room than
    the right side's reservation above. */
-#controls { padding-left: 3rem; }
+#controls { padding-left: 2.5rem; }   /* the 30px trigger plus its 0.6rem offset */
 
 .control-group {
   display: flex;
@@ -318,7 +318,7 @@
      specificity than the line above, so it survived on phones: 96px of dead space down the right side.
      The corner has its own row at this width, so nothing needs reserving beside it. */
   #controls.controls--no-profiles { padding-right: 1rem; }
-  #controls-top { padding-right: 7.5rem; }
+  #controls-top { padding-right: var(--corner-w, 7.5rem); }
 
   /* Same reasoning, left side, for the collapse-controls trigger — its own
      2.5rem still covers one 30px button plus its 0.6rem offset; there's
@@ -362,7 +362,7 @@
      look off-centre. 7.5rem clears both — see shortcuts.css. */
   #controls-top { padding-right: 0; }
   #controls-top > .control-group:first-child,
-  #controls-top > .control-stack:first-child { padding-right: 7.5rem; }
+  #controls-top > .control-stack:first-child { padding-right: var(--corner-w, 7.5rem); }
 
   /* Words: select, custom number and the By Rank / Skip Known toggle. Wraps
      onto as many rows as it needs instead of forcing the card wider. */
@@ -438,7 +438,7 @@
      move on the left for the collapse-controls trigger, which never
      shrinks — it's always just the one 30px circle. */
   #controls-top > .control-group:first-child,
-  #controls-top > .control-stack:first-child { padding-right: 5.5rem; padding-left: 2.5rem; }
+  #controls-top > .control-stack:first-child { padding-right: var(--corner-w, 5.5rem); padding-left: 2.5rem; }
   .size-row { width: 100%; }
 }
 
@@ -627,11 +627,18 @@
 #controls-top .chip-toggle :is(.sort-order-btn, .conj-toggle-btn),
 .ctl-cycle { border-radius: var(--radius-sm); }
 
+/* A stack whose groups are all hidden for this mode (Trivia's, Picture's, Conjugation's on the Table tab)
+   still took a flex gap each — five of them, 40px, between Words and Quiz Style, enough on their own to push
+   Quiz Style/Direction onto a second line. The groups are hidden with an inline display:none (index.html
+   writes it without the space, ui-state.ts with it), so a stack with nothing else in it is dropped. Live,
+   so a group a mode reveals later brings its stack back. */
+#controls-top > .control-stack:not(:has(> :not([style*="display:none"], [style*="display: none"], [hidden]))) { display: none; }
+
 @media (min-width: 600px) {
   /* Fixed columns: Language, Words and Quiz Style/Direction each keep the width their widest state needs,
      so switching pool mode, picking languages or changing a dropdown never shifts the group beside it. */
-  #controls-top > .control-stack:first-child { flex: 0 0 15rem; }
-  #controls-top > #wordsSizeGroup { flex: 0 0 27.5rem; }   /* the widest state (Most Common, ~440px with the 8rem Words button), so Quiz Style sits snug beside it */
+  #controls-top > .control-stack:first-child { flex: 0 0 14.75rem; }
+  #controls-top > #wordsSizeGroup { flex: 0 0 24.375rem; }   /* the widest state (Most Common, ~390px now its sizes read "1000" rather than "1000 Most Common" — the pool button beside them already says it), so Quiz Style sits snug beside it */
   body[data-mode="table"] #controls-top > .control-stack:has(> #tableStyleGroup) { flex: 0 0 17.5rem; }   /* only while Table is showing: elsewhere its hidden groups must not hold a gap open */
   .words-controls { flex-wrap: nowrap; }
   .ctl-cycle { min-width: 9.5rem; }

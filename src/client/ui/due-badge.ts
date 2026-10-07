@@ -15,8 +15,11 @@ function currentLang(): string {
   return (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? 'spanish';
 }
 
+/** The badge itself is just the icon and the count — it shares the corner with the controls beside it, and a
+ *  " due" made it wide enough to push Quiz Style and Direction onto a second row at 1280px. What it means
+ *  is in its tooltip and its accessible name (render, below). */
 export function buildDueBadgeLabel(count: number): string {
-  return `\u{1F501} ${count} due`;
+  return `\u{1F501} ${count}`;
 }
 
 /** Redraw now — for Settings, when the due switch or cap changes. */
@@ -30,6 +33,7 @@ function render(): void {
   if (count === 0) return;
   el.textContent = buildDueBadgeLabel(count);
   el.title = `${count} word${count === 1 ? ' is' : 's are'} due for review — click to start`;
+  el.setAttribute('aria-label', el.title);
 }
 
 export function initDueBadge(): void {

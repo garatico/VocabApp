@@ -2762,7 +2762,9 @@ body .ml-root-drop.ml-root-drop--armed {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  margin: 0.4rem 0.85rem 0.6rem;
+  /* No side margin: the table is exactly as wide as the grey Add Vocabulary box above it (and the
+     pager, on Browse), rather than inset from it, and sits the panel's own gap below it — no extra margin. */
+  margin: 0 0 0.6rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--bg);

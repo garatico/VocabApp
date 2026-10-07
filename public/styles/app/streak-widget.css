@@ -17,7 +17,7 @@
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;   /* every px here is a px the controls row loses (controls-bar.css reserves the corner's width) */
 }
 
 /* Same `[hidden]`-vs-class-`display` cascade tie this codebase hits

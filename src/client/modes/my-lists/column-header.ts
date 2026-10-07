@@ -381,6 +381,8 @@ export function createColumnHeader(opts: ColumnHeaderOptions): ColumnHeader {
   const bandSet = opts.bandSet ?? new Set<string>();
   const masteredSet = opts.masteredSet ?? new Set<string>();
   const widths = loadWidths();
+  /** Fitted to the rows on screen, for every column the learner hasn't sized (never saved; see autoSizeUnset). */
+  const autoWidths: Partial<Record<ColKey, number>> = {};
   let listEl: HTMLElement | null = null;
   let tableEl: HTMLElement | null = null;
   let compact = false;
@@ -408,10 +410,10 @@ export function createColumnHeader(opts: ColumnHeaderOptions): ColumnHeader {
     });
   }
 
-  /** Column widths the learner has set, as CSS variables the row/header templates read (my-lists.css). */
+  /** Column widths — the learner's own, else fitted — as CSS variables the row/header templates read (my-lists.css). */
   function applyWidths(): void {
     for (const col of COLUMNS) {
-      const w = widths[col.key];
+      const w = widths[col.key] ?? autoWidths[col.key];
       for (const target of [el, listEl]) {
         if (!target) continue;
         if (w) target.style.setProperty(`--ml-w-${col.track}`, `${w}px`);
@@ -426,9 +428,9 @@ export function createColumnHeader(opts: ColumnHeaderOptions): ColumnHeader {
   }
   function saveWidths(): void { writeString(WIDTHS_KEY, JSON.stringify(widths)); }
 
-  /** Double-click on a column's edge: fit it to the widest thing in it (header label and the rows on screen). */
-  function autoFit(col: ColumnDef): void {
-    if (!listEl) return;
+  /** The width that fits the widest thing in a column: its header label and the rows on screen. */
+  function fitWidth(col: ColumnDef): number | null {
+    if (!listEl) return null;
     const cells = [...listEl.querySelectorAll<HTMLElement>(`.ml-cell-${col.track}`)];
     const sample = cells[0] ?? el;
     const font = getComputedStyle(sample).font;
@@ -439,12 +441,37 @@ export function createColumnHeader(opts: ColumnHeaderOptions): ColumnHeader {
     // Room around the text: the cell's own padding, plus a pill's when the column holds pills (POS, CEFR, Percent,
     // Mastered); the label also needs the sort arrow.
     const pills = col.key === 'pos' || col.key === 'band' || col.key === 'percent' || col.key === 'mastered';
-    setWidth(col.key, autoFitWidth({
+    return autoFitWidth({
       font, labelFont, label: col.label.toUpperCase(), cells: texts,
       labelExtra: 8, cellExtra: pills ? 30 : 18, min: 40, max: 480,
-    }));
+    });
+  }
+
+  /** Double-click on a column's edge: fit it, and remember that as the learner's own width. */
+  function autoFit(col: ColumnDef): void {
+    const w = fitWidth(col);
+    if (w === null) return;
+    setWidth(col.key, w);
     saveWidths();
     header.sync();
+  }
+
+  /**
+   * By default every column is fitted to what it holds, as if its edge had been double-clicked — except
+   * Definition, the one flexible column, which takes whatever width is left. A width the learner set
+   * (dragged or double-clicked) wins and is the only kind saved. Fitted widths only grow while the view is
+   * open, so paging through a list doesn't make the columns jump about. Skipped in the compact layout,
+   * which has no column tracks.
+   */
+  function autoSizeUnset(): void {
+    if (!listEl || compact || !listEl.querySelector('.ml-word-item')) return;
+    let changed = false;
+    for (const col of COLUMNS) {
+      if (col.key === 'definition' || widths[col.key] !== undefined) continue;
+      const w = fitWidth(col);
+      if (w !== null && w > (autoWidths[col.key] ?? 0)) { autoWidths[col.key] = w; changed = true; }
+    }
+    if (changed) applyWidths();
   }
 
   const header: ColumnHeader = {
@@ -474,6 +501,7 @@ export function createColumnHeader(opts: ColumnHeaderOptions): ColumnHeader {
     },
     sync() {
       if (!listEl) return;
+      autoSizeUnset();
       // The list reserves room for its scrollbar and the header has none, so tell it how much (what is left
       // of the list's width once its own borders are taken out) and its columns end where the rows' do.
       const sbw = Math.max(0, listEl.offsetWidth - listEl.clientWidth - listEl.clientLeft * 2);

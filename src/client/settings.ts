@@ -228,9 +228,9 @@ export const Settings = {
    *  switched back on. */
   getDueExemptEnabled: (): boolean => get('due_exempt_enabled', 'true') === 'true',
 
-  /** On by default. Closes the quiz setup panel when a quiz starts, so the quiz is on screen instead of
+  /** Off by default (opt in from Appearance). Closes the quiz setup panel when a quiz starts, so the quiz is on screen instead of
    *  below a screenful of controls. The ▾ in the panel's corner opens it again. */
-  getCollapseControlsOnStart: (): boolean => get('collapse_controls_on_start', 'true') === 'true',
+  getCollapseControlsOnStart: (): boolean => get('collapse_controls_on_start', 'false') === 'true',
 
   /** On by default. Off disables "due for review" entirely: srs.ts reports
    *  nothing due, so the header badge, History's Due for Review and a Smart

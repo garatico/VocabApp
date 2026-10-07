@@ -143,4 +143,25 @@ export function initStreakWidget(): void {
 
   const btn = document.getElementById('streakWidget');
   btn?.addEventListener('click', () => openStreakPopover(btn));
+  reserveCornerWidth();
+}
+
+/**
+ * Tell #controls how wide the corner cluster really is (`--corner-w`, read by controls-bar.css),
+ * so the controls beside it keep clear. The room used to be a fixed 11rem, sized when the corner
+ * held the streak, Profiles and ?; the due badge and dice joined it later and it grew to ~20rem,
+ * landing on Direction / By Rank. Measured, it stays right whatever joins or hides (Profiles on
+ * Trivia, the due badge at zero).
+ */
+function reserveCornerWidth(): void {
+  const corner   = document.getElementById('controlsCorner');
+  const controls = document.getElementById('controls');
+  if (!corner || !controls || typeof ResizeObserver === 'undefined') return;
+  const update = (): void => {
+    // Its own width plus the gap between its left edge and the card's right edge.
+    const reserve = controls.getBoundingClientRect().right - corner.getBoundingClientRect().left;
+    if (reserve > 0) controls.style.setProperty('--corner-w', `${Math.ceil(reserve)}px`);
+  };
+  new ResizeObserver(update).observe(corner);
+  update();
 }

@@ -672,7 +672,7 @@ export function bindSettings(): void {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
     if (!btn) return;
     activateToggle('settingCollapseOnStart', btn);
-    set('collapse_controls_on_start', btn.dataset.enabled ?? 'true');
+    set('collapse_controls_on_start', btn.dataset.enabled ?? 'false');
   });
 
   // Sessions to keep (see getMaxSessionsKept)

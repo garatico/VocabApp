@@ -27,22 +27,25 @@ export interface VocabCsvWord {
 
 const HEADERS = csvHeaders(VOCAB_CSV);   // the columns are declared in csv-schema.ts, which also documents them
 
+/** One word's cells, in VOCAB_CSV's column order, before quoting. Settings → Help draws its example from this. */
+export function vocabCsvCells(w: VocabCsvWord): unknown[] {
+  const l = w.linguistic;
+  return [
+    w.rank, w.word, w.translation,
+    w.glosses.join('|'),
+    w.pos, w.difficulty,
+    w.tags.join('|'),
+    w.notes,
+    w.examples.join('|'),
+    l?.ipa, w.frequency?.band, l?.gender,
+    l?.plural, l?.infinitive,
+    l?.reflexive ? 'true' : '',
+    l?.register,
+  ];
+}
+
 export function buildCsv(words: readonly VocabCsvWord[]): string {
   const lines = [HEADERS.join(',')];
-  for (const w of words) {
-    const l = w.linguistic;
-    lines.push([
-      w.rank, w.word, w.translation,
-      w.glosses.join('|'),
-      w.pos, w.difficulty,
-      w.tags.join('|'),
-      w.notes,
-      w.examples.join('|'),
-      l?.ipa, w.frequency?.band, l?.gender,
-      l?.plural, l?.infinitive,
-      l?.reflexive ? 'true' : '',
-      l?.register,
-    ].map(csvCell).join(','));
-  }
+  for (const w of words) lines.push(vocabCsvCells(w).map(csvCell).join(','));
   return lines.join('\n');
 }

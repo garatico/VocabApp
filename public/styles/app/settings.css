@@ -831,6 +831,7 @@ body.simple-mode [data-simple-hide="true"] {
 .settings-section--streak,     .settings-nav-link[href="#settings-sec-streak"]     { --sec: #d9822b; }
 .settings-section--history,    .settings-nav-link[href="#settings-sec-history"]    { --sec: #6b7fd7; }
 .settings-section--general,    .settings-nav-link[href="#settings-sec-general"]    { --sec: #8a8a8a; }
+.settings-section--help,       .settings-nav-link[href="#settings-sec-help"]       { --sec: #4f9a6a; }
 
 .settings-section { border-left: 4px solid var(--sec, var(--border)); position: relative; }
 .settings-section-icon, .settings-nav-icon { color: var(--sec, currentColor); }
@@ -938,6 +939,58 @@ body:not(.tauri-app) [data-tauri-only] { display: none !important; }
 
 /* Simple Mode holds the reduced Settings: advanced-only rows stay hidden whatever the Advanced switch says. */
 body.simple-mode [data-advanced="true"] { display: none !important; }
+
+/* Help & Tips → CSV import & export: each file drawn as a little spreadsheet (settings-help.ts). Cell colours
+   come from the theme tokens so it reads in light and dark alike; the header row is tinted like a frozen row. */
+.csv-guide { display: flex; flex-direction: column; gap: 0.9rem; margin-top: 0.6rem; }
+.csv-guide-card {
+  padding: 0.7rem 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.csv-guide-title { margin: 0 0 0.2rem; font-size: 0.92rem; color: var(--text); }
+.csv-guide-from { margin: 0 0 0.55rem; font-size: 0.8rem; color: var(--text-muted); }
+.csv-sheet-scroll { overflow-x: auto; border: 1px solid var(--border-strong); border-radius: 4px; }
+.csv-sheet { border-collapse: collapse; font-size: 0.76rem; color: var(--text); white-space: nowrap; }
+.csv-sheet th, .csv-sheet td { border: 1px solid var(--border); padding: 0.25rem 0.5rem; text-align: left; }
+.csv-sheet td { max-width: 14rem; overflow: hidden; text-overflow: ellipsis; background: var(--bg); }
+.csv-sheet .csv-sheet-letter, .csv-sheet .csv-sheet-rownum, .csv-sheet .csv-sheet-corner {
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-weight: 600;
+  text-align: center;
+  font-size: 0.7rem;
+}
+.csv-sheet .csv-sheet-rownum { min-width: 1.8rem; }
+.csv-sheet .csv-sheet-header td {
+  background: color-mix(in srgb, var(--sec, var(--accent)) 18%, var(--surface));
+  font-weight: 700;
+  font-family: ui-monospace, Consolas, monospace;
+}
+.csv-guide-raw { margin-top: 0.45rem; font-size: 0.78rem; color: var(--text-muted); }
+.csv-guide-raw summary { cursor: pointer; }
+.csv-guide-raw pre, .csv-guide-example pre {
+  margin: 0.35rem 0 0;
+  padding: 0.45rem 0.6rem;
+  overflow-x: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.74rem;
+  color: var(--text);
+  tab-size: 8;
+}
+.csv-guide-examples { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0.6rem; }
+.csv-guide-example { display: flex; flex-direction: column; }
+.csv-guide-example-label { font-size: 0.78rem; font-weight: 600; color: var(--success, var(--accent)); }
+.csv-guide-example--bad .csv-guide-example-label { color: var(--danger); }
+.csv-guide-example--bad pre { border-style: dashed; }
+.csv-docs-details { margin-top: 0.45rem; }
+.csv-docs-details > summary { cursor: pointer; font-size: 0.82rem; color: var(--text); }
+
+/* Help & Tips → Tips: each one a short card, title over one line of advice and, where it helps, a link. */
+.help-tips .help-tip .settings-label > span:first-child { font-weight: 700; }
 
 /* Glossary → CSV formats: generated tables (settings-search.ts renderCsvDocs). */
 .csv-docs h4 { margin: 1rem 0 0.35rem; font-size: 0.9rem; color: var(--text); }
