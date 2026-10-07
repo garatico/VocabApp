@@ -27,6 +27,7 @@ export function buildLangAppearanceRows(): void {
     flagSelect.className  = 'lang-appearance-flag';
     flagSelect.dataset.lang = lang.name;
     flagSelect.title      = `Flag shown for ${lang.label} in Flag mode`;
+    flagSelect.setAttribute('aria-label', flagSelect.title);   // a title alone is not a label
     const currentFlag = Settings.getLangFlag(lang.name);
     for (const opt of lang.flagOptions) {
       const o       = document.createElement('option');

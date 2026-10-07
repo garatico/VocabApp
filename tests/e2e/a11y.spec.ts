@@ -119,3 +119,23 @@ for (const theme of ['light', 'dark'] as const) {
     expect(await violationsOf(page)).toEqual([]);
   });
 }
+
+// The Settings tab test above sees only what is open by default: every section but the first is collapsed
+// and the Advanced folds are hidden. With Advanced on and everything expanded, five violations had sat
+// unseen (an unnamed select, title-only labels, a contrast miss on the folds' tint, a skipped heading level).
+for (const theme of ['light', 'dark'] as const) {
+  test(`Settings with every section, group and fold open has no axe violations (${theme})`, async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem('s_advanced_mode', 'true'));
+    await open(page, theme);
+    await page.locator('.mode-tab[data-mode="settings"]').click();
+    // Opening a section reveals the groups and folds inside it, so expand until nothing is left closed.
+    for (let pass = 0; pass < 4; pass++) {
+      await page.evaluate(() => document.querySelectorAll<HTMLElement>('#settingsArea [data-collapse][aria-expanded="false"]').forEach(b => b.click()));
+      await page.waitForTimeout(200);
+    }
+    await page.locator('#settingsArea details').evaluateAll(ds => ds.forEach(d => { (d as HTMLDetailsElement).open = true; }));
+    await page.waitForTimeout(300);
+    expect(await page.locator('#settingsArea [data-collapse][aria-expanded="false"]').count()).toBe(0);
+    expect(await violationsOf(page)).toEqual([]);
+  });
+}

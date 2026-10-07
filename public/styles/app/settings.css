@@ -853,6 +853,8 @@ body.simple-mode [data-simple-hide="true"] {
 }
 /* Groups inside the fold are a shade deeper than ordinary groups, so "advanced" reads at a glance. */
 .settings-fold .settings-group { background: color-mix(in srgb, var(--sec, var(--accent)) 14%, var(--surface)); }
+/* On the folds' deeper tint the muted grey fell just under 4.5:1 (4.39–4.43); pulled a little toward the text colour. */
+.settings-fold .settings-group .settings-desc { color: color-mix(in srgb, var(--text-muted) 80%, var(--text)); }
 .settings-fold-btn { padding-top: 0.5rem !important; }
 /* Not while collapsed: this display would beat .filter-body--collapsed and the fold could never close. */
 .settings-fold-body:not(.filter-body--collapsed) { display: flex; flex-direction: column; gap: 0.55rem; }
