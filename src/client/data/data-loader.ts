@@ -91,6 +91,19 @@ function loadCachedVocab(lang: string, silent = false): Promise<Word[]> {
   return inflight[lang] ??= fetchFullVocab(lang, silent).finally(() => { delete inflight[lang]; });
 }
 
+/** First-page loads in progress. Startup asks for the same language twice before either answer is in,
+ *  and each used to send its own request. */
+const previewInflight: Record<string, Promise<Word[] | null>> = {};
+
+/** The most frequent words, or null when there is no paged source or the page is already everything. */
+async function loadPreview(lang: string): Promise<Word[] | null> {
+  try {
+    const page = await loadVocabPage(lang, { page: 1, limit: PREVIEW_SIZE });
+    if (page.total > page.words.length) { enrichDerivedTenses(lang, page.words); return page.words; }
+  } catch { /* no paged source — fall through to the whole-language load */ }
+  return null;
+}
+
 /** How many of the most frequent words the first paint waits for. The page API caps a page at 200. */
 const PREVIEW_SIZE = 200;
 
@@ -110,11 +123,7 @@ export interface ProgressiveWords {
  */
 export async function loadWordsProgressive(lang: string): Promise<ProgressiveWords> {
   if (!cache[lang]) {
-    let preview: Word[] | null = null;
-    try {
-      const page = await loadVocabPage(lang, { page: 1, limit: PREVIEW_SIZE });
-      if (page.total > page.words.length) { preview = page.words; enrichDerivedTenses(lang, preview); }
-    } catch { /* no paged source — fall through to the whole-language load */ }
+    const preview = await (previewInflight[lang] ??= loadPreview(lang).finally(() => { delete previewInflight[lang]; }));
 
     if (preview) {
       const full = loadCachedVocab(lang, true).then(() => loadWords(lang));

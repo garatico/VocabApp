@@ -38,9 +38,12 @@ describe('modeAccuracy', () => {
 });
 
 describe('activityGrid', () => {
+  // Dates in the format streak.ts actually records (today() is toDateString()).
+  const day = (y: number, m: number, d: number): string => new Date(y, m - 1, d).toDateString();
+
   it('is weeks x 7, marks active dates, and blanks days after today', () => {
     // 2026-03-04 is a Wednesday.
-    const grid = activityGrid(['2026-03-04', '2026-03-01'], '2026-03-04', 3);
+    const grid = activityGrid([day(2026, 3, 4), day(2026, 3, 1)], new Date(2026, 2, 4, 15, 30), 3);
     expect(grid).toHaveLength(3);
     grid.forEach(col => expect(col).toHaveLength(7));
     const last = grid[2];
@@ -48,5 +51,20 @@ describe('activityGrid', () => {
     expect(last[3]).toBe(true);    // Wednesday Mar 4 (today)
     expect(last[1]).toBe(false);
     expect(last[4]).toBeNull();    // Thursday, still in the future
+  });
+
+  it('reads the dates streak.ts really records', async () => {
+    const { today } = await import('../../src/client/utils/streak.ts');
+    const grid = activityGrid([today()], new Date(), 1);
+    expect(grid[0][new Date().getDay()]).toBe(true);
+  });
+
+  it('crosses month and year boundaries', () => {
+    // Fri 2027-01-01; the first column starts Sun 2026-12-20.
+    const grid = activityGrid([day(2026, 12, 31), day(2026, 12, 20)], new Date(2027, 0, 1), 2);
+    expect(grid[0][0]).toBe(true);   // Sun Dec 20
+    expect(grid[1][4]).toBe(true);   // Thu Dec 31
+    expect(grid[1][5]).toBe(false);  // Fri Jan 1, today, no activity
+    expect(grid[1][6]).toBeNull();
   });
 });

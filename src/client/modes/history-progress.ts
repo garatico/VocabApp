@@ -10,7 +10,7 @@ import { srsAllEntries } from '../utils/srs.ts';
 import { getMasteryLevels, MAX_MASTERY_LEVEL } from './my-lists/mastery.ts';
 import { cachedVocab, fetchVocab } from './my-lists/vocab-cache.ts';
 import { getSessions } from '../utils/session-history.ts';
-import { getStreakHistory, today } from '../utils/streak.ts';
+import { getStreakHistory } from '../utils/streak.ts';
 import {
   reviewForecast, bandCoverage, modeAccuracy, activityGrid, LEARNED_BOX,
 } from '../utils/progress-stats.ts';
@@ -122,7 +122,7 @@ export function renderProgress(body: HTMLElement, lang: string): void {
   const calEl = el('div', 'prog-cal');
   calEl.setAttribute('role', 'img');
   calEl.setAttribute('aria-label', 'Calendar of the last 12 weeks; filled squares are days you studied');
-  activityGrid(getStreakHistory(), today(), 12).forEach(col => {
+  activityGrid(getStreakHistory(), new Date(), 12).forEach(col => {
     const c = el('div', 'prog-cal-col');
     col.forEach(v => c.appendChild(
       el('span', 'prog-cal-cell' + (v === true ? ' is-active' : v === null ? ' is-future' : '')),

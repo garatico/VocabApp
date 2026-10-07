@@ -83,16 +83,17 @@ export function modeAccuracy(
 
 /**
  * The last `weeks` weeks as a column-per-week grid of booleans (Sunday-first
- * rows), marking which dates had activity. `activeDates` are YYYY-MM-DD in the
- * same local-date format streak.ts records; `today` is in that format too.
+ * rows), marking which dates had activity. `activeDates` are local calendar
+ * dates as streak.ts records them — `Date#toDateString()`, "Wed Oct 07 2026".
+ * This used to expect YYYY-MM-DD and split `today` on "-", which that format
+ * doesn't have: every date was invalid and the History calendar always empty.
  * Days after `today` in the final week are null so the grid stays rectangular.
  */
 export function activityGrid(
-  activeDates: readonly string[], today: string, weeks = 12,
+  activeDates: readonly string[], today: Date, weeks = 12,
 ): (boolean | null)[][] {
   const active = new Set(activeDates);
-  const [y, m, d] = today.split('-').map(Number);
-  const end = new Date(y, m - 1, d);
+  const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const start = new Date(end);
   start.setDate(end.getDate() - end.getDay() - (weeks - 1) * 7);
 
@@ -103,8 +104,7 @@ export function activityGrid(
       const day = new Date(start);
       day.setDate(start.getDate() + w * 7 + r);
       if (day > end) { col.push(null); continue; }
-      const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-      col.push(active.has(key));
+      col.push(active.has(day.toDateString()));
     }
     grid.push(col);
   }

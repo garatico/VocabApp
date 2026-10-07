@@ -11,9 +11,7 @@
  * other on every keystroke was the panel's slowest operation.
  */
 
-import type { Word as ApiWord } from '../../types.ts';
-import { loadVocab } from '../../data/vocab-source.ts';
-import { applyWordOverride } from '../../data/user-content.ts';
+import { loadWords } from '../../data/data-loader.ts';
 import type { VocabEntry } from './types.ts';
 
 const vocabCache    = new Map<string, VocabEntry[]>();
@@ -33,15 +31,13 @@ export async function fetchVocab(lang: string): Promise<VocabEntry[]> {
   const hit = vocabCache.get(lang);
   if (hit) return hit;
   try {
-    // Same source resolution as the main loader, so lists work offline too.
-    const data = (await loadVocab(lang)).data as ApiWord[];
+    // The same words every other mode reads — one download, held once, with My
+    // Content's overrides and the derived tenses applied. This used to call
+    // loadVocab itself, so the whole language (~4.7 MB for Spanish) was fetched
+    // and parsed a second time, and a second copy kept in memory, just for My Lists.
+    const data = await loadWords(lang);
     const entries: VocabEntry[] = data
       .filter(w => w.word)
-      // Same override step data-loader.ts's loadWords() applies for every
-      // other consumer (table mode, tooltips, ...) — without it, a My
-      // Content gloss reorder/hide or field override never showed up here,
-      // since this cache read straight from the raw vocab source instead.
-      .map(w => applyWordOverride(lang, w))
       .map(w => ({
         word:        w.word,
         translation: w.translation || '',
