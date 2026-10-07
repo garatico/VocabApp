@@ -542,7 +542,7 @@ export const es: Record<string, string> = {
 
   // ── Help & Tips ──────────────────────────────────────────────────────────
   'settings.nav.help':                 'Ayuda y consejos',
-  'settings.help.tipsHeading':         'Consejos para sacar el máximo partido a la app',
+  'settings.help.tipsHeading':         'Consejos',
   'settings.help.tipLevel':            'Empieza en tu nivel',
   'settings.help.tipLevelDesc':        'Los cuatro puntos de partida de la tarjeta de bienvenida ajustan por ti los controles de Palabras: desde las 100 palabras más comunes hasta C1–C2.',
   'settings.help.tipLevelLink':        'Ver de nuevo los puntos de partida →',

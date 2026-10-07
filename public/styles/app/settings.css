@@ -951,6 +951,10 @@ body.simple-mode [data-advanced="true"] { display: none !important; }
 }
 .csv-guide-title { margin: 0 0 0.2rem; font-size: 0.92rem; color: var(--text); }
 .csv-guide-from { margin: 0 0 0.55rem; font-size: 0.8rem; color: var(--text-muted); }
+/* width 0 + min-width 100%: fill the card but contribute nothing to its intrinsic width. Without it, on a
+   phone (where the settings column is not its own scroller) the 16-column sheet and the long raw lines set
+   the width of the whole Settings page — 1,450px on a 375px screen — instead of scrolling inside the card. */
+.csv-sheet-scroll, .csv-guide-raw pre, .csv-guide-example pre { width: 0; min-width: 100%; box-sizing: border-box; }
 .csv-sheet-scroll { overflow-x: auto; border: 1px solid var(--border-strong); border-radius: 4px; }
 .csv-sheet { border-collapse: collapse; font-size: 0.76rem; color: var(--text); white-space: nowrap; }
 .csv-sheet th, .csv-sheet td { border: 1px solid var(--border); padding: 0.25rem 0.5rem; text-align: left; }
@@ -991,6 +995,9 @@ body.simple-mode [data-advanced="true"] { display: none !important; }
 
 /* Help & Tips → Tips: each one a short card, title over one line of advice and, where it helps, a link. */
 .help-tips .help-tip .settings-label > span:first-child { font-weight: 700; }
+/* Buttons are nowrap app-wide; a tip's "Show the starting points again →" then set the minimum width of
+   the whole Settings column and pushed it past a phone's edge. */
+.help-tip .settings-link { white-space: normal; text-align: left; }
 
 /* Glossary → CSV formats: generated tables (settings-search.ts renderCsvDocs). */
 .csv-docs h4 { margin: 1rem 0 0.35rem; font-size: 0.9rem; color: var(--text); }
