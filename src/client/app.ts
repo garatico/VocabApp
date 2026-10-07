@@ -39,6 +39,7 @@ import { showToast } from './ui/toast.ts';
 import { initStreakWidget } from './ui/streak-widget.ts';
 import { initDueBadge } from './ui/due-badge.ts';
 import { initStorageWarning } from './ui/storage-warning.ts';
+import { initStaleBuildRecovery } from './ui/stale-build.ts';
 import { renderLevelChoices } from './ui/level-picker.ts';
 import { initGlobalShortcuts } from './ui/global-shortcuts.ts';
 import { initMissedAdd } from './ui/quiz-summary.ts';
@@ -1360,6 +1361,7 @@ void (async function init(): Promise<void> {
   initStreakWidget();
   initDueBadge();
   initStorageWarning();
+  initStaleBuildRecovery();
   initMissedAdd();
   bindBackupSettings();
   maybeRemindBackup();
