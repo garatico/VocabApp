@@ -826,7 +826,8 @@
 .ml-word-band[data-band="C2"] { --pos-hue:   0; }
 
 .ml-word-band[data-band] {
-  color:        hsl(var(--pos-hue) 55% 32%);
+  /* 25%, not 32%: A1's green was 3.9-4.1:1 on its own (stronger) tint, same story as .ml-word-pos. */
+  color:        hsl(var(--pos-hue) 55% 25%);
   border-color: hsl(var(--pos-hue) 50% 45% / 0.5);
   background:   hsl(var(--pos-hue) 55% 50% / 0.16);
 }
@@ -1071,8 +1072,7 @@ html.dark .ml-word-band[data-band] {
   font-size: 0.8rem;
   font-weight: 600;
   font-family: 'DM Mono', monospace;
-  color: var(--text-muted);
-  opacity: 0.8;
+  color: var(--text-muted);   /* no extra opacity: on a highlighted dark row it fell to 3.99:1 */
   text-align: right;
 }
 
@@ -1888,7 +1888,8 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
 
 .ml-profile-head .ml-new-list-btn {
   border-color: var(--ml-accent-profile);
-  color: var(--ml-accent-profile);
+  /* Mixed toward the text colour: the plain accent orange on white was 4.36:1. */
+  color: color-mix(in srgb, var(--ml-accent-profile) 80%, var(--text));
 }
 
 .ml-profile-head .ml-new-list-btn:hover { background: var(--ml-accent-profile); color: #fff; }

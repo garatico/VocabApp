@@ -379,6 +379,7 @@ export function createWordList(ctx: ListsCtx, deps: WordListDeps): WordListUI {
     check.dataset.word = word;
     check.checked = selectedWords.has(word);
     check.title = 'Select for bulk actions';
+    check.setAttribute('aria-label', `Select ${word}`);   // a title alone is not a label
     check.addEventListener('click', e => e.stopPropagation());
     check.addEventListener('change', () => {
       if (check.checked) selectedWords.add(word); else selectedWords.delete(word);

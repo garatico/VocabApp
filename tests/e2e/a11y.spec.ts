@@ -139,3 +139,29 @@ for (const theme of ['light', 'dark'] as const) {
     expect(await violationsOf(page)).toEqual([]);
   });
 }
+
+// The My Lists tab test above sees an empty list. With words in it — rows, pills, checkboxes, the row's
+// actions menu and the naming dialog — it had title-only checkbox labels and four contrast misses.
+for (const theme of ['light', 'dark'] as const) {
+  test(`My Lists with words, its row menu and a naming dialog have no axe violations (${theme})`, async ({ page }) => {
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await open(page, theme);
+    await page.locator('.mode-tab[data-mode="mylists"]').click();
+    await page.locator('.ml-single-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
+    await page.locator('.ml-list-name-input').fill('A11y');
+    await page.locator('.ml-list-name-input').press('Enter');
+    for (const word of ['casa', 'hablar']) {
+      await page.locator('.ml-add-input').fill(word);
+      await page.locator('.ml-add-result-word', { hasText: new RegExp(`^${word}$`) }).locator('xpath=..').locator('.ml-add-btn').click();
+    }
+    expect(await violationsOf(page)).toEqual([]);              // search results open over the list
+    await page.locator('.ml-add-input').fill('');
+    await expect(page.locator('.ml-word-item')).toHaveCount(2);
+    expect(await violationsOf(page)).toEqual([]);              // the list itself
+    await page.locator('.ml-word-item').first().hover();
+    expect(await violationsOf(page)).toEqual([]);              // a highlighted row
+    await page.locator('.ml-single-head .ml-new-folder-btn').click();
+    await expect(page.locator('.app-dialog-input')).toBeVisible();
+    expect(await violationsOf(page)).toEqual([]);              // the naming dialog
+  });
+}

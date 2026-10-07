@@ -224,7 +224,8 @@
 .ml-word-pos[data-pos="suffix"]      { --pos-hue: var(--pos-hue-suffix,      165); }  /* teal      */
 
 .ml-word-pos[data-pos] {
-  color:        hsl(var(--pos-hue) 60% 34%);
+  /* 27%, not 34%: green and amber at 34% were 3.5-3.7:1 on their own tint (axe, light mode). */
+  color:        hsl(var(--pos-hue) 60% 27%);
   border-color: hsl(var(--pos-hue) 55% 45% / 0.45);
   background:   hsl(var(--pos-hue) 60% 50% / 0.10);
 }
