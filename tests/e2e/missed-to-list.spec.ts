@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, startQuiz } from './helpers.ts';
 
 /**
  * After a quiz with misses, the summary strip offers to add them to a list,
@@ -38,7 +38,7 @@ test('starting a new quiz drops the offer, so it never describes a stale session
   await page.locator('#tableReset').click();
   await expect(page.locator('[data-add-missed]').first()).toBeVisible();
 
-  await page.locator('#startBtn').click();
+  await startQuiz(page);
   await page.locator('#tableWrap input[type="text"]').first().waitFor();
   await expect(page.locator('[data-add-missed]')).toHaveCount(0);
 });

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode, startMode } from './helpers.ts';
+import { disableSimpleMode, startMode, startQuiz } from './helpers.ts';
 
 /**
  * Table mode's add-to-list pickers: each list shows its language's flag and word count, single- and
@@ -60,6 +60,6 @@ test('restarting a quiz resets the "Add N to List(s)" button along with the sele
 
   await tick(0);                                                            // and it can be picked again
   await expect(page.locator('#tableBulkAddBtn')).toHaveText('+ Add 1 to List(s)');
-  await page.locator('#startBtn').click();
+  await startQuiz(page);
   await expect(page.locator('#tableBulkAddBtn')).toHaveText('+ Add to List(s)');
 });

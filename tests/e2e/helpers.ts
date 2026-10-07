@@ -62,3 +62,23 @@ async function answerNextDialog(page: Page, pick: '.app-dialog-choice' | '.app-d
 
 export function confirmNext(page: Page): Promise<void> { return answerNextDialog(page, '.app-dialog-choice'); }
 export function cancelNext(page: Page): Promise<void> { return answerNextDialog(page, '.app-dialog-cancel'); }
+
+/**
+ * Click Start Quiz, opening the controls first if the last quiz collapsed them. Starting a quiz closes the setup
+ * panel (Settings -> Appearance -> "Collapse controls on Start", on by default), so a second Start in the same test
+ * has to reopen it, as a person would.
+ */
+export async function startQuiz(page: Page): Promise<void> {
+  const start = page.locator('#startBtn');
+  if (!(await start.isVisible())) await page.locator('#controlsCollapseBtn').click();
+  await start.click();
+}
+
+/**
+ * Open the "⋯" actions menu on a My Lists word row, then click one of its items. The row's buttons (move, remove,
+ * edit, due reminders) live in that menu rather than as a row of icons.
+ */
+export async function rowAction(page: Page, item: string, row = page.locator('.ml-word-item').first()): Promise<void> {
+  await row.locator('.ml-row-menu-btn').click();
+  await row.locator(item).click();
+}

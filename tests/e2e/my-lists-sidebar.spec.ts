@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
-import { disableSimpleMode, confirmNext } from './helpers.ts';
+import { disableSimpleMode, confirmNext, rowAction } from './helpers.ts';
 
 /**
  * My Lists sidebar — every section's create / rename / copy / delete, plus folders, the emoji and
@@ -756,7 +756,7 @@ test('Move to / Copy to: sections are labelled, collapsible and coloured like th
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await expect(card(page, 'ml-single-item', 'Source')).toHaveClass(/active/);   // the first list opens by itself
-  await page.locator('.ml-word-list .ml-move-btn').first().click();
+  await rowAction(page, '.ml-move-btn', page.locator('.ml-word-list .ml-word-item').first());
 
   const pop = page.locator('.ml-move-popover');
   await expect(pop.locator('.ml-move-section--single .ml-move-section-head')).toContainText('Single-Language Lists');

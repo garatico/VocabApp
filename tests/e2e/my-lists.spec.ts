@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, rowAction } from './helpers.ts';
 
 /**
  * My Lists — CRUD + Undo. This is where the Undo-snapshot bugs lived: three
@@ -57,7 +57,7 @@ test('undoing the removal of a list\'s last word restores it in the panel, not j
   await addWord(page, 'casa');
   await expect(page.locator('.ml-word-text')).toHaveText('casa');
 
-  await page.locator('.ml-remove-btn').click();
+  await rowAction(page, '.ml-remove-btn');
   // Removing a list's only word deletes the list itself, and with no other
   // list to fall back to the panel goes to its top-level empty state — not
   // word-list's own "No words in this list yet.", which would (incorrectly)
@@ -122,8 +122,8 @@ test('move to… offers Cross-Language lists too, each showing its own flag(s)',
   await createList(page, 'FromSingle');
   await addWord(page, 'casa');
 
-  // The row's own ⇥ button, not the bulk toolbar — no selection step needed.
-  await page.locator('.ml-move-btn').click();
+  // The row's own Move item (in its ⋯ menu), not the bulk toolbar — no selection step needed.
+  await rowAction(page, '.ml-move-btn');
   const crossItem = page.locator('.ml-move-popover-item', { hasText: 'Mixed' });
   await expect(crossItem).toBeVisible();
   await expect(crossItem.locator('.flag-icon, .lang-badge')).not.toHaveCount(0);
@@ -142,7 +142,7 @@ test('a Cross-Language list\'s own row can Move/Copy to a single-language list o
   await page.locator('.ml-list-name', { hasText: 'Mixed' }).click();
   await expect(page.locator('.ml-word-text')).toHaveText('casa');
 
-  await page.locator('.ml-move-btn').click();
+  await rowAction(page, '.ml-move-btn');
   await page.locator('.ml-move-popover-item', { hasText: 'Landing' }).click();
 
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('vq_lists_spanish') ?? '{}'));

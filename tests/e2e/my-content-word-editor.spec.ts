@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode, confirmNext } from './helpers.ts';
+import { disableSimpleMode, confirmNext, startQuiz } from './helpers.ts';
 
 /**
  * My Content — the shared Word Editor (the Words tab).
@@ -159,7 +159,7 @@ test('reordering a gloss shows up in a quiz immediately, without a reload', asyn
   // #startBtn click above — a fresh Start Quiz is what has to pick up the
   // edit, the same as a learner starting a new quiz after editing a word.
   await page.locator('.mode-tab[data-mode="table"]').click();
-  await page.locator('#startBtn').click();
+  await startQuiz(page);
   const nextPage = page.locator('#tablePagerTop .pager-btn[aria-label="Next page"]');
   await nextPage.click();
   const input = page.locator('input[data-word="hablar"]');
