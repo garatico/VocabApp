@@ -1312,3 +1312,27 @@ html:not(.dark) .crt-input.incorrect {
    Order and the verb summary live in the ⋯ menu. Only one of Forms / Verbs is shown at a time. */
 .quiz-progress-group[hidden],
 .conj-pills-cell[hidden] { display: none !important; }
+
+/* ── Phones: pin only the progress bar ──────────────────────────────────────────────────────────────
+   The whole sticky card (Forms/Verbs, bar, pills, Full Quiz, timer, Give Up, pager) was ~340px — about
+   half a phone screen pinned over the cards. Its wrappers dissolve here (display: contents) so everything
+   but the bar scrolls with the page, and the bar alone sticks to the top as a slim strip. */
+@media (max-width: 599px) {
+  .conj-sticky-bar,
+  .conj-sticky-bar > .conj-progress-section,
+  .conj-sticky-bar .conj-progress-block { display: contents; }
+  .conj-sticky-bar .conj-progress-bars {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    margin: 0 0 0.5rem;
+    padding: 0.35rem 0.6rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+  }
+  .conj-sticky-bar .conj-progress-block > .conj-cycle-btn,
+  .conj-sticky-bar .conj-progress-pills { margin-bottom: 0.5rem; }
+  .conj-sticky-bar > .conj-full-header { margin-bottom: 0.75rem; }
+}

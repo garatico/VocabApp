@@ -1360,8 +1360,13 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
 }
 
 @media (max-width: 599px) {
-  /* Collapse left pane, but not as tight as before */
-  .ml-left-pane { max-height: 280px; }
+  /* The sidebar is a box of its own above the panel. 280px showed two or three lists under the starter
+     ones and left most of the screen empty below; half the screen shows a real share of them. */
+  .ml-left-pane { max-height: min(52vh, 440px); }
+  /* Lists · Browse All Words · Collapse All · Backup · Restore: one line that scrolls sideways, not two. */
+  .ml-header { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; justify-content: flex-start; }
+  .ml-header::-webkit-scrollbar { display: none; }
+  .ml-header > * { flex-shrink: 0; }
 
   /* Hide rank badge on narrow screens — the grid template itself has to
      drop that column too (not just size it to 0), or `column-gap` still

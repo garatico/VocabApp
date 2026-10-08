@@ -622,6 +622,23 @@ html.dark .pos-chip[data-band]:not(.active):hover {
   min-width: 0;
 }
 .filters-summary-body.filter-body--collapsed { display: none; }
+.filters-row.filter-body--collapsed { display: none; }
+/* "Filters": collapses the pill row. Nothing to collapse on a tab that shows none of the three pills. */
+#controls .filters-section-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 24px;
+  margin: 0 0 0.25rem;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+#controls .filters-section-toggle:hover { color: var(--text); }
+#filtersBar:not(:has(#filtersRow > :is(#classFilter, #listFilter, #domainFilterWrap):not([style*="display: none"]):not([style*="display:none"]))) > .filters-section-toggle { display: none; }
 #controls .filters-summary-toggle {
   display: inline-flex;
   flex: 0 0 auto;

@@ -987,6 +987,9 @@ label.ml-chip-dropdown-group:hover { color: var(--text); }
   flex: 0 1 15rem; min-width: 9rem;
 }
 .ml-topbar .ml-lang-select { font-size: 0.85rem; padding: 0.3rem 0.45rem; min-height: 36px; }
+/* The flag dropdown (ui/language-dropdown.ts) stands in for the select, which stays as the hidden source of truth. */
+.ml-lang-row .lang-dd { flex: 1 1 auto; min-width: 0; }
+.ml-lang-row .lang-dd-trigger { width: 100%; }
 
 /* The panel's stats chips, moved up beside the title in the top bar. */
 .ml-topbar { flex-wrap: wrap; }

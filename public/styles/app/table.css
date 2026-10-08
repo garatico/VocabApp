@@ -1410,3 +1410,23 @@ body.hide-settings-links .tsb-more-row.settings-links { display: none; }
   .tsb-nav #tableControls { gap: 0.2rem; }
   .tsb-nav #tableControls button { font-size: 0.64rem; padding-inline: 0.2rem; }
 }
+
+/* ── Phones: pin only the progress line ──────────────────────────────────────────────────────────────
+   Even compacted, the whole pinned bar (progress, score pills, actions, pager) was ~155px of a 844px phone,
+   on top of every row scrolling under it. The bar dissolves here (display: contents) so its rows flow with the
+   page, and only the progress line — bar, "N / M · %" and the timer — sticks to the top, as its own strip.
+   The score pills, actions and pager are a scroll back up away, as is the pager under the table. */
+@media (max-width: 599px) {
+  #tableStickyBar { display: contents; }
+  #tableStickyBar > .progressWrap {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    margin: 0 -0.6rem;
+    padding: 0.35rem 0.6rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+  #tableStickyBar > .tsb-row { padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); margin-bottom: 0.4rem; }
+}

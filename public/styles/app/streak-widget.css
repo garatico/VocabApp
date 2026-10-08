@@ -175,8 +175,8 @@ body #controls:has(#controlsBody[hidden]) .controls-corner {
   top: 0.25rem;
   right: 0.3rem;
 }
-body #controls:has(#controlsBody.filter-body--collapsed) #controlsCollapseBtn.controls-collapse-btn,
-body #controls:has(#controlsBody[hidden]) #controlsCollapseBtn.controls-collapse-btn {
+body #controls:has(#controlsBody.filter-body--collapsed) :is(#controlsCollapseBtn, #settingsBarCollapseBtn).controls-collapse-btn,
+body #controls:has(#controlsBody[hidden]) :is(#controlsCollapseBtn, #settingsBarCollapseBtn).controls-collapse-btn {
   top: 1rem;
 }
 

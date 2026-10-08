@@ -18,6 +18,7 @@
  * every list in every language, not on the one that happens to be open.
  */
 
+import { enhanceLanguageSelect } from '../../ui/language-dropdown.ts';
 import { getListNames } from '../../utils/word-lists.ts';
 import { seedStarterLists } from './starter-lists.ts';
 import { closeAllChipDropdowns } from './chip-dropdown.ts';
@@ -74,6 +75,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   langLabel.textContent = 'Language';
   const langSel = document.createElement('select');
   langSel.className = 'ml-lang-select';
+  langSel.id = 'mlLangSelect';
   langSel.setAttribute('aria-label', 'Language');
   LANGUAGES.forEach(({ name, label }) => {
     const opt = document.createElement('option');
@@ -86,6 +88,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
     closePopover(); render();
   });
   langRow.appendChild(langLabel); langRow.appendChild(langSel);
+  enhanceLanguageSelect(langSel);   // flags and colours, as on Table and Conjugation; the select stays the source of truth
 
   // ── Header: title, backup, restore ──────────────────────────────────────────
 

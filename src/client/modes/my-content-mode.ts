@@ -1,3 +1,4 @@
+import { enhanceLanguageSelect } from '../ui/language-dropdown.ts';
 import { downloadUserContent, applyUserContentImport } from '../data/user-content.ts';
 import { languageInfo } from '../data/languages.ts';
 import { createFlagImg } from '../ui/flag-icon.ts';
@@ -244,6 +245,13 @@ function buildSharedWordEditor(currentLang: string, focusWord?: { lang: string; 
 
   const wrap = el('div', 'word-editor mc-we');
   editor.mount(wrap);
+  // Flags and colours, as on Table and My Lists; the select stays the source of truth (and the host's options).
+  enhanceLanguageSelect(wrap.querySelector<HTMLSelectElement>('#mcwe-langSelect'));
+  // On a phone the form sits under the word list, so picking a word looked like nothing happened.
+  wrap.addEventListener('click', e => {
+    if (!(e.target as HTMLElement).closest('.word-item') || !window.matchMedia('(max-width: 900px)').matches) return;
+    requestAnimationFrame(() => wrap.querySelector('.form-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  });
   // Language list, POS and domain values arrive once the vocabulary is loaded;
   // the first page of words loads at the same time.
   void (async () => {

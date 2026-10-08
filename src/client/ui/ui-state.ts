@@ -95,6 +95,9 @@ export function bindModeSwitch({
     // Nothing to collapse/expand on a tab with no form to begin with.
     const controlsCollapseBtn = document.getElementById('controlsCollapseBtn');
     if (controlsCollapseBtn) controlsCollapseBtn.hidden = noControls;
+    // Settings' bar has a collapse of its own (index.html): it holds the page-level switches, not a quiz form.
+    const settingsBarCollapseBtn = document.getElementById('settingsBarCollapseBtn');
+    if (settingsBarCollapseBtn) settingsBarCollapseBtn.hidden = mode !== 'settings';
 
     const classFilter         = document.getElementById('classFilter');
     const listFilter          = document.getElementById('listFilter');

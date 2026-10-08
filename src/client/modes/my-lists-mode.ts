@@ -164,11 +164,21 @@ export function renderMyLists(container: HTMLElement): void {
     barTitle.title = name;
   }
 
+  /** On a phone the panel sits under the sidebar, so opening a list looked like nothing happened: the words
+   *  appeared a screen further down. Bring the panel up when what is open changes (not on the first draw). */
+  let shownTitle: string | null = null;
+  function followSelection(): void {
+    const title = barTitle.textContent ?? '';
+    const changed = shownTitle !== null && title !== shownTitle && !barTitle.classList.contains('ml-topbar-title--none');
+    shownTitle = title;
+    if (changed && window.matchMedia('(max-width: 767px)').matches) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   // The two panes call each other, so the hooks are filled in once both exist.
-  ctx.renderSidebar = (rerenderPanel = true) => { sidebar.render(rerenderPanel); updateBarTitle(); };
+  ctx.renderSidebar = (rerenderPanel = true) => { sidebar.render(rerenderPanel); updateBarTitle(); followSelection(); };
   ctx.renderPanel   = () => {
     barStats?.remove(); barStats = null;   // the previous panel's chips; a new panel brings its own
-    renderPanel(ctx); updateBarTitle();
+    renderPanel(ctx); updateBarTitle(); followSelection();
   };
   ctx.updateBadge   = updateBadge;
 

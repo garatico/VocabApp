@@ -1738,3 +1738,44 @@ html.dark .mcc-extra-group label { color: hsl(var(--tense-hue, 145) 62% 72%); }
   #myContentWrap .mcc { flex: 1 1 auto; min-height: 0; }
   #myContentWrap .mcc-layout { flex: 1 1 auto; height: auto; min-height: 0; }
 }
+
+/* The flag dropdown stands in for the language select (my-content-mode.ts), so the separate flag beside it goes. */
+.mc-we .lang-dd ~ .lang-select-flag { display: none; }
+/* The editor styles every button in it as a filled action (word-editor.css); the dropdown's trigger is not one. */
+.word-editor.mc-we .lang-dd-trigger {
+  height: auto; min-height: 36px; padding: 0.22rem 0.5rem;
+  font-size: 0.82rem; font-weight: 500; color: var(--text);
+  background: color-mix(in srgb, var(--lang-tint, var(--surface2)) 55%, var(--surface2));
+  border: 1px solid var(--border-strong); box-shadow: none;
+}
+.word-editor.mc-we .lang-dd-trigger:hover { border-color: var(--accent); }
+.word-editor.mc-we .edit-form-header { flex-wrap: wrap; gap: 0.4rem; }
+
+/* ── Phones ────────────────────────────────────────────────────────────────────────────────────────
+   Tabs and actions were three wrapped rows; each filter took a row of its own and Search sat on top of
+   Clear; an empty "Select a word to edit it" box filled a screen under the list. Now: one sideways-scrolling
+   row each for the tabs and the actions, the filters side by side, and no empty box (picking a word brings
+   the form up — my-content-mode.ts). */
+@media (max-width: 599px) {
+  .mc-topbar .mc-tabs,
+  .mc-topbar-actions { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+  .mc-topbar .mc-tabs::-webkit-scrollbar,
+  .mc-topbar-actions::-webkit-scrollbar { display: none; }
+  .mc-topbar .mc-tabs > *,
+  .mc-topbar-actions > * { flex-shrink: 0; }
+  .mc-topbar-actions { margin-left: 0; }
+
+  .word-editor.mc-we .filter-bar { flex-direction: row; flex-wrap: wrap; align-items: stretch; gap: 0.35rem; }
+  .word-editor.mc-we .filter-bar .filter-divider { display: none; }
+  .word-editor.mc-we .filter-bar > .filter-field:first-child { flex: 1 1 100%; }
+  .word-editor.mc-we .filter-bar input[type="text"] { flex: 1 1 100% !important; min-width: 0 !important; }
+  /* POS · Band · Domain on one row, Search · Clear on the next: each basis is too wide to share the other's row. */
+  .word-editor.mc-we .filter-bar > .filter-chip-field { flex: 1 1 calc(33.333% - 0.25rem); min-width: 0; }
+  .word-editor.mc-we .filter-bar > .filter-chip-field > button { width: 100%; min-width: 0; overflow: hidden; white-space: nowrap; gap: 0.25rem; padding: 0.25rem 0.4rem; justify-content: center; }
+  .word-editor.mc-we .filter-chip-trigger .filter-label { letter-spacing: 0.02em; }
+  .word-editor.mc-we .filter-bar > button { flex: 1 1 calc(50% - 0.2rem); height: auto; min-height: 34px; }
+  .word-editor.mc-we .filter-bar > :last-child:not(button):not(.filter-field) { flex: 1 1 100%; }
+
+  .word-editor.mc-we .form-panel:has(.form-panel-empty:not([style*="display: none"]):not([style*="display:none"])) { display: none; }
+  .word-editor.mc-we .word-list-pager { flex-wrap: wrap; justify-content: center; gap: 0.35rem; }
+}

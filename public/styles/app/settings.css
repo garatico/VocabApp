@@ -1072,5 +1072,7 @@ html.dark .settings-fold .settings-group { background: color-mix(in srgb, var(--
   flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start;
   gap: 0.35rem 1.4rem; margin: 0; padding: 0.15rem 0;
 }
-body #controls:has(> .settings-toolbar--topbar) { padding-left: 1rem; }
+/* Collapsed (#settingsBarCollapseBtn): only the corner is left, like a collapsed quiz form. The bar keeps its
+   left padding (controls-bar.css) so the switches clear that button. */
+#controls > .settings-toolbar.filter-body--collapsed { display: none; }
 #controls > .settings-toolbar--topbar .settings-toolbar-item { gap: 0.4rem; }

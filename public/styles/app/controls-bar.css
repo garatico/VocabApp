@@ -458,7 +458,7 @@
   body #controls:not(:has(#controlsBody.filter-body--collapsed)) {
     padding-top: calc(var(--corner-h, 2.85rem) + 0.25rem);   /* the corner's measured height (streak-widget.ts) */
   }
-  body #controls #controlsCollapseBtn.controls-collapse-btn { top: 1rem; }
+  body #controls :is(#controlsCollapseBtn, #settingsBarCollapseBtn).controls-collapse-btn { top: 1rem; }
   #controls-top > .control-group:first-child,
   #controls-top > .control-stack:first-child { padding-right: 0; padding-left: 0; }
 
@@ -477,6 +477,7 @@
  *    line, the count under them — the three don't fit across a 390px phone. The size row dissolves
  *    (display: contents) so its pieces can join the pool button's line; Rank Range and Level keep theirs.
  *  - Quiz Style and Direction side by side: the two labels on one line, their controls on the next.
+ *    Conjugation's View and Display the same.
  */
 @media (max-width: 599px) {
   #controls-top > .control-stack:first-child { flex-direction: row; align-items: flex-end; gap: 0.4rem; }
@@ -491,9 +492,9 @@
   .words-controls #sizeCustom { order: 3; }
   .words-controls > :is(#rankRangeRow, #bandRow) { order: 4; flex: 1 1 100%; }
 
-  #controls-top > .control-stack:has(> #tableStyleGroup) { flex-direction: row; align-items: stretch; gap: 0.4rem; }
-  #controls-top > .control-stack:has(> #tableStyleGroup) > .control-group { flex: 1 1 0; min-width: 0; }
-  :is(#tableStyleSelect, #directionCycle) { width: 100%; }
+  #controls-top > .control-stack:is(:has(> #tableStyleGroup), :has(> #conjViewGroup)) { flex-direction: row; align-items: stretch; gap: 0.4rem; }
+  #controls-top > .control-stack:is(:has(> #tableStyleGroup), :has(> #conjViewGroup)) > .control-group { flex: 1 1 0; min-width: 0; }
+  :is(#tableStyleSelect, #directionCycle, #conjViewSelect, #conjDisplayCycle) { width: 100%; }
 }
 
 /* ── Pager page-jump dropdown ──────────────────────────────────

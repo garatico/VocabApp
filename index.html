@@ -79,6 +79,12 @@
         <button type="button" id="controlsCollapseBtn" class="filter-collapse-btn controls-collapse-btn" data-collapse="controlsBody" data-default-open="true" aria-expanded="true" aria-controls="controlsBody" aria-label="Collapse quiz controls" title="Collapse quiz controls">
           <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
         </button>
+        <!-- The same corner button on Settings, where the bar holds Settings' page-level switches instead of a quiz
+             form (ui-state.ts moves .settings-toolbar here and shows this only on that tab). Its own section, so
+             collapsing Settings' bar never collapses Table's controls. -->
+        <button type="button" id="settingsBarCollapseBtn" class="filter-collapse-btn controls-collapse-btn" data-collapse="settingsToolbar" data-default-open="true" aria-expanded="true" aria-controls="settingsToolbar" aria-label="Collapse the Settings bar" title="Collapse the Settings bar" hidden>
+          <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
+        </button>
         <!-- One flex row anchored to #controls' own top-right corner, so
              every button here lays out naturally instead of each needing
              its own hand-tuned `right: Nrem` (the old approach — a wider
@@ -524,6 +530,12 @@
              what is filtering below (filters/filter-bar.ts). Each filter still
              owns its own state, On/Off, chain and Hide/Focus. -->
         <div id="filtersBar" class="filters-bar">
+        <!-- Collapses the filter pills (remembered, like any data-collapse section). The summary of what they
+             are set to stays below either way. -->
+        <button type="button" class="filter-collapse-btn filters-section-toggle" data-collapse="filtersRow" data-default-open="true" aria-expanded="true" aria-controls="filtersRow" data-simple-hide="true">
+          <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
+          <span class="filters-section-heading" data-i18n="filter.filters">Filters</span>
+        </button>
         <div id="filtersRow" class="filters-row">
         <div id="classFilter" class="class-filter-wrap" data-simple-hide="true">
           <button type="button" class="filter-collapse-btn" data-collapse="classFilterBody" aria-expanded="false" aria-controls="classFilterBody">
@@ -2987,7 +2999,7 @@
              with "Table Quiz" instead of sitting above the whole layout —
              settings-layout.css puts it in the empty gutter to the right of
              settings-wrap's capped width on a wide viewport. -->
-        <div class="settings-toolbar">
+        <div class="settings-toolbar" id="settingsToolbar">
           <div class="settings-toolbar-item">
             <span class="settings-toolbar-label" data-i18n="settings.general.kidMode" title="Simplifies the whole app for a newcomer — every tab, not just this Settings page. See the General section below for exactly what this changes." data-i18n-title="settings.general.kidModeDesc">Simple Mode (App)</span>
             <div class="sort-order-toggle" id="settingSimpleMode">
