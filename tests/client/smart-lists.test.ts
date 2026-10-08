@@ -68,3 +68,69 @@ describe('a rule saved before domains/wordStartsWith/meaningContains existed', (
     expect(smart.evaluateSmart('spanish', rule, vocab).sort()).toEqual(['casa', 'perro']);
   });
 });
+
+describe('In list / Not in list — the difference between two lists', () => {
+  // word-lists.ts refreshes a few badges on write; there is no page here.
+  const stubDocument = (): void => {
+    (globalThis as Record<string, unknown>).document = {
+      getElementById: () => null, querySelector: () => null, querySelectorAll: () => [],
+    };
+  };
+  const vocab = [
+    entry({ word: 'hablar', pos: 'verb', rank: 1 }), entry({ word: 'comer', pos: 'verb', rank: 2 }),
+    entry({ word: 'vivir', pos: 'verb', rank: 3 }), entry({ word: 'casa', pos: 'noun', rank: 4 }),
+    entry({ word: 'perro', pos: 'noun', rank: 5 }),
+  ];
+  async function setup() {
+    stubDocument();
+    const smart = await import('../../src/client/modes/my-lists/smart-lists.ts');
+    const lists = await import('../../src/client/utils/word-lists.ts');
+    lists.createList('spanish', 'Reading');
+    lists.createList('spanish', 'Writing');
+    for (const w of ['hablar', 'comer', 'vivir', 'casa']) lists.addToList('spanish', 'Reading', w);
+    for (const w of ['hablar']) lists.addToList('spanish', 'Writing', w);
+    const rule = (over: Partial<import('../../src/client/modes/my-lists/smart-lists.ts').SmartRule>) =>
+      ({ ...smart.DEFAULT_SMART_RULE, mastered: 'any' as const, limit: 0, ...over });
+    return { smart, lists, rule };
+  }
+
+  it('Reading minus Writing: what reading has that writing doesn\'t', async () => {
+    const { smart, rule } = await setup();
+    expect(smart.evaluateSmart('spanish', rule({ inLists: ['Reading'], notInLists: ['Writing'] }), vocab))
+      .toEqual(['comer', 'vivir', 'casa']);
+  });
+
+  it('combines with the other rules: the verbs only', async () => {
+    const { smart, rule } = await setup();
+    expect(smart.evaluateSmart('spanish', rule({ inLists: ['Reading'], notInLists: ['Writing'], pos: ['verb'] }), vocab))
+      .toEqual(['comer', 'vivir']);
+  });
+
+  it('ignores the default "not in any list" while In list is set (they can\'t both hold)', async () => {
+    const { smart, rule } = await setup();
+    expect(smart.evaluateSmart('spanish', rule({ listed: 'no', inLists: ['Reading'] }), vocab))
+      .toEqual(['hablar', 'comer', 'vivir', 'casa']);
+  });
+
+  it('keeps up as the lists change', async () => {
+    const { smart, lists, rule } = await setup();
+    const r = rule({ inLists: ['Reading'], notInLists: ['Writing'] });
+    lists.addToList('spanish', 'Writing', 'comer');
+    expect(smart.evaluateSmart('spanish', r, vocab)).toEqual(['vivir', 'casa']);
+  });
+
+  it('a deleted In list leaves nothing, rather than widening to every word', async () => {
+    const { smart, lists, rule } = await setup();
+    lists.deleteList('spanish', 'Reading');
+    expect(smart.evaluateSmart('spanish', rule({ inLists: ['Reading'] }), vocab)).toEqual([]);
+  });
+
+  it('follows a renamed list', async () => {
+    const { smart, lists } = await setup();
+    smart.saveSmartRule('spanish', 'To write', { ...smart.DEFAULT_SMART_RULE, inLists: ['Reading'], notInLists: ['Writing'] });
+    lists.renameList('spanish', 'Writing', 'Written');
+    const saved = smart.getSmartLists('spanish')['To write'];
+    expect(saved.notInLists).toEqual(['Written']);
+    expect(saved.inLists).toEqual(['Reading']);
+  });
+});

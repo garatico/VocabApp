@@ -141,7 +141,11 @@ export async function seedRealisticStorage(store: Store): Promise<SeedResult> {
   lists.addToMultiList('Animals', 'perro', 'spanish');
   lists.addToMultiList('Animals', 'chat', 'french');
   lists.setMultiListMeta('Animals', { folders: ['Nature'] } as never);
-  lists.saveListFilterState('spanish', { active: true, mode: 'focus', selected: ['Travel'] }, 'table');
+  // A difference list (made of Travel, minus Known) and a filter that excludes a list.
+  lists.createList('spanish', 'To practise');
+  lists.setListSources('spanish', 'To practise', [{ lang: 'spanish', list: 'Travel' }]);
+  lists.setListMinus('spanish', 'To practise', [{ lang: 'spanish', list: 'Known' }]);
+  lists.saveListFilterState('spanish', { active: true, mode: 'focus', selected: ['Travel'], excluded: ['Known'] }, 'table');
   claim('api');
 
   starter.seedStarterLists('spanish');     // the starter smart lists + their folder look
@@ -152,6 +156,9 @@ export async function seedRealisticStorage(store: Store): Promise<SeedResult> {
   folders.setFolderStyle('single_spanish', 'Trips', { emoji: '✈️', color: '#2f6fd0' });
   smart.saveSmartRule('spanish', 'Due B1 verbs', {
     ...smart.DEFAULT_SMART_RULE, bands: ['B1'], pos: ['verb'], due: 'yes',
+  });
+  smart.saveSmartRule('spanish', 'Travel not yet known', {
+    ...smart.DEFAULT_SMART_RULE, inLists: ['Travel'], notInLists: ['Known'],
   });
   claim('api');
 

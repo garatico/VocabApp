@@ -21,7 +21,7 @@ import { buildListFilterDropdowns } from '../ui/list-filter-dropdowns.ts';
 // smart-lists.ts imports getAllListedWords from this module — both directions
 // only reach across the cycle from inside function bodies (never at module
 // top-level), which ES modules resolve fine; nothing here runs at import time.
-import { getSmartNames, getSmartLists } from '../modes/my-lists/smart-lists.ts';
+import { getSmartNames, getSmartLists, retargetSmartListRefs } from '../modes/my-lists/smart-lists.ts';
 
 const LISTS_PREFIX         = 'vq_lists_';
 const OLD_PREFIX           = 'vq_known_';
@@ -64,6 +64,9 @@ export interface ListMeta {
    *  others in the same language). Their words count as members live — nothing is copied, so
    *  edits to a source show up here at once. */
   sources?: ListSource[];
+  /** Lists whose words are taken *out* (single-language lists only): "Reading minus Writing" is made of
+   *  Reading with Writing subtracted — what Reading has that Writing doesn't. Live, like `sources`. */
+  minus?: ListSource[];
 }
 
 /** One single-language list an aggregate cross-language list draws from. */
@@ -321,11 +324,14 @@ function retargetSources(lang: string, oldName: string, newName: string | null):
   const singles = loadMeta(lang);
   let singlesChanged = false;
   for (const meta of Object.values(singles)) {
-    if (!meta.sources?.some(s => s.lang === lang && s.list === oldName)) continue;
-    meta.sources = meta.sources.flatMap(s =>
-      s.lang !== lang || s.list !== oldName ? [s] : newName ? [{ lang, list: newName }] : []);
-    if (meta.sources.length === 0) delete meta.sources;
-    singlesChanged = true;
+    for (const key of ['sources', 'minus'] as const) {
+      const refs = meta[key];
+      if (!refs?.some(s => s.lang === lang && s.list === oldName)) continue;
+      const next = refs.flatMap(s =>
+        s.lang !== lang || s.list !== oldName ? [s] : newName ? [{ lang, list: newName }] : []);
+      if (next.length) meta[key] = next; else delete meta[key];
+      singlesChanged = true;
+    }
   }
   if (singlesChanged) saveMeta(lang, singles);
 }
@@ -345,6 +351,9 @@ export interface ListFilterState {
   active:   boolean;
   mode:     ListFilterMode;
   selected: string[];
+  /** Lists whose words are always left out, whatever the mode — Focus on Reading, except Writing, quizzes
+   *  the difference. Absent in a state saved before this existed (= none). */
+  excluded?: string[];
 }
 
 const LIST_FILTER_MODES: ListFilterMode[] = ['hide', 'focus'];
@@ -476,7 +485,10 @@ function readBucket(lang: string, bucket: Bucket): ListFilterState {
   if (parsed && LIST_FILTER_MODES.includes(parsed.mode) && Array.isArray(parsed.selected)) {
     // active was added after the key existed, so absent means the old
     // behaviour: a stored hide/focus was always doing something.
-    return { ...parsed, active: parsed.active !== false, selected: normalizeSelected(parsed.selected, lang) };
+    return {
+      ...parsed, active: parsed.active !== false, selected: normalizeSelected(parsed.selected, lang),
+      excluded: Array.isArray(parsed.excluded) ? normalizeSelected(parsed.excluded, lang) : [],
+    };
   }
   return { active: true, mode: 'hide', selected: [] };
 }
@@ -599,14 +611,31 @@ export function getListOwn(lang: string, listName: string): string[] {
  *  each list once, so a cycle can't loop. */
 function collectList(
   lang: string, name: string, seen: Set<string>, into: Map<string, string | undefined>, via?: string,
+  path: ReadonlySet<string> = new Set(),
 ): void {
-  if (seen.has(name)) return;
+  // `seen`: every list already folded in (a diamond counts once). `path`: the lists being resolved right now,
+  // outermost first — what a minus lookup must not re-enter, or A minus B, B minus A recurses for ever.
+  if (seen.has(name) || path.has(name)) return;
   seen.add(name);
+  const here = new Set(path).add(name);
   const store = loadStore(lang);
-  for (const w of store[name] ?? []) if (!into.has(w)) into.set(w, via);
-  for (const s of loadMeta(lang)[name]?.sources ?? []) {
-    if (s.lang === lang && s.list in store) collectList(lang, s.list, seen, into, via ?? s.list);
+  const meta = loadMeta(lang)[name];
+  // Built locally first so this list's `minus` comes off its own whole contents (own words and sources),
+  // and so a difference list used as someone else's source contributes the difference, not more.
+  const mine = new Map<string, string | undefined>();
+  for (const w of store[name] ?? []) if (!mine.has(w)) mine.set(w, via);
+  for (const s of meta?.sources ?? []) {
+    if (s.lang === lang && s.list in store) collectList(lang, s.list, seen, mine, via ?? s.list, here);
   }
+  for (const m of meta?.minus ?? []) {
+    if (m.lang !== lang || !(m.list in store)) continue;   // a deleted list subtracts nothing
+    const sub = new Map<string, string | undefined>();
+    // A fresh `seen` — a minus list may also be one of the sources and must still subtract — but the same
+    // `path`, so one that leads back to a list being resolved (A minus B, B minus A) stops there.
+    collectList(lang, m.list, new Set(), sub, undefined, here);
+    for (const w of sub.keys()) mine.delete(w);
+  }
+  for (const [w, v] of mine) if (!into.has(w)) into.set(w, v);
 }
 
 /** Every member: the list's own words, then its sources' (skipping repeats). */
@@ -622,6 +651,14 @@ export function getDerivedWords(lang: string, listName: string): Map<string, str
   const derived = new Map<string, string>();
   for (const [w, via] of into) if (via) derived.set(w, via);
   return derived;
+}
+
+export function getListMinus(lang: string, listName: string): ListSource[] {
+  return getListMeta(lang, listName).minus ?? [];
+}
+
+export function setListMinus(lang: string, listName: string, minus: ListSource[]): void {
+  setListMeta(lang, listName, { ...getListMeta(lang, listName), minus: minus.length ? minus : undefined });
 }
 
 export function getListSources(lang: string, listName: string): ListSource[] {
@@ -744,6 +781,7 @@ export function renameList(lang: string, oldName: string, newName: string): bool
     saveMeta(lang, meta);
   }
   retargetSources(lang, oldName, newName);
+  retargetSmartListRefs(lang, oldName, newName);
   return true;
 }
 
@@ -751,9 +789,11 @@ export function getTotalListedCount(lang: string): number {
   return getAllListedWords(lang).size;
 }
 
+/** How many words the list holds as shown: its own, its sources', less its minus lists'. (It counted only
+ *  its own words, so a "Made of" or difference list read wrong in the add-to-list pickers.) */
 export function getListCount(lang: string, listName: string): number {
-  const store = loadStore(lang);
-  return store[listName]?.length ?? 0;
+  if (!(listName in loadStore(lang))) return 0;
+  return getList(lang, listName).length;
 }
 
 export function refreshCountBadge(lang: string): void {
@@ -861,14 +901,17 @@ export function refreshFilterSelect(lang: string): void {
   // than dropped — re-adding that language brings the selection straight
   // back rather than losing it.
   const state = getListFilterState(lang);
-  const pruned = state.selected.filter(entry => {
+  const exists = (entry: string): boolean => {
     const parsed = parseSelected(entry, lang);
     if (parsed.kind === 'multi') return multiNames.includes(parsed.name);
     if (parsed.kind === 'smart') return getSmartNames(parsed.lang).includes(parsed.name);
     return getListNames(parsed.lang).includes(parsed.name);
-  });
-  if (pruned.length !== state.selected.length) {
+  };
+  const pruned = state.selected.filter(exists);
+  const prunedExcluded = (state.excluded ?? []).filter(exists);
+  if (pruned.length !== state.selected.length || prunedExcluded.length !== (state.excluded ?? []).length) {
     state.selected = pruned;
+    state.excluded = prunedExcluded;
     saveListFilterState(lang, state);
   }
 
@@ -883,6 +926,25 @@ export function refreshFilterSelect(lang: string): void {
       saveListFilterState(lang, s);
     },
   }));
+  // A second set of the same dropdowns: lists whose words are always left out, whatever Hide/Focus says.
+  // Focus on Reading, except Writing, is the difference between them.
+  if (rows.length) {
+    const exceptRow = document.createElement('div');
+    exceptRow.className = 'list-filter-except';
+    const exceptLabel = document.createElement('span');
+    exceptLabel.className = 'list-filter-except-label';
+    exceptLabel.textContent = 'Except words in';
+    exceptRow.append(exceptLabel, buildListFilterDropdowns(rows, {
+      languages: [lang, ...extras],
+      getSelected: () => getListFilterState(lang).excluded ?? [],
+      setSelected: next => {
+        const s = getListFilterState(lang);
+        s.excluded = next;
+        saveListFilterState(lang, s);
+      },
+    }));
+    container.appendChild(exceptRow);
+  }
 
   // Sync mode toggle button active state
   const modeWrap = document.getElementById('listFilterMode');

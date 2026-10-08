@@ -27,6 +27,7 @@ const {
   qualifyListName, qualifyMultiListName, qualifySmartListName, parseSelected,
   addToList, renameList, deleteList, setMultiSources, getMultiSources, getMultiListOwn,
   getList, getListOwn, getDerivedWords, setListSources, getListSources, getListSourceCandidates, removeFromList, getListNames,
+  setListMinus, getListMinus, createList, getListCount,
 } = await import('../../src/client/utils/word-lists.js');
 
 beforeEach(() => store.clear());
@@ -246,5 +247,72 @@ describe('single-language lists made of other lists', () => {
     setMultiSources('All', [{ lang: 'spanish', list: 'Meals' }]);
     expect(getMultiListCount('All')).toBe(3);
     expect(isInMultiList('All', 'pan', 'spanish')).toBe(true);
+  });
+});
+
+describe('difference lists (minus)', () => {
+  function seed(): void {
+    createList('spanish', 'Reading');
+    createList('spanish', 'Writing');
+    createList('spanish', 'To write');
+    for (const w of ['hablar', 'comer', 'vivir', 'casa']) addToList('spanish', 'Reading', w);
+    for (const w of ['hablar', 'casa']) addToList('spanish', 'Writing', w);
+    setListSources('spanish', 'To write', [{ lang: 'spanish', list: 'Reading' }]);
+    setListMinus('spanish', 'To write', [{ lang: 'spanish', list: 'Writing' }]);
+  }
+
+  it('Made of Reading, minus Writing, is what Reading has that Writing doesn\'t', () => {
+    seed();
+    expect(getList('spanish', 'To write')).toEqual(['comer', 'vivir']);
+    expect(getListCount('spanish', 'To write')).toBe(2);
+  });
+
+  it('shrinks as Writing catches up, and grows as Reading does', () => {
+    seed();
+    addToList('spanish', 'Writing', 'comer');
+    addToList('spanish', 'Reading', 'perro');
+    expect(getList('spanish', 'To write')).toEqual(['vivir', 'perro']);
+  });
+
+  it('takes the subtracted words out of its own words too', () => {
+    seed();
+    addToList('spanish', 'To write', 'casa');   // in Writing: subtracted
+    addToList('spanish', 'To write', 'gato');
+    expect(getList('spanish', 'To write').sort()).toEqual(['comer', 'gato', 'vivir']);
+  });
+
+  it('used as another list\'s source, contributes the difference', () => {
+    seed();
+    createList('spanish', 'Everything to practise');
+    setListSources('spanish', 'Everything to practise', [{ lang: 'spanish', list: 'To write' }]);
+    expect(getList('spanish', 'Everything to practise')).toEqual(['comer', 'vivir']);
+  });
+
+  it('a list that is both a source and a minus subtracts itself away (made of B, minus B: nothing)', () => {
+    createList('spanish', 'B'); createList('spanish', 'C');
+    addToList('spanish', 'B', 'uno');
+    setListSources('spanish', 'C', [{ lang: 'spanish', list: 'B' }]);
+    setListMinus('spanish', 'C', [{ lang: 'spanish', list: 'B' }]);
+    expect(getList('spanish', 'C')).toEqual([]);
+  });
+
+  it('a cycle (A minus B, B minus A) ends rather than looping', () => {
+    createList('spanish', 'A'); createList('spanish', 'B');
+    addToList('spanish', 'A', 'uno'); addToList('spanish', 'A', 'dos');
+    addToList('spanish', 'B', 'dos');
+    setListMinus('spanish', 'A', [{ lang: 'spanish', list: 'B' }]);
+    setListMinus('spanish', 'B', [{ lang: 'spanish', list: 'A' }]);
+    expect(() => getList('spanish', 'A')).not.toThrow();
+    expect(getList('spanish', 'A')).toEqual(['uno']);
+  });
+
+  it('follows a renamed minus list, and a deleted one subtracts nothing', () => {
+    seed();
+    renameList('spanish', 'Writing', 'Written');
+    expect(getListMinus('spanish', 'To write')).toEqual([{ lang: 'spanish', list: 'Written' }]);
+    expect(getList('spanish', 'To write')).toEqual(['comer', 'vivir']);
+    deleteList('spanish', 'Written');
+    expect(getListMinus('spanish', 'To write')).toEqual([]);
+    expect(getList('spanish', 'To write')).toEqual(['hablar', 'comer', 'vivir', 'casa']);
   });
 });

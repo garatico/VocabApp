@@ -93,7 +93,7 @@ describe('the fixture', () => {
     const { raw, semantic } = await seedFresh();
     expect(Object.keys(raw.data).length).toBeGreaterThan(150);
     const es = (semantic['perLang'] as Record<string, Record<string, unknown>>)['spanish'];
-    expect(Object.keys(es['lists'] as object)).toEqual(['Known', 'Travel']);
+    expect(Object.keys(es['lists'] as object)).toEqual(['Known', 'To practise', 'Travel']);
     expect((es['mastered'] as string[]).length).toBeGreaterThan(0);
     expect(Object.keys(es['srs'] as object).length).toBeGreaterThan(0);
     expect((es['sessions'] as unknown[]).length).toBe(2);

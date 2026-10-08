@@ -385,3 +385,40 @@ describe('Combined filters in Table mode', () => {
     expect(afterAll.map(w => w.word)).toEqual(['casa']);
   });
 });
+
+describe('List filter — "Except words in" (the difference between two lists)', () => {
+  async function seed() {
+    const { wf, wl } = await load();
+    switchTo('table');
+    wl.createList('spanish', 'Reading');
+    wl.createList('spanish', 'Writing');
+    for (const w of ['ser', 'casa', 'hola']) wl.addToList('spanish', 'Reading', w);
+    wl.addToList('spanish', 'Writing', 'ser');
+    const q = (n: string): string => wl.qualifyListName('spanish', n);
+    return { wf, wl, q };
+  }
+
+  it('Focus on Reading, except Writing: what Reading has that Writing doesn\'t', async () => {
+    const { wf, wl, q } = await seed();
+    wl.saveListFilterState('spanish', { active: true, mode: 'focus', selected: [q('Reading')], excluded: [q('Writing')] });
+    expect(wf.filterWords(WORDS).map(w => w.word)).toEqual(['casa', 'hola']);
+  });
+
+  it('with nothing checked, it still leaves the excluded words out', async () => {
+    const { wf, wl, q } = await seed();
+    wl.saveListFilterState('spanish', { active: true, mode: 'focus', selected: [], excluded: [q('Writing')] });
+    expect(wf.filterWords(WORDS).map(w => w.word)).toEqual(['casa', 'hola', 'rojo']);
+  });
+
+  it('switched off, it changes nothing', async () => {
+    const { wf, wl, q } = await seed();
+    wl.saveListFilterState('spanish', { active: false, mode: 'focus', selected: [q('Reading')], excluded: [q('Writing')] });
+    expect(wf.filterWords(WORDS)).toHaveLength(WORDS.length);
+  });
+
+  it('a state saved before Except existed reads back with nothing excluded', async () => {
+    const { wl, q } = await seed();
+    wl.saveListFilterState('spanish', { active: true, mode: 'focus', selected: [q('Reading')] });
+    expect(wl.getListFilterState('spanish').excluded).toEqual([]);
+  });
+});

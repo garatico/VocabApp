@@ -422,13 +422,40 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
     bandDropdown.wrap.after(posDropdown.wrap, domainDropdown.wrap);
   }
 
+  // In list / Not in list — the difference between two lists: "in Reading, not in Writing" is what Reading
+  // has that Writing doesn't, kept up to date as either changes. Saved in place like the dropdowns above.
+  let syncListedRow = (): void => { /* assigned once the In a List row exists, below */ };
+  const listOptions = getListNames(ctx.lang).map(n => ({ value: n, label: n }));
+  if (listOptions.length) {
+    const inSelected = new Set<string>(rule.inLists ?? []);
+    const notInSelected = new Set<string>(rule.notInLists ?? []);
+    const inDropdown = buildChecklistDropdown('In list', listOptions, inSelected, () => {
+      rule.inLists = [...inSelected]; saveRule(); syncListedRow();
+    });
+    const notInDropdown = buildChecklistDropdown('Not in list', listOptions, notInSelected, () => {
+      rule.notInLists = [...notInSelected]; saveRule();
+    });
+    folderDropdown.wrap.before(inDropdown.wrap, notInDropdown.wrap);   // with the rule's dropdowns, not filing's
+  }
+
+  const listedRow = selectRow('In a List', [
+    ['no', 'Not In Any List'], ['any', 'Either'],
+  ], rule.listed, v => { rule.listed = v as SmartRule['listed']; });
+  // "Not in any list" and "In list: Reading" can't both hold, so the evaluator drops the former while the
+  // latter is set (smart-lists.ts); the control says so rather than appearing to do nothing.
+  syncListedRow = (): void => {
+    const sel = listedRow.querySelector('select');
+    if (!sel) return;
+    sel.disabled = (rule.inLists?.length ?? 0) > 0;
+    sel.title = sel.disabled ? 'Not used while "In list" is set' : '';
+  };
+  syncListedRow();
+
   const refineRows: HTMLElement[] = [
     selectRow('Mastered', [
       ['no', 'Not Yet Mastered'], ['yes', 'Mastered'], ['any', 'Either'],
     ], rule.mastered, v => { rule.mastered = v as SmartRule['mastered']; }),
-    selectRow('In a List', [
-      ['no', 'Not In Any List'], ['any', 'Either'],
-    ], rule.listed, v => { rule.listed = v as SmartRule['listed']; }),
+    listedRow,
     selectRow('Review', [
       ['yes', 'Due Now'], ['any', 'Either'],
     ], rule.due ?? 'any', v => { rule.due = v as SmartRule['due']; }),

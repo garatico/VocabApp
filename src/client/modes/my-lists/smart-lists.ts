@@ -13,7 +13,7 @@
  */
 
 import { foldKey as norm } from '../../utils/match.ts';
-import { getAllListedWords } from '../../utils/word-lists.ts';
+import { getAllListedWords, getList, getListNames } from '../../utils/word-lists.ts';
 import { getMastered } from './mastery.ts';
 import { srsDueWords } from '../../utils/srs.ts';
 import type { VocabEntry } from './types.ts';
@@ -36,6 +36,14 @@ export interface SmartRule {
    * (just seen), or mastered long ago and now overdue for a refresher.
    */
   due:      'any' | 'yes';
+  /**
+   * Single-Language lists (this language) a word must be in — at least one of them. Absent or empty = any.
+   * With this set, `listed` is not applied: "in Reading" and "not in any list" can't both hold.
+   * Each list counts with its sources (an aggregate list's whole contents).
+   */
+  inLists?: string[];
+  /** Single-Language lists a word must be in none of. "In Reading, not in Writing" is the difference. */
+  notInLists?: string[];
   /** Case/accent-insensitive prefix match on the word itself. '' = any. */
   wordStartsWith:  string;
   /** Case/accent-insensitive substring match on the translation. '' = any. */
@@ -134,19 +142,40 @@ export function renameSmartList(lang: string, oldName: string, newName: string):
   return true;
 }
 
+/** A Single-Language list was renamed: rules naming it in In list / Not in list follow it (word-lists.ts calls this). */
+export function retargetSmartListRefs(lang: string, oldName: string, newName: string): void {
+  const all = getSmartLists(lang);
+  let changed = false;
+  for (const rule of Object.values(all)) {
+    for (const key of ['inLists', 'notInLists'] as const) {
+      const refs = rule[key];
+      if (refs?.includes(oldName)) { rule[key] = refs.map(n => (n === oldName ? newName : n)); changed = true; }
+    }
+  }
+  if (changed) saveSmartLists(lang, all);
+}
+
 /** Evaluate a rule against the loaded vocabulary for a language. */
 export function evaluateSmart(lang: string, rule: SmartRule, vocab: VocabEntry[]): string[] {
   const mastered = getMastered(lang);
   const listed   = getAllListedWords(lang);
   const due      = rule.due === 'yes' ? new Set(srsDueWords(lang)) : null;
+  // In list / Not in list. A list since deleted contributes nothing: if every "In list" is gone the result is
+  // empty, rather than the rule quietly widening to every word.
+  const names    = new Set(getListNames(lang));
+  const wantIn   = (rule.inLists ?? []).length > 0;
+  const inSets   = (rule.inLists ?? []).filter(n => names.has(n)).map(n => new Set(getList(lang, n)));
+  const notSets  = (rule.notInLists ?? []).filter(n => names.has(n)).map(n => new Set(getList(lang, n)));
 
   let out = vocab.filter(e => {
+    if (wantIn && !inSets.some(s => s.has(e.word))) return false;
+    if (notSets.some(s => s.has(e.word))) return false;
     if (rule.bands.length && !rule.bands.includes(e.band ?? '')) return false;
     if (rule.pos.length   && !rule.pos.includes(e.pos ?? ''))    return false;
     if (rule.domains.length && !e.domains.some(d => rule.domains.includes(d))) return false;
     if (rule.mastered === 'yes' && !mastered.has(e.word)) return false;
     if (rule.mastered === 'no'  &&  mastered.has(e.word)) return false;
-    if (rule.listed   === 'no'  &&  listed.has(e.word))   return false;
+    if (rule.listed   === 'no'  &&  !wantIn && listed.has(e.word)) return false;
     if (due && !due.has(e.word)) return false;
     if (rule.wordStartsWith && !norm(e.word).startsWith(norm(rule.wordStartsWith))) return false;
     if (rule.meaningContains && !norm(e.translation).includes(norm(rule.meaningContains))) return false;

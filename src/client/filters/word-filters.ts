@@ -85,6 +85,40 @@ export function getFilterState(): FilterState {
  * chainable state; it's a single on/off Settings toggle, so it always
  * applies here rather than being gated on `state.active`.
  */
+
+/**
+ * Is a word in any of these Lists-filter entries? An entry may name a list in a language other than `lang`
+ * (a "+ Languages" extra, merged into a Compare/multi-language table) or a Cross-Language list — see
+ * refreshFilterSelect(). Single-language membership is keyed by language *and* word (the same word can appear
+ * in two languages' lists with no relation to each other); Cross-Language membership is checked directly,
+ * since a multi-list entry already carries its own language. Shared by the checked lists and the "Except
+ * words in" ones.
+ */
+function listMembership(entries: readonly string[], lang: string): (w: Word) => boolean {
+  const singleKeys = new Set<string>();   // `${language} ${word}`
+  const multiNames: string[] = [];
+  for (const entry of entries) {
+    const parsed = parseSelected(entry, lang);
+    if (parsed.kind === 'multi') { multiNames.push(parsed.name); continue; }
+    if (parsed.kind === 'smart') {
+      // A smart list is a rule, not a stored word array — evaluate it against whatever vocab for its language
+      // is already loaded this session. Nothing loaded means it contributes nothing rather than triggering a
+      // fetch mid-filter (filterWords is synchronous).
+      const rule = getSmartLists(parsed.lang)[parsed.name];
+      const vocab = getCachedWords(parsed.lang);
+      if (rule && vocab) {
+        for (const w of evaluateSmart(parsed.lang, rule, vocab.map(toVocabEntry))) singleKeys.add(parsed.lang + ' ' + w);
+      }
+      continue;
+    }
+    for (const w of getList(parsed.lang, parsed.name)) singleKeys.add(parsed.lang + ' ' + w);
+  }
+  return (w: Word): boolean => {
+    const wordLang = w.language ?? lang;
+    if (singleKeys.has(wordLang + ' ' + w.word)) return true;
+    return multiNames.some(name => isInMultiList(name, w.word, wordLang));
+  };
+}
 export function filterWords(words: Word[]): Word[] {
   const lang  = (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? 'spanish';
   const state = getListFilterState(lang);
@@ -93,47 +127,22 @@ export function filterWords(words: Word[]): Word[] {
 
   // See class-filter.ts's getSelectedClasses() for why Simple Mode is
   // checked here rather than cleared once, at the moment it's toggled on.
+  const excluded = state.excluded ?? [];
   if (!Settings.getSimpleMode()
-      && !Settings.getHideListsFilter(getCurrentMode()) && state.active && state.selected.length > 0) {
-    // A selected entry may name a list in a language other than `lang` (a
-    // "+ Languages" extra, merged into a Compare/multi-language table) or a
-    // Cross-Language list — see refreshFilterSelect(). Single-language
-    // membership is keyed by language *and* word (the same word can appear
-    // in two languages' lists with no relation to each other); Cross-
-    // Language membership is checked directly, since a multi-list entry
-    // already carries its own language.
-    const singleKeys = new Set<string>();   // `${language} ${word}`
-    const multiNames: string[] = [];
-    for (const entry of state.selected) {
-      const parsed = parseSelected(entry, lang);
-      if (parsed.kind === 'multi') { multiNames.push(parsed.name); continue; }
-      if (parsed.kind === 'smart') {
-        // A smart list is a rule, not a stored word array — evaluate it
-        // against whatever vocab for its language is already loaded this
-        // session. Nothing loaded means it contributes nothing rather than
-        // triggering a fetch mid-filter (filterWords is synchronous).
-        const rule = getSmartLists(parsed.lang)[parsed.name];
-        const vocab = getCachedWords(parsed.lang);
-        if (rule && vocab) {
-          for (const w of evaluateSmart(parsed.lang, rule, vocab.map(toVocabEntry))) {
-            singleKeys.add(parsed.lang + ' ' + w);
-          }
-        }
-        continue;
-      }
-      for (const w of getList(parsed.lang, parsed.name)) singleKeys.add(parsed.lang + ' ' + w);
+      && !Settings.getHideListsFilter(getCurrentMode()) && state.active
+      && (state.selected.length > 0 || excluded.length > 0)) {
+    if (state.selected.length > 0) {
+      const inSelection = listMembership(state.selected, lang);
+      out = state.mode === 'hide'
+        ? out.filter(w => !inSelection(w))
+        // focus: only words that appear in at least one selected list
+        : out.filter(w => inSelection(w));
     }
-
-    const inSelection = (w: Word): boolean => {
-      const wordLang = w.language ?? lang;
-      if (singleKeys.has(wordLang + ' ' + w.word)) return true;
-      return multiNames.some(name => isInMultiList(name, w.word, wordLang));
-    };
-
-    out = state.mode === 'hide'
-      ? out.filter(w => !inSelection(w))
-      // focus: only words that appear in at least one selected list
-      : out.filter(w => inSelection(w));
+    // "Except words in": out in either mode — Focus on Reading, except Writing, is the difference.
+    if (excluded.length > 0) {
+      const inExcluded = listMembership(excluded, lang);
+      out = out.filter(w => !inExcluded(w));
+    }
   }
 
   if (Settings.getSwearFilterEnabled()) {

@@ -123,7 +123,7 @@ function updatePillCounts(): void {
   const cls = getClassFilterState();
   setPillCount('classFilter', cls.selected.length);
   const lst = getListFilterState(currentLangValue());
-  setPillCount('listFilter', lst.selected.length);
+  setPillCount('listFilter', lst.selected.length + (lst.excluded?.length ?? 0));
 }
 
 // ── Summary strip ───────────────────────────────────────────────────────────
@@ -159,6 +159,22 @@ function collectGroups(): Group[] {
           remove: () => {
             const next = getListFilterState(lang);
             next.selected = next.selected.filter(e => e !== entry);
+            saveListFilterState(lang, next);
+            refreshFilterSelect(lang);
+            document.getElementById('listFilter')?.dispatchEvent(new Event('change', { bubbles: true }));
+          },
+        })),
+      });
+    }
+    const excluded = s.excluded ?? [];
+    if (excluded.length > 0) {
+      groups.push({
+        kind: 'lists', title: 'Except',
+        chips: excluded.map(entry => ({
+          label: parseSelected(entry, lang).name, off: !s.active,
+          remove: () => {
+            const next = getListFilterState(lang);
+            next.excluded = (next.excluded ?? []).filter(e => e !== entry);
             saveListFilterState(lang, next);
             refreshFilterSelect(lang);
             document.getElementById('listFilter')?.dispatchEvent(new Event('change', { bubbles: true }));

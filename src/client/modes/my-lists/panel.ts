@@ -14,6 +14,7 @@
 import {
   getListMeta, setListMeta, metaFolders,
   getListSources, setListSources, getListSourceCandidates,
+  getListMinus, setListMinus, getListNames,
 } from '../../utils/word-lists.ts';
 import { FILTER_SCOPES, SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
 import { BROWSE_ALL_LIST, NO_SELECTION, deselectAll, type ListsCtx } from './context.ts';
@@ -220,7 +221,22 @@ function renderPanelBody(ctx: ListsCtx): void {
   );
   sourceDropdown.wrap.title = 'Build this list from other lists instead of copying their words';
 
-  filterDropdownsRow.append(folderDropdown.wrap, sourceDropdown.wrap, hideFromDropdown.wrap);
+  // Difference lists: words of these lists are taken out of this one, live. Made of Reading, minus Writing,
+  // is what Reading has that Writing doesn't — and it shrinks as Writing catches up.
+  const minusSelected = new Set(getListMinus(ctx.lang, ctx.selectedList).map(s => s.list));
+  const minusDropdown = buildChecklistDropdown(
+    'Minus',
+    getListNames(ctx.lang).filter(n => n !== ctx.selectedList).map(n => ({ value: n, label: n, language: ctx.lang })),
+    minusSelected,
+    () => {
+      setListMinus(ctx.lang, ctx.selectedList, [...minusSelected].map(list => ({ lang: ctx.lang, list })));
+      ctx.renderSidebar(false);
+      renderPanel(ctx);
+    },
+  );
+  minusDropdown.wrap.title = 'Leave out every word that is in these lists — e.g. Made of Reading, minus Writing';
+
+  filterDropdownsRow.append(folderDropdown.wrap, sourceDropdown.wrap, minusDropdown.wrap, hideFromDropdown.wrap);
 
   panelHeader.appendChild(titleGroup);
   panelHeader.appendChild(filterDropdownsRow);

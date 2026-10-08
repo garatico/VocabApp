@@ -407,9 +407,12 @@ html.dark .pos-chip[data-band]:not(.active):hover {
 
 /* ── Checkbox list ── */
 .list-filter-checkboxes {
+  /* A column: its children are whole rows (the dropdowns, then "Except words in"). As a wrapping row, the
+     popover's shrink-to-fit width counted the two side by side and grew past a phone's card. */
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem 0.4rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
 }
 
 .list-filter-empty {
@@ -557,6 +560,11 @@ html.dark .pos-chip[data-band]:not(.active):hover {
 
 /* Lists filter: a few dropdowns (one per kind) instead of a wall of pills */
 .list-filter-dropdowns { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.4rem; }
+/* "Except words in" — the same dropdowns again, for lists whose words are always left out (word-lists.ts). */
+.list-filter-except { margin-top: 0.15rem; }
+/* Label above the dropdowns, as a block: the popover is shrink-to-fit, and a flex row sizes it by its
+   unwrapped width — label and dropdowns side by side pushed it past a phone's card. */
+.list-filter-except-label { display: block; margin-bottom: 0.25rem; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); }
 .list-filter-dd--multi .ml-chip-dropdown-toggle { color: var(--ml-accent-multi, inherit); border-color: color-mix(in srgb, var(--ml-accent-multi, var(--border-strong)) 55%, transparent); }
 .list-filter-dd--smart .ml-chip-dropdown-toggle { color: var(--ml-accent-smart, inherit); border-color: color-mix(in srgb, var(--ml-accent-smart, var(--border-strong)) 55%, transparent); }
 

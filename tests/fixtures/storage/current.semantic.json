@@ -378,6 +378,9 @@
       "listFilter": {
         "conjugation": {
           "active": true,
+          "excluded": [
+            "spanish␟Known"
+          ],
           "mode": "focus",
           "selected": [
             "spanish␟Travel"
@@ -385,6 +388,9 @@
         },
         "mylists": {
           "active": true,
+          "excluded": [
+            "spanish␟Known"
+          ],
           "mode": "focus",
           "selected": [
             "spanish␟Travel"
@@ -392,6 +398,9 @@
         },
         "picture": {
           "active": true,
+          "excluded": [
+            "spanish␟Known"
+          ],
           "mode": "focus",
           "selected": [
             "spanish␟Travel"
@@ -399,6 +408,9 @@
         },
         "table": {
           "active": true,
+          "excluded": [
+            "spanish␟Known"
+          ],
           "mode": "focus",
           "selected": [
             "spanish␟Travel"
@@ -406,6 +418,9 @@
         },
         "trivia": {
           "active": true,
+          "excluded": [
+            "spanish␟Known"
+          ],
           "mode": "focus",
           "selected": [
             "spanish␟Travel"
@@ -428,6 +443,32 @@
             "no",
             "perro",
             "que"
+          ]
+        },
+        "To practise": {
+          "added": {
+            "aeropuerto": null,
+            "billete": null,
+            "hotel": null
+          },
+          "meta": {
+            "minus": [
+              {
+                "lang": "spanish",
+                "list": "Known"
+              }
+            ],
+            "sources": [
+              {
+                "lang": "spanish",
+                "list": "Travel"
+              }
+            ]
+          },
+          "words": [
+            "aeropuerto",
+            "billete",
+            "hotel"
           ]
         },
         "Travel": {
@@ -820,6 +861,27 @@
           "pos": [],
           "sort": "rank",
           "starter": true,
+          "wordStartsWith": ""
+        },
+        "Travel not yet known": {
+          "bands": [],
+          "domains": [],
+          "due": "any",
+          "folders": [],
+          "hiddenModes": [],
+          "inLists": [
+            "Travel"
+          ],
+          "limit": 100,
+          "listed": "no",
+          "manualWords": [],
+          "mastered": "no",
+          "meaningContains": "",
+          "notInLists": [
+            "Known"
+          ],
+          "pos": [],
+          "sort": "rank",
           "wordStartsWith": ""
         },
         "Work & Business": {
