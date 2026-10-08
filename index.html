@@ -1025,7 +1025,7 @@
             <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTableLists" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupTableLists">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading" data-i18n="settings.table.listsGroup">Adding to Lists</span>
+              <span class="settings-group-heading" data-i18n="settings.table.listsGroup">Lists</span>
             </button>
             <div id="settingsGroupTableLists" class="filter-body">
 
@@ -1037,6 +1037,17 @@
               <div class="sort-order-toggle" id="settingListPickerCounts">
                 <button type="button" class="sort-order-btn" data-show="false" data-i18n="common.off">Off</button>
                 <button type="button" class="sort-order-btn active" data-show="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.listExcept">&quot;Except words in&quot; in the Lists filter</span>
+                <span class="settings-desc" data-i18n="settings.table.listExceptDesc">Adds a row of lists whose words are always left out — Focus on Reading, except Writing.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingListFilterExcept">
+                <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-enabled="true" data-i18n="common.on">On</button>
               </div>
             </div>
 

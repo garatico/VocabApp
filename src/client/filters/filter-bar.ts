@@ -32,7 +32,7 @@ import {
   getActiveProfile, setActiveProfile, applyPreset, savePreset,
 } from './presets.ts';
 import {
-  getListFilterState, saveListFilterState, refreshFilterSelect, parseSelected,
+  getListFilterState, saveListFilterState, refreshFilterSelect, parseSelected, activeExcluded,
 } from '../utils/word-lists.ts';
 
 const BOXES = ['classFilter', 'listFilter', 'domainFilterWrap'] as const;
@@ -123,7 +123,7 @@ function updatePillCounts(): void {
   const cls = getClassFilterState();
   setPillCount('classFilter', cls.selected.length);
   const lst = getListFilterState(currentLangValue());
-  setPillCount('listFilter', lst.selected.length + (lst.excluded?.length ?? 0));
+  setPillCount('listFilter', lst.selected.length + activeExcluded(lst).length);
 }
 
 // ── Summary strip ───────────────────────────────────────────────────────────
@@ -166,7 +166,7 @@ function collectGroups(): Group[] {
         })),
       });
     }
-    const excluded = s.excluded ?? [];
+    const excluded = activeExcluded(s);
     if (excluded.length > 0) {
       groups.push({
         kind: 'lists', title: 'Except',

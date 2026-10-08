@@ -228,6 +228,10 @@ export const Settings = {
    *  switched back on. */
   getDueExemptEnabled: (): boolean => get('due_exempt_enabled', 'true') === 'true',
 
+  /** Off by default (opt in from Table's Advanced fold). Shows the Lists filter's "Except words in" row and applies it. Off is
+   *  a master switch, not a delete: lists already chosen there are kept, ignored, and apply again when it's switched back on. */
+  getListFilterExcept: (): boolean => get('list_filter_except', 'false') === 'true',
+
   /** Off by default (opt in from Appearance). Closes the quiz setup panel when a quiz starts, so the quiz is on screen instead of
    *  below a screenful of controls. The ▾ in the panel's corner opens it again. */
   getCollapseControlsOnStart: (): boolean => get('collapse_controls_on_start', 'false') === 'true',

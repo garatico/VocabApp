@@ -18,6 +18,7 @@ import { currentScope, type FilterScope } from '../filters/filter-scope.ts';
 import { bucketFor, bucketForRead, SHARED_BUCKET, type Bucket } from '../filters/filter-state.ts';
 import { currentExtraLanguages } from '../filters/filter-lang.ts';
 import { buildListFilterDropdowns } from '../ui/list-filter-dropdowns.ts';
+import { Settings } from '../settings.ts';
 // smart-lists.ts imports getAllListedWords from this module — both directions
 // only reach across the cycle from inside function bodies (never at module
 // top-level), which ES modules resolve fine; nothing here runs at import time.
@@ -502,6 +503,12 @@ export function getListFilterState(
     b => readString(filterKey(lang, b)) !== null, scope));
 }
 
+/** The "Except words in" lists that apply now: none while Settings' switch for it is off. Read this, not `excluded`,
+ *  anywhere that filters or shows them — the saved choice survives the switch being off. */
+export function activeExcluded(state: ListFilterState): string[] {
+  return Settings.getListFilterExcept() ? state.excluded ?? [] : [];
+}
+
 export function saveListFilterState(
   lang: string, state: ListFilterState, scope: FilterScope = currentScope(),
 ): void {
@@ -927,8 +934,8 @@ export function refreshFilterSelect(lang: string): void {
     },
   }));
   // A second set of the same dropdowns: lists whose words are always left out, whatever Hide/Focus says.
-  // Focus on Reading, except Writing, is the difference between them.
-  if (rows.length) {
+  // Focus on Reading, except Writing, is the difference between them. Opt-in (Settings → Table → Advanced).
+  if (rows.length && Settings.getListFilterExcept()) {
     const exceptRow = document.createElement('div');
     exceptRow.className = 'list-filter-except';
     const exceptLabel = document.createElement('span');

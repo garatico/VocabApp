@@ -390,6 +390,7 @@ describe('List filter — "Except words in" (the difference between two lists)',
   async function seed() {
     const { wf, wl } = await load();
     switchTo('table');
+    localStorage.setItem('s_list_filter_except', 'true');   // opt-in, off by default
     wl.createList('spanish', 'Reading');
     wl.createList('spanish', 'Writing');
     for (const w of ['ser', 'casa', 'hola']) wl.addToList('spanish', 'Reading', w);
@@ -414,6 +415,17 @@ describe('List filter — "Except words in" (the difference between two lists)',
     const { wf, wl, q } = await seed();
     wl.saveListFilterState('spanish', { active: false, mode: 'focus', selected: [q('Reading')], excluded: [q('Writing')] });
     expect(wf.filterWords(WORDS)).toHaveLength(WORDS.length);
+  });
+
+  it('with its Settings switch off (the default) the choice is ignored, not lost', async () => {
+    const { wf, wl, q } = await seed();
+    wl.saveListFilterState('spanish', { active: true, mode: 'focus', selected: [q('Reading')], excluded: [q('Writing')] });
+    localStorage.removeItem('s_list_filter_except');
+    expect(wf.filterWords(WORDS).map(w => w.word)).toEqual(['ser', 'casa', 'hola']);
+    expect(wl.activeExcluded(wl.getListFilterState('spanish'))).toEqual([]);
+    expect(wl.getListFilterState('spanish').excluded).toEqual([q('Writing')]);
+    localStorage.setItem('s_list_filter_except', 'true');
+    expect(wf.filterWords(WORDS).map(w => w.word)).toEqual(['casa', 'hola']);
   });
 
   it('a state saved before Except existed reads back with nothing excluded', async () => {

@@ -67,11 +67,30 @@ test('a list Made of Reading, Minus Writing', async ({ page }) => {
 });
 
 test('Table\'s Lists filter: Focus on Reading, Except words in Writing', async ({ page }) => {
-  await seed(page, { keys: { vq_listfilter_spanish__shared: { active: true, mode: 'focus', selected: ['Reading'], excluded: ['Writing'] } } });
+  await seed(page, { keys: {
+    s_list_filter_except: true,
+    vq_listfilter_spanish__shared: { active: true, mode: 'focus', selected: ['Reading'], excluded: ['Writing'] },
+  } });
   await expect(page.locator('.list-filter-except')).toBeAttached();
   await expect(page.locator('.filters-summary-group', { hasText: 'Except' })).toContainText('Writing');
   await page.locator('#startBtn').click();
   await expect(page.locator('#tableWrap input[data-word]')).toHaveCount(3);
   const words = await page.locator('#tableWrap input[data-word]').evaluateAll(els => els.map(e => (e as HTMLElement).dataset.word ?? ''));
   expect(words.sort()).toEqual([...DIFF].sort());
+});
+
+test('"Except words in" is off by default: no row, and a saved choice is ignored until Settings turns it on', async ({ page }) => {
+  await seed(page, { keys: { vq_listfilter_spanish__shared: { active: true, mode: 'focus', selected: ['Reading'], excluded: ['Writing'] } } });
+  await expect(page.locator('.filters-summary-group', { hasText: 'Reading' })).toBeAttached();   // the filter has drawn
+  await expect(page.locator('.list-filter-except')).toHaveCount(0);
+  await expect(page.locator('.filters-summary-group', { hasText: 'Except' })).toHaveCount(0);
+  await page.locator('#startBtn').click();
+  await expect(page.locator('#tableWrap input[data-word]')).toHaveCount(4);   // all of Reading
+
+  await page.locator('.mode-tab[data-mode="settings"]').click();
+  await page.locator('#settingListFilterExcept .sort-order-btn[data-enabled="true"]').evaluate(b => (b as HTMLElement).click());
+  await page.locator('.mode-tab[data-mode="table"]').click();
+  await expect(page.locator('.list-filter-except')).toBeAttached();
+  await page.locator('#startBtn').click();
+  await expect(page.locator('#tableWrap input[data-word]')).toHaveCount(3);
 });

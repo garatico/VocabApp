@@ -285,6 +285,13 @@ export function bindSettings(): void {
     activateToggle('settingListPickerCounts', btn);
     set('list_picker_counts', btn.dataset.show ?? 'true');
   });
+  document.getElementById('settingListFilterExcept')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingListFilterExcept', btn);
+    set('list_filter_except', btn.dataset.enabled ?? 'false');
+    // The Lists filter redraws itself on the way back to a quiz tab; Start reads the switch afresh.
+  });
   document.getElementById('settingSuddenDeath')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
     if (!btn) return;
@@ -1199,6 +1206,10 @@ function restoreSettingsUI(): void {
   const savedPickerCounts = String(Settings.getListPickerCounts());
   document.querySelectorAll<HTMLElement>('#settingListPickerCounts .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.show === savedPickerCounts);
+  });
+  const savedListExcept = String(Settings.getListFilterExcept());
+  document.querySelectorAll<HTMLElement>('#settingListFilterExcept .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedListExcept);
   });
   const savedSuddenDeath = String(Settings.getSuddenDeath());
   document.querySelectorAll<HTMLElement>('#settingSuddenDeath .sort-order-btn').forEach(b => {
