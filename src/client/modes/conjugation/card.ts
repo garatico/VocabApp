@@ -263,6 +263,12 @@ export function buildCard({
         hideWordWhenUnrevealed: getDisplayMode() === 'english',
       });
     });
+    // The same details from the keyboard: F2 in any of this card's answer boxes (see shortcuts-overlay.ts).
+    card.addEventListener('keydown', e => {
+      if (e.key !== 'F2' || !(e.target instanceof HTMLInputElement)) return;
+      e.preventDefault();
+      targetEl.click();
+    });
   }
 
   const innerGrid = document.createElement('div');

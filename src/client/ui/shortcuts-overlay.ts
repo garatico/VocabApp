@@ -24,6 +24,7 @@ const SHORTCUTS: ShortcutGroup[] = [
       { keys: ['Esc'],          desc: 'Skip to next unanswered' },
       { keys: ['Ctrl', '/'],    desc: 'Jump to first unanswered' },
       { keys: ['?'],            desc: 'Hint (first letter or full reveal)' },
+      { keys: ['F2'],           desc: 'Word details: add to a list, copy, conjugation' },
     ],
   },
   {
@@ -33,6 +34,7 @@ const SHORTCUTS: ShortcutGroup[] = [
       { keys: ['Shift', 'Tab'],  desc: 'Previous form within a verb' },
       { keys: ['Ctrl', '↓'],     desc: 'Next verb' },
       { keys: ['Ctrl', '↑'],     desc: 'Previous verb' },
+      { keys: ['F2'],             desc: 'Verb details' },
     ],
   },
   {

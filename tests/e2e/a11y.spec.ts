@@ -277,3 +277,36 @@ test('a word can be opened in the Word Editor from the keyboard', async ({ page 
   await expect(first).toHaveClass(/active/);
   await expect(page.locator('#editWord')).not.toHaveValue('');
 });
+
+// Things a click opens, reachable from the keyboard too.
+test('F2 opens a word\'s details from its answer box, and Escape hands focus back', async ({ page }) => {
+  await open(page, 'light');
+  await page.locator('#startBtn').click();
+  const input = page.locator('#tableWrap input[type="text"]').first();
+  await input.focus();
+  await page.keyboard.press('F2');
+  const popover = page.locator('#wordInfoPopover');
+  await expect(popover).toBeVisible();
+  expect(await popover.evaluate(p => p.contains(document.activeElement))).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(popover).toHaveCount(0);
+  await expect(input).toBeFocused();
+});
+
+test('a My Lists word row expands from the keyboard', async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await open(page, 'light');
+  await page.locator('.mode-tab[data-mode="mylists"]').click();
+  await page.locator('.ml-single-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
+  await page.locator('.ml-list-name-input').fill('Keys');
+  await page.locator('.ml-list-name-input').press('Enter');
+  await page.locator('.ml-add-input').fill('casa');
+  await page.locator('.ml-add-result-word', { hasText: /^casa$/ }).locator('xpath=..').locator('.ml-add-btn').click();
+  await page.locator('.ml-add-input').fill('');
+  const word = page.locator('.ml-word-item .ml-word-text').first();
+  await expect(word).toHaveAttribute('aria-expanded', 'false');
+  await word.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.ml-word-item').first()).toHaveClass(/ml-word-item--expanded/);
+  await expect(page.locator('.ml-word-item .ml-word-text').first()).toHaveAttribute('aria-expanded', 'true');
+});

@@ -391,6 +391,8 @@ export interface RowCellsOptions {
 export interface RowCells {
   /** In column order: word, audio, pos, band, rank, trans, pct, mastered. */
   cells: HTMLElement[];
+  /** The word itself — the row's keyboard handle for expanding its details (makeExpandToggle). */
+  wordEl: HTMLSpanElement;
   masteryBtn: HTMLButtonElement;
   quizBadge: HTMLSpanElement;
 }
@@ -440,7 +442,24 @@ export function buildRowCells(o: RowCellsOptions): RowCells {
     cell('pct', quizBadge),
     cell('mastered', masteryBtn),
   ];
-  return { cells, masteryBtn, quizBadge };
+  return { cells, wordEl: wordSpan, masteryBtn, quizBadge };
+}
+
+/**
+ * A row expands on a click anywhere in it, which a keyboard can't do: the row holds buttons, so it can't be a
+ * button itself (nested interactive controls). The word becomes the row's toggle instead — focusable, says
+ * whether the details are open, and Enter / Space toggles them. Keys only: a click on the word already reaches
+ * the row's own click handler.
+ */
+export function makeExpandToggle(wordEl: HTMLElement, expanded: boolean, toggle: () => void): void {
+  wordEl.tabIndex = 0;
+  wordEl.setAttribute('role', 'button');
+  wordEl.setAttribute('aria-expanded', String(expanded));
+  wordEl.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    toggle();
+  });
 }
 
 /**
@@ -457,10 +476,11 @@ export function buildWordRow(o: WordRowOptions): HTMLLIElement {
   const li = document.createElement('li');
   li.className = 'ml-word-item' + (o.expanded ? ' ml-word-item--expanded' : '');
 
-  const { cells } = buildRowCells({
+  const { cells, wordEl } = buildRowCells({
     lang: o.lang, word: o.word, entry, filter: o.filter, transFilter: o.transFilter,
     redraw: o.redraw, beforePos: o.beforePos,
   });
+  makeExpandToggle(wordEl, !!o.expanded, o.onToggleExpand);
 
   // Master switch: Settings → Session History → "Omit from Due" per word.
   // Off hides the control entirely rather than just disabling it — there is

@@ -146,18 +146,29 @@ export function openWordInfoPopover({
 
   popover.appendChild(actions);
 
+  // Keyboard reach: the popover is appended at the end of <body>, so without this a keyboard user who opened
+  // it (F2 in an answer box) would have to Tab through the whole page to reach its buttons. Focus moves in,
+  // and Escape hands it back to whatever had it.
+  const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  popover.setAttribute('role', 'dialog');
+  popover.setAttribute('aria-label', 'Word details');   // not the word: unrevealed, it is the answer
+
   document.body.appendChild(popover);
   positionPopover(popover, anchorEl);
   popover.style.zIndex = '9999';
+  popover.querySelector<HTMLElement>('button:not(:disabled)')?.focus({ preventScroll: true });
 
   function onOutside(e: MouseEvent): void {
     if (!popover.contains(e.target as Node) && e.target !== anchorEl) close();
   }
   function onKey(e: KeyboardEvent): void {
-    if (e.key === 'Escape') close();
+    // Handled here: the answer box's own Escape ("skip to next unanswered") must not also fire.
+    if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); close(); }
   }
   function close(): void {
+    const hadFocus = popover.contains(document.activeElement);
     popover.remove();
+    if (hadFocus && opener?.isConnected) opener.focus({ preventScroll: true });
     document.removeEventListener('mousedown', onOutside, true);
     document.removeEventListener('keydown', onKey, true);
     onClose?.();

@@ -506,6 +506,13 @@ export function renderTableMode({
         inp.placeholder  = PLACEHOLDER_FOR[slotsFor(dir)[1]];
         // The language being typed: spellcheck, on-screen keyboards and screen readers follow it.
         inp.lang         = slotsFor(dir)[1] === 'word' ? isoCode(wordLang) : 'en';
+        // F2: this row's word details, as a click on the word gives — the only way to reach them by keyboard
+        // without adding a Tab stop to every row (see shortcuts-overlay.ts).
+        inp.addEventListener('keydown', e => {
+          if (e.key !== 'F2') return;
+          e.preventDefault();
+          wordDiv.click();
+        });
         // Own index into allInputs — read back below instead of re-deriving
         // it with allInputs.indexOf(inp) on every answer.
         inp.dataset.idx  = String(allInputs.length);

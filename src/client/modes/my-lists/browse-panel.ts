@@ -36,7 +36,7 @@
 import type { ListsCtx } from './context.ts';
 import { cachedVocab, fetchVocab } from './vocab-cache.ts';
 import { getMastered } from './mastery.ts';
-import { buildRowCells, buildActionsCell, appendCountChip, appendMasteredChip, buildWordDetail, buildEditInMyContentButton } from './row-shared.ts';
+import { buildRowCells, makeExpandToggle, buildActionsCell, appendCountChip, appendMasteredChip, buildWordDetail, buildEditInMyContentButton } from './row-shared.ts';
 import {
   createColumnHeader, createCellReader, applyColumnFilters, applyColumnSort, ACTIONS_WIDTH, type ColumnItem,
 } from './column-header.ts';
@@ -313,10 +313,14 @@ export function renderBrowsePanel(ctx: ListsCtx): void {
 
     // The data cells are the same ones every list's rows use (row-shared.ts), so the column header sits over
     // them the same way.
-    const { cells } = buildRowCells({
+    const { cells, wordEl } = buildRowCells({
       lang: ctx.lang, word: entry.word, entry,
       filter: columns.filters.get('word') ?? '', transFilter: columns.filters.get('definition') ?? '',
       redraw: render,
+    });
+    makeExpandToggle(wordEl, entry.word === ctx.expandedWord, () => {
+      ctx.expandedWord = (ctx.expandedWord === entry.word) ? null : entry.word;
+      render();
     });
 
     const addBtn = document.createElement('button');
