@@ -3156,3 +3156,35 @@ html.dark .ml-level-pill[data-level]:not([data-level="0"]) {
   }
   .ml-topbar .ml-stats-row { flex: 1 1 100%; border-left: 0; padding-left: 0; margin-left: 0; }
 }
+
+/* The narrowest phones (360px): the compact row's fixed columns left the word ~38px ("co…" for comer). The
+   Percent column — "–" until the word has been quizzed — gives its 38px to the word (and 6px to POS, where NOUN was clipped). Its track stays (0px)
+   because cells are placed by line name; it is still sortable and filterable under "Sort & filter". */
+@media (max-width: 420px) {
+  .ml-word-list--cols.ml-cols--compact .ml-word-item {
+    grid-template-columns:
+      [check]    18px
+      [word]     minmax(48px, var(--ml-cword-w, 1fr))
+      [audio]    20px
+      [pos]      44px
+      [band]     var(--ml-band-w, 34px)
+      [rank]     var(--ml-rank-w, 40px)
+      [trans]    minmax(50px, 1fr)
+      [pct]      0px
+      [mastered] 28px
+      [actions]  30px;
+  }
+  .ml-word-list--cols.ml-cols--compact.ml-word-list--nocheck .ml-word-item {
+    grid-template-columns:
+      [word]     minmax(48px, var(--ml-cword-w, 1fr))
+      [audio]    20px
+      [pos]      44px
+      [band]     var(--ml-band-w, 34px)
+      [rank]     var(--ml-rank-w, 40px)
+      [trans]    minmax(50px, 1fr)
+      [pct]      0px
+      [mastered] 28px
+      [actions]  30px;
+  }
+  .ml-cols--compact .ml-cell-pct { display: none; }
+}

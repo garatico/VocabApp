@@ -8,6 +8,7 @@ import { foldKey } from '../../utils/match.ts';
 import type { Word } from '../../types.ts';
 import { PRONOUNS, TENSE_DEFS } from '../conjugation/data.ts';
 import { el } from './shared.ts';
+import { enhanceLanguageSelect } from '../../ui/language-dropdown.ts';
 import '../../styles-lazy/my-content-bundle.css';
 
 /**
@@ -66,7 +67,19 @@ export function buildConjugationsSection(currentLang: string): HTMLElement {
   return editor.wrap;
 }
 
+/** Outside click / Escape closes the tense menu of whichever editor is current — registered once, since an editor
+ *  is built afresh each time My Content draws this section. */
+let closeOpenTenseMenu: (() => void) | null = null;
+let tenseMenuListening = false;
+function listenForTenseMenuClose(): void {
+  if (tenseMenuListening) return;
+  tenseMenuListening = true;
+  document.addEventListener('click', () => closeOpenTenseMenu?.());
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeOpenTenseMenu?.(); });
+}
+
 function buildEditor(defaultLang: string): ConjugationEditor {
+  listenForTenseMenuClose();
   const wrap = el('div', 'mcc');
   let lang = defaultLang;
   let verbs: Word[] = [];
@@ -76,12 +89,23 @@ function buildEditor(defaultLang: string): ConjugationEditor {
   let page = 1;
   let selected: Word | null = null;
   let selectedTenses = new Set<string>();
+  /** The tense menu stays open across the card's redraw (ticking a tense redraws it). */
+  let tenseMenuOpen = false;
+  const closeTenseMenu = (): void => {
+    if (!tenseMenuOpen) return;
+    tenseMenuOpen = false;
+    const panel = document.getElementById('mccTensePanel');
+    if (panel) panel.hidden = true;
+    panel?.previousElementSibling?.setAttribute('aria-expanded', 'false');
+  };
+  closeOpenTenseMenu = closeTenseMenu;
 
   // ── Filter bar: language, search, "edited only" ──────────────────────────
   const bar = el('div', 'mcc-filter-bar');
   const langField = el('div', 'mcc-filter-field');
   langField.appendChild(el('span', 'mcc-filter-label', 'Language'));
   const langSelect = el('select', 'mcc-select') as HTMLSelectElement;
+  langSelect.id = 'mccLangSelect';
   langSelect.setAttribute('aria-label', 'Language');
   CONJ_LANGS.forEach(l => {
     const opt = el('option', undefined, l.label) as HTMLOptionElement;
@@ -91,6 +115,7 @@ function buildEditor(defaultLang: string): ConjugationEditor {
   const flag = el('span', 'mcc-flag');
   const syncFlag = (): void => { flag.replaceChildren(createFlagImg(languageInfo(lang).flagCountry, languageInfo(lang).label)); };
   langField.append(langSelect, flag);
+  enhanceLanguageSelect(langSelect);   // flags and colours, as on every other tab; the select stays the source of truth
   const search = el('input', 'mcc-search') as HTMLInputElement;
   search.type = 'text'; search.placeholder = 'Search verbs…';
   search.setAttribute('aria-label', 'Search verbs');
@@ -224,35 +249,62 @@ function buildEditor(defaultLang: string): ConjugationEditor {
     actions.append(save, reset, clear, revert);
     head.append(titleBox, actions);
 
-    // Tense chips (multi-select) with All / None.
-    const chipsRow = el('div', 'mcc-chips-row');
-    const chips = el('div', 'mcc-chips');
-    tenseDefs().filter(d => d.key in base || d.key in stored).forEach(d => {
-      const chip = el('button', 'mcc-chip' + (selectedTenses.has(d.key) ? ' active' : '') + (d.key in stored ? ' mcc-chip--changed' : ''), d.label);
-      chip.type = 'button';
-      chip.dataset.tense = d.key;
-      chip.addEventListener('click', () => {
-        if (selectedTenses.has(d.key)) selectedTenses.delete(d.key); else selectedTenses.add(d.key);
-        if (selectedTenses.size === 0) selectedTenses.add(d.key);        // an empty table says nothing
-        renderCard();
-      });
-      chips.appendChild(chip);
-    });
+    // Tenses: one dropdown — a button naming what is shown, opening a checklist with All / None. They were a
+    // row of eleven chips, eleven rows on a phone above the table they choose the columns of.
+    const available = tenseDefs().filter(d => d.key in base || d.key in stored);
+    const chipsRow = el('div', 'mcc-chips-row mcc-tense-dd');
+    const trigger = el('button', 'mcc-tense-trigger') as HTMLButtonElement;
+    trigger.type = 'button';
+    trigger.setAttribute('aria-haspopup', 'true');
+    const picked = available.filter(d => selectedTenses.has(d.key));
+    const summary = picked.length === available.length && available.length > 1 ? 'All'
+      : picked.length === 1 ? picked[0].label : `${picked.length} shown`;
+    trigger.append(el('span', 'mcc-tense-trigger-label', 'Tenses'), el('span', 'mcc-tense-trigger-value', summary),
+      el('span', 'mcc-tense-trigger-caret', '▾'));
+    const menu = el('div', 'mcc-tense-panel');
+    menu.id = 'mccTensePanel';
+    trigger.setAttribute('aria-controls', menu.id);
+    const setOpen = (open: boolean): void => {
+      tenseMenuOpen = open;
+      menu.hidden = !open;
+      trigger.setAttribute('aria-expanded', String(open));
+    };
+    setOpen(tenseMenuOpen);
+    trigger.addEventListener('click', e => { e.stopPropagation(); setOpen(menu.hidden); });
+    menu.addEventListener('click', e => e.stopPropagation());
     const chipActions = el('div', 'mcc-chips-actions');
     const allBtn = el('button', 'mcc-btn mcc-btn--ghost', 'All') as HTMLButtonElement;
     const noneBtn = el('button', 'mcc-btn mcc-btn--ghost', 'None') as HTMLButtonElement;
     allBtn.type = 'button'; noneBtn.type = 'button';
+    noneBtn.title = 'Just the first tense — an empty table says nothing';
     allBtn.addEventListener('click', () => {
-      selectedTenses = new Set(tenseDefs().filter(d => d.key in base || d.key in stored).map(d => d.key));
+      selectedTenses = new Set(available.map(d => d.key));
       renderCard();
     });
     noneBtn.addEventListener('click', () => {
-      const first = tenseDefs().find(d => d.key in base || d.key in stored);
-      selectedTenses = new Set(first ? [first.key] : []);
+      selectedTenses = new Set(available[0] ? [available[0].key] : []);
       renderCard();
     });
     chipActions.append(allBtn, noneBtn);
-    chipsRow.append(chips, chipActions);
+    menu.appendChild(chipActions);
+    available.forEach(d => {
+      const row = el('label', 'mcc-tense-option');
+      const box = el('input') as HTMLInputElement;
+      box.type = 'checkbox';
+      box.checked = selectedTenses.has(d.key);
+      box.dataset.tense = d.key;
+      box.addEventListener('change', () => {
+        if (box.checked) selectedTenses.add(d.key); else selectedTenses.delete(d.key);
+        if (selectedTenses.size === 0) selectedTenses.add(d.key);        // an empty table says nothing
+        renderCard();
+      });
+      const name = el('span', 'mcc-chip' + (box.checked ? ' active' : '') + (d.key in stored ? ' mcc-chip--changed' : ''), d.label);
+      name.dataset.tense = d.key;
+      if (d.key in stored) name.title = 'You have changed this tense';
+      row.append(box, name);
+      menu.appendChild(row);
+    });
+    chipsRow.append(trigger, menu);
 
     // The table: a column per chosen tense, a row per pronoun.
     const shown = tenseDefs().filter(d => selectedTenses.has(d.key) && (d.key in base || d.key in stored));

@@ -81,9 +81,10 @@ test('My Content: backing up, wiping storage, and restoring brings a word back',
   await page.getByRole('button', { name: 'Added', exact: true }).click();
   await expect(page.locator('.mc-we .word-item .word-item-key')).toHaveText('palabraprueba');
 
+  await page.locator('.mc-file-menu-btn').click();                              // the "Backup & export" menu
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Download my content' }).click(),
+    page.getByRole('menuitem', { name: 'Download my content' }).click(),
   ]);
   const filePath = await download.path();
   expect(filePath).toBeTruthy();

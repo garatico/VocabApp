@@ -92,6 +92,8 @@ export function bindModeSwitch({
     if (myListsBar) myListsBar.hidden = mode !== 'mylists';
     const myContentBar = document.getElementById('myContentBar');
     if (myContentBar) myContentBar.hidden = mode !== 'myContent';
+    const historyBar = document.getElementById('historyBar');
+    if (historyBar) historyBar.hidden = mode !== 'history';
     // Nothing to collapse/expand on a tab with no form to begin with.
     const controlsCollapseBtn = document.getElementById('controlsCollapseBtn');
     if (controlsCollapseBtn) controlsCollapseBtn.hidden = noControls;

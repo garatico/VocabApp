@@ -123,9 +123,11 @@
    Correct / Revealed / Missed / Left counts become small tinted chips on one
    tight line instead of full pills. Sits at the end of quiz.css so it follows the base pill rules; the doubled selectors
    beat the mode-specific pill sizing in conjugation.css and table.css. */
-.progress { height: 14px; }
+/* The track is the one thing read at a glance mid-quiz: 20px, with a label big enough to read inside it
+   (was 14px with a 0.62rem label; 12px on a phone). */
+.progress { height: 20px; }
 .progressWrap { margin-top: 0.3rem; gap: 0.5rem; }
-.progress-label { font-size: 0.62rem; }
+.progress-label { font-size: 0.72rem; }
 .progress-pct { padding: 0 0.35em; }
 
 .quiz-score {
@@ -168,6 +170,6 @@
 .conj-progress-bars { gap: 0.25rem; }
 
 @media (max-width: 600px) {
-  .progress { height: 12px; }
+  .progress { height: 18px; }
   .quiz-score { font-size: 0.7rem; gap: 0.1rem 0.6rem; }
 }

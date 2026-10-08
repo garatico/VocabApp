@@ -485,6 +485,28 @@ html.dark .form-group select.we-gender[data-gender="feminine"]  { color: hsl(340
 }
 .chip-input-tag-move:hover:not(:disabled) { color: var(--accent); background: transparent; box-shadow: none; }
 .chip-input-tag-move:disabled { opacity: 0.25; cursor: default; }
+/* Ordered chips (Glosses): the position, a drag handle, and where a dragged chip would land. */
+.chip-input-tag--ordered { padding-left: 0.2rem; position: relative; }
+.chip-input-tag-order {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.15rem; height: 1.15rem; padding: 0 0.2rem;
+  border-radius: 999px; font-size: 0.66rem; font-weight: 700;
+  color: var(--on-accent); background: var(--accent);
+}
+.chip-input-tag-handle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.2rem; height: 1.6rem; margin-right: -0.1rem;
+  color: var(--text-muted); font-size: 0.85rem; cursor: grab;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.chip-input-tag-handle:hover { color: var(--text); }
+.chip-input-tag--dragging {
+  z-index: 3; cursor: grabbing; opacity: 0.9;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); border-color: var(--accent);
+}
+.chip-input-tag--dragging .chip-input-tag-handle { cursor: grabbing; }
+.chip-drop-before { box-shadow: -3px 0 0 0 var(--accent); }
+.chip-drop-after  { box-shadow: 3px 0 0 0 var(--accent); }
 
 /* A field whose value differs from the original, with a ↺ to put it back */
 .form-group.we-modified > label { color: var(--accent); }

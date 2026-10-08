@@ -74,7 +74,7 @@ export const KEY_FAMILIES: readonly KeyFamily[] = [
   prefix('vq_srs_',          'data', 'utils/srs.ts', { evidence: true }),
   prefix('vq_history_',      'data', 'utils/session-history.ts', { evidence: true, note: 'quiz sessions per language' }),
   exact ('vq_history_collapsed', 'ui', 'modes/history-mode.ts',
-    { note: 'shares the vq_history_ prefix with the data above — the reason classification is by entry, not by prefix' }),
+    { note: 'which History panels were collapsed. No longer read or written — History shows one view at a time, as tabs — but an old value is still classed as UI, not learner data. It shares the vq_history_ prefix with the data above, the reason classification is by entry, not by prefix' }),
   prefix('vq_misses_',       'data', 'utils/session-history.ts', { evidence: true }),
   prefix('vq_tally_',        'data', 'utils/session-history.ts', { evidence: true }),
 

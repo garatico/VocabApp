@@ -226,6 +226,7 @@ test('Settings → Help & Tips fits a phone: the CSV sheets scroll inside their 
   await page.setViewportSize({ width: 375, height: 812 });
   await open(page);
   await page.locator('.mode-tab[data-mode="settings"]').click();
+  await page.locator('.settings-nav-toggle').click();                            // on a phone the sections fold behind "Section ▾"
   await page.locator('.settings-nav-link[href="#settings-sec-help"]').click();
   await expect(page.locator('#csvGuide table.csv-sheet').first()).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

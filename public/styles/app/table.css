@@ -871,10 +871,13 @@
     vertical-align: middle;
   }
 
-  /* ── Word cell: 38% of row width, tinted, vertically centered ── */
+  /* ── Word cell: 32% of row width, tinted, vertically centered ──
+     Was 38%: "de" sat in a third of the row while the answer box, sharing its side with ?? and ★, cut its own
+     placeholder to "Type transl…". A long word breaks instead (overflow-wrap below). */
   #tableWrap .word-cell {
-    width: 38%;
-    min-width: 38%;
+    width: 32%;
+    min-width: 32%;
+    overflow-wrap: anywhere;
     background: var(--surface2);
     display: flex;
     align-items: center;
@@ -883,10 +886,10 @@
     padding: 0.5rem 0.35rem;
   }
 
-  /* ── Input cell: 62% of row width ── */
+  /* ── Input cell: 68% of row width ── */
   #tableWrap .input-cell {
-    width: 62%;
-    min-width: 62%;
+    width: 68%;
+    min-width: 68%;
     background: var(--surface);
     padding: 0.4rem 0.4rem;
     display: flex;
@@ -1445,4 +1448,20 @@ body.hide-settings-links .tsb-more-row.settings-links { display: none; }
 @media (max-width: 599px) {
   #tableWrap :is(.reveal-btn, .known-btn) { min-width: 30px; min-height: 30px; }
   #tableWrap .row-select-cb { width: 18px; height: 18px; }
+}
+
+/* Phones: Correct · Revealed · Missed · Left wrapped by label length — three on a line and "Left" alone under
+   them. As a grid they are one even row of four where it fits, two rows of two where it doesn't. */
+@media (max-width: 599px) {
+  #tableStickyBar .quiz-score { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.3rem; }
+  #tableStickyBar .quiz-score .score-pill { justify-content: center; text-align: center; white-space: nowrap; }
+}
+@media (max-width: 479px) {
+  #tableStickyBar .quiz-score { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Phones: each word/answer pair has the row to itself, so the 3px rule that divides pairs sharing a row on a
+   wide table had nothing to divide — it drew a grey bar down the right of every other pair. */
+@media (max-width: 599px) {
+  #tableWrap td.input-cell:nth-child(n) { border-right: none; }   /* beats td:nth-child(even), the pair divider */
 }

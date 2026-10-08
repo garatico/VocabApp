@@ -320,3 +320,24 @@
 @media (max-width: 599px) {
   .history-panel-head--collapsible { min-height: 36px; }
 }
+
+/* ── Views as tabs in the top bar (history-mode.ts): language, then Progress / Due for Review / Words to
+   Review / Recent Sessions. On a phone the four tabs are a 2×2 grid, not a row that scrolls sideways. ── */
+#historyBar .history-lang-row { margin: 0; padding: 0; border: 0; background: none; flex: 0 0 auto; }
+.history-tabs { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.history-tab-btn {
+  min-height: 34px; padding: 0.3rem 0.8rem;
+  font-family: 'Sora', sans-serif; font-size: 0.8rem; font-weight: 600; white-space: nowrap;
+  color: var(--text-muted); background: var(--surface2);
+  border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer;
+}
+.history-tab-btn:hover { color: var(--text); border-color: var(--accent); }
+.history-tab-btn.active {
+  color: var(--text); background: var(--surface);
+  border-color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent);
+}
+.history-panel[hidden] { display: none; }
+@media (max-width: 599px) {
+  .history-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1 1 100%; }
+  .history-tab-btn { min-height: 38px; white-space: normal; }
+}

@@ -699,6 +699,10 @@ export function bindSettingsSearch(): void {
         const current = [...sections].reverse().find(sec => inBand.has(sec.id));
         if (!current) return;
         navLinks.forEach(l => l.classList.toggle('is-current', l.getAttribute('href') === `#${current.id}`));
+        // The narrow layout's "Section ▾" button names where you are.
+        const label = document.querySelector<HTMLElement>('.settings-nav-current');
+        const link = linkFor(current);
+        if (label && link) label.textContent = link.textContent?.trim() ?? '';
         clearTimeout(saveTimer);
         saveTimer = setTimeout(() => writeString(LAST_SECTION_KEY, current.id), 400);
       }, { root: scroller, rootMargin: '-10% 0px -80% 0px' });

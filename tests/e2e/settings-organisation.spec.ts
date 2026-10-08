@@ -409,18 +409,25 @@ test('a changed row says so in text, not only in colour', async ({ page }) => {
   await expect(row.locator('.settings-changed-sr')).toHaveText('');
 });
 
-test('on a phone-width screen the nav is a row of chips and nothing spills sideways', async ({ page }) => {
+test('on a phone-width screen the sections fold behind "Section ▾" and nothing spills sideways', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 800 });
   await openSettings(page);
   await page.locator('#settingCols .sort-order-btn[data-cols="3"]').evaluate((b: HTMLElement) => b.click());
-  await expect(page.locator('.settings-nav-heading').first()).toBeHidden();
-  const nav = await page.locator('.settings-nav').evaluate(el => ({ dir: getComputedStyle(el).flexDirection, scrolls: el.scrollWidth > el.clientWidth }));
-  expect(nav.dir).toBe('row');
-  expect(nav.scrolls).toBe(true);
+  // No sideways-scrolling row of chips: one button that names the section, opening the grouped list.
+  const toggle = page.locator('.settings-nav-toggle');
+  await expect(toggle).toBeVisible();
+  await expect(page.locator('.settings-nav-link').first()).toBeHidden();
+  const nav = await page.locator('.settings-nav').evaluate(el => ({ scrolls: el.scrollWidth > el.clientWidth + 1 }));
+  expect(nav.scrolls).toBe(false);
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('.settings-nav-heading').first()).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
   // The section's Reset button must not sit on top of its title.
   await page.locator('.settings-nav-link[href="#settings-sec-appearance"]').click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');                 // picking a section closes the list
+  await expect(page.locator('.settings-nav-current')).toHaveText('Appearance');
   const boxes = await page.evaluate(() => {
     const sec = document.getElementById('settings-sec-appearance')!;
     const title = sec.querySelector('.settings-section-title')!.getBoundingClientRect();

@@ -1,3 +1,4 @@
+import { attachMoreMenu } from '../ui/more-menu.ts';
 import { enhanceLanguageSelect } from '../ui/language-dropdown.ts';
 import { downloadUserContent, applyUserContentImport } from '../data/user-content.ts';
 import { languageInfo } from '../data/languages.ts';
@@ -95,15 +96,29 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
   // No page title or blurb: the tabs lead, and each tab says what it is for. (Everything stays in this browser.)
   const header = el('div', 'mc-header');
 
-  const exportBtn = el('button', 'mc-btn mc-btn--secondary', 'Download my content');
+  // Backup, export and restore share one menu: three wide buttons beside five tabs ran out of room in the bar
+  // at an ordinary laptop width and were cut off.
+  const exportBtn = el('button', 'mc-file-menu-item', 'Download my content');
   exportBtn.type = 'button';
   exportBtn.addEventListener('click', () => downloadUserContent());
-  const exportCsvBtn = el('button', 'mc-btn mc-btn--secondary', 'Export vocabulary (CSV)');
+  const exportCsvBtn = el('button', 'mc-file-menu-item', 'Export vocabulary (CSV)');
   exportCsvBtn.type = 'button';
   exportCsvBtn.title = 'Download the current language\'s full vocabulary as CSV — works offline, no server needed';
   exportCsvBtn.addEventListener('click', () => { void downloadVocabCsv(lang); });
-  const importBtn = el('button', 'mc-btn mc-btn--secondary', 'Load a file…');
+  const importBtn = el('button', 'mc-file-menu-item', 'Load a file…');
   importBtn.type = 'button';
+  exportBtn.title = 'Download everything you have added or changed here, as one file you can load again';
+  importBtn.title = 'Load a file downloaded from "Download my content"';
+  const fileMenu = el('div', 'mc-file-menu');
+  const fileMenuBtn = el('button', 'mc-btn mc-btn--secondary mc-file-menu-btn', 'Backup & export ▾') as HTMLButtonElement;
+  fileMenuBtn.type = 'button';
+  fileMenuBtn.setAttribute('aria-haspopup', 'true');
+  const fileMenuList = el('div', 'mc-file-menu-list');
+  fileMenuList.setAttribute('role', 'menu');
+  [exportBtn, exportCsvBtn, importBtn].forEach(b => b.setAttribute('role', 'menuitem'));
+  fileMenuList.append(exportBtn, exportCsvBtn, importBtn);
+  fileMenu.append(fileMenuBtn, fileMenuList);
+  attachMoreMenu(fileMenu, fileMenuBtn, fileMenuList);
   const importInput = el('input', undefined) as HTMLInputElement;
   importInput.type = 'file';
   importInput.accept = 'application/json';
@@ -137,7 +152,7 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
   const showPickerFor = (key: string): void => { langPicker.hidden = key !== 'trivia' && key !== 'guessBlank'; };
   const controls: HTMLElement[] = [
     langPicker,
-    exportBtn, exportCsvBtn, importBtn, importInput, importStatus,
+    fileMenu, importInput, importStatus,
   ];
   const topBar = document.getElementById('myContentBar');
 

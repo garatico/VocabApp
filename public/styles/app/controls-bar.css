@@ -740,3 +740,21 @@
     grid-template-columns: repeat(auto-fit, minmax(4.6rem, 1fr));
   }
 }
+
+/* The collapse button is the corner box's mirror image at every width — same top, same height (the box's
+   measured height, --corner-h from streak-widget.ts, less its 0.15rem top offset and the card's 1px border),
+   the same grey box — in the opposite corner. It used to sit 0.5rem down while the controls were open and
+   1rem down once collapsed, so it jumped under the pointer that had just clicked it. The tripled #controls:
+   it has to beat streak-widget.css's rules for collapsed and form-less tabs, which carry two ids of their own. */
+html body #controls#controls#controls :is(#controlsCollapseBtn, #settingsBarCollapseBtn).controls-collapse-btn {
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 2rem;
+  height: calc(var(--corner-h, 2.85rem) - 0.15rem - 1px);
+  background: var(--surface2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+}
+@media (max-width: 599px) {
+  html body #controls#controls#controls :is(#controlsCollapseBtn, #settingsBarCollapseBtn).controls-collapse-btn { width: 2.5rem; }
+}

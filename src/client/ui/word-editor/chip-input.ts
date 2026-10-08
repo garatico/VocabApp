@@ -15,7 +15,8 @@ export interface ChipInputHandle {
 }
 
 export interface ChipInputOptions {
-  /** Show ‹ › on each chip to move it earlier/later (Glosses: order matters). */
+  /** Order matters (Glosses): each chip shows its position, drags by its ⠿ handle (mouse or touch), and keeps
+   *  ‹ › buttons to move it earlier/later from the keyboard. */
   reorderable?: boolean;
   /** Fires after the user adds, removes or reorders a chip — not after `set()`. */
   onChange?: () => void;
@@ -46,7 +47,21 @@ export function createChipInput(
           if (j < 0 || j >= chips.length) return;
           [chips[i], chips[j]] = [chips[j], chips[i]];
           render(); changed();
+          container.querySelectorAll<HTMLButtonElement>('.chip-input-tag')[j]
+            ?.querySelector<HTMLButtonElement>(`.chip-input-tag-move:nth-of-type(${dir < 0 ? 1 : 2})`)?.focus();
         };
+        chip.classList.add('chip-input-tag--ordered');
+        chip.dataset['index'] = String(i);
+        const handle = document.createElement('span');
+        handle.className = 'chip-input-tag-handle';
+        handle.textContent = '⠿';
+        handle.title = 'Drag to reorder';
+        handle.setAttribute('aria-hidden', 'true');
+        handle.addEventListener('pointerdown', e => startDrag(e, chip, i));
+        const order = document.createElement('span');
+        order.className = 'chip-input-tag-order';
+        order.textContent = String(i + 1);
+        order.title = i === 0 ? 'Shown first' : `Shown ${ordinal(i + 1)}`;
         const earlier = document.createElement('button');
         earlier.type = 'button'; earlier.className = 'chip-input-tag-move';
         earlier.textContent = '‹'; earlier.disabled = i === 0;
@@ -57,12 +72,65 @@ export function createChipInput(
         later.textContent = '›'; later.disabled = i === chips.length - 1;
         later.setAttribute('aria-label', `Move ${itemLabel} "${value}" later`);
         later.addEventListener('click', () => move(1));
-        chip.append(earlier, label, later, remove);
+        chip.append(handle, order, earlier, label, later, remove);
       } else {
         chip.append(label, remove);
       }
       container.insertBefore(chip, input);
     });
+  }
+
+  /**
+   * Drag a chip by its handle to a new place. Pointer events, not HTML drag-and-drop, which phones don't fire:
+   * the handle captures the pointer (touch-action: none on it alone, so the page still scrolls from anywhere
+   * else), the chip follows it, and the chip under the pointer shows a bar on the side it would land.
+   */
+  function startDrag(e: PointerEvent, chip: HTMLElement, from: number): void {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const handle = e.currentTarget as HTMLElement;
+    handle.setPointerCapture(e.pointerId);
+    const x0 = e.clientX, y0 = e.clientY;
+    let to = from;
+    let dragging = false;
+    const others = (): HTMLElement[] => [...container.querySelectorAll<HTMLElement>('.chip-input-tag')].filter(c => c !== chip);
+    const clearMarks = (): void => others().forEach(c => c.classList.remove('chip-drop-before', 'chip-drop-after'));
+    const onMove = (ev: PointerEvent): void => {
+      const dx = ev.clientX - x0, dy = ev.clientY - y0;
+      if (!dragging && Math.hypot(dx, dy) < 4) return;
+      dragging = true;
+      chip.classList.add('chip-input-tag--dragging');
+      chip.style.transform = `translate(${dx}px, ${dy}px)`;
+      clearMarks();
+      // The chip nearest the pointer, and which side of its middle the pointer is on.
+      let best: HTMLElement | null = null, bestD = Infinity;
+      for (const c of others()) {
+        const r = c.getBoundingClientRect();
+        const d = Math.hypot(ev.clientX - (r.left + r.width / 2), ev.clientY - (r.top + r.height / 2));
+        if (d < bestD) { bestD = d; best = c; }
+      }
+      if (!best) return;
+      const r = best.getBoundingClientRect();
+      const after = ev.clientX > r.left + r.width / 2;
+      best.classList.add(after ? 'chip-drop-after' : 'chip-drop-before');
+      const at = Number(best.dataset['index']);
+      to = after ? (at < from ? at + 1 : at) : (at < from ? at : at - 1);
+    };
+    const onUp = (): void => {
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+      handle.removeEventListener('pointercancel', onUp);
+      chip.classList.remove('chip-input-tag--dragging');
+      chip.style.transform = '';
+      clearMarks();
+      if (!dragging || to === from) return;
+      const [moved] = chips.splice(from, 1);
+      chips.splice(to, 0, moved);
+      render(); changed();
+    };
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onUp);
   }
 
   function addFromInput(): void {
@@ -83,4 +151,9 @@ export function createChipInput(
     set(values) { chips = [...values]; render(); },
     addFromInput,
   };
+}
+
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }

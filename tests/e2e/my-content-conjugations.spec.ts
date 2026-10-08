@@ -37,7 +37,8 @@ test('changing a form stores just that tense, and putting it back removes the ov
   await expect(page.locator('.mcc-verb-item.active .mcc-badge-edited')).toBeVisible();
 
   // More tenses become more columns; the gerund and participle sit below the table.
-  await page.locator('.mcc-chip', { hasText: 'Futuro' }).first().click();
+  await page.locator('.mcc-tense-trigger').click();                              // the Tenses dropdown
+  await page.locator('.mcc-tense-option', { hasText: 'Futuro' }).first().locator('input').check();
   await expect(page.locator('.mcc-th-form')).toHaveCount(2);
   await expect(page.locator('.mcc-extra-forms')).toBeVisible();
 
@@ -64,8 +65,11 @@ test('a verb selected in the Words tab offers to open its conjugations, and only
 test('the language picker and backup buttons live in the top bar', async ({ page }) => {
   const bar = page.locator('#myContentBar');
   await expect(bar).toBeVisible();
-  await expect(bar.getByRole('button', { name: 'Download my content' })).toBeVisible();
-  await expect(bar.getByRole('button', { name: 'Export vocabulary (CSV)' })).toBeVisible();
+  await bar.getByRole('button', { name: /Backup & export/ }).click();             // one menu, so it never runs out of room
+  await expect(bar.getByRole('menuitem', { name: 'Download my content' })).toBeVisible();
+  await expect(bar.getByRole('menuitem', { name: 'Export vocabulary (CSV)' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(bar.getByRole('menuitem', { name: 'Download my content' })).toBeHidden();
   // "Add content in" only where it matters: Trivia and Guess the Blank write one row per language.
   await expect(bar.locator('.mc-lang-dropdown')).toBeHidden();                  // the Conjugations tab
   await page.locator('.mc-tab-btn', { hasText: 'Trivia Questions' }).click();

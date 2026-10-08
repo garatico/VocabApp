@@ -22,6 +22,11 @@ const PLACEHOLDER_FOR: Record<QuizSlot, string> = {
   word:    'Type in target language…',
   english: 'Type translation…',
 };
+/** The same, short enough for a phone's answer box (beside ?? and ★ it shows ~12 characters). */
+const PLACEHOLDER_SHORT_FOR: Record<QuizSlot, string> = {
+  word:    'Word…',
+  english: 'Meaning…',
+};
 
 /** (promptSlot, answerSlot) for a resolved (non-'mixed') direction. */
 function slotsFor(dir: DirectionPair): [QuizSlot, QuizSlot] {
@@ -364,6 +369,9 @@ export function renderTableMode({
     // reuses it rather than needing its own copy of the same CSS.
     container.classList.toggle('hide-word-markers', !Settings.getTableShowWordMarkers() || Settings.getSimpleMode());
 
+    // A phone's answer box shows ~12 characters beside ?? and ★: "Type translation…" read "Type transl".
+    const narrow = window.matchMedia('(max-width: 599px)').matches;
+
     for (let i = 0; i < words.length; i += pairsPerRow) {
       const tr = document.createElement('tr');
 
@@ -503,7 +511,7 @@ export function renderTableMode({
         // the right spot instead of forgetting how far a hint got.
         inp.dataset.hints = String(snap?.hintsShown ?? 0);
         inp.dataset.selected = String(snap?.selected ?? false);
-        inp.placeholder  = PLACEHOLDER_FOR[slotsFor(dir)[1]];
+        inp.placeholder  = (narrow ? PLACEHOLDER_SHORT_FOR : PLACEHOLDER_FOR)[slotsFor(dir)[1]];
         // The language being typed: spellcheck, on-screen keyboards and screen readers follow it.
         inp.lang         = slotsFor(dir)[1] === 'word' ? isoCode(wordLang) : 'en';
         // F2: this row's word details, as a click on the word gives — the only way to reach them by keyboard

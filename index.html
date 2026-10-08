@@ -132,6 +132,8 @@
         <div id="myListsBar" class="ml-topbar" hidden></div>
         <!-- My Content's own strip: the language(s) it adds content in, and backup / restore / export. -->
         <div id="myContentBar" class="ml-topbar mc-topbar" hidden></div>
+        <!-- History's own strip: its language and its four views as tabs (history-mode.ts). -->
+        <div id="historyBar" class="ml-topbar" hidden></div>
         <div id="controlsBody" class="filter-body">
         <div id="controls-top">
           <!-- Language and the multi-language picker share one column —
@@ -938,6 +940,12 @@
                 <span data-i18n="settings.resetAll">Reset all to defaults</span>
               </button>
             </div>
+            <!-- Narrow screens only: the section list folds behind this button instead of scrolling sideways. -->
+            <button type="button" class="settings-nav-toggle" aria-expanded="false">
+              <span class="settings-nav-toggle-label" data-i18n="settings.navSection">Section</span>
+              <span class="settings-nav-current">Table Quiz</span>
+              <span class="settings-nav-toggle-caret" aria-hidden="true">&#x25BE;</span>
+            </button>
             <div class="settings-nav-group">
               <div class="settings-nav-heading" data-i18n="settings.navGroup.quizzes">Quizzes</div>
               <a class="settings-nav-link" href="#settings-sec-table"><span class="settings-nav-icon"><svg class="settings-icon" aria-hidden="true" focusable="false"><use href="#si-table"/></svg></span><span data-i18n="settings.nav.table">Table Quiz</span></a>

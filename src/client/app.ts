@@ -1139,8 +1139,19 @@ document.getElementById('conjViewToggle')?.addEventListener('click', e => {
 // it. The actual scroll is the browser's own #anchor behaviour; this only
 // handles the part that isn't already true of a plain link.
 document.querySelector('.settings-nav')?.addEventListener('click', e => {
+  // Narrow screens: "Section ▾" opens the list of sections (grouped, as on desktop) and picking one closes it.
+  const nav = e.currentTarget as HTMLElement;
+  const toggle = (e.target as Element).closest<HTMLButtonElement>('.settings-nav-toggle');
+  if (toggle) {
+    const open = !nav.classList.contains('settings-nav--open');
+    nav.classList.toggle('settings-nav--open', open);
+    toggle.setAttribute('aria-expanded', String(open));
+    return;
+  }
   const link = (e.target as Element).closest<HTMLAnchorElement>('.settings-nav-link');
   if (!link) return;
+  nav.classList.remove('settings-nav--open');
+  nav.querySelector('.settings-nav-toggle')?.setAttribute('aria-expanded', 'false');
   const targetId = link.getAttribute('href')?.slice(1);
   const section = targetId ? document.getElementById(targetId) : null;
   const collapseBtn = section?.querySelector<HTMLButtonElement>('.settings-collapse-btn');

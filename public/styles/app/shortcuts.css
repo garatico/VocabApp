@@ -277,3 +277,9 @@ kbd {
 
 /* The desktop reload button belongs to Settings only (ui-state.ts sets body[data-mode]). */
 body:not([data-mode="settings"]) #reloadAppBtn { display: none !important; }
+
+/* A touch-only device (a phone, the Android app) has no keyboard to use the shortcuts with, and the corner the
+   button sits in is the most crowded strip on a phone. The overlay is still there for a keyboard: `?` opens it. */
+@media (hover: none) and (pointer: coarse) {
+  #shortcutsBtn { display: none; }
+}

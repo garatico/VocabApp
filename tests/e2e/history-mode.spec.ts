@@ -45,6 +45,7 @@ test('a word marked exempt is left out of Due for Review, unless the master swit
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
 
   await page.locator('.mode-tab[data-mode="history"]').click();
+  await page.locator('#historyTab-review').click();                              // History's views are tabs
   await expect(page.locator('.history-trouble-word', { hasText: 'zzztestword' })).toHaveCount(0);
 
   // The per-word button shows up on the word's own row in My Lists, marked
@@ -63,6 +64,7 @@ test('a word marked exempt is left out of Due for Review, unless the master swit
   await expect(page.locator('.ml-due-exempt-btn')).toHaveCount(0);
 
   await page.locator('.mode-tab[data-mode="history"]').click();
+  await page.locator('#historyTab-review').click();                              // History's views are tabs
   await expect(page.locator('.history-trouble-word', { hasText: 'zzztestword' })).toBeVisible();
 
   // Switching it back on resumes the exemption from the same, untouched data.
@@ -70,5 +72,6 @@ test('a word marked exempt is left out of Due for Review, unless the master swit
   await page.reload();
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   await page.locator('.mode-tab[data-mode="history"]').click();
+  await page.locator('#historyTab-review').click();                              // History's views are tabs
   await expect(page.locator('.history-trouble-word', { hasText: 'zzztestword' })).toHaveCount(0);
 });

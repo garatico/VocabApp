@@ -171,3 +171,122 @@ test('My Lists on a phone: a long list name shows whole, and the stats row has n
   expect(await title.evaluate(e => e.scrollWidth <= e.clientWidth + 1)).toBe(true);   // not cut off
   await expect(page.locator('#myListsBar .ml-stats-row')).toHaveCSS('border-left-width', '0px');
 });
+
+test('the narrowest phone (360px): My Lists rows show a short word whole, and the panel header is two rows', async ({ page }) => {
+  await open(page, 360, () => {
+    localStorage.setItem('vq_lists_spanish', JSON.stringify({ Reading: ['hablar', 'comer'] }));
+  });
+  await page.locator('.mode-tab[data-mode="mylists"]').click();
+  await expect(page.locator('.ml-word-item')).toHaveCount(2);
+  await expect.poll(() => page.locator('.ml-word-item .ml-word-text').evaluateAll(els => els.every(e => e.scrollWidth <= e.clientWidth + 1))).toBe(true);
+  const quiz = await box(page, '.ml-panel-header .ml-quiz-btn');
+  const close = await box(page, '.ml-panel-close');
+  expect(Math.abs(quiz.y - close.y)).toBeLessThan(12);   // ▶ Quiz beside ✕
+  const chips = await page.locator('.ml-panel-header .ml-chip-dropdown').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)));
+  expect(new Set(chips).size).toBe(1);                    // the four chips share one row
+});
+
+test('on a phone the Table\'s answer box says "Meaning…", short enough to read', async ({ page }) => {
+  await open(page, 360);
+  await page.locator('#startBtn').click();
+  await expect(page.locator('#tableWrap input[type="text"]').first()).toHaveAttribute('placeholder', 'Meaning…');
+});
+
+test('Table on a phone: the four counts are a 2×2 grid (one row of four where it fits), the bar is 18px+', async ({ page }) => {
+  for (const [width, rows] of [[360, 2], [540, 1]] as const) {
+    await page.setViewportSize({ width, height: 800 });
+    if (width === 360) await open(page, width); else await page.reload();
+    await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+    await page.locator('#startBtn').click();
+    await expect(page.locator('#tableScoreTop .score-pill').first()).toBeVisible();
+    const tops = await page.locator('#tableScoreTop .score-pill').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)));
+    expect(tops).toHaveLength(4);
+    expect(new Set(tops).size).toBe(rows);
+    expect((await box(page, '#tableStickyBar .progress')).height).toBeGreaterThanOrEqual(18);
+  }
+});
+
+test('on a phone the collapse button matches the corner box: same top, same height', async ({ page }) => {
+  await open(page, 360);
+  const [btn, corner] = [await box(page, '#controlsCollapseBtn'), await box(page, '#controlsCorner')];
+  expect(Math.abs(btn.y - corner.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(btn.height - corner.height)).toBeLessThanOrEqual(1);
+});
+
+test('Active filters: the chips start on a line of their own, under the heading', async ({ page }) => {
+  await open(page, 360, () => {
+    localStorage.setItem('vq_lists_spanish', JSON.stringify({ Reading: ['hablar'] }));
+    localStorage.setItem('vq_listfilter_spanish__shared', JSON.stringify({ active: true, mode: 'focus', selected: ['Reading'] }));
+  });
+  const [toggle, body] = [await box(page, '.filters-summary-toggle'), await box(page, '#filtersSummaryBody')];
+  expect(body.y).toBeGreaterThanOrEqual(toggle.y + toggle.height - 1);
+  expect(Math.round(body.x)).toBeLessThanOrEqual(Math.round(toggle.x) + 1);
+});
+
+test('My Content on a phone: the Domain options stay on screen', async ({ page }) => {
+  await open(page, 390);
+  await page.locator('.mode-tab[data-mode="myContent"]').click();
+  await page.locator('#mcwe-domainFilterTrigger').click();
+  const panel = await box(page, '#mcwe-domainFilterPanel');
+  expect(panel.x).toBeGreaterThanOrEqual(0);
+  expect(panel.x + panel.width).toBeLessThanOrEqual(390);
+});
+
+test('My Content: glosses are numbered and drag into a new order', async ({ page }) => {
+  await open(page, 1400);
+  await page.locator('.mode-tab[data-mode="myContent"]').click();
+  await page.locator('#mcwe-searchInput').fill('hablar');
+  await page.locator('#mcwe-searchBtn').click();
+  await page.locator('.mc-we .word-item', { hasText: 'hablar' }).first().click();
+  const chips = page.locator('#mcwe-editGlossesChips .chip-input-tag');
+  const labels = () => chips.evaluateAll(cs => cs.map(c => c.querySelector('span:not(.chip-input-tag-order):not(.chip-input-tag-handle)')!.textContent));
+  await expect(chips.nth(1)).toBeVisible();
+  const before = await labels();
+  await expect(chips.locator('.chip-input-tag-order').first()).toHaveText('1');
+  const h = await chips.first().locator('.chip-input-tag-handle').boundingBox();
+  const t = await chips.nth(1).boundingBox();
+  await page.mouse.move(h!.x + h!.width / 2, h!.y + h!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(t!.x + t!.width - 4, t!.y + t!.height / 2, { steps: 8 });
+  await page.mouse.up();
+  expect(await labels()).toEqual([before[1], before[0], ...before.slice(2)]);
+  await expect(chips.locator('.chip-input-tag-order')).toHaveText(before.map((_, i) => String(i + 1)));
+});
+
+test('History: its four views are tabs in the top bar, one at a time', async ({ page }) => {
+  await open(page, 1400, () => { localStorage.setItem('s_due_enabled', 'true'); });
+  await page.locator('.mode-tab[data-mode="history"]').click();
+  const bar = page.locator('#historyBar');
+  await expect(bar.locator('.history-tab-btn')).toHaveText(['Progress', 'Due for Review', 'Words to Review', 'Recent Sessions']);
+  await expect(page.locator('#historyView-progress')).toBeVisible();
+  await expect(page.locator('#historyView-sessions')).toBeHidden();
+  await bar.locator('#historyTab-sessions').click();
+  await expect(page.locator('#historyView-sessions')).toBeVisible();
+  await expect(page.locator('#historyView-progress')).toBeHidden();
+  await expect(bar.locator('#historyTab-sessions')).toHaveAttribute('aria-selected', 'true');
+});
+
+test('the collapse button stays put when the controls collapse and expand', async ({ page }) => {
+  for (const width of [1400, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    if (width === 1400) await open(page, width); else await page.reload();
+    await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+    const before = await box(page, '#controlsCollapseBtn');
+    await page.locator('#controlsCollapseBtn').click();
+    await expect(page.locator('#controlsBody')).toHaveClass(/filter-body--collapsed/);
+    const after = await box(page, '#controlsCollapseBtn');
+    expect([Math.round(after.x), Math.round(after.y), Math.round(after.height)]).toEqual([Math.round(before.x), Math.round(before.y), Math.round(before.height)]);
+    await page.locator('#controlsCollapseBtn').click();
+  }
+});
+
+test('Table on a phone: no stray divider beside the answers, and the counts fill the width', async ({ page }) => {
+  await open(page, 460);
+  await page.locator('#startBtn').click();
+  await expect(page.locator('#tableWrap .input-cell').first()).toBeVisible();
+  const borders = await page.locator('#tableWrap .input-cell').evaluateAll(els => els.slice(0, 6).map(e => getComputedStyle(e).borderRightWidth));
+  expect(new Set(borders)).toEqual(new Set(['0px']));
+  const score = await box(page, '#tableScoreTop');
+  const pills = await page.locator('#tableScoreTop .score-pill').evaluateAll(els => els.map(e => e.getBoundingClientRect().right));
+  expect(Math.max(...pills)).toBeGreaterThan(score.x + score.width - 4);   // the right column reaches the edge
+});

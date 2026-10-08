@@ -84,7 +84,17 @@ export function buildChipFilter(cfg: {
     panel.appendChild(footer);
   }
 
-  function open(): void  { panel.hidden = false; trigger.setAttribute('aria-expanded', 'true'); }
+  /** The panel opens under its trigger's left edge; one near the right of a phone (Domain) ran off the screen,
+   *  cutting its options off. Shift it left as far as it needs to stay on screen, and never wider than it. */
+  function place(): void {
+    panel.style.left = '';
+    panel.style.maxWidth = `min(320px, ${window.innerWidth - 16}px)`;
+    const fieldLeft = field.getBoundingClientRect().left;
+    const width = panel.getBoundingClientRect().width;
+    const want = Math.max(8, Math.min(fieldLeft, window.innerWidth - 8 - width));
+    if (want !== fieldLeft) panel.style.left = `${want - fieldLeft}px`;
+  }
+  function open(): void  { panel.hidden = false; trigger.setAttribute('aria-expanded', 'true'); place(); }
   function close(): void { panel.hidden = true;  trigger.setAttribute('aria-expanded', 'false'); }
 
   trigger.addEventListener('click', () => { if (panel.hidden) open(); else close(); });

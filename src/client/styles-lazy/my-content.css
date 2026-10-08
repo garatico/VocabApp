@@ -1683,7 +1683,8 @@ html.dark .mcc-extra-group label { color: hsl(var(--tense-hue, 145) 62% 72%); }
 
 @media (max-width: 700px) {
   .mcc-layout { flex-direction: column; height: auto; }
-  .mcc-verb-panel { width: 100%; max-height: 220px; }
+  /* Was 220px: header, search and pager left room for three verbs. */
+  .mcc-verb-panel { width: 100%; max-height: min(60vh, 480px); }
   .mcc-th-pronoun, .mcc-pronoun { width: 130px; }
 }
 
@@ -1757,12 +1758,9 @@ html.dark .mcc-extra-group label { color: hsl(var(--tense-hue, 145) 62% 72%); }
    row each for the tabs and the actions, the filters side by side, and no empty box (picking a word brings
    the form up — my-content-mode.ts). */
 @media (max-width: 599px) {
-  .mc-topbar .mc-tabs,
-  .mc-topbar-actions { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
-  .mc-topbar .mc-tabs::-webkit-scrollbar,
-  .mc-topbar-actions::-webkit-scrollbar { display: none; }
-  .mc-topbar .mc-tabs > *,
-  .mc-topbar-actions > * { flex-shrink: 0; }
+  .mc-topbar .mc-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+  .mc-topbar .mc-tabs::-webkit-scrollbar { display: none; }
+  .mc-topbar .mc-tabs > * { flex-shrink: 0; }
   .mc-topbar-actions { margin-left: 0; }
 
   .word-editor.mc-we .filter-bar { flex-direction: row; flex-wrap: wrap; align-items: stretch; gap: 0.35rem; }
@@ -1794,3 +1792,54 @@ html.dark .mcc-extra-group label { color: hsl(var(--tense-hue, 145) 62% 72%); }
 @media (max-width: 599px) {
   .word-editor.mc-we .word-list-pager button { min-height: 34px; }
 }
+
+/* ── Conjugations: the Tenses dropdown (conjugations.ts) ─────────────────────────────────────────────
+   A button naming what the table shows, and a checklist that opens in place under it — in place, not
+   floating, because the card clips anything that overflows it. */
+.mcc-chips-row.mcc-tense-dd { flex-wrap: wrap; align-items: center; justify-content: flex-start; }
+.mcc-tense-trigger {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  min-height: 34px; padding: 0.3rem 0.7rem;
+  font-size: 0.82rem; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.mcc-tense-trigger:hover { border-color: var(--accent); }
+.mcc-tense-trigger-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
+.mcc-tense-trigger-value { font-weight: 600; }
+.mcc-tense-trigger-caret { font-size: 0.7rem; color: var(--text-muted); }
+.mcc-tense-panel {
+  flex: 1 1 100%;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: 0.3rem 0.75rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+}
+.mcc-tense-panel[hidden] { display: none; }
+.mcc-tense-panel > .mcc-chips-actions { grid-column: 1 / -1; justify-content: flex-end; }
+.mcc-tense-option { display: flex; align-items: center; gap: 0.5rem; min-height: 32px; cursor: pointer; }
+.mcc-tense-option input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+.mcc-tense-option .mcc-chip { pointer-events: none; }
+/* The flag dropdown names and flags the language, so the separate flag beside it goes. */
+.mcc .lang-dd ~ .mcc-flag { display: none; }
+
+/* Phones: the pronoun column was 130px — half the table — so a second tense's forms read "hablar" for
+   "hablaré". Narrower, and "ellos / ellas" wraps instead. */
+@media (max-width: 599px) {
+  .mcc-th-pronoun, .mcc-pronoun { width: 84px; white-space: normal; }
+}
+
+/* "Backup & export ▾": Download my content, Export vocabulary (CSV) and Load a file, in one menu (more-menu.ts). */
+.mc-file-menu { position: relative; }
+.mc-file-menu-list {
+  position: absolute; top: calc(100% + 4px); right: 0; z-index: 30;
+  display: flex; flex-direction: column; min-width: 13rem; padding: 0.3rem;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+}
+.mc-file-menu-list[hidden] { display: none; }
+.mc-file-menu-item {
+  display: block; width: 100%; min-height: 34px; padding: 0.4rem 0.6rem;
+  text-align: left; font-size: 0.82rem; color: var(--text);
+  background: none; border: 0; border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap;
+}
+.mc-file-menu-item:hover, .mc-file-menu-item:focus-visible { background: var(--surface2); }

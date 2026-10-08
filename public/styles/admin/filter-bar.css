@@ -83,6 +83,9 @@
   cursor: pointer;
 }
 .filter-chip-trigger:hover { border-color: var(--accent); }
+/* buttons.css paints every button:hover with the accent fill; on this light trigger that left its dark label
+   and value on dark green — unreadable while the pointer is still over it after opening the panel. */
+button.filter-chip-trigger:hover:not(:disabled) { background: var(--surface); box-shadow: none; transform: none; }
 .filter-chip-trigger .filter-label { color: var(--text-muted); }
 .filter-chip-trigger-value { font-weight: 600; color: var(--text); white-space: nowrap; }
 .filter-chip-trigger-value--active { color: var(--accent); }

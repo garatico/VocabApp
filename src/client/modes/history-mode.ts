@@ -30,7 +30,7 @@ import {
   saveListFilterState, refreshFilterSelect,
 } from '../utils/word-lists.ts';
 import type { FilterScope } from '../filters/filter-scope.ts';
-import { readString, readJson, writeJson, isStringArray } from '../utils/storage.ts';
+import { readString } from '../utils/storage.ts';
 import { percent } from '../ui/quiz-summary.ts';
 import { buildLangBadge } from '../ui/lang-badge.ts';
 import type { SessionDirection } from '../utils/session-history.ts';
@@ -62,72 +62,29 @@ const DIRECTION_LABELS: Record<SessionDirection, string> = {
 const TROUBLE_LIST_NAME = 'Words I Keep Missing';
 
 
-// ── Collapsible panels ────────────────────────────────────────────────────
+// ── Views as tabs ─────────────────────────────────────────────────────────
 //
-// Due for Review / Words to Review / Recent Sessions each collapse
-// independently — persisted the same way My Content's own sections are
-// (a small JSON array of collapsed keys), so a learner who only cares about
-// Recent Sessions doesn't have to keep re-collapsing the other two on every
-// visit to this tab (it's rebuilt fresh every time — see this file's own
-// header comment).
+// Progress / Due for Review / Words to Review / Recent Sessions are tabs in the top bar (#historyBar), one
+// view at a time. They used to be four collapsible panels down one page, each remembered in
+// vq_history_collapsed (no longer used — see storage-keys.ts). The tab chosen lasts for the session.
 
-const HISTORY_COLLAPSED_KEY = 'vq_history_collapsed';
+type HistoryView = 'progress' | 'review' | 'trouble' | 'sessions';
+const HISTORY_VIEWS: { key: HistoryView; title: string }[] = [
+  { key: 'progress', title: 'Progress' },
+  { key: 'review',   title: 'Due for Review' },
+  { key: 'trouble',  title: 'Words to Review' },
+  { key: 'sessions', title: 'Recent Sessions' },
+];
+let activeHistoryView: HistoryView = 'progress';
 
-function getCollapsedHistoryPanels(): Set<string> {
-  return new Set(readJson<string[]>(HISTORY_COLLAPSED_KEY, [], isStringArray));
-}
-
-function setCollapsedHistoryPanels(keys: Set<string>): void {
-  writeJson(HISTORY_COLLAPSED_KEY, [...keys]);
-}
-
-/**
- * A clickable chevron+title header that shows/hides `body` in place. Any
- * caller-added action button (e.g. "Study these N") should stop propagation
- * on its own click so it doesn't also toggle the section.
- */
-function buildHistoryPanelHead(key: string, title: string, body: HTMLElement): HTMLElement {
+/** A panel's own header: its title and any actions a render adds (e.g. "Study these N"). */
+function buildHistoryPanelHead(_key: string, title: string, _body: HTMLElement): HTMLElement {
   const head = document.createElement('div');
-  head.className = 'history-panel-head history-panel-head--collapsible';
-  head.setAttribute('role', 'button');
-  head.tabIndex = 0;
-
-  const chevron = document.createElement('span');
-  chevron.className = 'history-panel-chevron';
-  chevron.textContent = '▾';
-  chevron.setAttribute('aria-hidden', 'true');
-
+  head.className = 'history-panel-head';
   const titleEl = document.createElement('h2');
   titleEl.className = 'history-panel-title';
   titleEl.textContent = title;
-
-  head.append(chevron, titleEl);
-
-  function applyState(collapsed: boolean): void {
-    body.hidden = collapsed;
-    head.classList.toggle('history-panel-head--collapsed', collapsed);
-    head.setAttribute('aria-expanded', String(!collapsed));
-  }
-  applyState(getCollapsedHistoryPanels().has(key));
-
-  function toggle(): void {
-    const collapsed = !body.hidden;
-    applyState(collapsed);
-    const keys = getCollapsedHistoryPanels();
-    if (collapsed) keys.add(key); else keys.delete(key);
-    setCollapsedHistoryPanels(keys);
-  }
-  head.addEventListener('click', toggle);
-  // Guarded to the header itself — Study These (a focusable descendant once
-  // one is added) already stops its own click from bubbling here, but a
-  // keydown Space/Enter on it still bubbles up before the browser's own
-  // "activate the focused button" handling runs, and without this guard
-  // that would toggle the section *and* click the button.
-  head.addEventListener('keydown', e => {
-    if (e.target !== head) return;
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
-  });
-
+  head.append(titleEl);
   return head;
 }
 
@@ -171,14 +128,66 @@ export function renderHistory(container: HTMLElement, lang: string): void {
   const sessionsPanel = document.createElement('div');
   sessionsPanel.className = 'history-panel history-sessions';
 
-  wrap.append(langRow, progressPanel, reviewPanel, troublePanel, sessionsPanel);
+  const panelFor: Record<HistoryView, HTMLElement> = {
+    progress: progressPanel, review: reviewPanel, trouble: troublePanel, sessions: sessionsPanel,
+  };
+  const tabs = document.createElement('div');
+  tabs.className = 'history-tabs';
+  tabs.setAttribute('role', 'tablist');
+  tabs.setAttribute('aria-label', 'History');
+  const tabButtons = HISTORY_VIEWS.map(v => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'history-tab-btn';
+    b.id = `historyTab-${v.key}`;
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-controls', `historyView-${v.key}`);
+    b.textContent = v.title;
+    b.addEventListener('click', () => showView(v.key));
+    const panel = panelFor[v.key];
+    panel.id = `historyView-${v.key}`;
+    panel.setAttribute('role', 'tabpanel');
+    panel.setAttribute('aria-labelledby', b.id);
+    return b;
+  });
+  tabs.append(...tabButtons);
+  // Arrow keys move between tabs, as on the main tab bar.
+  tabs.addEventListener('keydown', e => {
+    const i = tabButtons.indexOf(document.activeElement as HTMLButtonElement);
+    if (i < 0 || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return;
+    e.preventDefault();
+    const next = tabButtons[(i + (e.key === 'ArrowRight' ? 1 : tabButtons.length - 1)) % tabButtons.length];
+    next.focus(); next.click();
+  });
+  function showView(key: HistoryView): void {
+    // Due for Review is a Settings switch (Session History); while it is off there is no such view.
+    const dueOn = Settings.getDueEnabled();
+    if (key === 'review' && !dueOn) key = 'progress';
+    activeHistoryView = key;
+    HISTORY_VIEWS.forEach((v, i) => {
+      const on = v.key === key;
+      tabButtons[i].hidden = v.key === 'review' && !dueOn;
+      tabButtons[i].classList.toggle('active', on);
+      tabButtons[i].setAttribute('aria-selected', String(on));
+      tabButtons[i].tabIndex = on ? 0 : -1;
+      panelFor[v.key].hidden = !on;
+    });
+  }
+
+  // Language and tabs go in the top bar, like My Lists' and My Content's; a page without the bar keeps them here.
+  const bar = document.getElementById('historyBar');
+  if (bar) bar.replaceChildren(langRow, tabs);
+  else wrap.append(langRow, tabs);
+  wrap.append(progressPanel, reviewPanel, troublePanel, sessionsPanel);
   container.appendChild(wrap);
+  showView(activeHistoryView);
 
   function render(): void {
     renderProgressPanel();
     renderDueWords();
     renderTroubleWords();
     renderSessionList();
+    showView(activeHistoryView);
   }
 
   function renderProgressPanel(): void {
@@ -193,8 +202,7 @@ export function renderHistory(container: HTMLElement, lang: string): void {
 
   function renderDueWords(): void {
     reviewPanel.innerHTML = '';
-    reviewPanel.hidden = !Settings.getDueEnabled();
-    if (reviewPanel.hidden) return;
+    if (!Settings.getDueEnabled()) return;   // its tab is hidden too (showView)
 
     const body = document.createElement('div');
     body.className = 'history-panel-body';

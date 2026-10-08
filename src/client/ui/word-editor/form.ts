@@ -115,7 +115,7 @@ export function buildWordForm(options: WordFormOptions = {}): WordFormHandle {
             </div>
           </div>
           <div class="form-group">
-            <label>Glosses <span class="hint">type one, press Enter or comma to add</span></label>
+            <label>Glosses <span class="hint">type one, press Enter or comma to add${options.reorderGlosses ? ' · numbered in the order shown — drag ⠿ to reorder' : ''}</span></label>
             <div class="chip-input" id="${id('editGlossesChips')}">
               <input type="text" id="${id('editGlossesInput')}" class="chip-input-field" placeholder="Add a gloss…">
             </div>

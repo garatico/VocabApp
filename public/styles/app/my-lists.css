@@ -1062,3 +1062,13 @@ label.ml-chip-dropdown-group:hover { color: var(--text); }
   border-radius: var(--radius-sm);
 }
 .ml-chip-dropdown-item--lang .lang-badge { flex-shrink: 0; }
+
+/* Phones: the panel header was three rows — Folders / Made of / Minus, then Hide From alone, then ▶ Quiz alone,
+   away from the ✕ it belongs beside. Now ▶ Quiz sits on the first row next to ✕ and the four chips, a little
+   tighter, share the second. (Not a sideways-scrolling strip: that would clip each chip's dropdown.) */
+@media (max-width: 599px) {
+  .ml-panel-header { row-gap: 0.4rem; }
+  .ml-panel-header > .ml-panel-title-group { order: -1; margin-left: auto; }
+  .ml-panel-header > .ml-filter-dropdowns-row { flex: 1 1 100%; gap: 0.3rem; }
+  .ml-panel-header > .ml-filter-dropdowns-row .ml-chip-dropdown-toggle { padding-left: 0.5rem; padding-right: 0.5rem; }
+}
