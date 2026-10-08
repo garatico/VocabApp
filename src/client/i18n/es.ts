@@ -145,6 +145,7 @@ export const es: Record<string, string> = {
   'filter.adverbs':       'Adverbios',
   'filter.articles':      'Artículos',
   'filter.clearAll':      'Borrar todo',
+  'filter.activeFilters': 'Filtros activos',
   'filter.conjunctions':  'Conjunciones',
   'filter.domains':       'Dominios',
   'filter.filtersTitle':  'Filtros',

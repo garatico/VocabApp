@@ -141,6 +141,76 @@ for (const width of [390, 1024]) {
   });
 }
 
+/** Top edge of an element, rounded — two controls "share a line" when their tops match. */
+async function top(page: Page, sel: string): Promise<number> {
+  return Math.round((await page.locator(sel).first().boundingBox())!.y);
+}
+
+test.describe('Table controls on a phone (390px)', () => {
+  test.beforeEach(async ({ page }) => {
+    await disableSimpleMode(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open(page);
+  });
+
+  test('Language and + Languages share a line; so do Most Common and the take-mode dropdown', async ({ page }) => {
+    expect(await top(page, '#langPickerBtn')).toBe(await top(page, '#langGroup .lang-dd-trigger'));
+    expect(await top(page, '#sizeModeSelect')).toBe(await top(page, '#poolModeCycle'));
+    expect(await top(page, '#sizeSelect')).toBeGreaterThan(await top(page, '#poolModeCycle'));   // the count goes underneath
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
+  });
+
+  test('Quiz Style and Direction sit side by side: labels on one line, controls on the next', async ({ page }) => {
+    expect(await top(page, '#directionGroup > label')).toBe(await top(page, '#tableStyleGroup > label'));
+    expect(await top(page, '#directionCycle')).toBe(await top(page, '#tableStyleSelect'));
+    expect(await top(page, '#tableStyleSelect')).toBeGreaterThan(await top(page, '#tableStyleGroup > label'));
+  });
+
+  test('collapsed, the card still holds the corner box (streak, dice…)', async ({ page }) => {
+    await page.locator('#controlsCollapseBtn').click();
+    await expect(page.locator('#controlsBody')).toHaveClass(/filter-body--collapsed/);
+    const card = (await page.locator('#controls').boundingBox())!;
+    const corner = (await page.locator('#controlsCorner').boundingBox())!;
+    expect(corner.y + corner.height).toBeLessThanOrEqual(card.y + card.height - 1);
+  });
+});
+
+test.describe('Active filters', () => {
+  test.beforeEach(async ({ page }) => {
+    await disableSimpleMode(page);
+    await page.addInitScript(() => {
+      localStorage.setItem('vq_lists_spanish', JSON.stringify({ Reading: ['hablar', 'comer'] }));
+      localStorage.setItem('vq_listfilter_spanish__shared', JSON.stringify({ active: true, mode: 'focus', selected: ['Reading'] }));
+    });
+  });
+
+  for (const width of [390, 1400]) {
+    test(`Start Quiz sits below the active filters (${width}px)`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await open(page);
+      const summary = (await page.locator('#filtersSummary').boundingBox())!;
+      const start = (await page.locator('#startBtn').boundingBox())!;
+      expect(start.y).toBeGreaterThanOrEqual(summary.y + summary.height);
+    });
+  }
+
+  test('the active filters collapse and expand, and stay as left', async ({ page }) => {
+    await open(page);
+    const toggle = page.locator('.filters-summary-toggle');
+    await expect(page.locator('#filtersSummaryCount')).toHaveText('1');
+    await expect(page.locator('#filtersSummaryBody .filters-summary-chip')).toBeVisible();
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator('#filtersSummaryBody')).toBeHidden();
+    await page.reload();
+    await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+    await expect(page.locator('#filtersSummaryBody')).toBeHidden();
+    await expect(page.locator('#filtersSummaryCount')).toHaveText('1');   // still says how many, collapsed
+    await toggle.click();
+    await expect(page.locator('#filtersSummaryBody .filters-summary-chip')).toBeVisible();
+  });
+});
+
 test('Settings → Help & Tips: the Glossary\'s CSV entry opens the CSV guide', async ({ page }) => {
   await disableSimpleMode(page);
   await open(page);

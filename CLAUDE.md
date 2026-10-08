@@ -428,7 +428,7 @@ read from or write to `vocabulary.db`.
   The corner cluster (`#controlsCorner`: due badge, streak, dice, Profiles, ?) is reserved by its *measured* width
   (`--corner-w`, set by a `ResizeObserver` in `streak-widget.ts`), never a fixed rem — a fixed 11rem let the corner sit on
   Direction once the badge and dice joined it. The three groups plus a 12-due corner just fit one row at 1280px
-  (`tests/e2e/controls-and-lists-layout.spec.ts`); anything that widens either costs that.
+  (`tests/e2e/controls-and-lists-layout.spec.ts`); anything that widens either costs that. Its height is measured too (`--corner-h`): the phone card's top padding and a collapsed card's height come from it. Below 600px Table pairs controls up rather than one per row — Language beside "+ Languages", Words' pool button beside the take-mode dropdown (the size row is `display: contents` so its pieces can join that line), Quiz Style beside Direction. Start Quiz sits under the filters *and* the "Active filters" summary, which collapses (`data-collapse="filtersSummaryBody"`; `renderSummary` fills `#filtersSummaryBody` and the count, never the toggle).
 - **The language dropdown is a listbox over the native select** (`ui/language-dropdown.ts`): each entry and the
   closed button show the language's flag (SVG — Windows has no flag emoji) and its `--lang-<name>-bg` tint. The
   `<select id="langSelect">` stays in the page, visually hidden, as the source of truth, so `.value`, `change`

@@ -147,7 +147,8 @@ export function initStreakWidget(): void {
 }
 
 /**
- * Tell #controls how wide the corner cluster really is (`--corner-w`, read by controls-bar.css),
+ * Tell #controls how wide the corner cluster really is (`--corner-w`, read by controls-bar.css) — and how tall
+ * (`--corner-h`, read by streak-widget.css for the collapsed bar) —
  * so the controls beside it keep clear. The room used to be a fixed 11rem, sized when the corner
  * held the streak, Profiles and ?; the due badge and dice joined it later and it grew to ~20rem,
  * landing on Direction / By Rank. Measured, it stays right whatever joins or hides (Profiles on
@@ -161,6 +162,10 @@ function reserveCornerWidth(): void {
     // Its own width plus the gap between its left edge and the card's right edge.
     const reserve = controls.getBoundingClientRect().right - corner.getBoundingClientRect().left;
     if (reserve > 0) controls.style.setProperty('--corner-w', `${Math.ceil(reserve)}px`);
+    // And its height, bottom edge to the card's top: a collapsed card is exactly tall enough to hold it
+    // (streak-widget.css). A guessed 3.1rem left a phone's 48px corner sitting on the card's bottom border.
+    const drop = corner.getBoundingClientRect().bottom - controls.getBoundingClientRect().top;
+    if (corner.offsetHeight > 0 && drop > 0) controls.style.setProperty('--corner-h', `${Math.ceil(drop)}px`);
   };
   new ResizeObserver(update).observe(corner);
   update();

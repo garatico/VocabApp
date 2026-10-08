@@ -250,13 +250,18 @@ function buildProfileBlock(): HTMLElement | null {
 function renderSummary(): void {
   updatePillCounts();
   const strip = document.getElementById('filtersSummary');
-  if (!strip) return;
+  // The chips go in the body; the strip keeps its collapse toggle (index.html), so a learner's
+  // collapsed/expanded choice survives every redraw.
+  const body = document.getElementById('filtersSummaryBody') ?? strip;
+  if (!strip || !body) return;
   const groups = collectGroups();
   const profile = buildProfileBlock();
-  strip.innerHTML = '';
+  body.innerHTML = '';
   strip.hidden = groups.length === 0 && !profile;
+  const count = document.getElementById('filtersSummaryCount');
+  if (count) count.textContent = String(groups.reduce((n, g) => n + g.chips.length, 0) + (profile ? 1 : 0));
   if (groups.length === 0 && !profile) return;
-  if (profile) strip.appendChild(profile);
+  if (profile) body.appendChild(profile);
   if (groups.length === 0) return;
 
   groups.forEach(g => {
@@ -279,7 +284,7 @@ function renderSummary(): void {
       chip.addEventListener('click', e => { e.stopPropagation(); c.remove(); });
       wrap.appendChild(chip);
     });
-    strip.appendChild(wrap);
+    body.appendChild(wrap);
   });
 
   const clear = document.createElement('button');
@@ -293,7 +298,7 @@ function renderSummary(): void {
     const snapshot = collectGroups();
     snapshot.forEach(g => g.chips.forEach(c => c.remove()));
   });
-  strip.appendChild(clear);
+  body.appendChild(clear);
 }
 
 // ── Wiring ──────────────────────────────────────────────────────────────────

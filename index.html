@@ -609,11 +609,19 @@
           </div>
         </div>
 
-        <!-- Start Quiz: the last item in the filters row, using the space left
-             at its right end. -->
-        <button id="startBtn" data-i18n="controls.startQuiz">Start Quiz</button>
         </div>
-        <div id="filtersSummary" class="filters-summary" data-simple-hide="true" hidden></div>
+        <!-- What is filtering right now (filter-bar.ts fills the body). Collapsible, and remembered, like
+             any data-collapse section. -->
+        <div id="filtersSummary" class="filters-summary" data-simple-hide="true" hidden>
+          <button type="button" class="filter-collapse-btn filters-summary-toggle" data-collapse="filtersSummaryBody" data-default-open="true" aria-expanded="true" aria-controls="filtersSummaryBody">
+            <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
+            <span class="filters-summary-heading" data-i18n="filter.activeFilters">Active filters</span>
+            <span id="filtersSummaryCount" class="filters-pill-count"></span>
+          </button>
+          <div id="filtersSummaryBody" class="filters-summary-body"></div>
+        </div>
+        <!-- Start Quiz: below the filters and what they are set to, so it is the last thing read before starting. -->
+        <button id="startBtn" data-i18n="controls.startQuiz">Start Quiz</button>
         </div>
 
         <!-- Only shown for a language with a non-Latin script (Chinese,

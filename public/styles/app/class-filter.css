@@ -604,16 +604,39 @@ html.dark .pos-chip[data-band]:not(.active):hover {
 }
 .filters-row .filter-body.filter-body--collapsed { display: none; }
 
-/* Summary of what is filtering right now */
+/* Summary of what is filtering right now: a collapse toggle ("Active filters N") and, beside it, the chips. */
 .filters-summary {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem 0.7rem;
+  align-items: flex-start;
+  gap: 0.3rem 0.6rem;
   margin-top: 0.4rem;
   font-size: 0.72rem;
 }
 .filters-summary[hidden] { display: none; }
+.filters-summary-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.7rem;
+  min-width: 0;
+}
+.filters-summary-body.filter-body--collapsed { display: none; }
+#controls .filters-summary-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 24px;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+#controls .filters-summary-toggle:hover { color: var(--text); }
 .filters-summary-group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; }
 .filters-summary-title {
   font-size: 0.64rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
@@ -698,24 +721,24 @@ html.dark .pos-chip[data-band]:not(.active):hover {
 .filters-row .filter-collapse-btn { flex: 1 1 auto; justify-content: flex-start; min-width: 0; }
 .filters-row .filter-header-controls { margin-left: auto; }
 
-/* Start Quiz: the last item in the filters row, right-aligned in the space
-   left after the three filter pills. */
-.filters-row > #startBtn {
-  flex: 0 0 auto;
-  align-self: stretch;
+/* Start Quiz: under the filters and the summary of what they are set to, right-aligned — the last thing
+   read before starting. Full width on a phone, where it is the tap target the whole card leads to. */
+#filtersBar > #startBtn {
+  display: block;
   width: auto;
-  min-height: 38px;
-  margin-left: auto;
-  padding: 0.3rem 1.3rem;
+  min-width: 14rem;
+  min-height: 40px;
+  margin: 0.55rem 0 0 auto;
+  padding: 0.4rem 1.6rem;
   font-size: 0.9rem;
   box-shadow: none;
 }
 
-/* Phones: no room to share a row. Every pill takes a full row, and Start Quiz sits under them at full
-   width — beside the Domain pill it squeezed "DOMAIN" to "DOMAI…" and left a small tap target. */
+/* Phones: no room to share a row. Every pill takes a full row — beside the Domain pill, Start Quiz once
+   squeezed "DOMAIN" to "DOMAI…". */
 @media (max-width: 599px) {
   .filters-row > #domainFilterWrap { flex: 1 1 100%; max-width: none; }
-  .filters-row > #startBtn { flex: 1 1 100%; margin-left: 0; min-height: 44px; }
+  #filtersBar > #startBtn { width: 100%; min-width: 0; margin-left: 0; min-height: 44px; }
 }
 
 /* Applied profile, at the head of the summary strip */
