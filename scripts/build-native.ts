@@ -90,8 +90,13 @@ function checkTarget(target: 'windows' | 'android'): boolean {
   }
 
   if (target === 'android') {
-    const sdk = process.env.ANDROID_HOME ?? process.env.ANDROID_SDK_ROOT;
-    if (sdk && fs.existsSync(sdk)) ok(`Android SDK (${sdk})`);
+    // Android Studio's own install location when neither variable is set (a fresh shell often has neither).
+    const studioSdk = process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Android', 'Sdk') : '';
+    const sdk = process.env.ANDROID_HOME ?? process.env.ANDROID_SDK_ROOT ?? (fs.existsSync(studioSdk) ? studioSdk : undefined);
+    if (sdk && fs.existsSync(sdk)) {
+      process.env.ANDROID_HOME ??= sdk;   // Gradle, spawned below, inherits it
+      ok(`Android SDK (${sdk})`);
+    }
     else {
       bad('Android SDK — set ANDROID_HOME, or install Android Studio');
       allGood = false;

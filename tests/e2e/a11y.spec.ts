@@ -144,6 +144,7 @@ for (const theme of ['light', 'dark'] as const) {
 // actions menu and the naming dialog — it had title-only checkbox labels and four contrast misses.
 for (const theme of ['light', 'dark'] as const) {
   test(`My Lists with words, its row menu and a naming dialog have no axe violations (${theme})`, async ({ page }) => {
+    test.setTimeout(60_000);   // four full axe scans; at the default 30 s it timed out about one run in four
     await page.setViewportSize({ width: 1400, height: 900 });
     await open(page, theme);
     await page.locator('.mode-tab[data-mode="mylists"]').click();
