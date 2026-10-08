@@ -531,9 +531,7 @@ function ensureAndroidStoragePermissions(): void {
     '<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />',
   ].filter(line => !xml.includes(line.split('"')[1]));
   if (!wanted.length) return;
-  xml = xml.replace('</manifest>', `    ${wanted.join('
-    ')}
-</manifest>`);
+  xml = xml.replace('</manifest>', `    ${wanted.join('\n    ')}\n</manifest>`);
   fs.writeFileSync(manifest, xml);
   ok('Android: storage permissions for the automatic backup (Android 10 and older)');
 }
