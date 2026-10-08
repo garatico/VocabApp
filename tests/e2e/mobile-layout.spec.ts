@@ -160,3 +160,14 @@ test('on a phone, the controls people tap are at least 30px tall', async ({ page
     expect(await tooSmall(), mode).toEqual([]);
   }
 });
+
+test('My Lists on a phone: a long list name shows whole, and the stats row has no divider before it', async ({ page }) => {
+  await open(page, 390, () => {
+    localStorage.setItem('vq_lists_spanish', JSON.stringify({ EspañolDeLosLibrosQueLeo: ['hablar', 'comer'] }));
+  });
+  await page.locator('.mode-tab[data-mode="mylists"]').click();
+  const title = page.locator('#myListsBar .ml-topbar-title');
+  await expect(title).toContainText('EspañolDeLosLibrosQueLeo');
+  expect(await title.evaluate(e => e.scrollWidth <= e.clientWidth + 1)).toBe(true);   // not cut off
+  await expect(page.locator('#myListsBar .ml-stats-row')).toHaveCSS('border-left-width', '0px');
+});

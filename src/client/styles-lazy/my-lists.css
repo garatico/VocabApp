@@ -3141,3 +3141,18 @@ html.dark .ml-level-pill[data-level]:not([data-level="0"]) {
 @media (max-width: 599px) {
   .ml-menu-gear { min-width: 32px; min-height: 30px; }
 }
+
+/* Narrow windows and phones: the top bar wraps, so the title gets a row of its own — and the whole row: it was
+   still capped at 40% of it ("EspañolDeL…"), and a long one-word name breaks rather than being cut. The rule
+   that divides title and stats on one desktop line is dropped too: on a row of their own the stats started
+   with a stray "|". */
+@media (max-width: 767px) {
+  .ml-topbar .ml-topbar-title {
+    flex: 1 1 100%;
+    max-width: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.25;
+  }
+  .ml-topbar .ml-stats-row { flex: 1 1 100%; border-left: 0; padding-left: 0; margin-left: 0; }
+}
