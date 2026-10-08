@@ -464,7 +464,8 @@ export function createColumnHeader(opts: ColumnHeaderOptions): ColumnHeader {
    * which has no column tracks.
    */
   function autoSizeUnset(): void {
-    if (!listEl || compact || !listEl.querySelector('.ml-word-item')) return;
+    if (!listEl || !listEl.querySelector('.ml-word-item')) return;
+    if (compact) { fitCompactWord(listEl); return; }
     let changed = false;
     for (const col of COLUMNS) {
       if (col.key === 'definition' || widths[col.key] !== undefined) continue;
@@ -472,6 +473,24 @@ export function createColumnHeader(opts: ColumnHeaderOptions): ColumnHeader {
       if (w !== null && w > (autoWidths[col.key] ?? 0)) { autoWidths[col.key] = w; changed = true; }
     }
     if (changed) applyWidths();
+  }
+
+  /** The compact rows' one shared word width (--ml-cword-w, my-lists.css): the widest word on screen, so a short
+   *  word isn't ellipsized beside a half-empty meaning and every row's columns still line up — but never more
+   *  than 60% of the room word and meaning share, or one long word would ellipsize every meaning. The widest
+   *  word is grow-only, like the fitted widths above, so paging doesn't make the row jump. */
+  let compactWordW = 0;
+  function fitCompactWord(list: HTMLElement): void {
+    let room = 0;
+    list.querySelectorAll<HTMLElement>('.ml-word-item .ml-cell-word').forEach(cell => {
+      const text = cell.querySelector<HTMLElement>('.ml-word-text');
+      if (!text) return;
+      // The cell's own extras (badges, padding) plus the text at its full, unclipped width.
+      compactWordW = Math.max(compactWordW, Math.ceil(cell.clientWidth - text.clientWidth + text.scrollWidth) + 1);
+      room ||= cell.offsetWidth + (cell.parentElement?.querySelector<HTMLElement>('.ml-cell-trans')?.offsetWidth ?? 0);
+    });
+    if (!compactWordW || !room) return;
+    list.style.setProperty('--ml-cword-w', `${Math.min(compactWordW, Math.max(48, Math.floor(room * 0.6)))}px`);
   }
 
   const header: ColumnHeader = {

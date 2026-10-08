@@ -3051,17 +3051,20 @@ html.dark .ml-level-pill[data-level]:not([data-level="0"]) {
 /* Compact: the columns cannot line up in a narrow list (a phone, or a window beside the 440px sidebar), so the
    header becomes a stacked list — a sort button beside its filter, in two or three columns where there is room —
    behind the Columns button, and the rows keep a compact grid of their own. No dividers, no resizing.
-   ColumnHeader sets .ml-cols--compact on both, from the list's own width (column-header.ts). */
+   ColumnHeader sets .ml-cols--compact on both, from the list's own width (column-header.ts).
+   The word takes the widest word's width first (--ml-cword-w, measured by column-header.ts, so rows still line up)
+   and the meaning the rest; with too little room it shrinks to 48px and ellipsizes. Splitting the space by ratio cut
+   "comer" to "com…" beside a half-empty meaning. */
 .ml-table > .ml-word-list.ml-cols--compact { margin: 0; }
 .ml-word-list--cols.ml-cols--compact .ml-word-item {
   grid-template-columns:
     [check]    18px
-    [word]     minmax(48px, 1fr)
+    [word]     minmax(48px, var(--ml-cword-w, 1fr))
     [audio]    20px
     [pos]      38px
     [band]     var(--ml-band-w, 34px)
     [rank]     var(--ml-rank-w, 40px)
-    [trans]    minmax(50px, 1.3fr)
+    [trans]    minmax(50px, 1fr)
     [pct]      38px
     [mastered] 28px
     [actions]  30px;
@@ -3071,12 +3074,12 @@ html.dark .ml-level-pill[data-level]:not([data-level="0"]) {
 }
 .ml-word-list--cols.ml-cols--compact.ml-word-list--nocheck .ml-word-item {
   grid-template-columns:
-    [word]     minmax(48px, 1fr)
+    [word]     minmax(48px, var(--ml-cword-w, 1fr))
     [audio]    20px
     [pos]      38px
     [band]     var(--ml-band-w, 34px)
     [rank]     var(--ml-rank-w, 40px)
-    [trans]    minmax(50px, 1.3fr)
+    [trans]    minmax(50px, 1fr)
     [pct]      38px
     [mastered] 28px
     [actions]  30px;

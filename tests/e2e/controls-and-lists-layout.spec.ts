@@ -117,6 +117,30 @@ test.describe('My Lists word table', () => {
   });
 });
 
+for (const width of [390, 1024]) {
+  test(`compact My Lists rows (${width}px): a short word shows whole, and one long word can't squeeze every meaning`, async ({ page }) => {
+    await disableSimpleMode(page);
+    await page.addInitScript(() => {
+      localStorage.setItem('vq_lists_spanish', JSON.stringify({ Reading: ['comer', 'hablar', 'vivir', 'desafortunadamente'] }));
+    });
+    await page.setViewportSize({ width, height: 844 });
+    await open(page);
+    await page.locator('.mode-tab[data-mode="mylists"]').click();
+    await expect(page.locator('.ml-table.ml-cols--compact')).toBeVisible();
+    await expect(page.locator('.ml-word-item')).toHaveCount(4);
+    await expect.poll(() => page.locator('.ml-word-list').evaluate(l => (l as HTMLElement).style.getPropertyValue('--ml-cword-w'))).not.toBe('');
+    const rows = await page.locator('.ml-word-item').evaluateAll(items => items.map(r => {
+      const text = r.querySelector('.ml-word-text') as HTMLElement;
+      const word = r.querySelector('.ml-cell-word') as HTMLElement;
+      const trans = r.querySelector('.ml-cell-trans') as HTMLElement;
+      return { word: text.innerText, clipped: text.scrollWidth > text.clientWidth + 1, x: word.getBoundingClientRect().width, t: trans.getBoundingClientRect().width };
+    }));
+    for (const r of rows.filter(r => r.word !== 'desafortunadamente')) expect(r.clipped, r.word).toBe(false);
+    expect(new Set(rows.map(r => Math.round(r.x))).size).toBe(1);   // one shared width: the columns line up
+    expect(rows[0].x).toBeLessThanOrEqual(Math.ceil((rows[0].x + rows[0].t) * 0.6) + 1);   // the meaning keeps 40%
+  });
+}
+
 test('Settings → Help & Tips: the Glossary\'s CSV entry opens the CSV guide', async ({ page }) => {
   await disableSimpleMode(page);
   await open(page);
