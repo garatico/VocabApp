@@ -815,8 +815,9 @@ test('Export lives in each list card’s gear menu, and choosing "Made of" leave
   ]);
   expect(download.suggestedFilename()).toBe('Food-spanish-words.txt');
 
-  await page.locator('.ml-panel .ml-chip-dropdown', { hasText: 'Made of' }).locator('button').first().click();
-  await page.locator('.ml-panel .ml-chip-dropdown-item', { hasText: 'Other' }).locator('input').check();
+  const madeOf = page.locator('.ml-panel .ml-chip-dropdown', { hasText: 'Made of' });   // not Minus, which lists Other too
+  await madeOf.locator('button').first().click();
+  await madeOf.locator('.ml-chip-dropdown-item', { hasText: 'Other' }).locator('input').check();
   await expect(page.locator('#myListsBar .ml-stats-row')).toHaveCount(1);
   await expect(page.locator('.ml-panel .ml-stats-row')).toHaveCount(0);
   await expect(page.locator('#myListsBar .ml-stat-chip--count')).toHaveText('3 Words');

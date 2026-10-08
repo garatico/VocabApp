@@ -19,7 +19,7 @@ import {
 import { foldKey as norm } from '../../utils/match.ts';
 import { readString, writeString } from '../../utils/storage.ts';
 import type { ListsCtx } from './context.ts';
-import { cachedVocab, cachedVocabMap } from './vocab-cache.ts';
+import { cachedVocab, cachedVocabMap, fetchVocab } from './vocab-cache.ts';
 import {
   getSmartLists, saveSmartRule, evaluateSmart, type SmartRule,
 } from './smart-lists.ts';
@@ -616,4 +616,13 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
   });
 
   refresh();
+
+  // Opened before the vocabulary arrived: the rule has nothing to match yet, so fetch it and redraw
+  // the whole panel (the Domains checklist is built from `vocab` too) — unless the learner moved on.
+  if (vocab.length === 0) {
+    const lang = ctx.lang;
+    fetchVocab(lang).then(entries => {
+      if (entries.length && ctx.lang === lang && ctx.selectedSmart === name) ctx.renderPanel();
+    }).catch(() => {});
+  }
 }
