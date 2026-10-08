@@ -315,3 +315,8 @@
 .prog-cal-cell.is-active { background: var(--accent); border-color: var(--accent); }
 
 .prog-cal-cell.is-future { visibility: hidden; }
+
+/* Phones: a collapsible panel's head (the whole row is the toggle) was 22px tall. */
+@media (max-width: 599px) {
+  .history-panel-head--collapsible { min-height: 36px; }
+}

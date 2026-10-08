@@ -293,3 +293,10 @@
   .tv-nav-btn { font-size: 0.72rem; padding: 0.3rem 0.55rem; }
   .tv-type-row { max-width: none; }
 }
+
+/* Phones: Back / Next were 26px beside a 42px Give Up, so the row read as two sizes of button. One height. */
+@media (max-width: 599px) {
+  .tv-nav-btn,
+  .tv-giveup-btn.recall-giveup-btn { min-height: 36px; }
+  .gb-hint-btn { min-height: 36px; }
+}

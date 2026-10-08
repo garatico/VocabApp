@@ -1430,3 +1430,19 @@ body.hide-settings-links .tsb-more-row.settings-links { display: none; }
   }
   #tableStickyBar > .tsb-row { padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); margin-bottom: 0.4rem; }
 }
+
+/* Phones: the bar's Jump, ⋯ and page controls were 23-24px tall. */
+@media (max-width: 599px) {
+  .tsb-nav .jump-btn--icon,
+  .tsb-nav .tsb-more-btn,
+  .tsb-nav .pager-btn,
+  .tsb-nav .pager-select { min-height: 32px; }
+  .tsb-nav .jump-btn--icon { min-width: 32px; }
+}
+
+/* Phones: each row's ?? (reveal) and ★ were 22px squares and its checkbox 12px — the smallest targets in
+   the app, used on every row. 30px still leaves the answer box most of the row. */
+@media (max-width: 599px) {
+  #tableWrap :is(.reveal-btn, .known-btn) { min-width: 30px; min-height: 30px; }
+  #tableWrap .row-select-cb { width: 18px; height: 18px; }
+}

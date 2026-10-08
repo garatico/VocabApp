@@ -1076,3 +1076,15 @@ html.dark .settings-fold .settings-group { background: color-mix(in srgb, var(--
    left padding (controls-bar.css) so the switches clear that button. */
 #controls > .settings-toolbar.filter-body--collapsed { display: none; }
 #controls > .settings-toolbar--topbar .settings-toolbar-item { gap: 0.4rem; }
+
+/* Phones: Settings' switches in the top bar stack one per row; each toggle started wherever its label ended,
+   so the four didn't line up. Label left, control right. "Reset section" was 21px tall. */
+@media (max-width: 599px) {
+  #controls > .settings-toolbar--topbar { flex-direction: column; align-items: stretch; gap: 0.4rem; }
+  #controls > .settings-toolbar--topbar .settings-toolbar-item { justify-content: space-between; }
+  #controls > .settings-toolbar--topbar .settings-toolbar-item .sort-order-btn { min-height: 34px; }
+  .settings-section-reset,
+  #settingsChangedOnly,
+  #settingsResetAll,
+  .settings-group-collapse-btn { min-height: 32px; }
+}

@@ -119,3 +119,44 @@ test('My Content on a phone: filters on two rows, and no empty editor until a wo
   await expect(page.locator('.mc-we .edit-form-card')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
 });
+
+test('on a phone, Start brings the quiz into view (the setup panel stays open)', async ({ page }) => {
+  await open(page, 360);
+  await page.locator('#startBtn').click();
+  await expect(page.locator('#tableWrap input[type="text"]').first()).toBeVisible();
+  await expect.poll(() => page.evaluate(() => Math.round(document.getElementById('tableArea')!.getBoundingClientRect().top))).toBeLessThan(40);
+  await expect(page.locator('#controlsBody')).not.toHaveClass(/filter-body--collapsed/);
+});
+
+test('History\'s language picker shows flags', async ({ page }) => {
+  await open(page, 390);
+  await page.locator('.mode-tab[data-mode="history"]').click();
+  await expect(page.locator('#historyLangSelectBtn img.lang-dd-flag')).toBeVisible();
+});
+
+test('on a phone, chip groups are even grids: no option left alone on a row of its own', async ({ page }) => {
+  await open(page, 360);
+  await page.locator('.mode-tab[data-mode="picture"]').click();
+  const widths = await page.locator('#controls-top .control-group--chip .sort-order-toggle:visible .sort-order-btn')
+    .evaluateAll(els => els.filter(e => (e as HTMLElement).offsetParent).map(e => Math.round(e.getBoundingClientRect().width)));
+  expect(widths.length).toBeGreaterThan(3);
+  expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(2);
+});
+
+test('on a phone, the controls people tap are at least 30px tall', async ({ page }) => {
+  await open(page, 360);
+  const tooSmall = async (): Promise<string[]> => page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>('button, select, [role="button"]'))
+    .filter(e => { const b = e.getBoundingClientRect(); return b.width > 0 && b.height > 0 && b.height < 30
+      && !e.closest('.filters-row')                       // the pill itself (38px) is the target there
+      && !e.classList.contains('lang-dd-native') && !e.classList.contains('ml-lang-select'); })
+    .map(e => `${e.id || e.className} ${Math.round(e.getBoundingClientRect().height)}px`));
+  expect(await tooSmall()).toEqual([]);
+  await page.locator('#startBtn').click();
+  await expect(page.locator('#tableWrap input[type="text"]').first()).toBeVisible();
+  expect(await tooSmall()).toEqual([]);
+  for (const mode of ['trivia', 'mylists', 'history', 'settings']) {
+    await page.locator(`.mode-tab[data-mode="${mode}"]`).click();
+    await page.waitForTimeout(600);
+    expect(await tooSmall(), mode).toEqual([]);
+  }
+});

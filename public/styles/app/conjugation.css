@@ -1336,3 +1336,16 @@ html:not(.dark) .crt-input.incorrect {
   .conj-sticky-bar .conj-progress-pills { margin-bottom: 0.5rem; }
   .conj-sticky-bar > .conj-full-header { margin-bottom: 0.75rem; }
 }
+
+/* Phones: the Forms/Verbs and Full Quiz cycle buttons and the timer's buttons were 23-24px tall. */
+@media (max-width: 599px) {
+  .conj-sticky-bar .conj-cycle-btn,
+  .conj-sticky-bar .timer-btn { min-height: 32px; }
+  .conj-sticky-bar .timer-btn { min-width: 32px; }
+}
+
+/* Phones: the per-row ? (26px), the card's ★ (23px) and "Reveal all" (20px tall). */
+@media (max-width: 599px) {
+  .conj-card :is(.reveal-btn, .known-btn) { min-width: 30px; min-height: 30px; }
+  .conj-reveal-all-btn { min-height: 30px; }
+}

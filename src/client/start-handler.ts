@@ -445,6 +445,11 @@ export function bindStartHandler({
       if (Settings.getCollapseControlsOnStart()) {
         setSectionOpen('controlsBody', false);
         window.scrollTo({ top: 0 });
+      } else if (window.matchMedia('(max-width: 599px)').matches) {
+        // On a phone the open setup panel is a screen or more tall, so the quiz began out of sight below it
+        // and Start looked like it did nothing. Bring the quiz up to the top instead (the panel stays open).
+        const controls = document.getElementById('controls');
+        if (controls) window.scrollTo({ top: controls.getBoundingClientRect().bottom + window.scrollY - 4, behavior: 'smooth' });
       }
 
     } catch (err) {

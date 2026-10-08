@@ -14,6 +14,7 @@
  * a page reload.
  */
 
+import { enhanceLanguageSelect } from '../ui/language-dropdown.ts';
 import { LANGUAGES } from '../data/languages.ts';
 import {
   getSessions, troubleWords, missCount, wordsPerMinute,
@@ -147,6 +148,7 @@ export function renderHistory(container: HTMLElement, lang: string): void {
   langLabel.textContent = 'Language';
   const langSel = document.createElement('select');
   langSel.className = 'history-lang-select';
+  langSel.id = 'historyLangSelect';
   langSel.setAttribute('aria-label', 'Language');
   LANGUAGES.forEach(l => {
     const opt = document.createElement('option');
@@ -158,6 +160,7 @@ export function renderHistory(container: HTMLElement, lang: string): void {
     render();
   });
   langRow.append(langLabel, langSel);
+  enhanceLanguageSelect(langSel);   // flags and colours, as on every other tab; the select stays the source of truth
 
   const progressPanel = document.createElement('div');
   progressPanel.className = 'history-panel history-progress';

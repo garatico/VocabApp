@@ -1117,4 +1117,3 @@ html:not(.dark) .conj-card-tense {
   .conj-cards-grid:not(.conj-cards-grid--full) .conj-head-main { flex: 1 1 100%; }
   .conj-cards-grid:not(.conj-cards-grid--full) .conj-head-side { flex: 1 1 100%; justify-content: flex-end; }
 }
-

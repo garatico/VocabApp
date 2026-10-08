@@ -3130,3 +3130,14 @@ html.dark .ml-level-pill[data-level]:not([data-level="0"]) {
   .ml-browse-pager { flex-wrap: wrap; }
   .ml-browse-page-select { flex: 1 1 8rem; }
 }
+
+/* Phones: the sidebar's buttons were 15-22px tall (Browse All / Backup / Restore, section toggles, + New). */
+@media (max-width: 599px) {
+  .ml-header .ml-icon-btn { min-height: 32px; }
+  .ml-section-toggle-btn { min-height: 32px; }
+  .ml-new-list-btn { min-height: 30px; }
+}
+
+@media (max-width: 599px) {
+  .ml-menu-gear { min-width: 32px; min-height: 30px; }
+}

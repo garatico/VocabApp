@@ -1779,3 +1779,18 @@ html.dark .mcc-extra-group label { color: hsl(var(--tense-hue, 145) 62% 72%); }
   .word-editor.mc-we .form-panel:has(.form-panel-empty:not([style*="display: none"]):not([style*="display:none"])) { display: none; }
   .word-editor.mc-we .word-list-pager { flex-wrap: wrap; justify-content: center; gap: 0.35rem; }
 }
+
+/* Phones: the tab and action buttons were 25-28px tall. */
+@media (max-width: 599px) {
+  .mc-topbar .mc-tab-btn,
+  .mc-topbar .mc-btn { min-height: 36px; }
+}
+
+/* Phones: a word row was 27px tall — the whole row is what picks the word. */
+@media (max-width: 599px) {
+  .word-editor.mc-we .word-item { min-height: 36px; }
+}
+
+@media (max-width: 599px) {
+  .word-editor.mc-we .word-list-pager button { min-height: 34px; }
+}

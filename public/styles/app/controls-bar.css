@@ -724,3 +724,19 @@
 
 /* Random Table's blank count and its custom box share one line. */
 #conjRandomTableSizeGroup .size-row { display: flex; gap: 0.4rem; align-items: stretch; flex-wrap: nowrap; }
+
+/* ── Phones: tap targets and even chip rows ────────────────────────────────────────────────────────
+   Measured at 360/390px, several controls were 21-26px tall (the collapse buttons, On/Off, the link button).
+   Chip groups (Order, Quiz Style, Trivia's difficulties…) wrapped by label length, so Picture Quiz's sixth
+   order chip, "Smart", sat alone on a second row; as a grid of equal cells every row is full and even. */
+@media (max-width: 599px) {
+  /* body #controls: these rules sit before shortcuts.css / class-filter.css in the cascade, which set the sizes. */
+  body #controls :is(#controlsCollapseBtn, #settingsBarCollapseBtn).controls-collapse-btn { width: 32px; height: 32px; }
+  body #controls :is(.filter-active-btn, .filter-chain-btn) { min-height: 32px; min-width: 32px; }
+  body #controls .filters-section-toggle,
+  body #controls .filters-summary-toggle { min-height: 32px; }
+  #controls-top .control-group--chip :is(.sort-order-toggle, .conj-display-toggle):not(.ctl-proxied) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(4.6rem, 1fr));
+  }
+}

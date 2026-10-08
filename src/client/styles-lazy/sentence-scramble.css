@@ -192,3 +192,9 @@
   .ss-nav-btn { font-size: 0.72rem; padding: 0.3rem 0.55rem; }
   .ss-answer-row, .ss-bank-row { max-width: none; }
 }
+
+/* Phones: Back / Next were 26px beside a 42px Give Up, so the row read as two sizes of button. One height. */
+@media (max-width: 599px) {
+  .ss-nav-btn,
+  .ss-giveup-btn.recall-giveup-btn { min-height: 36px; }
+}
