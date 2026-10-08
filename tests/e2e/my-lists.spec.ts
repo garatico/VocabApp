@@ -141,6 +141,8 @@ test('a Cross-Language list\'s own row can Move/Copy to a single-language list o
   await createList(page, 'Landing');
   await page.locator('.ml-list-name', { hasText: 'Mixed' }).click();
   await expect(page.locator('.ml-word-text')).toHaveText('casa');
+  // Rows are redrawn once the vocabulary lands (that fills the definition), closing any open ⋯ menu.
+  await expect(page.locator('.ml-word-item .ml-word-trans').first()).not.toBeEmpty();
 
   await rowAction(page, '.ml-move-btn');
   await page.locator('.ml-move-popover-item', { hasText: 'Landing' }).click();

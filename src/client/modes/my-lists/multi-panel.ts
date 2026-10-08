@@ -505,8 +505,10 @@ export function renderMultiPanel(ctx: ListsCtx, listName: string): void {
 
   // Distinct languages this list actually holds — fetched once, cached
   // per-language by vocab-cache.ts for every other mode that already uses it.
-  const distinctLangs = getMultiListLanguages(listName);
-  Promise.all(distinctLangs.map(fetchVocab)).then(() => renderRows()).catch(logger.error);
+  // Only redraw for languages that weren't cached yet: an unneeded redraw rebuilt every row and so
+  // closed a row's ⋯ menu the learner had just opened.
+  const missingLangs = getMultiListLanguages(listName).filter(l => !cachedVocabMap(l));
+  if (missingLangs.length) Promise.all(missingLangs.map(fetchVocab)).then(() => renderRows()).catch(logger.error);
 
   if (outsideClickHandler) document.removeEventListener('click', outsideClickHandler, true);
   outsideClickHandler = (e: MouseEvent) => {
