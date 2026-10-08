@@ -823,3 +823,42 @@ html.dark .pos-chip[data-band]:not(.active):hover {
 .filters-summary-chip[data-pos="article"] { --pos-hue: var(--pos-hue-article,     260); }
 .filters-summary-chip[data-pos="particle"] { --pos-hue: var(--pos-hue-particle,     85); }
 .filters-summary-chip[data-pos="suffix"] { --pos-hue: var(--pos-hue-suffix,      165); }
+
+/* Desktop: Start Quiz sits in the top-right column, just under the corner box (streak, due, dice, Profiles).
+   The card already reserves that column down its whole height for the corner (controls-bar.css), so the space
+   under the box was empty — and Start there is on screen without scrolling past the filters. It is at least
+   11rem wide: on tabs without Profiles the corner box is narrower, so the reservation widens to match, and the
+   card is at least as tall as box + button. Phones keep it full width at the bottom of the setup. */
+@media (min-width: 768px) {
+  body #controls:has(#controlsBody:not([hidden]):not(.filter-body--collapsed) #startBtn) {
+    padding-right: calc(max(var(--corner-w, 11rem), 11rem) + 0.5rem);
+    min-height: calc(var(--corner-h, 2.85rem) + 0.45rem + 44px + 0.6rem);
+  }
+  #filtersBar > #startBtn {
+    position: absolute;
+    top: calc(var(--corner-h, 2.85rem) + 0.45rem);
+    right: 0.15rem;
+    width: calc(max(var(--corner-w, 11rem), 11rem) - 0.15rem);
+    min-width: 0;
+    min-height: 44px;
+    margin: 0;
+  }
+}
+
+/* ── Phones: the three filters on one row ─────────────────────────────────────────────────────────────
+   Each pill is its name and count (On/Off and the link sit at the top of its panel there — filter-bar.ts),
+   so Part of Speech · Lists · Domains fit side by side. A panel opens across the whole row, not under its
+   own pill, so the right-hand one never runs off the screen. An inactive filter's pill stays dimmed. */
+@media (max-width: 599px) {
+  .filters-row { position: relative; flex-wrap: nowrap; gap: 0.35rem; }
+  .filters-row > #classFilter,
+  .filters-row > #listFilter,
+  .filters-row > #domainFilterWrap {
+    position: static; flex: 1 1 0; min-width: 0; max-width: none; min-height: 40px; padding: 0.2rem 0.4rem;
+  }
+  .filters-row .filter-collapse-btn { min-width: 0; gap: 0.25rem; }
+  .filters-row .filter-section-label { font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .filters-row .filter-section-label[data-short] { font-size: 0; }
+  .filters-row .filter-section-label[data-short]::after { content: attr(data-short); font-size: 0.72rem; }
+  .filters-row .filter-body { left: 0; right: 0; width: auto; min-width: 0; max-width: none; }
+}

@@ -44,7 +44,7 @@ import { renderLevelChoices } from './ui/level-picker.ts';
 import { initGlobalShortcuts } from './ui/global-shortcuts.ts';
 import { initMissedAdd } from './ui/quiz-summary.ts';
 import { offerResume } from './ui/resume-banner.ts';
-import { bindBackupSettings, maybeRemindBackup } from './ui/backup-settings.ts';
+import { bindBackupSettings, maybeRemindBackup, startAutoBackup } from './ui/backup-settings.ts';
 import { initDiceButton } from './ui/dice-widget.ts';
 import { applyTranslations, ensureDictionary } from './i18n/index.ts';
 import { initShortcuts }                         from './ui/shortcuts-overlay.ts';
@@ -1312,6 +1312,9 @@ function resetTabOrigin(): void {
 proxyToggleAsSelect(document.getElementById('tableStyleToggle'), document.getElementById('tableStyleSelect') as HTMLSelectElement | null, 'style');
 proxyToggleAsSelect(document.getElementById('sizeModeToggle'), document.getElementById('sizeModeSelect') as HTMLSelectElement | null, 'mode');
 proxyToggleAsCycle(document.getElementById('poolModeToggle'), document.getElementById('poolModeCycle') as HTMLButtonElement | null, 'pool', 'Words');
+// Phones show these two as pickers instead of click-to-cycle buttons (controls-bar.css), like every other setting there.
+proxyToggleAsSelect(document.getElementById('poolModeToggle'), document.getElementById('poolModeSelect') as HTMLSelectElement | null, 'pool');
+proxyToggleAsSelect(document.getElementById('directionToggle'), document.getElementById('directionSelect') as HTMLSelectElement | null, 'direction');
 proxyToggleAsCycle(document.getElementById('conjMatchStyleToggle'), document.getElementById('conjMatchCycle') as HTMLButtonElement | null, 'pairing', 'Match');
 proxyToggleAsSelect(document.getElementById('conjViewToggle'), document.getElementById('conjViewSelect') as HTMLSelectElement | null, 'view');
 proxyToggleAsCycle(document.getElementById('conjDisplayToggle'), document.getElementById('conjDisplayCycle') as HTMLButtonElement | null, 'mode', 'Display');
@@ -1376,6 +1379,7 @@ void (async function init(): Promise<void> {
   initMissedAdd();
   bindBackupSettings();
   maybeRemindBackup();
+  startAutoBackup();
   initDiceButton();
   initShortcuts();
   initGlobalShortcuts();

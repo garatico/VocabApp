@@ -153,17 +153,38 @@ test.describe('Table controls on a phone (390px)', () => {
     await open(page);
   });
 
-  test('Language and + Languages share a line; so do Most Common and the take-mode dropdown', async ({ page }) => {
+  test('Language and + Languages share a line; Words is pool | count, then the take mode', async ({ page }) => {
     expect(await top(page, '#langPickerBtn')).toBe(await top(page, '#langGroup .lang-dd-trigger'));
-    expect(await top(page, '#sizeModeSelect')).toBe(await top(page, '#poolModeCycle'));
-    expect(await top(page, '#sizeSelect')).toBeGreaterThan(await top(page, '#poolModeCycle'));   // the count goes underneath
+    expect(await top(page, '#sizeSelect')).toBe(await top(page, '#poolModeSelect'));
+    expect(await top(page, '#sizeModeSelect')).toBeGreaterThan(await top(page, '#poolModeSelect'));   // the take mode goes underneath
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
   });
 
   test('Quiz Style and Direction sit side by side: labels on one line, controls on the next', async ({ page }) => {
     expect(await top(page, '#directionGroup > label')).toBe(await top(page, '#tableStyleGroup > label'));
-    expect(await top(page, '#directionCycle')).toBe(await top(page, '#tableStyleSelect'));
+    expect(await top(page, '#directionSelect')).toBe(await top(page, '#tableStyleSelect'));
     expect(await top(page, '#tableStyleSelect')).toBeGreaterThan(await top(page, '#tableStyleGroup > label'));
+  });
+
+  test('every setting is a dropdown: the cycle buttons give way to pickers, and they drive the real controls', async ({ page }) => {
+    await expect(page.locator('#poolModeCycle')).toBeHidden();
+    await expect(page.locator('#directionCycle')).toBeHidden();
+    await page.locator('#directionSelect').selectOption('mixed');
+    await expect(page.locator('#directionToggle .conj-toggle-btn.active')).toHaveAttribute('data-direction', 'mixed');
+    await page.locator('#poolModeSelect').selectOption('range');
+    await expect(page.locator('#rankRangeRow')).toBeVisible();
+    await page.locator('#poolModeSelect').selectOption('topn');
+    await expect(page.locator('#sizeSelect')).toBeVisible();
+  });
+
+  test('the three filters share one row; On/Off and the link are at the top of each panel', async ({ page }) => {
+    const tops = await page.locator('#filtersRow > :is(#classFilter, #listFilter, #domainFilterWrap)').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)));
+    expect(new Set(tops).size).toBe(1);
+    await expect(page.locator('#listFilterActive')).toBeHidden();
+    await page.locator('#listFilter .filter-collapse-btn').click();
+    await expect(page.locator('#listFilterBody #listFilterActive')).toBeVisible();
+    const panel = (await page.locator('#listFilterBody').boundingBox())!;
+    expect(panel.x + panel.width).toBeLessThanOrEqual(390);
   });
 
   test('collapsed, the card still holds the corner box (streak, dice…)', async ({ page }) => {
@@ -184,13 +205,31 @@ test.describe('Active filters', () => {
     });
   });
 
-  for (const width of [390, 1400]) {
-    test(`Start Quiz sits below the active filters (${width}px)`, async ({ page }) => {
+  test('on a phone, Start Quiz sits below the active filters', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    await open(page);
+    const summary = (await page.locator('#filtersSummary').boundingBox())!;
+    const start = (await page.locator('#startBtn').boundingBox())!;
+    expect(start.y).toBeGreaterThanOrEqual(summary.y + summary.height);
+  });
+
+  for (const width of [1024, 1400]) {
+    test(`on desktop, Start Quiz sits under the corner box, clear of every control (${width}px)`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await open(page);
-      const summary = (await page.locator('#filtersSummary').boundingBox())!;
+      const corner = (await page.locator('#controlsCorner').boundingBox())!;
       const start = (await page.locator('#startBtn').boundingBox())!;
-      expect(start.y).toBeGreaterThanOrEqual(summary.y + summary.height);
+      const card = (await page.locator('#controls').boundingBox())!;
+      expect(start.y).toBeGreaterThanOrEqual(corner.y + corner.height);
+      expect(Math.abs(start.x + start.width - (corner.x + corner.width))).toBeLessThanOrEqual(2);   // right edges line up
+      expect(start.y + start.height).toBeLessThanOrEqual(card.y + card.height);
+      const overlaps = await page.evaluate(() => {
+        const s = document.getElementById('startBtn')!.getBoundingClientRect();
+        return Array.from(document.querySelectorAll<HTMLElement>('#controls-top button, #controls-top select, #filtersRow > *, #filtersSummary'))
+          .filter(e => { const r = e.getBoundingClientRect(); return r.width && r.left < s.right && r.right > s.left && r.top < s.bottom && r.bottom > s.top; })
+          .map(e => e.id || e.className);
+      });
+      expect(overlaps).toEqual([]);
     });
   }
 

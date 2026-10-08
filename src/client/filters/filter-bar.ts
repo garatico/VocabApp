@@ -107,6 +107,40 @@ function moveControlsIntoPopovers(): void {
   });
 }
 
+/**
+ * Phones: the three filter pills share one row, so each pill is its name and count alone and its On/Off and
+ * link buttons move into the top of its panel (where Hide/Focus and Clear all already are). Above 600px they
+ * go back to where they were, on the pill. The same elements are moved, so their handlers keep working.
+ */
+const PHONE = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(max-width: 599px)') : null;
+const homeOf = new Map<HTMLElement, Comment>();
+function placePillControls(): void {
+  const phone = PHONE?.matches ?? false;
+  BOXES.forEach(id => {
+    const box = document.getElementById(id);
+    const btn = box ? collapseButton(box) : null;
+    const body = btn ? document.getElementById(btn.dataset.collapse ?? '') : null;
+    if (!box || !btn || !body) return;
+    const wrappers = [...box.querySelectorAll<HTMLElement>('.filter-header-controls')]
+      .filter(w => w.querySelector('.filter-active-btn, .filter-chain-btn'));
+    let head = body.querySelector<HTMLElement>('.filter-popover-head');
+    if (phone && !head) {
+      head = document.createElement('div');
+      head.className = 'filter-popover-head';
+      body.insertBefore(head, body.firstChild);
+    }
+    wrappers.forEach(w => {
+      if (!homeOf.has(w)) {
+        const mark = document.createComment('pill-controls');
+        w.before(mark);
+        homeOf.set(w, mark);
+      }
+      if (phone && head) { if (w.parentElement !== head) head.prepend(w); }
+      else homeOf.get(w)?.after(w);
+    });
+  });
+}
+
 function setPillCount(boxId: string, selected: number): void {
   const el = document.querySelector<HTMLElement>(`#${boxId} .filters-pill-count`);
   if (!el) return;
@@ -308,6 +342,8 @@ export function initFiltersBar(): void {
   if (!row) return;
 
   moveControlsIntoPopovers();
+  placePillControls();
+  PHONE?.addEventListener('change', placePillControls);
 
   // Popovers are transient: whatever open state section-collapse restored
   // from an earlier session must not put a popover on screen at load.

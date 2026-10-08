@@ -635,7 +635,7 @@
 
 #controls-top :is(.sort-order-btn, .conj-toggle-btn, .ctl-select, .ctl-cycle)[data-cc] {
   border-color: color-mix(in srgb, var(--cc) 55%, var(--border-strong));
-  background: color-mix(in srgb, var(--cc) 12%, var(--surface2));
+  background-color: color-mix(in srgb, var(--cc) 12%, var(--surface2));   /* not the shorthand: it wiped the select's ▾ (selects.css) */
   color: color-mix(in srgb, var(--cc) 78%, var(--text));
 }
 #controls-top :is(.sort-order-btn, .conj-toggle-btn)[data-cc]:hover { border-color: var(--cc); color: color-mix(in srgb, var(--cc) 78%, var(--text)); }
@@ -757,4 +757,20 @@ html body #controls#controls#controls :is(#controlsCollapseBtn, #settingsBarColl
 }
 @media (max-width: 599px) {
   html body #controls#controls#controls :is(#controlsCollapseBtn, #settingsBarCollapseBtn).controls-collapse-btn { width: 2.5rem; }
+}
+
+/* ── Phones: every setting is a dropdown, in two columns ────────────────────────────────────────────────
+   Words' pool and Direction are click-to-cycle buttons on a wide bar; on a phone they are the phone's own
+   pickers (#poolModeSelect, #directionSelect — toggle-proxy.ts keeps them in step with the real rows), like
+   the count, the take mode and Quiz Style beside them. Words reads pool | count, then the take mode. */
+.ctl-phone { display: none; }
+@media (max-width: 599px) {
+  #controls-top .ctl-phone { display: block; }
+  #controls-top :is(#poolModeCycle, #directionCycle) { display: none; }
+  #controls-top .ctl-select { width: 100%; min-height: 40px; font-size: 0.85rem; }
+  .words-controls > #poolModeSelect { order: 1; flex: 1 1 calc(50% - 0.15rem); min-width: 0; }
+  .words-controls #sizeSelect { order: 2; flex: 1 1 calc(50% - 0.15rem); min-width: 0; min-height: 40px; }
+  .words-controls #sizeCustom { order: 3; flex: 1 1 calc(50% - 0.15rem); }
+  .words-controls #sizeModeSelect { order: 4; flex: 1 1 100%; }
+  #controls-top .control-group > label { margin-bottom: 0.1rem; }
 }

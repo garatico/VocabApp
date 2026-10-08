@@ -38,8 +38,10 @@ const ADMIN_KEYS = KEY_FAMILIES.filter(f => f.pattern.startsWith('admin_')).map(
  *  - vq_schema_version (Phase 2) is bookkeeping about *this browser's* layout. Backing it up
  *    would let a restore claim old data was already migrated, so a backup records the schema
  *    beside the data instead (full-backup.ts) and a restore sets the version to match.
+ *  - s_auto_backup_file names *this install's* automatic backup file (auto-backup.ts). Restored onto
+ *    another install it would point that install at a file it may not own, and skip its restore check.
  */
-const DELIBERATE = [...ADMIN_KEYS, 'vq_schema_version'];
+const DELIBERATE = [...ADMIN_KEYS, 'vq_schema_version', 's_auto_backup_file'];
 
 describe('equivalence with the filter the registry replaced', () => {
   const corpus = (): string[] => {
@@ -124,7 +126,7 @@ describe('the registry itself', () => {
   it('only bookkeeping and explicit opt-outs are excluded from backups', () => {
     const excluded = KEY_FAMILIES.filter(f => (f.backup ?? f.class !== 'bookkeeping') === false).map(f => f.pattern).sort();
     expect(excluded).toEqual([
-      's_backup_first_seen', 's_last_backup_at', 'vq_schema_version',
+      's_auto_backup_file', 's_backup_first_seen', 's_last_backup_at', 'vq_schema_version',
       ...ADMIN_KEYS,
     ].sort());
   });

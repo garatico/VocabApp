@@ -68,6 +68,7 @@
     "s_answer_gloss_count": "3",
     "s_app_opacity": "85",
     "s_app_zoom": "1.25",
+    "s_auto_backup_file": "vocabapp-backup.json",
     "s_autofill_enabled": "true",
     "s_bg_angle": "90",
     "s_bg_color": "#112233",

@@ -281,6 +281,8 @@ export async function seedRealisticStorage(store: Store): Promise<SeedResult> {
   raw('vq_conj_view', 'grid');
   raw('vq_extra_langs', ['french']);
   raw('vq_history_collapsed', ['trouble']);
+  // Installed apps only (auto-backup.ts writes it after its async first-start check); hand-seeded here.
+  raw('s_auto_backup_file', 'vocabapp-backup.json');
   raw('vq_mycontent_activetab', 'words');
   raw('vq_mycontent_langs', ['spanish']);
   raw('vq_filterchain_domain', 'true');

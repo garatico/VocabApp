@@ -169,6 +169,8 @@
             <label data-i18n="controls.words">Words</label>
             <div class="words-controls">
             <button type="button" id="poolModeCycle" class="ctl-cycle" aria-label="Words"></button>
+            <!-- Phones: the same choice as a picker (toggle-proxy.ts). Below 600px every setting is a dropdown. -->
+            <select id="poolModeSelect" class="ctl-select ctl-phone" aria-label="Which words" data-i18n-aria-label="controls.words"></select>
             <div class="sort-order-toggle chip-toggle" id="poolModeToggle" title="Most Common: the N most frequent words. Rank Range: a specific slice of the frequency list. Level: every word at the CEFR level(s) you pick." data-i18n-title="controls.poolModeTip">
               <button type="button" class="sort-order-btn active" data-pool="topn" data-cc="pool-topn" data-i18n="controls.topN">Most Common</button>
               <button type="button" class="sort-order-btn" data-pool="range" data-cc="pool-range" data-i18n="controls.rankRange">Rank Range</button>
@@ -376,6 +378,7 @@
             <div class="control-group control-group--chip" id="directionGroup" data-simple-hide="true">
               <label for="directionCycle" data-i18n="controls.direction">Direction</label>
               <button type="button" id="directionCycle" class="ctl-cycle"></button>
+              <select id="directionSelect" class="ctl-select ctl-phone" aria-label="Direction" data-i18n-aria-label="controls.direction"></select>
               <div class="conj-display-toggle" id="directionToggle">
                 <button class="conj-toggle-btn active" data-direction="target-en" data-cc="dir-target-en" data-i18n="controls.wordToMeaning">Word &#x2192; Meaning</button>
                 <button class="conj-toggle-btn"        data-direction="en-target" data-cc="dir-en-target" data-i18n="controls.meaningToWord">Meaning &#x2192; Word</button>
@@ -542,7 +545,7 @@
         <div id="classFilter" class="class-filter-wrap" data-simple-hide="true">
           <button type="button" class="filter-collapse-btn" data-collapse="classFilterBody" aria-expanded="false" aria-controls="classFilterBody">
             <span class="filter-collapse-arrow" aria-hidden="true">&#x25BE;</span>
-            <span class="filter-section-label" data-i18n="filter.partOfSpeech">Part of Speech</span>
+            <span class="filter-section-label" data-i18n="filter.partOfSpeech" data-short="POS">Part of Speech</span>
           </button>
           <span class="filter-header-controls">
             <button type="button" class="filter-active-btn filter-active-btn--on" id="classFilterActive" aria-pressed="true">
@@ -2683,7 +2686,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.history.backup">Back up everything</span>
-                <span class="settings-desc">One file with your lists, progress and settings. Data lives only in this browser and clearing it erases it. <span id="backupLastReadout">Never backed up.</span></span>
+                <span class="settings-desc">One file with your lists, progress and settings. Data lives only in this browser and clearing it erases it. <span id="backupLastReadout">Never backed up.</span> <span id="backupAutoReadout" hidden></span></span>
               </div>
               <button type="button" id="settingFullBackup" class="settings-action-btn">Download Backup</button>
             </div>

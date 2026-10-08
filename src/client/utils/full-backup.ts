@@ -112,7 +112,7 @@ export function lastBackupAt(): number | null {
  * list that counted every `ml_`/`uc_` key — including a collapsed sidebar section — and
  * missed lists and mastery entirely.)
  */
-function hasLearnerData(): boolean {
+export function hasLearnerData(): boolean {
   return keys().some(isLearnerEvidence);
 }
 

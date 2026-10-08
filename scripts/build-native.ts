@@ -516,6 +516,28 @@ if (target === 'windows' || target === 'native') {
   console.log('\n  Installer: src-tauri/target/release/bundle/');
 }
 
+/**
+ * The automatic backup (src/client/utils/auto-backup.ts) writes to Documents/VocabApp, which outlives an
+ * uninstall. Android 11+ lets an app create files there with no permission; Android 10 and older need the
+ * legacy storage permissions, capped at those versions so newer phones are never asked. android/ is
+ * generated (and gitignored), so they are added here rather than by hand.
+ */
+function ensureAndroidStoragePermissions(): void {
+  const manifest = path.join(root, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
+  if (!fs.existsSync(manifest)) return;
+  let xml = fs.readFileSync(manifest, 'utf8');
+  const wanted = [
+    '<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />',
+    '<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />',
+  ].filter(line => !xml.includes(line.split('"')[1]));
+  if (!wanted.length) return;
+  xml = xml.replace('</manifest>', `    ${wanted.join('
+    ')}
+</manifest>`);
+  fs.writeFileSync(manifest, xml);
+  ok('Android: storage permissions for the automatic backup (Android 10 and older)');
+}
+
 if (target === 'android' || target === 'native') {
   console.log(`\n${bar}\n  ANDROID (Capacitor)\n${bar}`);
   if (!checkTarget('android')) {
@@ -534,6 +556,7 @@ if (target === 'android' || target === 'native') {
     );
     process.exit(1);
   }
+  ensureAndroidStoragePermissions();
   run('npx cap sync android', 'Capacitor sync');
   // A bare `gradlew.bat` is not found: the shell this runs under does not search the current directory.
   // Full path, forward slashes (valid for both cmd and a POSIX shell), quoted for spaces.

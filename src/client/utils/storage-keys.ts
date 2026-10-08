@@ -151,6 +151,8 @@ export const KEY_FAMILIES: readonly KeyFamily[] = [
   // ── Housekeeping — never backed up ────────────────────────────────────────
   exact ('s_last_backup_at',    'bookkeeping', 'utils/full-backup.ts'),
   exact ('s_backup_first_seen', 'bookkeeping', 'utils/full-backup.ts'),
+  exact ('s_auto_backup_file',  'bookkeeping', 'utils/auto-backup.ts',
+    { note: 'installed apps: the Documents/VocabApp file this install keeps its automatic backup in, and that the first-start restore check is done' }),
   exact ('vq_schema_version',  'bookkeeping', 'utils/storage-migrations.ts',
     { note: 'the layout the stored data is in; a backup records it separately and a restore sets it back' }),
 
