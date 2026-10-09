@@ -829,6 +829,13 @@ export const TENSE_COLOR_DEFS: readonly [key: string, label: string, defaultHue:
   ['imperative_negative',      'Imperative (Negative)',      100],
   ['imperfect_subjunctive',    'Imperfect Subjunctive',      235],
   ['future_subjunctive',       'Future Subjunctive',          65],
+  ['personal_infinitive',      'Personal Infinitive',         10],
+  ['present_perfect',          'Present Perfect',            170],
+  ['pluperfect',               'Pluperfect',                 250],
+  ['future_perfect',           'Future Perfect',              80],
+  ['conditional_perfect',      'Conditional Perfect',        310],
+  ['subjunctive_perfect',      'Perfect Subjunctive',        215],
+  ['pluperfect_subjunctive',   'Pluperfect Subjunctive',     295],
 ];
 
 /** Same idea, for the 6 grammatical-person slots (data-pi="0".."5"). */

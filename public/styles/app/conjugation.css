@@ -529,6 +529,13 @@
 [data-tense="imperative_negative"]     { --tense-hue: var(--tense-hue-imperative_negative, 100); }
 [data-tense="imperfect_subjunctive"]   { --tense-hue: var(--tense-hue-imperfect_subjunctive, 235); }
 [data-tense="future_subjunctive"]      { --tense-hue: var(--tense-hue-future_subjunctive, 65); }
+[data-tense="personal_infinitive"]     { --tense-hue: var(--tense-hue-personal_infinitive, 10); }
+[data-tense="present_perfect"]         { --tense-hue: var(--tense-hue-present_perfect, 170); }
+[data-tense="pluperfect"]              { --tense-hue: var(--tense-hue-pluperfect, 250); }
+[data-tense="future_perfect"]          { --tense-hue: var(--tense-hue-future_perfect, 80); }
+[data-tense="conditional_perfect"]     { --tense-hue: var(--tense-hue-conditional_perfect, 310); }
+[data-tense="subjunctive_perfect"]     { --tense-hue: var(--tense-hue-subjunctive_perfect, 215); }
+[data-tense="pluperfect_subjunctive"]  { --tense-hue: var(--tense-hue-pluperfect_subjunctive, 295); }
 
 /* ═══════════════════════════════════════════════════════════════
    Grammatical person colour coding

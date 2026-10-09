@@ -394,6 +394,10 @@ read from or write to `vocabulary.db`.
   has, and never replace a form the row does have. Anything the ending can't settle (an unlisted French -oir
   participle) is left empty rather than guessed. The real fix for a language is still to add the forms to
   VocabApp-Data; delete the deriver's tense once the data carries it.
+  Portuguese and Italian also get compound tenses (`present_perfect`, `pluperfect`, `future_perfect`, `conditional_perfect`,
+  `subjunctive_perfect`, `pluperfect_subjunctive`) built from the auxiliary + the row's participle — Portuguese with "ter", Italian with
+  avere or essere (`italianUsesEssere`: a listed set of motion / change-of-state verbs, the `ri-` forms and -venire; masculine, plural slots
+  agree) — and Portuguese the `personal_infinitive`. Italian's `preterite` is the passato remoto the rows already carry (it was never offered).
 - **First paint doesn't wait for the whole vocabulary** (`loadWordsProgressive` in `data-loader.ts`): the
   most frequent 200 words arrive at once from a paged source, the rest loads in the background behind a
   corner spinner (`#vocabBgLoading`), and the filters are rebuilt when it lands. Start waits for it

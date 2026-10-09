@@ -42,11 +42,37 @@ const IRREGULAR_PARTICIPLE: Record<string, string> = {
   ganhar: 'ganho', gastar: 'gasto', pagar: 'pago',
 };
 
+/** "ter" in the tenses a compound is built on — the auxiliary of every Portuguese compound tense here. */
+const TER: Record<string, string[]> = {
+  present:               ['tenho', 'tens', 'tem', 'temos', 'tendes', 'têm'],
+  imperfect:             ['tinha', 'tinhas', 'tinha', 'tínhamos', 'tínheis', 'tinham'],
+  future:                ['terei', 'terás', 'terá', 'teremos', 'tereis', 'terão'],
+  conditional:           ['teria', 'terias', 'teria', 'teríamos', 'teríeis', 'teriam'],
+  subjunctive:           ['tenha', 'tenhas', 'tenha', 'tenhamos', 'tenhais', 'tenham'],
+  imperfect_subjunctive: ['tivesse', 'tivesses', 'tivesse', 'tivéssemos', 'tivésseis', 'tivessem'],
+};
+/** compound key → the tense of "ter" it takes. */
+const PT_COMPOUNDS: [key: string, aux: string][] = [
+  ['present_perfect',        'present'],
+  ['pluperfect',             'imperfect'],
+  ['future_perfect',         'future'],
+  ['conditional_perfect',    'conditional'],
+  ['subjunctive_perfect',    'subjunctive'],
+  ['pluperfect_subjunctive', 'imperfect_subjunctive'],
+];
+
+/** The personal (inflected) infinitive: the infinitive itself + -, -es, -, -mos, -des, -em — for every verb, irregular or not. */
+export function personalInfinitiveOf(inf: string): string[] {
+  // pôr loses its circumflex once an ending follows it: pôr, pores, pôr, pormos, pordes, porem.
+  const base = inf.endsWith('ôr') ? inf.slice(0, -2) + 'or' : inf;
+  return [inf, base + 'es', inf, base + 'mos', base + 'des', base + 'em'];
+}
+
 const ACUTE: Record<string, string> = { a: 'á', e: 'é', i: 'í', o: 'ô', u: 'ú' };
 
 /** pôr and its compounds (compor, dispor, impor …) — but not the preposition "por". */
 const isPor = (inf: string): boolean => /p[oô]r$/.test(inf) && inf !== 'por';
-const isInfinitive = (inf: string): boolean => /^[a-zà-ú]+(ar|er|ir|or|ôr)$/.test(inf) || inf === 'pôr';
+const isInfinitive = (inf: string): boolean => /^[a-zà-ú]+(ar|er|ir|or|ôr)$/.test(inf) || inf === 'pôr' || inf === 'ir';
 
 /** The stem's last vowel takes the written accent that keeps "-ssemos"/"-sseis" stressed there: falássemos, fizéssemos, fôssemos. */
 function accentStemEnd(stem: string, inf: string): string {
@@ -111,6 +137,16 @@ export function derivePortugueseTenses(forms: Forms, infinitive: string): Forms 
       out['imperfect_subjunctive'] = IMPF_SUBJ.map((e, i) => (i === 3 || i === 4 ? accented : stem) + e);
     }
     if (!out['future_subjunctive']) out['future_subjunctive'] = FUT_SUBJ.map(e => stem + e);
+  }
+
+  if (!out['personal_infinitive']) out['personal_infinitive'] = personalInfinitiveOf(inf);
+
+  // Compound tenses: "ter" in the right tense + the (invariable) past participle.
+  const participle = typeof out['past_participle'] === 'string' ? out['past_participle'] : '';
+  if (participle) {
+    for (const [key, aux] of PT_COMPOUNDS) {
+      if (!out[key]) out[key] = TER[aux].map(a => `${a} ${participle}`);
+    }
   }
   return out;
 }

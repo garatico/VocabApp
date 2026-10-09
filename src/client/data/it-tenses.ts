@@ -55,6 +55,52 @@ const ENDING_PARTICIPLES: [string, string][] = [
   ['scere', 'sciuto'], ['cere', 'ciuto'],
 ];
 
+const AVERE: Record<string, string[]> = {
+  present:               ['ho', 'hai', 'ha', 'abbiamo', 'avete', 'hanno'],
+  imperfect:             ['avevo', 'avevi', 'aveva', 'avevamo', 'avevate', 'avevano'],
+  future:                ['avrò', 'avrai', 'avrà', 'avremo', 'avrete', 'avranno'],
+  conditional:           ['avrei', 'avresti', 'avrebbe', 'avremmo', 'avreste', 'avrebbero'],
+  subjunctive:           ['abbia', 'abbia', 'abbia', 'abbiamo', 'abbiate', 'abbiano'],
+  imperfect_subjunctive: ['avessi', 'avessi', 'avesse', 'avessimo', 'aveste', 'avessero'],
+};
+const ESSERE: Record<string, string[]> = {
+  present:               ['sono', 'sei', 'è', 'siamo', 'siete', 'sono'],
+  imperfect:             ['ero', 'eri', 'era', 'eravamo', 'eravate', 'erano'],
+  future:                ['sarò', 'sarai', 'sarà', 'saremo', 'sarete', 'saranno'],
+  conditional:           ['sarei', 'saresti', 'sarebbe', 'saremmo', 'sareste', 'sarebbero'],
+  subjunctive:           ['sia', 'sia', 'sia', 'siamo', 'siate', 'siano'],
+  imperfect_subjunctive: ['fossi', 'fossi', 'fosse', 'fossimo', 'foste', 'fossero'],
+};
+/** compound key → the tense of the auxiliary it takes. */
+const IT_COMPOUNDS: [key: string, aux: string][] = [
+  ['present_perfect',        'present'],
+  ['pluperfect',             'imperfect'],
+  ['future_perfect',         'future'],
+  ['conditional_perfect',    'conditional'],
+  ['subjunctive_perfect',    'subjunctive'],
+  ['pluperfect_subjunctive', 'imperfect_subjunctive'],
+];
+
+/**
+ * Verbs that take "essere" (mostly intransitive verbs of motion and change of state). Anything not listed takes
+ * "avere" — right for every transitive verb, which is most of them. A "ri-" prefix and the -venire compounds
+ * follow their base; reflexive (-si) verbs are not derived at all (they would need the clitic as well).
+ */
+const ESSERE_VERBS = new Set([
+  'essere', 'stare', 'andare', 'venire', 'arrivare', 'partire', 'entrare', 'uscire', 'tornare', 'restare', 'rimanere',
+  'nascere', 'morire', 'diventare', 'divenire', 'salire', 'scendere', 'cadere', 'piacere', 'dispiacere', 'sembrare',
+  'parere', 'bastare', 'accadere', 'succedere', 'avvenire', 'costare', 'esistere', 'sorgere', 'scappare', 'fuggire',
+  'giungere', 'crescere', 'apparire', 'sparire', 'svenire', 'dimagrire', 'ingrassare', 'guarire', 'mancare', 'occorrere',
+  'capitare', 'decadere', 'cascare', 'riuscire', 'costare',
+]);
+export function italianUsesEssere(inf: string): boolean {
+  if (ESSERE_VERBS.has(inf)) return true;
+  if (inf.startsWith('ri') && ESSERE_VERBS.has(inf.slice(2))) return true;
+  return /venire$/.test(inf) && inf !== 'prevenire';
+}
+/** "andato" → "andati": the participle agrees with the subject, and with an essere verb the plural slots show it. */
+const pluralParticiple = (p: string): string => (p.endsWith('o') ? p.slice(0, -1) + 'i' : p.endsWith('a') ? p.slice(0, -1) + 'e' : p);
+
 const isInfinitive = (inf: string): boolean => /^[a-zà-ù]+(are|ere|ire|rre)$/.test(inf);
 const isSix = (v: unknown): v is string[] => Array.isArray(v) && v.length >= 6;
 
@@ -104,6 +150,17 @@ export function deriveItalianTenses(forms: Forms, infinitive: string): Forms {
   if (!out['imperfect_subjunctive'] && isSix(imperfect)) {
     const stem = IMPF_SUBJ_STEM[inf] ?? (imperfect[0].endsWith('vo') ? imperfect[0].slice(0, -2) : '');
     if (stem) out['imperfect_subjunctive'] = IMPF_SUBJ.map(e => stem + e);
+  }
+
+  // Compound tenses: avere / essere in the right tense + the past participle (masculine; plural slots agree).
+  const participle = typeof out['past_participle'] === 'string' ? out['past_participle'] : '';
+  if (participle) {
+    const essere = italianUsesEssere(inf);
+    const aux = essere ? ESSERE : AVERE;
+    for (const [key, tense] of IT_COMPOUNDS) {
+      if (out[key]) continue;
+      out[key] = aux[tense].map((a, i) => `${a} ${essere && i >= 3 ? pluralParticiple(participle) : participle}`);
+    }
   }
   return out;
 }

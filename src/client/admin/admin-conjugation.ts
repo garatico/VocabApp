@@ -80,7 +80,7 @@ const TENSE_LABELS: Record<string, Record<string, string>> = {
     future: 'Futuro', conditional: 'Condicional', subjunctive: 'Subjuntivo Presente', imperative: 'Imperativo',
   },
   italian: {
-    present: 'Presente', preterite: 'Passato Prossimo', imperfect: 'Imperfetto',
+    present: 'Presente', preterite: 'Passato Remoto', imperfect: 'Imperfetto',
     future: 'Futuro Semplice', conditional: 'Condizionale', subjunctive: 'Congiuntivo Presente', imperative: 'Imperativo',
   },
   french: {

@@ -32,6 +32,13 @@ export const TENSE_EN: Record<string, string> = {
   imperative_negative:    'Imperative (negative)',
   imperfect_subjunctive:  'Imperfect subjunctive',
   future_subjunctive:     'Future subjunctive',
+  personal_infinitive:    'Personal infinitive',
+  present_perfect:        'Present perfect',
+  pluperfect:             'Pluperfect',
+  future_perfect:         'Future perfect',
+  conditional_perfect:    'Conditional perfect',
+  subjunctive_perfect:    'Perfect subjunctive',
+  pluperfect_subjunctive: 'Pluperfect subjunctive',
 };
 
 /**
@@ -94,6 +101,27 @@ export const TENSE_HELP: Record<string, string> = {
     'Future subjunctive — a rarely-used, mostly archaic/legal form for a '
     + 'hypothetical future condition. "si hablare" = if he/she should speak. '
     + 'Modern Spanish almost always uses the present subjunctive instead.',
+  personal_infinitive:
+    'Personal infinitive — Portuguese\'s own form: the infinitive with a person ending, used after '
+    + 'prepositions. "para eu falar", "para nós falarmos" = (in order) for me to speak, for us to speak.',
+  present_perfect:
+    'Present perfect — the auxiliary in the present + the past participle. Italian: "ho parlato" = I spoke / '
+    + 'I have spoken, the everyday past. Portuguese: "tenho falado" = I have been speaking (repeatedly, up to now).',
+  pluperfect:
+    'Pluperfect — what had already happened before another past moment: the auxiliary in the imperfect + '
+    + 'the past participle. "avevo parlato" / "tinha falado" = I had spoken.',
+  future_perfect:
+    'Future perfect — what will have happened by some future moment, or a guess about the past. '
+    + '"avrò parlato" / "terei falado" = I will have spoken.',
+  conditional_perfect:
+    'Conditional perfect — what would have happened. "avrei parlato" / "teria falado" = I would have spoken.',
+  subjunctive_perfect:
+    'Perfect subjunctive — the subjunctive for something already done: the auxiliary in the present '
+    + 'subjunctive + the past participle. "che abbia parlato" / "que tenha falado" = that he has spoken.',
+  pluperfect_subjunctive:
+    'Pluperfect subjunctive — the subjunctive for something that had already happened, or "if only … had": '
+    + 'the auxiliary in the imperfect subjunctive + the past participle. "se avessi parlato" / '
+    + '"se tivesse falado" = if I had spoken.',
 };
 
 /**
@@ -160,9 +188,17 @@ export const TENSE_DEFS: Record<string, TenseDef[]> = {
     { key: 'future_subjunctive',     label: 'Subjuntivo Futuro' },
     { key: 'past_participle', label: 'Participio Passado' },
     { key: 'gerund',          label: 'Gerundio' },
+    { key: 'personal_infinitive',    label: 'Infinitivo Pessoal' },
+    { key: 'present_perfect',        label: 'Preterito Perfeito Composto' },
+    { key: 'pluperfect',             label: 'Mais-que-perfeito Composto' },
+    { key: 'future_perfect',         label: 'Futuro Composto' },
+    { key: 'conditional_perfect',    label: 'Condicional Composto' },
+    { key: 'subjunctive_perfect',    label: 'Subjuntivo Perfeito' },
+    { key: 'pluperfect_subjunctive', label: 'Subjuntivo Mais-que-perfeito' },
   ],
   italian: [
     { key: 'present',         label: 'Presente' },
+    { key: 'preterite',       label: 'Passato Remoto' },
     { key: 'imperfect',       label: 'Imperfetto' },
     { key: 'future',          label: 'Futuro Semplice' },
     { key: 'conditional',     label: 'Condizionale' },
@@ -172,6 +208,12 @@ export const TENSE_DEFS: Record<string, TenseDef[]> = {
     { key: 'imperative_negative',    label: 'Imperativo Negativo' },
     { key: 'past_participle', label: 'Participio Passato' },
     { key: 'gerund',          label: 'Gerundio' },
+    { key: 'present_perfect',        label: 'Passato Prossimo' },
+    { key: 'pluperfect',             label: 'Trapassato Prossimo' },
+    { key: 'future_perfect',         label: 'Futuro Anteriore' },
+    { key: 'conditional_perfect',    label: 'Condizionale Passato' },
+    { key: 'subjunctive_perfect',    label: 'Congiuntivo Passato' },
+    { key: 'pluperfect_subjunctive', label: 'Congiuntivo Trapassato' },
   ],
   french: [
     { key: 'present',         label: 'Present' },
