@@ -3188,3 +3188,95 @@ html.dark .ml-level-pill[data-level]:not([data-level="0"]) {
   }
   .ml-cols--compact .ml-cell-pct { display: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Phones: two screens (my-lists-mode.ts sets data-ml-phone on the bar and the container)
+   The sidebar and the open list used to share one screen — a 52vh box of lists with its own scrollbar above the
+   words, a toolbar that scrolled sideways, and "+ Folder / + New" crowding the edge. Here the index of lists is a
+   screen of its own (the page scrolls, nothing nests), tapping a list opens it full width, and a "← Lists" strip
+   stays at the top to go back.
+   ═══════════════════════════════════════════════════════════════ */
+.ml-back-bar { display: none; }
+
+@media (max-width: 599px) {
+  /* One screen at a time */
+  #myListsWrap[data-ml-phone="index"] .ml-panel,
+  #myListsWrap[data-ml-phone="index"] .ml-back-bar,
+  #myListsWrap[data-ml-phone="detail"] .ml-left-pane { display: none; }
+  #myListsBar[data-ml-phone="index"] .ml-topbar-title,
+  #myListsBar[data-ml-phone="index"] .ml-stats-row,
+  #myListsBar[data-ml-phone="detail"] .ml-lang-row { display: none; }
+
+  .ml-back-bar {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    padding: 0.4rem 0.6rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .ml-back-bar { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+  .ml-back-bar .ml-quiz-btn { min-height: 40px; padding: 0.3rem 1rem; font-size: 0.9rem; }
+  .ml-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 40px;
+    padding: 0.3rem 0.9rem 0.3rem 0.7rem;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: var(--accent-light);
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  /* The ✕ in the panel does what ← Lists does. */
+  #myListsWrap[data-ml-phone="detail"] .ml-panel-close { display: none; }
+
+  /* The index is the page: no box with its own scrollbar */
+  .ml-left-pane { max-height: none; overflow: visible; border-bottom: none; }
+  .ml-list-nav { overflow: visible; padding: 0.25rem 0 0.5rem; }
+
+  /* Toolbar: a grid of buttons that fit, not a row that scrolls off the right edge */
+  .ml-header {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
+    overflow: visible;
+    padding: 0.55rem 0.6rem;
+  }
+  .ml-header > * { flex-shrink: 1; min-width: 0; }
+  .ml-header > .ml-sidebar-title { grid-column: 1 / -1; }
+  .ml-header > .ml-browse-btn { grid-column: 1 / -1; }
+  .ml-header .ml-icon-btn.ml-text-btn {
+    min-height: 40px;
+    justify-content: center;
+    padding-inline: 0.3rem;
+    font-size: 0.78rem;
+    white-space: normal;
+    text-align: center;
+  }
+
+  /* Section heads: the title and "+ Folder" / "+ New" wrap instead of running past the edge */
+  .ml-single-head, .ml-smart-head, .ml-multi-head, .ml-profile-head { flex-wrap: wrap; row-gap: 0.35rem; }
+  .ml-section-head-btns { flex-wrap: wrap; margin-left: auto; }
+  .ml-section-head-btns .ml-new-list-btn { min-height: 36px; padding-inline: 0.8rem; font-size: 0.78rem; }
+
+  /* The counts share the bar's whole width */
+  #myListsBar .ml-stats-row { width: 100%; }
+  #myListsBar .ml-stat-chip { flex: 1 1 auto; text-align: center; justify-content: center; }
+
+  /* Add Vocabulary: the heading and the Bulk import button share the first line; the search box has the next to itself */
+  .ml-add-top-row > .ml-add-heading { order: 1; flex: 1 1 auto; }
+  .ml-add-top-row > .ml-bulk-toggle, .ml-add-top-row > button:last-child { order: 2; margin-left: auto; }
+  .ml-add-top-row > .ml-add-row { order: 3; }
+
+  /* A list is a row you can tap with a thumb */
+  .ml-list-item { min-height: 48px; padding-block: 0.55rem; }
+
+  /* The open list uses the whole screen: the word list is the page's own scroll */
+  .ml-panel { border-radius: 0; }
+}

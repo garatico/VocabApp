@@ -47,7 +47,11 @@ export interface WordInfoPopoverOptions {
 export function openWordInfoPopover({
   anchorEl, word, lang, revealed, hideWordWhenUnrevealed = false, extra, inConjugation = false, onClose,
 }: WordInfoPopoverOptions): void {
+  // Tapping the same word again closes its popover instead of reopening it.
+  const existing = document.getElementById('wordInfoPopover') as (HTMLElement & { _close?: () => void; _anchor?: HTMLElement }) | null;
+  const sameAnchor = !!existing && existing._anchor === anchorEl;
   closeExistingPopover();
+  if (sameAnchor) return;
 
   const popover = document.createElement('div');
   popover.className = 'list-picker-popover word-info-popover';
@@ -60,7 +64,7 @@ export function openWordInfoPopover({
   popover.appendChild(buildWordDetailContent(word, lang, revealed, hideWordWhenUnrevealed, expanding => {
     popover.classList.toggle('word-info-popover--wide', expanding);
     positionPopover(popover, anchorEl);
-  }));
+  }, inConjugation ? undefined : { onLayout: () => positionPopover(popover, anchorEl) }));
 
   const actions = document.createElement('div');
   actions.className = 'word-info-actions';
@@ -159,7 +163,7 @@ export function openWordInfoPopover({
   popover.querySelector<HTMLElement>('button:not(:disabled)')?.focus({ preventScroll: true });
 
   function onOutside(e: MouseEvent): void {
-    if (!popover.contains(e.target as Node) && e.target !== anchorEl) close();
+    if (!popover.contains(e.target as Node) && !anchorEl.contains(e.target as Node)) close();
   }
   function onKey(e: KeyboardEvent): void {
     // Handled here: the answer box's own Escape ("skip to next unanswered") must not also fire.
@@ -173,7 +177,8 @@ export function openWordInfoPopover({
     document.removeEventListener('keydown', onKey, true);
     onClose?.();
   }
-  (popover as HTMLElement & { _close?: () => void })._close = close;
+  (popover as HTMLElement & { _close?: () => void; _anchor?: HTMLElement })._close = close;
+  (popover as HTMLElement & { _anchor?: HTMLElement })._anchor = anchorEl;
 
   setTimeout(() => {
     document.addEventListener('mousedown', onOutside, true);

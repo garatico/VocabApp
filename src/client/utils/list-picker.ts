@@ -45,6 +45,7 @@ function buildPickerRow(
   const label = document.createElement('span');
   label.className = 'list-picker-row-label';
   label.textContent = name;
+  row.title = name;
   row.append(cb);
   if (flag) row.append(flag);
   row.append(label);

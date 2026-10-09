@@ -72,6 +72,7 @@ export const KEY_FAMILIES: readonly KeyFamily[] = [
   prefix('vq_mastery_',      'data', 'modes/my-lists/mastery.ts',
     { evidence: true, note: 'vq_mastery_<lang>, _dates_<lang>, _scale_<lang>; also the legacy per-list vq_mastery_<lang>_<list>, merged on read' }),
   prefix('vq_srs_',          'data', 'utils/srs.ts', { evidence: true }),
+  prefix('vq_glossreq_',     'data', 'utils/gloss-required.ts', { note: 'vq_glossreq_<lang>: word → how many meanings its Table answer must name' }),
   prefix('vq_history_',      'data', 'utils/session-history.ts', { evidence: true, note: 'quiz sessions per language' }),
   exact ('vq_history_collapsed', 'ui', 'modes/history-mode.ts',
     { note: 'which History panels were collapsed. No longer read or written — History shows one view at a time, as tabs — but an old value is still classed as UI, not learner data. It shares the vq_history_ prefix with the data above, the reason classification is by entry, not by prefix' }),
@@ -119,7 +120,7 @@ export const KEY_FAMILIES: readonly KeyFamily[] = [
   // ── Conjugation choices ───────────────────────────────────────────────────
   exact ('vq_conj_view', 'ui', 'modes/conjugation/index.ts'),
   exact ('vq_conj_order', 'ui', 'modes/conjugation/index.ts'),
-  exact ('vq_conj_page_size', 'ui', 'modes/conjugation/index.ts'),
+  exact ('vq_conj_page_size', 'legacy', 'modes/conjugation/index.ts', { note: "the quiz's old Per Page selector; verbs per page is now only Settings → Conjugation. No longer read or written" }),
   exact ('vq_conj_match_order', 'ui', 'modes/conjugation/card-match-mode.ts'),
   exact ('vq_conj_match_pairing', 'ui', 'app.ts'),
   exact ('vq_conj_oat_order', 'ui', 'modes/conjugation/one-at-a-time-mode.ts'),

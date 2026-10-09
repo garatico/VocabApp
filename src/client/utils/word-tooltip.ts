@@ -387,14 +387,34 @@ export function buildConjSection(
 function appendRevealedDetail(
   container: HTMLElement, word: Word, lang: string,
   onExpandToggle?: (expanding: boolean) => void,
+  conjOnDemand?: { onLayout: () => void },
 ): void {
   container.appendChild(buildGlosses(word));
 
   if (word.pos === 'verb') {
     const conjSection = buildConjSection(word.linguistic?.conjugations, lang, onExpandToggle);
-    if (conjSection) container.appendChild(conjSection);
     const nonFiniteSection = buildNonFiniteSection(word.linguistic?.conjugations, lang);
-    if (nonFiniteSection) container.appendChild(nonFiniteSection);
+    if (conjOnDemand && (conjSection || nonFiniteSection)) {
+      // Click popover: conjugations stay folded behind a button until asked for.
+      const wrap = document.createElement('div');
+      wrap.hidden = true;
+      if (conjSection) wrap.appendChild(conjSection);
+      if (nonFiniteSection) wrap.appendChild(nonFiniteSection);
+      const btn = document.createElement('button');
+      btn.type        = 'button';
+      btn.className   = 'tt-expand-btn tt-show-conj-btn';
+      btn.textContent = 'Show Conjugations';
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        wrap.hidden = !wrap.hidden;
+        btn.textContent = wrap.hidden ? 'Show Conjugations' : 'Hide Conjugations';
+        conjOnDemand.onLayout();
+      });
+      container.append(btn, wrap);
+    } else {
+      if (conjSection) container.appendChild(conjSection);
+      if (nonFiniteSection) container.appendChild(nonFiniteSection);
+    }
   }
 
   const syns = word.relations?.synonyms ?? [];
@@ -430,6 +450,7 @@ function appendRevealedDetail(
 export function buildWordDetailContent(
   word: Word, lang: string, revealed: boolean, hideWordWhenUnrevealed = false,
   onExpandToggle?: (expanding: boolean) => void,
+  conjOnDemand?: { onLayout: () => void },
 ): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'tt-detail-content';
@@ -455,7 +476,7 @@ export function buildWordDetailContent(
   wrap.appendChild(buildMetaRow(word));
 
   if (revealed) {
-    appendRevealedDetail(wrap, word, lang, onExpandToggle);
+    appendRevealedDetail(wrap, word, lang, onExpandToggle, conjOnDemand);
   } else {
     const hint = document.createElement('div');
     hint.className   = 'tt-glosses tt-hidden-hint';

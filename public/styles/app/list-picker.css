@@ -18,6 +18,21 @@
   z-index: 9999;
 }
 
+/* The add-to-list picker sizes itself to its longest list name (up to a
+   readable cap); past the cap a name wraps, and the row's title shows the
+   whole name on hover. */
+#listPickerPopover {
+  width: max-content;
+  min-width: 200px;
+  max-width: min(520px, calc(100vw - 8px));
+}
+/* Past the cap a name wraps onto a second line rather than being cut off. */
+#listPickerPopover .list-picker-row-label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+}
+
 /* ── Testing Profiles popover — preset-picker.ts ──
    Same .list-picker-popover shell; these are its own row/save-row shapes.
    Wider than the base 260px cap — a profile name is free-text and often

@@ -117,6 +117,14 @@ export interface WordEditorOptions {
    * An extra button in the form header, shown only for words `appliesTo` accepts — how My Content sends a
    * selected verb on to its Conjugations tab. `onClick` gets the word and the language it is being edited in.
    */
+  /**
+   * A per-word "meanings needed" preference (My Content): shown above the form, saved on click, kept outside the
+   * word's own data. Omitted = no control (the Admin panel edits the master database, not a learner's quiz rules).
+   */
+  answerMeanings?: {
+    get: (word: string, lang: string) => number | null;
+    set: (word: string, lang: string, count: number | null) => void;
+  };
   hostAction?: {
     label: string;
     title?: string;

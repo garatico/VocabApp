@@ -160,6 +160,63 @@ function isCorrectImpl(
 }
 
 /**
+ * The accepted senses of an entry, each as the set of strings that name it.
+ * A sense is one element of `glosses` (or one `|`-separated answer): "a, an"
+ * is a single sense with two spellings, so typing both of them is still one
+ * meaning, while "let" and "leave" for *dejar* are two.
+ */
+function senseTokens(entry: Word, norm: (s?: string) => string): string[][] {
+  if (Array.isArray(entry.glosses) && entry.glosses.length > 0) {
+    return entry.glosses.map(g => glossToTokens(g, norm)).filter(t => t.length > 0);
+  }
+  if (typeof entry.answers === 'string') {
+    return entry.answers.split('|').map(a => glossToTokens(a, norm)).filter(t => t.length > 0);
+  }
+  return [];
+}
+
+/** Separators between several typed meanings: comma, semicolon, slash. */
+const MEANING_SEPARATOR = /[,;/]/;
+
+/** How many different meanings an answer to `entry` must name: what was asked for,
+ *  but never more than the word has, and never fewer than one. */
+export function neededMeanings(entry: Word, wanted: number): number {
+  if (!(wanted > 1)) return 1;
+  const senses = senseTokens(entry, normalise).length;
+  return Math.max(1, Math.min(wanted, senses));
+}
+
+/**
+ * Does `input` name at least `need` different meanings of `entry`? Each
+ * separated piece is matched against every sense; two pieces that land on the
+ * same sense ("to let" and "let") count once.
+ */
+function isCorrectMeanings(
+  input: string, entry: Word, need: number, norm: (s?: string) => string,
+): boolean {
+  const senses = senseTokens(entry, norm);
+  const hit = new Set<number>();
+  for (const part of input.split(MEANING_SEPARATOR)) {
+    const piece = norm(part);
+    if (!piece) continue;
+    senses.forEach((tokens, i) => { if (tokens.includes(piece)) hit.add(i); });
+  }
+  return hit.size >= need;
+}
+
+/** Sudden Death's twin of isCorrectMeanings: every finished piece must already be a meaning,
+ *  and the one still being typed must still be able to become one. */
+function couldStillMeanings(input: string, entry: Word, norm: (s?: string) => string): boolean {
+  const senses = senseTokens(entry, norm);
+  if (senses.length === 0) return true;
+  const parts = input.split(MEANING_SEPARATOR);
+  const last = norm(parts.pop() ?? '');
+  const finished = parts.map(p => norm(p)).filter(Boolean);
+  if (!finished.every(f => senses.some(t => t.includes(f)))) return false;
+  return !last || senses.some(t => t.some(tok => tok.startsWith(last)));
+}
+
+/**
  * Check whether the user's input matches any accepted gloss for a word entry.
  * Used in forward direction (target language shown, user types English).
  */
@@ -402,7 +459,9 @@ export function slotText(
 }
 
 /**
- * Whether `input` is an accepted answer for one slot of a quiz row. 'english'
+ * Whether `input` is an accepted answer for one slot of a quiz row. `meanings`
+ * (english slot only) is how many different senses the answer must name — 1 is
+ * the ordinary "any one accepted gloss". 'english'
  * reuses forward-direction gloss matching unchanged; 'word' reuses the same
  * matching (and script leniency) as the reverse-direction case above.
  */
@@ -413,7 +472,11 @@ export function slotMatches(
   mode: AnswerMatchMode = 'fuzzy',
   lang?: string | null,
   display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
+  meanings = 1,
 ): boolean {
+  if (slot === 'english' && meanings > 1) {
+    return isCorrectMeanings(input, entry, neededMeanings(entry, meanings), mode === 'strict' ? normaliseStrict : normalise);
+  }
   if (slot === 'english') return mode === 'strict' ? isCorrectStrict(input, entry) : isCorrect(input, entry);
   return mode === 'strict'
     ? isReverseCorrectStrict(input, entry, lang, display)
@@ -428,7 +491,11 @@ export function slotCouldMatch(
   mode: AnswerMatchMode = 'fuzzy',
   lang?: string | null,
   display: ChineseDisplay = DEFAULT_CHINESE_DISPLAY,
+  meanings = 1,
 ): boolean {
+  if (slot === 'english' && meanings > 1 && neededMeanings(entry, meanings) > 1) {
+    return couldStillMeanings(input, entry, mode === 'strict' ? normaliseStrict : normalise);
+  }
   if (slot === 'english') return mode === 'strict' ? isCorrectStrictPrefix(input, entry) : isCorrectPrefix(input, entry);
   return mode === 'strict'
     ? isReverseCorrectStrictPrefix(input, entry, lang, display)

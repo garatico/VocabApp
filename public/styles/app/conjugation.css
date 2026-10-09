@@ -249,7 +249,9 @@
   border: none;
   border-radius: 0;
 }
-.conj-progress-pills .conj-pills-cell + .conj-pills-cell {
+/* Forms and Verbs share one slot (the other cell is [hidden]): the divider is only for two cells showing at once,
+   or Verbs inherited a grey bar and 14px of left padding from the hidden Forms cell beside it. */
+.conj-progress-pills .conj-pills-cell:not([hidden]) + .conj-pills-cell:not([hidden]) {
   margin-left: auto;
   padding-left: 0.9rem;
   border-left: 1px solid var(--border);

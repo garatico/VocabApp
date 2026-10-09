@@ -292,22 +292,7 @@ html:not(.dark) .conj-card-tense {
   white-space: nowrap;
 }
 
-/* Matches table.css's .pager-status — same "N of M" role, styled the same
-   way so Conjugation's pager reads as the same control as Table's rather
-   than a different-looking one that happens to do the same thing. */
-
-.conj-full-count {
-  flex: none;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Matches table.css's .pager-btn. Also reused for the unrelated "Collapse
-   all" button (conj-collapse-all-btn), which keeps this same look on
-   purpose — it sits in the same header row as Prev/Next. */
+/* The "Collapse all" button, in the same header row as the pager. Its look matches table.css's .pager-btn. */
 
 .conj-full-nav {
   flex: none;
@@ -385,20 +370,14 @@ html:not(.dark) .conj-card-tense {
   .conj-verb-row .conj-card:not(:first-child) .conj-pronoun { visibility: visible; }
 }
 
-/* ── Pager ── */
+/* ── Pager ── the buttons and the page select are Table's own (.pager-btn / .pager-select) */
 
-.conj-full-size-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
+.conj-full-header .pager-select { flex: 1 1 auto; min-width: 0; max-width: 18rem; }
+@media (max-width: 599px) {
+  /* The page jump takes whatever the two arrows leave — as it does under Table's quiz. */
+  .conj-full-header { padding-inline: 0; }
+  .conj-full-header .pager-select { max-width: none; font-size: 0.8rem; }
 }
-
-.conj-full-size { min-height: 32px; }
 
 /* In Full Conjugation each card is one tense, so its pronouns run down a
    single column and the tenses are the columns of the chart. The card's
@@ -614,38 +593,15 @@ html:not(.dark) .conj-card-tense {
    PAGER AND PROGRESS ON A PHONE
 ================================================================ */
 
-/* Long label on a wide screen, short one on a narrow screen. Both are
-   always in the DOM; only one is ever displayed. */
-
-.conj-full-count--short { display: none; }
-
 @media (max-width: 599px) {
-
-  .conj-full-count--long  { display: none; }
-  .conj-full-count--short { display: inline; }
-
-  .conj-full-count {
-    flex: 1 1 auto;
-    min-width: 0;
-    text-align: center;
-    font-size: 0.72rem;
-  }
-
   .conj-full-nav {
     flex: 0 0 auto;
     padding: 0.35rem 0.5rem;
     font-size: 0.72rem;
     min-height: 40px;
   }
-
-  /* The label is a tooltip's worth of text next to a self-explanatory
-     number; the select keeps the title attribute. */
-  .conj-full-size-label { flex: 0 0 auto; font-size: 0; gap: 0; }
-  .conj-full-size {
-    font-size: 0.74rem;
-    min-height: 40px;
-    padding-inline: 0.4rem 1.1rem;
-  }
+  .conj-full-header .pager-btn { min-height: 40px; min-width: 40px; }
+  .conj-full-header .pager-select { min-height: 40px; }
 }
 
 /* ================================================================

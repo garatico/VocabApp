@@ -1843,3 +1843,75 @@ html.dark .mcc-extra-group label { color: hsl(var(--tense-hue, 145) 62% 72%); }
   background: none; border: 0; border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap;
 }
 .mc-file-menu-item:hover, .mc-file-menu-item:focus-visible { background: var(--surface2); }
+
+/* ── Meanings needed in Table quizzes — a per-word preference above the Word Editor's form ── */
+.mc-we .we-meanings {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem;
+  margin: 0 0 0.8rem; padding: 0.55rem 0.7rem;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.mc-we .we-meanings[hidden] { display: none; }
+.mc-we .we-meanings-label { flex: 1 1 100%; font-size: 0.8rem; font-weight: 600; color: var(--text); }
+.mc-we .we-meanings-label .hint { display: block; margin-top: 0.1rem; font-size: 0.72rem; font-weight: 400; color: var(--text-muted); }
+.mc-we .we-meanings-btn {
+  flex: 1 1 0; min-height: 34px; padding: 0.25rem 0.6rem;
+  font: inherit; font-size: 0.82rem; font-weight: 600; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer;
+}
+.mc-we .we-meanings-btn:hover { border-color: var(--accent); color: var(--accent); }
+.mc-we .we-meanings-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Phones: My Content
+   The bar is: the Words language box beside the streak/dice box (first line), then the tabs with Backup at their
+   right end — set apart from the tabs (dashed, accent text, a download arrow) so it does not read as a tab. The
+   Word Editor is two screens: the list of words, then the open word under a "← Words" strip.
+   ═══════════════════════════════════════════════════════════════ */
+.we-back-bar { display: none; }
+
+@media (max-width: 599px) {
+  .mc-topbar-actions { display: contents; }
+  .mc-topbar > .mc-tabs { order: 1; flex: 1 1 0; min-width: 0; }
+  .mc-topbar .mc-file-menu { order: 2; flex: none; }
+  .mc-topbar .mc-lang-dropdown { order: 3; flex: 1 1 100%; }
+  .mc-topbar .mc-import-status { order: 4; flex: 1 1 100%; }
+  .mc-topbar .mc-file-menu-btn {
+    min-height: 36px;
+    padding: 0.3rem 0.7rem;
+    font-weight: 600;
+    color: var(--accent);
+    background: transparent;
+    border: 1px dashed var(--accent);
+    border-radius: 999px;
+  }
+  .mc-fm-more { display: none; }
+  .mc-fm-icon { font-weight: 700; }
+  .mc-lang-slot { order: 0; flex: 1 1 100%; min-width: 0; }
+  .mc-lang-slot[hidden] { display: none; }
+  .mc-lang-slot .filter-field { flex-wrap: nowrap; min-height: 36px; }
+  .mc-lang-slot .lang-select-flag { display: none; }   /* the dropdown carries its own flag */
+  .mc-lang-slot .filter-label { font-size: 0.65rem; }
+
+  /* Two screens */
+  .word-editor.mc-we[data-we-phone="detail"] > .filter-bar,
+  .word-editor.mc-we[data-we-phone="detail"] .word-panel,
+  .word-editor.mc-we[data-we-phone="index"] .we-back-bar { display: none; }
+  .word-editor.mc-we[data-we-phone="detail"] .we-back-bar {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    padding: 0.4rem 0.2rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .we-back-btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    min-height: 40px; padding: 0.3rem 0.9rem 0.3rem 0.7rem;
+    font: inherit; font-size: 0.9rem; font-weight: 700;
+    color: var(--accent); background: var(--accent-light);
+    border: 1px solid var(--accent); border-radius: 999px; cursor: pointer;
+  }
+  /* The form's own Cancel does what ← Words does */
+  .word-editor.mc-we[data-we-phone="detail"] .edit-form-header #mcwe-cancelBtn { display: none; }
+}

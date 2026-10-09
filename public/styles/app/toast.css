@@ -4,8 +4,9 @@
 
 .toast {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  /* env(): on an edge-to-edge phone the system's back/home/recents bar sits over the page's bottom edge. */
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  right: calc(24px + env(safe-area-inset-right, 0px));
   max-width: 400px;
   padding: 14px 16px 16px;
   border-radius: var(--radius-sm);

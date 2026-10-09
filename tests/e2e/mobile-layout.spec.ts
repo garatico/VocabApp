@@ -166,6 +166,7 @@ test('My Lists on a phone: a long list name shows whole, and the stats row has n
     localStorage.setItem('vq_lists_spanish', JSON.stringify({ EspañolDeLosLibrosQueLeo: ['hablar', 'comer'] }));
   });
   await page.locator('.mode-tab[data-mode="mylists"]').click();
+  await page.locator('.ml-list-item', { hasText: 'EspañolDeLosLibrosQueLeo' }).click();   // a phone starts on the index of lists
   const title = page.locator('#myListsBar .ml-topbar-title');
   await expect(title).toContainText('EspañolDeLosLibrosQueLeo');
   expect(await title.evaluate(e => e.scrollWidth <= e.clientWidth + 1)).toBe(true);   // not cut off
@@ -177,13 +178,15 @@ test('the narrowest phone (360px): My Lists rows show a short word whole, and th
     localStorage.setItem('vq_lists_spanish', JSON.stringify({ Reading: ['hablar', 'comer'] }));
   });
   await page.locator('.mode-tab[data-mode="mylists"]').click();
+  await page.locator('.ml-list-item', { hasText: 'Reading' }).click();
   await expect(page.locator('.ml-word-item')).toHaveCount(2);
   await expect.poll(() => page.locator('.ml-word-item .ml-word-text').evaluateAll(els => els.every(e => e.scrollWidth <= e.clientWidth + 1))).toBe(true);
-  const quiz = await box(page, '.ml-panel-header .ml-quiz-btn');
-  const close = await box(page, '.ml-panel-close');
-  expect(Math.abs(quiz.y - close.y)).toBeLessThan(12);   // ▶ Quiz beside ✕
+  const quiz = await box(page, '.ml-quiz-btn');
+  expect(quiz.x + quiz.width).toBeLessThanOrEqual(360);   // ▶ Quiz is on the screen, not past its right edge
   const chips = await page.locator('.ml-panel-header .ml-chip-dropdown').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)));
-  expect(new Set(chips).size).toBe(1);                    // the four chips share one row
+  expect(new Set(chips).size).toBeLessThanOrEqual(2);     // an even grid: two chips a row, no ragged wrapping
+  const widths = await page.locator('.ml-panel-header .ml-chip-dropdown').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().width)));
+  expect(Math.max(...widths.slice(0, 4)) - Math.min(...widths.slice(0, 4))).toBeLessThanOrEqual(2);
 });
 
 test('on a phone the Table\'s answer box says "Meaning…", short enough to read', async ({ page }) => {
@@ -289,4 +292,93 @@ test('Table on a phone: no stray divider beside the answers, and the counts fill
   const score = await box(page, '#tableScoreTop');
   const pills = await page.locator('#tableScoreTop .score-pill').evaluateAll(els => els.map(e => e.getBoundingClientRect().right));
   expect(Math.max(...pills)).toBeGreaterThan(score.x + score.width - 4);   // the right column reaches the edge
+});
+
+test('My Lists on a phone is two screens: the index of lists, then the open list with a way back', async ({ page }) => {
+  await open(page, 360, () => {
+    localStorage.setItem('vq_lists_spanish', JSON.stringify({ Reading: ['hablar', 'comer'] }));
+  });
+  await page.locator('.mode-tab[data-mode="mylists"]').click();
+  const wrap = page.locator('#myListsWrap');
+  // Index: the lists, no panel, nothing running off the right edge, no box with its own scrollbar.
+  await expect(wrap).toHaveAttribute('data-ml-phone', 'index');
+  await expect(page.locator('.ml-panel')).toBeHidden();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  const past = await page.locator('.ml-left-pane *').evaluateAll(els => els.filter(e => {
+    const r = e.getBoundingClientRect();
+    return r.width > 0 && r.right > window.innerWidth + 1;
+  }).length);
+  expect(past).toBe(0);
+  expect(await page.locator('.ml-list-nav').evaluate(e => getComputedStyle(e).overflowY)).toBe('visible');
+  // Detail: the list, full width, and ← Lists goes back.
+  await page.locator('.ml-list-item', { hasText: 'Reading' }).click();
+  await expect(wrap).toHaveAttribute('data-ml-phone', 'detail');
+  await expect(page.locator('.ml-left-pane')).toBeHidden();
+  await expect(page.locator('.ml-word-item')).toHaveCount(2);
+  await page.locator('.ml-back-btn').click();
+  await expect(wrap).toHaveAttribute('data-ml-phone', 'index');
+  await expect(page.locator('.ml-list-item', { hasText: 'Reading' })).toBeVisible();
+});
+
+test('My Content on a phone: the language box shares the corner line, Backup sits with the tabs, a word opens as its own screen', async ({ page }) => {
+  await open(page, 360);
+  await page.locator('.mode-tab[data-mode="myContent"]').click();
+  await expect(page.locator('.mc-we .word-item').first()).toBeVisible();
+  const corner = await box(page, '.controls-corner');
+  const slot = await box(page, '.mc-lang-slot');
+  expect(Math.abs(slot.y + slot.height / 2 - (corner.y + corner.height / 2))).toBeLessThan(14);   // level with the streak / dice box
+  expect(slot.x + slot.width).toBeLessThanOrEqual(corner.x);                                      // and stops short of it
+  const tabs = await box(page, '.mc-tabs');
+  const backup = await box(page, '.mc-file-menu');
+  expect(Math.abs(backup.y - tabs.y)).toBeLessThan(8);                                            // Backup on the tabs' line…
+  expect(await page.locator('.mc-file-menu-btn').evaluate(e => getComputedStyle(e).borderTopStyle)).toBe('dashed');   // …but not dressed as a tab
+  await expect(page.locator('#dueBadge')).toBeHidden();
+  // Two screens: the word list, then the open word under a ← Words strip that stays on screen.
+  const editor = page.locator('.mc-we');
+  await expect(editor).toHaveAttribute('data-we-phone', 'index');
+  await page.locator('.mc-we .word-item').nth(1).click();
+  await expect(editor).toHaveAttribute('data-we-phone', 'detail');
+  await expect(page.locator('.mc-we .word-panel')).toBeHidden();
+  await page.evaluate(() => window.scrollTo(0, 600));
+  const back = page.locator('.we-back-bar');
+  await expect(back).toBeInViewport();
+  await page.locator('.we-back-btn').click();
+  await expect(editor).toHaveAttribute('data-we-phone', 'index');
+  await expect(page.locator('.mc-we .word-item').first()).toBeVisible();
+});
+
+test('History on a phone: the language box shares the corner line', async ({ page }) => {
+  await open(page, 360);
+  await page.locator('.mode-tab[data-mode="history"]').click();
+  const corner = await box(page, '.controls-corner');
+  const lang = await box(page, '#historyBar .history-lang-row');
+  expect(Math.abs(lang.y + lang.height / 2 - (corner.y + corner.height / 2))).toBeLessThan(14);
+  expect(lang.x + lang.width).toBeLessThanOrEqual(corner.x);
+});
+
+test('on a phone Language and "+ Languages" are equal halves, in Table and Conjugation, level with Quiz Style / Direction', async ({ page }) => {
+  await open(page, 360);
+  for (const mode of ['table', 'conjugation']) {
+    await page.locator(`.mode-tab[data-mode="${mode}"]`).click();
+    const lang = await box(page, '#langGroup');
+    const more = await box(page, '#compareGroup');
+    expect(Math.abs(lang.width - more.width)).toBeLessThan(3);
+    expect(lang.x + lang.width).toBeLessThanOrEqual(more.x + 1);
+  }
+  await page.locator('.mode-tab[data-mode="table"]').click();
+  const style = await box(page, '#tableStyleGroup');
+  const lang = await box(page, '#langGroup');
+  expect(Math.abs(lang.width - style.width)).toBeLessThan(3);
+});
+
+test('on a phone My Lists, My Content and History share one language dropdown style', async ({ page }) => {
+  await open(page, 360);
+  const seen: string[] = [];
+  for (const [mode, sel] of [['mylists', '#myListsBar .ml-lang-row .lang-dd-trigger'], ['history', '#historyBar .history-lang-row .lang-dd-trigger'], ['myContent', '#myContentBar .mc-lang-slot .lang-dd-trigger']] as const) {
+    await page.locator(`.mode-tab[data-mode="${mode}"]`).click();
+    const t = page.locator(sel).first();
+    await expect(t).toBeVisible();
+    seen.push(await t.evaluate(e => { const s = getComputedStyle(e); return `${s.fontSize}|${s.borderTopWidth}|${s.borderRadius}|${Math.round(e.getBoundingClientRect().height)}`; }));
+  }
+  expect(new Set(seen).size).toBe(1);
 });

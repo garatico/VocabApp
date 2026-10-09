@@ -15,7 +15,7 @@ import { spreadOverdueSrs } from './utils/srs.ts';
 import { REVIEW_LIST_NAME } from './utils/review-due.ts';
 import { getList, deleteList } from './utils/word-lists.ts';
 import { showToast } from './ui/toast.ts';
-import { applyPalette, applyBackground, applyOpacity, applyCtlColors, CTL_COLOR_DEFS, DUE_SOFT_CAP_MAX, ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applySettingsLinks, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onShowMyContentChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
+import { applyPalette, applyBackground, applyOpacity, applyCtlColors, CTL_COLOR_DEFS, DUE_SOFT_CAP_MAX, ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applySettingsLinks, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTablePhoneLayout, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onShowMyContentChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
 import { confirmDialog } from './ui/dialog.ts';
 
 /**
@@ -185,6 +185,16 @@ export function bindSettings(): void {
     applyTableRowDensity(density);
   });
 
+  // Phone layout — Stacked / Side by side (see getTablePhoneLayout)
+  document.getElementById('settingTablePhoneLayout')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn?.dataset.layout) return;
+    activateToggle('settingTablePhoneLayout', btn);
+    const layout = btn.dataset.layout === 'side' ? 'side' : 'stacked';
+    set('table_phone_layout', layout);
+    applyTablePhoneLayout(layout);
+  });
+
   // Words per page (table mode)
   document.getElementById('settingPageSize')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
@@ -194,9 +204,8 @@ export function bindSettings(): void {
     onPageSizeChange?.();
   });
 
-  // Verbs per page (conjugation mode) — just a starting default, so no live
-  // re-paginate hook the way Table's above has; a quiz already on screen
-  // reads its own vq_conj_page_size, not this.
+  // Verbs per page (conjugation mode) — read when a quiz starts, so no live
+  // re-paginate hook the way Table's above has.
   document.getElementById('settingConjPageSize')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
     if (!btn) return;
@@ -351,6 +360,30 @@ export function bindSettings(): void {
     if (!btn) return;
     activateToggle('settingQuestionGlosses', btn);
     set('question_gloss_count', btn.dataset.count ?? '1');
+  });
+  document.getElementById('settingTableAnswerStyle')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingTableAnswerStyle', btn);
+    set('table_answer_style', btn.dataset.style ?? 'type');
+  });
+  document.getElementById('settingTableChoiceCount')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingTableChoiceCount', btn);
+    set('table_choice_count', btn.dataset.count ?? '4');
+  });
+  document.getElementById('settingTableChoiceWrong')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingTableChoiceWrong', btn);
+    set('table_choice_wrong', btn.dataset.wrong ?? 'lock');
+  });
+  document.getElementById('settingRequiredMeanings')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingRequiredMeanings', btn);
+    set('table_required_glosses', btn.dataset.count ?? '1');
   });
   document.getElementById('settingAnswerGlosses')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
@@ -1056,6 +1089,13 @@ function restoreSettingsUI(): void {
   });
   applyTableRowDensity(savedDensity);
 
+  // Phone layout
+  const savedPhoneLayout = Settings.getTablePhoneLayout();
+  document.querySelectorAll<HTMLElement>('#settingTablePhoneLayout .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.layout === savedPhoneLayout);
+  });
+  applyTablePhoneLayout(savedPhoneLayout);
+
   // Words per page
   const savedPageSize = get('table_page_size', '100');
   document.querySelectorAll<HTMLElement>('#settingPageSize .sort-order-btn').forEach(b => {
@@ -1118,6 +1158,22 @@ function restoreSettingsUI(): void {
   const savedQuestionGlosses = get('question_gloss_count', '1');
   document.querySelectorAll<HTMLElement>('#settingQuestionGlosses .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.count === savedQuestionGlosses);
+  });
+  const savedAnswerStyle = get('table_answer_style', 'type');
+  document.querySelectorAll<HTMLElement>('#settingTableAnswerStyle .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.style === savedAnswerStyle);
+  });
+  const savedChoiceCount = get('table_choice_count', '4');
+  document.querySelectorAll<HTMLElement>('#settingTableChoiceCount .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.count === savedChoiceCount);
+  });
+  const savedChoiceWrong = get('table_choice_wrong', 'lock');
+  document.querySelectorAll<HTMLElement>('#settingTableChoiceWrong .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.wrong === savedChoiceWrong);
+  });
+  const savedRequiredMeanings = get('table_required_glosses', '1');
+  document.querySelectorAll<HTMLElement>('#settingRequiredMeanings .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.count === savedRequiredMeanings);
   });
   const savedAnswerGlosses = get('answer_gloss_count', '2');
   document.querySelectorAll<HTMLElement>('#settingAnswerGlosses .sort-order-btn').forEach(b => {

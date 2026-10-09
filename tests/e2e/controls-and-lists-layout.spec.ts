@@ -126,6 +126,7 @@ for (const width of [390, 1024]) {
     await page.setViewportSize({ width, height: 844 });
     await open(page);
     await page.locator('.mode-tab[data-mode="mylists"]').click();
+    if (width < 600) await page.locator('.ml-list-item', { hasText: 'Reading' }).click();   // a phone starts on the index of lists
     await expect(page.locator('.ml-table.ml-cols--compact')).toBeVisible();
     await expect(page.locator('.ml-word-item')).toHaveCount(4);
     await expect.poll(() => page.locator('.ml-word-list').evaluate(l => (l as HTMLElement).style.getPropertyValue('--ml-cword-w'))).not.toBe('');

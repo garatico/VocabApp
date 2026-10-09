@@ -101,7 +101,7 @@
 .pwa-update-toast {
   position: fixed;
   left: 50%;
-  bottom: 1.5rem;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
   z-index: 9999;
   display: flex;
@@ -153,4 +153,43 @@
 /* The offline bar sits above the on-screen keyboard area on mobile. */
 @supports (padding: env(safe-area-inset-bottom)) {
   .pwa-offline-bar { padding-bottom: calc(0.55rem + env(safe-area-inset-bottom)); }
+}
+
+/* ── Phones: the bottom notices (Resume, update ready, undo) are a docked card, not a centred pill ──────────
+   Centred with left: 50% + translateX(-50%), the box could only be as wide as half the screen, so the message
+   wrapped to four lines inside a 99px-radius capsule. Docked edge to edge (with the gutters and the system
+   bar's inset), the message gets a line or two, the action is a real button and the dismiss a real target. */
+@media (max-width: 599px) {
+  body .pwa-update-toast,
+  body .ml-undo-toast {
+    left: 0.6rem;
+    right: 0.6rem;
+    bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
+    transform: none;
+    gap: 0.5rem;
+    padding: 0.55rem 0.4rem 0.55rem 0.85rem;
+    border-radius: 14px;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    animation: none;
+  }
+  body .pwa-update-toast > span:first-child,
+  body .ml-undo-toast .ml-undo-msg { flex: 1 1 auto; min-width: 0; white-space: normal; }
+  body .pwa-update-btn,
+  body .ml-undo-btn {
+    flex: none;
+    min-height: 36px;
+    padding: 0.2rem 0.95rem;
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+  }
+  body .pwa-update-dismiss {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    font-size: 1.3rem;
+    opacity: 0.85;
+  }
+  body .ml-undo-close { flex: none; width: 36px; height: 36px; font-size: 1.3rem; opacity: 0.85; }
 }

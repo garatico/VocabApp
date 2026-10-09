@@ -1015,6 +1015,27 @@
             </div>
 
             <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAnswering" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupAnswering">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.table.groupAnswering">Answering</span>
+            </button>
+            <div id="settingsGroupAnswering" class="filter-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.answerStyle">Answer by</span>
+                <span class="settings-desc" data-i18n="settings.table.answerStyleDesc">Type each answer, or pick it from a few choices. Standard style only.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingTableAnswerStyle">
+                <button type="button" class="sort-order-btn active" data-style="type" data-i18n="settings.table.answerStyleType">Typing</button>
+                <button type="button" class="sort-order-btn" data-style="choice" data-i18n="settings.table.answerStyleChoice">Multiple choice</button>
+              </div>
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupHints" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupHints">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading" data-i18n="settings.table.groupHints">Hints &amp; Glosses</span>
@@ -1052,6 +1073,40 @@
               <span class="settings-group-heading" data-i18n="settings.advancedFold">Advanced</span>
             </button>
             <div id="settingsFold-table" class="filter-body settings-fold-body">
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTableChoice" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupTableChoice">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.table.groupChoice">Multiple choice</span>
+            </button>
+            <div id="settingsGroupTableChoice" class="filter-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.choiceCount">Choices per word</span>
+                <span class="settings-desc" data-i18n="settings.table.choiceCountDesc">How many options each row offers, the right one included.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingTableChoiceCount">
+                <button type="button" class="sort-order-btn" data-count="3">3</button>
+                <button type="button" class="sort-order-btn active" data-count="4">4</button>
+                <button type="button" class="sort-order-btn" data-count="5">5</button>
+                <button type="button" class="sort-order-btn" data-count="6">6</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.choiceWrong">After a wrong choice</span>
+                <span class="settings-desc" data-i18n="settings.table.choiceWrongDesc">Mark the word missed and show the answer, or grey that option out and let you pick again.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingTableChoiceWrong">
+                <button type="button" class="sort-order-btn active" data-wrong="lock" data-i18n="settings.table.choiceWrongLock">Mark missed</button>
+                <button type="button" class="sort-order-btn" data-wrong="retry" data-i18n="settings.table.choiceWrongRetry">Try again</button>
+              </div>
+            </div>
+
+            </div>
+            </div>
 
             <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTableLists" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupTableLists">
@@ -1159,6 +1214,18 @@
                 <button type="button" class="sort-order-btn" data-count="3">3</button>
                 <button type="button" class="sort-order-btn" data-count="4">4</button>
                 <button type="button" class="sort-order-btn" data-count="5">5</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.requiredMeanings">Meanings to type</span>
+                <span class="settings-desc" data-i18n="settings.table.requiredMeaningsDesc">Word → Meaning: how many different meanings an answer needs, separated by commas.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingRequiredMeanings">
+                <button type="button" class="sort-order-btn active" data-count="1">1</button>
+                <button type="button" class="sort-order-btn" data-count="2">2</button>
+                <button type="button" class="sort-order-btn" data-count="3">3</button>
               </div>
             </div>
 
@@ -1444,7 +1511,7 @@
             <div class="settings-row">
               <div class="settings-label">
                 <span data-i18n="settings.conj.pageSize">Verbs per page</span>
-                <span class="settings-desc" data-i18n="settings.conj.pageSizeDesc">Starting verbs per page; a quiz's own Per Page control takes over once changed.</span>
+                <span class="settings-desc" data-i18n="settings.conj.pageSizeDesc">How many verbs each page holds. Applies from the next Start Quiz.</span>
               </div>
               <div class="sort-order-toggle" id="settingConjPageSize">
                 <button type="button" class="sort-order-btn" data-pagesize="5">5</button>
@@ -1820,6 +1887,17 @@
               <span class="settings-group-heading">Table Layout</span>
             </button>
             <div id="settingsGroupAppearanceMore2" class="filter-body">
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.table.phoneLayout">Phone layout</span>
+                <span class="settings-desc" data-i18n="settings.table.phoneLayoutDesc">On a phone, put each word above its answer box (larger words), or keep them side by side.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingTablePhoneLayout">
+                <button type="button" class="sort-order-btn active" data-layout="stacked" data-i18n="settings.table.phoneLayoutStacked">Stacked</button>
+                <button type="button" class="sort-order-btn" data-layout="side" data-i18n="settings.table.phoneLayoutSide">Side by side</button>
+              </div>
+            </div>
 
             <div class="settings-row">
               <div class="settings-label">

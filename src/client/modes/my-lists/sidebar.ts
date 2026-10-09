@@ -23,7 +23,7 @@ import { getListNames } from '../../utils/word-lists.ts';
 import { seedStarterLists } from './starter-lists.ts';
 import { closeAllChipDropdowns } from './chip-dropdown.ts';
 import { logger } from '../../utils/logger.ts';
-import { BROWSE_ALL_LIST, type ListsCtx } from './context.ts';
+import { BROWSE_ALL_LIST, initialSelection, type ListsCtx } from './context.ts';
 import { migrateMastery } from './mastery.ts';
 import { closePopover } from './move-popover.ts';
 import { showUndo } from './undo-toast.ts';
@@ -84,7 +84,7 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
   });
   langSel.addEventListener('change', () => {
     ctx.lang = langSel.value; migrateMastery(ctx.lang);
-    ctx.selectedList = getListNames(ctx.lang)[0] ?? '';
+    ctx.selectedList = initialSelection(getListNames(ctx.lang)[0]);
     closePopover(); render();
   });
   langRow.appendChild(langLabel); langRow.appendChild(langSel);

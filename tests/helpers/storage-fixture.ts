@@ -187,6 +187,10 @@ export async function seedRealisticStorage(store: Store): Promise<SeedResult> {
   srs.setDueExempt('spanish', 'perro', true);
   claim('api');
 
+  // ── Words that must be answered with several meanings ───────────────────────
+  (await import('../../src/client/utils/gloss-required.ts')).setWordMeaningFlag('spanish', 'dejar', 2);
+  claim('api');
+
   // ── Streaks and daily goals ─────────────────────────────────────────────────
   streak.setGoalTarget('words', 10);   // low enough that the activity below *hits* it (writes goal history)
   streak.setGoalTarget('minutes', 15, 'spanish');
@@ -307,7 +311,7 @@ export async function seedRealisticStorage(store: Store): Promise<SeedResult> {
 
 /** Settings not reachable through a public setter, each at a non-default value. */
 const SETTINGS_NON_DEFAULT: Record<string, string> = {
-  abbreviate_grammar_hint: 'true', advanced_mode: 'true', answer_gloss_count: '3', autofill_enabled: 'true',
+  abbreviate_grammar_hint: 'true', advanced_mode: 'true', answer_gloss_count: '3', table_required_glosses: '2', table_phone_layout: 'side', table_answer_style: 'choice', table_choice_count: '5', table_choice_wrong: 'retry', autofill_enabled: 'true',
   chinese_script: 'pinyin', confirm_remove_word_override: 'false', conj_deselected: 'grey',
   conj_hint_mode: 'none', conj_page_size: '25', conj_show_timer: 'true', due_exempt_enabled: 'false', collapse_controls_on_start: 'false', due_enabled: 'false', due_soft_cap: '25', list_picker_counts: 'false', list_filter_except: 'true', palette: 'ocean', app_zoom: '1.25', bg_mode: 'gradient', bg_color: '#112233', bg_color2: '#445566', bg_angle: '90', app_opacity: '85',
   expand_gloss_on_match: 'false',
@@ -397,6 +401,7 @@ export async function readSemanticState(opaqueKeys: readonly string[] = []): Pro
       masteredDates: Object.fromEntries([...mastery.getMastered(lang)].map(w => [w, mastery.getMasteredDate(lang, w)])),
       srs: srs.srsAllEntries(lang),
       dueExempt: [...srs.getDueExempt(lang)].sort(),
+      meaningFlags: (await import('../../src/client/utils/gloss-required.ts')).getMeaningFlags(lang),
       sessions: history.getSessions(lang),
       misses: history.getMisses(lang),
       tallies: history.getWordTallies(lang),

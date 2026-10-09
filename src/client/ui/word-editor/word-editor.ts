@@ -83,8 +83,51 @@ export function createWordEditor(
     if (revertBtn) revertBtn.hidden = !word?.edited;
     if (deleteBtn) deleteBtn.hidden = !word?.custom;
     if (hostActionBtn && hostAction) hostActionBtn.hidden = !word || !hostAction.appliesTo(word);
+    syncMeanings(word);
   }
   const formHost = form.host;
+
+  // A per-word preference kept beside (not inside) the word's data: how many different meanings a Table answer
+  // must name. Saves as soon as it is clicked — it is not part of Save / Reset.
+  const meaningsHost = options.answerMeanings;
+  const meaningsRow = meaningsHost ? document.createElement('div') : null;
+  const meaningsBtns: HTMLButtonElement[] = [];
+  const MEANING_CHOICES: { text: string; value: number | null }[] = [
+    { text: 'Auto', value: null }, { text: '1', value: 1 }, { text: '2', value: 2 }, { text: '3', value: 3 },
+  ];
+  if (meaningsRow && meaningsHost) {
+    meaningsRow.className = 'we-meanings';
+    meaningsRow.setAttribute('role', 'group');
+    meaningsRow.setAttribute('aria-label', 'Meanings needed in Table quizzes');
+    meaningsRow.hidden = true;
+    meaningsRow.innerHTML = '<span class="we-meanings-label">Meanings needed in Table quizzes <span class="hint">Auto follows Settings → Table Quiz → Meanings to type</span></span>';
+    MEANING_CHOICES.forEach(c => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'we-meanings-btn';
+      b.textContent = c.text;
+      b.title = c.value === null ? 'Follow the Meanings to type setting' : `Answer with ${c.value} different meaning${c.value === 1 ? '' : 's'}`;
+      b.addEventListener('click', () => {
+        if (!currentWord) return;
+        meaningsHost.set(currentWord.word, langSelect.value, c.value);
+        syncMeanings(currentWord);
+      });
+      meaningsRow.appendChild(b);
+      meaningsBtns.push(b);
+    });
+    form.root.querySelector('.edit-form-body')?.prepend(meaningsRow);
+  }
+  function syncMeanings(word: WordData | null): void {
+    if (!meaningsRow || !meaningsHost) return;
+    meaningsRow.hidden = !word;
+    if (!word) return;
+    const cur = meaningsHost.get(word.word, langSelect.value);
+    meaningsBtns.forEach((b, i) => {
+      const on = MEANING_CHOICES[i].value === cur;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
 
   let currentWord: WordData | null = null;
   let pageSize = options.pageSize ?? 50;
@@ -166,7 +209,16 @@ export function createWordEditor(
       </span>
     </div>
   `;
-  layout.append(wordPanel, formHost);
+  // A phone shows one screen at a time — the list of words, or the open word's form under a "← Words" strip
+  // (the CSS keys off data-we-phone on the mount point; hidden everywhere else).
+  const backBar = document.createElement('div');
+  backBar.className = 'we-back-bar';
+  const backBtn = document.createElement('button');
+  backBtn.type = 'button';
+  backBtn.className = 'we-back-btn';
+  backBtn.innerHTML = '<span aria-hidden="true">←</span> Words';
+  backBar.appendChild(backBtn);
+  layout.append(wordPanel, backBar, formHost);
 
   const $ = <T extends HTMLElement>(name: string): T => wordPanel.querySelector<T>(`[id="${id(name)}"]`) as T;
   const wordList      = $('wordList');
@@ -370,10 +422,28 @@ export function createWordEditor(
     else if (currentWord) form.populate(currentWord);
   });
   form.cancelBtn.addEventListener('click', clearForm);
+  backBtn.addEventListener('click', async () => {
+    if (form.isDirty() && !await confirmDialog({
+      title: 'Discard your changes?', message: 'This word has edits that are not saved.', confirmLabel: 'Discard', danger: true,
+    })) return;
+    clearForm();
+  });
+  let mountEl: HTMLElement | null = null;
+  let shownScreen: string | null = null;
+  function syncPhoneScreen(): void {
+    if (!mountEl) return;
+    const screen = form.root.style.display === 'none' ? 'index' : 'detail';
+    mountEl.dataset.wePhone = screen;
+    if (shownScreen !== null && screen !== shownScreen && window.matchMedia('(max-width: 599px)').matches) {
+      mountEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    shownScreen = screen;
+  }
+  new MutationObserver(syncPhoneScreen).observe(form.root, { attributes: true, attributeFilter: ['style'] });
   newWordBtn.addEventListener('click', startNewWord);
 
   return {
-    mount(container) { container.append(filterBar, layout); },
+    mount(container) { mountEl = container; container.append(filterBar, layout); syncPhoneScreen(); },
     applyMeta(meta) {
       form.applyMeta(meta);
       if (meta.languages?.length) {

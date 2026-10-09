@@ -13,6 +13,7 @@ import { buildLanguagePicker, getSelectedLangs } from './my-content/languages.ts
 import { buildContentTabs, getActiveTab, getCollapsedSections, setActiveTab, setCollapsedSections } from './my-content/layout.ts';
 import { buildPicturesSection } from './my-content/pictures.ts';
 import { el } from './my-content/shared.ts';
+import { getWordMeaningFlag, setWordMeaningFlag } from '../utils/gloss-required.ts';
 import { buildTriviaSection } from './my-content/trivia.ts';
 import '../styles-lazy/my-content-bundle.css';
 
@@ -110,7 +111,9 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
   exportBtn.title = 'Download everything you have added or changed here, as one file you can load again';
   importBtn.title = 'Load a file downloaded from "Download my content"';
   const fileMenu = el('div', 'mc-file-menu');
-  const fileMenuBtn = el('button', 'mc-btn mc-btn--secondary mc-file-menu-btn', 'Backup & export ▾') as HTMLButtonElement;
+  const fileMenuBtn = el('button', 'mc-btn mc-btn--secondary mc-file-menu-btn') as HTMLButtonElement;
+  // On a phone it shares the tabs' line and says only "Backup" (the menu says the rest).
+  fileMenuBtn.innerHTML = '<span aria-hidden="true" class="mc-fm-icon">⤓</span> Backup<span class="mc-fm-more"> &amp; export</span> ▾';
   fileMenuBtn.type = 'button';
   fileMenuBtn.setAttribute('aria-haspopup', 'true');
   const fileMenuList = el('div', 'mc-file-menu-list');
@@ -149,7 +152,15 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
   // language). The Words editor and the Conjugations editor work on one language at a time, with their own
   // language box, and Pictures follows the search — so the picker shows only on the two tabs it affects.
   const langPicker = buildLanguagePicker(selectedLangs, () => renderMyContent(container, lang));
-  const showPickerFor = (key: string): void => { langPicker.hidden = key !== 'trivia' && key !== 'guessBlank'; };
+  // On a phone the Words editor's language box moves up beside the streak / dice box (the first line of the bar);
+  // it shows only on the Words tab, which is the only one it belongs to.
+  const phone = window.matchMedia('(max-width: 599px)').matches;
+  const langSlot = el('div', 'mc-lang-slot');
+  langSlot.hidden = true;
+  const showPickerFor = (key: string): void => {
+    langPicker.hidden = key !== 'trivia' && key !== 'guessBlank';
+    langSlot.hidden = !(phone && key === 'words' && langSlot.hasChildNodes());
+  };
   const controls: HTMLElement[] = [
     langPicker,
     fileMenu, importInput, importStatus,
@@ -184,10 +195,16 @@ export function renderMyContent(container: HTMLElement, lang: string): void {
     },
   ], focusWord ? 'words' : getActiveTab(), showPickerFor);
 
+  if (phone) {
+    const field = tabs.panels.querySelector<HTMLElement>('#mcwe-langSelect')?.closest<HTMLElement>('.filter-field');
+    if (field) langSlot.appendChild(field);
+    showPickerFor(focusWord ? 'words' : getActiveTab());
+  }
+
   if (topBar) {
     const right = el('div', 'mc-topbar-actions');
     right.append(...controls);
-    topBar.replaceChildren(tabs.tabBar, right);
+    topBar.replaceChildren(...(phone ? [langSlot] : []), tabs.tabBar, right);
   } else {
     const backupRow = el('div', 'mc-backup-row');
     backupRow.append(...controls);
@@ -245,6 +262,10 @@ function buildSharedWordEditor(currentLang: string, focusWord?: { lang: string; 
     meaningNotes: true,
     reorderGlosses: true,
     trackOriginal: true,
+    answerMeanings: {
+      get: (w, l) => getWordMeaningFlag(l, w),
+      set: (w, l, n) => setWordMeaningFlag(l, w, n),
+    },
     // A verb can go straight to its conjugation table, on the next tab.
     hostAction: {
       label: 'Edit conjugations →',

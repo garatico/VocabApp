@@ -142,6 +142,14 @@ export const Settings = {
    * quiz handing over the answer.
    */
   getQuestionGlossCount: (): number => Math.max(1, Math.min(5, Number(get('question_gloss_count', '1')))),
+  /** Table (Standard style): type each answer, or pick it from a few choices. */
+  getTableAnswerStyle:   (): 'type' | 'choice' => get('table_answer_style', 'type') === 'choice' ? 'choice' : 'type',
+  /** Options shown per row in multiple choice, the right one included. */
+  getTableChoiceCount:   (): number => Math.max(3, Math.min(6, Number(get('table_choice_count', '4')) || 4)),
+  /** A wrong pick in multiple choice: 'lock' marks the row missed and shows the answer; 'retry' greys that option out. */
+  getTableChoiceWrong:   (): 'lock' | 'retry' => get('table_choice_wrong', 'lock') === 'retry' ? 'retry' : 'lock',
+  /** Table, Word → Meaning: how many different meanings an answer must name (1 = any one, as before). */
+  getRequiredMeanings:   (): number => Math.max(1, Math.min(4, Number(get('table_required_glosses', '1')) || 1)),
   getAnswerGlossCount:   (): number => Math.max(1, Math.min(5, Number(get('answer_gloss_count', '2')))),
 
   /**
@@ -187,11 +195,8 @@ export const Settings = {
   },
 
   /**
-   * Starting default for Conjugation's Grid/Full Conjugation "Per Page"
-   * control (conjugation/index.ts's CONJ_PAGE_SIZES: 5/10/25/50) — read only
-   * until a quiz's own selector has ever been changed, at which point that
-   * choice (vq_conj_page_size) takes over. Not the live pagination size
-   * itself, unlike getTablePageSize.
+   * Verbs per page in Conjugation's Grid/Full views (5/10/25/50), read when a
+   * quiz starts. The quiz has no Per Page control of its own any more.
    */
   getConjPageSize: (): number => {
     const raw = get('conj_page_size', '10');
@@ -299,6 +304,8 @@ export const Settings = {
    * correspondingly less clearance to fit into (a smaller badge at a
    * smaller offset), rather than forcing them off outright.
    */
+  /** On a phone, Table rows stack the word above its answer box (default) or keep them side by side. */
+  getTablePhoneLayout: (): 'stacked' | 'side' => get('table_phone_layout', 'stacked') === 'side' ? 'side' : 'stacked',
   getTableRowDensity: (): TableRowDensity => get('table_row_density', 'comfortable') as TableRowDensity,
 
   /** The list star and "missed before" count badge, across every Table quiz style. */
@@ -1099,6 +1106,11 @@ export function applyFontSize(size: FontSize = Settings.getFontSize()): void {
   if (size === 'xl')    document.documentElement.classList.add('font-xl');
 }
 
+
+/** `table-phone-side` is the opt-out: stacked is the default phone layout (public/styles/app/table.css). */
+export function applyTablePhoneLayout(layout: 'stacked' | 'side'): void {
+  document.body.classList.toggle('table-phone-side', layout === 'side');
+}
 
 export function applyTableRowDensity(density: TableRowDensity): void {
   document.body.classList.toggle('table-compact-rows', density === 'compact' || density === 'ultra');

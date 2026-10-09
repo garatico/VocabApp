@@ -1459,9 +1459,104 @@ body.hide-settings-links .tsb-more-row.settings-links { display: none; }
 @media (max-width: 479px) {
   #tableStickyBar .quiz-score { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+/* The pills' box sized itself to its widest label (a flex item, 0 1 auto), so the grid filled ~60% of the card
+   and the right side sat empty. On a phone the counts get the whole line. */
+@media (max-width: 599px) {
+  .tsb-row .controls-line { flex: 1 1 100%; }
+}
 
 /* Phones: each word/answer pair has the row to itself, so the 3px rule that divides pairs sharing a row on a
    wide table had nothing to divide — it drew a grey bar down the right of every other pair. */
 @media (max-width: 599px) {
   #tableWrap td.input-cell:nth-child(n) { border-right: none; }   /* beats td:nth-child(even), the pair divider */
+}
+
+/* ── Multiple choice (Settings → Table Quiz → Answer by) ───────────────────────────────────────────────
+   Each open row offers a few options where the answer box would be; the box itself stays in the row as its
+   state and shows the result once answered (table-mode.ts swaps them with `hidden`). */
+#tableWrap .input-row input[hidden],
+#tableWrap .mc-choices[hidden] { display: none !important; }
+
+#tableWrap .mc-choices {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 0.3rem;
+}
+#tableWrap .mc-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  min-height: 38px;
+  padding: 0.3rem 0.55rem;
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+#tableWrap .mc-choice:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+#tableWrap .mc-choice:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+#tableWrap .mc-choice-key {
+  flex: 0 0 auto;
+  min-width: 1.35em;
+  text-align: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72em;
+  font-weight: 700;
+  line-height: 1.35em;
+  color: var(--text-muted);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+}
+#tableWrap .mc-choice-text { flex: 1 1 auto; min-width: 0; }
+/* A pick that was wrong (Settings → "After a wrong choice" → Try again): struck out, still readable. */
+#tableWrap .mc-choice--wrong,
+#tableWrap .mc-choice--wrong:disabled {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border-strong));
+  cursor: default;
+}
+/* Number badges hint at the 1-9 keys; a touch screen has no keys. */
+@media (hover: none) { #tableWrap .mc-choice-key { display: none; } }
+
+/* ── Phones: word above its answer ────────────────────────────────────────────────────────────────────
+   Side by side, the word got a third of a 375px row — "de" at 1rem, a long word broken across lines — and
+   the answer box shared the rest with ?? and ★. Stacked, each pair is a small card: the word on its own line
+   at a readable size, the answer box (or the choices) the full width underneath. A learner who prefers the
+   old layout has Settings → Appearance → Phone layout. */
+@media (max-width: 599px) {
+  body:not(.table-phone-side) #tableWrap .word-cell,
+  body:not(.table-phone-side) #tableWrap .input-cell {
+    width: 100%;
+    min-width: 100%;
+    border-right: none;
+  }
+  body:not(.table-phone-side) #tableWrap .word-cell {
+    justify-content: flex-start;
+    padding: 0.6rem 0.7rem 0.15rem 2.1rem;      /* the left gutter holds the rank and the select box */
+    border-top: 1px solid var(--border);
+  }
+  body:not(.table-phone-side) #tableWrap tr > .word-cell:first-child { border-top: none; }
+  body:not(.table-phone-side) #tableWrap .spanish-word {
+    font-size: 1.4rem;
+    font-weight: 600;
+    text-align: left;
+    align-items: flex-start;
+  }
+  body:not(.table-phone-side) #tableWrap .input-cell {
+    background: var(--surface2);
+    padding: 0.15rem 0.7rem 0.65rem;
+  }
+  body:not(.table-phone-side) #tableWrap .input-cell ~ .input-cell { border-top: none; }
+  body:not(.table-phone-side) #tableWrap tr.row-active .input-cell { background: var(--accent-light); }
+  body:not(.table-phone-side) #tableWrap .mc-choices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

@@ -678,18 +678,13 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
    * verb, so there was no per-page "block" to hide the rest behind) — same
    * pager, same page size, shared below, now applies to both.
    */
-  const CONJ_PAGE_SIZES = [5, 10, 25, 50] as const;
+  // Verbs per page is a Settings choice (Settings → Conjugation → Layout), read fresh on every
+  // quiz start; the quiz itself no longer carries a Per Page control.
+  const pageSize = Settings.getConjPageSize();
 
-  // Named for Full Conjugation, which is where paging started — shared with
+  // Fullpage index — named for Full Conjugation, which is where paging started; shared with
   // Grid now, which has no per-verb "page" of its own.
   let fullPage = 0;
-  // Settings.getConjPageSize() is only the *starting* default (10 out of the
-  // box) — once vq_conj_page_size holds a value the quiz's own Per Page
-  // selector wrote, that wins, same as before this was configurable.
-  let pageSize = (() => {
-    const n = Number(readString('vq_conj_page_size'));
-    return (CONJ_PAGE_SIZES as readonly number[]).includes(n) ? n : Settings.getConjPageSize();
-  })();
 
   const pageCount = (): number => Math.max(1, Math.ceil(verbs.length / pageSize));
   const pageStart = (): number => fullPage * pageSize;
@@ -699,41 +694,23 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   const fullHeader = document.createElement('div');
   fullHeader.className = 'conj-full-header';
 
+  // The same pager as Table mode (← [Page N of M (from–to)] →): its classes are the shared ones.
   const fullPrev = document.createElement('button');
   fullPrev.type = 'button';
-  fullPrev.className = 'conj-full-nav';
-  fullPrev.textContent = '◀ Prev';
+  fullPrev.className = 'pager-btn';
+  fullPrev.textContent = '←';
+  fullPrev.setAttribute('aria-label', 'Previous page');
 
   const fullNext = document.createElement('button');
   fullNext.type = 'button';
-  fullNext.className = 'conj-full-nav';
-  fullNext.textContent = 'Next ▶';
+  fullNext.className = 'pager-btn';
+  fullNext.textContent = '→';
+  fullNext.setAttribute('aria-label', 'Next page');
 
-  // Two labels, one shown at a time by CSS. "Verbs 1–10 of 249 · Page 1 of 25"
-  // does not fit on a phone beside two buttons and a select, and truncating it
-  // loses the numbers that are the whole point of a pager.
-  const fullCount = document.createElement('span');
-  fullCount.className = 'conj-full-count';
-  const countLong = document.createElement('span');
-  countLong.className = 'conj-full-count--long';
-  const countShort = document.createElement('span');
-  countShort.className = 'conj-full-count--short';
-  fullCount.append(countLong, countShort);
-
-  const sizeLabel = document.createElement('label');
-  sizeLabel.className = 'conj-full-size-label';
-  sizeLabel.textContent = 'Per page';
-
-  const sizeSel = document.createElement('select');
-  sizeSel.className = 'conj-order-select conj-full-size';
-  sizeSel.setAttribute('aria-label', 'Number of verbs');
-  sizeSel.title = 'Verbs shown at once. Each verb is one card per selected tense.';
-  CONJ_PAGE_SIZES.forEach(n => {
-    const o = document.createElement('option');
-    o.value = String(n); o.textContent = String(n); o.selected = n === pageSize;
-    sizeSel.appendChild(o);
-  });
-  sizeLabel.appendChild(sizeSel);
+  const pageSel = document.createElement('select');
+  pageSel.className = 'pager-select';
+  pageSel.setAttribute('aria-label', 'Jump to page');
+  pageSel.title = 'Each verb is one card per selected tense. Verbs per page: Settings → Conjugation → Layout.';
 
   // Collapse/expand every verb block on the current page at once — only
   // meaningful in Full Conjugation, which is the only view with per-verb
@@ -752,17 +729,26 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
     collapseAllBtn.textContent = collapse ? 'Expand all' : 'Collapse all';
   });
 
-  fullHeader.append(fullPrev, fullCount, sizeLabel, collapseAllBtn, fullNext);
+  fullHeader.append(fullPrev, pageSel, fullNext, collapseAllBtn);
 
   function syncFullHeader(): void {
     // Shown for both views now — only the layout (stacked blocks vs. cards
     // flowing into columns) differs between them.
     cardsGrid.classList.toggle('conj-cards-grid--full', viewMode === 'full');
-    const from = verbs.length === 0 ? 0 : pageStart() + 1;
-    const to   = Math.min(pageStart() + pageSize, verbs.length);
-    countLong.textContent =
-      `Verbs ${from}–${to} of ${verbs.length}  ·  Page ${fullPage + 1} of ${pageCount()}`;
-    countShort.textContent = `${from}–${to} / ${verbs.length}`;
+    // Rebuilt only when the page count changes — a long list can run to hundreds of options.
+    const pages = pageCount();
+    if (pageSel.options.length !== pages) {
+      pageSel.innerHTML = '';
+      for (let i = 0; i < pages; i++) {
+        const opt  = document.createElement('option');
+        opt.value  = String(i);
+        const from = verbs.length === 0 ? 0 : i * pageSize + 1;
+        const to   = Math.min((i + 1) * pageSize, verbs.length);
+        opt.textContent = `Page ${i + 1} of ${pages}  (${from}–${to})`;
+        pageSel.appendChild(opt);
+      }
+    }
+    pageSel.value = String(fullPage);
     fullPrev.disabled = fullPage === 0;
     fullNext.disabled = fullPage >= pageCount() - 1;
     // Grid has no verb blocks to fold.
@@ -792,18 +778,7 @@ export function renderConjugationMode({ words, container, lang = 'spanish', extr
   fullPrev.addEventListener('click', () => gotoPage(fullPage - 1));
   fullNext.addEventListener('click', () => gotoPage(fullPage + 1));
 
-  sizeSel.addEventListener('change', () => {
-    bankVisibleVerbs();
-    pageSize = Number(sizeSel.value) || Settings.getConjPageSize();
-    writeString('vq_conj_page_size', String(pageSize));
-    // Stay near where you were rather than jumping to the top: the verb that
-    // started the old page is the one you were working on.
-    fullPage = Math.floor(pageStart() / pageSize);
-    buildCards();
-    applyAllPronounToggles(cardsGrid);
-    syncDeselectedCells();
-    updateProgress();
-  });
+  pageSel.addEventListener('change', () => gotoPage(Number(pageSel.value) || 0));
 
   // Which verbs are folded shut in Full Conjugation, keyed by verbKey() so a
   // collapse choice survives paging back and forth (a page rebuild loses the

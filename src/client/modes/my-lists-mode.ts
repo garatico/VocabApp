@@ -32,7 +32,7 @@
  */
 
 import { getListNames, getTotalListedCount, refreshFilterSelect } from '../utils/word-lists.ts';
-import { createContext, BROWSE_ALL_LIST, NO_SELECTION } from './my-lists/context.ts';
+import { createContext, BROWSE_ALL_LIST, NO_SELECTION, deselectAll, initialSelection, isPhoneLayout } from './my-lists/context.ts';
 import { createSidebar } from './my-lists/sidebar.ts';
 import { renderPanel } from './my-lists/panel.ts';
 import { migrateMastery } from './my-lists/mastery.ts';
@@ -105,7 +105,7 @@ export function renderMyLists(container: HTMLElement): void {
     ctx.selectedList = BROWSE_ALL_LIST;
     ctx.focusWord = focus.word;
   } else {
-    ctx.selectedList = getListNames(lang)[0] ?? '';
+    ctx.selectedList = initialSelection(getListNames(lang)[0]);
   }
 
   const sidebar = createSidebar(ctx);
@@ -131,7 +131,27 @@ export function renderMyLists(container: HTMLElement): void {
     barStats = fresh;
     bar?.appendChild(fresh);
   }
-  new MutationObserver(adoptStats).observe(panel, { childList: true, subtree: true });
+  const backBar = document.createElement('div');
+  backBar.className = 'ml-back-bar';
+  const backBtn = document.createElement('button');
+  backBtn.type = 'button';
+  backBtn.className = 'ml-back-btn';
+  backBtn.innerHTML = '<span aria-hidden="true">←</span> Lists';
+  backBtn.addEventListener('click', () => { deselectAll(ctx); ctx.renderSidebar(); });
+  backBar.appendChild(backBtn);
+
+  // On a phone the ▶ Quiz button rides in the "← Lists" strip, on the right, instead of taking a row of the panel.
+  // It is the panel's own button, moved (its click handler comes with it); each redraw brings a new one.
+  let strayQuiz: HTMLElement | null = null;
+  function adoptQuiz(): void {
+    if (!isPhoneLayout()) return;
+    const fresh = panel.querySelector<HTMLElement>('.ml-quiz-btn');
+    if (!fresh) return;
+    if (strayQuiz && strayQuiz !== fresh) strayQuiz.remove();
+    strayQuiz = fresh;
+    backBar.appendChild(fresh);
+  }
+  new MutationObserver(() => { adoptStats(); adoptQuiz(); }).observe(panel, { childList: true, subtree: true });
 
   function updateBarTitle(): void {
     adoptStats();
@@ -164,14 +184,21 @@ export function renderMyLists(container: HTMLElement): void {
     barTitle.title = name;
   }
 
-  /** On a phone the panel sits under the sidebar, so opening a list looked like nothing happened: the words
-   *  appeared a screen further down. Bring the panel up when what is open changes (not on the first draw). */
+  // On a phone My Lists is two screens: the index of lists, and the one list you opened (full width, with a
+  // ← Lists strip that stays at the top). Which one shows is the `data-ml-phone` on the bar and the container;
+  // the CSS does the rest (my-lists.css, "Phones: two screens").
   let shownTitle: string | null = null;
+  let shownScreen: 'index' | 'detail' | null = null;
   function followSelection(): void {
+    const open = !barTitle.classList.contains('ml-topbar-title--none');
+    const screen = open ? 'detail' : 'index';
+    for (const el of [bar, container]) if (el) el.dataset.mlPhone = screen;
     const title = barTitle.textContent ?? '';
-    const changed = shownTitle !== null && title !== shownTitle && !barTitle.classList.contains('ml-topbar-title--none');
+    const changed = shownTitle !== null && (title !== shownTitle || screen !== shownScreen);
     shownTitle = title;
-    if (changed && window.matchMedia('(max-width: 767px)').matches) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    shownScreen = screen;
+    // A new screen starts at its top; a list stays where it is while you work in it.
+    if (changed && isPhoneLayout()) container.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // The two panes call each other, so the hooks are filled in once both exist.
@@ -183,6 +210,7 @@ export function renderMyLists(container: HTMLElement): void {
   ctx.updateBadge   = updateBadge;
 
   container.appendChild(sidebar.leftPane);
+  container.appendChild(backBar);
   container.appendChild(panel);
   fitToScreen(container);
 

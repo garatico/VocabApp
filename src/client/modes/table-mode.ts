@@ -1,7 +1,7 @@
 import type { Word } from '../types.ts';
 import {
   slotText, slotMatches, slotCouldMatch, extraMatchedGloss, displayWord, glossWithMeaningNote, DEFAULT_CHINESE_DISPLAY,
-  primaryGlossForHint, chosenGlosses, grammarHint, genderArticle, genderKey,
+  primaryGlossForHint, chosenGlosses, neededMeanings, grammarHint, genderArticle, genderKey,
   type QuizSlot, type ChineseDisplay,
 } from '../utils/utils.ts';
 import { attachTooltips }        from '../utils/word-tooltip.ts';
@@ -13,6 +13,8 @@ import { getMisses, type MissCounts } from '../utils/session-history.ts';
 import { flagUrl, isoCode }      from '../data/languages.ts';
 import { renderWordWithGender, applyGenderContainer, enableInputWheelScroll, shouldShowGenderIndicator } from '../utils/dom.ts';
 import { hintPrefix, hintableLength } from '../utils/hint-reveal.ts';
+import { shuffle }               from '../utils/shuffle.ts';
+import { getMeaningFlags, requiredMeaningsFor, meaningFlagsVersion } from '../utils/gloss-required.ts';
 
 export type DirectionPair = 'target-en' | 'en-target';
 export type TableDirection = DirectionPair | 'mixed';
@@ -77,6 +79,11 @@ interface RenderTableModeOptions {
    * by pagination so the bar can report the whole quiz rather than one page.
    */
   onProgress?:   ((answeredOnPage: number, totalOnPage: number) => void) | null;
+  /**
+   * Where multiple choice draws its wrong options from — the whole quiz, not just the page on screen,
+   * so a page of 10 words still has plenty to choose among. Defaults to `words`.
+   */
+  distractorPool?: Word[];
 }
 
 /**
@@ -125,6 +132,7 @@ export function renderTableMode({
   lang         = (document.getElementById('langSelect') as HTMLSelectElement | null)?.value ?? 'spanish',
   initialState = new Map<string, InputSnapshot>(),
   onProgress   = null,
+  distractorPool,
 }: RenderTableModeOptions): TableController {
   if (!(container instanceof HTMLElement)) {
     throw new Error('renderTableMode: container element required');
@@ -135,6 +143,11 @@ export function renderTableMode({
   const showRevealButton = Settings.getShowRevealButton();
   const matchMode = Settings.getMatchMode();
   const chineseDisplay = Settings.getChineseDisplay();
+  // Multiple choice (Settings → Table Quiz → Answer by): each row offers a few options instead of an answer box.
+  const choiceMode   = Settings.getTableAnswerStyle() === 'choice';
+  const choiceCount  = Settings.getTableChoiceCount();
+  const retryOnWrong = Settings.getTableChoiceWrong() === 'retry';
+  const choicePool   = distractorPool ?? words;
 
   // O(1) word lookup — avoids O(n²) words.find() inside forEach loops.
   // Keyed by rowKey rather than bare word text so a Compare-mode table mixing
@@ -242,16 +255,30 @@ export function renderTableMode({
     return primaryGlossForHint(entry);
   }
 
+  // Per-word "answer with several meanings" flags, read once per language and re-read after one changes
+  // (the word popover can set one mid-quiz).
+  let flagCache = new Map<string, Record<string, number>>();
+  let flagVersion = meaningFlagsVersion();
+  /** How many different meanings this row's answer must name — 1 unless the answer is English and asks for more. */
+  function meaningsFor(entry: Word, dir: DirectionPair): number {
+    if (slotsFor(dir)[1] !== 'english' || choiceMode) return 1;
+    if (flagVersion !== meaningFlagsVersion()) { flagCache = new Map(); flagVersion = meaningFlagsVersion(); }
+    const wordLang = entry.language ?? lang;
+    let flags = flagCache.get(wordLang);
+    if (!flags) { flags = getMeaningFlags(wordLang); flagCache.set(wordLang, flags); }
+    return requiredMeaningsFor(flags, entry.word);
+  }
+
   function checkInput(input: string, entry: Word, dir: DirectionPair): boolean {
     const [, answerSlot] = slotsFor(dir);
-    return slotMatches(input, entry, answerSlot, matchMode, entry.language ?? lang, chineseDisplay);
+    return slotMatches(input, entry, answerSlot, matchMode, entry.language ?? lang, chineseDisplay, meaningsFor(entry, dir));
   }
 
   /** Sudden Death's own checkInput — could more typing still land on an
    *  accepted answer, or has this input already strayed off every one? */
   function couldInputStillMatch(input: string, entry: Word, dir: DirectionPair): boolean {
     const [, answerSlot] = slotsFor(dir);
-    return slotCouldMatch(input, entry, answerSlot, matchMode, entry.language ?? lang, chineseDisplay);
+    return slotCouldMatch(input, entry, answerSlot, matchMode, entry.language ?? lang, chineseDisplay, meaningsFor(entry, dir));
   }
 
   function checkAllComplete(): boolean {
@@ -325,9 +352,54 @@ export function renderTableMode({
     return btn;
   }
 
+  /** The thing to focus for a row: its answer box, or — in multiple choice, while unanswered — its first option. */
+  function focusRow(inp: HTMLInputElement): void {
+    const firstOption = inp.dataset.mc === '1' && !inp.disabled
+      ? inp.closest('.input-row')?.querySelector<HTMLButtonElement>('.mc-choice:not(:disabled)') : null;
+    (firstOption ?? inp).focus();
+  }
+
   function scrollToNext(next: HTMLInputElement): void {
-    next.focus();
-    next.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    focusRow(next);
+    next.closest('.input-row')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  /** What an option says for `entry`: one short meaning, or the word itself. Right and wrong options use the same
+   *  function so nothing about their wording gives the answer away. */
+  function choiceText(entry: Word, slot: QuizSlot): string {
+    const wl = entry.language ?? lang;
+    return slot === 'english' ? slotText(entry, 'english', wl, chineseDisplay, 1) : slotText(entry, 'word', wl, chineseDisplay);
+  }
+
+  /**
+   * The options for one row, shuffled — or null when this word can't be asked as a choice (nothing to contrast it
+   * with), in which case the row falls back to typing. Wrong options come from other words, same part of speech
+   * first so "to let" is not the only verb among nouns, and never from a word whose text would also be accepted.
+   */
+  function buildChoices(entry: Word, dir: DirectionPair): string[] | null {
+    const [, answerSlot] = slotsFor(dir);
+    const wl = entry.language ?? lang;
+    const accepts = (text: string): boolean => slotMatches(text, entry, answerSlot, matchMode, wl, chineseDisplay, 1);
+    const right = [choiceText(entry, answerSlot), primaryGlossForHint(entry), revealTextFor(entry, dir, wl, chineseDisplay)]
+      .find(t => t && accepts(t));
+    if (!right) return null;
+
+    const seen = new Set<string>([right.toLowerCase()]);
+    const wrong: string[] = [];
+    const key = rowKey(entry, lang);
+    const others = shuffle(choicePool.filter(o => rowKey(o, lang) !== key));
+    for (const pass of [true, false]) {
+      for (const o of others) {
+        if (wrong.length >= choiceCount - 1) break;
+        if (pass !== (o.pos === entry.pos)) continue;
+        const text = choiceText(o, answerSlot);
+        if (!text || seen.has(text.toLowerCase()) || accepts(text)) continue;
+        seen.add(text.toLowerCase());
+        wrong.push(text);
+      }
+    }
+    if (wrong.length === 0) return null;
+    return shuffle([right, ...wrong]);
   }
 
   function buildTable(): void {
@@ -509,9 +581,19 @@ export function renderTableMode({
         // Letters revealed via the Hint button so far — mirrors `dir` above,
         // read back the same way so a page round-trip resumes the button at
         // the right spot instead of forgetting how far a hint got.
+        // Multiple choice: the box below stays as the row's state (value / disabled / result class) but is hidden
+        // until the row is answered; the options stand in for it. Decided per row, so a word with nothing to
+        // contrast against simply keeps its answer box.
+        const choices = choiceMode ? buildChoices(w, dir) : null;
         inp.dataset.hints = String(snap?.hintsShown ?? 0);
         inp.dataset.selected = String(snap?.selected ?? false);
         inp.placeholder  = (narrow ? PLACEHOLDER_SHORT_FOR : PLACEHOLDER_FOR)[slotsFor(dir)[1]];
+        // A word that wants several meanings says so up front, and how to give them.
+        const needMeanings = neededMeanings(w, meaningsFor(w, dir));
+        if (slotsFor(dir)[1] === 'english' && needMeanings > 1) {
+          inp.placeholder = narrow ? `${needMeanings} meanings…` : `${needMeanings} meanings, comma-separated…`;
+          inp.dataset.meanings = String(needMeanings);
+        }
         // The language being typed: spellcheck, on-screen keyboards and screen readers follow it.
         inp.lang         = slotsFor(dir)[1] === 'word' ? isoCode(wordLang) : 'en';
         // F2: this row's word details, as a click on the word gives — the only way to reach them by keyboard
@@ -539,6 +621,14 @@ export function renderTableMode({
           if (snap.stateClass) inp.classList.add(snap.stateClass);
         }
 
+        // Options show only while the row is open; once answered (or revealed, or given up on) the box shows the result.
+        let choiceBox: HTMLElement | null = null;
+        function syncChoiceView(): void {
+          if (!choiceBox) return;
+          choiceBox.hidden = inp.disabled;
+          inp.hidden       = !inp.disabled;
+        }
+
         // ── Gender indicator (dot/word-bg/box-bg) ──────────────────────────────
         // Whether it's showing yet depends on Settings.getGenderIndicatorVisibility()
         // and this row's own hinted/disabled state, so it's re-run (not just
@@ -555,7 +645,7 @@ export function renderTableMode({
           applyGenderContainer(tdWord, show ? gKey : null, indicatorStyle);
         }
         syncGenderIndicator();
-        genderSyncFns.set(inp, syncGenderIndicator);
+        genderSyncFns.set(inp, () => { syncGenderIndicator(); syncChoiceView(); });
 
         // Its active/inactive class already reflects real list membership —
         // read fresh inside buildKnownBtn, not from the snapshot.
@@ -576,6 +666,27 @@ export function renderTableMode({
         revealBtn.className = 'reveal-btn';
         revealBtn.tabIndex  = -1;
 
+        /** Lock this row as missed and show the answer — Sudden Death's end state, and a wrong multiple-choice pick's. */
+        function markIncorrect(): void {
+          inp.value = revealText(w, dir);
+          inp.disabled = true;
+          inp.classList.remove('correct');
+          inp.classList.add('incorrect');
+          syncGenderIndicator();
+          syncChoiceView();
+
+          const currentIdx = Number(inp.dataset.idx);
+          const next = allInputs.slice(currentIdx + 1).find(i => !i.disabled);
+          if (next) scrollToNext(next);
+
+          updateProgress();
+
+          if (checkAllComplete() && onComplete) {
+            const cb = onComplete;
+            setTimeout(() => cb(), 300);
+          }
+        }
+
         // ── Correct answer handler ───────────────────────────────────────────
         inp.addEventListener('input', () => {
           if (checkInput(inp.value, w, dir)) {
@@ -584,6 +695,7 @@ export function renderTableMode({
             inp.disabled = true;
             inp.classList.add('correct');
             syncGenderIndicator();
+            syncChoiceView();
 
             if (isInAnyList(wordLang, w.word)) {
               knownBtn.classList.add('known-btn--active');
@@ -604,22 +716,7 @@ export function renderTableMode({
             // The first keystroke that can no longer lead anywhere accepted —
             // same end state as Give Up on just this cell, triggered early
             // rather than waiting for the learner to submit or give up.
-            inp.value = revealText(w, dir);
-            inp.disabled = true;
-            inp.classList.remove('correct');
-            inp.classList.add('incorrect');
-            syncGenderIndicator();
-
-            const currentIdx = Number(inp.dataset.idx);
-            const next = allInputs.slice(currentIdx + 1).find(i => !i.disabled);
-            if (next) scrollToNext(next);
-
-            updateProgress();
-
-            if (checkAllComplete() && onComplete) {
-              const cb = onComplete;
-              setTimeout(() => cb(), 300);
-            }
+            markIncorrect();
           } else {
             inp.classList.remove('correct');
           }
@@ -650,6 +747,7 @@ export function renderTableMode({
           inp.disabled = true;
           inp.classList.add('peeked');
           syncGenderIndicator();
+          syncChoiceView();
           if (isInAnyList(wordLang, w.word)) {
             knownBtn.classList.add('known-btn--active');
             tdWord.classList.add('word-cell--known');
@@ -670,7 +768,71 @@ export function renderTableMode({
         tdInput.appendChild(inputRow);
         inputRow.appendChild(inp);
 
-        if (showHintButton) {
+        if (choices) {
+          inp.dataset.mc = '1';
+          inp.placeholder = '';
+          const box = document.createElement('div');
+          choiceBox = box;
+          box.className = 'mc-choices';
+          box.setAttribute('role', 'group');
+          box.setAttribute('aria-label', 'Choose the answer');
+          choices.forEach((text, i) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'mc-choice';
+            b.lang = slotsFor(dir)[1] === 'word' ? isoCode(wordLang) : 'en';
+            b.setAttribute('aria-keyshortcuts', String(i + 1));
+            const num = document.createElement('span');
+            num.className = 'mc-choice-key';
+            num.setAttribute('aria-hidden', 'true');
+            num.textContent = String(i + 1);
+            const label = document.createElement('span');
+            label.className = 'mc-choice-text';
+            label.textContent = text;
+            b.append(num, label);
+            b.addEventListener('click', () => {
+              if (inp.disabled || b.disabled) return;
+              if (checkInput(text, w, dir)) {
+                inp.value = text;
+                inp.dispatchEvent(new Event('input'));   // the one correct-answer path, shared with typing
+              } else if (retryOnWrong) {
+                b.disabled = true;
+                b.classList.add('mc-choice--wrong');
+                b.setAttribute('aria-label', `${text} — wrong`);
+                // Never strand focus on a disabled button.
+                box.querySelector<HTMLButtonElement>('.mc-choice:not(:disabled)')?.focus();
+              } else {
+                markIncorrect();
+              }
+            });
+            box.appendChild(b);
+          });
+          // 1-9 answer the focused row's options by number, without a pointer.
+          box.addEventListener('keydown', e => {
+            if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              const next = allInputs.slice(Number(inp.dataset.idx) + 1).find(i => !i.disabled);
+              if (next) scrollToNext(next);
+              return;
+            }
+            if (!/^[1-9]$/.test(e.key)) return;
+            const target = box.querySelectorAll<HTMLButtonElement>('.mc-choice')[Number(e.key) - 1];
+            if (!target || target.disabled) return;
+            e.preventDefault();
+            target.click();
+          });
+          box.addEventListener('focusin', () => {
+            activeRow?.classList.remove('row-active');
+            activeRow = box.closest('tr');
+            activeRow?.classList.add('row-active');
+          });
+          box.addEventListener('focusout', () => box.closest('tr')?.classList.remove('row-active'));
+          inputRow.appendChild(box);
+          syncChoiceView();
+        }
+
+        if (showHintButton && !choices) {
           hintBtn.textContent = '?';
 
           // Progressive: each click reveals one more letter into the input
@@ -739,7 +901,7 @@ export function renderTableMode({
 
     // Auto-focus first unanswered input
     const firstUnanswered = allInputs.find(inp => !inp.disabled);
-    firstUnanswered?.focus();
+    if (firstUnanswered) focusRow(firstUnanswered);
   }
 
   /** Rebuild wordMap's key from an input's dataset — the DOM-side half of rowKey(). */

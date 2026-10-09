@@ -645,6 +645,7 @@ function renderCurrentPage(): void {
     direction:    resolvedDirection,
     lang:         quizLang,
     initialState: sessionState,
+    distractorPool: allWords,
     onProgress:   () => {
       renderProgress();
       scheduleResumeSave();

@@ -611,7 +611,7 @@ mark.search-match {
 .ml-undo-toast {
   position: fixed;
   left: 50%;
-  bottom: 1.5rem;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
   z-index: 9999;
   display: flex;
@@ -1071,4 +1071,107 @@ label.ml-chip-dropdown-group:hover { color: var(--text); }
   .ml-panel-header > .ml-panel-title-group { order: -1; margin-left: auto; }
   .ml-panel-header > .ml-filter-dropdowns-row { flex: 1 1 100%; gap: 0.3rem; }
   .ml-panel-header > .ml-filter-dropdowns-row .ml-chip-dropdown-toggle { padding-left: 0.5rem; padding-right: 0.5rem; }
+}
+
+@media (max-width: 599px) {
+  /* The title row (name, counts, Save as list, Quiz) was a no-shrink flex item as wide as all of it, so Quiz ran off the screen */
+  .ml-panel-header > .ml-panel-title-group { flex: 1 1 100%; min-width: 0; margin-left: 0; }
+  .ml-panel-title-group .ml-title-actions { flex-wrap: wrap; margin-left: auto; }
+  .ml-panel-title-group .ml-export-btn, .ml-panel-title-group .ml-quiz-btn { min-height: 38px; }
+}
+
+/* ── Phones: the language picker shares the corner's line ─────────────────────────────────────────────────
+   The streak / due / dice box is pinned top-right and the bar below used to start under it, so the language row
+   sat on a line of its own with empty space beside the box. Here the bar starts at the top, and its first row
+   (the language on the index screen, the list's name on the open one) stops short of the box, level with it. */
+@media (max-width: 599px) {
+  body[data-mode="mylists"] #controls:not(:has(#controlsBody.filter-body--collapsed)) { padding-top: 0.15rem; }
+  #myListsBar .ml-lang-row,
+  #myListsBar .ml-topbar-title {
+    margin-right: calc(var(--corner-w, 7rem) + 0.15rem);
+    min-height: calc(var(--corner-h, 2.85rem) - 0.4rem);
+    align-items: center;
+  }
+  #myListsBar .ml-lang-row { flex: 1 1 0; min-width: 0; }
+  #myListsBar .ml-topbar-title { display: flex; flex: 1 1 100%; max-width: calc(100% - var(--corner-w, 7rem) - 0.15rem); }
+}
+
+/* Spaced-repetition "due" is a prompt to review, which is what the quiz tabs and History are for; My Lists is
+   where lists are organised, so the badge stays out of its corner (its "Is due" rule is still there to filter by). */
+body[data-mode="mylists"] #dueBadge { display: none; }
+
+/* ── Phones: the filter chips (Level · Type · Domain · Folders · Made of · Minus · Hide From …) ──────────────
+   They were 28px pills of ragged widths on 5px gaps, wrapping wherever the text happened to end — easy to
+   mis-tap and hard to scan. Here they are an even two-column grid of 40px buttons, label left and ▾ right,
+   with a lone last one taking the whole row. */
+@media (max-width: 599px) {
+  #myListsWrap .ml-filter-dropdowns-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+  }
+  #myListsWrap .ml-filter-dropdowns-row > .ml-chip-dropdown { display: block; width: 100%; min-width: 0; margin: 0; }
+  #myListsWrap .ml-filter-dropdowns-row > .ml-chip-dropdown:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  #myListsWrap .ml-filter-dropdowns-row .ml-chip-dropdown-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    width: 100%;
+    min-height: 40px;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.85rem;
+    text-align: left;
+  }
+  /* The label may be long ("Folders: By Topic"): it gives way, the ▾ does not. */
+  #myListsWrap .ml-filter-dropdowns-row .ml-chip-dropdown-toggle > :first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+@media (max-width: 599px) {
+  /* With Quiz moved up, an emptied title row takes no space and the filter chips have the width */
+  .ml-panel-header > .ml-panel-title-group:has(> .ml-title-actions:empty):not(:has(.ml-smart-matched, .ml-export-btn, .ml-manual-badge)) { display: none; }
+  .ml-panel-header { padding-right: 0; }
+  .ml-panel-header > .ml-filter-dropdowns-row { flex: 1 1 100%; min-width: 0; }
+}
+
+/* My Content has no use for the "due for review" prompt either (History has its own tab for it). */
+body[data-mode="myContent"] #dueBadge { display: none; }
+
+/* ── Phones: History's and My Content's language box shares the corner's line, as My Lists' does ─────────── */
+@media (max-width: 599px) {
+  body[data-mode="history"] #controls:not(:has(#controlsBody.filter-body--collapsed)),
+  body[data-mode="myContent"] #controls:not(:has(#controlsBody.filter-body--collapsed)):has(.mc-lang-slot:not([hidden])) { padding-top: 0.15rem; }
+  body #historyBar .history-lang-row,
+  body #myContentBar .mc-lang-slot {
+    flex: 1 1 100%;
+    margin-right: calc(var(--corner-w, 7rem) + 0.15rem);
+    min-height: calc(var(--corner-h, 2.85rem) - 0.4rem);
+    display: flex;
+    align-items: center;
+  }
+  #historyBar > .tabs, #historyBar > :not(.history-lang-row) { flex: 1 1 100%; }
+}
+
+/* Phones: the "← Lists" / "← Words" strips are position: sticky, which an overflow: hidden ancestor silently
+   defeats (the strip scrolled away with the page). overflow: clip keeps the rounded-corner clipping without
+   making the area a scroll container. */
+@media (max-width: 599px) {
+  body #myListsArea, body #myContentArea { overflow: clip; }
+}
+
+/* History's and My Content's language box: the flag and name say what it is, so the label gives its room to the
+   dropdown (a wide corner — streak, due, dice — leaves ~185px), and the row may shrink below its content. */
+@media (max-width: 599px) {
+  body #historyBar .history-lang-row, body #myContentBar .mc-lang-slot, body #myListsBar .ml-lang-row { min-width: 0; }
+  body #historyBar .history-lang-row > .ui-label,
+  body #myListsBar .ml-lang-label,
+  body #myContentBar .mc-lang-slot .filter-label { display: none; }
+  body #historyBar .history-lang-row .lang-dd,
+  body #myListsBar .ml-lang-row .lang-dd,
+  body #myContentBar .mc-lang-slot .lang-dd,
+  body #myContentBar .mc-lang-slot .filter-field { flex: 1 1 auto; min-width: 0; }
+  body #historyBar .history-lang-row .lang-dd-trigger,
+  body #myListsBar .ml-lang-row .lang-dd-trigger,
+  body #myContentBar .mc-lang-slot .lang-dd-trigger { width: 100%; min-width: 0; }
 }

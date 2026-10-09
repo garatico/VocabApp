@@ -132,10 +132,15 @@
     "s_streak_widget_format": "number-only",
     "s_sudden_death": "true",
     "s_swear_filter_enabled": "true",
+    "s_table_answer_style": "choice",
+    "s_table_choice_count": "5",
+    "s_table_choice_wrong": "retry",
     "s_table_color_correct": "#2e7d32",
     "s_table_cols": "3",
     "s_table_hint_button": "true",
     "s_table_page_size": "50",
+    "s_table_phone_layout": "side",
+    "s_table_required_glosses": "2",
     "s_table_reveal_button": "false",
     "s_table_row_density": "compact",
     "s_table_show_rank": "false",
@@ -250,6 +255,7 @@
         "maison": 1772793000000
       },
       "masteryLevels": {},
+      "meaningFlags": {},
       "misses": {
         "chat": 1
       },
@@ -336,6 +342,7 @@
       "mastered": [],
       "masteredDates": {},
       "masteryLevels": {},
+      "meaningFlags": {},
       "misses": {},
       "pictureOverrides": {},
       "sessions": [],
@@ -507,6 +514,9 @@
       "masteryLevels": {
         "casa": 2,
         "perro": 3
+      },
+      "meaningFlags": {
+        "dejar": 2
       },
       "misses": {
         "billete": 2
@@ -1206,6 +1216,7 @@
     "getProgressBarPercentMode": "missed",
     "getProgressBarShowHintBreakdown": true,
     "getQuestionGlossCount": 3,
+    "getRequiredMeanings": 2,
     "getShowAdminPanel": true,
     "getShowBothScripts": false,
     "getShowDisambiguatorOnHover": false,
@@ -1226,8 +1237,12 @@
     "getStreakWidgetFormat": "number-only",
     "getSuddenDeath": true,
     "getSwearFilterEnabled": true,
+    "getTableAnswerStyle": "choice",
+    "getTableChoiceCount": 5,
+    "getTableChoiceWrong": "retry",
     "getTableCols": 3,
     "getTablePageSize": 50,
+    "getTablePhoneLayout": "side",
     "getTableRowDensity": "compact",
     "getTableShowRank": false,
     "getTableShowWordMarkers": false,

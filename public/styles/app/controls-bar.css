@@ -481,8 +481,10 @@
  */
 @media (max-width: 599px) {
   #controls-top > .control-stack:first-child { flex-direction: row; align-items: flex-end; gap: 0.4rem; }
-  #controls-top > .control-stack:first-child > #langGroup { flex: 0 1 auto; min-width: 0; }
-  #controls-top > .control-stack:first-child > #compareGroup { flex: 0 0 auto; }
+  /* Language and "+ Languages" are equal halves, like Quiz Style and Direction below them. */
+  #controls-top > .control-stack:first-child > :is(#langGroup, #compareGroup) { flex: 1 1 0; min-width: 0; }
+  #controls-top > .control-stack:first-child > :is(#langGroup, #compareGroup) :is(.lang-dd, .lang-dd-trigger, .lang-picker-btn) { width: 100%; }
+  #controls-top > .control-stack:first-child :is(.lang-picker-btn, .lang-dd-trigger) { min-height: 40px; font-size: 0.85rem; }
 
   .words-controls { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.3rem; }
   .words-controls > #topNRow { display: contents; }

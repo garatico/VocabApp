@@ -40,6 +40,16 @@ export interface PopoverPlacement {
   alignRight?: boolean;
 }
 
+/** Height of the system bar over the page's bottom edge, in CSS px (0 where nothing overlaps it). */
+function safeBottom(): number {
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;left:0;bottom:0;width:0;height:env(safe-area-inset-bottom, 0px);visibility:hidden;pointer-events:none';
+  document.body.appendChild(probe);
+  const h = probe.getBoundingClientRect().height;
+  probe.remove();
+  return h;
+}
+
 export function positionPopover(
   popover: HTMLElement,
   anchor: HTMLElement,
@@ -51,7 +61,8 @@ export function positionPopover(
   const scrollX = window.scrollX;
   const scrollY = window.scrollY;
   const vw      = document.documentElement.clientWidth;
-  const vh      = document.documentElement.clientHeight;
+  // The system's own bottom bar (Android back/home/recents) counts as off-screen, or a popover can end up under it.
+  const vh      = document.documentElement.clientHeight - safeBottom();
 
   // ── Horizontal ──
   // Same "prefer the side with room" reasoning as the vertical placement

@@ -35,6 +35,17 @@ export const BROWSE_ALL_LIST = '\u0000browse-all\u0000';
  *  shows the empty panel and stops the sidebar falling back to the first list. */
 export const NO_SELECTION = '\u0000none\u0000';
 
+/** A phone: My Lists is two screens (the index of lists, then the list you opened) rather than two panes. */
+export function isPhoneLayout(): boolean {
+  return window.matchMedia('(max-width: 599px)').matches;
+}
+
+/** What is open when a language is first shown: its first list on a wide screen; on a phone nothing, so the
+ *  index of lists is the first thing seen and a list opens full screen when tapped. */
+export function initialSelection(firstList: string | undefined): string {
+  return isPhoneLayout() ? NO_SELECTION : (firstList ?? '');
+}
+
 /** Closes whatever is open — a list, smart list, profile, Browse All Words — leaving the panel empty. */
 export function deselectAll(ctx: ListsCtx): void {
   ctx.selectedList = NO_SELECTION;
