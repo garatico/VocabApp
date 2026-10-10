@@ -1111,7 +1111,7 @@ html.dark .settings-fold .settings-group { background: color-mix(in srgb, var(--
     border: 1px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer;
   }
   .settings-nav-toggle:hover { border-color: var(--accent); }
-  .settings-nav-toggle-label { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+  .settings-nav-toggle-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
   .settings-nav-current { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .settings-nav-toggle-caret { color: var(--text-muted); transition: transform var(--transition-fast); }
   .settings-nav--open .settings-nav-toggle-caret { transform: rotate(180deg); }

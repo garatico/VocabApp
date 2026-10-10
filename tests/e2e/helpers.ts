@@ -97,3 +97,12 @@ export async function rowAction(page: Page, item: string, row = page.locator('.m
   await row.locator('.ml-row-menu-btn').click();
   await row.locator(item).click();
 }
+
+/** Switches to a mode the way the viewport allows: the tab where the tab row is shown, the mode menu
+ *  (ui/mode-menu.ts) on a phone, where the row is replaced by one button and the tabs are hidden. */
+export async function openMode(page: Page, mode: string): Promise<void> {
+  const tab = page.locator(`.mode-tab[data-mode="${mode}"]`);
+  if (await tab.isVisible()) { await tab.click(); return; }
+  await page.locator('#modeMenuBtn').click();
+  await page.locator(`#modeMenuList li[data-mode="${mode}"]`).click();
+}

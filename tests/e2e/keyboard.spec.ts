@@ -9,6 +9,7 @@ async function open(page: Page): Promise<void> {
   await disableSimpleMode(page);
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await page.locator('html[data-app-ready="true"]').waitFor();   // startup (incl. resetting where Tab begins) is done
 }
 
 test('the first Tab stop is a skip link that lands on the quiz controls', async ({ page }) => {

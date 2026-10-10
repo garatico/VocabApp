@@ -275,6 +275,7 @@ html.dark .word-editor .filter-chip[data-band]:not(.active) {
   gap: 1.25rem;
   align-items: stretch;
   height: calc(100vh - 130px);
+  height: calc(100dvh - 130px);
 }
 .word-editor .word-panel {
   width: 330px;
@@ -302,6 +303,11 @@ html.dark .word-editor .filter-chip[data-band]:not(.active) {
 .word-editor .word-list-new-btn {
   padding: 0.15rem 0.45rem;
   font-size: 0.7rem;
+}
+@media (max-width: 599px) {
+  .word-editor .word-list-new-btn { padding: 0.3rem 0.7rem; font-size: 0.75rem; min-height: 34px; }
+  
+  
 }
 .word-editor .word-list {
   flex: 1;
@@ -490,6 +496,12 @@ html.dark .word-editor .badge-band { color: hsl(var(--band-hue) 62% 72%); }
 .word-editor .badge-custom { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
 .word-editor .badge-edited { background: color-mix(in srgb, hsl(35 90% 50%) 16%, transparent); color: hsl(35 80% 38%); }
 html.dark .word-editor .badge-edited { color: hsl(35 85% 65%); }
+@media (max-width: 599px) {
+  .word-editor .word-item-rank { font-size: 0.72rem; }
+  .word-editor .badge { font-size: 0.7rem; }
+  
+  
+}
 
 /* ── from public/styles/admin/edit-form.css ── */
 .word-editor .edit-form-card {

@@ -162,7 +162,7 @@
 }
 
 .ml-list-count {
-  font-size: 0.66rem;
+  font-size: 0.72rem;
   font-family: 'DM Mono', monospace;
   color: var(--text-muted);
   background: var(--surface2);
@@ -1324,6 +1324,8 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
   .ml-word-list {
     min-height: 58vh;
     max-height: 68vh;
+    min-height: 58dvh;
+    max-height: 68dvh;
   }
 
   /* A slow drag across word/translation text was being read as a text
@@ -1853,7 +1855,7 @@ html.dark .ml-quiz-badge[data-strength]:not([data-strength="0"]) {
 }
 
 .ml-smart-hint {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-style: italic;
   opacity: 0.75;
 }

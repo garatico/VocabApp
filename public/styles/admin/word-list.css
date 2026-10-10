@@ -16,6 +16,7 @@
   gap: 1.25rem;
   align-items: stretch;
   height: calc(100vh - 130px);
+  height: calc(100dvh - 130px);
 }
 
 .word-panel {
@@ -47,6 +48,9 @@
 .word-list-new-btn {
   padding: 0.15rem 0.45rem;
   font-size: 0.7rem;
+}
+@media (max-width: 599px) {
+  .word-list-new-btn { padding: 0.3rem 0.7rem; font-size: 0.75rem; min-height: 34px; }
 }
 
 /* ── Scrollable list ── */
@@ -297,3 +301,9 @@ label .hint {
 .badge-custom { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
 .badge-edited { background: color-mix(in srgb, hsl(35 90% 50%) 16%, transparent); color: hsl(35 80% 38%); }
 html.dark .badge-edited { color: hsl(35 85% 65%); }
+
+/* Phones (My Content's Word Editor shares this sheet): row badges and ranks a little larger. */
+@media (max-width: 599px) {
+  .word-item-rank { font-size: 0.72rem; }
+  .badge { font-size: 0.7rem; }
+}

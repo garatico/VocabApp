@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { startMode, confirmNext, cancelNext } from './helpers.ts';
+import { startMode, confirmNext, cancelNext, openMode } from './helpers.ts';
 
 /**
  * How the Settings screen is organised: sections fall under five nav headings and follow the same
@@ -15,7 +15,7 @@ async function openSettings(page: Page): Promise<void> {
   });
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
-  await page.locator('.mode-tab[data-mode="settings"]').click();
+  await openMode(page, 'settings');
   await expect(page.locator('#settingsSearch')).toBeVisible();
 }
 
@@ -86,7 +86,7 @@ test('a changed setting is still changed after a reload, and search finds a colo
   await page.locator('#settingCols .sort-order-btn[data-cols="4"]').evaluate((b: HTMLElement) => b.click());
   await page.reload();
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
-  await page.locator('.mode-tab[data-mode="settings"]').click();
+  await openMode(page, 'settings');
   await expect(page.locator('#settingsChangedCount')).toHaveText('1');
 
   await page.locator('#settingsSearch').fill('colors');
@@ -121,7 +121,7 @@ test('Reset all to defaults clears every preference but keeps lists and progress
   });
   await page.reload();
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
-  await page.locator('.mode-tab[data-mode="settings"]').click();
+  await openMode(page, 'settings');
   await expect(page.locator('#settingsChangedCount')).toHaveText('2');      // the column count and the colour
 
   await cancelNext(page);
@@ -133,7 +133,7 @@ test('Reset all to defaults clears every preference but keeps lists and progress
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   expect(await page.evaluate(() => [localStorage.getItem('s_table_cols'), localStorage.getItem('s_list_color_profile')])).toEqual([null, null]);
   expect(await page.evaluate(() => localStorage.getItem('vq_lists_spanish'))).toContain('Keepers');
-  await page.locator('.mode-tab[data-mode="settings"]').click();
+  await openMode(page, 'settings');
   await expect(page.locator('#settingsChangedCount')).toHaveText('');
 });
 
@@ -199,7 +199,7 @@ test('Settings reopens on the section you were last reading', async ({ page }) =
 
   await page.reload();
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
-  await page.locator('.mode-tab[data-mode="settings"]').click();
+  await openMode(page, 'settings');
   await expect.poll(() => page.evaluate(() => Math.round(document.getElementById('settings-sec-glossary')!.getBoundingClientRect().top - document.querySelector('.settings-wrap')!.getBoundingClientRect().top))).toBeLessThan(60);   // the list scrolls, not the page
   await expect(page.locator('#settingsBodyGlossary')).not.toHaveClass(/filter-body--collapsed/);
 });
@@ -234,7 +234,7 @@ test('a new user sees only the essentials; the rest is behind Advanced', async (
   await page.addInitScript(() => window.localStorage.setItem('s_simple_mode', 'false'));
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
-  await page.locator('.mode-tab[data-mode="settings"]').click();
+  await openMode(page, 'settings');
   // Advanced mode is off: these are not on the page at all.
   for (const id of ['settingTimedQuiz', 'settingTableRowDensity', 'settingQuestionGlosses', 'settingConjPageSize', 'settingStreakGoal']) {
     if (await page.locator('#' + id).count()) await expect(page.locator('#' + id)).toBeHidden();
@@ -256,7 +256,7 @@ test('the corner buttons sit inside the top bar and never overlap the page below
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
   for (const tab of ['mylists', 'myContent', 'history', 'settings', 'table']) {
-    await page.locator(`.mode-tab[data-mode="${tab}"]`).click();
+    await openMode(page, tab);
     await page.waitForTimeout(300);
     const r = await page.evaluate(() => {
       const bar = document.getElementById('controls')!.getBoundingClientRect();
@@ -312,7 +312,7 @@ test('"Reset all" offers Undo after the page reloads', async ({ page }) => {
   await page.evaluate(() => { localStorage.setItem('s_table_cols', '4'); localStorage.setItem('vq_daily_goal', JSON.stringify({ words: 25, minutes: 0, streak: 0 })); });
   await page.reload();
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
-  await page.locator('.mode-tab[data-mode="settings"]').click();
+  await openMode(page, 'settings');
   await expect(page.locator('#settingsChangedCount')).toHaveText('2');            // the column count and the words goal
 
   await confirmNext(page);
@@ -359,7 +359,7 @@ test('the quiz screen links straight to a setting, switching Advanced on when it
   await page.addInitScript(() => window.localStorage.setItem('s_simple_mode', 'false'));
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
-  await page.locator('.mode-tab[data-mode="table"]').click();
+  await openMode(page, 'table');
   await page.locator('#tableSettingsLinks [data-setting-link="settingTableRowDensity"]').evaluate((b: HTMLElement) => b.click());
   await expect(page.locator('#settingsArea')).toBeVisible();
   await expect(page.locator('#settingTableRowDensity')).toBeVisible();                 // Appearance + its Advanced fold opened
@@ -442,7 +442,7 @@ test('search only offers settings that the current Advanced / Simple mode makes 
   await page.addInitScript(() => window.localStorage.setItem('s_simple_mode', 'false'));     // Advanced stays off
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
-  await page.locator('.mode-tab[data-mode="settings"]').click();
+  await openMode(page, 'settings');
 
   await page.locator('#settingsSearch').fill('filter linking');                              // an Advanced-only setting
   await expect(page.locator('#settingsSearchEmpty')).toBeVisible();
@@ -490,7 +490,7 @@ test('Simple Mode hides the Settings shortcuts even when they are switched on', 
   });
   await page.goto('/');
   await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
-  await page.locator('.mode-tab[data-mode="table"]').click();
+  await openMode(page, 'table');
   await page.locator('#startBtn').click();
   await expect(page.locator('#tableControls')).toBeVisible();
   await expect(page.locator('#tableSettingsLinks')).toBeHidden();

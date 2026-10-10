@@ -824,7 +824,7 @@ html:not(.dark) .crt-input.incorrect {
 }
 .conj-chip-native { font-size: 0.8rem; }
 .conj-chip-en {
-  font-size: 0.64rem;
+  font-size: 0.72rem;
   font-weight: 400;
   font-style: italic;
 }

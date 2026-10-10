@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, openMode } from './helpers.ts';
 
 /**
  * Layout requests, mostly for phones: the filter pills collapse; Conjugation's View and Display share a line;
@@ -36,7 +36,7 @@ test('the filter pills collapse and expand, and stay as left', async ({ page }) 
 
 test('Conjugation on a phone: View and Display labels share a line, their controls the next', async ({ page }) => {
   await open(page, 390);
-  await page.locator('.mode-tab[data-mode="conjugation"]').click();
+  await openMode(page, 'conjugation');
   await expect(page.locator('#conjViewSelect')).toBeVisible();
   const [viewLabel, dispLabel] = [await box(page, '#conjViewGroup > label'), await box(page, '#conjDisplayGroup > label')];
   const [view, disp] = [await box(page, '#conjViewSelect'), await box(page, '#conjDisplayCycle')];
@@ -47,7 +47,7 @@ test('Conjugation on a phone: View and Display labels share a line, their contro
 
 test('My Lists\' language picker shows flags, and still switches the language', async ({ page }) => {
   await open(page, 1400);
-  await page.locator('.mode-tab[data-mode="mylists"]').click();
+  await openMode(page, 'mylists');
   const trigger = page.locator('#mlLangSelectBtn');
   await expect(trigger.locator('img.lang-dd-flag')).toBeVisible();
   await expect(trigger).toContainText('Spanish');
@@ -60,7 +60,7 @@ test('My Lists\' language picker shows flags, and still switches the language', 
 for (const width of [390, 1400]) {
   test(`Settings' top bar collapses, and its switches clear the button (${width}px)`, async ({ page }) => {
     await open(page, width);
-    await page.locator('.mode-tab[data-mode="settings"]').click();
+    await openMode(page, 'settings');
     const btn = page.locator('#settingsBarCollapseBtn');
     await expect(btn).toBeVisible();
     const b = await box(page, '#settingsBarCollapseBtn');
@@ -74,10 +74,10 @@ for (const width of [390, 1400]) {
     const card = await box(page, '#controls');
     const corner = await box(page, '#controlsCorner');
     expect(corner.y + corner.height).toBeLessThanOrEqual(card.y + card.height);
-    await page.locator('.mode-tab[data-mode="table"]').click();
+    await openMode(page, 'table');
     await expect(page.locator('#settingsBarCollapseBtn')).toBeHidden();
     await expect(page.locator('#controlsBody')).toBeVisible();   // its own section: Table's controls stay open
-    await page.locator('.mode-tab[data-mode="settings"]').click();
+    await openMode(page, 'settings');
     await btn.click();
     await expect(page.locator('#settingsToolbar')).toBeVisible();
   });
@@ -96,7 +96,7 @@ test('Table on a phone: scrolled, only the progress line stays pinned', async ({
 
 test('Conjugation on a phone: scrolled, only the progress bar stays pinned', async ({ page }) => {
   await open(page, 390);
-  await page.locator('.mode-tab[data-mode="conjugation"]').click();
+  await openMode(page, 'conjugation');
   await page.locator('#startBtn').click();
   await expect(page.locator('.conj-progress-bars')).toBeVisible();
   await page.mouse.wheel(0, 3000);
@@ -108,7 +108,7 @@ test('Conjugation on a phone: scrolled, only the progress bar stays pinned', asy
 
 test('My Content on a phone: filters on two rows, and no empty editor until a word is picked', async ({ page }) => {
   await open(page, 390);
-  await page.locator('.mode-tab[data-mode="myContent"]').click();
+  await openMode(page, 'myContent');
   await expect(page.locator('.mc-we .word-item').first()).toBeVisible();
   const chips = await page.locator('.mc-we .filter-bar > .filter-chip-field').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)));
   expect(new Set(chips).size).toBe(1);
@@ -130,13 +130,13 @@ test('on a phone, Start brings the quiz into view (the setup panel stays open)',
 
 test('History\'s language picker shows flags', async ({ page }) => {
   await open(page, 390);
-  await page.locator('.mode-tab[data-mode="history"]').click();
+  await openMode(page, 'history');
   await expect(page.locator('#historyLangSelectBtn img.lang-dd-flag')).toBeVisible();
 });
 
 test('on a phone, chip groups are even grids: no option left alone on a row of its own', async ({ page }) => {
   await open(page, 360);
-  await page.locator('.mode-tab[data-mode="picture"]').click();
+  await openMode(page, 'picture');
   const widths = await page.locator('#controls-top .control-group--chip .sort-order-toggle:visible .sort-order-btn')
     .evaluateAll(els => els.filter(e => (e as HTMLElement).offsetParent).map(e => Math.round(e.getBoundingClientRect().width)));
   expect(widths.length).toBeGreaterThan(3);
@@ -155,7 +155,7 @@ test('on a phone, the controls people tap are at least 30px tall', async ({ page
   await expect(page.locator('#tableWrap input[type="text"]').first()).toBeVisible();
   expect(await tooSmall()).toEqual([]);
   for (const mode of ['trivia', 'mylists', 'history', 'settings']) {
-    await page.locator(`.mode-tab[data-mode="${mode}"]`).click();
+    await openMode(page, mode);
     await page.waitForTimeout(600);
     expect(await tooSmall(), mode).toEqual([]);
   }
@@ -165,7 +165,7 @@ test('My Lists on a phone: a long list name shows whole, and the stats row has n
   await open(page, 390, () => {
     localStorage.setItem('vq_lists_spanish', JSON.stringify({ EspañolDeLosLibrosQueLeo: ['hablar', 'comer'] }));
   });
-  await page.locator('.mode-tab[data-mode="mylists"]').click();
+  await openMode(page, 'mylists');
   await page.locator('.ml-list-item', { hasText: 'EspañolDeLosLibrosQueLeo' }).click();   // a phone starts on the index of lists
   const title = page.locator('#myListsBar .ml-topbar-title');
   await expect(title).toContainText('EspañolDeLosLibrosQueLeo');
@@ -177,7 +177,7 @@ test('the narrowest phone (360px): My Lists rows show a short word whole, and th
   await open(page, 360, () => {
     localStorage.setItem('vq_lists_spanish', JSON.stringify({ Reading: ['hablar', 'comer'] }));
   });
-  await page.locator('.mode-tab[data-mode="mylists"]').click();
+  await openMode(page, 'mylists');
   await page.locator('.ml-list-item', { hasText: 'Reading' }).click();
   await expect(page.locator('.ml-word-item')).toHaveCount(2);
   await expect.poll(() => page.locator('.ml-word-item .ml-word-text').evaluateAll(els => els.every(e => e.scrollWidth <= e.clientWidth + 1))).toBe(true);
@@ -228,7 +228,7 @@ test('Active filters: the chips start on a line of their own, under the heading'
 
 test('My Content on a phone: the Domain options stay on screen', async ({ page }) => {
   await open(page, 390);
-  await page.locator('.mode-tab[data-mode="myContent"]').click();
+  await openMode(page, 'myContent');
   await page.locator('#mcwe-domainFilterTrigger').click();
   const panel = await box(page, '#mcwe-domainFilterPanel');
   expect(panel.x).toBeGreaterThanOrEqual(0);
@@ -237,7 +237,7 @@ test('My Content on a phone: the Domain options stay on screen', async ({ page }
 
 test('My Content: glosses are numbered and drag into a new order', async ({ page }) => {
   await open(page, 1400);
-  await page.locator('.mode-tab[data-mode="myContent"]').click();
+  await openMode(page, 'myContent');
   await page.locator('#mcwe-searchInput').fill('hablar');
   await page.locator('#mcwe-searchBtn').click();
   await page.locator('.mc-we .word-item', { hasText: 'hablar' }).first().click();
@@ -258,7 +258,7 @@ test('My Content: glosses are numbered and drag into a new order', async ({ page
 
 test('History: its four views are tabs in the top bar, one at a time', async ({ page }) => {
   await open(page, 1400, () => { localStorage.setItem('s_due_enabled', 'true'); });
-  await page.locator('.mode-tab[data-mode="history"]').click();
+  await openMode(page, 'history');
   const bar = page.locator('#historyBar');
   await expect(bar.locator('.history-tab-btn')).toHaveText(['Progress', 'Due for Review', 'Words to Review', 'Recent Sessions']);
   await expect(page.locator('#historyView-progress')).toBeVisible();
@@ -298,7 +298,7 @@ test('My Lists on a phone is two screens: the index of lists, then the open list
   await open(page, 360, () => {
     localStorage.setItem('vq_lists_spanish', JSON.stringify({ Reading: ['hablar', 'comer'] }));
   });
-  await page.locator('.mode-tab[data-mode="mylists"]').click();
+  await openMode(page, 'mylists');
   const wrap = page.locator('#myListsWrap');
   // Index: the lists, no panel, nothing running off the right edge, no box with its own scrollbar.
   await expect(wrap).toHaveAttribute('data-ml-phone', 'index');
@@ -322,7 +322,7 @@ test('My Lists on a phone is two screens: the index of lists, then the open list
 
 test('My Content on a phone: the language box shares the corner line, Backup sits with the tabs, a word opens as its own screen', async ({ page }) => {
   await open(page, 360);
-  await page.locator('.mode-tab[data-mode="myContent"]').click();
+  await openMode(page, 'myContent');
   await expect(page.locator('.mc-we .word-item').first()).toBeVisible();
   const corner = await box(page, '.controls-corner');
   const slot = await box(page, '.mc-lang-slot');
@@ -349,7 +349,7 @@ test('My Content on a phone: the language box shares the corner line, Backup sit
 
 test('History on a phone: the language box shares the corner line', async ({ page }) => {
   await open(page, 360);
-  await page.locator('.mode-tab[data-mode="history"]').click();
+  await openMode(page, 'history');
   const corner = await box(page, '.controls-corner');
   const lang = await box(page, '#historyBar .history-lang-row');
   expect(Math.abs(lang.y + lang.height / 2 - (corner.y + corner.height / 2))).toBeLessThan(14);
@@ -359,13 +359,13 @@ test('History on a phone: the language box shares the corner line', async ({ pag
 test('on a phone Language and "+ Languages" are equal halves, in Table and Conjugation, level with Quiz Style / Direction', async ({ page }) => {
   await open(page, 360);
   for (const mode of ['table', 'conjugation']) {
-    await page.locator(`.mode-tab[data-mode="${mode}"]`).click();
+    await openMode(page, mode);
     const lang = await box(page, '#langGroup');
     const more = await box(page, '#compareGroup');
     expect(Math.abs(lang.width - more.width)).toBeLessThan(3);
     expect(lang.x + lang.width).toBeLessThanOrEqual(more.x + 1);
   }
-  await page.locator('.mode-tab[data-mode="table"]').click();
+  await openMode(page, 'table');
   const style = await box(page, '#tableStyleGroup');
   const lang = await box(page, '#langGroup');
   expect(Math.abs(lang.width - style.width)).toBeLessThan(3);
@@ -375,10 +375,44 @@ test('on a phone My Lists, My Content and History share one language dropdown st
   await open(page, 360);
   const seen: string[] = [];
   for (const [mode, sel] of [['mylists', '#myListsBar .ml-lang-row .lang-dd-trigger'], ['history', '#historyBar .history-lang-row .lang-dd-trigger'], ['myContent', '#myContentBar .mc-lang-slot .lang-dd-trigger']] as const) {
-    await page.locator(`.mode-tab[data-mode="${mode}"]`).click();
+    await openMode(page, mode);
     const t = page.locator(sel).first();
     await expect(t).toBeVisible();
     seen.push(await t.evaluate(e => { const s = getComputedStyle(e); return `${s.fontSize}|${s.borderTopWidth}|${s.borderRadius}|${Math.round(e.getBoundingClientRect().height)}`; }));
   }
   expect(new Set(seen).size).toBe(1);
+});
+
+test('on a phone the tab row is one button and a grouped sheet; picking an entry switches the real tab', async ({ page }) => {
+  await open(page, 390);
+  const btn = page.locator('#modeMenuBtn');
+  await expect(btn).toBeVisible();
+  await expect(page.locator('.mode-tablist')).toBeHidden();
+  await expect(btn).toContainText('Table');
+  expect((await box(page, '#modeMenuBtn')).height).toBeGreaterThanOrEqual(44);
+
+  await btn.click();
+  const sheet = page.locator('#modeMenuList');
+  await expect(sheet).toBeVisible();
+  await expect(sheet.locator('.mode-menu-group')).toContainText(['Quizzes', 'Library', 'App']);
+  await expect(sheet.locator('li[data-mode="table"]')).toHaveAttribute('aria-selected', 'true');
+  const b = (await sheet.boundingBox())!;
+  expect(b.x).toBeGreaterThanOrEqual(0);
+  expect(b.x + b.width).toBeLessThanOrEqual(390);
+
+  await sheet.locator('li[data-mode="history"]').click();
+  await expect(sheet).toBeHidden();
+  await expect(page.locator('.mode-tab[data-mode="history"]')).toHaveClass(/active/);
+  await expect(btn).toContainText('History');
+
+  await btn.click();                     // Escape closes it without changing the mode
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
+  await expect(btn).toContainText('History');
+});
+
+test('above a phone the tab row is unchanged and the mode menu is not shown', async ({ page }) => {
+  await open(page, 1000);
+  await expect(page.locator('.mode-tablist')).toBeVisible();
+  await expect(page.locator('#modeMenuBtn')).toBeHidden();
 });

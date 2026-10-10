@@ -42,6 +42,8 @@ import { initStorageWarning } from './ui/storage-warning.ts';
 import { initStaleBuildRecovery } from './ui/stale-build.ts';
 import { renderLevelChoices } from './ui/level-picker.ts';
 import { initGlobalShortcuts } from './ui/global-shortcuts.ts';
+import { initKeyboardAwareness } from './ui/keyboard-aware.ts';
+import { initModeMenu } from './ui/mode-menu.ts';
 import { initMissedAdd } from './ui/quiz-summary.ts';
 import { offerResume } from './ui/resume-banner.ts';
 import { bindBackupSettings, maybeRemindBackup, startAutoBackup } from './ui/backup-settings.ts';
@@ -1383,6 +1385,8 @@ void (async function init(): Promise<void> {
   initDiceButton();
   initShortcuts();
   initGlobalShortcuts();
+  initKeyboardAwareness();
+  initModeMenu();
   initReloadButton();
   initListFilter(langSelect?.value ?? 'spanish');
   syncConjViewToggle();
@@ -1473,4 +1477,7 @@ void (async function init(): Promise<void> {
   offerResume();
   prefetchModes();
   resetTabOrigin();
+  // Startup is finished: the tab origin is reset and the first Tab key press starts at the skip link.
+  // Specs that drive the keyboard wait for this rather than guessing at a delay.
+  document.documentElement.dataset['appReady'] = 'true';
 })();

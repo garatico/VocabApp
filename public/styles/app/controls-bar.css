@@ -377,7 +377,7 @@
   /* Start button is full width and this size at every breakpoint now —
      see buttons.css. Nothing to override here below 599px. */
 
-  .control-group > label { font-size: 0.63rem; }
+  .control-group > label { font-size: 0.72rem; }
   .size-row { gap: 0.3rem; width: 100%; }
 
   /*

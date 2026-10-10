@@ -862,3 +862,8 @@ html.dark .pos-chip[data-band]:not(.active):hover {
   .filters-row .filter-section-label[data-short]::after { content: attr(data-short); font-size: 0.72rem; }
   .filters-row .filter-body { left: 0; right: 0; width: auto; min-width: 0; max-width: none; }
 }
+
+/* Phones: the section collapse bar is a tap target. */
+@media (max-width: 599px) {
+  .filter-collapse-btn { min-height: 36px; }
+}

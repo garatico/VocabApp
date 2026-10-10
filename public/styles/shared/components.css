@@ -500,3 +500,16 @@
    text color as .gender-word-bg above, and for the same reason. */
 .gender-box-bg--masculine { background: var(--gender-color-masculine); color: #1a1916; }
 .gender-box-bg--feminine  { background: var(--gender-color-feminine); color: #1a1916; }
+
+/* Phones: the All / None / Clear buttons are tapped, not just read. */
+@media (max-width: 599px) {
+  .ui-btn-mini,
+  .conj-tf-header button,
+  #conjFormsAll,
+  #conjFormsNone,
+  #clearAllDomains {
+    font-size: 0.75rem;
+    min-height: 32px;
+    padding: 0.25rem 0.6rem;
+  }
+}

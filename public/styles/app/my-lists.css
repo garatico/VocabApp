@@ -39,6 +39,7 @@
      panel on a typical desktop monitor, which is exactly the space a
      scrolling word list wants back. */
   height: calc(100vh - 56px);
+  height: calc(100dvh - 56px);
   min-height: 640px;
   max-height: 1600px;
 }

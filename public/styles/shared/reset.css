@@ -28,6 +28,7 @@ body {
   background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
+  min-height: 100dvh;   /* excludes the phone URL bar, which 100vh counts as page */
   /* safe-area-inset: respect notches, home indicators, and rounded corners */
   padding: calc(0.75rem + env(safe-area-inset-top))
            calc(0.65rem + env(safe-area-inset-right))

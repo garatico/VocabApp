@@ -1,4 +1,5 @@
 import { Settings } from '../settings.ts';
+import { watchScrollFade } from './scroll-fade.ts';
 
 type CoreMode = 'table' | 'picture' | 'conjugation';
 type Mode = CoreMode | string;
@@ -217,11 +218,25 @@ export function bindModeSwitch({
         // was the alternative.
         btn.tabIndex = isActive ? 0 : -1;
       }
-      if (isActive && scrollTabIntoView) btn.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+      // Scroll the strip itself, not `btn.scrollIntoView()`: that also moves the browser's sequential-focus
+      // starting point to the tab, so after load the first Tab key press skipped the skip link.
+      if (isActive && scrollTabIntoView) {
+        const strip = btn.closest<HTMLElement>('.mode-tabs');
+        if (strip && strip.scrollWidth > strip.clientWidth) {
+          const b = btn.getBoundingClientRect();
+          const s = strip.getBoundingClientRect();
+          const pad = 8;
+          if (b.left < s.left + pad) strip.scrollTo({ left: strip.scrollLeft + (b.left - s.left) - pad, behavior: 'smooth' });
+          else if (b.right > s.right - pad) strip.scrollTo({ left: strip.scrollLeft + (b.right - s.right) + pad, behavior: 'smooth' });
+        }
+      }
     });
 
     onActivate[mode]?.();
   }
+
+  const modeTabs = document.querySelector<HTMLElement>('.mode-tabs');
+  if (modeTabs) watchScrollFade(modeTabs);
 
   document.querySelectorAll<HTMLElement>('.mode-tab').forEach(btn => {
     btn.addEventListener('click', () => {

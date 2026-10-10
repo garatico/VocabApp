@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, openMode } from './helpers.ts';
 
 /**
  * Layout requests: the quiz setup panel stays open on Start unless asked otherwise; the corner cluster
@@ -82,7 +82,7 @@ test.describe('My Lists word table', () => {
     // Wide enough for the full table (the sidebar takes ~440px; under ~800px of list it goes compact).
     await page.setViewportSize({ width: 1400, height: 900 });
     await open(page);
-    await page.locator('.mode-tab[data-mode="mylists"]').click();
+    await openMode(page, 'mylists');
     await page.locator('.ml-single-head .ml-new-list-btn:not(.ml-new-folder-btn)').click();
     await page.locator('.ml-list-name-input').fill('Layout');
     await page.locator('.ml-list-name-input').press('Enter');
@@ -125,7 +125,7 @@ for (const width of [390, 1024]) {
     });
     await page.setViewportSize({ width, height: 844 });
     await open(page);
-    await page.locator('.mode-tab[data-mode="mylists"]').click();
+    await openMode(page, 'mylists');
     if (width < 600) await page.locator('.ml-list-item', { hasText: 'Reading' }).click();   // a phone starts on the index of lists
     await expect(page.locator('.ml-table.ml-cols--compact')).toBeVisible();
     await expect(page.locator('.ml-word-item')).toHaveCount(4);
@@ -254,7 +254,7 @@ test.describe('Active filters', () => {
 test('Settings → Help & Tips: the Glossary\'s CSV entry opens the CSV guide', async ({ page }) => {
   await disableSimpleMode(page);
   await open(page);
-  await page.locator('.mode-tab[data-mode="settings"]').click();
+  await openMode(page, 'settings');
   await page.locator('[data-collapse="settingsBodyGlossary"]').click();
   await page.locator('[data-setting-link="csvGuide"]').click();
   await expect(page.locator('#csvGuide table.csv-sheet').first()).toBeVisible();
@@ -265,7 +265,7 @@ test('Settings → Help & Tips fits a phone: the CSV sheets scroll inside their 
   await disableSimpleMode(page);
   await page.setViewportSize({ width: 375, height: 812 });
   await open(page);
-  await page.locator('.mode-tab[data-mode="settings"]').click();
+  await openMode(page, 'settings');
   await page.locator('.settings-nav-toggle').click();                            // on a phone the sections fold behind "Section ▾"
   await page.locator('.settings-nav-link[href="#settings-sec-help"]').click();
   await expect(page.locator('#csvGuide table.csv-sheet').first()).toBeVisible();

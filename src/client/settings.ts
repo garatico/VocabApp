@@ -1130,6 +1130,11 @@ export function applyTableRowDensity(density: TableRowDensity): void {
 
 export function applyAutofillAttr(el: HTMLInputElement): void {
   el.autocomplete = Settings.getAutofillEnabled() ? 'on' : 'off';
+  // Phone keyboards would otherwise capitalise the first letter and "correct" a
+  // foreign word into a different one, so a right answer arrives wrong.
+  el.setAttribute('autocorrect', 'off');
+  el.setAttribute('autocapitalize', 'off');
+  el.spellcheck = false;
 }
 
 /**

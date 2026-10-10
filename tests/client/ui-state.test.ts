@@ -360,23 +360,53 @@ describe('bindModeSwitch — mode-tab active state and scroll-into-view', () => 
     expect(admin.hasAttribute('aria-selected')).toBe(false);
   });
 
-  it('scrolls the newly active tab into view by default', () => {
+  /** Puts the Picture tab in a sideways-scrolling `.mode-tabs` strip, positioned wherever the test says. */
+  function stripWith(tabRect: { left: number; right: number }): { strip: HTMLElement; scrollTo: ReturnType<typeof vi.fn> } {
+    const strip = document.createElement('div');
+    strip.className = 'mode-tabs';
+    document.body.appendChild(strip);
+    strip.appendChild(tabs.picture);
+    Object.defineProperty(strip, 'scrollWidth', { value: 600, configurable: true });
+    Object.defineProperty(strip, 'clientWidth', { value: 300, configurable: true });
+    strip.getBoundingClientRect = () => ({ left: 0, right: 300, top: 0, bottom: 40, width: 300, height: 40, x: 0, y: 0, toJSON() {} }) as DOMRect;
+    tabs.picture.getBoundingClientRect = () => ({ ...tabRect, top: 0, bottom: 40, width: tabRect.right - tabRect.left, height: 40, x: tabRect.left, y: 0, toJSON() {} }) as DOMRect;
+    const scrollTo = vi.fn();
+    strip.scrollTo = scrollTo as unknown as typeof strip.scrollTo;
+    return { strip, scrollTo };
+  }
+
+  it('scrolls the tab strip so a newly active tab that is off-screen comes into view', () => {
+    const { tableArea, pictureArea, conjugationArea } = buildFixture();
+    const { scrollTo } = stripWith({ left: 400, right: 480 });
+    bindModeSwitch({ tableArea, pictureArea, conjugationArea });
+    tabs.picture.click();
+    expect(scrollTo).toHaveBeenCalled();
+  });
+
+  it('leaves the strip alone when the active tab is already in view', () => {
+    const { tableArea, pictureArea, conjugationArea } = buildFixture();
+    const { scrollTo } = stripWith({ left: 100, right: 180 });
+    bindModeSwitch({ tableArea, pictureArea, conjugationArea });
+    tabs.picture.click();
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('never calls scrollIntoView on the tab: it moves the Tab-key starting point', () => {
     const { tableArea, pictureArea, conjugationArea } = buildFixture();
     const spy = vi.fn();
     tabs.picture.scrollIntoView = spy;
     bindModeSwitch({ tableArea, pictureArea, conjugationArea });
     tabs.picture.click();
-    expect(spy).toHaveBeenCalled();
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it('does not scroll when updateModeUI(false) is called directly (a filter-visibility resync, not a tab switch)', () => {
     const { tableArea, pictureArea, conjugationArea } = buildFixture();
     const { updateModeUI } = bindModeSwitch({ tableArea, pictureArea, conjugationArea });
     tabs.picture.click();
-    const spy = vi.fn();
-    tabs.picture.scrollIntoView = spy;
+    const { scrollTo } = stripWith({ left: 400, right: 480 });
     updateModeUI(false);
-    expect(spy).not.toHaveBeenCalled();
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 });
 

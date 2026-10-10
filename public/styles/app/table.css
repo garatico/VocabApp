@@ -1403,7 +1403,7 @@ body.hide-settings-links .tsb-more-row.settings-links { display: none; }
     min-width: 0;
     min-height: 32px;
     padding: 0.3rem 0.25rem;
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     white-space: nowrap;
   }
   .tsb-nav .table-pager .pager-btn { min-height: 36px; min-width: 40px; }
@@ -1411,7 +1411,7 @@ body.hide-settings-links .tsb-more-row.settings-links { display: none; }
 
 @media (max-width: 360px) {
   .tsb-nav #tableControls { gap: 0.2rem; }
-  .tsb-nav #tableControls button { font-size: 0.64rem; padding-inline: 0.2rem; }
+  .tsb-nav #tableControls button { font-size: 0.7rem; padding-inline: 0.2rem; }
 }
 
 /* ── Phones: pin only the progress line ──────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { readString, writeString, readJson, writeJson, isStringArray } from '../../utils/storage.ts';
 import { el } from './shared.ts';
+import { watchScrollFade } from '../../ui/scroll-fade.ts';
 import '../../styles-lazy/my-content-bundle.css';
 
 /**
@@ -136,6 +137,7 @@ export function buildContentTabs(tabs: MCTabDef[], initialActive: MCTabKey, onAc
     buttons.forEach((btn, k) => {
       btn.classList.toggle('active', k === key);
       btn.setAttribute('aria-selected', String(k === key));
+      if (k === key) btn.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });   // the strip scrolls sideways on a phone
     });
     setActiveTab(key);
     onActivate?.(key);
@@ -157,6 +159,7 @@ export function buildContentTabs(tabs: MCTabDef[], initialActive: MCTabKey, onAc
     panelsWrap.appendChild(panel);
   }
 
+  watchScrollFade(tabBar);
   activate(panels.has(initialActive) ? initialActive : tabs[0].key);
   return { tabBar, panels: panelsWrap };
 }

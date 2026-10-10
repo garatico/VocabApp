@@ -45,3 +45,28 @@
   #tableWrap { font-size: 1.5rem; }
   #tableWrap input[type="text"] { font-size: 1.25rem; min-height: 36px; }
 }
+
+/* ── iOS: never zoom the page when a field is focused ──
+   Safari zooms in on any text field under 16px and leaves the page zoomed.
+   Fields here are 12–14px by design, so on touch devices they are raised to 16px.
+   Android and desktop don't zoom, so they keep the compact sizes. `!important`
+   because field sizes are set by id/class selectors all over the sheets. */
+@supports (-webkit-touch-callout: none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* ── Touch behaviour ──
+   `manipulation` drops the double-tap-to-zoom wait on controls; a quiz is full of
+   fast repeated taps. The grey tap flash is replaced by the controls' own :active
+   states, and pull-to-refresh no longer throws away a quiz half-answered. */
+@media (pointer: coarse) {
+  button, a, select, summary, label, input, textarea, [role="button"], [role="tab"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html, body { overscroll-behavior-y: contain; }
+}
