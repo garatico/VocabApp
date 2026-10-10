@@ -513,3 +513,28 @@
     padding: 0.25rem 0.6rem;
   }
 }
+
+/* ── Empty state (ui/empty-state.ts): icon, title, why, and the obvious next step ── */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 0.35rem;
+  padding: 2rem 1rem;
+  max-width: 28rem; margin: 0 auto;
+}
+.empty-state-icon { font-size: 2.4rem; line-height: 1; opacity: 0.85; }
+.empty-state-title { margin: 0.25rem 0 0; font-size: 1rem; font-weight: 700; color: var(--text); }
+.empty-state-body { margin: 0; font-size: 0.85rem; line-height: 1.45; color: var(--text-muted); }
+.empty-state-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 0.75rem; }
+.empty-state-btn {
+  min-height: 40px; padding: 0.45rem 1rem;
+  font-family: inherit; font-size: 0.85rem; font-weight: 600;
+  color: var(--text); background: var(--surface2);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer;
+}
+.empty-state-btn:hover { border-color: var(--accent); color: var(--accent); }
+.empty-state-btn--primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.empty-state-btn--primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--on-accent); }
+.empty-state--compact { padding: 1rem 0.75rem; }
+.empty-state--compact .empty-state-icon { display: none; }
+.empty-state--compact .empty-state-title { font-size: 0.9rem; }
+

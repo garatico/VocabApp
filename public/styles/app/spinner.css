@@ -10,8 +10,10 @@
   z-index: 9999;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 16px;
+  padding: calc(0.75rem + env(safe-area-inset-top)) 0.65rem 0;
+  overflow: hidden;
   animation: fadeIn var(--transition-normal);
 }
 html.dark #loadingSpinner { background: rgba(26, 25, 23, 0.95); }
@@ -78,3 +80,38 @@ html.dark #loadingSpinner { background: rgba(26, 25, 23, 0.95); }
   transition: opacity 0.35s ease;
 }
 .zoom-indicator.show { opacity: 1; transition-duration: 0.08s; }
+
+/* ── Skeleton: the page sketched in grey while the vocabulary loads ──────────────────────────────
+   Inside #loadingSpinner. The status line (spinner + words) sits low in the screen like the corner badge. */
+.loading-skeleton {
+  width: min(100%, 1100px);
+  display: flex; flex-direction: column; gap: 0.75rem;
+}
+.sk {
+  display: block;
+  background: linear-gradient(100deg, var(--surface2) 30%, var(--border) 50%, var(--surface2) 70%) 0 0 / 300% 100%;
+  border-radius: var(--radius-sm);
+  animation: sk-shimmer 1.4s ease-in-out infinite;
+}
+.sk-tabs { display: flex; gap: 0.3rem; height: 42px; background: none; animation: none; }
+.sk-tabs .sk { flex: 0 0 5.5rem; height: 100%; border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+.sk-card { height: 150px; border-radius: var(--radius); }
+.sk-bar { height: 14px; border-radius: 999px; }
+.sk-rows { display: flex; flex-direction: column; gap: 0.5rem; }
+.sk-row { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.6fr); gap: 0.6rem; }
+.sk-row .sk { height: 38px; }
+.sk-row .sk:first-child { max-width: 85%; }
+.loading-status {
+  position: absolute;
+  left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 999px; box-shadow: var(--shadow);
+  white-space: nowrap;
+}
+.loading-status .spinner { width: 18px; height: 18px; border-width: 2px; }
+#loadingSpinner .loading-status p { font-size: 13px; color: var(--text); }
+@keyframes sk-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (max-width: 600px) { .sk-card { height: 120px; } .sk-tabs .sk { flex-basis: 4.5rem; } }
+@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }

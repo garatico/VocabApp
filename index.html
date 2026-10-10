@@ -28,8 +28,27 @@
 
   <!-- Loading Spinner -->
   <div id="loadingSpinner" role="status">
-    <div class="spinner"></div>
-    <p data-i18n="common.loadingVocab">Loading vocabulary...</p>
+    <!-- A grey sketch of the page (tabs, controls, rows) instead of a bare spinner: the layout appears to be
+         there already, which reads as faster than a blank screen. Decorative; the status line below is what is announced. -->
+    <div class="loading-skeleton" aria-hidden="true">
+      <div class="sk sk-tabs"><span class="sk"></span><span class="sk"></span><span class="sk"></span><span class="sk"></span></div>
+      <div class="sk sk-card"></div>
+      <div class="sk sk-bar"></div>
+      <div class="sk-rows">
+        <div class="sk-row"><span class="sk"></span><span class="sk"></span></div>
+        <div class="sk-row"><span class="sk"></span><span class="sk"></span></div>
+        <div class="sk-row"><span class="sk"></span><span class="sk"></span></div>
+        <div class="sk-row"><span class="sk"></span><span class="sk"></span></div>
+        <div class="sk-row"><span class="sk"></span><span class="sk"></span></div>
+        <div class="sk-row"><span class="sk"></span><span class="sk"></span></div>
+        <div class="sk-row"><span class="sk"></span><span class="sk"></span></div>
+        <div class="sk-row"><span class="sk"></span><span class="sk"></span></div>
+      </div>
+    </div>
+    <div class="loading-status">
+      <div class="spinner"></div>
+      <p data-i18n="common.loadingVocab">Loading vocabulary...</p>
+    </div>
   </div>
 
   <!-- Corner indicator while the rest of the vocabulary loads behind the first screen -->
@@ -1727,6 +1746,17 @@
               <div class="sort-order-toggle" id="settingCollapseOnStart">
                 <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
                 <button type="button" class="sort-order-btn" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row" id="settingHapticsRow">
+              <div class="settings-label">
+                <span data-i18n="settings.appearance.haptics">Vibrate on answers</span>
+                <span class="settings-desc" data-i18n="settings.appearance.hapticsDesc">A short buzz when an answer is right or wrong, on phones that can vibrate.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingHaptics">
+                <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
               </div>
             </div>
 

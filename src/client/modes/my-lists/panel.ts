@@ -37,6 +37,7 @@ import { buildChecklistDropdown, closeAllChipDropdowns } from './chip-dropdown.t
 import { getFolderRegistry, addFolder } from './folders.ts';
 import '../../styles-lazy/my-lists.css';
 import { askText } from '../../ui/dialog.ts';
+import { emptyState } from '../../ui/empty-state.ts';
 
 /**
  * The outside-click listener is captured on the document, so it has to be
@@ -90,15 +91,30 @@ function renderPanelBody(ctx: ListsCtx): void {
   if (ctx.selectedList === BROWSE_ALL_LIST) { renderBrowsePanel(ctx); return; }
 
   if (ctx.selectedList === NO_SELECTION) {
-    const empty = document.createElement('p');
-    empty.className = 'ml-panel-empty'; empty.textContent = 'Select a list to see its words.';
-    ctx.panel.appendChild(empty); return;
+    const none = emptyState({
+      icon: '📚',
+      title: 'Select a list to see its words',
+      body: 'Pick one on the left to view and edit it, or browse every word in the language.',
+      actions: [{ label: 'Browse all words', onClick: () => document.querySelector<HTMLElement>('.ml-browse-btn')?.click() }],
+    });
+    none.classList.add('ml-panel-empty');   // the class the specs (and the phone layout) look for
+    ctx.panel.appendChild(none);
+    return;
   }
 
   if (!ctx.selectedList) {
-    const empty = document.createElement('p');
-    empty.className = 'ml-panel-empty'; empty.textContent = 'Create a list to get started.';
-    ctx.panel.appendChild(empty); return;
+    const first = emptyState({
+      icon: '🗂️',
+      title: 'Make your first list',
+      body: 'A list is a set of words you choose, to study on their own or to add to a quiz.',
+      actions: [{
+        label: '+ New list',
+        onClick: () => document.querySelector<HTMLElement>('.ml-single-head .ml-new-list-btn:not(.ml-new-folder-btn)')?.click(),
+      }],
+    });
+    first.classList.add('ml-panel-empty');
+    ctx.panel.appendChild(first);
+    return;
   }
 
   // ── Header: title, count, export, quiz ─────────────────────────────────────

@@ -241,6 +241,9 @@ export const Settings = {
    *  below a screenful of controls. The ▾ in the panel's corner opens it again. */
   getCollapseControlsOnStart: (): boolean => get('collapse_controls_on_start', 'false') === 'true',
 
+  /** On by default. A short vibration when an answer is marked right or wrong (utils/haptics.ts); only where the device can vibrate. */
+  getHaptics: (): boolean => get('haptics', 'true') === 'true',
+
   /** On by default. Off disables "due for review" entirely: srs.ts reports
    *  nothing due, so the header badge, History's Due for Review and a Smart
    *  List's `due: 'yes'` rule all go quiet. Schedules keep being recorded, so

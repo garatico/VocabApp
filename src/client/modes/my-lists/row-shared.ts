@@ -17,6 +17,7 @@ import { fillHighlighted } from '../../utils/dom.ts';
 import { respellSpanishIpa } from '../../utils/respell.ts';
 import '../../styles-lazy/my-lists.css';
 import { isoCode } from '../../data/languages.ts';
+import { attachSwipe } from '../../ui/swipe.ts';
 
 /** Compact fill-level glyphs for the mastery scale, 0..MAX_MASTERY_LEVEL. */
 export const MASTERY_GLYPHS = ['○', '◔', '◑', '◕', '●'];
@@ -500,6 +501,19 @@ export function buildWordRow(o: WordRowOptions): HTMLLIElement {
   li.addEventListener('click', e => {
     if ((e.target as HTMLElement).closest('button, input')) return;
     o.onToggleExpand();
+  });
+
+  // Touch: swipe right raises the word's level one step (it stops at the top rather than wrapping to zero,
+  // which the button does); swipe left opens the row's ⋯ menu. Both are the row's existing actions.
+  attachSwipe(li, {
+    follow: true,
+    onRight: () => {
+      const level = getMasteryLevel(o.lang, o.word);
+      if (level >= MASTERY_LEVELS.length - 1) return;
+      setMasteryLevel(o.lang, o.word, level + 1);
+      o.redraw();
+    },
+    onLeft: () => { actions.querySelector<HTMLElement>('.ml-row-menu-btn')?.click(); },
   });
   return li;
 }

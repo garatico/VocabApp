@@ -529,6 +529,8 @@ function ensureAndroidStoragePermissions(): void {
   const wanted = [
     '<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />',
     '<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />',
+    // navigator.vibrate in the WebView (utils/haptics.ts) needs this; it is a normal permission, so no prompt.
+    '<uses-permission android:name="android.permission.VIBRATE" />',
   ].filter(line => !xml.includes(line.split('"')[1]));
   if (!wanted.length) return;
   xml = xml.replace('</manifest>', `    ${wanted.join('\n    ')}\n</manifest>`);

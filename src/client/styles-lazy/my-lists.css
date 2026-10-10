@@ -3282,3 +3282,10 @@ html.dark .ml-level-pill[data-level]:not([data-level="0"]) {
   /* The open list uses the whole screen: the word list is the page's own scroll */
   .ml-panel { border-radius: 0; }
 }
+
+/* ── Swipe on a word row (ui/swipe.ts, from buildWordRow): the row follows the finger and tints ── */
+.ml-word-item[data-swipe^="right"] { background: var(--accent-light); }
+.ml-word-item[data-swipe="right-ready"] { box-shadow: inset 4px 0 0 var(--accent); }
+.ml-word-item[data-swipe^="left"] { background: var(--surface2); }
+.ml-word-item[data-swipe="left-ready"] { box-shadow: inset -4px 0 0 var(--border-strong); }
+

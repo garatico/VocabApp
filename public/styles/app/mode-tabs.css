@@ -113,10 +113,9 @@ a.admin-tab:hover {
 }
 
 /* ── Responsive ── */
-@media (max-width: 767px) {
-  .mode-tab.chat-tab { display: none !important; }
-
-  /* Scroll tabs horizontally instead of wrapping/overflowing */
+/* Scroll tabs horizontally instead of wrapping/overflowing. Every tab on (Simple Mode off) is ~1130px wide, so
+   this runs up to 1199px: below that a tablet's page scrolled sideways, taking the tab row and the card with it. */
+@media (max-width: 1199px) {
   .mode-tabs {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -124,6 +123,11 @@ a.admin-tab:hover {
     -ms-overflow-style: none;    /* IE/Edge */
   }
   .mode-tabs::-webkit-scrollbar { display: none; }
+  .mode-tab { flex-shrink: 0; }   /* never compress — keep each tab at its natural width */
+}
+
+@media (max-width: 767px) {
+  .mode-tab.chat-tab { display: none !important; }
 
   .mode-tab {
     flex-shrink: 0;   /* never compress — keep each tab at its natural width */
@@ -152,11 +156,11 @@ body { padding-top: calc(0.2rem + env(safe-area-inset-top)); }
   mask-image: linear-gradient(to right, transparent 0, black 12%, black 88%, transparent 100%);
 }
 
-/* ── Phones: the tab row is one button and a sheet (ui/mode-menu.ts) ──
+/* ── Phones and small tablets (where the row would scroll): the tab row is one button and a sheet (ui/mode-menu.ts) ──
    The tabs stay in the page, hidden, as the real state; the menu clicks them. The
    class is added by the script, so without it the scrolling row is still there. */
 .mode-menu { display: none; }
-@media (max-width: 599px) {
+@media (max-width: 767px) {
   .mode-tabs--menu .mode-tablist,
   .mode-tabs--menu .admin-tab { display: none !important; }
   .mode-tabs--menu { overflow: visible; -webkit-mask-image: none; mask-image: none; }

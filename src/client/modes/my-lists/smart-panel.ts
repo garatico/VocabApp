@@ -37,6 +37,7 @@ import { getFolderRegistry, addFolder } from './folders.ts';
 import { FILTER_SCOPES, SCOPE_LABELS, type FilterScope } from '../../filters/filter-scope.ts';
 import '../../styles-lazy/my-lists.css';
 import { askText } from '../../ui/dialog.ts';
+import { emptyState } from '../../ui/empty-state.ts';
 
 /** Same display formatting as the Table/Picture Domains filter — see domain-filter.ts's fmt(). */
 function fmtDomain(d: string): string {
@@ -544,7 +545,12 @@ export function renderSmartPanel(ctx: ListsCtx, name: string): void {
     if (words.length === 0) {
       const empty = document.createElement('li');
       empty.className = 'ml-word-empty';
-      empty.textContent = 'Nothing matches this rule. Try loosening it above.';
+      empty.append(emptyState({
+        icon: '🔍',
+        title: 'Nothing matches this rule',
+        body: 'Try loosening one of the filters above.',
+        compact: true,
+      }));
       listEl.appendChild(empty);
       return;
     }

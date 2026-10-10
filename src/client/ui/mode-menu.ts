@@ -1,12 +1,12 @@
 /**
  * mode-menu.ts — on a phone, the row of mode tabs becomes one button and a sheet.
  *
- * Ten tabs in a sideways-scrolling row showed about four at a time; the rest sat off-screen. Below 600px
+ * Ten tabs in a sideways-scrolling row showed about four at a time; the rest sat off-screen. Below 768px
  * the row is replaced by a single button naming the current mode that opens a grouped list of every mode
  * that is switched on. The tabs themselves stay in the page, hidden, as the real state — choosing an
  * entry clicks the matching tab, so `updateModeUI`, saved state, shortcuts and everything listening for
  * tab clicks run exactly as before (the same pattern as ui/toggle-proxy.ts and ui/choice-menu.ts).
- * Above 600px nothing here is visible and the tab row is unchanged.
+ * From 768px up nothing here is visible and the tab row is unchanged.
  */
 import { t } from '../i18n/index.ts';
 

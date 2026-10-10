@@ -416,3 +416,48 @@ test('above a phone the tab row is unchanged and the mode menu is not shown', as
   await expect(page.locator('.mode-tablist')).toBeVisible();
   await expect(page.locator('#modeMenuBtn')).toBeHidden();
 });
+
+test('landscape phone: only the progress line is pinned, not the whole bar', async ({ page }) => {
+  await disableSimpleMode(page);
+  await page.addInitScript(() => { localStorage.setItem('s_onboarding_seen', 'true'); });
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.goto('/');
+  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await page.locator('#startBtn').click();
+  await expect(page.locator('#tableWrap input[type="text"]').first()).toBeVisible();
+  expect(await page.evaluate(() => getComputedStyle(document.getElementById('tableStickyBar')!).display)).toBe('contents');
+  const pw = page.locator('#tableStickyBar > .progressWrap');
+  expect(await pw.evaluate(e => getComputedStyle(e).position)).toBe('sticky');
+  expect((await pw.boundingBox())!.height).toBeLessThan(60);
+});
+
+test('a tablet with every tab on: the page does not scroll sideways, and the tab row scrolls instead', async ({ page }) => {
+  await disableSimpleMode(page);
+  await page.addInitScript(() => { localStorage.setItem('s_onboarding_seen', 'true'); localStorage.setItem('s_show_experimental_modes', 'true'); });
+  await page.setViewportSize({ width: 800, height: 1100 });
+  await page.goto('/');
+  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
+  const bar = page.locator('.mode-tabs');
+  expect(await bar.evaluate(e => getComputedStyle(e).overflowX)).toBe('auto');
+  expect(await bar.evaluate(e => e.scrollWidth > e.clientWidth)).toBe(true);
+});
+
+test('History on a fresh install says what to do, and the button goes to a quiz', async ({ page }) => {
+  await open(page, 390);
+  await openMode(page, 'history');
+  await page.locator('#historyTab-sessions').click();
+  const empty = page.locator('#historyView-sessions .empty-state');
+  await expect(empty).toBeVisible();
+  await empty.getByRole('button', { name: 'Start a quiz' }).click();
+  await expect(page.locator('.mode-tab[data-mode="table"]')).toHaveClass(/active/);
+});
+
+test('the loading overlay is a sketch of the page, with the status line still announced', async ({ page }) => {
+  await page.goto('/');
+  const overlay = page.locator('#loadingSpinner');
+  await expect(overlay.locator('.loading-skeleton')).toHaveAttribute('aria-hidden', 'true');
+  await expect(overlay).toHaveAttribute('role', 'status');
+  expect(await overlay.locator('.loading-skeleton .sk-row').count()).toBeGreaterThan(3);
+  await expect(overlay.locator('.loading-status p')).toHaveCount(1);
+});

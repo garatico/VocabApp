@@ -1358,3 +1358,19 @@ html:not(.dark) .crt-input.incorrect {
   .conj-card :is(.reveal-btn, .known-btn) { min-width: 30px; min-height: 30px; }
   .conj-reveal-all-btn { min-height: 30px; }
 }
+
+/* ── Landscape phone: pin only the progress bar (as on a portrait phone, above) ── */
+@media (min-width: 600px) and (max-height: 520px) and (orientation: landscape) {
+  .conj-sticky-bar,
+  .conj-sticky-bar > .conj-progress-section,
+  .conj-sticky-bar .conj-progress-block { display: contents; }
+  .conj-sticky-bar .conj-progress-bars {
+    position: sticky; top: 0; z-index: 5;
+    margin: 0 0 0.5rem; padding: 0.3rem 0.6rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+  }
+}
+

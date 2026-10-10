@@ -17,6 +17,7 @@ import { getList, deleteList } from './utils/word-lists.ts';
 import { showToast } from './ui/toast.ts';
 import { applyPalette, applyBackground, applyOpacity, applyCtlColors, CTL_COLOR_DEFS, DUE_SOFT_CAP_MAX, ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applySettingsLinks, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTablePhoneLayout, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onShowMyContentChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
 import { confirmDialog } from './ui/dialog.ts';
+import { hapticsSupported } from './utils/haptics.ts';
 
 /**
  * settings-ui.ts — binds the Settings screen: click handlers for every control,
@@ -715,6 +716,15 @@ export function bindSettings(): void {
     set('collapse_controls_on_start', btn.dataset.enabled ?? 'false');
   });
 
+  // Vibrate on answers (see utils/haptics.ts); the row is hidden where the device cannot vibrate
+  document.getElementById('settingHaptics')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingHaptics', btn);
+    set('haptics', btn.dataset.enabled ?? 'true');
+  });
+  if (!hapticsSupported()) document.getElementById('settingHapticsRow')?.setAttribute('hidden', '');
+
   // Sessions to keep (see getMaxSessionsKept)
   document.getElementById('settingMaxSessionsKept')?.addEventListener('change', e => {
     const n = Number((e.target as HTMLInputElement).value);
@@ -1377,6 +1387,12 @@ function restoreSettingsUI(): void {
   const savedCollapseOnStart = String(Settings.getCollapseControlsOnStart());
   document.querySelectorAll<HTMLElement>('#settingCollapseOnStart .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.enabled === savedCollapseOnStart);
+  });
+
+  // Vibrate on answers
+  const savedHaptics = String(Settings.getHaptics());
+  document.querySelectorAll<HTMLElement>('#settingHaptics .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedHaptics);
   });
 
   // "Omit from Due" per word

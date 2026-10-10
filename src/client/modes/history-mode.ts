@@ -35,6 +35,7 @@ import { percent } from '../ui/quiz-summary.ts';
 import { buildLangBadge } from '../ui/lang-badge.ts';
 import type { SessionDirection } from '../utils/session-history.ts';
 import '../styles-lazy/history.css';
+import { emptyState, goToMode } from '../ui/empty-state.ts';
 
 const MODE_LABELS: Record<QuizMode, string> = {
   table:        'Table',
@@ -212,11 +213,12 @@ export function renderHistory(container: HTMLElement, lang: string): void {
     const words = srsDueWords(currentLang);
 
     if (words.length === 0) {
-      const empty = document.createElement('p');
-      empty.className = 'history-empty';
-      empty.textContent = 'Nothing due right now — words land here on their own '
-        + 'review schedule as you quiz them.';
-      body.appendChild(empty);
+      body.appendChild(emptyState({
+        icon: '✅',
+        title: 'Nothing due right now',
+        body: 'Words land here on their own review schedule as you quiz them.',
+        actions: [{ label: 'Start a quiz', onClick: () => goToMode('table') }],
+      }));
       return;
     }
 
@@ -272,11 +274,12 @@ export function renderHistory(container: HTMLElement, lang: string): void {
     const words = troubleWords(currentLang);
 
     if (words.length === 0) {
-      const empty = document.createElement('p');
-      empty.className = 'history-empty';
-      empty.textContent = 'Nothing here yet — a word shows up once you’ve '
-        + 'missed it a couple of times across quizzes.';
-      body.appendChild(empty);
+      body.appendChild(emptyState({
+        icon: '🎯',
+        title: 'No trouble words yet',
+        body: 'A word shows up here once you’ve missed it a couple of times across quizzes.',
+        actions: [{ label: 'Start a quiz', onClick: () => goToMode('table') }],
+      }));
       return;
     }
 
@@ -398,10 +401,12 @@ export function renderHistory(container: HTMLElement, lang: string): void {
       .reverse(); // newest first
 
     if (shown.length === 0) {
-      const empty = document.createElement('p');
-      empty.className = 'history-empty';
-      empty.textContent = 'No sessions recorded yet — finish a quiz in this language and it will show up here.';
-      body.appendChild(empty);
+      body.appendChild(emptyState({
+        icon: '📈',
+        title: 'No sessions recorded yet',
+        body: 'Finish a quiz in this language and it will show up here, with how you did.',
+        actions: [{ label: 'Start a quiz', onClick: () => goToMode('table') }],
+      }));
       return;
     }
 

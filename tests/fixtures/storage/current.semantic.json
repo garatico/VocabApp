@@ -92,6 +92,7 @@
     "s_gender_indicator_style": "dot",
     "s_gender_indicator_visibility": "hinted",
     "s_guess_blank_max_attempts": "2",
+    "s_haptics": "false",
     "s_hint_mode": "first-letter",
     "s_hint_multi_gloss": "true",
     "s_history_enabled": "false",
@@ -1191,6 +1192,7 @@
     "getGenderIndicatorStyle": "dot",
     "getGenderIndicatorVisibility": "hinted",
     "getGuessBlankMaxAttempts": 2,
+    "getHaptics": false,
     "getHideableListsDomainsModes": [
       "table",
       "picture",
