@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, appReady } from './helpers.ts';
 
 /**
  * Three ways to quiz the difference between two lists — Reading (4 words) and Writing (1 of them):
@@ -21,7 +21,7 @@ async function seed(page: Page, extra: Record<string, unknown> = {}): Promise<vo
   }, extra);
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 }
 
 /** Open a My Lists checklist dropdown by its label and tick one option. */

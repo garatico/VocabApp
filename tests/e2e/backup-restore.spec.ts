@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, appReady } from './helpers.ts';
 
 /**
  * My Lists' and My Content's backup/restore — the disaster-recovery path
@@ -21,7 +21,7 @@ test('My Lists: backing up, wiping storage, and restoring brings a list back', a
   // not just the first — so My Lists stays reachable post-wipe too.
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
 
   // :not(.ml-new-folder-btn) — see my-lists.spec.ts's createList helper for why.
@@ -46,7 +46,7 @@ test('My Lists: backing up, wiping storage, and restoring brings a list back', a
   // The "cleared site data" scenario this feature exists for.
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   // Exact text — .ml-list-empty is reused (with modifier classes) for the
   // Smart/Cross-Language/Testing-Profiles sections' own empty hints too.
@@ -69,7 +69,7 @@ test('My Lists: backing up, wiping storage, and restoring brings a list back', a
 test('My Content: backing up, wiping storage, and restoring brings a word back', async ({ page }) => {
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="myContent"]').click();
 
   // Add a word through the Words tab's editor, then look at just the words the
@@ -91,7 +91,7 @@ test('My Content: backing up, wiping storage, and restoring brings a word back',
 
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="myContent"]').click();
   await page.getByRole('button', { name: 'Added', exact: true }).click();
   await expect(page.locator('.mc-we .word-item')).toHaveCount(0);

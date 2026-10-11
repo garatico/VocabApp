@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { adminWordsLoaded } from './helpers.ts';
 
 /**
  * (The list is scoped to #wordList: the Conjugation tab keeps its own verb
@@ -21,7 +22,7 @@ import { test, expect } from '@playwright/test';
  * to appear before typing a search.
  */
 async function searchForHablar(page: import('@playwright/test').Page): Promise<void> {
-  await expect(page.locator('#wordList .word-item').first()).toBeVisible();
+  await adminWordsLoaded(page);
   await page.locator('#searchInput').fill('hablar');
 }
 

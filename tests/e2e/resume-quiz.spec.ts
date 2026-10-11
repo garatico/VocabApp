@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, appReady } from './helpers.ts';
 
 /**
  * An unfinished Table quiz survives a reload and can be resumed with its
@@ -9,7 +9,7 @@ import { disableSimpleMode } from './helpers.ts';
 async function startQuizAndAnswerFirstWord(page: Page): Promise<string> {
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('#startBtn').click();
   const first = page.locator('#tableWrap input[type="text"]').first();
   await first.waitFor();
@@ -32,7 +32,7 @@ test('a reload offers the unfinished quiz and resume restores the answers', asyn
   expect(word).not.toBe('');
 
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 
   const banner = page.locator('.resume-banner');
   await expect(banner).toBeVisible();
@@ -52,13 +52,13 @@ test('a reload offers the unfinished quiz and resume restores the answers', asyn
 test('discarding the offer forgets the quiz', async ({ page }) => {
   await startQuizAndAnswerFirstWord(page);
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 
   await page.locator('.resume-banner').getByRole('button', { name: 'Discard the unfinished quiz' }).click();
   expect(await page.evaluate(() => localStorage.getItem('vq_resume_table'))).toBeNull();
 
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await expect(page.locator('.resume-banner')).toHaveCount(0);
 });
 
@@ -69,17 +69,17 @@ test('giving up discards the saved quiz', async ({ page }) => {
 
   // ...and it must stay gone: the page-hide flush may not resurrect it.
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await expect(page.locator('.resume-banner')).toHaveCount(0);
 });
 
 test('a quiz with nothing answered is not worth saving', async ({ page }) => {
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('#startBtn').click();
   await page.locator('#tableWrap input[type="text"]').first().waitFor();
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await expect(page.locator('.resume-banner')).toHaveCount(0);
 });

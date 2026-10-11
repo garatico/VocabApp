@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, appReady } from './helpers.ts';
 
 /**
  * The Testing Profiles picker (the Profiles button in Table / Picture / Conjugation) groups profiles
@@ -13,7 +13,7 @@ test('picker folders collapse and expand, and the choice is remembered', async (
     window.localStorage.setItem('ml_folders_profiles_table', JSON.stringify(['Starter']));
   });
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="table"]').click();
 
   const open = async (): Promise<void> => { await page.locator('#presetsBtn').click(); };

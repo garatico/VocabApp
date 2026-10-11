@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode, confirmNext, startQuiz } from './helpers.ts';
+import { disableSimpleMode, confirmNext, startQuiz, appReady } from './helpers.ts';
 
 /**
  * My Content — the shared Word Editor (the Words tab).
@@ -11,7 +11,7 @@ import { disableSimpleMode, confirmNext, startQuiz } from './helpers.ts';
 test.beforeEach(async ({ page }) => {
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="myContent"]').click();
   await expect(page.locator('.mc-we .word-item').first()).toBeVisible();
 });
@@ -35,7 +35,7 @@ test('editing a word marks the field, saves an override, and Revert undoes it', 
   // The list now flags the word as edited, and the edit survives a reload.
   await expect(page.locator('.mc-we .word-item .badge-edited').first()).toBeVisible();
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="myContent"]').click();
   await open(page, 'hablar');
   await expect(page.locator('#mcwe-editTranslation')).toHaveValue('to chat');

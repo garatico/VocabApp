@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, appReady } from './helpers.ts';
 
 /**
  * Settings → Appearance → Background & Transparency: a solid colour or a gradient behind the app, and
@@ -9,7 +9,7 @@ import { disableSimpleMode } from './helpers.ts';
 test.beforeEach(async ({ page }) => {
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="settings"]').click();
 });
 
@@ -38,7 +38,7 @@ test('choosing a colour on Default switches to Solid, and the choice survives a 
   });
   await expect(page.locator('#settingBgMode .sort-order-btn.active')).toHaveText('Solid');
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await expect.poll(() => pageBg(page)).toContain('rgb(18, 52, 86)');
 });
 

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, appReady } from './helpers.ts';
 
 /**
  * History mode — a finished quiz has to actually show up here, and the
@@ -11,7 +11,7 @@ import { disableSimpleMode } from './helpers.ts';
 
 test('a finished quiz appears in Recent sessions and Due for Review', async ({ page }) => {
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 
   // A single page's worth, so completion doesn't depend on pagination.
   await page.locator('#sizeSelect').selectOption('100');
@@ -42,7 +42,7 @@ test('a word marked exempt is left out of Due for Review, unless the master swit
     window.localStorage.setItem('vq_srs_exempt_spanish', JSON.stringify(['zzztestword']));
   });
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 
   await page.locator('.mode-tab[data-mode="history"]').click();
   await page.locator('#historyTab-review').click();                              // History's views are tabs
@@ -58,7 +58,7 @@ test('a word marked exempt is left out of Due for Review, unless the master swit
   // word resumes counting as due, exemption data untouched.
   await page.evaluate(() => window.localStorage.setItem('s_due_exempt_enabled', 'false'));
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await expect(page.locator('.ml-due-exempt-btn')).toHaveCount(0);
@@ -70,7 +70,7 @@ test('a word marked exempt is left out of Due for Review, unless the master swit
   // Switching it back on resumes the exemption from the same, untouched data.
   await page.evaluate(() => window.localStorage.setItem('s_due_exempt_enabled', 'true'));
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="history"]').click();
   await page.locator('#historyTab-review').click();                              // History's views are tabs
   await expect(page.locator('.history-trouble-word', { hasText: 'zzztestword' })).toHaveCount(0);

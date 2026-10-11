@@ -14,6 +14,7 @@
  * (buildWordDetailContent) so the two can never drift apart.
  */
 
+import { pronunciationAvailable, sayWord } from '../ui/speak-button.ts';
 import type { Word } from '../types.ts';
 import { buildWordDetailContent } from './word-tooltip.ts';
 import { buildGlossDisplay } from './utils.ts';
@@ -81,6 +82,20 @@ export function openWordInfoPopover({
     openListPicker({ anchorEl: addBtn, lang, word: word.word });
   });
   actions.appendChild(addBtn);
+
+  // Pronunciation (Settings → Appearance, off by default). Held back, like Copy word, while the heading
+  // still shows ??? — speaking it would give the answer away.
+  if (pronunciationAvailable()) {
+    const unsolved = hideWordWhenUnrevealed && !revealed;
+    const sayBtn = document.createElement('button');
+    sayBtn.type        = 'button';
+    sayBtn.className   = 'word-info-action-btn';
+    sayBtn.textContent = '🔊 Say it';
+    sayBtn.disabled    = unsolved;
+    sayBtn.title       = unsolved ? 'Solve this word first' : '';
+    sayBtn.addEventListener('click', () => { void sayWord(lang, word.word); });
+    actions.appendChild(sayBtn);
+  }
 
   if (word.pos === 'verb' && !inConjugation) {
     const conjBtn = document.createElement('button');

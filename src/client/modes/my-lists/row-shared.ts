@@ -18,6 +18,7 @@ import { respellSpanishIpa } from '../../utils/respell.ts';
 import '../../styles-lazy/my-lists.css';
 import { isoCode } from '../../data/languages.ts';
 import { attachSwipe } from '../../ui/swipe.ts';
+import { buildSpeakButton } from '../../ui/speak-button.ts';
 
 /** Compact fill-level glyphs for the mastery scale, 0..MAX_MASTERY_LEVEL. */
 export const MASTERY_GLYPHS = ['○', '◔', '◑', '◕', '●'];
@@ -435,7 +436,7 @@ export function buildRowCells(o: RowCellsOptions): RowCells {
 
   const cells = [
     cell('word', wordSpan),
-    cell('audio', buildAudioButton(entry?.audioUrl)),
+    cell('audio', buildAudioButton(entry?.audioUrl) ?? buildSpeakButton(o.lang, o.word, 'speak-btn')),
     cell('pos', ...(o.beforePos ?? []), posSpan),
     cell('band', bandSpan),
     cell('rank', rankBadge),

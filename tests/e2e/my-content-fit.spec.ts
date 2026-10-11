@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, appReady } from './helpers.ts';
 
 /** My Content fits the window like My Lists does: the editor's own panes scroll, not the page. */
 
@@ -7,7 +7,7 @@ test('every My Content tab fits one screen without page scroll', async ({ page }
   await page.setViewportSize({ width: 1280, height: 800 });
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="myContent"]').click();
 
   for (const tab of ['Words', 'Conjugations', 'Trivia Questions', 'Guess the Blank', 'Pictures']) {

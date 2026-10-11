@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { disableSimpleMode, openMode } from './helpers.ts';
+import { disableSimpleMode, openMode, appReady } from './helpers.ts';
 
 /**
  * Layout requests, mostly for phones: the filter pills collapse; Conjugation's View and Display share a line;
@@ -14,7 +14,7 @@ async function open(page: Page, width: number, seed: () => void = () => {}): Pro
   await page.addInitScript(seed);
   await page.setViewportSize({ width, height: 844 });
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 }
 
 const box = async (page: Page, sel: string) => (await page.locator(sel).first().boundingBox())!;
@@ -28,7 +28,7 @@ test('the filter pills collapse and expand, and stay as left', async ({ page }) 
   await expect(page.locator('#filtersRow')).toBeHidden();
   await expect(page.locator('#startBtn')).toBeVisible();
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await expect(page.locator('#filtersRow')).toBeHidden();
   await toggle.click();
   await expect(page.locator('#listFilter')).toBeVisible();
@@ -199,7 +199,7 @@ test('Table on a phone: the four counts are a 2×2 grid (one row of four where i
   for (const [width, rows] of [[360, 2], [540, 1]] as const) {
     await page.setViewportSize({ width, height: 800 });
     if (width === 360) await open(page, width); else await page.reload();
-    await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+    await appReady(page);
     await page.locator('#startBtn').click();
     await expect(page.locator('#tableScoreTop .score-pill').first()).toBeVisible();
     const tops = await page.locator('#tableScoreTop .score-pill').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)));
@@ -273,7 +273,7 @@ test('the collapse button stays put when the controls collapse and expand', asyn
   for (const width of [1400, 390]) {
     await page.setViewportSize({ width, height: 844 });
     if (width === 1400) await open(page, width); else await page.reload();
-    await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+    await appReady(page);
     const before = await box(page, '#controlsCollapseBtn');
     await page.locator('#controlsCollapseBtn').click();
     await expect(page.locator('#controlsBody')).toHaveClass(/filter-body--collapsed/);
@@ -422,7 +422,7 @@ test('landscape phone: only the progress line is pinned, not the whole bar', asy
   await page.addInitScript(() => { localStorage.setItem('s_onboarding_seen', 'true'); });
   await page.setViewportSize({ width: 844, height: 390 });
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('#startBtn').click();
   await expect(page.locator('#tableWrap input[type="text"]').first()).toBeVisible();
   expect(await page.evaluate(() => getComputedStyle(document.getElementById('tableStickyBar')!).display)).toBe('contents');
@@ -436,7 +436,7 @@ test('a tablet with every tab on: the page does not scroll sideways, and the tab
   await page.addInitScript(() => { localStorage.setItem('s_onboarding_seen', 'true'); localStorage.setItem('s_show_experimental_modes', 'true'); });
   await page.setViewportSize({ width: 800, height: 1100 });
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
   const bar = page.locator('.mode-tabs');
   expect(await bar.evaluate(e => getComputedStyle(e).overflowX)).toBe('auto');

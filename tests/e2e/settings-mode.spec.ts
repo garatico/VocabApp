@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { appReady } from './helpers.ts';
 
 /**
  * Settings — a changed setting has to actually be read by the mode it
@@ -10,7 +11,7 @@ test('changing Default columns to 1 actually narrows the table', async ({ page }
   // Default columns sits in Appearance's Advanced fold, which only exists once Advanced mode is on.
   await page.addInitScript(() => { window.localStorage.setItem('s_simple_mode', 'false'); window.localStorage.setItem('s_advanced_mode', 'true'); });
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 
   await page.locator('.mode-tab[data-mode="settings"]').click();
   // Default columns lives under Appearance (Table Layout), which opens from the side nav.

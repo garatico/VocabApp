@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { appReady, adminWordsLoaded } from './helpers.ts';
 
 /**
  * Accessibility audit — runs axe-core (WCAG 2.0/2.1 A + AA, plus axe's
@@ -33,7 +34,7 @@ async function open(page: Page, theme: 'light' | 'dark'): Promise<void> {
   }, theme);
   await page.emulateMedia({ colorScheme: theme });
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 }
 
 /** A readable one-line-per-node summary, so a CI failure explains itself. */
@@ -259,7 +260,7 @@ for (const theme of ['light', 'dark'] as const) {
     await page.addInitScript(t => window.localStorage.setItem('theme', t), theme);
     await page.emulateMedia({ colorScheme: theme });
     await page.goto('/admin');
-    await expect(page.locator('#wordList .word-item').first()).toBeVisible();
+    await adminWordsLoaded(page);
     for (const tab of ['editor', 'conjugation', 'dbadmin', 'statistics', 'documentation', 'settings']) {
       await page.locator(`.tab-btn[data-tab="${tab}"]`).click();   // the pointer stays on it: the hover state is audited too
       await page.waitForTimeout(800);
@@ -271,8 +272,8 @@ for (const theme of ['light', 'dark'] as const) {
 
 test('a word can be opened in the Word Editor from the keyboard', async ({ page }) => {
   await page.goto('/admin');
+  await adminWordsLoaded(page);
   const first = page.locator('#wordList .word-item').first();
-  await expect(first).toBeVisible();
   await first.focus();
   await page.keyboard.press('Enter');
   await expect(first).toHaveClass(/active/);

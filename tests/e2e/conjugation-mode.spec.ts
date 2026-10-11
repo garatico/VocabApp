@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { startMode, disableSimpleMode } from './helpers.ts';
+import { startMode, disableSimpleMode, appReady } from './helpers.ts';
 
 /**
  * Conjugation mode, default Grid view — Spanish's most frequent verb is
@@ -42,7 +42,7 @@ test('One at a Time: Give Up offers a "Practice missed" run of just the wrong fo
   // Profiles elsewhere in this suite.
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="conjugation"]').click();
   await page.locator('#conjViewSelect').selectOption('oneatatime');   // View is a dropdown now
   await page.locator('#startBtn').click();

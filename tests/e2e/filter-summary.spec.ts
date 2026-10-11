@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, appReady } from './helpers.ts';
 
 /**
  * The strip under the filters ("what is filtering right now"): every group sits in its own grey box,
@@ -8,7 +8,7 @@ import { disableSimpleMode } from './helpers.ts';
 test('each filter group is a grey box, Part of Speech chips wear their own colour, and a profile has its colour', async ({ page }) => {
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="table"]').click();
 
   // Pick two parts of speech through the real filter chips.

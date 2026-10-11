@@ -30,7 +30,7 @@ export async function startMode(page: Page, mode: string): Promise<void> {
     window.localStorage.setItem('s_show_experimental_modes', 'true');
   });
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator(`.mode-tab[data-mode="${mode}"]`).click();
   await page.locator('#startBtn').click();
 }
@@ -106,3 +106,28 @@ export async function openMode(page: Page, mode: string): Promise<void> {
   await page.locator('#modeMenuBtn').click();
   await page.locator(`#modeMenuList li[data-mode="${mode}"]`).click();
 }
+
+/**
+ * Waits until the app has finished starting, not merely until the spinner is hidden.
+ *
+ * `#loadingSpinner` is `display: none` until the script shows it, so waiting for it to be hidden returns
+ * the moment the page loads — before the app has built its controls, restored the last tab or reset where
+ * the Tab key begins — and a spec that clicks straight away races startup. Under load (a full run, several
+ * workers) that was the source of most of the suite's random failures. `data-app-ready` is set on <html>
+ * as the last step of startup (app.ts). Never fails on its own: a page that did not get there fails at the
+ * assertion that needed it, with a clearer message than a timeout here.
+ */
+export async function appReady(page: Page): Promise<void> {
+  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await page.locator('html[data-app-ready="true"]').waitFor({ timeout: 20_000 }).catch(() => {});
+}
+
+/**
+ * Waits for the Admin panel's Words list to arrive. Its first request loads and shapes the whole language
+ * on a server that, at the start of a full run, is also warming up for every other worker; ten seconds (the
+ * default) is not always enough there, and a longer wait costs nothing when it is.
+ */
+export async function adminWordsLoaded(page: Page): Promise<void> {
+  await page.locator('#wordList .word-item').first().waitFor({ state: 'visible', timeout: 60_000 });
+}
+

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { disableSimpleMode, rowAction } from './helpers.ts';
+import { disableSimpleMode, rowAction, appReady } from './helpers.ts';
 
 /**
  * My Lists — CRUD + Undo. This is where the Undo-snapshot bugs lived: three
@@ -39,7 +39,7 @@ async function addWord(page: Page, word: string): Promise<void> {
 test.beforeEach(async ({ page }) => {
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
 });
 
@@ -116,7 +116,7 @@ test('bulk move relocates the word, and Undo brings it back to the source list',
 test('move to… offers Cross-Language lists too, each showing its own flag(s)', async ({ page }) => {
   await page.evaluate(() => localStorage.setItem('vq_lists_multi', JSON.stringify({ Mixed: [] })));
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
 
   await createList(page, 'FromSingle');

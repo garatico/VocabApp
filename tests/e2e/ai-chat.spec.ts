@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { appReady } from './helpers.ts';
 
 /**
  * AI Chat — deliberately never clicks "Load model". The original scope for
@@ -13,7 +14,7 @@ import { test, expect } from '@playwright/test';
  */
 test('the pre-load UI renders and preset switching works without a model', async ({ page }) => {
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 
   const errors: string[] = [];
   page.on('pageerror', err => errors.push(err.message));

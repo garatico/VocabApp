@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, appReady } from './helpers.ts';
 
 /**
  * Phase 0 smoke test — proves the harness itself works end to end (real
@@ -26,7 +26,7 @@ test('app loads, hides the spinner, and lands on Table mode', async ({ page }) =
 
   await page.goto('/');
   await expect(page).toHaveTitle('VocabApp');
-  await expect(page.locator('#loadingSpinner')).toBeHidden();
+  await appReady(page);
 
   const tableTab = page.locator('.mode-tab[data-mode="table"]');
   await expect(tableTab).toHaveClass(/active/);
@@ -44,7 +44,7 @@ test('switching mode tabs shows the matching section and no console errors', asy
   // Settings.
   await disableSimpleMode(page);
   await page.goto('/');
-  await expect(page.locator('#loadingSpinner')).toBeHidden();
+  await appReady(page);
 
   const modes: { mode: string; area: string }[] = [
     { mode: 'picture',  area: '#pictureArea' },

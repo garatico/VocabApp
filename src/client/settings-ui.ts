@@ -18,6 +18,8 @@ import { showToast } from './ui/toast.ts';
 import { applyPalette, applyBackground, applyOpacity, applyCtlColors, CTL_COLOR_DEFS, DUE_SOFT_CAP_MAX, ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applySettingsLinks, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTablePhoneLayout, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onShowMyContentChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
 import { confirmDialog } from './ui/dialog.ts';
 import { hapticsSupported } from './utils/haptics.ts';
+import { speechSupported } from './utils/speech.ts';
+import { remindersSupported, enableReminders, disableReminders, syncReminders } from './utils/reminders.ts';
 
 /**
  * settings-ui.ts — binds the Settings screen: click handlers for every control,
@@ -716,6 +718,45 @@ export function bindSettings(): void {
     set('collapse_controls_on_start', btn.dataset.enabled ?? 'false');
   });
 
+  // Daily reminder (see utils/reminders.ts): Android app only, so the rows are hidden everywhere else
+  if (!remindersSupported()) {
+    document.getElementById('settingRemindersRow')?.setAttribute('hidden', '');
+    document.getElementById('settingReminderTimeRow')?.setAttribute('hidden', '');
+  }
+  document.getElementById('settingReminders')?.addEventListener('click', async e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    const on = btn.dataset.enabled === 'true';
+    if (on) {
+      const r = await enableReminders();
+      if (r !== 'ok') {
+        showToast(r === 'denied'
+          ? 'Notifications are blocked for VocabApp. Allow them in your phone’s app settings to get a reminder.'
+          : 'Reminders are only available in the Android app.', 'error');
+        return;   // the switch stays off
+      }
+    } else {
+      await disableReminders();
+    }
+    activateToggle('settingReminders', btn);
+    set('reminders', on ? 'true' : 'false');
+  });
+  document.getElementById('settingReminderTime')?.addEventListener('change', e => {
+    const v = (e.target as HTMLInputElement).value;
+    if (!/^\d{1,2}:\d{2}$/.test(v)) return;
+    set('reminder_time', v);
+    void syncReminders();
+  });
+
+  // Pronunciation (see utils/speech.ts); the row is hidden where the browser has no speech synthesis
+  document.getElementById('settingPronunciation')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    activateToggle('settingPronunciation', btn);
+    set('pronunciation', btn.dataset.enabled ?? 'false');
+  });
+  if (!speechSupported()) document.getElementById('settingPronunciationRow')?.setAttribute('hidden', '');
+
   // Vibrate on answers (see utils/haptics.ts); the row is hidden where the device cannot vibrate
   document.getElementById('settingHaptics')?.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
@@ -1387,6 +1428,20 @@ function restoreSettingsUI(): void {
   const savedCollapseOnStart = String(Settings.getCollapseControlsOnStart());
   document.querySelectorAll<HTMLElement>('#settingCollapseOnStart .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.enabled === savedCollapseOnStart);
+  });
+
+  // Daily reminder
+  const savedReminders = String(Settings.getReminders());
+  document.querySelectorAll<HTMLElement>('#settingReminders .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedReminders);
+  });
+  const reminderTimeInput = document.getElementById('settingReminderTime') as HTMLInputElement | null;
+  if (reminderTimeInput) reminderTimeInput.value = Settings.getReminderTime();
+
+  // Pronunciation
+  const savedPronunciation = String(Settings.getPronunciation());
+  document.querySelectorAll<HTMLElement>('#settingPronunciation .sort-order-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.enabled === savedPronunciation);
   });
 
   // Vibrate on answers

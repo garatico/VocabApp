@@ -531,6 +531,8 @@ function ensureAndroidStoragePermissions(): void {
     '<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />',
     // navigator.vibrate in the WebView (utils/haptics.ts) needs this; it is a normal permission, so no prompt.
     '<uses-permission android:name="android.permission.VIBRATE" />',
+    // Android 13+: the daily reminder (utils/reminders.ts) asks for this at runtime when it is switched on.
+    '<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />',
   ].filter(line => !xml.includes(line.split('"')[1]));
   if (!wanted.length) return;
   xml = xml.replace('</manifest>', `    ${wanted.join('\n    ')}\n</manifest>`);

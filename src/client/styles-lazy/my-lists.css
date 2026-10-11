@@ -3289,3 +3289,11 @@ html.dark .ml-level-pill[data-level]:not([data-level="0"]) {
 .ml-word-item[data-swipe^="left"] { background: var(--surface2); }
 .ml-word-item[data-swipe="left-ready"] { box-shadow: inset -4px 0 0 var(--border-strong); }
 
+/* Phones: the section headings, folder names and list emoji were 10–11px. */
+@media (max-width: 599px) {
+  .ml-section-toggle-btn,
+  .ml-folder-head,
+  .ml-header .ml-sidebar-title,
+  .ml-list-empty { font-size: 0.75rem; }
+  .ml-list-emoji { font-size: 0.85rem; }
+}

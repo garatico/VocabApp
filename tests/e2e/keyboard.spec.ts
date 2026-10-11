@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, appReady } from './helpers.ts';
 
 /**
  * Keyboard-only flows: nothing here uses a mouse after the page loads.
@@ -8,7 +8,7 @@ import { disableSimpleMode } from './helpers.ts';
 async function open(page: Page): Promise<void> {
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('html[data-app-ready="true"]').waitFor();   // startup (incl. resetting where Tab begins) is done
 }
 

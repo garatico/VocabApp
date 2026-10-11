@@ -15,7 +15,12 @@ export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env['CI'],
-  retries: process.env['CI'] ? 2 : 0,
+  // One retry locally too: every worker shares the one dev API (see `expect` below), so under a full
+  // run a spec can lose a race it wins alone. A retry that passes is reported as "flaky", not hidden.
+  retries: process.env['CI'] ? 2 : 1,
+  // Three browsers at a time, not half the cores: past that the shared API is the bottleneck and the
+  // run gets slower and flakier, not faster.
+  workers: process.env['CI'] ? 2 : 3,
   reporter: process.env['CI'] ? 'github' : 'list',
 
   // Assertions get 10 s (default 5). Every worker talks to one single-threaded

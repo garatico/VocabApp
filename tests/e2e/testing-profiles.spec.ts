@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, appReady } from './helpers.ts';
 
 /**
  * Testing Profiles — save the current filter bundle from Table mode's own
@@ -13,7 +13,7 @@ import { disableSimpleMode } from './helpers.ts';
 test('saving a profile from Table mode makes it reusable', async ({ page }) => {
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 
   await page.locator('#presetsBtn').click();
   const nameInput = page.locator('.preset-picker-save-row input');
@@ -42,7 +42,7 @@ test('saving a profile from Table mode makes it reusable', async ({ page }) => {
 test('a conjugation profile can turn off specific forms, and applying it reflects them live', async ({ page }) => {
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
 
   const profileHead = page.locator('.ml-profile-head:not(.ml-visual-head)').first();
@@ -75,7 +75,7 @@ test('a conjugation profile can turn off specific forms, and applying it reflect
 test('a conjugation profile lays its forms out like Conjugation mode: yo / tú / él, then nosotros / vosotros / ellos', async ({ page }) => {
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await page.locator('.ml-profile-head:not(.ml-visual-head) .ml-new-list-btn:not(.ml-new-folder-btn)').click();
   await page.locator('.ml-list-item--editing select.ml-list-name-input').selectOption('conjugation');

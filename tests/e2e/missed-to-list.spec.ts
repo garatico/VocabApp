@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode, startQuiz } from './helpers.ts';
+import { disableSimpleMode, startQuiz, appReady } from './helpers.ts';
 
 /**
  * After a quiz with misses, the summary strip offers to add them to a list,
@@ -8,7 +8,7 @@ import { disableSimpleMode, startQuiz } from './helpers.ts';
 test('Give Up on a Table quiz offers to add the missed words to a list', async ({ page }) => {
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 
   await page.locator('#startBtn').click();
   await page.locator('#tableWrap input[type="text"]').first().waitFor();
@@ -29,7 +29,7 @@ test('Give Up on a Table quiz offers to add the missed words to a list', async (
 test('starting a new quiz drops the offer, so it never describes a stale session', async ({ page }) => {
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 
   await page.locator('#startBtn').click();
   await page.locator('#tableWrap input[type="text"]').first().waitFor();

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { appReady } from './helpers.ts';
 
 /**
  * Storage migrations, in a real browser: data left in an old layout is upgraded
@@ -27,7 +28,7 @@ const stored = (page: Page, key: string): Promise<string | null> => page.evaluat
 test('an old-layout browser is migrated before the app reads it', async ({ page }) => {
   await seedOnce(page, LEGACY);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 
   // The layout version is stamped and every legacy key has been converted.
   expect(await stored(page, 'vq_schema_version')).toBe('6');
@@ -55,7 +56,7 @@ test('the Admin panel migrates too — it is a separate entry point on the same 
 
 test('a browser with no old data just gets the version stamp', async ({ page }) => {
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   expect(await stored(page, 'vq_schema_version')).toBe('6');
   // None of the legacy-conversion outputs appear out of nowhere.
   expect(await stored(page, 'vq_lists_spanish')).toBeNull();
@@ -65,11 +66,11 @@ test('a browser with no old data just gets the version stamp', async ({ page }) 
 test('a second start does nothing (and a reload keeps working)', async ({ page }) => {
   await seedOnce(page, LEGACY);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   const snapshot = await page.evaluate(() => JSON.stringify(Object.entries(localStorage).sort()));
 
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   // Compared without the keys the app itself keeps refreshing: the language/mode it last showed, and the
   // backup reminder's clock, which starts on the first load *after* the starter lists exist.
   const again = await page.evaluate(() => JSON.stringify(Object.entries(localStorage).sort()));
@@ -85,7 +86,7 @@ test('data from a newer app is left completely alone by the runner, and the app 
   // lazy code still converts that on read regardless of the marker — see the note in storage-migrations.ts.)
   await seedOnce(page, { vq_schema_version: '99', s_kid_friendly_mode: 'false' });
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 
   expect(await stored(page, 'vq_schema_version')).toBe('99');
   expect(await stored(page, 's_simple_mode')).toBeNull();          // step 5 did not run

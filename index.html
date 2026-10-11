@@ -1749,6 +1749,36 @@
               </div>
             </div>
 
+            <div class="settings-row" id="settingRemindersRow" data-android-only="true">
+              <div class="settings-label">
+                <span data-i18n="settings.appearance.reminders">Daily reminder</span>
+                <span class="settings-desc" data-i18n="settings.appearance.remindersDesc">A notification at the time below, every day, to nudge a quick practice. Android app only.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingReminders">
+                <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row" id="settingReminderTimeRow" data-android-only="true">
+              <div class="settings-label">
+                <span data-i18n="settings.appearance.reminderTime">Reminder time</span>
+                <span class="settings-desc" data-i18n="settings.appearance.reminderTimeDesc">When the daily reminder arrives.</span>
+              </div>
+              <input type="time" id="settingReminderTime" class="ml-profile-editor-number" value="19:00">
+            </div>
+
+            <div class="settings-row" id="settingPronunciationRow">
+              <div class="settings-label">
+                <span data-i18n="settings.appearance.pronunciation">Pronunciation</span>
+                <span class="settings-desc" data-i18n="settings.appearance.pronunciationDesc">Adds a 🔊 that says a word aloud in its own language, using your device's voices.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingPronunciation">
+                <button type="button" class="sort-order-btn active" data-enabled="false" data-i18n="common.off">Off</button>
+                <button type="button" class="sort-order-btn" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
             <div class="settings-row" id="settingHapticsRow">
               <div class="settings-label">
                 <span data-i18n="settings.appearance.haptics">Vibrate on answers</span>

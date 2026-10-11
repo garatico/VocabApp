@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { appReady } from './helpers.ts';
 
 /**
  * First visit: a "where are you starting?" chooser sets up the Words controls,
@@ -8,7 +9,7 @@ import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 });
 
 test('a first visit offers four starting points', async ({ page }) => {
@@ -30,7 +31,7 @@ test('choosing Comfortable selects the Level pool with B1 and B2, and it sticks'
 
   // A reload restores it, and the card stays away.
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await expect(page.locator('#onboardingCard')).toBeHidden();
   await expect(page.locator('#poolModeToggle [data-pool="band"]')).toHaveClass(/active/);
   await expect(page.locator('#bandChips .pos-chip.active')).toHaveCount(2);
@@ -55,7 +56,7 @@ test('dismissing without choosing keeps the defaults and does not come back', as
   await expect(page.locator('#sizeSelect')).toHaveValue('1000');
 
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await expect(page.locator('#onboardingCard')).toBeHidden();
 });
 
@@ -75,7 +76,7 @@ test('starting a quiz without choosing puts the card away for good', async ({ pa
   await expect(page.locator('#onboardingCard')).toBeHidden();
 
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await expect(page.locator('#onboardingCard')).toBeHidden();
 });
 

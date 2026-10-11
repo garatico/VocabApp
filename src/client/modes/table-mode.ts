@@ -8,6 +8,7 @@ import { attachTooltips }        from '../utils/word-tooltip.ts';
 import { isInAnyList, loadAllLists, listsForWordIn, type ListStore } from '../utils/word-lists.ts';
 import { openListPicker }        from '../utils/list-picker.ts';
 import { openWordInfoPopover }   from '../utils/word-info-popover.ts';
+import { buildSpeakButton } from '../ui/speak-button.ts';
 import { Settings, applyAutofillAttr } from '../settings.ts';
 import { getMisses, type MissCounts } from '../utils/session-history.ts';
 import { flagUrl, isoCode }      from '../data/languages.ts';
@@ -567,6 +568,12 @@ export function renderTableMode({
           });
         });
         tdWord.appendChild(wordDiv);
+        // Pronunciation (off by default): only beside a prompt that *is* the target-language word — in the
+        // other direction the visible word is the English meaning and speaking the answer would give it away.
+        if (wordIsPrompt) {
+          const sayBtn = buildSpeakButton(wordLang, w.word, 'speak-btn speak-btn--inline');
+          if (sayBtn) tdWord.appendChild(sayBtn);
+        }
 
         const inp        = document.createElement('input');
         inp.type         = 'text';

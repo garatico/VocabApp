@@ -46,6 +46,8 @@ import { initKeyboardAwareness } from './ui/keyboard-aware.ts';
 import { initModeMenu } from './ui/mode-menu.ts';
 import { initHaptics } from './utils/haptics.ts';
 import { initPagerSwipe } from './ui/swipe.ts';
+import { syncReminders } from './utils/reminders.ts';
+import { initCommandPalette } from './ui/command-palette-launcher.ts';
 import { initMissedAdd } from './ui/quiz-summary.ts';
 import { offerResume } from './ui/resume-banner.ts';
 import { bindBackupSettings, maybeRemindBackup, startAutoBackup } from './ui/backup-settings.ts';
@@ -1391,6 +1393,8 @@ void (async function init(): Promise<void> {
   initModeMenu();
   initHaptics();
   initPagerSwipe();
+  void syncReminders();
+  initCommandPalette();
   initReloadButton();
   initListFilter(langSelect?.value ?? 'spanish');
   syncConjViewToggle();

@@ -244,6 +244,14 @@ export const Settings = {
   /** On by default. A short vibration when an answer is marked right or wrong (utils/haptics.ts); only where the device can vibrate. */
   getHaptics: (): boolean => get('haptics', 'true') === 'true',
 
+  /** Off by default (opt in from Appearance). Adds a 🔊 that says a word with the device's own voice for its language (utils/speech.ts). */
+  getPronunciation: (): boolean => get('pronunciation', 'false') === 'true',
+
+  /** Off by default; Android app only (utils/reminders.ts). A notification every day at `getReminderTime()`. */
+  getReminders: (): boolean => get('reminders', 'false') === 'true',
+  /** "HH:MM", 24-hour. */
+  getReminderTime: (): string => get('reminder_time', '19:00'),
+
   /** On by default. Off disables "due for review" entirely: srs.ts reports
    *  nothing due, so the header badge, History's Due for Review and a Smart
    *  List's `due: 'yes'` rule all go quiet. Schedules keep being recorded, so

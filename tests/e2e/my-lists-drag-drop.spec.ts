@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode, answerTextNext } from './helpers.ts';
+import { disableSimpleMode, answerTextNext, appReady } from './helpers.ts';
 
 /**
  * My Lists — dragging a list card onto a folder header adds it to that
@@ -11,7 +11,7 @@ import { disableSimpleMode, answerTextNext } from './helpers.ts';
 test.beforeEach(async ({ page }) => {
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
 });
 

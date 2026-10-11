@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, appReady } from './helpers.ts';
 
 /**
  * Nested folders in the Testing Profiles picker: a folder's name is its whole path, but the picker draws a
@@ -14,7 +14,7 @@ test('picker folders nest: click through each level, show leaf names, stay insid
     }));
   });
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="table"]').click();
   await page.locator('#presetsBtn').click();
 

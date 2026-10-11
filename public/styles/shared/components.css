@@ -538,3 +538,16 @@
 .empty-state--compact .empty-state-icon { display: none; }
 .empty-state--compact .empty-state-title { font-size: 0.9rem; }
 
+/* ── Pronunciation (ui/speak-button.ts): a small 🔊 beside a word. Only exists when switched on. ── */
+.speak-btn {
+  flex: 0 0 auto;
+  min-width: 28px; min-height: 28px; padding: 0 0.3rem;
+  font-size: 0.9rem; line-height: 1;
+  background: transparent; color: var(--text-muted);
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.speak-btn:hover, .speak-btn:focus-visible { color: var(--accent); border-color: var(--accent); }
+.speak-btn--inline { margin-left: 0.25rem; vertical-align: middle; }
+@media (pointer: coarse) { .speak-btn { min-width: 36px; min-height: 36px; } }
+

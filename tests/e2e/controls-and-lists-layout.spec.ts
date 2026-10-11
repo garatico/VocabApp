@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { disableSimpleMode, openMode } from './helpers.ts';
+import { disableSimpleMode, openMode, appReady } from './helpers.ts';
 
 /**
  * Layout requests: the quiz setup panel stays open on Start unless asked otherwise; the corner cluster
@@ -10,7 +10,7 @@ import { disableSimpleMode, openMode } from './helpers.ts';
 
 async function open(page: Page): Promise<void> {
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
 }
 
 /** Twelve common words fell due yesterday or earlier, so the 🔁 badge shows in the corner. */
@@ -243,7 +243,7 @@ test.describe('Active filters', () => {
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await expect(page.locator('#filtersSummaryBody')).toBeHidden();
     await page.reload();
-    await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+    await appReady(page);
     await expect(page.locator('#filtersSummaryBody')).toBeHidden();
     await expect(page.locator('#filtersSummaryCount')).toHaveText('1');   // still says how many, collapsed
     await toggle.click();

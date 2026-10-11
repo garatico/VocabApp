@@ -67,6 +67,7 @@ const SHORTCUTS: ShortcutGroup[] = [
   {
     group: 'General',
     items: [
+      { keys: ['Ctrl', 'K'],    desc: 'Command palette: jump to a mode, setting or language' },
       { keys: ['r'],            desc: 'Review the words that are due' },
       { keys: ['←', '→'],       desc: 'Move between tabs (when the tab bar is focused)' },
       { keys: ['?'],            desc: 'Open this shortcuts reference' },

@@ -341,3 +341,9 @@
   .history-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1 1 100%; }
   .history-tab-btn { min-height: 38px; white-space: normal; }
 }
+
+/* Phones: the due-forecast figures were 11px. */
+@media (max-width: 599px) {
+  .prog-forecast-n,
+  .prog-forecast-day { font-size: 0.75rem; }
+}

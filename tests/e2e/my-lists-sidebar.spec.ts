@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
-import { disableSimpleMode, confirmNext, rowAction, answerTextNext } from './helpers.ts';
+import { disableSimpleMode, confirmNext, rowAction, answerTextNext, appReady } from './helpers.ts';
 
 /**
  * My Lists sidebar — every section's create / rename / copy / delete, plus folders, the emoji and
@@ -15,7 +15,7 @@ const NEW_BTN = '.ml-new-list-btn:not(.ml-new-folder-btn)';
 test.beforeEach(async ({ page }) => {
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await expect(page.locator('.ml-single-head')).toBeVisible();
 });
@@ -123,7 +123,7 @@ test('folders: create, give an emoji and colour, choose what to hide from, colla
   await folderHead.locator('.ml-section-toggle-btn').click();
   await expect(page.locator('.ml-folder-group', { has: folderHead }).locator('.ml-folder-body')).toBeHidden();
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await expect(page.locator('.ml-folder-group', { has: page.locator('.ml-folder-head', { hasText: 'Trips' }) }).locator('.ml-folder-body')).toBeHidden();
 });
@@ -270,7 +270,7 @@ test('copying a cross-language list copies its words, not just its name', async 
     Pets: [{ word: 'perro', language: 'spanish' }, { word: 'chat', language: 'french' }],
   })));
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await expect(card(page, 'ml-multi-item', 'Pets').locator('.ml-list-count')).toHaveText('2 words');
 
@@ -340,7 +340,7 @@ test('testing profiles: create in a mode, rename, copy, delete, and a per-mode f
 async function openVisualProfiles(page: Page): Promise<void> {
   await page.evaluate(() => localStorage.setItem('s_show_visual_profiles', 'true'));
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await expect(page.locator('.ml-visual-head')).toBeVisible();
 }
@@ -481,7 +481,7 @@ test('list kind colours: a colour chosen in Settings recolours the sidebar, pers
   expect(await page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--accent').trim())).toBe(appAccent);
 
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await expect(page.locator('.ml-profile-head:not(.ml-visual-head)')).toBeVisible();
   await expect.poll(accent).toBe('#00aa55');
@@ -611,7 +611,7 @@ test('sections collapse individually and all at once, and remember it', async ({
   await expect(page.locator('.ml-collapse-all-btn')).toHaveText('Expand All');
 
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await expect(page.locator('.ml-section-body[data-section="single"]')).toBeHidden();
 
@@ -677,7 +677,7 @@ test('an aggregate cross-language list is made of single-language lists, live', 
     localStorage.setItem('vq_lists_multi_meta', JSON.stringify({ Everything: { sources: [{ lang: 'spanish', list: 'Food' }] } }));
   });
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await card(page, 'ml-multi-item', 'Everything').click();
   await expect(page.locator('.ml-word-list .ml-word-via', { hasText: 'Food' })).toHaveCount(2);
@@ -718,7 +718,7 @@ test('a single-language list can be made of other lists of its language', async 
     localStorage.setItem('vq_lists_meta_spanish', JSON.stringify({ Meals: { sources: [{ lang: 'spanish', list: 'Food' }] } }));
   });
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await card(page, 'ml-single-item', 'Meals').click();
   await expect(page.locator('.ml-word-list .ml-word-via', { hasText: 'Food' })).toHaveCount(2);
@@ -749,7 +749,7 @@ test('Move to / Copy to: sections are labelled, collapsible and coloured like th
     localStorage.setItem('vq_lists_multi', JSON.stringify({ Everywhere: [] }));
   });
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await expect(card(page, 'ml-single-item', 'Source')).toHaveClass(/active/);   // the first list opens by itself
   await rowAction(page, '.ml-move-btn', page.locator('.ml-word-list .ml-word-item').first());
@@ -802,7 +802,7 @@ test('the emoji picker keeps only emoji, and offers every emoji this system can 
 test('Export lives in each list card’s gear menu, and choosing "Made of" leaves one set of stats, in the top bar', async ({ page }) => {
   await page.evaluate(() => { localStorage.setItem('vq_lists_spanish', JSON.stringify({ Food: ['pan', 'queso'], Other: ['x'] })); });
   await page.reload();
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await expect(page.locator('.ml-panel .ml-export-btn')).toHaveCount(0);        // gone from the panel
 

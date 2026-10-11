@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { disableSimpleMode } from './helpers.ts';
+import { disableSimpleMode, appReady } from './helpers.ts';
 
 /**
  * My Content → Conjugations: the Admin panel's Conjugation editor, pointed at this browser. A verb list
@@ -10,7 +10,7 @@ import { disableSimpleMode } from './helpers.ts';
 test.beforeEach(async ({ page }) => {
   await disableSimpleMode(page);
   await page.goto('/');
-  await page.locator('#loadingSpinner').waitFor({ state: 'hidden' });
+  await appReady(page);
   await page.locator('.mode-tab[data-mode="myContent"]').click();
   await page.locator('.mc-tab-btn', { hasText: 'Conjugations' }).click();
 });
