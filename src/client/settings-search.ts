@@ -419,8 +419,9 @@ export function bindSettingsSearch(): void {
       let text = foldKey(`${label.textContent ?? ''} ${desc?.textContent ?? ''}`);
       for (const [needle, aliases] of SYNONYMS) if (text.includes(needle)) text += ' ' + foldKey(aliases);
       const groupBody = row.closest<HTMLElement>('.filter-body[id^="settingsGroup"]');
-      const inFold = row.closest('.settings-fold') !== null;
-      const crumbText = [titleRaw, inFold ? t('settings.advancedFold', 'Advanced') : '', groupBody ? headingOfBody.get(groupBody) ?? '' : '']
+      // The fold's own name: "Advanced", or "Colors" for the one fold that Simple Mode does not hide.
+      const foldHeading = row.closest('.settings-fold')?.querySelector('.settings-fold-btn .settings-group-heading')?.textContent?.trim() ?? '';
+      const crumbText = [titleRaw, foldHeading, groupBody ? headingOfBody.get(groupBody) ?? '' : '']
         .filter(Boolean).join(' › ');
       const holder = row.querySelector<HTMLElement>('.settings-label');
       const crumb = document.createElement('span');

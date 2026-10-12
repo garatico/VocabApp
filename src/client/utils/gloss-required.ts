@@ -12,7 +12,8 @@ import { readJson, writeJson, isRecord } from './storage.ts';
 import { Settings } from '../settings.ts';
 
 const PREFIX = 'vq_glossreq_';
-export const MAX_REQUIRED_MEANINGS = 4;
+/** A word can have more senses than the old cap of 4; the editor asks for up to however many it has. */
+export const MAX_REQUIRED_MEANINGS = 12;
 
 /** Bumped on every write so a table holding a cached read knows to take a fresh one. */
 let version = 0;

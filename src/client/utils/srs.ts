@@ -17,6 +17,7 @@
 
 import { readJson, writeJson, remove as removeKey, isRecord, isStringArray } from './storage.ts';
 import { Settings, DUE_HARD_CAP } from '../settings.ts';
+import { getQuizHidden } from './quiz-hidden.ts';
 
 export interface SrsEntry {
   box:    number; // 0..MAX_BOX
@@ -128,9 +129,10 @@ export function srsAllEntries(lang: string): Readonly<Record<string, SrsEntry>> 
 export function srsDueWords(lang: string, now = Date.now()): string[] {
   if (!Settings.getDueEnabled()) return [];
   const exempt = Settings.getDueExemptEnabled() ? getDueExempt(lang) : null;
+  const hidden = getQuizHidden(lang);   // taken out of every quiz: never "due", whatever its schedule says
   const cap = Math.min(Settings.getDueSoftCap(), DUE_HARD_CAP);
   return Object.entries(getState(lang))
-    .filter(([w, e]) => e.dueAt <= now && !exempt?.has(w))
+    .filter(([w, e]) => e.dueAt <= now && !exempt?.has(w) && !hidden.has(w))
     .sort((a, b) => a[1].dueAt - b[1].dueAt)
     .slice(0, cap)
     .map(([w]) => w);

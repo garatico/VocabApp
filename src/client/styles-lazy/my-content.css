@@ -1861,6 +1861,26 @@ html.dark .mcc-extra-group label { color: hsl(var(--tense-hue, 145) 62% 72%); }
 .mc-we .we-meanings-btn:hover { border-color: var(--accent); color: var(--accent); }
 .mc-we .we-meanings-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
 
+/* ── Hide from all quizzes — a per-word switch under "Meanings needed" ── */
+.mc-we .we-hide {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem;
+  margin: 0 0 0.8rem; padding: 0.55rem 0.7rem;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.mc-we .we-hide[hidden] { display: none; }
+.mc-we .we-hide-label { flex: 1 1 14rem; min-width: 0; font-size: 0.8rem; font-weight: 600; color: var(--text); }
+.mc-we .we-hide-label .hint { display: block; margin-top: 0.1rem; font-size: 0.72rem; font-weight: 400; color: var(--text-muted); }
+.mc-we .we-hide-btn {
+  flex: 0 0 auto; min-height: 34px; padding: 0.25rem 0.9rem;
+  font: inherit; font-size: 0.82rem; font-weight: 600; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer;
+}
+.mc-we .we-hide-btn:hover { border-color: var(--accent); color: var(--accent); }
+.mc-we .we-hide-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+.mc-we .badge-hidden { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border-strong); }
+.mc-we .word-item--hidden .word-item-key,
+.mc-we .word-item--hidden .word-item-translation { opacity: 0.6; text-decoration: line-through; text-decoration-thickness: 1px; }
+
 /* ═══════════════════════════════════════════════════════════════
    Phones: My Content
    The bar is: the Words language box beside the streak/dice box (first line), then the tabs with Backup at their
@@ -1915,3 +1935,158 @@ html.dark .mcc-extra-group label { color: hsl(var(--tense-hue, 145) 62% 72%); }
   /* The form's own Cancel does what ← Words does */
   .word-editor.mc-we[data-we-phone="detail"] .edit-form-header #mcwe-cancelBtn { display: none; }
 }
+
+/* ── Long glosses wrap instead of running off the side ──
+   A chip is a flex item that used to be `nowrap` and unbounded, so one long sense ("to put something in
+   a place where it will not be found") was wider than the box it sat in. It is now capped at the box
+   and its text breaks where it must. The order number, ‹ › and × keep their size. */
+/* `.word-editor.mc-we`, not `.mc-we`: word-editor.css (generated from Admin) loads after this file and says `nowrap`
+   at one class less. */
+.word-editor.mc-we .chip-input-tag { max-width: 100%; min-width: 0; white-space: normal; align-items: flex-start; }
+.word-editor.mc-we .chip-input-tag > span:not([class]) { min-width: 0; overflow-wrap: anywhere; text-align: left; }
+
+/* ── Phones: less box-in-box padding, and a header that wraps ──
+   The Word Editor sat inside five nested boxes (page, tab panel, editor, form card, form body), each with its
+   own side padding, which on a 390px screen left the form ~320px wide with 35px of empty space either side.
+   And its Save / Reset / Collapse All / ✕ buttons were a no-wrap row, so on a narrow phone "Collapse All"
+   was cut off. */
+@media (max-width: 599px) {
+  .mc-wrap { padding: 0.5rem 0.15rem 1rem; gap: 0.7rem; }
+  .mc-tabs-wrap { padding: 0.3rem 0.2rem 0.5rem; border-radius: var(--radius-sm); }
+  .word-editor.mc-we .edit-form-header { padding: 0.4rem 0.5rem; }
+  .word-editor.mc-we .edit-form-body { padding: 0.6rem 0.5rem; }
+  .word-editor.mc-we .edit-form-actions { flex: 1 1 100%; flex-wrap: wrap; flex-shrink: 1; min-width: 0; }
+  .word-editor.mc-we .edit-form-actions button { flex: 1 1 auto; min-height: 36px; white-space: nowrap; }
+  .mc-we .we-meanings, .mc-we .we-hide { padding: 0.5rem 0.55rem; }
+}
+
+/* ── The two per-word preferences share one line (Meanings needed · Hide from all quizzes) ──
+   Each wraps onto its own line only when the form is too narrow for both. */
+.mc-we .we-prefs { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 0 0 0.8rem; align-items: stretch; }
+.mc-we .we-prefs[hidden] { display: none; }
+.mc-we .we-prefs > .we-meanings { flex: 1 1 22rem; margin: 0; }
+.mc-we .we-prefs > .we-hide { flex: 1 1 17rem; margin: 0; }
+
+/* Meanings needed is a number box now: blank = Auto, otherwise 1 to the word's number of senses. */
+.mc-we .we-meanings-field { display: inline-flex; align-items: center; gap: 0.4rem; flex: 0 0 auto; }
+.mc-we .we-meanings-input { width: 5.6rem; min-height: 34px; padding: 0.25rem 0.5rem; font: inherit; font-size: 0.9rem; text-align: center; }
+.mc-we .we-meanings-input:disabled { opacity: 0.6; }
+.mc-we .we-meanings-of { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; }
+.mc-we .we-meanings-auto {
+  min-height: 34px; padding: 0.25rem 0.7rem;
+  font: inherit; font-size: 0.8rem; font-weight: 600; color: var(--text-muted);
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer;
+}
+.mc-we .we-meanings-auto:hover { border-color: var(--accent); color: var(--accent); }
+.mc-we .we-meanings { justify-content: space-between; }
+.mc-we .we-meanings-label { flex: 1 1 11rem; min-width: 0; }
+
+/* Sense notes: a quiet link until there is something to show. */
+.word-editor.mc-we .we-meaning-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.6rem; }
+.word-editor.mc-we .we-meaning-toggle {
+  padding: 0.15rem 0; background: none; border: 0; box-shadow: none;
+  font: inherit; font-size: 0.82rem; font-weight: 600; color: var(--text); cursor: pointer; text-align: left;
+  text-decoration: underline dotted; text-underline-offset: 3px;   /* reads as a control without relying on the accent's contrast */
+}
+.word-editor.mc-we .we-meaning-toggle:hover { color: var(--accent); text-decoration-style: solid; }
+.word-editor.mc-we .we-meaning-list { margin-top: 0.4rem; }
+.word-editor.mc-we .we-meaning-hint[hidden],
+.word-editor.mc-we .we-meaning-list[hidden] { display: none; }   /* their own display: flex would beat the attribute */
+
+@media (max-width: 599px) {
+  /* Part of Speech · Difficulty · CEFR band on one line: three short controls fit across a phone. */
+  .word-editor.mc-we .form-row-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; }
+  .word-editor.mc-we .form-row-3 .hint { display: none; }
+  .word-editor.mc-we .form-row-3 label { font-size: 0.72rem; }
+  .word-editor.mc-we .form-row-3 select,
+  .word-editor.mc-we .form-row-3 input { min-width: 0; padding-left: 0.4rem; padding-right: 0.4rem; text-overflow: ellipsis; }
+  .mc-we .we-prefs > .we-meanings, .mc-we .we-prefs > .we-hide { flex-basis: 100%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Word Editor form: folded sections, a facts strip, a pinned save bar, and a Settings-style "changed" marker
+   ═══════════════════════════════════════════════════════════════ */
+
+/* A folded section says what is inside it, beside its title. */
+.word-editor.mc-we .form-section-title { display: flex; align-items: baseline; gap: 0.6rem; }
+.word-editor.mc-we .form-section-summary {
+  flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 0.76rem; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-muted);
+}
+.word-editor.mc-we .form-section:not(.collapsed) .form-section-summary { display: none; }
+.word-editor.mc-we .form-section-caret { margin-left: auto; }
+.word-editor.mc-we .form-section.collapsed { margin-bottom: 0.35rem; }
+
+/* The read-only data as equal, colour-coded cells under the header: two across on a phone (like the score pills
+   in a Table quiz), as many as fit on a wide screen. Which ones show is a setting (Settings → General). */
+.word-editor.mc-we .we-facts {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem;
+  padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); background: var(--surface);
+}
+.word-editor.mc-we .we-facts[hidden] { display: none; }
+@media (min-width: 600px) {
+  .word-editor.mc-we .we-facts { grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); padding: 0.5rem 1rem; }
+}
+.word-editor.mc-we .we-fact {
+  --fh: hsl(210 55% 50%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.1rem;
+  min-width: 0; padding: 0.35rem 0.4rem; text-align: center;
+  background: color-mix(in srgb, var(--fh) 15%, var(--surface2));
+  border: 1px solid color-mix(in srgb, var(--fh) 45%, var(--border));
+  border-radius: var(--radius-sm);
+}
+.word-editor.mc-we .we-fact-k {
+  font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  color: color-mix(in srgb, var(--fh) 35%, var(--text));
+}
+.word-editor.mc-we .we-fact-v { max-width: 100%; font-size: 0.88rem; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+.word-editor.mc-we .we-fact[data-fact="ipa"]        { --fh: hsl(215 70% 55%); }
+.word-editor.mc-we .we-fact[data-fact="syllables"]  { --fh: hsl(175 60% 40%); }
+.word-editor.mc-we .we-fact[data-fact="gender"]     { --fh: hsl(335 65% 55%); }
+.word-editor.mc-we .we-fact[data-fact="plural"]     { --fh: hsl(275 55% 58%); }
+.word-editor.mc-we .we-fact[data-fact="infinitive"] { --fh: hsl(28 80% 50%); }
+.word-editor.mc-we .we-fact[data-fact="register"]   { --fh: hsl(50 75% 45%); }
+.word-editor.mc-we .we-fact[data-fact="reflexive"]  { --fh: hsl(0 65% 55%); }
+.word-editor.mc-we .we-fact[data-fact="rank"]       { --fh: hsl(140 55% 42%); }
+.word-editor.mc-we .we-fact[data-fact="corpus"]     { --fh: hsl(95 50% 42%); }
+.word-editor.mc-we .we-fact[data-fact="emoji"]      { --fh: hsl(45 85% 50%); }
+
+/* Save and Reset: a bar that stays in view however long the form is (a flex footer on a tall screen, sticky
+   where the page itself scrolls, as on a phone). */
+.word-editor.mc-we .edit-form-savebar {
+  position: sticky; bottom: 0; z-index: 4;
+  display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap;
+  padding: 0.5rem 0.9rem;
+  background: var(--surface); border-top: 1px solid var(--border-strong);
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.06);
+}
+.word-editor.mc-we .we-savebar-status { flex: 1 1 10rem; min-width: 0; font-size: 0.78rem; color: var(--text-muted); }
+.word-editor.mc-we .we-savebar-status--dirty { color: var(--text); font-weight: 600; }
+.word-editor.mc-we .edit-form-savebar button { min-height: 36px; padding: 0.3rem 1rem; font-size: 0.85rem; }
+
+/* A field that differs from the original is marked the way a changed setting is in Settings: an accent bar down
+   its left edge and a small ↺ at the right of its label that puts it back. */
+.word-editor.mc-we .form-group.we-modified { position: relative; }
+.word-editor.mc-we .form-group.we-modified::before {
+  content: ''; position: absolute; left: -0.5rem; top: 0.2rem; bottom: 0.2rem;
+  width: 3px; border-radius: 2px; background: var(--accent);
+}
+.word-editor.mc-we .form-group.we-modified > label { display: flex; align-items: center; gap: 0.4rem; color: var(--text); }
+.word-editor.mc-we .we-revert {
+  margin: 0 0 0 auto; padding: 0.1rem 0.45rem; flex: 0 0 auto;
+  font-size: 0.75rem; line-height: 1.2; color: var(--text-muted); background: transparent;
+  border: 1px solid var(--border); border-radius: 999px; cursor: pointer;
+}
+.word-editor.mc-we .we-revert:hover:not(:disabled) { color: var(--danger); border-color: var(--danger); background: var(--surface); }
+
+@media (max-width: 599px) {
+  .word-editor.mc-we .we-facts { padding: 0.35rem 0.5rem; }
+  .word-editor.mc-we .edit-form-savebar { padding: 0.4rem 0.5rem; }
+  .word-editor.mc-we .form-group.we-modified::before { left: -0.35rem; }
+}
+
+/* The number box: no spin arrows (they ate the word "Auto" on a phone), room for the placeholder. */
+.mc-we .we-meanings-input { -moz-appearance: textfield; appearance: textfield; }
+.mc-we .we-meanings-input::-webkit-outer-spin-button,
+.mc-we .we-meanings-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+

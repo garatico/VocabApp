@@ -56,6 +56,7 @@ export function initModeMenu(): void {
     const chevron = Object.assign(document.createElement('span'), { className: 'mode-menu-chevron', textContent: '▾' });
     chevron.setAttribute('aria-hidden', 'true');
     trigger.replaceChildren(name, chevron);
+    if (cur?.dataset['mode']) trigger.dataset['mode'] = cur.dataset['mode']; else delete trigger.dataset['mode'];   // the tab's colour (mode-tabs.css)
     trigger.setAttribute('aria-label', `${t('nav.menuLabel', 'Change mode')}: ${cur ? labelOf(cur) : ''}`);
   }
 

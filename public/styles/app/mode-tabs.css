@@ -210,3 +210,51 @@ body { padding-top: calc(0.2rem + env(safe-area-inset-top)); }
   .mode-menu-item.mode-menu-active { outline: 2px solid var(--accent); outline-offset: -2px; }
   .mode-menu-item[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; text-decoration: line-through; }
 }
+
+/* ── Colour-coded tabs ──
+   Each tab carries its own colour (--tab-<mode>, Settings → Appearance → Tab Colors). Text stays mostly the page's
+   own text colour so contrast holds on every pick; the colour shows in the tint, the border and the stripe. */
+.mode-tab, .mode-menu-trigger, .mode-menu-item { --tc: var(--text-muted); }   /* a tab with no colour of its own (AI Chat) */
+.mode-tab[data-mode="table"], .mode-menu-trigger[data-mode="table"], .mode-menu-item[data-mode="table"] { --tc: var(--tab-table); }
+.mode-tab[data-mode="picture"], .mode-menu-trigger[data-mode="picture"], .mode-menu-item[data-mode="picture"] { --tc: var(--tab-picture); }
+.mode-tab[data-mode="trivia"], .mode-menu-trigger[data-mode="trivia"], .mode-menu-item[data-mode="trivia"] { --tc: var(--tab-trivia); }
+.mode-tab[data-mode="guessBlank"], .mode-menu-trigger[data-mode="guessBlank"], .mode-menu-item[data-mode="guessBlank"] { --tc: var(--tab-guessBlank); }
+.mode-tab[data-mode="sentenceScramble"], .mode-menu-trigger[data-mode="sentenceScramble"], .mode-menu-item[data-mode="sentenceScramble"] { --tc: var(--tab-sentenceScramble); }
+.mode-tab[data-mode="conjugation"], .mode-menu-trigger[data-mode="conjugation"], .mode-menu-item[data-mode="conjugation"] { --tc: var(--tab-conjugation); }
+.mode-tab[data-mode="mylists"], .mode-menu-trigger[data-mode="mylists"], .mode-menu-item[data-mode="mylists"] { --tc: var(--tab-mylists); }
+.mode-tab[data-mode="myContent"], .mode-menu-trigger[data-mode="myContent"], .mode-menu-item[data-mode="myContent"] { --tc: var(--tab-myContent); }
+.mode-tab[data-mode="history"], .mode-menu-trigger[data-mode="history"], .mode-menu-item[data-mode="history"] { --tc: var(--tab-history); }
+.mode-tab[data-mode="settings"], .mode-menu-trigger[data-mode="settings"], .mode-menu-item[data-mode="settings"] { --tc: var(--tab-settings); }
+
+.mode-tablist .mode-tab[data-mode] {
+  background: color-mix(in srgb, var(--tc) 13%, var(--surface2));
+  border-color: color-mix(in srgb, var(--tc) 38%, var(--border));
+  border-bottom-color: var(--border-strong);
+  color: color-mix(in srgb, var(--tc) 30%, var(--text));
+}
+.mode-tablist .mode-tab[data-mode]:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--tc) 24%, var(--surface2));
+  color: var(--text);
+}
+.mode-tablist .mode-tab.active[data-mode] {
+  background: var(--surface);
+  border-color: var(--border-strong);
+  border-bottom-color: var(--surface);
+  color: color-mix(in srgb, var(--tc) 30%, var(--text));
+}
+.mode-tablist .mode-tab.active[data-mode]::before {
+  background: var(--tc);
+  box-shadow: 0 1px 6px color-mix(in srgb, var(--tc) 45%, transparent);
+}
+.mode-tablist .mode-tab:disabled[data-mode],
+.mode-tablist .mode-tab--unavailable[data-mode] { background: var(--surface2); }
+
+@media (max-width: 767px) {
+  .mode-menu-trigger[data-mode]::before { background: var(--tc); }
+  .mode-menu-trigger[data-mode] { color: color-mix(in srgb, var(--tc) 30%, var(--text)); }
+  .mode-menu-item[data-mode] { border-left: 4px solid var(--tc); }
+  .mode-menu-item[data-mode][aria-selected="true"] {
+    background: color-mix(in srgb, var(--tc) 14%, var(--surface));
+    color: color-mix(in srgb, var(--tc) 30%, var(--text));
+  }
+}

@@ -103,6 +103,8 @@ test('a custom word with additional senses is hideable like a real word', async 
 
 test('editing a real word only records the field that actually changed', async ({ page }) => {
   await open(page, 'hablar');
+  // Notes live in "Examples & Notes", which is folded until asked for.
+  await page.locator('.mc-we .form-section-title[data-key="examples & notes"]').click();
   await page.locator('#mcwe-editNotes').fill('e2e note only');
   await page.locator('#mcwe-saveBtn').click();
   await expect(page.locator('.mc-we .word-item .badge-edited').first()).toBeVisible();

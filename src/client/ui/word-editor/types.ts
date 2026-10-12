@@ -125,6 +125,14 @@ export interface WordEditorOptions {
     get: (word: string, lang: string) => number | null;
     set: (word: string, lang: string, count: number | null) => void;
   };
+  /**
+   * A per-word "hide from all quizzes" switch (My Content), kept outside the word's own data like
+   * `answerMeanings`. Omitted = no control.
+   */
+  hiddenFromQuizzes?: {
+    get: (word: string, lang: string) => boolean;
+    set: (word: string, lang: string, hidden: boolean) => void;
+  };
   hostAction?: {
     label: string;
     title?: string;

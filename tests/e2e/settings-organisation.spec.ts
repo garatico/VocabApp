@@ -139,16 +139,37 @@ test('Reset all to defaults clears every preference but keeps lists and progress
 
 test('advanced-only groups sit together in one Advanced fold per section, closed until searched for', async ({ page }) => {
   await openSettings(page);
-  await expect(page.locator('.settings-fold')).toHaveCount(10);
+  // Ten Advanced folds, plus Appearance's "Colors" fold, which (unlike them) Simple Mode does not hide.
+  await expect(page.locator('.settings-fold')).toHaveCount(11);
   expect(await page.evaluate(() => document.querySelectorAll('.settings-group[data-advanced]').length)).toBe(0);
-  await expect(page.locator('#settingsFold-appearance')).toHaveClass(/filter-body--collapsed/);
-  await expect(page.locator('#settingsFold-appearance #settingsGroupGenderColors')).toHaveCount(1);
+  await expect(page.locator('#settingsFold-colors')).toHaveClass(/filter-body--collapsed/);
+  await expect(page.locator('#settingsFold-colors #settingsGroupGenderColors')).toHaveCount(1);
 
   await page.locator('#settingsSearch').fill('gender colors');
-  await expect(page.locator('#settingsFold-appearance')).not.toHaveClass(/filter-body--collapsed/);
+  await expect(page.locator('#settingsFold-colors')).not.toHaveClass(/filter-body--collapsed/);
   await expect(page.locator('#settingsGroupGenderColors')).toBeVisible();
   await page.locator('#settingsSearch').fill('');
-  await expect(page.locator('#settingsFold-appearance')).toHaveClass(/filter-body--collapsed/);
+  await expect(page.locator('#settingsFold-colors')).toHaveClass(/filter-body--collapsed/);
+});
+
+test('the colour pickers are reachable in Simple Mode (the phone default), in their own Colors fold', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('s_simple_mode', 'true');
+    window.localStorage.setItem('s_onboarding_seen', 'true');
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await appReady(page);
+  await openMode(page, 'settings');
+  const section = page.locator('[data-collapse="settingsBodyAppearance"]');
+  if ((await section.getAttribute('aria-expanded')) === 'false') await section.click();
+  const fold = page.locator('[data-collapse="settingsFold-colors"]');
+  await expect(fold).toBeVisible();                                  // the Advanced fold is not
+  await expect(page.locator('[data-collapse="settingsFold-appearance"]')).toBeHidden();
+  await fold.click();
+  await page.locator('[data-collapse="settingsGroupTabColors"]').click();
+  await expect(page.locator('#settingTabColors input[type="color"]').first()).toBeVisible();
+  await expect(page.locator('#settingsGroupTableColors')).toBeAttached();
 });
 
 test('the nav uses one icon set, keeps every label on one line, and shares each section colour', async ({ page }) => {

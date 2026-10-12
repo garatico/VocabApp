@@ -191,6 +191,10 @@ for (const theme of ['light', 'dark'] as const) {
     await page.locator('.mode-tab[data-mode="myContent"]').click();
     const item = page.locator('[id^="mcwe-"] .word-item').first();
     await item.click();
+    // Every section open, so every control is audited (the form folds all but Identity by default).
+    for (const key of ['classification', 'linguistic data', 'examples & notes']) {
+      await page.locator(`.mc-we .form-section-title[data-key="${key}"]`).click();
+    }
     await expect(page.locator('#mcwe-editPos')).toBeVisible();
     expect(await violationsOf(page)).toEqual([]);
   });

@@ -189,6 +189,7 @@ export async function seedRealisticStorage(store: Store): Promise<SeedResult> {
 
   // ── Words that must be answered with several meanings ───────────────────────
   (await import('../../src/client/utils/gloss-required.ts')).setWordMeaningFlag('spanish', 'dejar', 2);
+  (await import('../../src/client/utils/quiz-hidden.ts')).setQuizHidden('spanish', 'hacer', true);
   claim('api');
 
   // ── Streaks and daily goals ─────────────────────────────────────────────────
@@ -313,7 +314,7 @@ export async function seedRealisticStorage(store: Store): Promise<SeedResult> {
 const SETTINGS_NON_DEFAULT: Record<string, string> = {
   abbreviate_grammar_hint: 'true', advanced_mode: 'true', answer_gloss_count: '3', table_required_glosses: '2', table_phone_layout: 'side', table_answer_style: 'choice', table_choice_count: '5', table_choice_wrong: 'retry', autofill_enabled: 'true',
   chinese_script: 'pinyin', confirm_remove_word_override: 'false', conj_deselected: 'grey',
-  conj_hint_mode: 'none', conj_page_size: '25', conj_show_timer: 'true', due_exempt_enabled: 'false', collapse_controls_on_start: 'false', haptics: 'false', pronunciation: 'true', reminders: 'true', reminder_time: '08:30', due_enabled: 'false', due_soft_cap: '25', list_picker_counts: 'false', list_filter_except: 'true', palette: 'ocean', app_zoom: '1.25', bg_mode: 'gradient', bg_color: '#112233', bg_color2: '#445566', bg_angle: '90', app_opacity: '85',
+  conj_hint_mode: 'none', conj_page_size: '25', conj_show_timer: 'true', due_exempt_enabled: 'false', collapse_controls_on_start: 'false', haptics: 'false', we_facts_extra: 'syllables,emoji', pronunciation: 'true', reminders: 'true', reminder_time: '08:30', due_enabled: 'false', due_soft_cap: '25', list_picker_counts: 'false', list_filter_except: 'true', palette: 'ocean', app_zoom: '1.25', bg_mode: 'gradient', bg_color: '#112233', bg_color2: '#445566', bg_angle: '90', app_opacity: '85',
   expand_gloss_on_match: 'false',
   filter_linking_enabled: 'false', function_word_marker: 'both', gender_indicator_style: 'dot',
   gender_indicator_visibility: 'hinted', guess_blank_max_attempts: '2', hint_mode: 'first-letter',
@@ -331,7 +332,7 @@ const SETTINGS_NON_DEFAULT: Record<string, string> = {
   // dynamic families: <prefix><language | tense | person | part of speech | element>
   lang_color_spanish: '#c0392b', lang_flag_spanish: 'es', tense_hue_present: '120', person_hue_0: '10',
   pos_hue_verb: '200', table_color_correct: '#2e7d32', gender_color_masculine: '#3366cc',
-  list_color_profile: '#aa3311', ctl_color_pool_topn: '#118844',
+  list_color_profile: '#aa3311', ctl_color_pool_topn: '#118844', tab_color_history: '#cc3366',
 };
 
 /** Per-mode choices and panel state written by DOM handlers. */
@@ -343,7 +344,7 @@ const UI_STATE_RAW: Record<string, string> = {
   vq_conj_order: 'rank', vq_conj_page_size: '10', vq_conj_random_table_size: '5',
   vq_conj_random_table_size_custom: '7', vq_conj_regularity: 'all', vq_conj_size: '100',
   vq_conj_size_custom: '80', vq_conj_tenses_spanish: JSON.stringify(['present', 'preterite']),
-  vq_guess_blank_difficulty: 'easy', vq_mycontent_collapsed: JSON.stringify(['trivia']),
+  vq_guess_blank_difficulty: 'easy', vq_mycontent_collapsed: JSON.stringify(['trivia']), vq_wordeditor_sections: JSON.stringify({ identity: true, classification: true }),
   vq_size_custom: '750', vq_table_order: 'shuffle', vq_table_order_sortby: 'meaning',
   vq_trivia_category: 'history', vq_trivia_difficulty: 'easy', vq_trivia_reading_difficulty: 'easy',
   vq_trivia_reading_length: 'short',
@@ -402,6 +403,7 @@ export async function readSemanticState(opaqueKeys: readonly string[] = []): Pro
       srs: srs.srsAllEntries(lang),
       dueExempt: [...srs.getDueExempt(lang)].sort(),
       meaningFlags: (await import('../../src/client/utils/gloss-required.ts')).getMeaningFlags(lang),
+      quizHidden: [...(await import('../../src/client/utils/quiz-hidden.ts')).getQuizHidden(lang)].sort(),
       sessions: history.getSessions(lang),
       misses: history.getMisses(lang),
       tallies: history.getWordTallies(lang),

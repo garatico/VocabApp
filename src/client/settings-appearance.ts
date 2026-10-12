@@ -1,6 +1,6 @@
 import { LANGUAGES, flagUrl } from './data/languages.ts';
 import { createFlagImg } from './ui/flag-icon.ts';
-import { CTL_COLOR_DEFS, GENDER_COLOR_DEFS, ML_COLOR_DEFS, PERSON_COLOR_DEFS, POS_COLOR_DEFS, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, applyCtlColors, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTenseColors, set } from './settings.ts';
+import { CTL_COLOR_DEFS, GENDER_COLOR_DEFS, ML_COLOR_DEFS, PERSON_COLOR_DEFS, POS_COLOR_DEFS, Settings, TAB_COLOR_DEFS, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, applyCtlColors, applyTabColors, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTenseColors, set } from './settings.ts';
 
 /**
  * settings-appearance.ts — the Settings screen's colour and language-appearance
@@ -226,6 +226,21 @@ export function buildMlColorRows(): void {
     list.appendChild(buildHexColorSwatchRow(label, current, hex => {
       set('list_color_' + key, hex);
       applyMlColors();
+    }));
+  }
+}
+
+/** One row per mode tab — same layout and reasoning as buildCtlColorRows below. */
+export function buildTabColorRows(): void {
+  const list = document.getElementById('settingTabColors');
+  if (!list) return;
+  list.innerHTML = '';
+  for (const [key, label, cssVar] of TAB_COLOR_DEFS) {
+    const current = Settings.getTabColor(key)
+      ?? rgbToHex(getComputedStyle(document.documentElement).getPropertyValue(cssVar));
+    list.appendChild(buildHexColorSwatchRow(label, current, hex => {
+      set('tab_color_' + key, hex);
+      applyTabColors();
     }));
   }
 }

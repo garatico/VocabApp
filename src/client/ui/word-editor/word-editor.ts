@@ -26,6 +26,8 @@ export interface WordEditorHandle {
   load(): Promise<void>;
   /** Back to page 1, then loads — for when the host changed what is being listed. */
   reload(): void;
+  /** Searches for `word` and opens it in the form. False when it is not in the current language. */
+  openWord(word: string): Promise<boolean>;
   isDirty(): boolean;
   /** Closes whatever is open without saving. */
   discard(): void;
@@ -40,7 +42,7 @@ const DEFAULT_POS_OPTIONS: ChipOption[] = [
 const BAND_OPTIONS: ChipOption[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map(b => ({ value: b, label: b }));
 
 export function createWordEditor(
-  options: WordEditorOptions & Pick<WordFormOptions, 'readOnlyFields' | 'relationFields' | 'meaningNotes' | 'reorderGlosses' | 'trackOriginal'>,
+  options: WordEditorOptions & Pick<WordFormOptions, 'readOnlyFields' | 'relationFields' | 'meaningNotes' | 'reorderGlosses' | 'trackOriginal' | 'openSections' | 'rememberSections' | 'factsStrip' | 'saveBar' | 'factsShown'>,
 ): WordEditorHandle {
   const { adapter } = options;
   const p = options.idPrefix ?? '';
@@ -76,6 +78,11 @@ export function createWordEditor(
     meaningNotes: options.meaningNotes,
     reorderGlosses: options.reorderGlosses,
     trackOriginal: options.trackOriginal,
+    openSections: options.openSections,
+    rememberSections: options.rememberSections,
+    factsStrip: options.factsStrip,
+    saveBar: options.saveBar,
+    factsShown: options.factsShown,
     extraHeaderButtons: [hostActionBtn, revertBtn, deleteBtn].filter((b): b is HTMLButtonElement => !!b),
   });
   /** Revert / Delete only make sense for a word that has edits / that the user added. */
@@ -84,49 +91,124 @@ export function createWordEditor(
     if (deleteBtn) deleteBtn.hidden = !word?.custom;
     if (hostActionBtn && hostAction) hostActionBtn.hidden = !word || !hostAction.appliesTo(word);
     syncMeanings(word);
+    syncHidden(word);
   }
   const formHost = form.host;
 
-  // A per-word preference kept beside (not inside) the word's data: how many different meanings a Table answer
-  // must name. Saves as soon as it is clicked — it is not part of Save / Reset.
+  // Two per-word preferences kept beside (not inside) the word's data, together on one line: how many different
+  // meanings a Table answer must name, and whether the word is taken out of every quiz. Each saves as soon as it is
+  // changed — neither is part of Save / Reset.
+  const prefsRow = options.answerMeanings || options.hiddenFromQuizzes ? document.createElement('div') : null;
+  if (prefsRow) {
+    prefsRow.className = 'we-prefs';
+    form.root.querySelector('.edit-form-body')?.prepend(prefsRow);
+  }
+
   const meaningsHost = options.answerMeanings;
   const meaningsRow = meaningsHost ? document.createElement('div') : null;
-  const meaningsBtns: HTMLButtonElement[] = [];
-  const MEANING_CHOICES: { text: string; value: number | null }[] = [
-    { text: 'Auto', value: null }, { text: '1', value: 1 }, { text: '2', value: 2 }, { text: '3', value: 3 },
-  ];
+  let meaningsInput: HTMLInputElement | null = null;
+  let meaningsOf: HTMLElement | null = null;
+  /** The most senses a Table answer can name for this word: how many it has. */
+  const maxMeanings = (word: WordData): number => Math.max(1, word.glosses?.length ?? 1);
   if (meaningsRow && meaningsHost) {
     meaningsRow.className = 'we-meanings';
     meaningsRow.setAttribute('role', 'group');
     meaningsRow.setAttribute('aria-label', 'Meanings needed in Table quizzes');
     meaningsRow.hidden = true;
-    meaningsRow.innerHTML = '<span class="we-meanings-label">Meanings needed in Table quizzes <span class="hint">Auto follows Settings → Table Quiz → Meanings to type</span></span>';
-    MEANING_CHOICES.forEach(c => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'we-meanings-btn';
-      b.textContent = c.text;
-      b.title = c.value === null ? 'Follow the Meanings to type setting' : `Answer with ${c.value} different meaning${c.value === 1 ? '' : 's'}`;
-      b.addEventListener('click', () => {
-        if (!currentWord) return;
-        meaningsHost.set(currentWord.word, langSelect.value, c.value);
-        syncMeanings(currentWord);
-      });
-      meaningsRow.appendChild(b);
-      meaningsBtns.push(b);
+    const label = document.createElement('span');
+    label.className = 'we-meanings-label';
+    label.innerHTML = 'Meanings needed in Table quizzes <span class="hint">Blank follows Settings → Table Quiz → Meanings to type</span>';
+    const field = document.createElement('span');
+    field.className = 'we-meanings-field';
+    meaningsInput = document.createElement('input');
+    meaningsInput.type = 'number';
+    meaningsInput.min = '1';
+    meaningsInput.inputMode = 'numeric';
+    meaningsInput.placeholder = 'Auto';
+    meaningsInput.className = 'we-meanings-input';
+    meaningsInput.setAttribute('aria-label', 'Meanings needed in Table quizzes (blank = Auto)');
+    meaningsOf = document.createElement('span');
+    meaningsOf.className = 'we-meanings-of';
+    const auto = document.createElement('button');
+    auto.type = 'button';
+    auto.className = 'we-meanings-auto';
+    auto.textContent = 'Auto';
+    auto.title = 'Follow the Meanings to type setting';
+    field.append(meaningsInput, meaningsOf, auto);
+    meaningsRow.append(label, field);
+    prefsRow?.append(meaningsRow);
+
+    /** Saves what is typed: nothing = Auto; anything else is kept between 1 and the word's own number of senses. */
+    const commit = (): void => {
+      if (!currentWord || !meaningsInput) return;
+      const raw = meaningsInput.value.trim();
+      const n = raw === '' ? NaN : Math.floor(Number(raw));
+      const value = Number.isFinite(n) ? Math.min(Math.max(n, 1), maxMeanings(currentWord)) : null;
+      meaningsHost.set(currentWord.word, langSelect.value, value);
+      syncMeanings(currentWord);
+    };
+    meaningsInput.addEventListener('change', commit);
+    meaningsInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } });
+    auto.addEventListener('click', () => {
+      if (!currentWord) return;
+      meaningsHost.set(currentWord.word, langSelect.value, null);
+      syncMeanings(currentWord);
     });
-    form.root.querySelector('.edit-form-body')?.prepend(meaningsRow);
+  }
+
+  // "Hide from all quizzes": a per-word switch, also kept beside the word's data and saved on click. A plain
+  // button among the header's own (Collapse All, Edit conjugations, Revert), not a box of its own.
+  const hideHost = options.hiddenFromQuizzes;
+  const hideBtn = hideHost ? document.createElement('button') : null;
+  if (hideBtn && hideHost) {
+    hideBtn.type = 'button';
+    hideBtn.className = 'secondary we-hide-btn';
+    hideBtn.id = (options.idPrefix ?? '') + 'hideFromQuizzesBtn';
+    hideBtn.hidden = true;
+    hideBtn.title = 'It stays in your lists and here; it just never comes up as a question.';
+    hideBtn.addEventListener('click', () => {
+      if (!currentWord) return;
+      const { word } = currentWord;
+      const hidden = !hideHost.get(word, langSelect.value);
+      hideHost.set(word, langSelect.value, hidden);
+      syncHidden(currentWord);
+      // The list's own row reads the same switch.
+      wordList.querySelectorAll('.word-item.active').forEach(item => item.classList.toggle('word-item--hidden', hidden));
+    });
+    form.root.querySelector('.edit-form-header .edit-form-actions')?.append(hideBtn);
+  }
+  function syncHidden(word: WordData | null): void {
+    if (!hideBtn || !hideHost) return;
+    hideBtn.hidden = !word;
+    if (!word) return;
+    const on = hideHost.get(word.word, langSelect.value);
+    hideBtn.textContent = on ? 'Hidden — show again' : 'Hide from quizzes';
+    hideBtn.classList.toggle('active', on);
+    hideBtn.setAttribute('aria-pressed', String(on));
   }
   function syncMeanings(word: WordData | null): void {
-    if (!meaningsRow || !meaningsHost) return;
+    if (!meaningsRow || !meaningsHost || !meaningsInput || !meaningsOf) return;
     meaningsRow.hidden = !word;
     if (!word) return;
+    const max = maxMeanings(word);
     const cur = meaningsHost.get(word.word, langSelect.value);
-    meaningsBtns.forEach((b, i) => {
-      const on = MEANING_CHOICES[i].value === cur;
-      b.classList.toggle('active', on);
-      b.setAttribute('aria-pressed', String(on));
-    });
+    meaningsInput.max = String(max);
+    meaningsInput.disabled = max === 1;
+    meaningsInput.title = max === 1 ? 'This word has one meaning' : `1 to ${max}`;
+    meaningsInput.value = cur === null ? '' : String(Math.min(cur, max));
+    meaningsOf.textContent = `of ${max}`;
+  }
+  // The row itself goes when neither control has a word to act on, so it leaves no empty box. Watches the two
+  // children only (never the row itself: setting its own `hidden` would trigger the observer again) and writes
+  // only when the value changes.
+  if (prefsRow) {
+    const syncPrefs = (): void => {
+      const none = meaningsRow?.hidden ?? true;
+      if (prefsRow.hidden !== none) prefsRow.hidden = none;
+    };
+    const watcher = new MutationObserver(syncPrefs);
+    if (meaningsRow) watcher.observe(meaningsRow, { attributes: true, attributeFilter: ['hidden'] });
+    syncPrefs();
   }
 
   let currentWord: WordData | null = null;
@@ -290,9 +372,11 @@ export function createWordEditor(
       const item = document.createElement('div');
       // A reload after a save rebuilds the list — keep the open word highlighted.
       item.className = currentWord && word.word === currentWord.word ? 'word-item active' : 'word-item';
+      if (hideHost?.get(word.word, langSelect.value)) item.classList.add('word-item--hidden');
       const badges = [
         word.custom ? '<span class="badge badge-custom" title="A word you added">added</span>' : '',
         word.edited ? '<span class="badge badge-edited" title="You have edited this word">edited</span>' : '',
+        hideHost?.get(word.word, langSelect.value) ? '<span class="badge badge-hidden" title="Hidden from all quizzes">hidden</span>' : '',
         word.pos             ? `<span class="badge badge-pos" data-pos="${escapeHtml(word.pos)}">${escapeHtml(word.pos)}</span>` : '',
         word.frequency?.band ? `<span class="badge badge-band" data-band="${escapeHtml(word.frequency.band)}">${escapeHtml(word.frequency.band)}</span>` : '',
       ].join('');
@@ -460,6 +544,22 @@ export function createWordEditor(
     },
     load,
     reload: resetPageAndLoad,
+    /**
+     * Shows `word` in the form: searches for it, then opens its row — what "Edit in My Content" from a quiz needs,
+     * rather than leaving the learner to find it in a one-item list. Other filters are cleared so the word cannot
+     * be hidden by one left over from earlier. Resolves false when the word is not in this language's list.
+     */
+    async openWord(word: string): Promise<boolean> {
+      searchInput.value = word;
+      posFilter.clear(); bandFilter.clear(); domainFilter.clear();
+      page = 1;
+      await load();
+      const row = [...wordList.querySelectorAll<HTMLElement>('.word-item')]
+        .find(item => item.querySelector('.word-item-key')?.textContent === word);
+      if (!row) return false;
+      row.click();
+      return true;
+    },
     isDirty: () => form.isDirty(),
     discard: clearForm,
     setPageSize(n) { pageSize = n; resetPageAndLoad(); },

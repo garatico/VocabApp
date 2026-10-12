@@ -136,6 +136,7 @@
     "s_streak_widget_format": "number-only",
     "s_sudden_death": "true",
     "s_swear_filter_enabled": "true",
+    "s_tab_color_history": "#cc3366",
     "s_table_answer_style": "choice",
     "s_table_choice_count": "5",
     "s_table_choice_wrong": "retry",
@@ -158,6 +159,7 @@
     "s_track_hinted_revealed": "false",
     "s_typo_tolerance": "high",
     "s_ui_language": "spanish",
+    "s_we_facts_extra": "syllables,emoji",
     "theme": "dark",
     "vq_bands": "B1,B2",
     "vq_classfilter_table": "{\"active\":true,\"selected\":[\"verb\"]}",
@@ -200,7 +202,8 @@
     "vq_trivia_difficulty": "easy",
     "vq_trivia_reading_difficulty": "easy",
     "vq_trivia_reading_length": "short",
-    "vq_trivia_style": "choice"
+    "vq_trivia_style": "choice",
+    "vq_wordeditor_sections": "{\"identity\":true,\"classification\":true}"
   },
   "perLang": {
     "french": {
@@ -264,6 +267,7 @@
         "chat": 1
       },
       "pictureOverrides": {},
+      "quizHidden": [],
       "sessions": [
         {
           "at": "2026-03-07T10:30:00.000Z",
@@ -349,6 +353,7 @@
       "meaningFlags": {},
       "misses": {},
       "pictureOverrides": {},
+      "quizHidden": [],
       "sessions": [],
       "smartLists": {},
       "srs": {},
@@ -529,6 +534,9 @@
         "gato": "https://example.com/gato.jpg",
         "perro": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
       },
+      "quizHidden": [
+        "hacer"
+      ],
       "sessions": [
         {
           "at": "2026-03-06T10:30:00.000Z",
@@ -1261,7 +1269,17 @@
     "getTrackHintedRevealed": false,
     "getTypoTolerance": "high",
     "getTypoToleranceRatio": 0.35,
-    "getUILanguage": "spanish"
+    "getUILanguage": "spanish",
+    "getWordFactExtras": {},
+    "getWordFacts": [
+      "ipa",
+      "gender",
+      "plural",
+      "infinitive",
+      "rank",
+      "syllables",
+      "emoji"
+    ]
   },
   "streak": {
     "best": 3,

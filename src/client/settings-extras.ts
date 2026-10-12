@@ -1,8 +1,8 @@
 import {
-  P, Settings, applyCtlColors, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTenseColors,
+  P, Settings, applyCtlColors, applyTabColors, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTenseColors,
 } from './settings.ts';
 import {
-  buildConjColorRows, buildCtlColorRows, buildGenderColorRows, buildLangAppearanceRows, buildMlColorRows, buildPosColorRows, buildTableColorRows,
+  buildConjColorRows, buildCtlColorRows, buildGenderColorRows, buildLangAppearanceRows, buildMlColorRows, buildPosColorRows, buildTabColorRows, buildTableColorRows,
 } from './settings-appearance.ts';
 import { getGoals, type GoalType } from './utils/streak.ts';
 import { keys, readString, remove, writeString } from './utils/storage.ts';
@@ -22,6 +22,7 @@ import { keys, readString, remove, writeString } from './utils/storage.ts';
 /** Each colour group's body id, and the s_ storage families it overrides. */
 export const COLOUR_GROUPS: ReadonlyArray<{ body: string; prefixes: readonly string[] }> = [
   { body: 'settingsGroupMlColors',      prefixes: ['list_color_'] },
+  { body: 'settingsGroupTabColors',     prefixes: ['tab_color_'] },
   { body: 'settingsGroupCtlColors',     prefixes: ['ctl_color_'] },
   { body: 'settingsGroupTableColors',   prefixes: ['table_color_'] },
   { body: 'settingsGroupGenderColors',  prefixes: ['gender_color_'] },
@@ -48,8 +49,8 @@ export function colourGroupChanged(body: string): boolean {
 
 /** Repaint every colour picker and re-apply every colour, from storage. */
 export function repaintColours(): void {
-  applyLangColors(); applyTenseColors(); applyPosColors(); applyTableColors(); applyGenderColors(); applyMlColors(); applyCtlColors();
-  buildLangAppearanceRows(); buildConjColorRows(); buildPosColorRows(); buildTableColorRows(); buildGenderColorRows(); buildMlColorRows(); buildCtlColorRows();
+  applyLangColors(); applyTenseColors(); applyPosColors(); applyTableColors(); applyGenderColors(); applyMlColors(); applyCtlColors(); applyTabColors();
+  buildLangAppearanceRows(); buildConjColorRows(); buildPosColorRows(); buildTableColorRows(); buildGenderColorRows(); buildMlColorRows(); buildCtlColorRows(); buildTabColorRows();
 }
 
 export function resetColourGroup(body: string): void {

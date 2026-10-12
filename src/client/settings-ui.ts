@@ -7,7 +7,7 @@ import { getGoals, setGoalTarget, hasLanguageGoal, clearLanguageGoal, type GoalT
 import type { GenderIndicatorStyle, GenderIndicatorVisibility } from './utils/dom.ts';
 import type { ProgressBarPercentMode } from './ui/score-pills.ts';
 import type { StreakWidgetFormat } from './ui/streak-widget.ts';
-import { buildConjColorRows, buildCtlColorRows, buildGenderColorRows, buildLangAppearanceRows, buildMlColorRows, buildPosColorRows, buildTableColorRows } from './settings-appearance.ts';
+import { buildConjColorRows, buildCtlColorRows, buildGenderColorRows, buildLangAppearanceRows, buildMlColorRows, buildPosColorRows, buildTabColorRows, buildTableColorRows } from './settings-appearance.ts';
 import { bindGlossary, bindSettingsSearch, snapshotSettingDefaults } from './settings-search.ts';
 import { bindStreakCalendarNav, refreshStreakReadouts } from './settings-streak.ts';
 import { refreshDueBadge } from './ui/due-badge.ts';
@@ -15,7 +15,7 @@ import { spreadOverdueSrs } from './utils/srs.ts';
 import { REVIEW_LIST_NAME } from './utils/review-due.ts';
 import { getList, deleteList } from './utils/word-lists.ts';
 import { showToast } from './ui/toast.ts';
-import { applyPalette, applyBackground, applyOpacity, applyCtlColors, CTL_COLOR_DEFS, DUE_SOFT_CAP_MAX, ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applySettingsLinks, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTablePhoneLayout, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onShowMyContentChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
+import { applyPalette, applyBackground, applyOpacity, applyCtlColors, applyTabColors, CTL_COLOR_DEFS, TAB_COLOR_DEFS, DUE_SOFT_CAP_MAX, ConjDeselected, FontSize, GENDER_COLOR_DEFS, LISTS_DOMAINS_HIDEABLE_MODES, LangIndicator, ML_COLOR_DEFS, P, PERSON_COLOR_DEFS, POS_COLOR_DEFS, POS_HIDEABLE_MODES, Settings, TABLE_COLOR_DEFS, TENSE_COLOR_DEFS, TableRowDensity, UILanguage, applyConjDeselectedClass, applyFontSize, applySettingsLinks, applyGenderColors, applyLangColors, applyMlColors, applyPosColors, applyTableColors, applyTableRowDensity, applyTablePhoneLayout, applyTenseColors, get, getHiddenFilterModes, onConjDeselectedChange, onExperimentalModesChangeListeners, onShowMyContentChangeListeners, onFilterVisibilityChange, onPageSizeChange, onShowAdminPanelChangeListeners, onShowTimerChangeListeners, onSimpleModeChangeListeners, onStreakWidgetChangeListeners, onUILanguageChange, set, setHiddenFilterModes } from './settings.ts';
 import { confirmDialog } from './ui/dialog.ts';
 import { hapticsSupported } from './utils/haptics.ts';
 import { speechSupported } from './utils/speech.ts';
@@ -766,6 +766,17 @@ export function bindSettings(): void {
   });
   if (!hapticsSupported()) document.getElementById('settingHapticsRow')?.setAttribute('hidden', '');
 
+  // Extra word details shown in My Content's Word Editor (see WORD_FACT_EXTRAS)
+  document.getElementById('settingWordFacts')?.addEventListener('click', e => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('.sort-order-btn');
+    if (!btn) return;
+    btn.classList.toggle('active');
+    btn.setAttribute('aria-pressed', String(btn.classList.contains('active')));
+    const on = [...document.querySelectorAll<HTMLElement>('#settingWordFacts .sort-order-btn.active')]
+      .map(b => b.dataset.fact ?? '').filter(Boolean);
+    set('we_facts_extra', on.join(','));
+  });
+
   // Sessions to keep (see getMaxSessionsKept)
   document.getElementById('settingMaxSessionsKept')?.addEventListener('change', e => {
     const n = Number((e.target as HTMLInputElement).value);
@@ -965,6 +976,14 @@ export function bindSettings(): void {
     },
     watch: ['settingBgMode', 'settingBgColor', 'settingBgColor2', 'settingBgAngle']
       .map(id => document.getElementById(id)).filter((el): el is HTMLElement => el !== null),
+  });
+
+  buildTabColorRows();
+  applyTabColors();
+  document.getElementById('settingResetTabColors')?.addEventListener('click', () => {
+    for (const [key] of TAB_COLOR_DEFS) removeKey(P + 'tab_color_' + key);
+    applyTabColors();
+    buildTabColorRows();
   });
 
   buildCtlColorRows();
@@ -1442,6 +1461,14 @@ function restoreSettingsUI(): void {
   const savedPronunciation = String(Settings.getPronunciation());
   document.querySelectorAll<HTMLElement>('#settingPronunciation .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.enabled === savedPronunciation);
+  });
+
+  // Extra word details
+  const factExtras = Settings.getWordFactExtras();
+  document.querySelectorAll<HTMLElement>('#settingWordFacts .sort-order-btn').forEach(b => {
+    const on = factExtras.has(b.dataset.fact ?? '');
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', String(on));
   });
 
   // Vibrate on answers

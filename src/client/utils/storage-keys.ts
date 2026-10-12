@@ -72,6 +72,7 @@ export const KEY_FAMILIES: readonly KeyFamily[] = [
   prefix('vq_mastery_',      'data', 'modes/my-lists/mastery.ts',
     { evidence: true, note: 'vq_mastery_<lang>, _dates_<lang>, _scale_<lang>; also the legacy per-list vq_mastery_<lang>_<list>, merged on read' }),
   prefix('vq_srs_',          'data', 'utils/srs.ts', { evidence: true }),
+  prefix('vq_hidden_',       'data', 'utils/quiz-hidden.ts', { note: 'vq_hidden_<lang>: words the learner hid from every quiz (My Content)' }),
   prefix('vq_glossreq_',     'data', 'utils/gloss-required.ts', { note: 'vq_glossreq_<lang>: word → how many meanings its Table answer must name' }),
   prefix('vq_history_',      'data', 'utils/session-history.ts', { evidence: true, note: 'quiz sessions per language' }),
   exact ('vq_history_collapsed', 'ui', 'modes/history-mode.ts',
@@ -134,6 +135,7 @@ export const KEY_FAMILIES: readonly KeyFamily[] = [
   // ── My Content and My Lists panels ────────────────────────────────────────
   exact ('vq_mycontent_activetab',  'ui', 'modes/my-content/layout.ts'),
   exact ('vq_mycontent_collapsed',  'ui', 'modes/my-content/layout.ts'),
+  exact ('vq_wordeditor_sections',  'ui', 'modes/my-content-mode.ts', { note: 'which Word Editor form sections the learner has open: { section: boolean }' }),
   exact ('vq_mycontent_langs',      'ui', 'modes/my-content/languages.ts'),
   exact ('ml_browse_filter',        'legacy', 'modes/my-lists/browse-panel.ts', { note: 'the old broad filter box in Browse All Words; its column filters are not remembered. No longer read or written' }),
   exact ('ml_browse_sort',          'ui', 'modes/my-lists/browse-panel.ts'),

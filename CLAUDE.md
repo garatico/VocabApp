@@ -229,6 +229,26 @@ read from or write to `vocabulary.db`.
   `app.ts` uses (it belongs in the eager sheet) or a lazy file is imported by nothing. New styles for a lazy mode go in its lazy file.
   The split was verified with 144 screenshots (4 viewports/themes x every tab and sub-view) diffed against the pre-split build, plus a
   computed-style diff per regression: a class used on the first paint but styled only in a lazy file renders unstyled until the mode loads.
+- **Hiding a word from quizzes is its own per-language set** (`utils/quiz-hidden.ts`, `vq_hidden_<lang>`), set from My Content's Word Editor
+  ("Hide from all quizzes", the `hiddenFromQuizzes` editor option, beside `answerMeanings`). It is filtered once, where the pool is built
+  (`ensureLoaded` in `app.ts`), so every mode and a list's Quiz skip it, and `srsDueWords` leaves it out of "due". The word stays in the
+  vocabulary, My Lists and the editor (badge + struck-through) so it can be brought back. Not an override: it works on a word never edited.
+- **Mode tabs are colour-coded** (`TAB_COLOR_DEFS` in `settings.ts`, `--tab-<mode>` defaults for light and dark in `variables.css`, stored as
+  `s_tab_color_<mode>`, picked in Settings → Appearance → Colors → Tab Colors). `mode-tabs.css` derives tint, border, stripe and text from one
+  `--tc` per tab and the phone mode menu reuses it (`data-mode` on the trigger and each entry); text stays mostly `--text` so contrast holds
+  for any pick. `tests/client/tab-colors.test.ts` fails if a tab has no colour, default or rule.
+- **Colour pickers live in a "Colors" fold that Simple Mode does not hide** (`#settingsFold-colors`, Appearance, closed by default), apart
+  from the Advanced fold. They used to sit in the Advanced fold, which phones (Simple Mode by default) never showed. A new colour group goes in
+  that fold and in `COLOUR_GROUPS` (`settings-extras.ts`); Language appearance stays in Advanced (`data-simple-hide`).
+- **The My Content Word Editor form is folded, summarised and pinned** (`ui/word-editor/form.ts`, options set in `my-content-mode.ts`; Admin
+  uses none of them, so it is unchanged). Only Identity starts open (`openSections`); the others show a one-line summary beside their title and
+  remember how the learner left them (`rememberSections` -> `vq_wordeditor_sections`). The read-only linguistic data is a chip strip under
+  the header (`factsStrip`) as equal, colour-coded cells (two across on a phone; `data-fact` carries each hue). IPA, gender, plural,
+  infinitive and rank always show; syllables, register, reflexive, corpus and emoji are off until ticked in Settings -> General ->
+  "Extra word details" (`WORD_FACT_EXTRAS`, `s_we_facts_extra`). That leaves just the Disambiguator in the Linguistic Data section. Save and Reset live in a bar at the foot of the form
+  (`saveBar`) with a "N fields differ from the original" count, and a field that differs from the original is marked like a changed setting
+  (accent bar + a small ↺ in its label). Hide from all quizzes is a plain button in the form header beside Collapse All; Meanings needed is a number box
+  (blank = Auto, otherwise 1 to the word's number of senses) in a `.we-prefs` row.
 - **Accessibility is a tested bar, not a wish.** `tests/e2e/a11y.spec.ts` runs
   axe-core (WCAG 2.1 A/AA + best-practice) on every tab, light and dark, with and
   without a quiz running, and expects *zero* violations. Colour pairs come from

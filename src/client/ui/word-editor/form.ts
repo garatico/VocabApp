@@ -11,6 +11,7 @@
  */
 
 import { createChipInput, type ChipInputHandle } from './chip-input.ts';
+import { readJson, writeJson, isRecord } from '../../utils/storage.ts';
 import { setupEmojiPicker } from './emoji-picker.ts';
 import type { WordData } from './types.ts';
 import '../../styles-lazy/my-content-bundle.css';
@@ -40,6 +41,22 @@ export interface WordFormOptions {
    * glosses that have been removed so they can be restored.
    */
   trackOriginal?: boolean;
+  /**
+   * Which sections start open, by title (lower-case: "identity"); every other starts folded, with a one-line
+   * summary of what is inside. Omitted = all open, as the Admin panel has always been.
+   */
+  openSections?: string[];
+  /** A storage key under which the learner's own open/folded choices are kept, overriding `openSections`. */
+  rememberSections?: string;
+  /**
+   * Shows the read-only linguistic data (IPA, syllables, gender, plural, infinitive, register, rank, emoji…) as a
+   * strip of chips under the header instead of a block of disabled inputs.
+   */
+  factsStrip?: boolean;
+  /** Puts Save and Reset in a bar pinned to the foot of the form, with a count of what differs from the original. */
+  saveBar?: boolean;
+  /** Which facts the strip shows (ipa, syllables, gender, plural, infinitive, register, reflexive, rank, corpus, emoji); omitted = all. */
+  factsShown?: () => readonly string[];
 }
 
 export interface WordFormHandle {
@@ -123,8 +140,11 @@ export function buildWordForm(options: WordFormOptions = {}): WordFormHandle {
           </div>
           ${options.meaningNotes ? `
           <div class="form-group we-meaning-notes" id="${id('meaningNotesGroup')}">
-            <label>Sense notes <span class="hint">optional — shown as "gloss (note)" to tell similar senses apart</span></label>
-            <div class="we-meaning-list" id="${id('meaningNotesList')}"></div>
+            <div class="we-meaning-head">
+              <button type="button" class="we-meaning-toggle" id="${id('meaningNotesToggle')}" aria-expanded="false" aria-controls="${id('meaningNotesList')}">+ Add a sense note</button>
+              <span class="hint we-meaning-hint" hidden>optional — shown as "gloss (note)" to tell similar senses apart</span>
+            </div>
+            <div class="we-meaning-list" id="${id('meaningNotesList')}" hidden></div>
           </div>` : ''}
         </div>
 
@@ -321,6 +341,10 @@ export function buildWordForm(options: WordFormOptions = {}): WordFormHandle {
     : null;
   const removedGlossesEl = q<HTMLElement>('removedGlosses');
   const meaningList = options.meaningNotes ? q<HTMLElement>('meaningNotesList') : null;
+  const meaningToggle = options.meaningNotes ? q<HTMLButtonElement>('meaningNotesToggle') : null;
+  // Sense notes take a row per gloss, which is a lot of height for something most words never use, so they stay
+  // folded away until the word already has one or the learner asks to add one.
+  let meaningOpen = false;
 
   let currentOriginal: WordData | null = null;
   const meaningNotes: Record<string, string> = {};
@@ -351,7 +375,7 @@ export function buildWordForm(options: WordFormOptions = {}): WordFormHandle {
   // Save stays disabled until something changes — there is nothing to save
   // otherwise. Delegated on the body: 'input'/'change' cover every field, and
   // a chip's remove button is a plain click neither event fires for.
-  function setDirty(next: boolean): void { dirty = next; saveBtn.disabled = !next; }
+  function setDirty(next: boolean): void { dirty = next; saveBtn.disabled = !next; updateSaveBarStatus(); }
   saveBtn.disabled = true;
   body.addEventListener('input',  () => setDirty(true));
   body.addEventListener('change', () => setDirty(true));
@@ -364,25 +388,45 @@ export function buildWordForm(options: WordFormOptions = {}): WordFormHandle {
 
   // ── Collapsible sections ─────────────────────────────────────────────────
   const sections = [...host.querySelectorAll<HTMLElement>('.form-section')];
+  // Which sections are open: the learner's own choices when the host names a key to keep them under, else the
+  // host's `openSections` (by title), else all of them — which is how the Admin panel has always been.
+  const remembered = options.rememberSections
+    ? readJson<Record<string, unknown>>(options.rememberSections, {}, isRecord)
+    : {};
+  function persistSections(): void {
+    if (!options.rememberSections) return;
+    const out: Record<string, boolean> = {};
+    sections.forEach(s => {
+      const key = s.querySelector<HTMLElement>(':scope > .form-section-title')?.dataset['key'];
+      if (key) out[key] = !s.classList.contains('collapsed');
+    });
+    writeJson(options.rememberSections, out);
+  }
   function updateToggleAllLabel(): void {
     toggleAll.textContent = sections.some(s => !s.classList.contains('collapsed')) ? 'Collapse All' : 'Expand All';
   }
   sections.forEach(section => {
     const title = section.querySelector<HTMLElement>(':scope > .form-section-title');
     if (!title) return;
+    const key = (title.textContent ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+    title.dataset['key'] = key;
     const sectionBody = document.createElement('div');
     sectionBody.className = 'form-section-body';
     [...section.children].forEach(child => { if (child !== title) sectionBody.appendChild(child); });
     section.appendChild(sectionBody);
+    const saved = remembered[key];
+    const open = typeof saved === 'boolean' ? saved : (options.openSections ? options.openSections.includes(key) : true);
+    section.classList.toggle('collapsed', !open);
     title.classList.add('form-section-toggle');
     title.setAttribute('role', 'button');
-    title.setAttribute('aria-expanded', 'true');
+    title.setAttribute('aria-expanded', String(open));
     title.tabIndex = 0;
-    title.insertAdjacentHTML('beforeend', '<span class="form-section-caret">▾</span>');
+    title.insertAdjacentHTML('beforeend', '<span class="form-section-summary" aria-hidden="true"></span><span class="form-section-caret">▾</span>');
     const toggle = (): void => {
       const collapsed = section.classList.toggle('collapsed');
       title.setAttribute('aria-expanded', String(!collapsed));
       updateToggleAllLabel();
+      persistSections();
     };
     title.addEventListener('click', toggle);
     title.addEventListener('keydown', e => {
@@ -396,7 +440,107 @@ export function buildWordForm(options: WordFormOptions = {}): WordFormHandle {
       section.querySelector('.form-section-title')?.setAttribute('aria-expanded', String(!anyExpanded));
     });
     updateToggleAllLabel();
+    persistSections();
   });
+  updateToggleAllLabel();
+
+  /** What a folded section says about what is inside it, so folding it does not hide the facts. */
+  function summaryFor(key: string): string {
+    if (key === 'classification') {
+      const d = domainsChip.get();
+      return [
+        posSel.value,
+        difficulty.value ? `difficulty ${difficulty.value}` : '',
+        band.value,
+        d.length ? d.slice(0, 2).join(', ') + (d.length > 2 ? ` +${d.length - 2}` : '') : '',
+      ].filter(Boolean).join(' · ');
+    }
+    if (key === 'linguistic data') {
+      return options.factsStrip ? disambig.value.trim() : [ipa.value.trim(), gender.value].filter(Boolean).join(' · ');
+    }
+    if (key === 'examples & notes') {
+      const n = examples.value.split('\n').filter(l => l.trim()).length;
+      return [n ? `${n} example${n === 1 ? '' : 's'}` : '', notes.value.trim() ? 'notes' : ''].filter(Boolean).join(' · ');
+    }
+    return '';
+  }
+  function updateSummaries(): void {
+    sections.forEach(s => {
+      const title = s.querySelector<HTMLElement>(':scope > .form-section-title');
+      const out = title?.querySelector<HTMLElement>('.form-section-summary');
+      if (title && out) out.textContent = summaryFor(title.dataset['key'] ?? '');
+    });
+  }
+  body.addEventListener('input',  updateSummaries);
+  body.addEventListener('change', updateSummaries);
+
+  // ── Facts strip: the read-only data, as quiet chips instead of disabled inputs ─────────────────────────────
+  const factsEl = document.createElement('div');
+  factsEl.className = 'we-facts';
+  factsEl.hidden = true;
+  if (options.factsStrip) {
+    body.before(factsEl);
+    ['editIPA', 'editSyllables', 'editGender', 'editPlural', 'editInfinitive', 'editRegister', 'editReflexive',
+      'editRank', 'editCorpusFrequency', 'editEmoji'].forEach(name => {
+      const group = q(name).closest<HTMLElement>('.form-group');
+      if (group) group.hidden = true;
+    });
+    host.querySelectorAll<HTMLElement>('.form-row, .form-row-3, .form-row-4, .form-row-5').forEach(row => {
+      if ([...row.children].every(c => (c as HTMLElement).hidden)) row.hidden = true;
+    });
+    // What is left in that section is the disambiguator, which is the learner's to edit.
+    const ling = sections.find(s => s.querySelector<HTMLElement>(':scope > .form-section-title')?.dataset['key'] === 'linguistic data');
+    const lingTitle = ling?.querySelector<HTMLElement>(':scope > .form-section-title');
+    if (lingTitle?.firstChild) lingTitle.firstChild.textContent = 'Disambiguator';
+  }
+  function renderFacts(word: WordData | null): void {
+    if (!options.factsStrip) return;
+    factsEl.replaceChildren();
+    const l = word?.linguistic ?? {};
+    const syl = Array.isArray(l.syllables) ? l.syllables.join('-') : l.syllables;
+    const shown = options.factsShown ? new Set(options.factsShown()) : null;
+    // One cell per fact, in this order, each with its own colour (word-editor CSS keys off data-fact).
+    const facts: [key: string, label: string, value: string | number | null | undefined][] = [
+      ['ipa', 'IPA', l.ipa], ['syllables', 'Syllables', syl], ['gender', 'Gender', l.gender], ['plural', 'Plural', l.plural],
+      ['infinitive', 'Infinitive', l.infinitive], ['register', 'Register', l.register],
+      ['reflexive', 'Reflexive', l.reflexive ? 'yes' : null],
+      ['rank', 'Rank', word?.frequency?.rank], ['corpus', 'Corpus', word?.frequency?.corpus_frequency], ['emoji', 'Emoji', word?.emoji],
+    ];
+    for (const [key, label, value] of facts) {
+      if (shown && !shown.has(key)) continue;
+      if (value === null || value === undefined || value === '') continue;
+      const cell = document.createElement('span');
+      cell.className = 'we-fact';
+      cell.dataset['fact'] = key;
+      const k = document.createElement('span');
+      k.className = 'we-fact-k';
+      k.textContent = label;
+      const v = document.createElement('span');
+      v.className = 'we-fact-v';
+      v.textContent = String(value);
+      cell.append(k, v);
+      factsEl.append(cell);
+    }
+    factsEl.hidden = factsEl.childElementCount === 0;
+  }
+
+  // ── Save bar: Save and Reset pinned to the foot of the form ────────────────────────────────────────────────
+  const saveBarStatus = document.createElement('span');
+  saveBarStatus.className = 'we-savebar-status';
+  saveBarStatus.setAttribute('role', 'status');
+  if (options.saveBar) {
+    const bar = document.createElement('div');
+    bar.className = 'edit-form-savebar';
+    bar.append(saveBarStatus, resetBtn, saveBtn);
+    body.after(bar);
+  }
+  function updateSaveBarStatus(): void {
+    if (!options.saveBar) return;
+    const n = body.querySelectorAll('.form-group.we-modified').length;
+    const differs = n ? `${n} field${n === 1 ? '' : 's'} differ${n === 1 ? 's' : ''} from the original` : '';
+    saveBarStatus.textContent = dirty ? ['Unsaved changes', differs].filter(Boolean).join(' · ') : differs;
+    saveBarStatus.classList.toggle('we-savebar-status--dirty', dirty);
+  }
 
   setupEmojiPicker(q('editEmojiField'), q<HTMLButtonElement>('editEmojiPickerBtn'), q('editEmojiPickerPanel'), emoji);
 
@@ -488,8 +632,9 @@ export function buildWordForm(options: WordFormOptions = {}): WordFormHandle {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'we-revert';
-        btn.textContent = '↺ original';
+        btn.textContent = '↺';
         btn.title = 'Put just this field back the way it was originally';
+        btn.setAttribute('aria-label', `Put ${(label.firstChild?.textContent ?? 'this field').trim()} back the way it was originally`);
         btn.addEventListener('click', e => {
           e.preventDefault(); e.stopPropagation();
           if (currentOriginal) b.restore(currentOriginal);
@@ -501,6 +646,7 @@ export function buildWordForm(options: WordFormOptions = {}): WordFormHandle {
         existing.remove();
       }
     });
+    updateSaveBarStatus();
   }
 
   /** Original glosses that were taken out — shown as ghost chips that put them back. */
@@ -541,6 +687,13 @@ export function buildWordForm(options: WordFormOptions = {}): WordFormHandle {
     meaningList.innerHTML = '';
     const glosses = glossesChip.get();
     (meaningList.parentElement as HTMLElement).hidden = glosses.length === 0;
+    meaningList.hidden = !meaningOpen;
+    if (meaningToggle) {
+      meaningToggle.textContent = meaningOpen ? '▾ Sense notes' : '+ Add a sense note';
+      meaningToggle.setAttribute('aria-expanded', String(meaningOpen));
+      const hint = meaningToggle.parentElement?.querySelector<HTMLElement>('.we-meaning-hint');
+      if (hint) hint.hidden = !meaningOpen;
+    }
     glosses.forEach(g => {
       const row = document.createElement('div');
       row.className = 'we-meaning-row';
@@ -557,6 +710,12 @@ export function buildWordForm(options: WordFormOptions = {}): WordFormHandle {
     });
   }
 
+  meaningToggle?.addEventListener('click', () => {
+    meaningOpen = !meaningOpen;
+    renderMeaningNotes();
+    if (meaningOpen) meaningList?.querySelector<HTMLInputElement>('input')?.focus();
+  });
+
   function onChipsChanged(): void {
     setDirty(true);
     refreshMarkers();
@@ -568,6 +727,7 @@ export function buildWordForm(options: WordFormOptions = {}): WordFormHandle {
     currentOriginal = word.original ?? null;
     Object.keys(meaningNotes).forEach(k => delete meaningNotes[k]);
     Object.assign(meaningNotes, word.meaningDisambiguators ?? {});
+    meaningOpen = Object.values(meaningNotes).some(n => n.trim() !== '');
     setCreating(false);
     show();
     titleEl.textContent = word.word;
@@ -604,6 +764,8 @@ export function buildWordForm(options: WordFormOptions = {}): WordFormHandle {
     disambig.value = word.disambiguator ?? '';
     setDirty(false);
     refreshMarkers(); renderRemovedGlosses(); renderMeaningNotes();
+    renderFacts(word);
+    updateSummaries();
   }
 
   function startNew(): void {
@@ -623,11 +785,14 @@ export function buildWordForm(options: WordFormOptions = {}): WordFormHandle {
     relationChips?.tags.set([]); relationChips?.synonyms.set([]); relationChips?.antonyms.set([]);
     currentOriginal = null;
     Object.keys(meaningNotes).forEach(k => delete meaningNotes[k]);
+    meaningOpen = false;
     reflexive.checked = false;
     examples.value = '';
     notes.value = '';
     setDirty(false);
     refreshMarkers(); renderRemovedGlosses(); renderMeaningNotes();
+    renderFacts(null);
+    updateSummaries();
     wordInput.focus();
   }
 

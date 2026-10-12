@@ -416,6 +416,13 @@ export const Settings = {
   /** A My Lists sidebar accent (ML_COLOR_DEFS's keys), or null to use variables.css's own. */
   /** One controls-bar option's colour (CTL_COLOR_DEFS's keys), or null to use variables.css's own. */
   getCtlColor: (key: string): string | null => readString(P + 'ctl_color_' + key),
+  /** Which of WORD_FACT_EXTRAS the learner switched on (stored as a comma list). */
+  getWordFactExtras: (): Set<string> => new Set(
+    (readString(P + 'we_facts_extra') ?? '').split(',').filter(k => (WORD_FACT_EXTRAS as readonly string[]).includes(k))),
+  /** The facts to show in the Word Editor: the core ones plus whichever extras are on. */
+  getWordFacts: (): string[] => [...WORD_FACT_CORE, ...WORD_FACT_EXTRAS.filter(k => Settings.getWordFactExtras().has(k))],
+  /** One mode tab's colour (TAB_COLOR_DEFS's keys), or null to use variables.css's own. */
+  getTabColor: (key: string): string | null => readString(P + 'tab_color_' + key),
 
   getMlColor: (key: MlColorKey): string | null => readString(P + 'list_color_' + key),
 
@@ -920,6 +927,31 @@ export const ML_COLOR_DEFS: readonly [key: MlColorKey, label: string, accentVar:
 ];
 
 /**
+ * The read-only facts My Content's Word Editor shows about a word (IPA, gender …), as colour-coded cells. The core
+ * ones are always there when a word has them; the extras are off until switched on in Settings → General.
+ */
+export const WORD_FACT_CORE   = ['ipa', 'gender', 'plural', 'infinitive', 'rank'] as const;
+export const WORD_FACT_EXTRAS = ['syllables', 'register', 'reflexive', 'corpus', 'emoji'] as const;
+
+/**
+ * The colour of each mode tab along the top (and, on a phone, its entry in the mode menu): key (the tab's
+ * `data-mode`, also the storage suffix), label, and the CSS variable each overrides. mode-tabs.css derives the
+ * tab's tint, border, stripe and text from that one colour, so a single pick per tab is enough in both themes.
+ */
+export const TAB_COLOR_DEFS: readonly [key: string, label: string, cssVar: string][] = [
+  ['table', 'Table', '--tab-table'],
+  ['picture', 'Picture Quiz', '--tab-picture'],
+  ['trivia', 'Trivia', '--tab-trivia'],
+  ['guessBlank', 'Guess the Blank', '--tab-guessBlank'],
+  ['sentenceScramble', 'Sentence Scramble', '--tab-sentenceScramble'],
+  ['conjugation', 'Conjugation', '--tab-conjugation'],
+  ['mylists', 'My Lists', '--tab-mylists'],
+  ['myContent', 'My Content', '--tab-myContent'],
+  ['history', 'History', '--tab-history'],
+  ['settings', 'Settings', '--tab-settings'],
+];
+
+/**
  * The colour of each option in the controls bar's Words, Quiz Style and Direction controls: key (storage
  * suffix, also the `data-cc` on the option), label, and the CSS variable each overrides. The chip, dropdown
  * option or button derives its tint, border and text from that one colour (controls-bar.css), so a single
@@ -1027,6 +1059,15 @@ export function applyGenderColors(): void {
  * "-light" companion (selected cards, tags) is derived from it against the current surface, so it
  * stays readable in both themes and never needs a second setting.
  */
+/** Apply any saved mode-tab colours as inline :root properties. */
+export function applyTabColors(): void {
+  const root = document.documentElement.style;
+  for (const [key, , cssVar] of TAB_COLOR_DEFS) {
+    const hex = Settings.getTabColor(key);
+    if (hex) root.setProperty(cssVar, hex); else root.removeProperty(cssVar);
+  }
+}
+
 /** Apply any saved controls-bar option colours as inline :root properties. */
 export function applyCtlColors(): void {
   const root = document.documentElement.style;

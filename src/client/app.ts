@@ -48,6 +48,7 @@ import { initHaptics } from './utils/haptics.ts';
 import { initPagerSwipe } from './ui/swipe.ts';
 import { syncReminders } from './utils/reminders.ts';
 import { initCommandPalette } from './ui/command-palette-launcher.ts';
+import { getQuizHidden } from './utils/quiz-hidden.ts';
 import { initMissedAdd } from './ui/quiz-summary.ts';
 import { offerResume } from './ui/resume-banner.ts';
 import { bindBackupSettings, maybeRemindBackup, startAutoBackup } from './ui/backup-settings.ts';
@@ -587,7 +588,11 @@ async function ensureLoaded(lang: string): Promise<Word[]> {
   // `??`, not `||`: a My Content word's rank is 0 (see data/user-content.ts's
   // toWord()) specifically so it sorts first — `||` treats 0 as falsy and
   // sent it to the very back instead, alongside genuinely unranked words.
-  allWordsByLang[lang] = raw.slice().sort((a, b) => (a.rank ?? 9999) - (b.rank ?? 9999));
+  // Words the learner hid from quizzes (My Content → Word Editor) never reach a pool — every mode and a list's
+  // Quiz are drawn from this array, so this is the one place that has to know. Read fresh each call, like the overrides.
+  const hidden = getQuizHidden(lang);
+  const playable = hidden.size ? raw.filter(w => !hidden.has(w.word)) : raw;
+  allWordsByLang[lang] = playable.slice().sort((a, b) => (a.rank ?? 9999) - (b.rank ?? 9999));
   return allWordsByLang[lang];
 }
 
@@ -950,6 +955,11 @@ langPickerBtn?.addEventListener('click', () => {
 
 sizeSelect?.addEventListener('change', () => {
   S.set('vq_size', sizeSelect.value);
+  void loadAndBuildFilters(langSelect?.value ?? 'spanish');
+});
+
+// A word hidden from (or shown again to) quizzes in My Content: rebuild the pool so the next quiz reflects it.
+document.addEventListener('vq:quiz-hidden-changed', () => {
   void loadAndBuildFilters(langSelect?.value ?? 'spanish');
 });
 

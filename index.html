@@ -1804,12 +1804,140 @@
             </div>
             </div>
 
-            <div class="settings-fold" data-advanced="true">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn settings-fold-btn" data-collapse="settingsFold-appearance" data-default-open="false" aria-expanded="false" aria-controls="settingsFold-appearance">
+            <div class="settings-fold">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn settings-fold-btn" data-collapse="settingsFold-colors" data-default-open="false" aria-expanded="false" aria-controls="settingsFold-colors">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading" data-i18n="settings.advancedFold">Advanced</span>
+              <span class="settings-group-heading" data-i18n="settings.colorsFold">Colors</span>
             </button>
-            <div id="settingsFold-appearance" class="filter-body settings-fold-body">
+            <div id="settingsFold-colors" class="filter-body settings-fold-body">
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTabColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupTabColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Tab Colors</span>
+            </button>
+            <div id="settingsGroupTabColors" class="filter-body">
+
+            <p class="settings-desc">The colour of each tab along the top (and its entry in the phone's mode menu): Table, Picture Quiz, My Lists and the rest.</p>
+            <button type="button" id="settingResetTabColors" class="settings-action-btn">Reset to defaults</button>
+            <div class="conj-color-list" id="settingTabColors">
+              <!-- One row per tab, built from TAB_COLOR_DEFS — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupMlColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupMlColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">My Lists Colors</span>
+            </button>
+            <div id="settingsGroupMlColors" class="filter-body">
+
+            <p class="settings-desc">The accent colour of each kind of list in My Lists — its section bar, cards and buttons.</p>
+            <button type="button" id="settingResetMlColors" class="settings-action-btn">Reset to defaults</button>
+            <div class="conj-color-list" id="settingMlColors">
+              <!-- One row per list kind, built from ML_COLOR_DEFS — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupCtlColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupCtlColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Quiz Controls Colors</span>
+            </button>
+            <div id="settingsGroupCtlColors" class="filter-body">
+
+            <p class="settings-desc">The colour of each option in the controls above the quiz: Words, Table and Conjugation.</p>
+            <button type="button" id="settingResetCtlColors" class="settings-action-btn">Reset to defaults</button>
+            <div class="conj-color-list" id="settingCtlColors">
+              <!-- One row per option, built from CTL_COLOR_DEFS — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTableColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupTableColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading">Table Colors</span>
+            </button>
+            <div id="settingsGroupTableColors" class="filter-body">
+
+            <p class="settings-desc">Colors for each answer state in Table mode, including the hint-outcome states.</p>
+            <button type="button" id="settingResetTableColors" class="settings-action-btn">Reset to defaults</button>
+            <div class="conj-color-list" id="settingTableColors">
+              <!-- One row per state, built from TABLE_COLOR_DEFS — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupGenderColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupGenderColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.appearance.genderColors">Gender Colors</span>
+            </button>
+            <div id="settingsGroupGenderColors" class="filter-body">
+
+            <p class="settings-desc" data-i18n="settings.appearance.genderColorsDesc">Colors for the masculine and feminine gender indicator.</p>
+            <button type="button" id="settingResetGenderColors" class="settings-action-btn">Reset to defaults</button>
+            <div class="conj-color-list" id="settingGenderColors">
+              <!-- One row per gender, built from GENDER_COLOR_DEFS — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTenseColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupTenseColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.conj.tenseColors">Tense Colors</span>
+            </button>
+            <div id="settingsGroupTenseColors" class="filter-body">
+
+            <p class="settings-desc" data-i18n="settings.conj.tenseColorsDesc">The color each tense uses in Conjugation mode and My Lists conjugation tables.</p>
+            <button type="button" id="settingResetTenseColors" class="settings-action-btn" data-i18n="settings.conj.resetColors">Reset to defaults</button>
+            <div class="conj-color-list" id="settingTenseColors">
+              <!-- One row per tense, built from TENSE_DEFS — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupFormColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupFormColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.conj.personColors">Form Colors</span>
+            </button>
+            <div id="settingsGroupFormColors" class="filter-body">
+
+            <p class="settings-desc" data-i18n="settings.conj.personColorsDesc">The color each grammatical person's Forms toggle and table rows use.</p>
+            <button type="button" id="settingResetPersonColors" class="settings-action-btn" data-i18n="settings.conj.resetColors">Reset to defaults</button>
+            <div class="conj-color-list" id="settingPersonColors">
+              <!-- One row per pronoun slot (0-5) — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
+
+            <div class="settings-group">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupPosColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupPosColors">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.appearance.posColors">Part of Speech Colors</span>
+            </button>
+            <div id="settingsGroupPosColors" class="filter-body">
+
+            <p class="settings-desc" data-i18n="settings.appearance.posColorsDesc">The color each part of speech uses in filter chips, word badges and tooltips.</p>
+            <button type="button" id="settingResetPosColors" class="settings-action-btn">Reset to defaults</button>
+            <div class="conj-color-list" id="settingPosColors">
+              <!-- One row per part of speech, built from POS_COLOR_DEFS — see settings.ts -->
+            </div>
+
+            </div>
+            </div>
 
 <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAppearanceBackground" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupAppearanceBackground">
@@ -1880,6 +2008,16 @@
 
             </div>
             </div>
+
+            </div>
+            </div>
+
+            <div class="settings-fold" data-advanced="true">
+            <button type="button" class="filter-collapse-btn settings-group-collapse-btn settings-fold-btn" data-collapse="settingsFold-appearance" data-default-open="false" aria-expanded="false" aria-controls="settingsFold-appearance">
+              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
+              <span class="settings-group-heading" data-i18n="settings.advancedFold">Advanced</span>
+            </button>
+            <div id="settingsFold-appearance" class="filter-body settings-fold-body">
 
             <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAppearanceTableLayout" data-default-open="true" aria-expanded="true" aria-controls="settingsGroupAppearanceTableLayout">
@@ -1975,38 +2113,6 @@
             </div>
 
             <div class="settings-group">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupMlColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupMlColors">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading">My Lists Colors</span>
-            </button>
-            <div id="settingsGroupMlColors" class="filter-body">
-
-            <p class="settings-desc">The accent colour of each kind of list in My Lists — its section bar, cards and buttons.</p>
-            <button type="button" id="settingResetMlColors" class="settings-action-btn">Reset to defaults</button>
-            <div class="conj-color-list" id="settingMlColors">
-              <!-- One row per list kind, built from ML_COLOR_DEFS — see settings.ts -->
-            </div>
-
-            </div>
-            </div>
-
-            <div class="settings-group">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupCtlColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupCtlColors">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading">Quiz Controls Colors</span>
-            </button>
-            <div id="settingsGroupCtlColors" class="filter-body">
-
-            <p class="settings-desc">The colour of each option in the controls above the quiz: Words, Table and Conjugation.</p>
-            <button type="button" id="settingResetCtlColors" class="settings-action-btn">Reset to defaults</button>
-            <div class="conj-color-list" id="settingCtlColors">
-              <!-- One row per option, built from CTL_COLOR_DEFS — see settings.ts -->
-            </div>
-
-            </div>
-            </div>
-
-            <div class="settings-group">
             <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupAppearanceWordCells" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupAppearanceWordCells">
               <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
               <span class="settings-group-heading" data-i18n="settings.appearance.groupWordCells">Word Cells</span>
@@ -2058,86 +2164,6 @@
                 <button type="button" class="sort-order-btn" data-visibility="hinted" data-i18n="settings.table.genderVisibilityHinted">Once hinted</button>
                 <button type="button" class="sort-order-btn" data-visibility="revealed" data-i18n="settings.table.genderVisibilityRevealed">Only when revealed</button>
               </div>
-            </div>
-
-            </div>
-            </div>
-
-            <div class="settings-group">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTableColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupTableColors">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading">Table Colors</span>
-            </button>
-            <div id="settingsGroupTableColors" class="filter-body">
-
-            <p class="settings-desc">Colors for each answer state in Table mode, including the hint-outcome states.</p>
-            <button type="button" id="settingResetTableColors" class="settings-action-btn">Reset to defaults</button>
-            <div class="conj-color-list" id="settingTableColors">
-              <!-- One row per state, built from TABLE_COLOR_DEFS — see settings.ts -->
-            </div>
-
-            </div>
-            </div>
-
-            <div class="settings-group">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupGenderColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupGenderColors">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading" data-i18n="settings.appearance.genderColors">Gender Colors</span>
-            </button>
-            <div id="settingsGroupGenderColors" class="filter-body">
-
-            <p class="settings-desc" data-i18n="settings.appearance.genderColorsDesc">Colors for the masculine and feminine gender indicator.</p>
-            <button type="button" id="settingResetGenderColors" class="settings-action-btn">Reset to defaults</button>
-            <div class="conj-color-list" id="settingGenderColors">
-              <!-- One row per gender, built from GENDER_COLOR_DEFS — see settings.ts -->
-            </div>
-
-            </div>
-            </div>
-
-            <div class="settings-group">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupTenseColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupTenseColors">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading" data-i18n="settings.conj.tenseColors">Tense Colors</span>
-            </button>
-            <div id="settingsGroupTenseColors" class="filter-body">
-
-            <p class="settings-desc" data-i18n="settings.conj.tenseColorsDesc">The color each tense uses in Conjugation mode and My Lists conjugation tables.</p>
-            <button type="button" id="settingResetTenseColors" class="settings-action-btn" data-i18n="settings.conj.resetColors">Reset to defaults</button>
-            <div class="conj-color-list" id="settingTenseColors">
-              <!-- One row per tense, built from TENSE_DEFS — see settings.ts -->
-            </div>
-
-            </div>
-            </div>
-
-            <div class="settings-group">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupFormColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupFormColors">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading" data-i18n="settings.conj.personColors">Form Colors</span>
-            </button>
-            <div id="settingsGroupFormColors" class="filter-body">
-
-            <p class="settings-desc" data-i18n="settings.conj.personColorsDesc">The color each grammatical person's Forms toggle and table rows use.</p>
-            <button type="button" id="settingResetPersonColors" class="settings-action-btn" data-i18n="settings.conj.resetColors">Reset to defaults</button>
-            <div class="conj-color-list" id="settingPersonColors">
-              <!-- One row per pronoun slot (0-5) — see settings.ts -->
-            </div>
-
-            </div>
-            </div>
-
-            <div class="settings-group">
-            <button type="button" class="filter-collapse-btn settings-group-collapse-btn" data-collapse="settingsGroupPosColors" data-default-open="false" aria-expanded="false" aria-controls="settingsGroupPosColors">
-              <span class="filter-collapse-arrow" aria-hidden="true">▾</span>
-              <span class="settings-group-heading" data-i18n="settings.appearance.posColors">Part of Speech Colors</span>
-            </button>
-            <div id="settingsGroupPosColors" class="filter-body">
-
-            <p class="settings-desc" data-i18n="settings.appearance.posColorsDesc">The color each part of speech uses in filter chips, word badges and tooltips.</p>
-            <button type="button" id="settingResetPosColors" class="settings-action-btn">Reset to defaults</button>
-            <div class="conj-color-list" id="settingPosColors">
-              <!-- One row per part of speech, built from POS_COLOR_DEFS — see settings.ts -->
             </div>
 
             </div>
@@ -2978,6 +3004,20 @@
               <div class="sort-order-toggle" id="settingConfirmRemoveWordOverride">
                 <button type="button" class="sort-order-btn" data-enabled="false" data-i18n="common.off">Off</button>
                 <button type="button" class="sort-order-btn active" data-enabled="true" data-i18n="common.on">On</button>
+              </div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.general.wordFacts">Extra word details in My Content</span>
+                <span class="settings-desc" data-i18n="settings.general.wordFactsDesc">IPA, gender, plural, infinitive and rank always show. Tick any of these to add them to the word's details.</span>
+              </div>
+              <div class="sort-order-toggle" id="settingWordFacts">
+                <button type="button" class="sort-order-btn" data-fact="syllables" data-i18n="settings.general.factSyllables">Syllables</button>
+                <button type="button" class="sort-order-btn" data-fact="register" data-i18n="settings.general.factRegister">Register</button>
+                <button type="button" class="sort-order-btn" data-fact="reflexive" data-i18n="settings.general.factReflexive">Reflexive</button>
+                <button type="button" class="sort-order-btn" data-fact="corpus" data-i18n="settings.general.factCorpus">Corpus frequency</button>
+                <button type="button" class="sort-order-btn" data-fact="emoji" data-i18n="settings.general.factEmoji">Emoji</button>
               </div>
             </div>
 

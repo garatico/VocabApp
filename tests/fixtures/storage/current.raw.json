@@ -100,6 +100,7 @@
     "s_streak_widget_format": "raw",
     "s_sudden_death": "raw",
     "s_swear_filter_enabled": "raw",
+    "s_tab_color_history": "raw",
     "s_table_answer_style": "raw",
     "s_table_choice_count": "raw",
     "s_table_choice_wrong": "raw",
@@ -122,6 +123,7 @@
     "s_track_hinted_revealed": "raw",
     "s_typo_tolerance": "raw",
     "s_ui_language": "raw",
+    "s_we_facts_extra": "raw",
     "theme": "raw",
     "uc_conjoverride_spanish": "api",
     "uc_guessblank_spanish": "api",
@@ -158,6 +160,7 @@
     "vq_filterchain_domain": "raw",
     "vq_glossreq_spanish": "api",
     "vq_guess_blank_difficulty": "raw",
+    "vq_hidden_spanish": "api",
     "vq_history_collapsed": "raw",
     "vq_history_french": "api",
     "vq_history_spanish": "api",
@@ -215,7 +218,8 @@
     "vq_trivia_reading_difficulty": "raw",
     "vq_trivia_reading_length": "raw",
     "vq_trivia_style": "raw",
-    "vq_visual_profiles": "api"
+    "vq_visual_profiles": "api",
+    "vq_wordeditor_sections": "raw"
   },
   "data": {
     "admin_table_col_widths": "{\"word\":120}",
@@ -316,6 +320,7 @@
     "s_streak_widget_format": "number-only",
     "s_sudden_death": "true",
     "s_swear_filter_enabled": "true",
+    "s_tab_color_history": "#cc3366",
     "s_table_answer_style": "choice",
     "s_table_choice_count": "5",
     "s_table_choice_wrong": "retry",
@@ -338,6 +343,7 @@
     "s_track_hinted_revealed": "false",
     "s_typo_tolerance": "high",
     "s_ui_language": "spanish",
+    "s_we_facts_extra": "syllables,emoji",
     "theme": "dark",
     "uc_conjoverride_spanish": "{\"hablar\":{\"present\":[\"hablo\",\"hablas\",\"habla\",\"hablamos\",\"habláis\",\"hablan\"],\"gerund\":\"hablando\"}}",
     "uc_guessblank_spanish": "[{\"category\":\"animal\",\"difficulty\":\"easy\",\"cluesTarget\":[\"Ladra\",\"Es un mejor amigo\"],\"cluesEn\":[\"It barks\",\"A best friend\"],\"answerTarget\":\"perro\",\"answerEn\":\"dog\",\"id\":\"gb-mmhm26o0-jjxh5v\"}]",
@@ -374,6 +380,7 @@
     "vq_filterchain_domain": "true",
     "vq_glossreq_spanish": "{\"dejar\":2}",
     "vq_guess_blank_difficulty": "easy",
+    "vq_hidden_spanish": "[\"hacer\"]",
     "vq_history_collapsed": "[\"trouble\"]",
     "vq_history_french": "[{\"at\":\"2026-03-07T10:30:00.000Z\",\"mode\":\"trivia\",\"total\":5,\"correct\":3,\"unassisted\":3,\"hints\":0,\"revealed\":0,\"seconds\":60,\"lang\":\"french\"}]",
     "vq_history_spanish": "[{\"at\":\"2026-03-06T10:30:00.000Z\",\"mode\":\"table\",\"total\":20,\"correct\":15,\"unassisted\":14,\"hints\":1,\"revealed\":2,\"seconds\":240,\"lang\":\"spanish\"},{\"at\":\"2026-03-07T10:30:00.000Z\",\"mode\":\"picture\",\"total\":10,\"correct\":9,\"unassisted\":9,\"hints\":0,\"revealed\":1,\"seconds\":90,\"lang\":\"spanish\"}]",
@@ -431,6 +438,7 @@
     "vq_trivia_reading_difficulty": "easy",
     "vq_trivia_reading_length": "short",
     "vq_trivia_style": "choice",
-    "vq_visual_profiles": "{\"Night reading\":{\"theme\":\"dark\",\"fontSize\":\"large\"}}"
+    "vq_visual_profiles": "{\"Night reading\":{\"theme\":\"dark\",\"fontSize\":\"large\"}}",
+    "vq_wordeditor_sections": "{\"identity\":true,\"classification\":true}"
   }
 }

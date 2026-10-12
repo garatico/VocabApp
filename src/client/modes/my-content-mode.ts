@@ -14,6 +14,8 @@ import { buildContentTabs, getActiveTab, getCollapsedSections, setActiveTab, set
 import { buildPicturesSection } from './my-content/pictures.ts';
 import { el } from './my-content/shared.ts';
 import { getWordMeaningFlag, setWordMeaningFlag } from '../utils/gloss-required.ts';
+import { Settings } from '../settings.ts';
+import { isQuizHidden, setQuizHidden } from '../utils/quiz-hidden.ts';
 import { buildTriviaSection } from './my-content/trivia.ts';
 import '../styles-lazy/my-content-bundle.css';
 
@@ -262,9 +264,24 @@ function buildSharedWordEditor(currentLang: string, focusWord?: { lang: string; 
     meaningNotes: true,
     reorderGlosses: true,
     trackOriginal: true,
+    // Only Identity (translation and glosses, which is most of what is edited) starts open; the other sections
+    // are folded with a one-line summary and remember how the learner left them.
+    openSections: ['identity'],
+    rememberSections: 'vq_wordeditor_sections',
+    factsStrip: true,
+    factsShown: () => Settings.getWordFacts(),
+    saveBar: true,
     answerMeanings: {
       get: (w, l) => getWordMeaningFlag(l, w),
       set: (w, l, n) => setWordMeaningFlag(l, w, n),
+    },
+    hiddenFromQuizzes: {
+      get: (w, l) => isQuizHidden(l, w),
+      set: (w, l, hidden) => {
+        setQuizHidden(l, w, hidden);
+        // The pools are rebuilt from the vocabulary on the next quiz; tell a quiz already built to refresh.
+        document.dispatchEvent(new CustomEvent('vq:quiz-hidden-changed', { detail: { lang: l } }));
+      },
     },
     // A verb can go straight to its conjugation table, on the next tab.
     hostAction: {
@@ -293,11 +310,8 @@ function buildSharedWordEditor(currentLang: string, focusWord?: { lang: string; 
   void (async () => {
     await editor.load();
     editor.applyMeta(await adapter.getMeta());
-    if (focusWord) {
-      // Arrived from a word elsewhere in the app ("Edit in My Content"): search for it.
-      const search = wrap.querySelector<HTMLInputElement>('input[type="text"]');
-      if (search) { search.value = focusWord.word; search.dispatchEvent(new Event('input', { bubbles: true })); }
-    }
+    // Arrived from a word elsewhere in the app ("Edit in My Content"): open it in the form, not just search for it.
+    if (focusWord) await editor.openWord(focusWord.word);
   })();
   return wrap;
 }
