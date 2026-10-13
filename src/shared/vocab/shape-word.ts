@@ -65,9 +65,12 @@ export function shapeWordRow(row: WordSelectRow, language: string, deps: ShapeWo
   // rule-engine branch below — the admin Conjugation editor needs the raw
   // overrides object too (to merge an edit into it and save), not just the
   // forms conjugate() already folded them into.
-  const conjugationOverrides = row.conjugation_overrides
+  const parsedOverrides = row.conjugation_overrides
     ? parseJsonField<Record<string, unknown>>(row.conjugation_overrides, row.word, 'conjugation_overrides', deps, {})
     : null;
+  // The pipeline writes '{}' on every row, so an empty object is "none": left out
+  // of the Word rather than shipped 45,000 times (~0.3 MB a language).
+  const conjugationOverrides = parsedOverrides && Object.keys(parsedOverrides).length ? parsedOverrides : null;
   if (row.conjugation_class) {
     try {
       const inf = row.infinitive || row.word;

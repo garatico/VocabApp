@@ -51,6 +51,14 @@ describe('compactWord / expandWord', () => {
     expect(compactWord({ ...base, glosses: ['of'] })).not.toHaveProperty('glosses');
   });
 
+  it('drops a band that rank implies and puts it back, but keeps one that differs', () => {
+    const w = { translation: 'x', glosses: ['y'], rank: 2000, frequency: { rank: 2000, band: 'B1' } };
+    expect(compactWord(w).frequency).not.toHaveProperty('band');
+    expect(expandWord(compactWord(w)).frequency.band).toBe('B1');
+    const odd = { ...w, frequency: { rank: 2000, band: 'C2' } };
+    expect(compactWord(odd).frequency.band).toBe('C2');
+  });
+
   it('leaves register alone — absent means unknown, not neutral', () => {
     const noRegister = { translation: 'x', glosses: ['y'], linguistic: { reflexive: true } };
     expect(expandWord(compactWord(noRegister)).linguistic).not.toHaveProperty('register');

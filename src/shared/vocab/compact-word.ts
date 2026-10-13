@@ -6,6 +6,7 @@
  * JSON and ~350 KB of its gzipped transfer (Spanish):
  *
  *   frequency.rank    always equals `rank`
+ *   frequency.band    always `bandFromRank(rank)` (shared/band.ts, the one place a band is made)
  *   glosses           very often exactly `[translation]`
  *   linguistic.reflexive   false for most words
  *   is_function_word       false for most words
@@ -22,11 +23,13 @@
  * to infer.
  */
 
+import { bandFromRank } from '../band.js';
+
 interface CompactableWord {
   translation?:      string;
   glosses?:          string[];
   rank?:             number | null;
-  frequency?:        { rank?: number | null } | null;
+  frequency?:        { rank?: number | null; band?: string | null } | null;
   linguistic?:       { reflexive?: boolean } | null;
   is_function_word?: boolean;
 }
@@ -43,6 +46,10 @@ export function compactWord<T extends CompactableWord>(word: T): T {
     out.frequency = { ...out.frequency };
     delete out.frequency.rank;
   }
+  if (out.frequency && out.frequency.band === bandFromRank(out.rank ?? null)) {
+    out.frequency = { ...out.frequency };
+    delete out.frequency.band;
+  }
   if (out.glosses && out.glosses.length === 1 && out.glosses[0] === out.translation) delete out.glosses;
   return out as T;
 }
@@ -53,6 +60,7 @@ export function expandWord<T extends CompactableWord>(word: T): T {
   if (w.is_function_word === undefined) w.is_function_word = false;
   if (w.linguistic && w.linguistic.reflexive === undefined) w.linguistic.reflexive = false;
   if (w.frequency && w.frequency.rank === undefined) w.frequency.rank = w.rank ?? null;
+  if (w.frequency && w.frequency.band === undefined) w.frequency.band = bandFromRank(w.rank ?? null);
   if (w.glosses === undefined && w.translation !== undefined) w.glosses = [w.translation];
   return word;
 }
