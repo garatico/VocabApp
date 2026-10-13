@@ -146,6 +146,39 @@ describe('infinitives with and without "to"', () => {
   });
 });
 
+describe('nouns with and without "a"/"an"/"the"', () => {
+  const wagen = word({ word: 'Wagen', pos: 'noun', glosses: ['a car', 'an automobile'] });
+  const perro = word({ word: 'perro', pos: 'noun', glosses: ['dog'] });
+
+  it('accepts the bare form of a gloss written with an article', () => {
+    expect(isCorrect('car', wagen)).toBe(true);
+    expect(isCorrect('a car', wagen)).toBe(true);
+    expect(isCorrect('automobile', wagen)).toBe(true);
+  });
+
+  it('accepts an article in front of a bare gloss', () => {
+    expect(isCorrect('the dog', perro)).toBe(true);
+    expect(isCorrect('a dog', perro)).toBe(true);
+  });
+
+  it('still rejects a different noun, and an article alone', () => {
+    expect(isCorrect('bus', wagen)).toBe(false);
+    expect(isCorrect('a', wagen)).toBe(false);
+    expect(isCorrect('the', perro)).toBe(false);
+  });
+
+  it('leaves a gloss that is only an article alone', () => {
+    const un = word({ word: 'un', pos: 'article', glosses: ['a, an'] });
+    expect(isCorrect('a', un)).toBe(true);
+    expect(isCorrect('an', un)).toBe(true);
+  });
+
+  it('works as a prefix too (Sudden Death)', () => {
+    expect(isCorrectPrefix('ca', wagen)).toBe(true);
+    expect(isCorrectPrefix('the d', perro)).toBe(true);
+  });
+});
+
 describe('isReverseCorrect (English → target word)', () => {
   const habla = word({ word: 'habla', linguistic: { infinitive: 'hablar' } });
 

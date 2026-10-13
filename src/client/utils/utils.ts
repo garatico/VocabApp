@@ -113,10 +113,27 @@ function withInfinitiveForms(token: string): string[] {
 }
 
 /**
+ * Accept an English noun phrase with or without its article, the same way
+ * withInfinitiveForms does for "to". Wiktionary writes many glosses with one
+ * ("a car", "an oath", "the others"), so a learner typing "car" for *Wagen*
+ * was marked wrong, and typing "the dog" for *perro* ("dog") was too. Only a
+ * leading article followed by more text counts: the gloss "a" (Spanish *a*,
+ * "to, at") is left alone.
+ */
+const ENGLISH_ARTICLE = /^(a|an|the) (?=\S)/;
+function withArticleForms(token: string): string[] {
+  const m = ENGLISH_ARTICLE.exec(token);
+  if (m) return [token, token.slice(m[0].length)];
+  if (token.startsWith('to ')) return [token];
+  return [token, `a ${token}`, `an ${token}`, `the ${token}`];
+}
+
+/**
  * Expand a single gloss into all matchable forms:
  * - strips parentheticals
  * - splits comma-separated alternatives ("a, an" → ["a", "an"])
  * - accepts an infinitive with or without "to" (see withInfinitiveForms)
+ * - accepts a noun with or without "a"/"an"/"the" (see withArticleForms)
  *
  * `norm` is a parameter so the strict matcher can reuse this with a normaliser
  * that keeps diacritics; the two used to be separate copies of the same chain
@@ -127,7 +144,8 @@ function glossToTokens(gloss: string, norm: (s?: string) => string = normalise):
     .split(/[,/]/)
     .map(t => norm(t))
     .filter(Boolean)
-    .flatMap(withInfinitiveForms);
+    .flatMap(withInfinitiveForms)
+    .flatMap(withArticleForms);
 }
 
 /**
