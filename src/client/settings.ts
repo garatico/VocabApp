@@ -945,6 +945,7 @@ export const TAB_COLOR_DEFS: readonly [key: string, label: string, cssVar: strin
   ['trivia', 'Trivia', '--tab-trivia'],
   ['guessBlank', 'Guess the Blank', '--tab-guessBlank'],
   ['sentenceScramble', 'Sentence Scramble', '--tab-sentenceScramble'],
+  ['articles', 'Articles', '--tab-articles'],
   ['conjugation', 'Conjugation', '--tab-conjugation'],
   ['mylists', 'My Lists', '--tab-mylists'],
   ['myContent', 'My Content', '--tab-myContent'],

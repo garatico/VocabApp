@@ -27,6 +27,7 @@ import { getTriviaQuestions }                    from './data/trivia-questions.t
 import { getUserTriviaQuestions }                from './data/user-content.ts';
 import { LANGUAGES, isoCode, supportsConjugation,
          conjugationUnavailableReason, languageInfo } from './data/languages.ts';
+import { hasArticles } from './utils/utils.ts';
 import { availableLanguages, isPackagedApp }     from './data/vocab-source.ts';
 import { logger } from './utils/logger.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
@@ -74,6 +75,7 @@ const pictureWrap     = mustGet('pictureWrap');
 const triviaWrap      = mustGet('triviaWrap');
 const guessBlankWrap  = mustGet('guessBlankWrap');
 const sentenceScrambleWrap = mustGet('sentenceScrambleWrap');
+const articlesWrap = mustGet('articlesWrap');
 const conjugationWrap = mustGet('conjugationWrap');
 const myListsWrap     = document.getElementById('myListsWrap');  // optional — page may omit it
 const historyWrap     = document.getElementById('historyWrap');  // optional — page may omit it
@@ -86,6 +88,7 @@ const pictureArea     = mustGet('pictureArea');
 const triviaArea      = mustGet('triviaArea');
 const guessBlankArea  = mustGet('guessBlankArea');
 const sentenceScrambleArea = mustGet('sentenceScrambleArea');
+const articlesArea = mustGet('articlesArea');
 const conjugationArea = mustGet('conjugationArea');
 const myListsArea     = mustGet('myListsArea');
 const historyArea     = mustGet('historyArea');
@@ -293,6 +296,7 @@ async function markEmptyLanguages(): Promise<void> {
     S.set('vq_lang', langSelect.value);
     syncConjugationAvailability();
     syncScriptDisplayAvailability();
+    syncArticlesAvailability();
     syncScriptTypeAvailability();
     syncScriptDisplaySettingsAvailability();
     void loadAndBuildFilters(langSelect.value);
@@ -330,6 +334,21 @@ function syncConjugationAvailability(): void {
  * and merely inert, matching how the rest of this file treats a filter
  * that doesn't apply to the current language.
  */
+/**
+ * The Articles tab only means something for a language whose nouns take a gendered
+ * article (not Japanese or Chinese). Hidden, like the Script Display filter below,
+ * rather than shown dead; leaving it while it is open drops back to Table.
+ */
+function syncArticlesAvailability(): void {
+  const tab = document.querySelector<HTMLButtonElement>('.mode-tab[data-mode="articles"]');
+  if (!tab) return;
+  const available = hasArticles(langSelect?.value ?? 'spanish');
+  tab.hidden = !available;
+  if (!available && tab.classList.contains('active')) {
+    document.querySelector<HTMLElement>('.mode-tab[data-mode="table"]')?.click();
+  }
+}
+
 function syncScriptDisplayAvailability(): void {
   const lang = langSelect?.value ?? 'spanish';
   const wrap = document.getElementById('scriptFilterWrap');
@@ -769,7 +788,7 @@ const { updateModeUI } = bindModeSwitch({
   extraAreas: {
     mylists: myListsArea, settings: settingsArea, history: historyArea,
     trivia: triviaArea, guessBlank: guessBlankArea, chat: chatArea,
-    myContent: myContentArea, sentenceScramble: sentenceScrambleArea,
+    myContent: myContentArea, sentenceScramble: sentenceScrambleArea, articles: articlesArea,
   },
   onActivate: {
     table: syncTableStyleUI,
@@ -901,7 +920,7 @@ bindStartHandler({
   // read `w.language ?? lang` for mastery/history and per-verb tense
   // filtering, and a bogus combined fallback breaks both silently.
   getAllWords: getAllWordsForCurrentLang,
-  elements:       { startBtn, tableWrap, pictureWrap, triviaWrap, guessBlankWrap, sentenceScrambleWrap, conjugationWrap, output },
+  elements:       { startBtn, tableWrap, pictureWrap, triviaWrap, guessBlankWrap, sentenceScrambleWrap, articlesWrap, conjugationWrap, output },
 });
 
 // ── Event listeners ───────────────────────────────────────────────────────────
@@ -910,6 +929,7 @@ langSelect?.addEventListener('change', () => {
   S.set('vq_lang', langSelect.value);
   syncConjugationAvailability();
   syncScriptDisplayAvailability();
+  syncArticlesAvailability();
   syncScriptTypeAvailability();
   syncScriptDisplaySettingsAvailability();
   updateLangPickerButton();
@@ -1298,6 +1318,7 @@ function prefetchModes(): void {
     void import('./modes/trivia-mode.ts');
     void import('./modes/guess-blank-mode.ts');
     void import('./modes/sentence-scramble-mode.ts');
+    void import('./modes/articles-mode.ts');
     void import('./modes/conjugation/index.ts');
     void import('./modes/history-mode.ts');
     void import('./modes/my-content-mode.ts');
@@ -1373,6 +1394,7 @@ void (async function init(): Promise<void> {
   restoreSettings();
   syncConjugationAvailability();
   syncScriptDisplayAvailability();
+  syncArticlesAvailability();
   syncScriptTypeAvailability();
   syncScriptDisplaySettingsAvailability();
   syncSimpleModeLocks();

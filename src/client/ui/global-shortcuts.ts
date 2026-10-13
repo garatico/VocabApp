@@ -23,6 +23,7 @@ export const GO_CHORDS: Readonly<Record<string, string>> = {
   v: 'trivia',
   b: 'guessBlank',
   s: 'sentenceScramble',
+  a: 'articles',
   c: 'conjugation',
   l: 'mylists',
   m: 'myContent',

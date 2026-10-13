@@ -51,6 +51,7 @@ const SHORTCUTS: ShortcutGroup[] = [
       { keys: ['g', 'v'], desc: 'Trivia' },
       { keys: ['g', 'b'], desc: 'Guess the Blank' },
       { keys: ['g', 's'], desc: 'Sentence Scramble' },
+      { keys: ['g', 'a'], desc: 'Articles' },
       { keys: ['g', 'c'], desc: 'Conjugation' },
       { keys: ['g', 'l'], desc: 'My Lists' },
       { keys: ['g', 'm'], desc: 'My Content' },

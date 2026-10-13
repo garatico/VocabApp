@@ -608,6 +608,42 @@ export function genderArticle(entry: Word, lang: string): string | null {
   return article;
 }
 
+/** Whether any language of `lang` (a single code, or a merged `a+b` pool) has articles to quiz. */
+export function hasArticles(lang: string): boolean {
+  return lang.split('+').some(l => l in DEFINITE_ARTICLES);
+}
+
+/** One button of the Articles quiz. */
+export interface ArticleChoice { article: string; correct: boolean }
+
+/**
+ * The choices the Articles quiz offers for a noun: one per gender its language
+ * has, labelled with the article *this* noun would take in that gender (Italian
+ * `zaino` offers lo/la, not il/la), and the one it does take marked correct.
+ * Elision is ignored so le/la and il/la stay distinct before a vowel; Dutch
+ * collapses to de/het. Null when the noun has no single known article (no
+ * gender, Spanish m/f, a language without articles).
+ */
+export function articleChoices(entry: Word, lang: string): ArticleChoice[] | null {
+  if (entry.pos !== 'noun') return null;
+  const table = DEFINITE_ARTICLES[entry.language ?? lang];
+  const gender = entry.linguistic?.gender;
+  if (!table || !gender || typeof table[gender as keyof ArticleTable] !== 'string') return null;
+  const label = (g: string): string =>
+    table.italianLo && g === 'masculine' && ITALIAN_LO_TRIGGER.test(entry.word) ? 'lo' : table[g as keyof ArticleTable] as string;
+  const own = label(gender);
+  const labels = [...new Set((['masculine', 'feminine', 'neuter'] as const)
+    .filter(g => typeof table[g] === 'string').map(label))];
+  return labels.map(article => ({ article, correct: article === own }));
+}
+
+/** "das Haus", "l'amour", "lo zaino": the noun as it is said with its definite article, or the bare word. */
+export function withDefiniteArticle(entry: Word, lang: string): string {
+  const article = genderArticle(entry, entry.language ?? lang);
+  if (!article) return entry.word;
+  return article.endsWith("'") ? article + entry.word : `${article} ${entry.word}`;
+}
+
 /** A gender the colour indicator has a colour for. */
 export type GenderKey = 'masculine' | 'feminine' | 'neuter';
 

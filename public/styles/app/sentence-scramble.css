@@ -5,7 +5,7 @@
    mode.ts.
 ================================================================ */
 
-#sentenceScrambleArea {
+#sentenceScrambleArea, #articlesArea {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -13,9 +13,9 @@
   box-shadow: var(--shadow);
 }
 @media (max-width: 768px) {
-  #sentenceScrambleArea { padding: 0.5rem 0.75rem; }
+  #sentenceScrambleArea, #articlesArea { padding: 0.5rem 0.75rem; }
 }
 
 @media (max-width: 599px) {
-  #sentenceScrambleArea { padding: 0.5rem 0.6rem; }
+  #sentenceScrambleArea, #articlesArea { padding: 0.5rem 0.6rem; }
 }

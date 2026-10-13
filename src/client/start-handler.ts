@@ -8,6 +8,7 @@ import { orderWords }                     from './utils/session-history.ts';
 import { estimateConjugationSize, isOwnInfinitive, hasAnyForms, dropRedundantReflexives, regularityOf } from './modes/conjugation/verb-filters.ts';
 import { activeRegularities } from './modes/conjugation/controls.ts';
 import { Settings } from './settings.ts';
+import { articleChoices } from './utils/utils.ts';
 
 import type { Word } from './types.ts';
 import { confirmDialog } from './ui/dialog.ts';
@@ -24,6 +25,7 @@ interface StartHandlerElements {
   triviaWrap:      HTMLElement;
   guessBlankWrap:  HTMLElement;
   sentenceScrambleWrap: HTMLElement;
+  articlesWrap: HTMLElement;
   conjugationWrap: HTMLElement | null;
   output:          HTMLElement;
 }
@@ -80,6 +82,7 @@ export function bindStartHandler({
     triviaWrap,
     guessBlankWrap,
     sentenceScrambleWrap,
+    articlesWrap,
     conjugationWrap,
     output,
   }
@@ -154,6 +157,11 @@ export function bindStartHandler({
       const examplesOnly = modeAtStart === 'sentenceScramble';
       if (examplesOnly) list = list.filter(w => w.examples.length > 0);
 
+      // And once more for Articles: only a noun with a single known article can be asked.
+      const articlesOnly = modeAtStart === 'articles';
+      const hasArticle = (w: Word): boolean => articleChoices(w, fullLang) !== null;
+      if (articlesOnly) list = list.filter(hasArticle);
+
       // Apply domain filter from the HTML #domainFilter checkboxes.
       // Words with no domain data pass through unconditionally — domain
       // assignments only exist for Spanish, so filtering on them must not
@@ -183,6 +191,7 @@ export function bindStartHandler({
         if (verbsOnly)     extras = extras.filter(isDrillableVerb);
         if (visualsOnly)   extras = extras.filter(w => hasVisual(fullLang, w));
         if (examplesOnly)  extras = extras.filter(w => w.examples.length > 0);
+        if (articlesOnly)  extras = extras.filter(hasArticle);
 
         // Apply list filter (same as applied to the base list above)
         extras = filterWords(extras);
@@ -385,6 +394,12 @@ export function bindStartHandler({
           container: sentenceScrambleWrap,
           lang: fullLang,
         });
+      }
+
+      if (currentMode === 'articles') {
+        articlesWrap.innerHTML = '';
+        const { renderArticlesMode } = await import('./modes/articles-mode.ts');
+        renderArticlesMode({ words: list, container: articlesWrap, lang: fullLang });
       }
 
       if (currentMode === 'conjugation' && conjugationWrap) {

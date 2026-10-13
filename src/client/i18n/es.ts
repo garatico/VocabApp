@@ -25,6 +25,7 @@ export const es: Record<string, string> = {
   'nav.groupQuizzes':  'Cuestionarios',
   'nav.guessBlank':    'Adivina el Espacio',
   'nav.history':       'Historial',
+  'nav.articles':      'Artículos',
   'nav.menuLabel':     'Cambiar de modo',
   'nav.myLists':       'Mis Listas',
   'nav.pictureQuiz':   'Quiz de Imágenes',

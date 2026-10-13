@@ -220,6 +220,7 @@ body { padding-top: calc(0.2rem + env(safe-area-inset-top)); }
 .mode-tab[data-mode="trivia"], .mode-menu-trigger[data-mode="trivia"], .mode-menu-item[data-mode="trivia"] { --tc: var(--tab-trivia); }
 .mode-tab[data-mode="guessBlank"], .mode-menu-trigger[data-mode="guessBlank"], .mode-menu-item[data-mode="guessBlank"] { --tc: var(--tab-guessBlank); }
 .mode-tab[data-mode="sentenceScramble"], .mode-menu-trigger[data-mode="sentenceScramble"], .mode-menu-item[data-mode="sentenceScramble"] { --tc: var(--tab-sentenceScramble); }
+.mode-tab[data-mode="articles"], .mode-menu-trigger[data-mode="articles"], .mode-menu-item[data-mode="articles"] { --tc: var(--tab-articles); }
 .mode-tab[data-mode="conjugation"], .mode-menu-trigger[data-mode="conjugation"], .mode-menu-item[data-mode="conjugation"] { --tc: var(--tab-conjugation); }
 .mode-tab[data-mode="mylists"], .mode-menu-trigger[data-mode="mylists"], .mode-menu-item[data-mode="mylists"] { --tc: var(--tab-mylists); }
 .mode-tab[data-mode="myContent"], .mode-menu-trigger[data-mode="myContent"], .mode-menu-item[data-mode="myContent"] { --tc: var(--tab-myContent); }

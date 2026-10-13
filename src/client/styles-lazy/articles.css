@@ -1,0 +1,148 @@
+/* Lazy-loaded: rules for classes that only articles-mode.ts renders (see tests/client/lazy-css.test.ts).
+   Same card/header anatomy as Sentence Scramble's .ss-* rules; the word is the centre of the screen and
+   the article buttons are big enough to hit with a thumb. */
+.ar-wrap {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.ar-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.ar-nav {
+  display: flex;
+  gap: 0.4rem;
+  margin-right: auto;
+}
+
+.ar-nav-btn {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.ar-nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+
+.ar-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.ar-giveup-btn {
+  font-size: 0.82rem;
+  padding: 0.32rem 0.9rem;
+}
+
+.ar-counter {
+  text-align: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+}
+
+.ar-card {
+  text-align: center;
+  padding: 1.4rem 1rem 1.1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface2);
+  transition: border-color var(--transition-fast);
+}
+
+.ar-card--right { border-color: var(--correct); }
+
+.ar-card--wrong { border-color: var(--incorrect); }
+
+.ar-word {
+  font-family: 'DM Mono', monospace;
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.ar-meaning {
+  margin-top: 0.35rem;
+  font-family: 'Sora', sans-serif;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.ar-choices {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.ar-choice {
+  position: relative;
+  min-width: 5.5rem;
+  min-height: 3rem;
+  padding: 0.5rem 1.2rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 1.35rem;
+  font-weight: 600;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.ar-choice:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-1px); }
+
+.ar-choice:disabled { cursor: default; opacity: 0.5; }
+
+.ar-choice--right:disabled { opacity: 1; }
+
+/* The right article takes the noun's gender colour (gender-word-bg--<key> sets the background and a fixed
+   dark text), so the colour a learner sees in Table means the same thing here. */
+.ar-choice--right { border-color: var(--correct); }
+
+/* Two classes, so these beat .ar-choice's own background (this file loads after components.css). */
+.ar-choice.gender-word-bg--masculine { background: var(--gender-color-masculine); color: #1a1916; }
+.ar-choice.gender-word-bg--feminine  { background: var(--gender-color-feminine);  color: #1a1916; }
+.ar-choice.gender-word-bg--neuter    { background: var(--gender-color-neuter);    color: #1a1916; }
+
+.ar-choice--wrong {
+  border-color: var(--incorrect);
+  text-decoration: line-through;
+}
+
+.ar-choice--wrong:disabled { opacity: 0.85; }
+
+.ar-feedback {
+  text-align: center;
+  margin-top: 0.9rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  min-height: 1.5rem;
+  color: var(--text-muted);
+}
+
+.ar-feedback.ok  { color: var(--correct); }
+
+.ar-feedback.bad { color: var(--incorrect); }
+
+.ar-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 599px) {
+  .ar-word { font-size: 1.7rem; }
+  .ar-choice { min-width: 4.5rem; font-size: 1.2rem; }
+}

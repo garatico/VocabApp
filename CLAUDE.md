@@ -468,6 +468,15 @@ read from or write to `vocabulary.db`.
   (`display: contents`) and the pieces are ordered Order · Jump to Top · pager · Jump to Bottom · Next Gap ·
   Give Up · Retry · timer. Below that the two-row grid layout applies. Start does not wait for the background
   vocabulary in Trivia or Guess the Blank, which use their own question banks.
+- **Gender is three-way, and has its own quiz.** VocabApp-Data carries `neuter` (German, Dutch) and `common` (Dutch) as well as
+  masculine/feminine/m-f. `DEFINITE_ARTICLES` in `utils/utils.ts` maps each gender to an article per language (German das; Dutch de for
+  everything but neuter het; a gender with no single article, Spanish m/f, maps to none), `genderKey` has a third colour (`--gender-color-neuter`,
+  a Neuter picker in Gender Colors) and `grammarHint` names neuter/common. The **Articles** tab (`modes/articles-mode.ts`, `g a`) drills
+  der/die/das, de/het, el/la… one noun at a time from the filtered pool (`articleChoices` decides which nouns qualify and what the buttons
+  say: elision ignored, Italian lo/il per word); it is hidden for a language without articles (`syncArticlesAvailability`, like Script
+  Display), keeps the Order control's order, and saves sessions but not `recordOutcome` (a wrong article is not a missed meaning).
+- **Answers accept a noun with or without "a"/"an"/"the"** (`withArticleForms`, next to `withInfinitiveForms` in `glossToTokens`): ~11,000
+  Wiktionary glosses carry one ("a car").
 - **A word can opt out of ever being "due"** (`utils/srs.ts`'s `vq_srs_exempt_<lang>`
   Set, `isDueExempt`/`setDueExempt`) without touching its schedule — `srsDueWords`
   filters it out, so the header badge, History's Due for Review and a Smart List's

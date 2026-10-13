@@ -75,6 +75,7 @@
         <button class="mode-tab" data-mode="trivia" role="tab" aria-selected="false" data-i18n="nav.trivia">Trivia</button>
         <button class="mode-tab" data-mode="guessBlank" role="tab" aria-selected="false" data-i18n="nav.guessBlank">Guess the Blank</button>
         <button class="mode-tab" data-mode="sentenceScramble" role="tab" aria-selected="false" data-i18n="nav.sentenceScramble">Sentence Scramble</button>
+        <button class="mode-tab" data-mode="articles" role="tab" aria-selected="false" title="Which article does each noun take? der/die/das, el/la, le/la…" data-i18n="nav.articles">Articles</button>
         <button class="mode-tab" data-mode="conjugation" role="tab" aria-selected="false" data-i18n="nav.conjugation">Conjugation</button>
         <button class="mode-tab" data-mode="mylists" role="tab" aria-selected="false" data-i18n="nav.myLists">My Lists</button>
         <button class="mode-tab" data-mode="myContent" role="tab" aria-selected="false" title="Add your own words, trivia questions and pictures — stored in this browser only, never uploaded" data-i18n="nav.myContent">My Content</button>
@@ -925,6 +926,32 @@
           </div>
         </div>
         <div id="sentenceScrambleScoreBottom" class="quiz-score quiz-score--boxed"></div>
+      </section>
+
+      <section id="articlesArea" hidden>
+        <!-- Same anatomy as #sentenceScrambleArea; nouns with a known article from the real
+             vocabulary `list` — see articles-mode.ts. -->
+        <div class="progressWrap">
+          <div class="progress">
+            <div id="articlesBarTop" class="bar"></div>
+            <div id="articlesBarTopMissed" class="bar-missed"></div>
+            <span id="articlesStatsTop" class="progress-label"></span>
+          </div>
+        </div>
+        <div id="articlesScoreTop" class="quiz-score quiz-score--boxed"></div>
+        <div id="articlesSummaryTop" class="quiz-summary" style="display:none"></div>
+
+        <div id="articlesWrap"></div>
+        <div id="articlesSummaryBottom" class="quiz-summary" style="display:none"></div>
+
+        <div class="progressWrap">
+          <div class="progress">
+            <div id="articlesBarBottom" class="bar"></div>
+            <div id="articlesBarBottomMissed" class="bar-missed"></div>
+            <span id="articlesStatsBottom" class="progress-label"></span>
+          </div>
+        </div>
+        <div id="articlesScoreBottom" class="quiz-score quiz-score--boxed"></div>
       </section>
 
       <section id="conjugationArea" hidden>
