@@ -68,10 +68,11 @@
 
   /* Grammatical gender indicator — a dot next to a noun with a known
      masculine/feminine gender (see utils/dom.ts's addGenderIndicator).
-     Conventional newborn blue/pink, overridable per Settings
-     (applyGenderColors) same as the Table mode colors above. */
+     Conventional newborn blue/pink, and mint for German/Dutch neuter, overridable
+     per Settings (applyGenderColors) same as the Table mode colors above. */
   --gender-color-masculine: #89cff0;
   --gender-color-feminine:  #f4c2c2;
+  --gender-color-neuter:    #b5e3c4;
 
   /* Motion */
   --transition-fast:   0.15s ease;
@@ -198,6 +199,7 @@ html.dark {
 
   --gender-color-masculine: #89cff0;
   --gender-color-feminine:  #f4c2c2;
+  --gender-color-neuter:    #b5e3c4;
 
   --ml-accent-single:       #5a9e72;   /* the dark forest green, whatever the colour theme */
   --ml-accent-single-light: #18291f;

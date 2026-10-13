@@ -547,33 +547,37 @@ export function grammarHint(entry: Word, abbreviate = false): string | null {
   const number = entry.linguistic?.grammatical_number;
   if (!number) return null;
   const gender = entry.linguistic?.gender;
-  const genderText = abbreviate
-    ? (gender === 'masculine' ? 'masc.' : gender === 'feminine' ? 'fem.' : null)
-    : (gender === 'masculine' ? 'masculine' : gender === 'feminine' ? 'feminine' : null);
+  const genderText = (gender && (abbreviate ? GENDER_ABBREVIATIONS : GENDER_NAMES)[gender]) || null;
   const numberText = abbreviate
     ? (number === 'singular' ? 'sing.' : 'pl.')
     : (number === 'singular' ? 'singular' : 'plural');
   return genderText ? `${genderText}, ${numberText}` : numberText;
 }
 
+/** The gender values the data uses, spelled out and abbreviated for `grammarHint`. */
+const GENDER_NAMES: Record<string, string> = {
+  masculine: 'masculine', feminine: 'feminine', neuter: 'neuter', common: 'common',
+};
+const GENDER_ABBREVIATIONS: Record<string, string> = {
+  masculine: 'masc.', feminine: 'fem.', neuter: 'neut.', common: 'com.',
+};
+
 /**
- * Definite article table for languages whose gender data this app actually
- * has: Spanish/French/Italian/Portuguese/German. Deliberately excludes
- * Dutch — its curated data only ever carries 'common'/'neuter' (see
- * VocabApp-Data's curated JSONL survey), never 'masculine'/'feminine', so a
- * masc/fem table would just never match — and Japanese/Chinese, which have
- * no grammatical gender at all. German's third gender ('neuter') is out of
- * scope for the same reason `genderDotClass` below only ever returns
- * masculine/feminine: this feature is a binary (blue/pink) indicator, not a
- * three-way one, so a neuter noun simply shows nothing rather than a
- * half-supported third state.
+ * Definite article per gender, for each language whose nouns carry one. A
+ * gender a language has no single article for is simply absent: Spanish 'm/f'
+ * nouns (el/la estudiante) get none. German has a third gender (das), and
+ * Dutch only two articles: de for masculine, feminine and common nouns, het for
+ * neuter ones. Japanese and Chinese have no grammatical gender.
  */
-const DEFINITE_ARTICLES: Record<string, { masculine: string; feminine: string; elide?: boolean; italianLo?: boolean }> = {
+type ArticleTable = Partial<Record<'masculine' | 'feminine' | 'neuter' | 'common' | 'm/f', string>>
+  & { elide?: boolean; italianLo?: boolean };
+const DEFINITE_ARTICLES: Record<string, ArticleTable> = {
   spanish:    { masculine: 'el',  feminine: 'la' },
   french:     { masculine: 'le',  feminine: 'la', elide: true },
   italian:    { masculine: 'il',  feminine: 'la', elide: true, italianLo: true },
   portuguese: { masculine: 'o',   feminine: 'a' },
-  german:     { masculine: 'der', feminine: 'die' },
+  german:     { masculine: 'der', feminine: 'die', neuter: 'das' },
+  dutch:      { masculine: 'de',  feminine: 'de',  common: 'de', 'm/f': 'de', neuter: 'het' },
 };
 
 const VOWEL_SOUND = /^[aeiouàâäéèêëîïôöùûüAEIOUÀÂÄÉÈÊËÎÏÔÖÙÛÜ]/;
@@ -583,8 +587,8 @@ const VOWEL_SOUND = /^[aeiouàâäéèêëîïôöùûüAEIOUÀÂÄÉÈÊËÎÏ�
 const ITALIAN_LO_TRIGGER = /^(z|gn|ps|x|y|s[bcdfgjklmnpqrstvz])/i;
 
 /**
- * The definite article ("el"/"la"/"le"/"o"/"a"/"der"/"die"...) for a noun
- * with a known masculine/feminine gender, or null when it doesn't apply —
+ * The definite article ("el"/"la"/"le"/"o"/"a"/"der"/"die"/"das"/"de"/"het"...) for a
+ * noun with a known gender, or null when it doesn't apply —
  * no gender, a non-noun (a determiner's own gender is a different feature,
  * see grammarHint above; an adjective's agreement isn't what this teaches),
  * or a language this table doesn't cover. `lang` is the active quiz
@@ -595,29 +599,33 @@ const ITALIAN_LO_TRIGGER = /^(z|gn|ps|x|y|s[bcdfgjklmnpqrstvz])/i;
 export function genderArticle(entry: Word, lang: string): string | null {
   if (entry.pos !== 'noun') return null;
   const gender = entry.linguistic?.gender;
-  if (gender !== 'masculine' && gender !== 'feminine') return null;
   const table = DEFINITE_ARTICLES[entry.language ?? lang];
-  if (!table) return null;
+  const article = table && gender ? table[gender as keyof ArticleTable] : undefined;
+  if (typeof article !== 'string') return null;
 
   if (table.elide && VOWEL_SOUND.test(entry.word)) return "l'";
   if (table.italianLo && gender === 'masculine' && ITALIAN_LO_TRIGGER.test(entry.word)) return 'lo';
-  return gender === 'masculine' ? table.masculine : table.feminine;
+  return article;
 }
 
+/** A gender the colour indicator has a colour for. */
+export type GenderKey = 'masculine' | 'feminine' | 'neuter';
+
 /**
- * 'masculine'/'feminine' for a noun with a known binary gender, or null —
+ * 'masculine'/'feminine'/'neuter' for a noun with one known gender, or null —
  * same pos/gender gate as genderArticle above, but language-independent: a
  * colored indicator needs no article text, so it applies to any noun with a
- * known gender regardless of language, not just the five genderArticle
- * covers. Feeds both the colored-dot and colored-background indicator
+ * known gender regardless of language. Dutch 'common' (a de-word that is not
+ * marked masculine or feminine) and 'm/f' get no colour: neither is one of the
+ * three. Feeds both the colored-dot and colored-background indicator
  * styles (utils/dom.ts's renderWordWithGender) — a bare gender key rather
  * than a baked-in CSS class, since which class it becomes depends on which
  * style is active.
  */
-export function genderKey(entry: Word): 'masculine' | 'feminine' | null {
+export function genderKey(entry: Word): GenderKey | null {
   if (entry.pos !== 'noun') return null;
   const gender = entry.linguistic?.gender;
-  return gender === 'masculine' ? 'masculine' : gender === 'feminine' ? 'feminine' : null;
+  return gender === 'masculine' || gender === 'feminine' || gender === 'neuter' ? gender : null;
 }
 
 /**

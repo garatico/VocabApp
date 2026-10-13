@@ -411,7 +411,7 @@ export const Settings = {
    * getTableColor below — this is a specific, meaningful color a learner
    * would want to pick precisely.
    */
-  getGenderColor: (key: 'masculine' | 'feminine'): string | null => readString(P + 'gender_color_' + key),
+  getGenderColor: (key: 'masculine' | 'feminine' | 'neuter'): string | null => readString(P + 'gender_color_' + key),
 
   /** A My Lists sidebar accent (ML_COLOR_DEFS's keys), or null to use variables.css's own. */
   /** One controls-bar option's colour (CTL_COLOR_DEFS's keys), or null to use variables.css's own. */
@@ -902,14 +902,15 @@ export const POS_COLOR_DEFS: readonly [key: string, label: string, defaultHue: n
  * not just nudge the hue of.
  */
 /**
- * The two gender-dot colors — key (storage suffix and
- * --gender-color-<key> custom property), label, and the CSS default each
- * falls back to (variables.css's baby blue/pink). Same "full color, not a
- * hue" reasoning as TABLE_COLOR_DEFS below.
+ * The gender-dot colors — key (storage suffix and --gender-color-<key> custom
+ * property), label, and the CSS default each falls back to (variables.css's
+ * baby blue/pink, and mint for German and Dutch neuter nouns). Same "full
+ * color, not a hue" reasoning as TABLE_COLOR_DEFS below.
  */
-export const GENDER_COLOR_DEFS: readonly [key: 'masculine' | 'feminine', label: string, fallbackVar: string][] = [
+export const GENDER_COLOR_DEFS: readonly [key: 'masculine' | 'feminine' | 'neuter', label: string, fallbackVar: string][] = [
   ['masculine', 'Masculine', '--gender-color-masculine'],
   ['feminine',  'Feminine',  '--gender-color-feminine'],
+  ['neuter',    'Neuter',    '--gender-color-neuter'],
 ];
 
 /**
@@ -1047,7 +1048,7 @@ export function applyTableColors(): void {
  * or clear the override, same mechanism as applyTableColors above.
  */
 export function applyGenderColors(): void {
-  for (const key of ['masculine', 'feminine'] as const) {
+  for (const [key] of GENDER_COLOR_DEFS) {
     const hex = Settings.getGenderColor(key);
     if (hex) document.documentElement.style.setProperty('--gender-color-' + key, hex);
     else document.documentElement.style.removeProperty('--gender-color-' + key);

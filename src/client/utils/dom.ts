@@ -7,6 +7,7 @@
  */
 
 import { foldKey } from './match.ts';
+import type { GenderKey } from './utils.ts';
 
 export type GenderIndicatorStyle = 'off' | 'dot' | 'word-bg' | 'box-bg';
 
@@ -59,14 +60,14 @@ export function fillHighlighted(el: HTMLElement, text: string, query: string): v
  * *container* (which may be a wider element than the word itself, e.g.
  * table-mode's whole cell), not the word text, so they go through
  * `applyGenderContainer` below instead. Color for all three styles comes
- * from CSS (`--gender-color-masculine`/`-feminine` in variables.css,
+ * from CSS (`--gender-color-masculine`/`-feminine`/`-neuter` in variables.css,
  * overridable per Settings.getGenderColor/applyGenderColors) via class, not
  * an inline style, so a Settings color change repaints everything already
  * on screen without re-rendering anything.
  */
 export function renderWordWithGender(
   el: HTMLElement, base: string, annotation: string | null | undefined,
-  key: 'masculine' | 'feminine' | null, style: GenderIndicatorStyle,
+  key: GenderKey | null, style: GenderIndicatorStyle,
 ): void {
   el.textContent = '';
   if (key && style === 'word-bg') {
@@ -99,9 +100,9 @@ export function renderWordWithGender(
  * the word-level style.
  */
 export function applyGenderContainer(
-  container: HTMLElement, key: 'masculine' | 'feminine' | null, style: GenderIndicatorStyle,
+  container: HTMLElement, key: GenderKey | null, style: GenderIndicatorStyle,
 ): void {
-  container.classList.remove('gender-box-bg--masculine', 'gender-box-bg--feminine');
+  container.classList.remove('gender-box-bg--masculine', 'gender-box-bg--feminine', 'gender-box-bg--neuter');
   container.querySelector(':scope > .gender-dot')?.remove();
 
   if (!key) return;
@@ -110,7 +111,7 @@ export function applyGenderContainer(
   } else if (style === 'dot') {
     const dot = document.createElement('span');
     dot.className = `gender-dot gender-dot--${key}`;
-    dot.title = key === 'masculine' ? 'Masculine' : 'Feminine';
+    dot.title = key === 'masculine' ? 'Masculine' : key === 'feminine' ? 'Feminine' : 'Neuter';
     container.appendChild(dot);
   }
 }

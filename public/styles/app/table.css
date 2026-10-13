@@ -581,6 +581,7 @@
    cell matches regardless. */
 #tableWrap td.word-cell.gender-box-bg--masculine { background: var(--gender-color-masculine); color: #1a1916; }
 #tableWrap td.word-cell.gender-box-bg--feminine  { background: var(--gender-color-feminine);  color: #1a1916; }
+#tableWrap td.word-cell.gender-box-bg--neuter    { background: var(--gender-color-neuter);    color: #1a1916; }
 
 /* ── Compare/Multi-language indicator ──
    Applied only when 2+ languages are active in table mode — a word's

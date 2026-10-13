@@ -88,6 +88,11 @@ describe('grammarHint', () => {
   it('abbreviates a genderless determiner to just the number', () => {
     expect(grammarHint(word({ linguistic: { grammatical_number: 'singular' } }), true)).toBe('sing.');
   });
+
+  it('names neuter and common too', () => {
+    expect(grammarHint(word({ linguistic: { gender: 'neuter', grammatical_number: 'singular' } }))).toBe('neuter, singular');
+    expect(grammarHint(word({ linguistic: { gender: 'common', grammatical_number: 'plural' } }), true)).toBe('com., pl.');
+  });
 });
 
 describe('genderArticle', () => {
@@ -104,10 +109,10 @@ describe('genderArticle', () => {
     expect(genderArticle(noun('árvore', 'feminine'), 'portuguese')).toBe('a');
   });
 
-  it('returns "der"/"die" for German (neuter is out of scope)', () => {
+  it('returns "der"/"die"/"das" for German', () => {
     expect(genderArticle(noun('Mann', 'masculine'), 'german')).toBe('der');
     expect(genderArticle(noun('Frau', 'feminine'), 'german')).toBe('die');
-    expect(genderArticle(noun('Haus', 'neuter'), 'german')).toBeNull();
+    expect(genderArticle(noun('Haus', 'neuter'), 'german')).toBe('das');
   });
 
   it('elides French "le"/"la" to "l\'" before a vowel sound', () => {
@@ -137,8 +142,16 @@ describe('genderArticle', () => {
     expect(genderArticle(word({ word: 'coche', pos: 'noun', linguistic: {} }), 'spanish')).toBeNull();
   });
 
-  it('is null for Dutch — the data only ever carries common/neuter, never masculine/feminine', () => {
-    expect(genderArticle(noun('huis', 'neuter'), 'dutch')).toBeNull();
+  it('returns "het" for a Dutch neuter noun and "de" for every other gender', () => {
+    expect(genderArticle(noun('huis', 'neuter'), 'dutch')).toBe('het');
+    for (const g of ['masculine', 'feminine', 'common', 'm/f']) {
+      expect(genderArticle(noun('tafel', g), 'dutch')).toBe('de');
+    }
+  });
+
+  it('is null for a gender the language has no single article for', () => {
+    expect(genderArticle(noun('estudiante', 'm/f'), 'spanish')).toBeNull();
+    expect(genderArticle(noun('casa', 'neuter'), 'spanish')).toBeNull();
   });
 
   it('is null for a language with no grammatical gender at all', () => {
@@ -162,9 +175,13 @@ describe('genderKey', () => {
     expect(genderKey(word({ pos: 'adjective', linguistic: { gender: 'masculine' } }))).toBeNull();
   });
 
-  it('is null for neuter/common — binary indicator only', () => {
-    expect(genderKey(word({ pos: 'noun', linguistic: { gender: 'neuter' } }))).toBeNull();
+  it('returns neuter, the third colour', () => {
+    expect(genderKey(word({ pos: 'noun', linguistic: { gender: 'neuter' } }))).toBe('neuter');
+  });
+
+  it('is null for Dutch common and m/f — not one of the three colours', () => {
     expect(genderKey(word({ pos: 'noun', linguistic: { gender: 'common' } }))).toBeNull();
+    expect(genderKey(word({ pos: 'noun', linguistic: { gender: 'm/f' } }))).toBeNull();
   });
 
   it('is language-independent, unlike genderArticle', () => {

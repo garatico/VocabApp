@@ -61,6 +61,7 @@
  * different skin, not a third thing worth its own history bucket.
  */
 import type { Word } from '../types.ts';
+import type { GenderKey } from '../utils/utils.ts';
 import { matchesAnswer, buildGlossDisplay, chineseWordText, displayWord, wordAndAnnotation, genderKey, primaryGlossForHint, chosenGlosses } from '../utils/utils.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker } from '../utils/list-picker.ts';
@@ -107,7 +108,7 @@ interface CellRefs {
   // Gender indicator (dot/word-bg/box-bg) — computed once per row at build
   // time (cheap, pure) and reused by paintWordCell/paintWordHint below,
   // rather than every call site re-deriving them from `w` itself.
-  gKey:           'masculine' | 'feminine' | null;
+  gKey:           GenderKey | null;
   indicatorStyle: GenderIndicatorStyle;
 }
 
