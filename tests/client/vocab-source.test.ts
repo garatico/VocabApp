@@ -1,6 +1,7 @@
 /**
  * vocab-source.test.ts — API/static fallback ordering and Render-cold-start retry.
  */
+import { COMPACT_LEVEL } from '../../src/shared/vocab/compact-word.ts';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { loadVocab, loadVocabPage, resetOrigin, registerSqliteVocabSource } from '../../src/client/data/vocab-source.js';
 
@@ -59,7 +60,7 @@ describe('loadVocab', () => {
 
     const result = await loadVocab('spanish');
 
-    expect(new URL(fetchMock.mock.calls[0][0] as string, 'http://localhost').searchParams.get('compact')).toBe('1');
+    expect(new URL(fetchMock.mock.calls[0][0] as string, 'http://localhost').searchParams.get('compact')).toBe(String(COMPACT_LEVEL));
     expect(result.data[0]).toEqual({
       word: 'de', translation: 'of', rank: 1,
       frequency: { band: 'A1', corpus_frequency: 5, rank: 1 },
