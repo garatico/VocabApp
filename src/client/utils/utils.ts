@@ -597,7 +597,7 @@ const ITALIAN_LO_TRIGGER = /^(z|gn|ps|x|y|s[bcdfgjklmnpqrstvz])/i;
  * load — see types.ts).
  */
 export function genderArticle(entry: Word, lang: string): string | null {
-  if (entry.pos !== 'noun') return null;
+  if (entry.pos !== 'noun' || isPluralNoun(entry)) return null;
   const gender = entry.linguistic?.gender;
   const table = DEFINITE_ARTICLES[entry.language ?? lang];
   const article = table && gender ? table[gender as keyof ArticleTable] : undefined;
@@ -606,6 +606,11 @@ export function genderArticle(entry: Word, lang: string): string | null {
   if (table.elide && VOWEL_SOUND.test(entry.word)) return "l'";
   if (table.italianLo && gender === 'masculine' && ITALIAN_LO_TRIGGER.test(entry.word)) return 'lo';
   return article;
+}
+
+/** A noun row that is itself a plural (`Freunde`): its article is the plural one, which the tables don't give. */
+function isPluralNoun(entry: Word): boolean {
+  return entry.linguistic?.grammatical_number === 'plural';
 }
 
 /** Whether any language of `lang` (a single code, or a merged `a+b` pool) has articles to quiz. */
@@ -625,7 +630,7 @@ export interface ArticleChoice { article: string; correct: boolean }
  * gender, Spanish m/f, a language without articles).
  */
 export function articleChoices(entry: Word, lang: string): ArticleChoice[] | null {
-  if (entry.pos !== 'noun') return null;
+  if (entry.pos !== 'noun' || isPluralNoun(entry)) return null;
   const table = DEFINITE_ARTICLES[entry.language ?? lang];
   const gender = entry.linguistic?.gender;
   if (!table || !gender || typeof table[gender as keyof ArticleTable] !== 'string') return null;

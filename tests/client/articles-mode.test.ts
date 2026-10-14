@@ -42,6 +42,7 @@ describe('articleChoices', () => {
     expect(articleChoices(noun('casa', null), 'spanish')).toBeNull();
     expect(articleChoices(noun('猫', 'masculine'), 'japanese')).toBeNull();
     expect(articleChoices(noun('rápido', 'masculine', { pos: 'adjective' }), 'spanish')).toBeNull();
+    expect(articleChoices(noun('Freunde', 'masculine', { linguistic: { gender: 'masculine', grammatical_number: 'plural' } }), 'german')).toBeNull();
   });
 
   it('follows entry.language in a merged pool', () => {
