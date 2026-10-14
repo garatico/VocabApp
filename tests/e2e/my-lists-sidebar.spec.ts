@@ -502,9 +502,14 @@ async function dragOnto(page: Page, source: Locator, target: Locator): Promise<v
   await page.mouse.move(s.x + 30, s.y + s.height / 2);
   await page.mouse.down();
   await page.mouse.move(s.x + 40, s.y + s.height / 2 + 8, { steps: 4 });
+  // Starting a drag arms drop targets and can re-lay the section out a frame later, so the
+  // target is measured after that, and again before letting go — the way a hand follows it.
+  await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(null)))));
   await target.scrollIntoViewIfNeeded();
-  const t = (await target.boundingBox())!;
+  let t = (await target.boundingBox())!;
   await page.mouse.move(t.x + 40, t.y + t.height / 2, { steps: 10 });
+  t = (await target.boundingBox())!;
+  await page.mouse.move(t.x + 40, t.y + t.height / 2, { steps: 2 });
   await page.mouse.up();
 }
 
