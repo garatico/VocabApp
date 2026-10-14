@@ -328,11 +328,9 @@ html.dark .form-group input.we-band[data-band] {
 .form-group select.we-pos option[value="interjection"] { background: hsl(110 60% 90%); color: hsl(110 55% 28%); }
 .form-group select.we-pos option[value="numeral"]      { background: hsl(305 60% 90%); color: hsl(305 55% 28%); }
 
-/* ── Gender color coding — masculine/feminine only (see .form-group select.we-gender's own
-   comment in admin.html for why "neuter" isn't offered even though a few
-   non-Spanish words in the real data carry it). Conventional blue/pink
-   split rather than reusing the POS/Band hue formula — gender isn't part
-   of that palette anywhere else in the app, so there's nothing to match. ── */
+/* ── Gender color coding — conventional blue/pink, and green for German/Dutch neuter (the
+   quiz's own --gender-color-* follow the same three), rather than the POS/Band hue formula.
+   common and m/f are listed but not tinted: neither is one gender. ── */
 .form-group select.we-gender[data-gender="masculine"] {
   background: hsl(210 60% 50% / 0.14);
   border-color: hsl(210 50% 45% / 0.4);
@@ -345,11 +343,19 @@ html.dark .form-group input.we-band[data-band] {
   color: hsl(340 55% 25%);
   font-weight: 600;
 }
+.form-group select.we-gender[data-gender="neuter"] {
+  background: hsl(145 50% 45% / 0.14);
+  border-color: hsl(145 45% 40% / 0.4);
+  color: hsl(145 55% 22%);
+  font-weight: 600;
+}
 html.dark .form-group select.we-gender[data-gender="masculine"] { color: hsl(210 62% 72%); }
+html.dark .form-group select.we-gender[data-gender="neuter"]    { color: hsl(145 50% 68%); }
 html.dark .form-group select.we-gender[data-gender="feminine"]  { color: hsl(340 62% 72%); }
 
 .form-group select.we-gender option[value="masculine"] { background: hsl(210 60% 90%); color: hsl(210 55% 28%); }
 .form-group select.we-gender option[value="feminine"]  { background: hsl(340 60% 90%); color: hsl(340 55% 28%); }
+.form-group select.we-gender option[value="neuter"]    { background: hsl(145 50% 88%); color: hsl(145 55% 24%); }
 
 /* ── Emoji fallback + picker — setupEmojiPicker() in admin-emoji-picker.ts ── */
 .emoji-field {

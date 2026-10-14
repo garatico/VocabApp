@@ -208,6 +208,9 @@ export function buildWordForm(options: WordFormOptions = {}): WordFormHandle {
                 <option value="">— none —</option>
                 <option value="masculine">masculine</option>
                 <option value="feminine">feminine</option>
+                <option value="neuter">neuter</option>
+                <option value="common">common (Dutch de-word)</option>
+                <option value="m/f">m/f (either)</option>
               </select>
             </div>
             <div class="form-group">

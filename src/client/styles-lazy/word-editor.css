@@ -742,10 +742,18 @@ html.dark .word-editor .form-group input.we-band[data-band] {
   color: hsl(340 55% 25%);
   font-weight: 600;
 }
+.word-editor .form-group select.we-gender[data-gender="neuter"] {
+  background: hsl(145 50% 45% / 0.14);
+  border-color: hsl(145 45% 40% / 0.4);
+  color: hsl(145 55% 22%);
+  font-weight: 600;
+}
 html.dark .word-editor .form-group select.we-gender[data-gender="masculine"] { color: hsl(210 62% 72%); }
+html.dark .word-editor .form-group select.we-gender[data-gender="neuter"] { color: hsl(145 50% 68%); }
 html.dark .word-editor .form-group select.we-gender[data-gender="feminine"] { color: hsl(340 62% 72%); }
 .word-editor .form-group select.we-gender option[value="masculine"] { background: hsl(210 60% 90%); color: hsl(210 55% 28%); }
 .word-editor .form-group select.we-gender option[value="feminine"] { background: hsl(340 60% 90%); color: hsl(340 55% 28%); }
+.word-editor .form-group select.we-gender option[value="neuter"] { background: hsl(145 50% 88%); color: hsl(145 55% 24%); }
 .word-editor .emoji-field {
   position: relative;
   display: flex;

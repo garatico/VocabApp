@@ -556,24 +556,24 @@ function posCellSelect(word: string, value: string): HTMLTableCellElement {
   return td;
 }
 
-/** Gender's own cell — masculine/feminine/none only, same "locked to a
- *  preset list, not free text" reasoning as posCellSelect() above, and
- *  matching #editGender's own comment (admin.html) for why "neuter" isn't
- *  offered even though a few non-Spanish words in the real data carry it. */
+/** Gender's own cell — the same preset list as the Word Editor's #editGender
+ *  (masculine, feminine, neuter, common, m/f), not free text, same reasoning
+ *  as posCellSelect() above. */
+const GENDER_OPTIONS = ['masculine', 'feminine', 'neuter', 'common', 'm/f'];
+
 function genderCellSelect(word: string, value: string): HTMLTableCellElement {
   const td = document.createElement('td');
   const select = document.createElement('select');
   select.className = 'table-view-cell-select';
-  select.innerHTML = '<option value="">—</option><option value="masculine">masculine</option><option value="feminine">feminine</option>';
-  // A handful of non-Spanish words carry a gender outside this preset list
-  // (German/Dutch "neuter", Dutch "common", a few Spanish "m/f") — shown via
-  // a synthetic option rather than silently falling back to blank, same as
-  // Word Editor's own setSelectValue() does for #editGender.
-  if (value && value !== 'masculine' && value !== 'feminine') {
+  select.innerHTML = '<option value="">—</option>'
+    + GENDER_OPTIONS.map(g => `<option value="${g}">${g}</option>`).join('');
+  // Anything else the data carries is shown via a synthetic option rather than
+  // silently falling back to blank, same as the Word Editor's setSelectValue().
+  if (value && !GENDER_OPTIONS.includes(value)) {
     select.innerHTML += `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`;
   }
   select.value = value;
-  if (value === 'masculine' || value === 'feminine') select.setAttribute('data-gender', value);
+  if (value) select.setAttribute('data-gender', value);
   select.addEventListener('change', () => {
     const w = rows.get(word);
     if (w) w.linguistic = { ...w.linguistic, gender: select.value || null };

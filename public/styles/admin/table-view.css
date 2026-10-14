@@ -393,8 +393,7 @@ html.dark .table-view-cell-readonly[data-band] {
 .table-view-cell-select option[value="interjection"] { background: hsl(110 60% 90%); color: hsl(110 55% 28%); }
 .table-view-cell-select option[value="numeral"]      { background: hsl(305 60% 90%); color: hsl(305 55% 28%); }
 
-/* ── Gender color coding — same conventional blue/pink split as
-   edit-form.css's #editGender, masculine/feminine only. ── */
+/* ── Gender color coding — same blue/pink/green as edit-form.css's #editGender. ── */
 .table-view-cell-select[data-gender="masculine"] {
   background: hsl(210 60% 50% / 0.14);
   border-color: hsl(210 50% 45% / 0.4);
@@ -407,7 +406,14 @@ html.dark .table-view-cell-readonly[data-band] {
   color: hsl(340 55% 25%);
   font-weight: 600;
 }
+.table-view-cell-select[data-gender="neuter"] {
+  background: hsl(145 50% 45% / 0.14);
+  border-color: hsl(145 45% 40% / 0.4);
+  color: hsl(145 55% 22%);
+  font-weight: 600;
+}
 html.dark .table-view-cell-select[data-gender="masculine"] { color: hsl(210 62% 72%); }
+html.dark .table-view-cell-select[data-gender="neuter"]    { color: hsl(145 50% 68%); }
 html.dark .table-view-cell-select[data-gender="feminine"]  { color: hsl(340 62% 72%); }
 
 .table-view-cell-select option[value="masculine"] { background: hsl(210 60% 90%); color: hsl(210 55% 28%); }
