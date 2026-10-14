@@ -67,7 +67,7 @@ test.describe('tab colours', () => {
 
     await openMode(page, 'settings');
     await page.locator('#settingsSearch').fill('tab colors');   // search opens the fold and the group
-    const swatch = page.locator('#settingTabColors input[type="color"]').nth(8);   // History is the 9th
+    const swatch = page.locator('#settingTabColors .conj-color-row', { hasText: /^History$/ }).locator('input[type="color"]');
     await expect(swatch).toBeVisible();
     await swatch.evaluate((el: HTMLInputElement) => { el.value = '#cc3366'; el.dispatchEvent(new Event('input', { bubbles: true })); });
     expect(await colorOf('history')).toBe('#cc3366');
