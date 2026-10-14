@@ -13,6 +13,8 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests/e2e',
+  // One warm-up load before the first spec — see tests/e2e/global-setup.ts.
+  globalSetup: './tests/e2e/global-setup.ts',
   fullyParallel: true,
   forbidOnly: !!process.env['CI'],
   // One retry locally too: every worker shares the one dev API (see `expect` below), so under a full

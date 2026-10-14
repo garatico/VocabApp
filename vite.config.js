@@ -61,6 +61,12 @@ export default defineConfig({
 
   server: {
     port: 5173,
+    // Transform the app's and the admin panel's import graphs when the server starts, not on the first
+    // page load: cold, that first load took long enough (hundreds of modules on demand) that the opening
+    // e2e specs of a fresh run timed out in page.goto, and a developer's first refresh waited too.
+    warmup: {
+      clientFiles: ['./src/client/app.ts', './src/client/admin/admin.ts'],
+    },
     proxy: {
       // Forward all API calls and static asset requests to Express
       '/api':    { target: 'http://localhost:3000', changeOrigin: true },
