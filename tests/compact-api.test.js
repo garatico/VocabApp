@@ -59,6 +59,18 @@ describe('GET /api/vocab/:language?compact=1', () => {
     expect(miss.status).toBe(200);
   });
 
+  it('keeps level 1 as it was, so a client cached before level 2 still gets its band', async () => {
+    const one = await request(app).get('/api/vocab/spanish?compact=1');
+    const two = await request(app).get('/api/vocab/spanish?compact=2');
+    expect(one.body.compact).toBe(true);
+    expect(two.body.compact).toBe(2);
+    const ranked = one.body.data.find(w => w.rank != null);
+    expect(ranked.frequency).toHaveProperty('band');
+    expect(two.body.data.find(w => w.word === ranked.word).frequency).not.toHaveProperty('band');
+    const full = await request(app).get('/api/vocab/spanish');
+    expect(two.body.data.map(w => expandWord(w))).toEqual(full.body.data);
+  });
+
   it('compacts a paged response too, and expands to the same words as the full page', async () => {
     const full    = await request(app).get('/api/vocab/spanish?page=1&limit=5');
     const compact = await request(app).get('/api/vocab/spanish?page=1&limit=5&compact=1');

@@ -21,7 +21,7 @@ import zlib from 'zlib';
 import v8 from 'node:v8';
 import crypto from 'crypto';
 import type { Request, Response } from 'express';
-import { compactWord } from '../../shared/vocab/compact-word.js';
+import { compactWord, COMPACT_LEVEL, type CompactLevel } from '../../shared/vocab/compact-word.js';
 
 interface Encoded {
   etag: string;
@@ -36,8 +36,21 @@ interface Encoded {
  * Compact is opt-in per request so a client cached from before it existed, which
  * cannot expand, keeps receiving the shape it knows.
  */
-const entries        = new WeakMap<object, Encoded>();
-const compactEntries = new WeakMap<object, Encoded>();
+/** 0 = full words; otherwise the compact level the client asked for. */
+export type Compact = 0 | CompactLevel;
+const entries: Record<Compact, WeakMap<object, Encoded>> = { 0: new WeakMap(), 1: new WeakMap(), 2: new WeakMap() };
+
+/** `?compact=` -> the level to send: absent/other = 0, '1' = 1, '2' or higher = the newest. */
+export function compactLevel(param: unknown): Compact {
+  const n = typeof param === 'string' ? parseInt(param, 10) : NaN;
+  if (!(n >= 1)) return 0;
+  return n === 1 ? 1 : COMPACT_LEVEL;
+}
+
+/** The response's own marker: `compact: true` for level 1, as before levels existed. */
+export function compactMarker(level: Compact): { compact?: true | CompactLevel } {
+  return level === 0 ? {} : { compact: level === 1 ? true : level };
+}
 
 /** Tail of the compression queue — see build(). */
 let compressionQueue: Promise<void> = Promise.resolve();
@@ -72,9 +85,9 @@ function stripProvenance<T extends { tags?: string[] }>(w: T): T {
     : w;
 }
 
-/** `words` run through compactWord when `compact`, otherwise untouched. */
-export function compactIf<T extends object>(compact: boolean, words: T[]): T[] {
-  return compact ? words.map(w => compactWord(w as Parameters<typeof compactWord>[0]) as T) : words;
+/** `words` run through compactWord at `level`, or untouched at 0. */
+export function compactIf<T extends object>(level: Compact, words: T[]): T[] {
+  return level ? words.map(w => compactWord(w as Parameters<typeof compactWord>[0], level) as T) : words;
 }
 
 /** Words per piece when serialising: small enough that no copy of the whole language ever exists at once. */
@@ -87,7 +100,7 @@ const SERIALIZE_BATCH = 500;
  * over 100 MB of extra peak on a host whose Node heap is ~256 MB. Here each word's copy is garbage
  * as soon as its piece is encoded, and the only large allocation is the final Buffer.
  */
-export function serializeVocab(vocab: VocabLike, compact: boolean): Buffer {
+export function serializeVocab(vocab: VocabLike, compact: Compact): Buffer {
   // metadata is deliberately stable (no "now"): anything that changes per
   // request defeats the ETag. `cacheAge` stays as a field for existing
   // consumers and is the age at build time, i.e. 0.
@@ -96,7 +109,7 @@ export function serializeVocab(vocab: VocabLike, compact: boolean): Buffer {
     language: vocab.language,
     count:    vocab.words.length,
     metadata: { timestamp: new Date(vocab.loadedAt).toISOString(), cacheAge: 0 },
-    ...(compact ? { compact: true } : {}),
+    ...compactMarker(compact),
   });
   const words = vocab.words as { tags?: string[] }[];
   const chunks: Buffer[] = [Buffer.from(head.slice(0, -1) + ',"data":[')];
@@ -104,7 +117,7 @@ export function serializeVocab(vocab: VocabLike, compact: boolean): Buffer {
     const pieces: string[] = [];
     for (let j = i; j < Math.min(i + SERIALIZE_BATCH, words.length); j++) {
       const word = stripProvenance(words[j]);
-      pieces.push(JSON.stringify(compact ? compactWord(word as Parameters<typeof compactWord>[0]) : word));
+      pieces.push(JSON.stringify(compact ? compactWord(word as Parameters<typeof compactWord>[0], compact) : word));
     }
     chunks.push(Buffer.from((i ? ',' : '') + pieces.join(',')));
   }
@@ -129,7 +142,7 @@ function brotliParams(inputSize: number): zlib.BrotliOptions['params'] {
   };
 }
 
-function build(vocab: VocabLike, compact: boolean): Encoded {
+function build(vocab: VocabLike, compact: Compact): Encoded {
   const raw = serializeVocab(vocab, compact);
   const etag = `"${crypto.createHash('sha1').update(raw).digest('base64url')}"`;
   const entry: Encoded = { etag, raw, gzip: null, br: null };
@@ -155,8 +168,8 @@ function build(vocab: VocabLike, compact: boolean): Encoded {
   return entry;
 }
 
-function entryFor(vocab: VocabLike, compact: boolean): Encoded {
-  const cache = compact ? compactEntries : entries;
+function entryFor(vocab: VocabLike, compact: Compact): Encoded {
+  const cache = entries[compact];
   let e = cache.get(vocab.words);
   if (!e) { e = build(vocab, compact); cache.set(vocab.words, e); }
   return e;
@@ -166,7 +179,7 @@ function entryFor(vocab: VocabLike, compact: boolean): Encoded {
  * Send the whole-language response. Handles conditional requests (304) and
  * serves the best precompressed form the client accepts, when ready.
  */
-export function sendVocab(req: Request, res: Response, vocab: VocabLike, maxAgeSeconds: number, compact = false): void {
+export function sendVocab(req: Request, res: Response, vocab: VocabLike, maxAgeSeconds: number, compact: Compact = 0): void {
   const e = entryFor(vocab, compact);
 
   res.set({

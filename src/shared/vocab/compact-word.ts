@@ -6,7 +6,7 @@
  * JSON and ~350 KB of its gzipped transfer (Spanish):
  *
  *   frequency.rank    always equals `rank`
- *   frequency.band    always `bandFromRank(rank)` (shared/band.ts, the one place a band is made)
+ *   frequency.band    always `bandFromRank(rank)` (shared/band.ts) — level 2 only, see below
  *   glosses           very often exactly `[translation]`
  *   linguistic.reflexive   false for most words
  *   is_function_word       false for most words
@@ -25,6 +25,15 @@
 
 import { bandFromRank } from '../band.js';
 
+/**
+ * What a compact word leaves out has grown, and a client cached before a field was
+ * added to the list cannot put that field back. So the format is numbered and the
+ * client asks for the level it understands (`?compact=2`): level 1 is the original
+ * four fields, level 2 also drops `frequency.band`. A new omission is a new level.
+ */
+export type CompactLevel = 1 | 2;
+export const COMPACT_LEVEL: CompactLevel = 2;
+
 interface CompactableWord {
   translation?:      string;
   glosses?:          string[];
@@ -35,7 +44,7 @@ interface CompactableWord {
 }
 
 /** A copy of `word` without the redundant fields. Never mutates its input. */
-export function compactWord<T extends CompactableWord>(word: T): T {
+export function compactWord<T extends CompactableWord>(word: T, level: CompactLevel = COMPACT_LEVEL): T {
   const out: CompactableWord = { ...word };
   if (out.is_function_word === false) delete out.is_function_word;
   if (out.linguistic && out.linguistic.reflexive === false) {
@@ -46,7 +55,7 @@ export function compactWord<T extends CompactableWord>(word: T): T {
     out.frequency = { ...out.frequency };
     delete out.frequency.rank;
   }
-  if (out.frequency && out.frequency.band === bandFromRank(out.rank ?? null)) {
+  if (level >= 2 && out.frequency && out.frequency.band === bandFromRank(out.rank ?? null)) {
     out.frequency = { ...out.frequency };
     delete out.frequency.band;
   }

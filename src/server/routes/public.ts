@@ -13,7 +13,7 @@ import { loadVocabFile, getSupportedLanguages, getDb, getWordColumnFlags, shapeD
 import { loadTriviaQuestions, loadGuessBlankQuestions } from '../lib/content-loader.js';
 import { createBetterSqlite3Adapter } from '../lib/storage/better-sqlite3-adapter.js';
 import { getWordPage } from '../../shared/vocab/queries.js';
-import { sendVocab, publicTags, compactIf } from '../lib/vocab-response.js';
+import { sendVocab, publicTags, compactIf, compactLevel, compactMarker } from '../lib/vocab-response.js';
 
 export function makePublicRoutes(nodeEnv: string): Router {
   const router = Router();
@@ -35,8 +35,9 @@ export function makePublicRoutes(nodeEnv: string): Router {
   router.get('/vocab/:language', async (req, res, next) => {
     try {
       const language = req.params['language'];
-      // Opt-in: only a client that expands (vocab-source.ts) asks for it.
-      const compact  = req.query['compact'] === '1';
+      // Opt-in, and numbered: a client asks for the level it can expand (vocab-source.ts,
+      // shared/vocab/compact-word.ts); an older cached one keeps asking for 1 and gets 1.
+      const compact  = compactLevel(req.query['compact']);
 
       if (req.query['page'] === undefined) {
         // Built once per loaded copy, precompressed, with a content-hash ETag —
@@ -65,7 +66,7 @@ export function makePublicRoutes(nodeEnv: string): Router {
         pages:    result.pages,
         limit:    result.limit,
         metadata: { timestamp: new Date().toISOString() },
-        ...(compact ? { compact: true } : {}),
+        ...compactMarker(compact),
         data:     compactIf(compact, publicTags(result.words)),
       });
     } catch (error) {

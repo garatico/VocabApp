@@ -27,7 +27,7 @@
 
 import type { Word } from '../types.ts';
 import { logger } from '../utils/logger.ts';
-import { expandWord } from '../../shared/vocab/compact-word.ts';
+import { expandWord, COMPACT_LEVEL } from '../../shared/vocab/compact-word.ts';
 
 export type VocabOrigin = 'api' | 'sqlite' | 'static';
 
@@ -82,8 +82,8 @@ export function registerSqliteVocabSource(source: SqliteVocabSource | null): voi
 /** Remembered after the first success, so we stop probing a dead API. */
 let preferredOrigin: VocabOrigin | null = null;
 
-/** `compact=1` asks for words without the fields expandWord() restores — see shared/vocab/compact-word.ts. */
-function apiUrl(lang: string): string    { return `/api/vocab/${lang}?compact=1`; }
+/** `compact=N` asks for words without the fields expandWord() restores, at the level it understands — see shared/vocab/compact-word.ts. */
+function apiUrl(lang: string): string    { return `/api/vocab/${lang}?compact=${COMPACT_LEVEL}`; }
 function staticUrl(lang: string): string { return `/data/vocab-${lang}.json`; }
 function jsonlUrl(lang: string): string  { return `/data/${lang}.jsonl`; }
 
@@ -405,7 +405,7 @@ export async function loadVocabPage(lang: string, params: VocabPageParams = {}):
     }
 
     const qs = new URLSearchParams();
-    qs.set('compact', '1');
+    qs.set('compact', String(COMPACT_LEVEL));
     qs.set('page', String(params.page ?? 1));
     if (params.limit)  qs.set('limit',  String(params.limit));
     if (params.search) qs.set('search', params.search);
