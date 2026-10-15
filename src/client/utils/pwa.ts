@@ -104,10 +104,33 @@ function showUpdatePrompt(worker: ServiceWorker): void {
 
 // ── Registration ──────────────────────────────────────────────────────────────
 
+/**
+ * The installed apps serve every file from the package itself, so a worker only adds work: it starts up
+ * with each launch, keeps second copies of the vocabulary and pictures, and answered the first launch after
+ * an update with the previous version's cached page. Earlier builds registered one, so it is removed here
+ * along with its caches.
+ */
+async function retireServiceWorker(): Promise<void> {
+  try {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map(r => r.unregister()));
+    if (typeof caches !== 'undefined') {
+      const names = await caches.keys();
+      await Promise.all(names.filter(n => n.startsWith('vocab-')).map(n => caches.delete(n)));
+    }
+  } catch (err) {
+    logger.warn('pwa: could not remove the old service worker', err);
+  }
+}
+
 export function initPWA(): void {
   bindConnectivity();
 
   if (!('serviceWorker' in navigator)) return;
+  if (isPackagedApp()) {
+    void retireServiceWorker();
+    return;
+  }
   if (isDev()) {
     logger.info('pwa: service worker not registered in dev');
     return;

@@ -15,7 +15,7 @@ import { initConjugation } from './admin-conjugation.js';
 import { initTable, ensureTableLoaded, isTableDirty, discardTableChanges } from './admin-table.js';
 import { logger } from '../utils/logger.js';
 import { readString, writeString } from '../utils/storage.ts';
-import { isPackagedApp } from '../data/vocab-source.js';
+import { isTauriApp } from '../data/vocab-source.js';
 import { initAdminDataClient } from './admin-data-client.js';
 import { confirmDialog } from '../ui/dialog.ts';
 
@@ -144,7 +144,7 @@ wordsViewButtons.forEach(btn => {
 // just redirect away: no server anywhere.
 async function selectAdminDataSource(): Promise<'http' | 'tauri-sqlite' | null> {
   if (await hasReachableBackend()) return 'http';
-  if (isPackagedApp()) {
+  if (isTauriApp()) {
     const { initTauriVocabSource, isTauriSqlReady } = await import('../tauri/bootstrap.js');
     try {
       await initTauriVocabSource();

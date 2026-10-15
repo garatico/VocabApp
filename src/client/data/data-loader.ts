@@ -86,9 +86,16 @@ function applyEdits(lang: string, words: Word[]): Word[] {
 /** Full loads in progress, so a foreground caller and the background top-up share one fetch. */
 const inflight: Record<string, Promise<Word[]>> = {};
 
+/**
+ * A whole-language load waits for that language's first page if one is in flight. My Lists asks for
+ * every word while the first paint is still waiting on its 200, and the two used to race: on Windows the
+ * page's second query queued behind the 45k-row read and its parsing, and startup took 1.7 s instead of 0.4.
+ */
 function loadCachedVocab(lang: string, silent = false): Promise<Word[]> {
   if (cache[lang]) return Promise.resolve(cache[lang]);
-  return inflight[lang] ??= fetchFullVocab(lang, silent).finally(() => { delete inflight[lang]; });
+  const firstPage = previewInflight[lang];
+  return inflight[lang] ??= (firstPage ? firstPage.catch(() => null).then(() => fetchFullVocab(lang, silent)) : fetchFullVocab(lang, silent))
+    .finally(() => { delete inflight[lang]; });
 }
 
 /** First-page loads in progress. Startup asks for the same language twice before either answer is in,
@@ -161,6 +168,7 @@ async function fetchFullVocab(lang: string, silent: boolean): Promise<Word[]> {
     logger.info(`✓ Loaded ${words.length} words for ${lang} (${payload.origin})`);
 
     cache[lang] = words;
+    performance.mark(`vocab-full:${lang}`);   // for the load benchmarks (scripts/bench-*.ts)
     if (!silent) hideLoading();
     return words;
   } catch (error) {

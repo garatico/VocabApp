@@ -15,6 +15,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
 <meta name="apple-mobile-web-app-title" content="VocabApp"/>
+<!-- Dark mode before the first paint. The app module applies the theme too (ui/theme-toggle.ts), but it
+     runs after the page has been drawn once, so a dark-mode learner saw a light page flash at every start. -->
+<script>try{var t=localStorage.getItem('theme')||'system';if(t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}</script>
 <!-- One Vite entry that @imports every stylesheet below in the same order
      they used to appear as separate <link> tags — see the file's own header
      comment for why. -->

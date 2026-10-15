@@ -6,7 +6,7 @@
  * HTML documents, separate JS module instances, so each needs its own call;
  * a second call from the same page is cheap and safe, just redundant).
  *
- * Only ever imported via dynamic import() behind isPackagedApp(), so the
+ * Only ever imported via dynamic import() behind isTauriApp(), so the
  * plain web bundle never pulls in @tauri-apps/plugin-sql.
  */
 import Database from '@tauri-apps/plugin-sql';

@@ -3,7 +3,7 @@
  */
 import { COMPACT_LEVEL } from '../../src/shared/vocab/compact-word.ts';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { loadVocab, loadVocabPage, resetOrigin, registerSqliteVocabSource } from '../../src/client/data/vocab-source.js';
+import { loadVocab, loadVocabPage, resetOrigin, registerSqliteVocabSource, awaitSqliteSetup, availableLanguages } from '../../src/client/data/vocab-source.js';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -170,19 +170,46 @@ describe('loadVocab', () => {
     expect(onRetry).not.toHaveBeenCalled();
   });
 
-  it('skips the retry in a packaged Capacitor build too', async () => {
+  it('reads the bundled JSONL in the Android (Capacitor) app, without asking the API first', async () => {
     vi.stubGlobal('Capacitor', { isNativePlatform: () => true });
+    const lines = [{ ...word, rank: 1 }, { id: 2, word: 'adiós', translation: 'goodbye', rank: 2 }]
+      .map(w => JSON.stringify(w)).join(String.fromCharCode(10));
     const fetchMock = vi.fn((url: string) =>
-      Promise.resolve(
-        url.includes('/api/') ? jsonResponse({}, 503) : jsonResponse({ data: [word], count: 1 }),
-      ),
+      Promise.resolve(url === '/data/spanish.jsonl' ? new Response(lines) : jsonResponse({}, 503)),
     );
     vi.stubGlobal('fetch', fetchMock);
 
     const result = await loadVocab('spanish');
 
     expect(result.origin).toBe('static');
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.data.map(w => w.word)).toEqual(['hola', 'adiós']);
+    expect(result.data[0]!.glosses).toEqual(['hello']);   // expanded from the compact line
+    expect(fetchMock.mock.calls.map(c => c[0])).toEqual(['/data/spanish.jsonl']);
+  });
+
+  it('never asks the API in a built Windows (Tauri) app: its own database answers', async () => {
+    vi.stubGlobal('__TAURI_INTERNALS__', {});
+    vi.stubEnv('DEV', false);
+    const fetchMock = vi.fn(() => Promise.resolve(jsonResponse({}, 503)));
+    vi.stubGlobal('fetch', fetchMock);
+    let release!: () => void;
+    const setup = new Promise<void>(resolve => { release = resolve; });
+    awaitSqliteSetup(setup.then(() => registerSqliteVocabSource({
+      loadVocab: async () => ({ count: 1, data: [word] as never }),
+      loadLanguages: async () => ['spanish'],
+      loadVocabPage: async () => ({ words: [word] as never, total: 1, page: 1, pages: 1, limit: 1 }),
+    })));
+
+    // Asked before the database is open: waits for it rather than falling through to the bundled file.
+    const pending = loadVocab('spanish');
+    release();
+    const result = await pending;
+
+    expect(result.origin).toBe('sqlite');
+    expect(await availableLanguages()).toEqual(['spanish']);
+    expect((await loadVocabPage('spanish')).origin).toBe('sqlite');
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
   });
 
   // isPackagedApp() also checks the plain `__TAURI__` global — older Tauri

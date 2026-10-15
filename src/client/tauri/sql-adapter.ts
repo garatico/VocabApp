@@ -3,7 +3,7 @@
  * shared vocab query/write modules (src/shared/vocab/*) can run unmodified
  * against the Tauri desktop app's local SQLite copy.
  *
- * Only ever imported via dynamic import() behind isPackagedApp() — see
+ * Only ever imported via dynamic import() behind isTauriApp() — see
  * src/client/tauri/bootstrap.ts — so the plain web bundle never pulls in
  * @tauri-apps/plugin-sql.
  *
@@ -20,6 +20,10 @@
  * sequence of independent writes, so this is enough for what's actually
  * needed rather than trying to fully replicate synchronous same-connection
  * semantics.
+ *
+ * Reads go to the select_rows Rust command (main.rs), not plugin-sql's select(): it sends the column
+ * names once and each row as an array, about 40% of the bytes, and skips building and re-serializing
+ * a JSON value per row. Spanish's whole-language read was 26 MB and ~3 s through select().
  */
 import Database from '@tauri-apps/plugin-sql';
 import { invoke } from '@tauri-apps/api/core';
@@ -40,15 +44,40 @@ function unsupportedInTransaction(method: string): never {
   );
 }
 
+/** What select_rows sends: the column names once, then one array of values per row. */
+export interface ColumnarRows {
+  columns: string[];
+  rows:    unknown[][];
+}
+
+/** Back to one object per row, the shape every reader in src/shared/vocab/* expects. */
+export function rowsToObjects<T>({ columns, rows }: ColumnarRows): T[] {
+  return rows.map(values => {
+    const row: Record<string, unknown> = {};
+    columns.forEach((column, i) => { row[column] = values[i]; });
+    return row as T;
+  });
+}
+
 export function createTauriSqlAdapter(db: InstanceType<typeof Database>, dbPath: string): StorageAdapter {
+  /** select_rows, or plugin-sql's select() if the command is missing or fails. */
+  async function select<T>(sql: string, params: unknown[]): Promise<T[]> {
+    try {
+      // Native `?` placeholders, like run_sql_transaction. The answer is raw JSON bytes (an ArrayBuffer).
+      const bytes = await invoke<ArrayBuffer>('select_rows', { dbPath, sql, params });
+      return rowsToObjects<T>(JSON.parse(new TextDecoder().decode(bytes)) as ColumnarRows);
+    } catch {
+      return db.select<T[]>(toDollarPlaceholders(sql), params);
+    }
+  }
+
   const adapter: StorageAdapter = {
     async get<T = StorageRow>(sql: string, params: unknown[] = []): Promise<T | undefined> {
-      const rows = await db.select<T[]>(toDollarPlaceholders(sql), params);
-      return rows[0];
+      return (await select<T>(sql, params))[0];
     },
 
     async all<T = StorageRow>(sql: string, params: unknown[] = []): Promise<T[]> {
-      return db.select<T[]>(toDollarPlaceholders(sql), params);
+      return select<T>(sql, params);
     },
 
     async run(sql: string, params: unknown[] = []): Promise<RunResult> {

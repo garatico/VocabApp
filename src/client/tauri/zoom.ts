@@ -9,7 +9,7 @@
  *   - Ctrl (or ⌘) with +, − and 0.
  * The level is remembered (Settings' app_zoom) and re-applied on the next launch.
  *
- * Only ever imported via dynamic import() behind isPackagedApp(), like the rest of this folder, so the
+ * Only ever imported via dynamic import() behind isTauriApp(), like the rest of this folder, so the
  * web bundle never pulls in the Tauri API.
  */
 

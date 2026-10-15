@@ -28,7 +28,7 @@ import { getUserTriviaQuestions }                from './data/user-content.ts';
 import { LANGUAGES, isoCode, supportsConjugation,
          conjugationUnavailableReason, languageInfo } from './data/languages.ts';
 import { hasArticles } from './utils/utils.ts';
-import { availableLanguages, isPackagedApp }     from './data/vocab-source.ts';
+import { availableLanguages, isPackagedApp, isTauriApp, awaitSqliteSetup } from './data/vocab-source.ts';
 import { logger } from './utils/logger.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
 import { Settings, applyFontSize, applyPalette, applyBackground, applyOpacity, setOnFilterVisibilityChange, setOnUILanguageChange, setOnSimpleModeChange, setOnExperimentalModesChange, setOnShowMyContentChange, setOnShowAdminPanelChange } from './settings.ts';
@@ -1358,29 +1358,22 @@ proxyToggleAsCycle(document.getElementById('conjDisplayToggle'), document.getEle
 proxyToggleAsCycle(document.getElementById('directionToggle'), document.getElementById('directionCycle') as HTMLButtonElement | null, 'direction', 'Direction');
 
 void (async function init(): Promise<void> {
-  // Must complete before anything loads vocab (loadAndBuildFilters, below)
-  // so vocab-source.ts's registered sqlite source is ready by the time it's
-  // needed. A plain web build never reaches isPackagedApp() === true, so
-  // this never pulls in @tauri-apps/plugin-sql there.
-  if (isPackagedApp()) {
-    try {
-      const { initTauriVocabSource } = await import('./tauri/bootstrap.js');
-      await initTauriVocabSource();
-    } catch (err) {
+  // The Windows app's local SQLite copy. Started here but not waited for: the page draws meanwhile, and
+  // vocab-source.ts holds every vocabulary read until it has settled (awaitSqliteSetup). Tauri only —
+  // the Android app is packaged too but has no database, and used to load this, fail and log an error
+  // on every launch. A plain web build never pulls in @tauri-apps/plugin-sql.
+  if (isTauriApp()) {
+    awaitSqliteSetup(import('./tauri/bootstrap.js').then(m => m.initTauriVocabSource()).catch((err: unknown) => {
       logger.error('Failed to initialize local SQLite vocab source:', err);
-    }
+    }));
     // Pinch-to-zoom (touchpad or touch screen) and Ctrl +/-/0: a packaged window has no browser zoom of its own.
-    try {
-      (await import('./tauri/zoom.ts')).initAppZoom();
-    } catch (err) {
+    void import('./tauri/zoom.ts').then(m => m.initAppZoom()).catch((err: unknown) => {
       logger.warn('Zoom is unavailable:', err);
-    }
+    });
     // The native title bar follows the app's Light / Dark / System choice, including one a Visual Profile applies.
-    try {
-      (await import('./tauri/window-theme.ts')).initWindowTheme((readString('theme') ?? 'system') as ThemeValue);
-    } catch (err) {
+    void import('./tauri/window-theme.ts').then(m => m.initWindowTheme((readString('theme') ?? 'system') as ThemeValue)).catch((err: unknown) => {
       logger.warn('Window theme sync is unavailable:', err);
-    }
+    });
   }
 
   mountUI();

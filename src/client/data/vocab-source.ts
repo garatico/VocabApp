@@ -13,16 +13,11 @@
  *   1. /api/vocab/:lang     live server, always freshest
  *   2. /data/vocab-:lang.json   bundled export
  *
- * The API is tried first even in a packaged build: it costs one failed request
- * on a file:// origin and means a packaged app pointed at a dev server picks up
- * edits immediately. Once a language resolves, the working source is remembered
- * so the fallback isn't re-probed on every language switch.
- *
- * That one failed request does NOT get the Render cold-start retry treatment
- * below in a packaged build (see isPackagedApp) — there is no server back
- * there that might still be waking up, so retrying is just a ~42s wait for a
- * connection that will never succeed before falling through to the bundled
- * export it should have used immediately.
+ * A built app never asks the API (see noApi): the Windows app reads its own
+ * SQLite copy, the Android app the bundled JSONL. `tauri dev` still tries the
+ * API first, so a desktop window on the dev server picks up edits immediately.
+ * Once a language resolves, the working source is remembered so the fallback
+ * isn't re-probed on every language switch.
  */
 
 import type { Word } from '../types.ts';
@@ -79,6 +74,19 @@ export function registerSqliteVocabSource(source: SqliteVocabSource | null): voi
   sqliteSource = source;
 }
 
+/**
+ * The desktop app's SQLite setup, still in flight. app.ts starts it and goes on drawing the page
+ * instead of waiting: opening (and on an update, copying) the database used to hold up every
+ * other startup step. Anything that reads vocabulary waits here first.
+ */
+let sqliteSetup: Promise<unknown> | null = null;
+export function awaitSqliteSetup(setup: Promise<unknown>): void {
+  sqliteSetup = setup.catch(() => { /* reported by the caller; the sources below just go without sqlite */ });
+}
+async function sqliteSettled(): Promise<void> {
+  if (sqliteSetup) await sqliteSetup;
+}
+
 /** Remembered after the first success, so we stop probing a dead API. */
 let preferredOrigin: VocabOrigin | null = null;
 
@@ -95,10 +103,32 @@ function jsonlUrl(lang: string): string  { return `/data/${lang}.jsonl`; }
  */
 const STATIC_ONLY = import.meta.env.VITE_STATIC_VOCAB === '1';
 
+/**
+ * Only the bundled files can answer: the static web build, and the Android app, whose
+ * package carries the same per-language JSONL (scripts/build-native.ts). Android used to
+ * probe /api first and then parse a whole-language JSON file (25 MB for Spanish) before a
+ * single word could show; the JSONL paints the first 200 while the rest is still read.
+ */
+function staticOnly(): boolean {
+  return STATIC_ONLY || isCapacitorApp();
+}
+
+/**
+ * A built desktop app has no /api: its pages come from Tauri's asset protocol, which answers
+ * with a 404 or index.html. `tauri dev` runs the page on the Vite dev server, where /api is
+ * proxied to a real one, so a dev build still asks.
+ */
+function noApi(): boolean {
+  return staticOnly() || (isTauriApp() && !import.meta.env.DEV);
+}
+
 const NEWLINE = String.fromCharCode(10);
 
 /** Words handed over as the first-paint preview; matches data-loader.ts's PREVIEW_SIZE. */
 const PREVIEW_LINES = 200;
+
+/** How long the JSONL reader may keep the main thread once the preview is out: under the 50 ms a "long task" starts at. */
+const YIELD_EVERY_MS = 40;
 
 interface JsonlStream {
   /** Resolves as soon as the first PREVIEW_LINES words have been parsed (or at the end, for a smaller language). */
@@ -144,6 +174,15 @@ function streamJsonl(lang: string): JsonlStream {
       words.push(expandWord(JSON.parse(line) as Word));
       if (!previewed && words.length === PREVIEW_LINES) { previewed = true; resolvePreview(words.slice()); }
     };
+    // A file that is already all there (the Android app's bundle, a cached copy) arrives in a few big
+    // chunks and every read() resolves at once, so parsing never let the page paint: the first 200 words
+    // only appeared once all 45k were parsed. After the preview, hand the main thread back every 40 ms.
+    let lastYield = performance.now();
+    const breathe = async (): Promise<void> => {
+      if (!previewed || performance.now() - lastYield < YIELD_EVERY_MS) return;
+      await new Promise(resolve => setTimeout(resolve, 0));
+      lastYield = performance.now();
+    };
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -151,7 +190,12 @@ function streamJsonl(lang: string): JsonlStream {
       pending += decoder.decode(value, { stream: true });
       let from = 0;
       let nl: number;
-      while ((nl = pending.indexOf(NEWLINE, from)) !== -1) { take(pending.slice(from, nl)); from = nl + 1; }
+      let n = 0;
+      while ((nl = pending.indexOf(NEWLINE, from)) !== -1) {
+        take(pending.slice(from, nl));
+        from = nl + 1;
+        if ((++n & 63) === 0) await breathe();
+      }
       pending = pending.slice(from);
       listeners.forEach(fn => fn(loaded));
     }
@@ -286,12 +330,24 @@ const API_RETRY_DELAYS_MS = [1000, 3000, 6000, 12000, 20000];
  * connectivity at all.
  */
 export function isPackagedApp(): boolean {
-  const g = globalThis as typeof globalThis & {
-    __TAURI_INTERNALS__?: unknown;
-    __TAURI__?: unknown;
-    Capacitor?: { isNativePlatform?: () => boolean };
-  };
-  return Boolean(g.__TAURI_INTERNALS__) || Boolean(g.__TAURI__) || Boolean(g.Capacitor?.isNativePlatform?.());
+  return isTauriApp() || isCapacitorApp();
+}
+
+type NativeGlobals = typeof globalThis & {
+  __TAURI_INTERNALS__?: unknown;
+  __TAURI__?: unknown;
+  Capacitor?: { isNativePlatform?: () => boolean };
+};
+
+/** The Windows desktop app (Tauri), packaged or `tauri dev`. Only it has the local SQLite copy. */
+export function isTauriApp(): boolean {
+  const g = globalThis as NativeGlobals;
+  return Boolean(g.__TAURI_INTERNALS__) || Boolean(g.__TAURI__);
+}
+
+/** The Android app (Capacitor). */
+export function isCapacitorApp(): boolean {
+  return Boolean((globalThis as NativeGlobals).Capacitor?.isNativePlatform?.());
 }
 
 async function tryFetchWithRetry(url: string, callbacks: LoadVocabCallbacks): Promise<FetchOutcome> {
@@ -309,9 +365,10 @@ const DEFAULT_ORDER: VocabOrigin[] = ['api', 'sqlite', 'static'];
 
 /** preferredOrigin first (if set), then the rest in default order. */
 function tryOrder(): VocabOrigin[] {
-  if (STATIC_ONLY) return ['static'];
-  if (!preferredOrigin) return DEFAULT_ORDER;
-  return [preferredOrigin, ...DEFAULT_ORDER.filter(o => o !== preferredOrigin)];
+  if (staticOnly()) return ['static'];
+  const order = noApi() ? DEFAULT_ORDER.filter(o => o !== 'api') : DEFAULT_ORDER;
+  if (!preferredOrigin) return order;
+  return [preferredOrigin, ...order.filter(o => o !== preferredOrigin)];
 }
 
 /**
@@ -320,6 +377,7 @@ function tryOrder(): VocabOrigin[] {
  * Throws only when none are available.
  */
 export async function loadVocab(lang: string, callbacks: LoadVocabCallbacks = {}): Promise<VocabPayload> {
+  await sqliteSettled();
   for (const origin of tryOrder()) {
     if (origin === 'sqlite') {
       if (!sqliteSource) continue;
@@ -333,14 +391,14 @@ export async function loadVocab(lang: string, callbacks: LoadVocabCallbacks = {}
       }
     }
 
-    const url    = origin === 'api' ? apiUrl(lang) : staticUrl(lang);
+    const url    = origin === 'api' ? apiUrl(lang) : staticOnly() ? jsonlUrl(lang) : staticUrl(lang);
     let result: FetchOutcome;
     if (origin === 'api') {
       result = await tryFetchWithRetry(url, callbacks);
     } else {
       // Static-only builds ship one JSONL per language; everything else,
       // packaged apps included, still reads the whole-language JSON file.
-      result = STATIC_ONLY ? await tryFetchJsonl(lang, callbacks.onProgress) : await tryFetch(url, callbacks.onProgress);
+      result = staticOnly() ? await tryFetchJsonl(lang, callbacks.onProgress) : await tryFetch(url, callbacks.onProgress);
     }
     if (!result.ok) continue;
 
@@ -379,7 +437,9 @@ export async function loadVocab(lang: string, callbacks: LoadVocabCallbacks = {}
  * yet, and it's simple to add if that changes.
  */
 export async function loadVocabPage(lang: string, params: VocabPageParams = {}): Promise<VocabPageResult> {
-  for (const origin of (STATIC_ONLY ? ['static'] : ['api', 'sqlite']) as VocabOrigin[]) {
+  await sqliteSettled();
+  const origins: VocabOrigin[] = staticOnly() ? ['static'] : noApi() ? ['sqlite'] : ['api', 'sqlite'];
+  for (const origin of origins) {
     if (origin === 'static') {
       // Only the first-paint slice is on offer: page 1, unfiltered, no bigger
       // than the preview. Anything else has to wait for the whole language.
@@ -454,7 +514,7 @@ export function currentOrigin(): VocabOrigin | null {
 export async function availableLanguages(): Promise<string[] | null> {
   // Static-only build: there is no /api to ask, and the manifest is regenerated
   // with every deploy, so the staleness the comment below warns about can't arise.
-  if (STATIC_ONLY) {
+  if (staticOnly()) {
     try {
       const res = await fetch('/data/index.json');
       if (res.ok) {
@@ -464,6 +524,8 @@ export async function availableLanguages(): Promise<string[] | null> {
     } catch { /* nothing to go on */ }
     return null;
   }
+  await sqliteSettled();
+  if (noApi()) return sqliteLanguages();
   try {
     const res = await fetch('/api/languages');
     if (res.ok) {
@@ -485,6 +547,11 @@ export async function availableLanguages(): Promise<string[] | null> {
     // is the only source there is.
   }
 
+  return sqliteLanguages();
+}
+
+/** The desktop app's own database, then the bundled manifest. */
+async function sqliteLanguages(): Promise<string[] | null> {
   if (sqliteSource) {
     try {
       return await sqliteSource.loadLanguages();
@@ -507,6 +574,7 @@ export async function availableLanguages(): Promise<string[] | null> {
 /** Reset the remembered source — used by tests and after a manual reload. */
 export function resetOrigin(): void {
   preferredOrigin = null;
+  sqliteSetup = null;
   jsonlStreams.clear();
   manifestCounts = null;
 }

@@ -3,7 +3,7 @@
  * itself is showing. Without it the frame follows the OS while the page inside follows the app's own
  * Light / Dark / System choice — including one a Visual Profile just applied — so they can disagree.
  *
- * Only ever imported via dynamic import() behind isPackagedApp(), like the rest of this folder.
+ * Only ever imported via dynamic import() behind isTauriApp(), like the rest of this folder.
  */
 
 import { getCurrentWindow } from '@tauri-apps/api/window';

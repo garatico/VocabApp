@@ -9,10 +9,14 @@
  *
  * The pipeline for every target is the same up to packaging:
  *
- *   1. export the vocabulary to static JSON      (no server at runtime)
- *   2. stage data/ assets into public/           (images, emoji, svgs)
+ *   1. export the vocabulary                     (no server at runtime)
+ *   2. stage data/ assets into public/           (images, emoji, svgs; photos shrunk)
  *   3. vite build                                 -> dist/
  *   4. hand dist/ to Tauri or Capacitor
+ *
+ * What step 1 writes depends on the target: the web build gets the whole-language JSON, the
+ * Android app one rank-ordered JSONL per language (streamed, so the first words show while the
+ * rest is read), and the Windows app nothing, since it reads vocabulary.db.
  *
  * Step 2 exists because Express serves those directories from data/ at
  * runtime, flattening the domain sub-folders as it goes: a request for
@@ -32,6 +36,7 @@ import fs   from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { copyFlattened } from './lib/asset-flatten.js';
+import { shrinkPhotos } from './lib/shrink-photos.js';
 import { writeAssetManifest, readDbBuiltAt } from './lib/asset-manifest.js';
 import { dataDir as liveDataDir } from '../src/server/lib/paths.js';
 
@@ -115,7 +120,7 @@ function checkTarget(target: 'windows' | 'android'): boolean {
 /** Directories written into public/ by staging. Cleared before each run. */
 const STAGED = ['images', 'emoji', 'svgs'];
 
-function stageAssets(): void {
+async function stageAssets(): Promise<void> {
   const dataDir   = dataRoot;
   const publicDir = path.join(root, 'public');
   let total = 0;
@@ -131,6 +136,9 @@ function stageAssets(): void {
          + clashes.slice(0, 5).join(', '));
     }
   }
+
+  // The originals are Wikipedia's (up to 2.4 MB each); no packaged app shows one wider than 800 px.
+  await shrinkPhotos(path.join(publicDir, 'images'));
 
   // Audio keeps its language folders — they are part of the URL (/audio/<language>/<slug>.wav,
   // as the server serves it), unlike the arbitrary domain folders flattened above. It used to
@@ -172,14 +180,12 @@ function run(cmd: string, label: string): void {
 }
 
 /**
- * `exportVocabJson` is false for windows/native: that target reads its
- * vocabulary from an embedded SQLite copy at runtime instead (see
- * stageTauriResources below), so the JSON export is dead weight — both the
- * per-language files themselves and the "hold the whole language as parsed
- * JS objects" memory cost they force on the client. web/android still need
- * it; they have no local database to read from.
+ * `exportVocabJson` is false for the packaged apps. Windows reads its vocabulary
+ * from an embedded SQLite copy at runtime (see stageTauriResources below), and
+ * Android reads the JSONL exportJsonl() writes into dist/ after this. Only the
+ * web build reads the whole-language JSON.
  */
-function buildWeb(stepNo: number, total: number, exportVocabJson = true): void {
+async function buildWeb(stepNo: number, total: number, exportVocabJson = true): Promise<void> {
   step(stepNo, total, exportVocabJson ? 'Export vocabulary to static JSON' : 'Export vocabulary to static JSON (skipped)');
   if (exportVocabJson) {
     run('npm run export:vocab', 'Vocabulary export');
@@ -187,8 +193,8 @@ function buildWeb(stepNo: number, total: number, exportVocabJson = true): void {
     // A machine also used for `build:web`/`build:android` can have a stale
     // export sitting in public/data/ from an earlier run — harmless for
     // those targets (freshly regenerated each time), but left alone here it
-    // would still get copied into dist/ by vite below, shipping ~39MB of
-    // JSON a windows-only build never reads.
+    // would still get copied into dist/ by vite below, shipping 100+ MB of
+    // JSON no packaged app reads.
     const dataDir = path.join(root, 'public', 'data');
     const stale = fs.existsSync(dataDir)
       ? fs.readdirSync(dataDir).filter(f => f.startsWith('vocab-') || f === 'index.json')
@@ -196,11 +202,11 @@ function buildWeb(stepNo: number, total: number, exportVocabJson = true): void {
     stale.forEach(f => fs.rmSync(path.join(dataDir, f)));
     console.log(stale.length
       ? `  skipped — removed ${stale.length} stale export file(s) from an earlier build`
-      : '  skipped — this target reads vocabulary.db directly at runtime instead');
+      : '  skipped — the packaged apps read vocabulary.db (Windows) or JSONL (Android)');
   }
 
   step(stepNo + 1, total, 'Stage data/ assets into public/');
-  stageAssets();
+  await stageAssets();
 
   step(stepNo + 2, total, 'Build the web bundle');
   // Vite does not overwrite a file that already sits in dist/: a stale data/asset-manifest.json from an
@@ -487,7 +493,7 @@ if (target === 'check') {
 }
 
 if (target === 'web') {
-  buildWeb(1, 3);
+  await buildWeb(1, 3);
   console.log('\n  Done. dist/ can be served by any static host, or opened via the Express server.');
   process.exit(0);
 }
@@ -499,17 +505,15 @@ if (target === 'windows' || target === 'native') {
     process.exit(1);
   }
   // `native` also packages Android from this same dist/ (its own block below
-  // has no second buildWeb call) — Android has no embedded db of its own, so
-  // the JSON export has to stay for that target even though windows doesn't
-  // need it. The unused JSON just sits in the Tauri bundle unread in that
-  // case; only a windows-only build actually skips producing it.
+  // has no second buildWeb call). Android's JSONL is only written into dist/
+  // after Tauri has packaged it, so the Windows app never carries it.
   // Before the web build, not after: vite copies public/ into dist/ as it stands, so a
   // manifest written afterwards never reached the package — dist/ shipped the previous
   // build's, with the previous database's dbBuiltAt, and an installed app compared against
   // that could keep its old copy of the data.
   step(1, 5, 'Stage the embedded db + asset manifest for Tauri');
   stageTauriResources();
-  buildWeb(2, 5, target === 'native');
+  await buildWeb(2, 5, false);
   step(5, 5, 'Package with Tauri');
   scaffoldTauri();
   run('npx tauri build', 'Tauri build');
@@ -546,8 +550,10 @@ if (target === 'android' || target === 'native') {
     console.error('\n  Missing prerequisites — see above. Nothing was built.');
     process.exit(1);
   }
-  if (target === 'android') buildWeb(1, 4);
-  step(4, 4, 'Sync and assemble the APK');
+  if (target === 'android') await buildWeb(1, 5, false);
+  step(4, 5, 'Export vocabulary as JSONL into dist/');
+  run('npx tsx scripts/export-static-vocab.ts --static dist', 'Vocabulary export');
+  step(5, 5, 'Sync and assemble the APK');
   if (!fs.existsSync(path.join(root, 'android'))) {
     console.error(
       '  android/ is missing. Initialise it once:\n\n'

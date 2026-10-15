@@ -12,7 +12,7 @@
  * Before this, the copy was never refreshed: an installer built from re-ranked
  * data kept showing the old ranking.
  *
- * Only ever imported behind isPackagedApp() — see bootstrap.ts.
+ * Only ever imported behind isTauriApp() — see bootstrap.ts.
  */
 import { appDataDir, resolveResource, join } from '@tauri-apps/api/path';
 import { exists, mkdir, copyFile, remove } from '@tauri-apps/plugin-fs';

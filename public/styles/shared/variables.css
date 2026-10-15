@@ -4,7 +4,8 @@
    Dark-mode overrides at the bottom apply via html.dark on <html>.
 ================================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@400;600;700&display=swap');
+/* Sora and DM Mono are bundled (@fontsource, imported by each styles-entry.css), not fetched from Google:
+   that import held up the first paint behind two more requests, and an installed app offline never got them. */
 
 /* ── Light mode ─────────────────────────────────────────────── */
 :root {
