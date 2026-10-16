@@ -270,7 +270,7 @@ function buildEditor(defaultLang: string): ConjugationEditor {
       trigger.setAttribute('aria-expanded', String(open));
     };
     setOpen(tenseMenuOpen);
-    trigger.addEventListener('click', e => { e.stopPropagation(); setOpen(menu.hidden); });
+    trigger.addEventListener('click', e => { e.stopPropagation(); setOpen(Boolean(menu.hidden)); });
     menu.addEventListener('click', e => e.stopPropagation());
     const chipActions = el('div', 'mcc-chips-actions');
     const allBtn = el('button', 'mcc-btn mcc-btn--ghost', 'All') as HTMLButtonElement;

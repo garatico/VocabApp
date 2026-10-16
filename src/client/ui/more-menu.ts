@@ -21,7 +21,7 @@ export function attachMoreMenu(root: HTMLElement, btn: HTMLElement, menu: HTMLEl
     document.removeEventListener('click', onDocClick);
     document.removeEventListener('keydown', onKey);
   }
-  btn.addEventListener('click', e => { e.stopPropagation(); setOpen(menu.hidden); });
+  btn.addEventListener('click', e => { e.stopPropagation(); setOpen(Boolean(menu.hidden)); });
   menu.addEventListener('click', e => {
     if ((e.target as Element).closest('button:not([data-keep-open])')) setOpen(false);
   });

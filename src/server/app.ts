@@ -120,10 +120,10 @@ export function createApp({
         },
       }));
       app.get('/admin', (_req, res) => res.sendFile(path.join(projectRoot, 'dist', 'admin.html')));
-      app.get('*', (_req, res) => res.sendFile(path.join(projectRoot, 'dist', 'index.html')));
+      app.get('/{*path}', (_req, res) => res.sendFile(path.join(projectRoot, 'dist', 'index.html')));
     } else {
       app.use(express.static(path.join(projectRoot, 'public')));
-      app.get('*', (_req, res) => res.sendFile(path.join(projectRoot, 'index.html')));
+      app.get('/{*path}', (_req, res) => res.sendFile(path.join(projectRoot, 'index.html')));
     }
   }
 

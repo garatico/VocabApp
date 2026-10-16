@@ -1123,7 +1123,7 @@ export function bindTableControls(): void {
       moreMenu.hidden = !open;
       moreBtn.setAttribute('aria-expanded', String(open));
     };
-    moreBtn.addEventListener('click', e => { e.stopPropagation(); setMoreOpen(moreMenu.hidden); });
+    moreBtn.addEventListener('click', e => { e.stopPropagation(); setMoreOpen(Boolean(moreMenu.hidden)); });
     document.addEventListener('click', e => {
       if (!moreMenu.hidden && !document.getElementById('tableMore')?.contains(e.target as Node)) setMoreOpen(false);
     });

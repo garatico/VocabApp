@@ -360,7 +360,7 @@ export function buildConjSection(
 
   expandBtn.addEventListener('click', e => {
     e.stopPropagation();
-    const expanding = fullWrap.hidden;
+    const expanding = Boolean(fullWrap.hidden);   // `hidden` may also be "until-found"
     fullWrap.hidden    = !expanding;
     presentWrap.hidden = expanding;
     expandBtn.textContent = expanding ? 'Show less' : 'Show all tenses';

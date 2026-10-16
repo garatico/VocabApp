@@ -1,18 +1,27 @@
 name: CI
 
+# Every push and pull request: lint, typecheck, unit tests, a build, and the whole Playwright suite.
+# The Windows and Android builds (the slowest) run on pull requests, on pushes to main/master, and by hand.
 on:
   push:
-    branches: [main, master]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   node:
     name: App (Node)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: npm
@@ -26,7 +35,7 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Typecheck (client + server)
+      - name: Typecheck (client + server + e2e)
         run: npm run typecheck
 
       - name: Test
@@ -37,17 +46,23 @@ jobs:
 
   e2e:
     name: E2E (Playwright)
-    # PR-only, and gated on the node job passing first — browser install +
-    # real page loads make this the slowest job in the workflow, so it isn't
-    # worth paying on every push, or before the cheaper checks above have
-    # already passed.
-    if: github.event_name == 'pull_request'
     needs: node
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      # data/vocabulary.db is in Git LFS (115 MB) and the dev server reads it. LFS downloads count against
+      # a small monthly allowance, so the object is cached under its own id and fetched only when it changes.
+      - name: LFS object id
+        run: git lfs ls-files --long | cut -d' ' -f1 | sort > .lfs-ids
+      - uses: actions/cache@v4
+        with:
+          path: .git/lfs/objects
+          key: lfs-${{ hashFiles('.lfs-ids') }}
+      - name: Fetch LFS files
+        run: git lfs pull
+
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: npm
@@ -61,9 +76,91 @@ jobs:
       - name: E2E tests
         run: npm run test:e2e
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
           path: playwright-report/
+          retention-days: 7
+
+  android:
+    name: Android build
+    needs: node
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: LFS object id
+        run: git lfs ls-files --long | cut -d' ' -f1 | sort > .lfs-ids
+      - uses: actions/cache@v4
+        with:
+          path: .git/lfs/objects
+          key: lfs-${{ hashFiles('.lfs-ids') }}
+      - name: Fetch LFS files
+        run: git lfs pull
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      # Capacitor's Gradle can't run on Java 25; 21 is what it compiles to (see CLAUDE.md).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # android/ is generated (gitignored); `cap add` needs a dist/ to copy, so build once first.
+      - name: Create the Android project
+        run: npm run build && npx cap add android
+
+      # A debug build: CI has no release key (that stays on the machine that publishes, in ~/.vocabapp).
+      - name: Build the APK
+        run: npm run build:android -- --debug
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android-apk-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
+
+  windows:
+    name: Windows build
+    needs: node
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: LFS object id
+        shell: bash
+        run: git lfs ls-files --long | cut -d' ' -f1 | sort > .lfs-ids
+      - uses: actions/cache@v4
+        with:
+          path: .git/lfs/objects
+          key: lfs-${{ hashFiles('.lfs-ids') }}
+      - name: Fetch LFS files
+        run: git lfs pull
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the installers
+        run: npm run build:windows
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-installers
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
           retention-days: 7

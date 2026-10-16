@@ -108,3 +108,4 @@ src-tauri/gen/
 # resource by scripts/build-native.ts — an artifact, not source.
 src-tauri/resources/
 android/
+.lfs-ids
