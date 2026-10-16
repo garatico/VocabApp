@@ -29,6 +29,7 @@ import Database from '@tauri-apps/plugin-sql';
 import { invoke } from '@tauri-apps/api/core';
 import type { StorageAdapter, StorageRow, RunResult } from '../../shared/storage/types.js';
 import { toDollarPlaceholders } from './placeholder-syntax.js';
+import { logger } from '../utils/logger.js';
 
 interface QueuedStatement {
   sql:    string;
@@ -59,7 +60,30 @@ export function rowsToObjects<T>({ columns, rows }: ColumnarRows): T[] {
   });
 }
 
+/** Copies kept of the database as it was before a session's first edit (`snapshot_db`, main.rs). */
+export const EDIT_SNAPSHOT_PREFIX = 'vocabulary.before-edits-';
+const EDIT_SNAPSHOTS_KEPT = 3;
+
+/** `vocabulary.before-edits-2026-10-16T09-30-05.db`: sorts oldest first, and is a safe file name. */
+export function editSnapshotName(now: Date): string {
+  return `${EDIT_SNAPSHOT_PREFIX}${now.toISOString().slice(0, 19).replace(/:/g, '-')}.db`;
+}
+
 export function createTauriSqlAdapter(db: InstanceType<typeof Database>, dbPath: string): StorageAdapter {
+  /**
+   * The Word Editor writes straight into this database, so before the first write of each session a
+   * copy of it is saved next to it (the last three are kept). A failed copy is logged, not fatal: a
+   * full disk would fail the edit too, and refusing every edit over it would lock the editor.
+   */
+  let snapshot: Promise<void> | null = null;
+  function beforeFirstWrite(): Promise<void> {
+    snapshot ??= invoke<string>('snapshot_db', {
+      dbPath, name: editSnapshotName(new Date()), prefix: EDIT_SNAPSHOT_PREFIX, keep: EDIT_SNAPSHOTS_KEPT,
+    }).then(path => logger.info(`Saved a copy of the database before editing: ${path}`))
+      .catch((err: unknown) => logger.warn('Could not save a copy of the database before editing:', err));
+    return snapshot;
+  }
+
   /** select_rows, or plugin-sql's select() if the command is missing or fails. */
   async function select<T>(sql: string, params: unknown[]): Promise<T[]> {
     try {
@@ -81,6 +105,7 @@ export function createTauriSqlAdapter(db: InstanceType<typeof Database>, dbPath:
     },
 
     async run(sql: string, params: unknown[] = []): Promise<RunResult> {
+      await beforeFirstWrite();
       const result = await db.execute(toDollarPlaceholders(sql), params);
       return { changes: result.rowsAffected, lastInsertRowid: result.lastInsertId ?? null };
     },
@@ -101,6 +126,7 @@ export function createTauriSqlAdapter(db: InstanceType<typeof Database>, dbPath:
       };
 
       const result = await fn(collector);
+      await beforeFirstWrite();
       // Native `?` placeholders — this goes straight to rusqlite, not
       // through sqlx, so no toDollarPlaceholders translation here.
       await invoke('run_sql_transaction', { dbPath, statements: queued });

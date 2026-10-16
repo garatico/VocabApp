@@ -26,6 +26,7 @@ import { makeErrorHandler }     from './middleware/error-handler.js';
 import { flatStatic }           from './lib/flat-static.js';
 import { makeImageOptimizer }   from './lib/image-optimizer.js';
 import { logger }               from './lib/logger.js';
+import { CSP_DIRECTIVES }       from './lib/csp.js';
 
 const __filename  = fileURLToPath(import.meta.url);
 const __dirname   = path.dirname(__filename);
@@ -59,7 +60,10 @@ export function createApp({
 
   // Security headers. CSP is off for now — the SPA/admin HTML would need an
   // audit for inline scripts/styles before enabling it.
-  app.use(helmet({ contentSecurityPolicy: false }));
+  // The same policy every built page carries as a meta tag (lib/csp.ts), plus what only a header can say.
+  app.use(helmet({
+    contentSecurityPolicy: { useDefaults: false, directives: { ...CSP_DIRECTIVES, 'frame-ancestors': ["'none'"] } },
+  }));
   app.use(compression());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));

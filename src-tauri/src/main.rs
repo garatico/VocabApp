@@ -62,6 +62,38 @@ fn run_sql_transaction(db_path: String, statements: Vec<SqlStatement>) -> Result
     tx.commit().map_err(|e| e.to_string())
 }
 
+/// Saves a consistent copy of `db_path` as `name` in the same folder, then deletes the oldest copies
+/// beyond `keep` among the files that start with `prefix`. Called before the first edit of a session
+/// (sql-adapter.ts): a Word Editor edit writes straight into this database, and the only other copy
+/// was the one kept when an installer brings newer data. `VACUUM INTO` is SQLite's own online backup:
+/// it includes writes still in the -wal file, which copying the file would miss. Only names made of
+/// letters, digits, '.', '-' and '_' are accepted, so nothing outside that folder can be named.
+#[tauri::command]
+async fn snapshot_db(db_path: String, name: String, prefix: String, keep: usize) -> Result<String, String> {
+    let safe = |s: &str| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric() || "._-".contains(c));
+    if !safe(&name) || !safe(&prefix) || !name.starts_with(&prefix) {
+        return Err(format!("not a backup file name: {}", name));
+    }
+    let dir = std::path::Path::new(&db_path).parent().ok_or("database has no folder")?;
+    let target = dir.join(&name);
+    if target.exists() {
+        return Err(format!("{} already exists", name));
+    }
+    let conn = rusqlite::Connection::open(&db_path).map_err(|e| e.to_string())?;
+    conn.execute("VACUUM INTO ?1", [target.to_string_lossy().as_ref()]).map_err(|e| e.to_string())?;
+
+    let mut copies: Vec<std::path::PathBuf> = std::fs::read_dir(dir)
+        .map_err(|e| e.to_string())?
+        .filter_map(|entry| entry.ok().map(|e| e.path()))
+        .filter(|p| p.file_name().and_then(|n| n.to_str()).map_or(false, |n| n.starts_with(&prefix) && n.ends_with(".db")))
+        .collect();
+    copies.sort();   // names carry a sortable timestamp, oldest first
+    while copies.len() > keep {
+        let _ = std::fs::remove_file(copies.remove(0));
+    }
+    Ok(target.to_string_lossy().into_owned())
+}
+
 /// Idle read-only connections per database file, opened on demand and kept for the app's lifetime. A
 /// read takes one and puts it back, so reads run side by side: the first page of words must not wait
 /// behind a whole-language read that started a moment earlier.
@@ -144,7 +176,7 @@ fn main() {
         .plugin(tauri_plugin_sql::Builder::default().build())
         .plugin(tauri_plugin_fs::init())
         .manage(ReadConnections::default())
-        .invoke_handler(tauri::generate_handler![run_sql_transaction, select_rows])
+        .invoke_handler(tauri::generate_handler![run_sql_transaction, select_rows, snapshot_db])
         .run(tauri::generate_context!())
         .expect("error while running VocabApp");
 }

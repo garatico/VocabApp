@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import { rmSync, readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { createHash } from 'crypto';
+import { cspString, THEME_BOOT_SCRIPT } from './src/server/lib/csp.ts';
 
 export default defineConfig({
   root: '.',
@@ -10,6 +11,25 @@ export default defineConfig({
   publicDir: 'public',
 
   plugins: [
+    {
+      // Every page gets the theme boot script near the top of <head>, and every *built* page the Content
+      // Security Policy as a meta tag — the one place the static site, the Windows app and the Android app
+      // can all take it from (see src/server/lib/csp.ts). Not in dev: Vite's own client injects inline code.
+      // Both go right after <meta charset>, which must stay within the page's first 1024 bytes.
+      name: 'csp-and-theme-boot',
+      transformIndexHtml: {
+        order: 'pre',
+        handler(html, ctx) {
+          const csp = ctx.server ? '' : `<meta http-equiv="Content-Security-Policy" content="${cspString()}">
+`;
+          const add = `${csp}<script>${THEME_BOOT_SCRIPT}</script>
+`;
+          const charset = /<meta charset="[^"]*"\s*\/?>\s*/i;
+          if (!charset.test(html)) throw new Error('csp-and-theme-boot: page has no <meta charset>');
+          return html.replace(charset, m => m + add);
+        },
+      },
+    },
     {
       // Rewrite /admin → /admin.html so the Vite dev server serves it without .html
       name: 'admin-rewrite',

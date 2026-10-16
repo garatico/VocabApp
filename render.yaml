@@ -22,3 +22,14 @@ services:
       - path: /index.html
         name: Cache-Control
         value: no-cache
+      # The pages carry their Content Security Policy as a <meta> tag (src/server/lib/csp.ts); these
+      # are the parts only a response header can say. Policies add up, so the meta tag still applies.
+      - path: /*
+        name: Content-Security-Policy
+        value: frame-ancestors 'none'
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin

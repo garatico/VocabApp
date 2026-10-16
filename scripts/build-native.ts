@@ -3,7 +3,7 @@
  *
  *   npm run build:web        static site, no server needed
  *   npm run build:windows    Tauri .msi / .exe
- *   npm run build:android    Capacitor APK
+ *   npm run build:android    Capacitor APK, release-signed (`-- --debug` for a debug one)
  *   npm run build:native     both
  *   npm run native:check     report what tooling is missing, build nothing
  *
@@ -37,6 +37,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { copyFlattened } from './lib/asset-flatten.js';
 import { shrinkPhotos } from './lib/shrink-photos.js';
+import { writeGradleSigning, ensureReleaseKey, versionCode, SIGNING_DIR } from './lib/android-signing.js';
 import { writeAssetManifest, readDbBuiltAt } from './lib/asset-manifest.js';
 import { dataDir as liveDataDir } from '../src/server/lib/paths.js';
 
@@ -569,6 +570,15 @@ if (target === 'android' || target === 'native') {
   // A bare `gradlew.bat` is not found: the shell this runs under does not search the current directory.
   // Full path, forward slashes (valid for both cmd and a POSIX shell), quoted for spaces.
   const gradlew = path.join(root, 'android', process.platform === 'win32' ? 'gradlew.bat' : 'gradlew').replace(/\\/g, '/');
-  run(`cd android && "${gradlew}" assembleDebug`, 'Gradle build');
-  console.log('\n  APK: android/app/build/outputs/apk/debug/app-debug.apk');
+  // Release by default (one stable key, no WebView debugging — see lib/android-signing.ts); --debug, or a
+  // machine where no key can be made, builds the debug APK as before.
+  writeGradleSigning(path.join(root, 'android'));
+  const release = !process.argv.includes('--debug') && ensureReleaseKey(msg => warn(msg));
+  process.env['VOCABAPP_VERSION_CODE'] = String(versionCode());
+  process.env['VOCABAPP_VERSION_NAME'] = (JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')) as { version: string }).version;
+  run(`cd android && "${gradlew}" ${release ? 'assembleRelease' : 'assembleDebug'}`, 'Gradle build');
+  console.log(release
+    ? `\n  APK: android/app/build/outputs/apk/release/app-release.apk (versionCode ${process.env['VOCABAPP_VERSION_CODE']})\n`
+      + `  Signed with the key in ${SIGNING_DIR} — back that folder up; without it this app cannot be updated.`
+    : '\n  APK: android/app/build/outputs/apk/debug/app-debug.apk');
 }
