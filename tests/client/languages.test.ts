@@ -42,6 +42,11 @@ describe('supportsConjugation', () => {
     expect(supportsConjugation('chinese')).toBe(false);
     expect(supportsConjugation('japanese')).toBe(false);
   });
+
+  it('is false for Indonesian, which has no verb inflection to drill', () => {
+    expect(supportsConjugation('indonesian')).toBe(false);
+    expect(isoCode('indonesian')).toBe('id');
+  });
 });
 
 describe('conjugationUnavailableReason', () => {

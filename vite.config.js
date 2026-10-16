@@ -79,8 +79,21 @@ export default defineConfig({
     },
   ],
 
+  // Scan only the two real pages for dependencies to pre-bundle. Left unset, Vite crawls every *.html under the
+  // project root — the Tauri build output in src-tauri/target, the Android copy in android/app/src/main/assets,
+  // coverage reports — and with those present the scan ran for minutes and the first page load never finished.
+  optimizeDeps: {
+    entries: ['index.html', 'admin.html'],
+  },
+
   server: {
     port: 5173,
+    // Don't watch native build output. src-tauri/target reaches several GB after a Windows build and android/
+    // half a GB; walking them at startup kept the dev server busy for minutes, with every request (the first
+    // stylesheet included, which blocks the page) waiting behind it.
+    watch: {
+      ignored: ['**/src-tauri/**', '**/android/**', '**/dist/**', '**/coverage/**', '**/test-results/**', '**/_transfer/**'],
+    },
     // Transform the app's and the admin panel's import graphs when the server starts, not on the first
     // page load: cold, that first load took long enough (hundreds of modules on demand) that the opening
     // e2e specs of a fresh run timed out in page.goto, and a developer's first refresh waited too.

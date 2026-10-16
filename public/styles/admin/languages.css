@@ -41,6 +41,7 @@ html.hide-lang-flags .flag-icon { display: none; }
 [data-lang="dutch"]      { --lang-color: var(--lang-dutch-bg); }
 [data-lang="chinese"]    { --lang-color: var(--lang-chinese-bg); }
 [data-lang="japanese"]   { --lang-color: var(--lang-japanese-bg); }
+[data-lang="indonesian"] { --lang-color: var(--lang-indonesian-bg); }
 
 /* Any button carrying data-lang (DB Admin's Clear/Export-per-language
    groups) gets a left accent stripe in that language's color. */
