@@ -13,7 +13,7 @@ import { bindScriptTypeFilter, getSelectedScriptTypes } from './filters/script-t
 import { bindUIState, bindModeSwitch, getCurrentMode } from './ui/ui-state.ts';
 import { buildFilterUI, initListFilter, syncListFilterUI, filterWords } from './filters/word-filters.ts';
 import { estimateConjugationSize } from './modes/conjugation/verb-filters.ts';
-import { loadWordsProgressive }                  from './data/data-loader.ts';
+import { loadWordsProgressive, setActiveLanguages, onVocabEvicted } from './data/data-loader.ts';
 import { initTheme, type ThemeValue }            from './ui/theme-toggle.ts';
 import { enhanceLanguageSelect } from './ui/language-dropdown.ts';
 import { proxyToggleAsSelect, proxyToggleAsCycle } from './ui/toggle-proxy.ts';
@@ -579,6 +579,7 @@ function restoreSettings(): void {
 // ── Word list state ───────────────────────────────────────────────────────────
 
 const allWordsByLang: Record<string, Word[]> = {};
+onVocabEvicted(lang => { delete allWordsByLang[lang]; });
 /** Settles once every language still loading in the background is in and the filters are rebuilt over it. */
 let fullVocabPending: Promise<void> = Promise.resolve();
 let currentBaseList: Word[] = [];
@@ -642,6 +643,8 @@ function sizedSlice(sorted: Word[], size: number, isMax: boolean, selected: stri
  * what stopped a very early click from running against an empty pool.
  */
 function loadAndBuildFilters(lang: string): Promise<void> {
+  // Only these languages' words stay in memory (plus the last one used); see data-loader.ts.
+  setActiveLanguages([lang, ...getExtraLanguages()]);
   const built = buildFilters(lang);
   fullVocabPending = Promise.all([fullVocabPending, built.catch(() => { /* reported where it happens */ })]).then(() => undefined);
   return built;

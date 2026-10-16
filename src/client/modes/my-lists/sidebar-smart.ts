@@ -20,6 +20,28 @@ export function createSmartSection(kit: SidebarKit, opts: { starter?: boolean } 
 
   // ── Smart lists ────────────────────────────────────────────────────────────
 
+  /**
+   * Counting what a rule matches runs it over the whole language, and the sidebar is redrawn on every
+   * click: with the twenty-odd Starter Lists that was ~120 ms of a desktop's time (several times that on a
+   * phone) in one go, right when the vocabulary arrived. Counts are painted a few at a time instead,
+   * ~8 ms per slice, and a newer redraw cancels an older one's remaining work.
+   */
+  let countRun = 0;
+  function paintCountsInSlices(items: { el: HTMLElement; rule: SmartRule }[], paint: (el: HTMLElement, rule: SmartRule) => void): void {
+    const run = ++countRun;
+    let i = 0;
+    const slice = (): void => {
+      if (run !== countRun) return;
+      const until = performance.now() + 8;
+      for (; i < items.length && performance.now() < until; i++) {
+        const { el, rule } = items[i] as { el: HTMLElement; rule: SmartRule };
+        if (el.isConnected) paint(el, rule);
+      }
+      if (i < items.length) setTimeout(slice, 0);
+    };
+    slice();
+  }
+
   function renderSmartNav(): void {
     const folderScope = starter ? `starter_${ctx.lang}` : `smart_${ctx.lang}`;
     const allRules = getSmartLists(ctx.lang);
@@ -77,7 +99,6 @@ export function createSmartSection(kit: SidebarKit, opts: { starter?: boolean } 
       nameSpan.textContent = name;
       const countSpan = document.createElement('span');
       countSpan.className = 'ml-list-count';
-      paintSmartCount(countSpan, rule);
       smartCountEls.push({ el: countSpan, rule });
       topRow.append(nameSpan);
       const manualN = rule.manualWords.length;
@@ -134,8 +155,10 @@ export function createSmartSection(kit: SidebarKit, opts: { starter?: boolean } 
 
     if (cachedVocab(ctx.lang).length === 0) {
       fetchVocab(ctx.lang).then(vocab => {
-        smartCountEls.forEach(({ el, rule }) => paintSmartCount(el, rule, vocab));
+        paintCountsInSlices(smartCountEls, (el, rule) => paintSmartCount(el, rule, vocab));
       }).catch(() => {});
+    } else {
+      paintCountsInSlices(smartCountEls, (el, rule) => paintSmartCount(el, rule));
     }
   }
 

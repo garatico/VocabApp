@@ -16,7 +16,10 @@ import type { ShapeWordDeps } from '../../shared/vocab/shape-word.js';
 import { ensureLocalDb } from './db-provision.js';
 import { createTauriSqlAdapter } from './sql-adapter.js';
 import { detectWordColumnFlags } from '../../shared/vocab/column-flags.js';
-import { getSupportedLanguages, loadAllWordsForLanguage, getWordPage } from '../../shared/vocab/queries.js';
+import { getSupportedLanguages, allWordsSql, getWordPage } from '../../shared/vocab/queries.js';
+import { shapeWordRow } from '../../shared/vocab/shape-word.js';
+import type { WordSelectRow } from '../../shared/vocab/word-select.js';
+import { mapInSlices } from '../utils/slices.js';
 import { initTauriAssetResolver } from './asset-resolver.js';
 import { registerSqliteVocabSource } from '../data/vocab-source.js';
 import type { Word as ClientWord } from '../types.js';
@@ -43,7 +46,11 @@ export async function initTauriVocabSource(): Promise<void> {
 
   registerSqliteVocabSource({
     loadVocab: async (lang) => {
-      const words = await loadAllWordsForLanguage(getTauriStorageAdapter(), lang, getTauriColumnFlags(), getTauriShapeDeps());
+      // loadAllWordsForLanguage's query, shaped in slices: turning 45k rows into words in one go froze the
+      // window for a few hundred milliseconds right after the first paint.
+      const rows = await getTauriStorageAdapter().all<WordSelectRow>(allWordsSql(getTauriColumnFlags()), [lang]);
+      const deps = getTauriShapeDeps();
+      const words = await mapInSlices(rows, row => shapeWordRow(row, lang, deps));
       // src/shared/types.ts's Word (what the server has always actually sent)
       // vs src/client/types.ts's Word (a client-only superset) disagree on
       // one field's declared type: difficulty is `string | null` server-side

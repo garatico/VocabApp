@@ -11,10 +11,57 @@ import { showLoading, hideLoading, showErrorMessage } from '../ui/ui.js';
 import { logger } from '../utils/logger.js';
 import { capitalize } from '../utils/utils.js';
 import { enrichDerivedTenses } from './derived-tenses.ts';
-import { getUserWords, toWord, applyWordOverride, getConjOverrides, pickConjOverride, applyConjOverrideRecord } from './user-content.ts';
+import { getUserWords, toWord, getWordOverrides, pickWordOverride, applyWordOverrideRecord, getConjOverrides, pickConjOverride, applyConjOverrideRecord } from './user-content.ts';
 
 
 const cache: Record<string, Word[]> = {};
+
+// ── Keeping only what is in use ───────────────────────────────────────────────
+//
+// A language is ~45k words held as objects, and every language visited used to stay for the whole session:
+// a phone that had looked at three was holding 135k words. Now the languages in use (the one open, plus any
+// a quiz mixes in — app.ts says which via setActiveLanguages) stay, and so does the one used most recently
+// besides them, so switching back and forth costs nothing. The rest are let go, here and in every copy that
+// asked to hear about it (onVocabEvicted). Whatever still holds a word array keeps it alive until it lets go.
+
+const IDLE_LANGUAGES_KEPT = 1;
+let activeLanguages = new Set<string>();
+const lastUsed = new Map<string, number>();
+let useTick = 0;
+const evictListeners = new Set<(lang: string) => void>();
+
+/** Called with a language whose words were just let go, so a copy built from them can go too. */
+export function onVocabEvicted(listener: (lang: string) => void): () => void {
+  evictListeners.add(listener);
+  return () => evictListeners.delete(listener);
+}
+
+/** The languages on screen now; the others become candidates for being let go. */
+export function setActiveLanguages(langs: readonly string[]): void {
+  activeLanguages = new Set(langs);
+  langs.forEach(touch);
+  evictIdle();
+}
+
+function touch(lang: string): void {
+  lastUsed.set(lang, ++useTick);
+}
+
+function evictIdle(): void {
+  const idle = Object.keys(cache)
+    .filter(l => !activeLanguages.has(l))
+    .sort((a, b) => (lastUsed.get(b) ?? 0) - (lastUsed.get(a) ?? 0));
+  for (const lang of idle.slice(IDLE_LANGUAGES_KEPT)) {
+    delete cache[lang];
+    lastUsed.delete(lang);
+    evictListeners.forEach(fn => fn(lang));
+  }
+}
+
+/** Languages whose words are held right now (tests and diagnostics). */
+export function heldLanguages(): string[] {
+  return Object.keys(cache);
+}
 
 /**
  * The vocabulary for `lang` if it's already been loaded this session, or
@@ -75,10 +122,16 @@ export async function loadWords(lang: string): Promise<Word[]> {
 }
 
 function applyEdits(lang: string, words: Word[]): Word[] {
-  const conj = getConjOverrides(lang);            // read once, not per word
+  // Both records read once, not per word: applyWordOverride(lang, w) re-read and re-parsed the stored
+  // overrides for each of 45k words — the costliest step of every load (~170 ms on a desktop, several
+  // times over at startup).
+  const overrides = getWordOverrides(lang);
+  const conj = getConjOverrides(lang);
+  const hasWord = Object.keys(overrides).length > 0;
   const hasConj = Object.keys(conj).length > 0;
+  if (!hasWord && !hasConj) return words.slice();
   return words.map(w => {
-    const withEdits = applyWordOverride(lang, w);
+    const withEdits = hasWord ? applyWordOverrideRecord(w, pickWordOverride(overrides, w.word)) : w;
     return hasConj ? applyConjOverrideRecord(withEdits, pickConjOverride(conj, w.word)) : withEdits;
   });
 }
@@ -92,6 +145,7 @@ const inflight: Record<string, Promise<Word[]>> = {};
  * page's second query queued behind the 45k-row read and its parsing, and startup took 1.7 s instead of 0.4.
  */
 function loadCachedVocab(lang: string, silent = false): Promise<Word[]> {
+  touch(lang);
   if (cache[lang]) return Promise.resolve(cache[lang]);
   const firstPage = previewInflight[lang];
   return inflight[lang] ??= (firstPage ? firstPage.catch(() => null).then(() => fetchFullVocab(lang, silent)) : fetchFullVocab(lang, silent))
@@ -168,6 +222,8 @@ async function fetchFullVocab(lang: string, silent: boolean): Promise<Word[]> {
     logger.info(`✓ Loaded ${words.length} words for ${lang} (${payload.origin})`);
 
     cache[lang] = words;
+    touch(lang);
+    evictIdle();
     performance.mark(`vocab-full:${lang}`);   // for the load benchmarks (scripts/bench-*.ts)
     if (!silent) hideLoading();
     return words;

@@ -11,11 +11,15 @@
  * other on every keystroke was the panel's slowest operation.
  */
 
-import { loadWords } from '../../data/data-loader.ts';
+import { loadWords, onVocabEvicted } from '../../data/data-loader.ts';
 import type { VocabEntry } from './types.ts';
 
 const vocabCache    = new Map<string, VocabEntry[]>();
 const vocabMapCache = new Map<string, Map<string, VocabEntry>>();
+
+// Built from the loader's words, so it goes when they do (data-loader.ts keeps only the languages in use);
+// every reader already treats a missing language as "not loaded yet" and fetches it again.
+onVocabEvicted(lang => { vocabCache.delete(lang); vocabMapCache.delete(lang); });
 
 /** Rows for a language, or an empty array if they have not loaded yet. */
 export function cachedVocab(lang: string): VocabEntry[] {

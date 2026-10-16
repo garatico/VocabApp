@@ -25,12 +25,16 @@ export async function loadAllWordsForLanguage(
   columnFlags: WordSelectColumnFlags,
   shapeDeps: ShapeWordDeps,
 ): Promise<Word[]> {
-  const sql = `${buildWordSelectSql(columnFlags)}
+  const rows = await adapter.all<WordSelectRow>(allWordsSql(columnFlags), [language]);
+  return rows.map(row => shapeWordRow(row, language, shapeDeps));
+}
+
+/** The query loadAllWordsForLanguage runs (one `?`: the language), for a caller that shapes the rows itself. */
+export function allWordsSql(columnFlags: WordSelectColumnFlags): string {
+  return `${buildWordSelectSql(columnFlags)}
     WHERE w.language = ?
     ORDER BY COALESCE(w.rank, 9999), w.word
   `;
-  const rows = await adapter.all<WordSelectRow>(sql, [language]);
-  return rows.map(row => shapeWordRow(row, language, shapeDeps));
 }
 
 export interface WordPageParams extends WordFilterParams {
