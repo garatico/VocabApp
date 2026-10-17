@@ -84,9 +84,23 @@ function formatCard(format: CsvFormat): HTMLElement {
 
   const raw = el('details', undefined, 'csv-guide-raw');
   raw.append(el('summary', 'The same rows as text'));
-  raw.append(el('pre', [header, ...rows].map(cells => cells.map(csvCell).join(',')).join('\n')));
+  raw.append(scrollablePre([header, ...rows].map(cells => cells.map(csvCell).join(',')).join('\n'),
+    `${format.title}, the same rows as text`));
   card.append(raw);
   return card;
+}
+
+/**
+ * A `<pre>` that keeps its lines unwrapped (they are CSV) and so may scroll sideways — whenever the window
+ * is narrow, or a platform's fonts set the text a pixel wider (Linux CI did, at 1280px). A region that
+ * scrolls must be reachable by keyboard to scroll at all, like the sheet above it.
+ */
+function scrollablePre(text: string, label: string): HTMLElement {
+  const pre = el('pre', text);
+  pre.tabIndex = 0;
+  pre.setAttribute('role', 'region');
+  pre.setAttribute('aria-label', label);
+  return pre;
 }
 
 /** What Bulk import takes, and the one shape it doesn't. */
@@ -98,7 +112,7 @@ function bulkImportCard(): HTMLElement {
   const example = (label: string, text: string, ok = true): void => {
     const box = el('div', undefined, 'csv-guide-example' + (ok ? '' : ' csv-guide-example--bad'));
     box.append(el('span', (ok ? '✓ ' : '✗ ') + label, 'csv-guide-example-label'));
-    box.append(el('pre', text));
+    box.append(scrollablePre(text, `Example: ${label}`));
     grid.append(box);
   };
   example('One per line', 'hablar\ncasa\ncomer');

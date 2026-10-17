@@ -19,6 +19,14 @@ async function open(page: Page, width: number, seed: () => void = () => {}): Pro
 
 const box = async (page: Page, sel: string) => (await page.locator(sel).first().boundingBox())!;
 
+/**
+ * Scroll the page itself. Not `mouse.wheel`: the mouse starts at (0, 0), over the phone tab bar, which
+ * scrolls sideways — and Chromium on Linux turns a vertical wheel over a sideways-only scroller into
+ * sideways scrolling, so CI scrolled the tab bar and the page too little (the bar sat at 23px, not 0).
+ * These tests are about what stays pinned, not about wheel handling.
+ */
+const scrollPage = (page: Page, dy: number) => page.evaluate(d => window.scrollBy(0, d), dy);
+
 test('the filter pills collapse and expand, and stay as left', async ({ page }) => {
   await open(page, 1400);
   const toggle = page.locator('.filters-section-toggle');
@@ -87,7 +95,7 @@ test('Table on a phone: scrolled, only the progress line stays pinned', async ({
   await open(page, 390);
   await page.locator('#startBtn').click();
   await expect(page.locator('#tableWrap input[type="text"]').first()).toBeVisible();
-  await page.mouse.wheel(0, 2000);
+  await scrollPage(page, 2000);
   await expect.poll(async () => Math.round((await box(page, '#tableStickyBar > .progressWrap')).y)).toBe(0);
   const strip = await box(page, '#tableStickyBar > .progressWrap');
   expect(strip.height).toBeLessThan(60);
@@ -99,7 +107,7 @@ test('Conjugation on a phone: scrolled, only the progress bar stays pinned', asy
   await openMode(page, 'conjugation');
   await page.locator('#startBtn').click();
   await expect(page.locator('.conj-progress-bars')).toBeVisible();
-  await page.mouse.wheel(0, 3000);
+  await scrollPage(page, 3000);
   await expect.poll(async () => Math.round((await box(page, '.conj-progress-bars')).y)).toBe(0);
   expect((await box(page, '.conj-progress-bars')).height).toBeLessThan(70);
   const header = await box(page, '.conj-full-header');

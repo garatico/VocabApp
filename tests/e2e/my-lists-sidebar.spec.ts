@@ -758,6 +758,9 @@ test('an open list can be deselected by clicking it again, or with the X in the 
 });
 
 test('Move to / Copy to: sections are labelled, collapsible and coloured like the sidebar', async ({ page }) => {
+  // Two full loads (beforeEach's, then the reload that picks up the seeded lists) and the Spanish vocabulary
+  // behind the word row: past 30 s on a two-worker CI runner now and then.
+  test.slow();
   await page.evaluate(() => {
     localStorage.setItem('vq_lists_spanish', JSON.stringify({ Source: ['pan'], 'A rather long destination list name': [] , Short: [] }));
     localStorage.setItem('vq_lists_multi', JSON.stringify({ Everywhere: [] }));
@@ -766,7 +769,9 @@ test('Move to / Copy to: sections are labelled, collapsible and coloured like th
   await appReady(page);
   await page.locator('.mode-tab[data-mode="mylists"]').click();
   await expect(card(page, 'ml-single-item', 'Source')).toHaveClass(/active/);   // the first list opens by itself
-  await rowAction(page, '.ml-move-btn', page.locator('.ml-word-list .ml-word-item').first());
+  const firstRow = page.locator('.ml-word-list .ml-word-item').first();
+  await expect(firstRow, 'the list\'s word row (waits on the Spanish vocabulary)').toBeVisible();
+  await rowAction(page, '.ml-move-btn', firstRow);
 
   const pop = page.locator('.ml-move-popover');
   await expect(pop.locator('.ml-move-section--single .ml-move-section-head')).toContainText('Single-Language Lists');

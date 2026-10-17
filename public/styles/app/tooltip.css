@@ -101,9 +101,12 @@
 .tt-pos[data-pos="article"]     { --pos-hue: var(--pos-hue-article,     260); }
 .tt-pos[data-pos="particle"]    { --pos-hue: var(--pos-hue-particle,     85); }
 .tt-pos[data-pos="suffix"]      { --pos-hue: var(--pos-hue-suffix,      165); }
+/* The hue tint sits on an opaque --surface, not on whatever is behind the badge: the tooltip takes its
+   language's tint in a mixed-language quiz (#wordTooltip.lang-tag-*), and a translucent badge over that
+   pastel fell to 2.8:1 (Danish, yellow hues). Over --surface, 27% lightness is >= 5.1:1 for every hue. */
 .tt-pos[data-pos] {
-  background: hsl(var(--pos-hue) 60% 50% / 0.16);
-  color:      hsl(var(--pos-hue) 60% 34%);
+  background: linear-gradient(hsl(var(--pos-hue) 60% 50% / 0.16), hsl(var(--pos-hue) 60% 50% / 0.16)), var(--surface);
+  color:      hsl(var(--pos-hue) 60% 27%);
 }
 html.dark .tt-pos[data-pos] { color: hsl(var(--pos-hue) 62% 72%); }
 
@@ -114,8 +117,8 @@ html.dark .tt-pos[data-pos] { color: hsl(var(--pos-hue) 62% 72%); }
 .tt-band[data-band="C1"] { --pos-hue:  15; }
 .tt-band[data-band="C2"] { --pos-hue:   0; }
 .tt-band[data-band] {
-  background:  hsl(var(--pos-hue) 55% 50% / 0.16);
-  color:       hsl(var(--pos-hue) 55% 32%);
+  background:  linear-gradient(hsl(var(--pos-hue) 55% 50% / 0.16), hsl(var(--pos-hue) 55% 50% / 0.16)), var(--surface);
+  color:       hsl(var(--pos-hue) 55% 27%);
   border-color: hsl(var(--pos-hue) 50% 45% / 0.5);
 }
 html.dark .tt-band[data-band] { color: hsl(var(--pos-hue) 65% 72%); }
@@ -149,6 +152,8 @@ html.dark .tt-band[data-band] { color: hsl(var(--pos-hue) 65% 72%); }
 
 /* ── Glosses ── */
 .tt-glosses     { color: var(--text-muted); margin-bottom: 0.5rem; }
+/* On a language's tint (a mixed-language quiz) muted text fell under 4.5:1 on all fifteen; full text holds. */
+#wordTooltip[class*="lang-tag-"] .tt-glosses { color: var(--text); }
 .tt-hidden-hint { font-style: italic; font-size: 0.72rem; }
 
 /* ── Section label ── */

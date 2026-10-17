@@ -316,3 +316,47 @@ test('a My Lists word row expands from the keyboard', async ({ page }) => {
   await expect(page.locator('.ml-word-item').first()).toHaveClass(/ml-word-item--expanded/);
   await expect(page.locator('.ml-word-item .ml-word-text').first()).toHaveAttribute('aria-expanded', 'true');
 });
+
+// The two checks below pin conditions CI's Linux runner happened into and a Windows run never did: there the
+// mouse came to rest on a word after Start, opening the word tooltip (whose badges failed contrast and which
+// sat outside every landmark), and its fonts set the CSV guide's text a pixel too wide for 1280px, so the
+// <pre> scrolled without being reachable by keyboard. Both are set up on purpose here, on any OS.
+for (const theme of ['light', 'dark'] as const) {
+  test(`the word tooltip, on every language's tint, has no axe violations (${theme})`, async ({ page }) => {
+    await open(page, theme);
+    await page.locator('.mode-tab[data-mode="table"]').click();
+    await page.locator('#startBtn').click();
+    await page.locator('#tableWrap .word-info-trigger').first().hover();
+    await expect(page.locator('#wordTooltip')).toBeVisible();
+    expect(await violationsOf(page), 'untinted').toEqual([]);
+
+    const tints = await page.evaluate(() =>
+      [...document.styleSheets].flatMap(s => { try { return [...s.cssRules]; } catch { return []; } })
+        .map(r => (r as CSSStyleRule).selectorText ?? '')
+        .flatMap(sel => [...sel.matchAll(/#wordTooltip\.lang-tag-(\w+)/g)].map(m => m[1])));
+    expect(tints.length).toBeGreaterThan(10);
+    const failures: string[] = [];
+    for (const lang of new Set(tints)) {
+      await page.evaluate(l => {
+        const tt = document.getElementById('wordTooltip')!;
+        tt.className = tt.className.replace(/\blang-tag-\w+/g, '').trim();
+        tt.classList.add(`lang-tag-${l}`, 'visible');
+      }, lang);
+      const { violations } = await new AxeBuilder({ page }).include('#wordTooltip').withTags(TAGS).analyze();
+      failures.push(...violations.flatMap(v => v.nodes.map(n => `${lang}: ${v.id} ${n.target.join(' ')}`)));
+    }
+    expect(failures).toEqual([]);
+  });
+
+  test(`Settings → Help & Tips in a narrower window has no axe violations (${theme})`, async ({ page }) => {
+    await page.setViewportSize({ width: 1000, height: 800 });
+    await open(page, theme);
+    await page.locator('.mode-tab[data-mode="settings"]').click();
+    await page.locator('.settings-nav-link[href="#settings-sec-help"]').click();
+    await page.locator('#settings-sec-help details').evaluateAll(ds => ds.forEach(d => { (d as HTMLDetailsElement).open = true; }));
+    await page.waitForTimeout(300);
+    const scrolls = await page.locator('.csv-guide-raw > pre').first().evaluate(el => el.scrollWidth > el.clientWidth);
+    expect(scrolls, 'the CSV text should overflow at this width, or this test checks nothing').toBe(true);
+    expect(await violationsOf(page)).toEqual([]);
+  });
+}

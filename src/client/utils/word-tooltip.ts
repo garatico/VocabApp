@@ -50,7 +50,14 @@ function getTooltip(): HTMLElement {
   tooltip.setAttribute('role', 'tooltip');
   tooltip.addEventListener('mouseenter', () => { if (hideTimer) clearTimeout(hideTimer); });
   tooltip.addEventListener('mouseleave', () => scheduleHide());
-  document.body.appendChild(tooltip);
+  // In a landmark of its own, so its content is not "outside every landmark" (axe `region`). Not inside
+  // <main>: main is position: relative, and the tooltip's top/left are page coordinates. The <aside> is
+  // static, so they stay page coordinates.
+  const host = document.createElement('aside');
+  host.className = 'word-tooltip-host';
+  host.setAttribute('aria-label', 'Word details');
+  host.appendChild(tooltip);
+  document.body.appendChild(host);
   return tooltip;
 }
 
