@@ -47,6 +47,11 @@ describe('supportsConjugation', () => {
     expect(supportsConjugation('indonesian')).toBe(false);
     expect(isoCode('indonesian')).toBe('id');
   });
+
+  it('is false for Vietnamese, which has no verb inflection either', () => {
+    expect(supportsConjugation('vietnamese')).toBe(false);
+    expect(isoCode('vietnamese')).toBe('vi');
+  });
 });
 
 describe('conjugationUnavailableReason', () => {

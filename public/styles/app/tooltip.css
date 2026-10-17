@@ -39,6 +39,7 @@
 #wordTooltip.lang-tag-chinese    { background: var(--lang-chinese-bg); }
 #wordTooltip.lang-tag-japanese   { background: var(--lang-japanese-bg); }
 #wordTooltip.lang-tag-indonesian { background: var(--lang-indonesian-bg); }
+#wordTooltip.lang-tag-vietnamese { background: var(--lang-vietnamese-bg); }
 
 #wordTooltip.lang-indicator-flag[class*="lang-tag-"] {
   background: var(--surface);
@@ -134,6 +135,7 @@ html.dark .tt-band[data-band] { color: hsl(var(--pos-hue) 65% 72%); }
 .tt-lang.lang-tag-chinese    { background: var(--lang-chinese-bg); }
 .tt-lang.lang-tag-japanese   { background: var(--lang-japanese-bg); }
 .tt-lang.lang-tag-indonesian { background: var(--lang-indonesian-bg); }
+.tt-lang.lang-tag-vietnamese { background: var(--lang-vietnamese-bg); }
 
 /* ── Glosses ── */
 .tt-glosses     { color: var(--text-muted); margin-bottom: 0.5rem; }

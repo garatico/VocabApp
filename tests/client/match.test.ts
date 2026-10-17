@@ -16,6 +16,13 @@ describe('stripDiacritics', () => {
     expect(stripDiacritics('が')).toBe('が');
   });
 
+  it('removes Vietnamese tone and vowel marks, and folds đ to d', () => {
+    expect(stripDiacritics('bạn')).toBe('ban');
+    expect(stripDiacritics('người')).toBe('nguoi');     // ư, ơ: horn marks
+    expect(stripDiacritics('đi')).toBe('di');
+    expect(stripDiacritics('Đà Nẵng')).toBe('Da Nang');
+  });
+
   it('removes Spanish accents', () => {
     expect(stripDiacritics('canción')).toBe('cancion');
     expect(stripDiacritics('árbol')).toBe('arbol');

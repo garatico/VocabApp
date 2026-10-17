@@ -159,6 +159,7 @@
   --lang-chinese-bg:    #f0a8d0;
   --lang-japanese-bg:   #f0a3a3;
   --lang-indonesian-bg: #dfe08c;
+  --lang-vietnamese-bg: #e3c9a0;
 }
 
 /* ── Dark mode ──────────────────────────────────────────────── */
@@ -255,6 +256,7 @@ html.dark {
   --lang-chinese-bg:    #5c1f45;
   --lang-japanese-bg:   #6b2020;
   --lang-indonesian-bg: #4f5214;
+  --lang-vietnamese-bg: #5c4424;
 }
 
 /* Visually hidden, still read by screen readers (e.g. the page's <h1>). */

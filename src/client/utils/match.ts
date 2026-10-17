@@ -12,9 +12,13 @@
  * files dakuten/handakuten (゛゜, and half-width ﾞﾟ) under Diacritic, but they
  * change the consonant — stripped, かぎ "key" graded as かき "oyster" and ガラス
  * "glass" as カラス "crow". NFC afterwards puts か + ゛ back together as が.
+ *
+ * Vietnamese đ is a letter of its own, not d plus a mark, so no normalisation form takes it apart; it is
+ * folded to d by hand, so "di" is accepted for đi the way "ban" is for bạn.
  */
 export function stripDiacritics(s: string): string {
-  return s.normalize('NFD').replace(/(?![゙゚ﾞﾟ])\p{Diacritic}/gu, '').normalize('NFC');
+  return s.normalize('NFD').replace(/(?![゙゚ﾞﾟ])\p{Diacritic}/gu, '').normalize('NFC')
+    .replace(/đ/g, 'd').replace(/Đ/g, 'D');
 }
 
 /**
