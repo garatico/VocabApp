@@ -40,6 +40,8 @@ export interface Word {
     grammatical_number?: string;
     /** Chinese/Vietnamese nouns: the measure word(s), comma-separated, the usual one first ("只, 条"). */
     classifier?: string;
+    /** Russian: the word with its stress marked (говори́ть). Shown in place of `word`, never matched. */
+    stressed?: string;
     register?:          string;
     ipa?:               string;
     syllables?:         string[];

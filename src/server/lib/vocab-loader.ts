@@ -131,12 +131,13 @@ export function supportsDisambiguator(): boolean {
  * detectWordColumnFlags (src/shared/vocab/column-flags.ts), which exists for
  * readers that only have an async StorageAdapter, not this live connection.
  */
-export function getWordColumnFlags(): { hasDisambiguator: boolean; hasIsFunctionWord: boolean; hasGrammaticalNumber: boolean; hasClassifier: boolean } {
+export function getWordColumnFlags(): { hasDisambiguator: boolean; hasIsFunctionWord: boolean; hasGrammaticalNumber: boolean; hasClassifier: boolean; hasStressed: boolean } {
   return {
     hasDisambiguator:     hasDisambiguatorCol,
     hasIsFunctionWord:    hasIsFunctionWordCol,
     hasGrammaticalNumber: hasGrammaticalNumberCol,
     hasClassifier:        hasClassifierCol,
+    hasStressed:          hasStressedCol,
   };
 }
 
@@ -163,11 +164,16 @@ function checkGrammaticalNumberColumn(conn: Database.Database): void {
   const cols = conn.prepare("PRAGMA table_info('words')").all() as { name: string }[];
   hasGrammaticalNumberCol = cols.some(c => c.name === 'grammatical_number');
   hasClassifierCol        = cols.some(c => c.name === 'classifier');
+  hasStressedCol          = cols.some(c => c.name === 'stressed');
 }
 
 // And for schemaVersion 9's `classifier` (Chinese/Vietnamese nouns' measure words), checked in the same pass:
 // an older database just has none, and the Classifiers tab finds no nouns to drill.
 let hasClassifierCol = false;
+
+// And schemaVersion 10's `stressed` (a Russian word with its stress marked), same pass: an older database
+// has none, and words show unmarked.
+let hasStressedCol = false;
 
 // Per-language in-memory cache
 const vocabCache = new Map<string, VocabData>();
@@ -378,6 +384,7 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
       hasIsFunctionWord:    hasIsFunctionWordCol,
       hasGrammaticalNumber: hasGrammaticalNumberCol,
       hasClassifier:        hasClassifierCol,
+      hasStressed:          hasStressedCol,
     })}
       WHERE w.language = ?
       ORDER BY COALESCE(w.rank, 9999), w.word

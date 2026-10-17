@@ -44,6 +44,7 @@
 #wordTooltip.lang-tag-norwegian { background: var(--lang-norwegian-bg); }
 #wordTooltip.lang-tag-danish { background: var(--lang-danish-bg); }
 #wordTooltip.lang-tag-romanian { background: var(--lang-romanian-bg); }
+#wordTooltip.lang-tag-russian { background: var(--lang-russian-bg); }
 
 #wordTooltip.lang-indicator-flag[class*="lang-tag-"] {
   background: var(--surface);
@@ -144,6 +145,7 @@ html.dark .tt-band[data-band] { color: hsl(var(--pos-hue) 65% 72%); }
 .tt-lang.lang-tag-norwegian { background: var(--lang-norwegian-bg); }
 .tt-lang.lang-tag-danish { background: var(--lang-danish-bg); }
 .tt-lang.lang-tag-romanian { background: var(--lang-romanian-bg); }
+.tt-lang.lang-tag-russian { background: var(--lang-russian-bg); }
 
 /* ── Glosses ── */
 .tt-glosses     { color: var(--text-muted); margin-bottom: 0.5rem; }

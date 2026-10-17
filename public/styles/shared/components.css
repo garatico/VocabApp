@@ -566,3 +566,18 @@
 .speak-btn--inline { margin-left: 0.25rem; vertical-align: middle; }
 @media (pointer: coarse) { .speak-btn { min-width: 36px; min-height: 36px; } }
 
+
+
+/* ────────────────────────────────────────────────────────────────
+   Russian text: one font for the letter and its stress mark
+   The bundled Sora and DM Mono carry no Cyrillic and no combining
+   acute (U+0301), so the browser picked a fallback per character and
+   the stress mark of говори́ть floated beside its vowel. A system
+   font that has both draws them together. !important because every
+   mode sets its word font with an id-scoped selector; this is about
+   the script, not the mode, so it should win everywhere a word
+   carries lang="ru".
+   ──────────────────────────────────────────────────────────────── */
+[lang="ru"] {
+  font-family: "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif !important;
+}

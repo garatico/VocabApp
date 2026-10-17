@@ -47,6 +47,7 @@ html.hide-lang-flags .flag-icon { display: none; }
 [data-lang="norwegian"]  { --lang-color: var(--lang-norwegian-bg); }
 [data-lang="danish"]     { --lang-color: var(--lang-danish-bg); }
 [data-lang="romanian"]   { --lang-color: var(--lang-romanian-bg); }
+[data-lang="russian"]    { --lang-color: var(--lang-russian-bg); }
 
 /* Any button carrying data-lang (DB Admin's Clear/Export-per-language
    groups) gets a left accent stripe in that language's color. */

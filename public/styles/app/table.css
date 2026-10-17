@@ -604,6 +604,7 @@
 #tableWrap td.lang-tag-norwegian { background: var(--lang-norwegian-bg); }
 #tableWrap td.lang-tag-danish { background: var(--lang-danish-bg); }
 #tableWrap td.lang-tag-romanian { background: var(--lang-romanian-bg); }
+#tableWrap td.lang-tag-russian { background: var(--lang-russian-bg); }
 
 /* Flag style: same tagging, but a flag image watermarked behind the word
    instead of a tinted background — read from the --flag-img custom property

@@ -66,6 +66,11 @@ export interface LanguageInfo {
   /** Are nouns counted with a classifier (只, 本; con, cái)? Shows the Classifiers tab — see utils/classifiers.ts. */
   hasClassifiers?: boolean;
   /**
+   * Written in a non-Latin script that learners may not have a keyboard for (Russian): a typed answer
+   * is accepted in the script or in Latin letters, loosely transliterated — see shared/russian-translit.ts.
+   */
+  latinTyping?: boolean;
+  /**
    * Table mode's Compare/Multi-language indicator: a flag image and the CSS
    * custom property carrying its tinted cell-background color. See table.css
    * and variables.css for the `--lang-<name>-bg` definitions this points at.
@@ -156,6 +161,9 @@ const FLAG_OPTIONS: Record<string, { country: string; label: string }[]> = {
     { country: 'ro', label: 'Romania' },
     { country: 'md', label: 'Moldova' },
   ],
+  russian: [
+    { country: 'ru', label: 'Russia' },
+  ],
 };
 
 export const LANGUAGES: LanguageInfo[] = [
@@ -173,6 +181,7 @@ export const LANGUAGES: LanguageInfo[] = [
   { name: 'norwegian', label: 'Norwegian', iso: 'nb', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-norwegian-bg', flagOptions: FLAG_OPTIONS['norwegian'], flagCountry: FLAG_OPTIONS['norwegian'][0].country },
   { name: 'danish', label: 'Danish', iso: 'da', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-danish-bg', flagOptions: FLAG_OPTIONS['danish'], flagCountry: FLAG_OPTIONS['danish'][0].country },
   { name: 'romanian', label: 'Romanian', iso: 'ro', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-romanian-bg', flagOptions: FLAG_OPTIONS['romanian'], flagCountry: FLAG_OPTIONS['romanian'][0].country },
+  { name: 'russian', label: 'Russian', iso: 'ru', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, latinTyping: true, colorVar: '--lang-russian-bg', flagOptions: FLAG_OPTIONS['russian'], flagCountry: FLAG_OPTIONS['russian'][0].country },
 ];
 
 /** Language names in display order — the order of the dropdown. */

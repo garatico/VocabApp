@@ -19,5 +19,6 @@ export async function detectWordColumnFlags(adapter: StorageAdapter): Promise<Wo
     hasIsFunctionWord:    names.has('is_function_word'),
     hasGrammaticalNumber: names.has('grammatical_number'),
     hasClassifier:        names.has('classifier'),
+    hasStressed:          names.has('stressed'),
   };
 }

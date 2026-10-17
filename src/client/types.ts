@@ -27,6 +27,8 @@ export interface WordLinguistic {
   grammatical_number?: string | null;
   /** Chinese/Vietnamese nouns: the classifier(s) they are counted with, comma-separated, the usual one first. */
   classifier?:         string | null;
+  /** Russian: the word with its stress marked (говори́ть) — shown in place of `word`, never matched. */
+  stressed?:           string | null;
   register?:           string | null;
   ipa?:                string | null;
   syllables?:          string[] | null;

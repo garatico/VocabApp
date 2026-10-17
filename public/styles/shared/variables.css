@@ -164,6 +164,7 @@
   --lang-norwegian-bg:  #a9c4dd;
   --lang-danish-bg:     #e6a5b8;
   --lang-romanian-bg:   #b8cc9a;
+  --lang-russian-bg:    #c9b3e0;
 }
 
 /* ── Dark mode ──────────────────────────────────────────────── */
@@ -265,6 +266,7 @@ html.dark {
   --lang-norwegian-bg:  #24405c;
   --lang-danish-bg:     #5e2638;
   --lang-romanian-bg:   #3d4f22;
+  --lang-russian-bg:    #43305e;
 }
 
 /* Visually hidden, still read by screen readers (e.g. the page's <h1>). */

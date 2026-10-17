@@ -1,6 +1,7 @@
 import type { Word } from '../types.js';
 import { languageInfo } from '../data/languages.js';
 import { stripDiacritics } from './match.js';
+import { hasLatin, latinKey, latinTargets } from '../../shared/russian-translit.js';
 
 /**
  * For a `romanizedScript` language (Chinese): which script is the word slot's
@@ -270,6 +271,13 @@ function reverseTargets(
     .filter((w): w is string => typeof w === 'string' && w.length > 0)
     .map(w => norm(w));
 
+  if (lang && languageInfo(lang).latinTyping) {
+    // Russian: the Cyrillic forms, plus every Latin spelling the word is accepted as (russian-translit.ts).
+    const latin = ([entry.word, entry.linguistic?.infinitive] as (string | null | undefined)[])
+      .filter((w): w is string => typeof w === 'string' && w.length > 0)
+      .flatMap(w => latinTargets(w).map(k => latinKey(norm(k))));
+    return [...wordForms, ...latin];
+  }
   if (!lang || !languageInfo(lang).romanizedScript) return wordForms;
 
   const pinyin = entry.linguistic?.ipa ? norm(entry.linguistic.ipa) : null;
@@ -285,8 +293,9 @@ function isReverseCorrectImpl(
   input: string, entry: Word, norm: (s?: string) => string,
   lang: string | null | undefined, display: ChineseDisplay, exact: boolean,
 ): boolean {
-  const attempt = norm(input);
+  let attempt = norm(input);
   if (!attempt) return !exact;
+  if (lang && languageInfo(lang).latinTyping && hasLatin(attempt)) attempt = latinKey(attempt);
   return tokenCompare(attempt, reverseTargets(entry, norm, lang, display), exact);
 }
 
@@ -437,11 +446,19 @@ function bracketed(text: string): string {
  * `display.functionWordMarker` is 'word' or 'both' — see FunctionWordMarker
  * for why the two sides are independently configurable.
  */
+/**
+ * The spelling to show for a word: Russian's stress-marked form (говори́ть) when the data has one, else
+ * the word. Display only — answers are matched against `entry.word`, and the marks are never typed.
+ */
+export function shownWord(entry: Word): string {
+  return entry.linguistic?.stressed || entry.word;
+}
+
 export function chineseWordText(entry: Word, lang: string | null | undefined, display: ChineseDisplay): string {
   const mark = isFunctionWord(entry)
     && (display.functionWordMarker === 'word' || display.functionWordMarker === 'both');
   const wrap = (t: string) => mark ? bracketed(t) : t;
-  if (!lang || !languageInfo(lang).romanizedScript) return wrap(entry.word);
+  if (!lang || !languageInfo(lang).romanizedScript) return wrap(shownWord(entry));
   const pinyin = entry.linguistic?.ipa || null;
   const primary   = display.chineseScript === 'pinyin' ? (pinyin ?? entry.word) : entry.word;
   const secondary = display.chineseScript === 'pinyin' ? entry.word : pinyin;
@@ -698,7 +715,7 @@ export function wordAndAnnotation(
   entry: Word, show = true, abbreviate = false, showGenderArticle = false, lang = '',
 ): { base: string; annotation: string | null } {
   const article = showGenderArticle ? genderArticle(entry, entry.language ?? lang) : null;
-  const base    = article ? `${article} ${entry.word}` : entry.word;
+  const base    = article ? `${article} ${shownWord(entry)}` : shownWord(entry);
   const hint      = grammarHint(entry, abbreviate);
   const disambig  = show ? entry.disambiguator : null;
   const annotation = hint && disambig ? `${hint}; ${disambig}` : (hint || disambig || null);
