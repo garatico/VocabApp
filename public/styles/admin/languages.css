@@ -43,6 +43,10 @@ html.hide-lang-flags .flag-icon { display: none; }
 [data-lang="japanese"]   { --lang-color: var(--lang-japanese-bg); }
 [data-lang="indonesian"] { --lang-color: var(--lang-indonesian-bg); }
 [data-lang="vietnamese"] { --lang-color: var(--lang-vietnamese-bg); }
+[data-lang="swedish"]    { --lang-color: var(--lang-swedish-bg); }
+[data-lang="norwegian"]  { --lang-color: var(--lang-norwegian-bg); }
+[data-lang="danish"]     { --lang-color: var(--lang-danish-bg); }
+[data-lang="romanian"]   { --lang-color: var(--lang-romanian-bg); }
 
 /* Any button carrying data-lang (DB Admin's Clear/Export-per-language
    groups) gets a left accent stripe in that language's color. */

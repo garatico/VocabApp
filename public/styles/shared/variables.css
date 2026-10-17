@@ -160,6 +160,10 @@
   --lang-japanese-bg:   #f0a3a3;
   --lang-indonesian-bg: #dfe08c;
   --lang-vietnamese-bg: #e3c9a0;
+  --lang-swedish-bg:    #f2d675;
+  --lang-norwegian-bg:  #a9c4dd;
+  --lang-danish-bg:     #e6a5b8;
+  --lang-romanian-bg:   #b8cc9a;
 }
 
 /* ── Dark mode ──────────────────────────────────────────────── */
@@ -257,6 +261,10 @@ html.dark {
   --lang-japanese-bg:   #6b2020;
   --lang-indonesian-bg: #4f5214;
   --lang-vietnamese-bg: #5c4424;
+  --lang-swedish-bg:    #5a4a10;
+  --lang-norwegian-bg:  #24405c;
+  --lang-danish-bg:     #5e2638;
+  --lang-romanian-bg:   #3d4f22;
 }
 
 /* Visually hidden, still read by screen readers (e.g. the page's <h1>). */

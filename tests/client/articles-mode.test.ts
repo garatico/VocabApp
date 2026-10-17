@@ -27,6 +27,26 @@ describe('articleChoices', () => {
     expect(right(noun('man', 'masculine'), 'dutch')).toBe('de');
   });
 
+  it('asks Swedish and Danish en/ett, en/et — common and neuter', () => {
+    expect(labels(noun('bil', 'common'), 'swedish')).toEqual(['en', 'ett']);
+    expect(right(noun('hus', 'neuter'), 'swedish')).toBe('ett');
+    expect(labels(noun('bil', 'common'), 'danish')).toEqual(['en', 'et']);
+    expect(right(noun('bil', 'common'), 'danish')).toBe('en');
+  });
+
+  it('asks Norwegian en/ei/et, leaving out nouns that take either en or ei', () => {
+    expect(labels(noun('jente', 'feminine'), 'norwegian')).toEqual(['en', 'ei', 'et']);
+    expect(right(noun('jente', 'feminine'), 'norwegian')).toBe('ei');
+    expect(articleChoices(noun('bok', 'm/f'), 'norwegian')).toBeNull();
+  });
+
+  it('asks Romanian un/o, neuter taking un in the singular', () => {
+    expect(labels(noun('scaun', 'neuter'), 'romanian')).toEqual(['un', 'o']);
+    expect(right(noun('scaun', 'neuter'), 'romanian')).toBe('un');
+    expect(right(noun('casă', 'feminine'), 'romanian')).toBe('o');
+    expect(withDefiniteArticle(noun('hus', 'neuter'), 'swedish')).toBe('ett hus');
+  });
+
   it('ignores elision, so le/la stay apart before a vowel', () => {
     expect(labels(noun('amour', 'masculine'), 'french')).toEqual(['le', 'la']);
     expect(right(noun('amour', 'masculine'), 'french')).toBe('le');

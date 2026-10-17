@@ -578,6 +578,13 @@ const DEFINITE_ARTICLES: Record<string, ArticleTable> = {
   portuguese: { masculine: 'o',   feminine: 'a' },
   german:     { masculine: 'der', feminine: 'die', neuter: 'das' },
   dutch:      { masculine: 'de',  feminine: 'de',  common: 'de', 'm/f': 'de', neuter: 'het' },
+  // Scandinavian and Romanian *definite* articles are endings (bilen, huset; casa), so these are the
+  // indefinite ones, which are separate words and show the gender just as well: en bil, ett hus.
+  // Norwegian m/f nouns take either en or ei, so they have no single answer and stay out of the quiz.
+  swedish:    { common: 'en', neuter: 'ett' },
+  danish:     { common: 'en', neuter: 'et' },
+  norwegian:  { masculine: 'en', feminine: 'ei', neuter: 'et' },
+  romanian:   { masculine: 'un', feminine: 'o', neuter: 'un' },
 };
 
 const VOWEL_SOUND = /^[aeiouàâäéèêëîïôöùûüAEIOUÀÂÄÉÈÊËÎÏÔÖÙÛÜ]/;
@@ -637,7 +644,7 @@ export function articleChoices(entry: Word, lang: string): ArticleChoice[] | nul
   const label = (g: string): string =>
     table.italianLo && g === 'masculine' && ITALIAN_LO_TRIGGER.test(entry.word) ? 'lo' : table[g as keyof ArticleTable] as string;
   const own = label(gender);
-  const labels = [...new Set((['masculine', 'feminine', 'neuter'] as const)
+  const labels = [...new Set((['masculine', 'feminine', 'common', 'neuter'] as const)
     .filter(g => typeof table[g] === 'string').map(label))];
   return labels.map(article => ({ article, correct: article === own }));
 }

@@ -40,6 +40,10 @@
 #wordTooltip.lang-tag-japanese   { background: var(--lang-japanese-bg); }
 #wordTooltip.lang-tag-indonesian { background: var(--lang-indonesian-bg); }
 #wordTooltip.lang-tag-vietnamese { background: var(--lang-vietnamese-bg); }
+#wordTooltip.lang-tag-swedish { background: var(--lang-swedish-bg); }
+#wordTooltip.lang-tag-norwegian { background: var(--lang-norwegian-bg); }
+#wordTooltip.lang-tag-danish { background: var(--lang-danish-bg); }
+#wordTooltip.lang-tag-romanian { background: var(--lang-romanian-bg); }
 
 #wordTooltip.lang-indicator-flag[class*="lang-tag-"] {
   background: var(--surface);
@@ -136,6 +140,10 @@ html.dark .tt-band[data-band] { color: hsl(var(--pos-hue) 65% 72%); }
 .tt-lang.lang-tag-japanese   { background: var(--lang-japanese-bg); }
 .tt-lang.lang-tag-indonesian { background: var(--lang-indonesian-bg); }
 .tt-lang.lang-tag-vietnamese { background: var(--lang-vietnamese-bg); }
+.tt-lang.lang-tag-swedish { background: var(--lang-swedish-bg); }
+.tt-lang.lang-tag-norwegian { background: var(--lang-norwegian-bg); }
+.tt-lang.lang-tag-danish { background: var(--lang-danish-bg); }
+.tt-lang.lang-tag-romanian { background: var(--lang-romanian-bg); }
 
 /* ── Glosses ── */
 .tt-glosses     { color: var(--text-muted); margin-bottom: 0.5rem; }

@@ -142,6 +142,20 @@ const FLAG_OPTIONS: Record<string, { country: string; label: string }[]> = {
   vietnamese: [
     { country: 'vn', label: 'Vietnam' },
   ],
+  swedish: [
+    { country: 'se', label: 'Sweden' },
+    { country: 'fi', label: 'Finland' },
+  ],
+  norwegian: [
+    { country: 'no', label: 'Norway' },
+  ],
+  danish: [
+    { country: 'dk', label: 'Denmark' },
+  ],
+  romanian: [
+    { country: 'ro', label: 'Romania' },
+    { country: 'md', label: 'Moldova' },
+  ],
 };
 
 export const LANGUAGES: LanguageInfo[] = [
@@ -155,6 +169,10 @@ export const LANGUAGES: LanguageInfo[] = [
   { name: 'japanese',   label: 'Japanese',   iso: 'ja', hasConjugations: false, capitalisesNouns: false, romanizedScript: true,  colorVar: '--lang-japanese-bg',   flagOptions: FLAG_OPTIONS['japanese'],   flagCountry: FLAG_OPTIONS['japanese'][0].country },
   { name: 'indonesian', label: 'Indonesian', iso: 'id', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-indonesian-bg', flagOptions: FLAG_OPTIONS['indonesian'], flagCountry: FLAG_OPTIONS['indonesian'][0].country },
   { name: 'vietnamese', label: 'Vietnamese', iso: 'vi', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-vietnamese-bg', flagOptions: FLAG_OPTIONS['vietnamese'], flagCountry: FLAG_OPTIONS['vietnamese'][0].country, defaultMatchMode: 'strict', hasClassifiers: true },
+  { name: 'swedish', label: 'Swedish', iso: 'sv', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-swedish-bg', flagOptions: FLAG_OPTIONS['swedish'], flagCountry: FLAG_OPTIONS['swedish'][0].country },
+  { name: 'norwegian', label: 'Norwegian', iso: 'nb', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-norwegian-bg', flagOptions: FLAG_OPTIONS['norwegian'], flagCountry: FLAG_OPTIONS['norwegian'][0].country },
+  { name: 'danish', label: 'Danish', iso: 'da', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-danish-bg', flagOptions: FLAG_OPTIONS['danish'], flagCountry: FLAG_OPTIONS['danish'][0].country },
+  { name: 'romanian', label: 'Romanian', iso: 'ro', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-romanian-bg', flagOptions: FLAG_OPTIONS['romanian'], flagCountry: FLAG_OPTIONS['romanian'][0].country },
 ];
 
 /** Language names in display order — the order of the dropdown. */

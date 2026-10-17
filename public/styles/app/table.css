@@ -600,6 +600,10 @@
 #tableWrap td.lang-tag-japanese   { background: var(--lang-japanese-bg); }
 #tableWrap td.lang-tag-indonesian { background: var(--lang-indonesian-bg); }
 #tableWrap td.lang-tag-vietnamese { background: var(--lang-vietnamese-bg); }
+#tableWrap td.lang-tag-swedish { background: var(--lang-swedish-bg); }
+#tableWrap td.lang-tag-norwegian { background: var(--lang-norwegian-bg); }
+#tableWrap td.lang-tag-danish { background: var(--lang-danish-bg); }
+#tableWrap td.lang-tag-romanian { background: var(--lang-romanian-bg); }
 
 /* Flag style: same tagging, but a flag image watermarked behind the word
    instead of a tinted background — read from the --flag-img custom property

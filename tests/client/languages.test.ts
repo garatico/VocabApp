@@ -52,6 +52,13 @@ describe('supportsConjugation', () => {
     expect(supportsConjugation('vietnamese')).toBe(false);
     expect(isoCode('vietnamese')).toBe('vi');
   });
+
+  it('knows Swedish, Norwegian (Bokmål), Danish and Romanian', () => {
+    expect(isoCode('swedish')).toBe('sv');
+    expect(isoCode('norwegian')).toBe('nb');
+    expect(isoCode('danish')).toBe('da');
+    expect(isoCode('romanian')).toBe('ro');
+  });
 });
 
 describe('conjugationUnavailableReason', () => {
