@@ -65,7 +65,7 @@ import type { GenderKey } from '../utils/utils.ts';
 import { matchesAnswer, buildGlossDisplay, chineseWordText, displayWord, wordAndAnnotation, genderKey, primaryGlossForHint, chosenGlosses } from '../utils/utils.ts';
 import { isInAnyList, getWordLists } from '../utils/word-lists.ts';
 import { openListPicker } from '../utils/list-picker.ts';
-import { Settings, applyAutofillAttr } from '../settings.ts';
+import { Settings, applyAutofillAttr, type MatchMode } from '../settings.ts';
 import { languageInfo, flagUrl } from '../data/languages.ts';
 import {
   enableInputWheelScroll, renderWordWithGender, applyGenderContainer, shouldShowGenderIndicator,
@@ -127,7 +127,7 @@ export function renderTableRecallMode({
   if (words.length === 0) return;
 
   const cols        = Math.max(1, Math.min(5, Number(columns) || 3));
-  const matchMode   = Settings.getMatchMode();
+  const matchModeFor = (wordLang: string | null | undefined): MatchMode => Settings.getMatchModeFor((wordLang ?? lang).split('+')[0]);
   const chineseDisplay = Settings.getChineseDisplay();
   const primaryLang = lang.split('+')[0];
 
@@ -672,9 +672,9 @@ export function renderTableRecallMode({
     const val = inp.value.trim();
     if (!val) return;
 
-    const wordMatch = sorted.find(w => !wordState.has(cellKey(w)) && matchesAnswer(val, w, 'en-target', matchMode, w.language ?? lang, chineseDisplay));
+    const wordMatch = sorted.find(w => !wordState.has(cellKey(w)) && matchesAnswer(val, w, 'en-target', matchModeFor(w.language), w.language ?? lang, chineseDisplay));
     const transMatch = style === 'double'
-      ? sorted.find(w => !transState.has(cellKey(w)) && matchesAnswer(val, w, 'target-en', matchMode))
+      ? sorted.find(w => !transState.has(cellKey(w)) && matchesAnswer(val, w, 'target-en', matchModeFor(w.language)))
       : undefined;
 
     let matched: Word | null = null;

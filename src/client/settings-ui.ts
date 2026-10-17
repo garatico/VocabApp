@@ -101,7 +101,39 @@ function bindMirroredToggle(
  * attribute itself, so flipping the setting changes all of them the same way.
  */
 
+/**
+ * Settings → Answer Checking → Matching per language: one dropdown per language, built before the defaults
+ * snapshot so each starts on its default ("" — follow the language's default) and the row's changed /
+ * reset / undo come for free. Saved choices are painted on in restoreSettingsUI, like every other control.
+ */
+function buildMatchLangRows(): void {
+  const list = document.getElementById('settingMatchLangs');
+  if (!list) return;
+  list.innerHTML = '';
+  for (const lang of LANGUAGES) {
+    const row = document.createElement('div');
+    row.className = 'lang-appearance-row';
+    const name = document.createElement('span');
+    name.className = 'lang-appearance-name';
+    name.textContent = lang.label;
+    const select = document.createElement('select');
+    select.dataset.matchLang = lang.name;
+    select.setAttribute('aria-label', `Answer matching for ${lang.label}`);
+    const fallback = lang.defaultMatchMode === 'strict' ? 'Strict' : 'same as above';
+    for (const [value, label] of [['', `Default (${fallback})`], ['fuzzy', 'Flexible'], ['strict', 'Strict']] as const) {
+      select.appendChild(new Option(label, value, value === '', value === ''));
+    }
+    select.addEventListener('change', () => {
+      if (select.value === 'fuzzy' || select.value === 'strict') set('match_mode_' + lang.name, select.value);
+      else removeKey(P + 'match_mode_' + lang.name);
+    });
+    row.append(name, select);
+    list.appendChild(row);
+  }
+}
+
 export function bindSettings(): void {
+  buildMatchLangRows();
   // Before anything paints saved values onto the controls: the markup is what defines each default.
   snapshotSettingDefaults();
 
@@ -1303,6 +1335,9 @@ function restoreSettingsUI(): void {
   const savedMatch = get('match_mode', 'fuzzy');
   document.querySelectorAll<HTMLElement>('#settingMatch .sort-order-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.match === savedMatch);
+  });
+  document.querySelectorAll<HTMLSelectElement>('#settingMatchLangs select[data-match-lang]').forEach(sel => {
+    sel.value = Settings.getLanguageMatchMode(sel.dataset.matchLang ?? '') ?? '';
   });
 
   // Typo tolerance

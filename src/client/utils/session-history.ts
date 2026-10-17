@@ -24,7 +24,7 @@ import { bumpSrs, clearSrs, srsEntry } from './srs.ts';
 import { recordActivity } from './streak.ts';
 import { setLastMissed } from './missed-words.ts';
 
-export type QuizMode = 'recall' | 'doubleRecall' | 'table' | 'picture' | 'conjugation' | 'trivia' | 'wordChoice' | 'guessBlank' | 'sentenceScramble' | 'articles';
+export type QuizMode = 'recall' | 'doubleRecall' | 'table' | 'picture' | 'conjugation' | 'trivia' | 'wordChoice' | 'guessBlank' | 'sentenceScramble' | 'articles' | 'classifiers';
 
 /**
  * Table mode's own direction — see table-mode.ts's TableDirection. The other

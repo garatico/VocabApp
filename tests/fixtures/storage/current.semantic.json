@@ -104,6 +104,7 @@
     "s_list_filter_except": "true",
     "s_list_picker_counts": "false",
     "s_match_mode": "strict",
+    "s_match_mode_vietnamese": "fuzzy",
     "s_max_sessions_kept": "50",
     "s_my_content_page_size": "10",
     "s_onboarding_seen": "1",

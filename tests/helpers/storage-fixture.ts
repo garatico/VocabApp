@@ -330,7 +330,7 @@ const SETTINGS_NON_DEFAULT: Record<string, string> = {
   table_timed_quiz: 'true', table_timed_quiz_minutes: '15', track_hinted_correct: 'false',
   track_hinted_missed: 'false', track_hinted_revealed: 'false', typo_tolerance: 'high', ui_language: 'spanish',
   // dynamic families: <prefix><language | tense | person | part of speech | element>
-  lang_color_spanish: '#c0392b', lang_flag_spanish: 'es', tense_hue_present: '120', person_hue_0: '10',
+  lang_color_spanish: '#c0392b', lang_flag_spanish: 'es', match_mode_vietnamese: 'fuzzy', tense_hue_present: '120', person_hue_0: '10',
   pos_hue_verb: '200', table_color_correct: '#2e7d32', gender_color_masculine: '#3366cc',
   list_color_profile: '#aa3311', ctl_color_pool_topn: '#118844', tab_color_history: '#cc3366',
 };

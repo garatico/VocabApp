@@ -27,21 +27,21 @@ const GRADLE = `// Written by scripts/build-native.ts (scripts/lib/android-signi
 def signingProps = file(System.getenv('VOCABAPP_SIGNING') ?: "\${System.getProperty('user.home')}/.vocabapp/android-signing.properties")
 android {
     defaultConfig {
-        versionCode Integer.parseInt(System.getenv('VOCABAPP_VERSION_CODE') ?: '1')
-        versionName System.getenv('VOCABAPP_VERSION_NAME') ?: '1.0'
+        versionCode = Integer.parseInt(System.getenv('VOCABAPP_VERSION_CODE') ?: '1')
+        versionName = System.getenv('VOCABAPP_VERSION_NAME') ?: '1.0'
     }
     if (signingProps.exists()) {
         def p = new Properties()
         signingProps.withInputStream { p.load(it) }
         signingConfigs {
             release {
-                storeFile file(p.getProperty('storeFile'))
-                storePassword p.getProperty('storePassword')
-                keyAlias p.getProperty('keyAlias')
-                keyPassword p.getProperty('keyPassword')
+                storeFile = file(p.getProperty('storeFile'))
+                storePassword = p.getProperty('storePassword')
+                keyAlias = p.getProperty('keyAlias')
+                keyPassword = p.getProperty('keyPassword')
             }
         }
-        buildTypes { release { signingConfig signingConfigs.release } }
+        buildTypes { release { signingConfig = signingConfigs.release } }
     }
 }
 `;

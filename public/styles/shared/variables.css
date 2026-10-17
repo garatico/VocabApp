@@ -133,7 +133,7 @@
      Settings → Appearance → Tab Colors overrides each). */
   --tab-table: #2f7d55;    --tab-picture: #c2410c;    --tab-trivia: #6444ad;
   --tab-guessBlank: #0f7d94;    --tab-sentenceScramble: #b8285f;    --tab-conjugation: #2a62c0;
-  --tab-articles: #5f7a12;
+  --tab-articles: #5f7a12;    --tab-classifiers: #9c3d2e;
   --tab-mylists: #a0600b;    --tab-myContent: #8a2f9e;    --tab-history: #1d7a6b;
   --tab-settings: #4d6580;
   --cc-match-pronoun: #2a62c0;  --cc-match-infinitive: #b8285f;
@@ -231,7 +231,7 @@ html.dark {
 
   --tab-table: #6fcf97;    --tab-picture: #fb923c;    --tab-trivia: #b9a4ec;
   --tab-guessBlank: #4fc3d9;    --tab-sentenceScramble: #f28bb0;    --tab-conjugation: #7fb0f0;
-  --tab-articles: #c3d86e;
+  --tab-articles: #c3d86e;    --tab-classifiers: #f0a08f;
   --tab-mylists: #e0a855;    --tab-myContent: #d59bea;    --tab-history: #5fd0bd;
   --tab-settings: #a9bdd4;
   --cc-match-pronoun: #7fb0f0;  --cc-match-infinitive: #f28bb0;

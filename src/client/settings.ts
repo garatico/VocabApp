@@ -427,7 +427,26 @@ export const Settings = {
   getMlColor: (key: MlColorKey): string | null => readString(P + 'list_color_' + key),
 
   // ── All quizzes ────────────────────────────────────────────────────────────
+  /**
+   * Flexible or Strict for answers in `lang`: the learner's choice for that language (`match_mode_<lang>`,
+   * Settings → Answer Checking → Matching per language), else Strict where the language needs its marks
+   * (LanguageInfo.defaultMatchMode — Vietnamese tones), else the global setting (getMatchMode).
+   */
+  getMatchModeFor: (lang: string | null | undefined): MatchMode => {
+    if (lang) {
+      const own = readString(P + 'match_mode_' + lang);
+      if (own === 'fuzzy' || own === 'strict') return own;
+      if (languageInfo(lang).name === lang && languageInfo(lang).defaultMatchMode === 'strict') return 'strict';
+    }
+    return get('match_mode', 'fuzzy') as MatchMode;
+  },
+  /** The global Flexible/Strict setting — what a language with no default or choice of its own follows. */
   getMatchMode: (): MatchMode => get('match_mode', 'fuzzy') as MatchMode,
+  /** The learner's own choice for one language, or null when it follows the default. */
+  getLanguageMatchMode: (lang: string): MatchMode | null => {
+    const own = readString(P + 'match_mode_' + lang);
+    return own === 'fuzzy' || own === 'strict' ? own : null;
+  },
   getTypoTolerance: (): TypoTolerance => get('typo_tolerance', 'normal') as TypoTolerance,
   getTypoToleranceRatio: (): number => TYPO_RATIOS[get('typo_tolerance', 'normal') as TypoTolerance] ?? 0.25,
 
@@ -946,6 +965,7 @@ export const TAB_COLOR_DEFS: readonly [key: string, label: string, cssVar: strin
   ['guessBlank', 'Guess the Blank', '--tab-guessBlank'],
   ['sentenceScramble', 'Sentence Scramble', '--tab-sentenceScramble'],
   ['articles', 'Articles', '--tab-articles'],
+  ['classifiers', 'Classifiers', '--tab-classifiers'],
   ['conjugation', 'Conjugation', '--tab-conjugation'],
   ['mylists', 'My Lists', '--tab-mylists'],
   ['myContent', 'My Content', '--tab-myContent'],

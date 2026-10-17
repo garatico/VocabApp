@@ -78,6 +78,7 @@
         <button class="mode-tab" data-mode="guessBlank" role="tab" aria-selected="false" data-i18n="nav.guessBlank">Guess the Blank</button>
         <button class="mode-tab" data-mode="sentenceScramble" role="tab" aria-selected="false" data-i18n="nav.sentenceScramble">Sentence Scramble</button>
         <button class="mode-tab" data-mode="articles" role="tab" aria-selected="false" title="Which article does each noun take? der/die/das, el/la, le/la…" data-i18n="nav.articles">Articles</button>
+        <button class="mode-tab" data-mode="classifiers" role="tab" aria-selected="false" title="Which measure word counts each noun? 只/本/辆, con/cái/chiếc…" data-i18n="nav.classifiers" hidden>Classifiers</button>
         <button class="mode-tab" data-mode="conjugation" role="tab" aria-selected="false" data-i18n="nav.conjugation">Conjugation</button>
         <button class="mode-tab" data-mode="mylists" role="tab" aria-selected="false" data-i18n="nav.myLists">My Lists</button>
         <button class="mode-tab" data-mode="myContent" role="tab" aria-selected="false" title="Add your own words, trivia questions and pictures — stored in this browser only, never uploaded" data-i18n="nav.myContent">My Content</button>
@@ -956,6 +957,32 @@
         <div id="articlesScoreBottom" class="quiz-score quiz-score--boxed"></div>
       </section>
 
+      <section id="classifiersArea" hidden>
+        <!-- Same anatomy as #sentenceScrambleArea; nouns with a known classifier from the real
+             vocabulary `list` — see classifiers-mode.ts. -->
+        <div class="progressWrap">
+          <div class="progress">
+            <div id="classifiersBarTop" class="bar"></div>
+            <div id="classifiersBarTopMissed" class="bar-missed"></div>
+            <span id="classifiersStatsTop" class="progress-label"></span>
+          </div>
+        </div>
+        <div id="classifiersScoreTop" class="quiz-score quiz-score--boxed"></div>
+        <div id="classifiersSummaryTop" class="quiz-summary" style="display:none"></div>
+
+        <div id="classifiersWrap"></div>
+        <div id="classifiersSummaryBottom" class="quiz-summary" style="display:none"></div>
+
+        <div class="progressWrap">
+          <div class="progress">
+            <div id="classifiersBarBottom" class="bar"></div>
+            <div id="classifiersBarBottomMissed" class="bar-missed"></div>
+            <span id="classifiersStatsBottom" class="progress-label"></span>
+          </div>
+        </div>
+        <div id="classifiersScoreBottom" class="quiz-score quiz-score--boxed"></div>
+      </section>
+
       <section id="conjugationArea" hidden>
         <div id="conjSummaryTop" class="quiz-summary" style="display:none"></div>
         <div id="conjugationWrap"></div>
@@ -1660,6 +1687,14 @@
                 <button type="button" class="sort-order-btn" data-match="strict" data-i18n="settings.answers.strict">Strict</button>
                 <button type="button" class="sort-order-btn active" data-match="fuzzy" data-i18n="settings.answers.flexible">Flexible</button>
               </div>
+            </div>
+
+            <div data-advanced="true" class="settings-row">
+              <div class="settings-label">
+                <span data-i18n="settings.answers.matchLang">Matching per language</span>
+                <span class="settings-desc" data-i18n="settings.answers.matchLangDesc">Flexible or Strict for one language; Vietnamese defaults to Strict.</span>
+              </div>
+              <div class="lang-appearance-list" id="settingMatchLangs"></div>
             </div>
 
             <div class="settings-row">

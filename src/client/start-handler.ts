@@ -1,3 +1,4 @@
+import { hasClassifier } from './utils/classifiers.ts';
 import { startTableQuiz, getTableStyle, syncTableStyleUI } from './modes/table-controls.ts';
 import { renderTableRecallMode }          from './modes/table-recall-mode.ts';
 import { filterWords }                    from './filters/word-filters.ts';
@@ -26,6 +27,7 @@ interface StartHandlerElements {
   guessBlankWrap:  HTMLElement;
   sentenceScrambleWrap: HTMLElement;
   articlesWrap: HTMLElement;
+  classifiersWrap: HTMLElement;
   conjugationWrap: HTMLElement | null;
   output:          HTMLElement;
 }
@@ -83,6 +85,7 @@ export function bindStartHandler({
     guessBlankWrap,
     sentenceScrambleWrap,
     articlesWrap,
+    classifiersWrap,
     conjugationWrap,
     output,
   }
@@ -162,6 +165,10 @@ export function bindStartHandler({
       const hasArticle = (w: Word): boolean => articleChoices(w, fullLang) !== null;
       if (articlesOnly) list = list.filter(hasArticle);
 
+      // And for Classifiers: only a noun with a known classifier can be asked.
+      const classifiersOnly = modeAtStart === 'classifiers';
+      if (classifiersOnly) list = list.filter(hasClassifier);
+
       // Apply domain filter from the HTML #domainFilter checkboxes.
       // Words with no domain data pass through unconditionally — domain
       // assignments only exist for Spanish, so filtering on them must not
@@ -192,6 +199,7 @@ export function bindStartHandler({
         if (visualsOnly)   extras = extras.filter(w => hasVisual(fullLang, w));
         if (examplesOnly)  extras = extras.filter(w => w.examples.length > 0);
         if (articlesOnly)  extras = extras.filter(hasArticle);
+        if (classifiersOnly) extras = extras.filter(hasClassifier);
 
         // Apply list filter (same as applied to the base list above)
         extras = filterWords(extras);
@@ -400,6 +408,12 @@ export function bindStartHandler({
         articlesWrap.innerHTML = '';
         const { renderArticlesMode } = await import('./modes/articles-mode.ts');
         renderArticlesMode({ words: list, container: articlesWrap, lang: fullLang });
+      }
+
+      if (currentMode === 'classifiers') {
+        classifiersWrap.innerHTML = '';
+        const { renderClassifiersMode } = await import('./modes/classifiers-mode.ts');
+        renderClassifiersMode({ words: list, container: classifiersWrap, lang: fullLang });
       }
 
       if (currentMode === 'conjugation' && conjugationWrap) {

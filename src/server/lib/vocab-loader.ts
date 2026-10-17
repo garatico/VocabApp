@@ -131,11 +131,12 @@ export function supportsDisambiguator(): boolean {
  * detectWordColumnFlags (src/shared/vocab/column-flags.ts), which exists for
  * readers that only have an async StorageAdapter, not this live connection.
  */
-export function getWordColumnFlags(): { hasDisambiguator: boolean; hasIsFunctionWord: boolean; hasGrammaticalNumber: boolean } {
+export function getWordColumnFlags(): { hasDisambiguator: boolean; hasIsFunctionWord: boolean; hasGrammaticalNumber: boolean; hasClassifier: boolean } {
   return {
     hasDisambiguator:     hasDisambiguatorCol,
     hasIsFunctionWord:    hasIsFunctionWordCol,
     hasGrammaticalNumber: hasGrammaticalNumberCol,
+    hasClassifier:        hasClassifierCol,
   };
 }
 
@@ -161,7 +162,12 @@ let hasGrammaticalNumberCol = false;
 function checkGrammaticalNumberColumn(conn: Database.Database): void {
   const cols = conn.prepare("PRAGMA table_info('words')").all() as { name: string }[];
   hasGrammaticalNumberCol = cols.some(c => c.name === 'grammatical_number');
+  hasClassifierCol        = cols.some(c => c.name === 'classifier');
 }
+
+// And for schemaVersion 9's `classifier` (Chinese/Vietnamese nouns' measure words), checked in the same pass:
+// an older database just has none, and the Classifiers tab finds no nouns to drill.
+let hasClassifierCol = false;
 
 // Per-language in-memory cache
 const vocabCache = new Map<string, VocabData>();
@@ -371,6 +377,7 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
       hasDisambiguator:     hasDisambiguatorCol,
       hasIsFunctionWord:    hasIsFunctionWordCol,
       hasGrammaticalNumber: hasGrammaticalNumberCol,
+      hasClassifier:        hasClassifierCol,
     })}
       WHERE w.language = ?
       ORDER BY COALESCE(w.rank, 9999), w.word

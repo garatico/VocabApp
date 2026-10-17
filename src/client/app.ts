@@ -28,6 +28,7 @@ import { getUserTriviaQuestions }                from './data/user-content.ts';
 import { LANGUAGES, isoCode, supportsConjugation,
          conjugationUnavailableReason, languageInfo } from './data/languages.ts';
 import { hasArticles } from './utils/utils.ts';
+import { hasClassifiers } from './utils/classifiers.ts';
 import { availableLanguages, isPackagedApp, isTauriApp, awaitSqliteSetup } from './data/vocab-source.ts';
 import { logger } from './utils/logger.ts';
 import { refreshFilterSelect }                  from './utils/word-lists.ts';
@@ -76,6 +77,7 @@ const triviaWrap      = mustGet('triviaWrap');
 const guessBlankWrap  = mustGet('guessBlankWrap');
 const sentenceScrambleWrap = mustGet('sentenceScrambleWrap');
 const articlesWrap = mustGet('articlesWrap');
+const classifiersWrap = mustGet('classifiersWrap');
 const conjugationWrap = mustGet('conjugationWrap');
 const myListsWrap     = document.getElementById('myListsWrap');  // optional — page may omit it
 const historyWrap     = document.getElementById('historyWrap');  // optional — page may omit it
@@ -89,6 +91,7 @@ const triviaArea      = mustGet('triviaArea');
 const guessBlankArea  = mustGet('guessBlankArea');
 const sentenceScrambleArea = mustGet('sentenceScrambleArea');
 const articlesArea = mustGet('articlesArea');
+const classifiersArea = mustGet('classifiersArea');
 const conjugationArea = mustGet('conjugationArea');
 const myListsArea     = mustGet('myListsArea');
 const historyArea     = mustGet('historyArea');
@@ -297,6 +300,7 @@ async function markEmptyLanguages(): Promise<void> {
     syncConjugationAvailability();
     syncScriptDisplayAvailability();
     syncArticlesAvailability();
+    syncClassifiersAvailability();
     syncScriptTypeAvailability();
     syncScriptDisplaySettingsAvailability();
     void loadAndBuildFilters(langSelect.value);
@@ -343,6 +347,17 @@ function syncArticlesAvailability(): void {
   const tab = document.querySelector<HTMLButtonElement>('.mode-tab[data-mode="articles"]');
   if (!tab) return;
   const available = hasArticles(langSelect?.value ?? 'spanish');
+  tab.hidden = !available;
+  if (!available && tab.classList.contains('active')) {
+    document.querySelector<HTMLElement>('.mode-tab[data-mode="table"]')?.click();
+  }
+}
+
+/** The Classifiers tab, likewise, only for a language whose nouns are counted with one (Chinese, Vietnamese). */
+function syncClassifiersAvailability(): void {
+  const tab = document.querySelector<HTMLButtonElement>('.mode-tab[data-mode="classifiers"]');
+  if (!tab) return;
+  const available = hasClassifiers(langSelect?.value ?? 'spanish');
   tab.hidden = !available;
   if (!available && tab.classList.contains('active')) {
     document.querySelector<HTMLElement>('.mode-tab[data-mode="table"]')?.click();
@@ -791,7 +806,7 @@ const { updateModeUI } = bindModeSwitch({
   extraAreas: {
     mylists: myListsArea, settings: settingsArea, history: historyArea,
     trivia: triviaArea, guessBlank: guessBlankArea, chat: chatArea,
-    myContent: myContentArea, sentenceScramble: sentenceScrambleArea, articles: articlesArea,
+    myContent: myContentArea, sentenceScramble: sentenceScrambleArea, articles: articlesArea, classifiers: classifiersArea,
   },
   onActivate: {
     table: syncTableStyleUI,
@@ -923,7 +938,7 @@ bindStartHandler({
   // read `w.language ?? lang` for mastery/history and per-verb tense
   // filtering, and a bogus combined fallback breaks both silently.
   getAllWords: getAllWordsForCurrentLang,
-  elements:       { startBtn, tableWrap, pictureWrap, triviaWrap, guessBlankWrap, sentenceScrambleWrap, articlesWrap, conjugationWrap, output },
+  elements:       { startBtn, tableWrap, pictureWrap, triviaWrap, guessBlankWrap, sentenceScrambleWrap, articlesWrap, classifiersWrap, conjugationWrap, output },
 });
 
 // ── Event listeners ───────────────────────────────────────────────────────────
@@ -933,6 +948,7 @@ langSelect?.addEventListener('change', () => {
   syncConjugationAvailability();
   syncScriptDisplayAvailability();
   syncArticlesAvailability();
+  syncClassifiersAvailability();
   syncScriptTypeAvailability();
   syncScriptDisplaySettingsAvailability();
   updateLangPickerButton();
@@ -1322,6 +1338,7 @@ function prefetchModes(): void {
     void import('./modes/guess-blank-mode.ts');
     void import('./modes/sentence-scramble-mode.ts');
     void import('./modes/articles-mode.ts');
+    void import('./modes/classifiers-mode.ts');
     void import('./modes/conjugation/index.ts');
     void import('./modes/history-mode.ts');
     void import('./modes/my-content-mode.ts');
@@ -1391,6 +1408,7 @@ void (async function init(): Promise<void> {
   syncConjugationAvailability();
   syncScriptDisplayAvailability();
   syncArticlesAvailability();
+  syncClassifiersAvailability();
   syncScriptTypeAvailability();
   syncScriptDisplaySettingsAvailability();
   syncSimpleModeLocks();

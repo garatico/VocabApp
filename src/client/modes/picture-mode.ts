@@ -84,13 +84,13 @@ function renderNoPictures(container: HTMLElement, withHint = true): void {
  * setting at all, so Strict silently did nothing here while working in the tab
  * next door, and an irregular form was never accepted for its infinitive.
  */
-function wordIsCorrect(input: string, word: WordWithVisual): boolean {
-  return matchesAnswer(input, word, 'en-target', Settings.getMatchMode());
+function wordIsCorrect(input: string, word: WordWithVisual, lang: string): boolean {
+  return matchesAnswer(input, word, 'en-target', Settings.getMatchModeFor(word.language ?? lang.split('+')[0]));
 }
 
 /** Sudden Death's own wordIsCorrect — see utils.ts's couldStillMatch. */
-function wordCouldStillMatch(input: string, word: WordWithVisual): boolean {
-  return couldStillMatch(input, word, 'en-target', Settings.getMatchMode());
+function wordCouldStillMatch(input: string, word: WordWithVisual, lang: string): boolean {
+  return couldStillMatch(input, word, 'en-target', Settings.getMatchModeFor(word.language ?? lang.split('+')[0]));
 }
 
 // Returns all available visuals for a word, in priority order:
@@ -670,7 +670,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
     inp.setAttribute('spellcheck', 'false');
 
     inp.addEventListener('input', () => {
-      if (wordIsCorrect(inp.value, word)) {
+      if (wordIsCorrect(inp.value, word, lang)) {
         inp.value    = displayWord(word, Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang);
         inp.disabled = true;
         card.classList.add('correct');
@@ -683,7 +683,7 @@ function renderTypeMode(wordsWithVisuals: WordWithVisual[], container: HTMLEleme
         if (next) next.focus();
 
         updateTypeProgress();
-      } else if (Settings.getSuddenDeath() && inp.value && !wordCouldStillMatch(inp.value, word)) {
+      } else if (Settings.getSuddenDeath() && inp.value && !wordCouldStillMatch(inp.value, word, lang)) {
         // Same end state Give Up puts an unanswered card in — reused rather
         // than a new class, since scoring already treats "not correct" as
         // missed regardless of which of the two brought it there.
@@ -919,7 +919,7 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
     const state = states[idx];
     if (state.correct || state.revealed) return;
     state.value = inp.value;
-    if (wordIsCorrect(inp.value, word)) {
+    if (wordIsCorrect(inp.value, word, lang)) {
       state.correct = true;
       state.value   = displayWord(word, Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang);
       renderCurrent();
@@ -934,7 +934,7 @@ function renderFlashcardMode(wordsWithVisuals: WordWithVisual[], container: HTML
       if (nextUnanswered !== -1) {
         setTimeout(() => { idx = nextUnanswered; renderCurrent(); }, 600);
       }
-    } else if (Settings.getSuddenDeath() && inp.value && !wordCouldStillMatch(inp.value, word)) {
+    } else if (Settings.getSuddenDeath() && inp.value && !wordCouldStillMatch(inp.value, word, lang)) {
       // Same end state the card's own Give Up puts it in (line ~958 below).
       state.revealed = true;
       state.value    = displayWord(word, Settings.getShowWordSideDisambiguator(), Settings.getAbbreviateGrammarHint(), Settings.getShowGenderArticle(), lang);

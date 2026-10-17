@@ -101,6 +101,7 @@ export function shapeWordRow(row: WordSelectRow, language: string, deps: ShapeWo
       ...ifSet('gender',             row.gender || null),
       ...ifSet('plural',             row.plural || null),
       ...ifSet('grammatical_number', row.grammatical_number || null),
+      ...ifSet('classifier',         row.classifier || null),
       ...ifSet('register',           row.register || null),
       // Japanese: row.ipa is a hiragana reading, converted to romaji above so
       // the Chinese-oriented romanizedScript display code — which already

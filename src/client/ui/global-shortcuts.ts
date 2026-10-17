@@ -24,6 +24,7 @@ export const GO_CHORDS: Readonly<Record<string, string>> = {
   b: 'guessBlank',
   s: 'sentenceScramble',
   a: 'articles',
+  k: 'classifiers',
   c: 'conjugation',
   l: 'mylists',
   m: 'myContent',

@@ -9,7 +9,7 @@ import { isInAnyList, loadAllLists, listsForWordIn, type ListStore } from '../ut
 import { openListPicker }        from '../utils/list-picker.ts';
 import { openWordInfoPopover }   from '../utils/word-info-popover.ts';
 import { buildSpeakButton } from '../ui/speak-button.ts';
-import { Settings, applyAutofillAttr } from '../settings.ts';
+import { Settings, applyAutofillAttr, type MatchMode } from '../settings.ts';
 import { getMisses, type MissCounts } from '../utils/session-history.ts';
 import { flagUrl, isoCode }      from '../data/languages.ts';
 import { renderWordWithGender, applyGenderContainer, enableInputWheelScroll, shouldShowGenderIndicator } from '../utils/dom.ts';
@@ -142,7 +142,8 @@ export function renderTableMode({
   const cols      = Math.max(1, Math.min(5, Number(columns) || 3));
   const showHintButton   = Settings.getShowHintButton();
   const showRevealButton = Settings.getShowRevealButton();
-  const matchMode = Settings.getMatchMode();
+  /** Flexible or Strict for one word: a mixed quiz can hold a Strict language (Vietnamese) beside Flexible ones. */
+  const matchModeFor = (wordLang: string | null | undefined): MatchMode => Settings.getMatchModeFor((wordLang ?? lang).split('+')[0]);
   const chineseDisplay = Settings.getChineseDisplay();
   // Multiple choice (Settings → Table Quiz → Answer by): each row offers a few options instead of an answer box.
   const choiceMode   = Settings.getTableAnswerStyle() === 'choice';
@@ -236,7 +237,7 @@ export function renderTableMode({
       );
     }
     if (!typedInput || !Settings.getExpandGlossOnMatch()) return base;
-    const extra = extraMatchedGloss(typedInput, entry, Settings.getAnswerGlossCount(), matchMode);
+    const extra = extraMatchedGloss(typedInput, entry, Settings.getAnswerGlossCount(), matchModeFor(entry.language));
     return extra ? `${base} / ${glossWithMeaningNote(extra, entry)}` : base;
   }
 
@@ -272,14 +273,14 @@ export function renderTableMode({
 
   function checkInput(input: string, entry: Word, dir: DirectionPair): boolean {
     const [, answerSlot] = slotsFor(dir);
-    return slotMatches(input, entry, answerSlot, matchMode, entry.language ?? lang, chineseDisplay, meaningsFor(entry, dir));
+    return slotMatches(input, entry, answerSlot, matchModeFor(entry.language), entry.language ?? lang, chineseDisplay, meaningsFor(entry, dir));
   }
 
   /** Sudden Death's own checkInput — could more typing still land on an
    *  accepted answer, or has this input already strayed off every one? */
   function couldInputStillMatch(input: string, entry: Word, dir: DirectionPair): boolean {
     const [, answerSlot] = slotsFor(dir);
-    return slotCouldMatch(input, entry, answerSlot, matchMode, entry.language ?? lang, chineseDisplay, meaningsFor(entry, dir));
+    return slotCouldMatch(input, entry, answerSlot, matchModeFor(entry.language), entry.language ?? lang, chineseDisplay, meaningsFor(entry, dir));
   }
 
   function checkAllComplete(): boolean {
@@ -380,7 +381,7 @@ export function renderTableMode({
   function buildChoices(entry: Word, dir: DirectionPair): string[] | null {
     const [, answerSlot] = slotsFor(dir);
     const wl = entry.language ?? lang;
-    const accepts = (text: string): boolean => slotMatches(text, entry, answerSlot, matchMode, wl, chineseDisplay, 1);
+    const accepts = (text: string): boolean => slotMatches(text, entry, answerSlot, matchModeFor(wl), wl, chineseDisplay, 1);
     const right = [choiceText(entry, answerSlot), primaryGlossForHint(entry), revealTextFor(entry, dir, wl, chineseDisplay)]
       .find(t => t && accepts(t));
     if (!right) return null;

@@ -57,6 +57,15 @@ export interface LanguageInfo {
    */
   romanizedScript: boolean;
   /**
+   * Whether typed answers in this language are checked Strict (marks count) unless the learner says
+   * otherwise for it. Absent means it follows the global Flexible/Strict setting. Vietnamese is Strict:
+   * its tone marks tell words apart (bàn "table", bán "sell", bạn "friend"), so Flexible would accept the
+   * wrong word. See Settings.getMatchMode.
+   */
+  defaultMatchMode?: 'fuzzy' | 'strict';
+  /** Are nouns counted with a classifier (只, 本; con, cái)? Shows the Classifiers tab — see utils/classifiers.ts. */
+  hasClassifiers?: boolean;
+  /**
    * Table mode's Compare/Multi-language indicator: a flag image and the CSS
    * custom property carrying its tinted cell-background color. See table.css
    * and variables.css for the `--lang-<name>-bg` definitions this points at.
@@ -142,10 +151,10 @@ export const LANGUAGES: LanguageInfo[] = [
   { name: 'french',     label: 'French',     iso: 'fr', hasConjugations: true,  capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-french-bg',     flagOptions: FLAG_OPTIONS['french'],     flagCountry: FLAG_OPTIONS['french'][0].country },
   { name: 'german',     label: 'German',     iso: 'de', hasConjugations: true,  capitalisesNouns: true,  romanizedScript: false, colorVar: '--lang-german-bg',     flagOptions: FLAG_OPTIONS['german'],     flagCountry: FLAG_OPTIONS['german'][0].country },
   { name: 'dutch',      label: 'Dutch',      iso: 'nl', hasConjugations: true,  capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-dutch-bg',      flagOptions: FLAG_OPTIONS['dutch'],      flagCountry: FLAG_OPTIONS['dutch'][0].country },
-  { name: 'chinese',    label: 'Chinese',    iso: 'zh', hasConjugations: false, capitalisesNouns: false, romanizedScript: true,  colorVar: '--lang-chinese-bg',    flagOptions: FLAG_OPTIONS['chinese'],    flagCountry: FLAG_OPTIONS['chinese'][0].country },
+  { name: 'chinese',    label: 'Chinese',    iso: 'zh', hasConjugations: false, capitalisesNouns: false, romanizedScript: true,  colorVar: '--lang-chinese-bg',    flagOptions: FLAG_OPTIONS['chinese'],    flagCountry: FLAG_OPTIONS['chinese'][0].country, hasClassifiers: true },
   { name: 'japanese',   label: 'Japanese',   iso: 'ja', hasConjugations: false, capitalisesNouns: false, romanizedScript: true,  colorVar: '--lang-japanese-bg',   flagOptions: FLAG_OPTIONS['japanese'],   flagCountry: FLAG_OPTIONS['japanese'][0].country },
   { name: 'indonesian', label: 'Indonesian', iso: 'id', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-indonesian-bg', flagOptions: FLAG_OPTIONS['indonesian'], flagCountry: FLAG_OPTIONS['indonesian'][0].country },
-  { name: 'vietnamese', label: 'Vietnamese', iso: 'vi', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-vietnamese-bg', flagOptions: FLAG_OPTIONS['vietnamese'], flagCountry: FLAG_OPTIONS['vietnamese'][0].country },
+  { name: 'vietnamese', label: 'Vietnamese', iso: 'vi', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-vietnamese-bg', flagOptions: FLAG_OPTIONS['vietnamese'], flagCountry: FLAG_OPTIONS['vietnamese'][0].country, defaultMatchMode: 'strict', hasClassifiers: true },
 ];
 
 /** Language names in display order — the order of the dropdown. */

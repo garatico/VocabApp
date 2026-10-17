@@ -25,6 +25,8 @@ export interface WordLinguistic {
    * those also carry a `gender`. See utils/utils.ts's grammarHint().
    */
   grammatical_number?: string | null;
+  /** Chinese/Vietnamese nouns: the classifier(s) they are counted with, comma-separated, the usual one first. */
+  classifier?:         string | null;
   register?:           string | null;
   ipa?:                string | null;
   syllables?:          string[] | null;

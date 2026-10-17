@@ -38,6 +38,8 @@ export interface Word {
     gender?:            string;
     plural?:            string;
     grammatical_number?: string;
+    /** Chinese/Vietnamese nouns: the measure word(s), comma-separated, the usual one first ("只, 条"). */
+    classifier?: string;
     register?:          string;
     ipa?:               string;
     syllables?:         string[];

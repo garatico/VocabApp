@@ -20,6 +20,8 @@ export interface WordSelectColumnFlags {
   hasDisambiguator:      boolean;
   hasIsFunctionWord:     boolean;
   hasGrammaticalNumber:  boolean;
+  /** schemaVersion 9: a Chinese or Vietnamese noun's measure word(s). */
+  hasClassifier:         boolean;
 }
 
 /** Row shape returned by a query built with buildWordSelectSql. */
@@ -51,6 +53,7 @@ export interface WordSelectRow {
   disambiguator:         string | null;
   is_function_word:      number;
   grammatical_number:    string | null;
+  classifier:            string | null;
 }
 
 /** The SELECT-list + FROM clause, no WHERE/ORDER BY/LIMIT. */
@@ -66,6 +69,7 @@ export function buildWordSelectSql(flags: WordSelectColumnFlags): string {
       ${flags.hasDisambiguator ? 'w.disambiguator,' : 'NULL as disambiguator,'}
       ${flags.hasIsFunctionWord ? 'w.is_function_word,' : '0 as is_function_word,'}
       ${flags.hasGrammaticalNumber ? 'w.grammatical_number,' : 'NULL as grammatical_number,'}
+      ${flags.hasClassifier ? 'w.classifier,' : 'NULL as classifier,'}
       (SELECT json_group_array(gloss)
          FROM (SELECT gloss FROM word_glosses  WHERE word_id = w.id ORDER BY position)
       ) AS glosses,

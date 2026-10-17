@@ -11,7 +11,7 @@
 import { t } from '../i18n/index.ts';
 
 const GROUPS: { key: string; fallback: string; modes: string[] }[] = [
-  { key: 'nav.groupQuizzes', fallback: 'Quizzes', modes: ['table', 'picture', 'trivia', 'guessBlank', 'sentenceScramble', 'articles', 'conjugation'] },
+  { key: 'nav.groupQuizzes', fallback: 'Quizzes', modes: ['table', 'picture', 'trivia', 'guessBlank', 'sentenceScramble', 'articles', 'classifiers', 'conjugation'] },
   { key: 'nav.groupLibrary', fallback: 'Library', modes: ['mylists', 'myContent', 'history'] },
   { key: 'nav.groupApp',     fallback: 'App',     modes: ['settings', 'chat'] },
 ];
