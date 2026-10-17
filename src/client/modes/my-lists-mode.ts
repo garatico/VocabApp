@@ -68,6 +68,19 @@ function updateBadge(): void {
 // switching the language (if needed) and clicking the tab.
 let pendingFocusWord: { lang: string; word: string } | null = null;
 
+/**
+ * Lists changed outside the normal editing path (a restore) — redraw the My Lists that is on screen.
+ *
+ * My Lists is built twice at startup: once up front (app.ts, so starter lists are seeded) and again when the
+ * tab is opened. The up-front build arrives as its own chunk and can land *after* the tab's, replacing the
+ * screen with a sidebar drawn before a restore wrote anything — while the restore's own handler redraws the
+ * other, now detached, instance. The restored list was saved but never appeared until the next visit. Each
+ * mount takes over this one listener, so the event reaches the instance actually showing.
+ */
+export const LISTS_CHANGED_EVENT = 'vq:lists-changed';
+let redrawMounted: (() => void) | null = null;
+document.addEventListener(LISTS_CHANGED_EVENT, () => redrawMounted?.());
+
 /** Switches to My Lists → Browse All Words, filtered and expanded on one
  *  word — the entry point Table mode's word-info popover uses. Switches the
  *  global language picker to the word's own language first when it
@@ -214,5 +227,6 @@ export function renderMyLists(container: HTMLElement): void {
   container.appendChild(panel);
   fitToScreen(container);
 
+  redrawMounted = () => { ctx.updateBadge(); ctx.renderSidebar(); };
   sidebar.render();
 }

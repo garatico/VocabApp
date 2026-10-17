@@ -123,6 +123,8 @@ export function createSidebar(ctx: ListsCtx): SidebarUI {
       try {
         const summary = applyBackup(String(reader.result));
         ctx.updateBadge(); render();
+        // This sidebar may no longer be the one on screen (see LISTS_CHANGED_EVENT in my-lists-mode.ts).
+        document.dispatchEvent(new CustomEvent('vq:lists-changed'));
         // Restore is additive, so there is nothing meaningful to undo.
         showUndo(summary, null, 6000);
       } catch (err) {

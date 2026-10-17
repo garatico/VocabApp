@@ -56,6 +56,15 @@ async function renameInline(page: Page, c: Locator, newName: string): Promise<vo
 }
 
 // ═══ Single-language lists ═════════════════════════════════════════════════════
+/**
+ * Close an open popover by clicking outside it — on the sidebar's "Lists" heading, which does nothing itself.
+ * Not the page corner: (5, 5) is the Table tab once the page is scrolled to the top, and about one run in
+ * twelve the "click away" switched tabs and the next step found My Lists hidden.
+ */
+async function clickAway(page: import('@playwright/test').Page): Promise<void> {
+  await page.locator('.ml-sidebar-title').first().click();
+}
+
 test('single-language lists: create, rename, copy, delete and undo', async ({ page }) => {
   await createInline(page, '.ml-single-head', 'Alpha');
   await expect(card(page, 'ml-single-item', 'Alpha')).toBeVisible();
@@ -110,14 +119,14 @@ test('folders: create, give an emoji and colour, choose what to hide from, colla
   await page.locator('.ml-folder-swatch').nth(1).click();
   await expect(folderHead).toHaveClass(/ml-folder-head--colored/);
   await expect(folderHead).toContainText('✈️');
-  await page.mouse.click(5, 5);                               // dismiss the popover
+  await clickAway(page);                                      // dismiss the popover
 
   // Hide from …
   await folderHead.locator('.ml-menu-gear').click();
   await page.locator('.ml-action-menu:not([hidden]) .ml-menu-item--hide').click();
   await expect(page.locator('.ml-folder-style-pop .ml-chip-dropdown-item')).not.toHaveCount(0);
   await page.locator('.ml-folder-style-pop .ml-chip-dropdown-item', { hasText: 'Picture' }).locator('input').check();
-  await page.mouse.click(5, 5);
+  await clickAway(page);
 
   // Collapse, and it stays collapsed across a reload
   await folderHead.locator('.ml-section-toggle-btn').click();
@@ -137,7 +146,7 @@ test('folders: rename carries its list, emoji/colour and collapsed state to the 
   await menuAction(page, folder.locator('.ml-folder-head'), 'emoji');
   await page.locator('.ml-emoji-tab', { hasText: 'Travel' }).click();
   await page.locator('.ml-folder-style-quick button', { hasText: '✈️' }).click();
-  await page.mouse.click(5, 5);
+  await clickAway(page);
   await folder.locator('.ml-section-toggle-btn').click();
   await expect(folder.locator('.ml-folder-body')).toBeHidden();
 
@@ -221,7 +230,7 @@ test('a list card can be given a custom colour via the native colour input', asy
   await createInline(page, '.ml-single-head', 'Hue');
   await menuAction(page, card(page, 'ml-single-item', 'Hue'), 'emoji');
   await page.locator('.ml-folder-custom input.ml-folder-swatch--custom').fill('#123456');
-  await page.mouse.click(5, 5);
+  await clickAway(page);
   await expect(card(page, 'ml-single-item', 'Hue')).toHaveClass(/ml-list-item--colored/);
   const meta = await page.evaluate(() => (JSON.parse(localStorage.getItem('vq_lists_meta_spanish') ?? '{}') as Record<string, { color?: string }>).Hue);
   expect(meta?.color).toBe('#123456');
