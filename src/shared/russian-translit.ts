@@ -56,6 +56,21 @@ export function latinKey(s: string): string {
     .replace(/(?<![kzcs])h/g, 'kh');
 }
 
+/**
+ * The keys an answer typed in Latin letters may stand for. A finished answer has one: `latinKey(typed)`.
+ * One still being typed can end halfway through a spelling `latinKey` would read otherwise: a final
+ * "c" is ts on its own but the start of ch (что: c, ch, chto), and a final "sc" is the start of sch
+ * (щ). Read as ts, they would make Sudden Death mark a correct answer wrong mid-word, so the unfinished
+ * readings come along too. They can only ever match as a prefix: no full key ends in a bare c or in shc.
+ */
+export function latinAttempts(typed: string): string[] {
+  const out = [latinKey(typed)];
+  const t = typed.toLowerCase();
+  if (t.endsWith('sc')) out.push(`${latinKey(t.slice(0, -2))}shc`);
+  else if (t.endsWith('c')) out.push(`${latinKey(t.slice(0, -1))}c`);
+  return out;
+}
+
 /** The Latin keys a Russian word is accepted as: every ё/й choice, folded by `latinKey`. */
 export function latinTargets(word: string): string[] {
   const keys = new Set<string>();

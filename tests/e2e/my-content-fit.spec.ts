@@ -19,9 +19,16 @@ test('every My Content tab fits one screen without page scroll', async ({ page }
   }
 
   // The word list and the conjugation verb list still scroll on their own.
+  // Polled: the words arrive after the tab opens, and a list measured before then has nothing to scroll.
   await page.locator('.mc-tab-btn', { hasText: 'Words' }).click();
-  expect(await page.locator('.mc-we .word-list').evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  await expect.poll(
+    () => page.locator('.mc-we .word-list').evaluate(el => el.scrollHeight > el.clientHeight),
+    { message: 'the word list should scroll on its own' },
+  ).toBe(true);
   await page.locator('.mc-tab-btn', { hasText: 'Conjugations' }).click();
   await expect(page.locator('.mcc-verb-item').first()).toBeVisible();
-  expect(await page.locator('.mcc-verb-list').evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  await expect.poll(
+    () => page.locator('.mcc-verb-list').evaluate(el => el.scrollHeight > el.clientHeight),
+    { message: 'the verb list should scroll on its own' },
+  ).toBe(true);
 });

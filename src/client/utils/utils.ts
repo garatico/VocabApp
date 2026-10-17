@@ -1,7 +1,7 @@
 import type { Word } from '../types.js';
 import { languageInfo } from '../data/languages.js';
 import { stripDiacritics } from './match.js';
-import { hasLatin, latinKey, latinTargets } from '../../shared/russian-translit.js';
+import { hasLatin, latinAttempts, latinKey, latinTargets } from '../../shared/russian-translit.js';
 
 /**
  * For a `romanizedScript` language (Chinese): which script is the word slot's
@@ -293,10 +293,13 @@ function isReverseCorrectImpl(
   input: string, entry: Word, norm: (s?: string) => string,
   lang: string | null | undefined, display: ChineseDisplay, exact: boolean,
 ): boolean {
-  let attempt = norm(input);
+  const attempt = norm(input);
   if (!attempt) return !exact;
-  if (lang && languageInfo(lang).latinTyping && hasLatin(attempt)) attempt = latinKey(attempt);
-  return tokenCompare(attempt, reverseTargets(entry, norm, lang, display), exact);
+  const targets = reverseTargets(entry, norm, lang, display);
+  if (lang && languageInfo(lang).latinTyping && hasLatin(attempt)) {
+    return latinAttempts(attempt).some(a => tokenCompare(a, targets, exact));
+  }
+  return tokenCompare(attempt, targets, exact);
 }
 
 /**
