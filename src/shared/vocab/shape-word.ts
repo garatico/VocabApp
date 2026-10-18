@@ -55,6 +55,26 @@ function parseJsonField<T>(
   }
 }
 
+/**
+ * `examples` (the sentences), and beside them, index for index, `example_translations` and `example_sources`
+ * when the database has them (schemaVersion 11) and any is set. Zipped before empty sentences are dropped,
+ * so the three can never fall out of step.
+ */
+function shapeExamples(row: WordSelectRow, deps: ShapeWordDeps): {
+  examples: string[]; example_translations?: (string | null)[]; example_sources?: (string | null)[];
+} {
+  const texts = row.examples ? (parseJsonField<(string | null)[]>(row.examples, row.word, 'examples', deps, []) ?? []) : [];
+  const trans = row.example_translations ? (parseJsonField<(string | null)[]>(row.example_translations, row.word, 'example_translations', deps, []) ?? []) : [];
+  const srcs  = row.example_sources ? (parseJsonField<(string | null)[]>(row.example_sources, row.word, 'example_sources', deps, []) ?? []) : [];
+  const kept = texts.map((t, i) => ({ t, tr: trans[i] ?? null, src: srcs[i] ?? null })).filter(x => x.t);
+  const out: { examples: string[]; example_translations?: (string | null)[]; example_sources?: (string | null)[] } = {
+    examples: kept.map(x => x.t as string),
+  };
+  if (kept.some(x => x.tr)) out.example_translations = kept.map(x => x.tr);
+  if (kept.some(x => x.src)) out.example_sources = kept.map(x => x.src);
+  return out;
+}
+
 export function shapeWordRow(row: WordSelectRow, language: string, deps: ShapeWordDeps): Word {
   // Conjugations: compute at load time from verb-rules for rule-based verbs
   // (regular-*, ortho-*, stem-*). For irregular-* verbs the full forms live
@@ -91,7 +111,7 @@ export function shapeWordRow(row: WordSelectRow, language: string, deps: ShapeWo
     difficulty:  row.difficulty   || null,
     notes:       row.notes        || '',
     glosses:   row.glosses  ? (parseJsonField<string[]>(row.glosses,  row.word, 'glosses',  deps, []) ?? []).filter(Boolean) : [],
-    examples:  row.examples ? (parseJsonField<string[]>(row.examples, row.word, 'examples', deps, []) ?? []).filter(Boolean) : [],
+    ...shapeExamples(row, deps),
     ...ifSet('svg_url',   deps.assets.svgUrl(language, row.word)),
     ...ifSet('emoji',     row.emoji || null),
     ...ifSet('audio_url', deps.assets.audioUrl(language, row.word)),

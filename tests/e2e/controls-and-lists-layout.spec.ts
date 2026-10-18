@@ -258,7 +258,7 @@ test('Settings → Help & Tips: the Glossary\'s CSV entry opens the CSV guide', 
   await page.locator('[data-collapse="settingsBodyGlossary"]').click();
   await page.locator('[data-setting-link="csvGuide"]').click();
   await expect(page.locator('#csvGuide table.csv-sheet').first()).toBeVisible();
-  await expect(page.locator('.help-tip')).toHaveCount(9);
+  await expect(page.locator('.help-tip')).toHaveCount(10);   // nine tips and Sources (where the words come from)
 });
 
 test('Settings → Help & Tips fits a phone: the CSV sheets scroll inside their cards, not the page', async ({ page }) => {

@@ -154,6 +154,14 @@ html.dark .tt-band[data-band] { color: hsl(var(--pos-hue) 65% 72%); }
 .tt-glosses     { color: var(--text-muted); margin-bottom: 0.5rem; }
 /* On a language's tint (a mixed-language quiz) muted text fell under 4.5:1 on all fifteen; full text holds. */
 #wordTooltip[class*="lang-tag-"] .tt-glosses { color: var(--text); }
+
+/* Example sentences in the revealed detail (word-tooltip.ts buildExamples): the sentence, its English
+   under it, and a Tatoeba credit link. Same tint rule as the glosses above. */
+.tt-examples     { display: grid; gap: 0.35rem; margin: 0 0 0.5rem; }
+.tt-example-text { font-style: italic; }
+.tt-example-tr   { color: var(--text-muted); font-size: 0.85em; }
+.tt-example-src  { color: inherit; text-decoration: underline; }
+#wordTooltip[class*="lang-tag-"] .tt-example-tr { color: var(--text); }
 .tt-hidden-hint { font-style: italic; font-size: 0.72rem; }
 
 /* ── Section label ── */

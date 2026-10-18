@@ -391,12 +391,57 @@ export function buildConjSection(
  * without a reveal-gating concept of its own, and without duplicating this
  * logic where the two could quietly drift apart.
  */
+const TATOEBA_SOURCE = /^tatoeba:(\d+)$/;
+
+/**
+ * Up to two example sentences, each with its English under it and, for a Tatoeba sentence, a link to its
+ * page (the licence, CC BY 2.0 FR, asks for credit). Only in the revealed detail: a sentence contains the
+ * word, so it would give the answer away. Text nodes throughout: examples are editable in My Content.
+ */
+function buildExamples(word: Word, lang: string): HTMLElement | null {
+  const texts = (word.examples ?? []).filter(Boolean);
+  if (texts.length === 0) return null;
+  const box = document.createElement('div');
+  box.className = 'tt-examples';
+  texts.slice(0, 2).forEach((text, i) => {
+    const item = document.createElement('div');
+    item.className = 'tt-example';
+    const sentence = document.createElement('div');
+    sentence.className = 'tt-example-text';
+    sentence.lang = isoCode(lang);
+    sentence.textContent = text;
+    item.appendChild(sentence);
+    const english = word.example_translations?.[i];
+    const source = TATOEBA_SOURCE.exec(word.example_sources?.[i] ?? '');
+    if (english || source) {
+      const line = document.createElement('div');
+      line.className = 'tt-example-tr';
+      if (english) line.append(english);
+      if (source) {
+        const link = document.createElement('a');
+        link.className = 'tt-example-src';
+        link.href = `https://tatoeba.org/en/sentences/show/${source[1]}`;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = 'Tatoeba';
+        link.title = 'Sentence from Tatoeba (tatoeba.org), CC BY 2.0 FR';
+        line.append(english ? ' · ' : '', link);
+      }
+      item.appendChild(line);
+    }
+    box.appendChild(item);
+  });
+  return box;
+}
+
 function appendRevealedDetail(
   container: HTMLElement, word: Word, lang: string,
   onExpandToggle?: (expanding: boolean) => void,
   conjOnDemand?: { onLayout: () => void },
 ): void {
   container.appendChild(buildGlosses(word));
+  const examples = buildExamples(word, lang);
+  if (examples) container.appendChild(examples);
 
   if (word.pos === 'verb') {
     const conjSection = buildConjSection(word.linguistic?.conjugations, lang, onExpandToggle);

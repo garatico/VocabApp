@@ -24,6 +24,8 @@ export interface WordSelectColumnFlags {
   hasClassifier:         boolean;
   /** schemaVersion 10: the word with its stress marked (Russian). */
   hasStressed:           boolean;
+  /** schemaVersion 11: word_examples.translation and .source (an example's English, and 'tatoeba:<id>'). */
+  hasExampleDetails:     boolean;
 }
 
 /** Row shape returned by a query built with buildWordSelectSql. */
@@ -57,6 +59,8 @@ export interface WordSelectRow {
   grammatical_number:    string | null;
   classifier:            string | null;
   stressed:              string | null;
+  example_translations:  string | null;
+  example_sources:       string | null;
 }
 
 /** The SELECT-list + FROM clause, no WHERE/ORDER BY/LIMIT. */
@@ -80,6 +84,12 @@ export function buildWordSelectSql(flags: WordSelectColumnFlags): string {
       (SELECT json_group_array(example)
          FROM (SELECT example FROM word_examples WHERE word_id = w.id ORDER BY rowid)
       ) AS examples,
+      ${flags.hasExampleDetails ? `(SELECT json_group_array(translation)
+         FROM (SELECT translation FROM word_examples WHERE word_id = w.id ORDER BY rowid)
+      ) AS example_translations,
+      (SELECT json_group_array(source)
+         FROM (SELECT source FROM word_examples WHERE word_id = w.id ORDER BY rowid)
+      ) AS example_sources,` : 'NULL as example_translations, NULL as example_sources,'}
       w.domains,
       (SELECT json_group_array(tag)
          FROM (SELECT tag FROM word_tags WHERE word_id = w.id ORDER BY rowid)

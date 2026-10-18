@@ -554,3 +554,36 @@ describe('buildWordDetailContent — synonyms/antonyms', () => {
     expect(spans[1]?.textContent).toBe('ant: callar');
   });
 });
+
+describe('example sentences in the revealed detail', () => {
+  it('shows each sentence with its English and a Tatoeba link, in the word\'s language', async () => {
+    const { buildWordDetailContent } = await load();
+    const word = baseWord({
+      examples: ['Hablo español.', 'Ella habla mucho.'],
+      example_translations: ['I speak Spanish.', null],
+      example_sources: ['tatoeba:1234', null],
+    });
+    const el = buildWordDetailContent(word, 'spanish', true);
+    const items = el.querySelectorAll('.tt-example');
+    expect(items).toHaveLength(2);
+    expect(items[0].querySelector('.tt-example-text')?.textContent).toBe('Hablo español.');
+    expect(items[0].querySelector<HTMLElement>('.tt-example-text')?.lang).toBe('es');
+    expect(items[0].querySelector('.tt-example-tr')?.textContent).toBe('I speak Spanish. · Tatoeba');
+    const link = items[0].querySelector<HTMLAnchorElement>('a.tt-example-src');
+    expect(link?.href).toBe('https://tatoeba.org/en/sentences/show/1234');
+    expect(link?.rel).toBe('noopener noreferrer');
+    expect(items[1].querySelector('.tt-example-tr')).toBeNull();      // no English, no source: just the sentence
+  });
+
+  it('never shows them before the word is revealed: the sentence holds the answer', async () => {
+    const { buildWordDetailContent } = await load();
+    const el = buildWordDetailContent(baseWord({ examples: ['Hablo español.'] }), 'spanish', false);
+    expect(el.querySelector('.tt-examples')).toBeNull();
+  });
+
+  it('renders a sentence as text, not markup', async () => {
+    const { buildWordDetailContent } = await load();
+    const el = buildWordDetailContent(baseWord({ examples: ['<img src=x onerror=alert(1)>'] }), 'spanish', true);
+    expect(el.querySelector('.tt-example img')).toBeNull();
+  });
+});

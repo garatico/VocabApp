@@ -1136,6 +1136,13 @@ html.dark .ml-word-band[data-band] {
   line-height: 1.4;
 }
 
+/* An example's English, on its own line under the sentence (row-shared.ts, schemaVersion 11). */
+.ml-detail-sub {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+
 .ml-detail-none {
   color: var(--text-muted);
   font-style: italic;

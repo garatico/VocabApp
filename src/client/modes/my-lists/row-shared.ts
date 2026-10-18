@@ -220,7 +220,14 @@ export function buildWordDetail(entry: VocabEntry, lang: string, addedDate?: num
     if (sounds) table.appendChild(detailRow('Sounds like', sounds));
   }
   if (entry.examples.length > 0) {
-    table.appendChild(detailRow(entry.examples.length > 1 ? 'Examples' : 'Example', entry.examples[0]));
+    const row = detailRow(entry.examples.length > 1 ? 'Examples' : 'Example', entry.examples[0]);
+    if (entry.exampleTranslation) {
+      const english = document.createElement('span');
+      english.className = 'ml-detail-sub';
+      english.textContent = entry.exampleTranslation;
+      row.querySelector('.ml-detail-value')?.append(english);
+    }
+    table.appendChild(row);
   }
   if (table.children.length > 0) detail.appendChild(table);
 

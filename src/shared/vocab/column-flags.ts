@@ -14,11 +14,13 @@ import type { WordSelectColumnFlags } from './word-select.js';
 export async function detectWordColumnFlags(adapter: StorageAdapter): Promise<WordSelectColumnFlags> {
   const cols  = await adapter.all<{ name: string }>("PRAGMA table_info('words')");
   const names = new Set(cols.map(c => c.name));
+  const exCols = new Set((await adapter.all<{ name: string }>("PRAGMA table_info('word_examples')")).map(c => c.name));
   return {
     hasDisambiguator:     names.has('disambiguator'),
     hasIsFunctionWord:    names.has('is_function_word'),
     hasGrammaticalNumber: names.has('grammatical_number'),
     hasClassifier:        names.has('classifier'),
     hasStressed:          names.has('stressed'),
+    hasExampleDetails:    exCols.has('translation') && exCols.has('source'),
   };
 }

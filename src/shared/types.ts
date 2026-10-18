@@ -29,6 +29,10 @@ export interface Word {
   notes:       string;
   glosses:     string[];
   examples:    string[];
+  /** The English of each example, index for index (schemaVersion 11); null where it has none. */
+  example_translations?: (string | null)[];
+  /** Where each example came from, for credit: 'tatoeba:<sentence id>', or null. */
+  example_sources?: (string | null)[];
   svg_url?:    string;
   emoji?:      string;
   audio_url?:  string;

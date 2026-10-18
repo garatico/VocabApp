@@ -131,13 +131,14 @@ export function supportsDisambiguator(): boolean {
  * detectWordColumnFlags (src/shared/vocab/column-flags.ts), which exists for
  * readers that only have an async StorageAdapter, not this live connection.
  */
-export function getWordColumnFlags(): { hasDisambiguator: boolean; hasIsFunctionWord: boolean; hasGrammaticalNumber: boolean; hasClassifier: boolean; hasStressed: boolean } {
+export function getWordColumnFlags(): { hasDisambiguator: boolean; hasIsFunctionWord: boolean; hasGrammaticalNumber: boolean; hasClassifier: boolean; hasStressed: boolean; hasExampleDetails: boolean } {
   return {
     hasDisambiguator:     hasDisambiguatorCol,
     hasIsFunctionWord:    hasIsFunctionWordCol,
     hasGrammaticalNumber: hasGrammaticalNumberCol,
     hasClassifier:        hasClassifierCol,
     hasStressed:          hasStressedCol,
+    hasExampleDetails:    hasExampleDetailsCol,
   };
 }
 
@@ -165,6 +166,8 @@ function checkGrammaticalNumberColumn(conn: Database.Database): void {
   hasGrammaticalNumberCol = cols.some(c => c.name === 'grammatical_number');
   hasClassifierCol        = cols.some(c => c.name === 'classifier');
   hasStressedCol          = cols.some(c => c.name === 'stressed');
+  const exCols = conn.prepare("PRAGMA table_info('word_examples')").all() as { name: string }[];
+  hasExampleDetailsCol    = exCols.some(c => c.name === 'translation') && exCols.some(c => c.name === 'source');
 }
 
 // And for schemaVersion 9's `classifier` (Chinese/Vietnamese nouns' measure words), checked in the same pass:
@@ -174,6 +177,9 @@ let hasClassifierCol = false;
 // And schemaVersion 10's `stressed` (a Russian word with its stress marked), same pass: an older database
 // has none, and words show unmarked.
 let hasStressedCol = false;
+
+// And schemaVersion 11's word_examples.translation/source: an older database just shows examples untranslated.
+let hasExampleDetailsCol = false;
 
 // Per-language in-memory cache
 const vocabCache = new Map<string, VocabData>();
@@ -385,6 +391,7 @@ export function loadVocabFile(language: string): VocabData & { cacheAge: number 
       hasGrammaticalNumber: hasGrammaticalNumberCol,
       hasClassifier:        hasClassifierCol,
       hasStressed:          hasStressedCol,
+      hasExampleDetails:    hasExampleDetailsCol,
     })}
       WHERE w.language = ?
       ORDER BY COALESCE(w.rank, 9999), w.word

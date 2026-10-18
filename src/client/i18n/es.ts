@@ -615,6 +615,8 @@ export const es: Record<string, string> = {
   'settings.help.tipDaily':            'Un poco cada día vale más que mucho una vez por semana',
   'settings.help.tipDailyDesc':        'Ponte una meta diaria pequeña y mantén la racha: diez minutos al día se quedan mejor que una hora el domingo.',
   'settings.help.tipDailyLink':        'Fijar una meta diaria →',
+  'settings.help.tipSources':          'De dónde vienen las palabras',
+  'settings.help.tipSourcesDesc':      'Palabras, significados, pronunciación y tablas verbales: Wiktionary, a través de kaikki.org (CC BY-SA 4.0). Qué tan común es cada palabra: listas de frecuencia de OpenSubtitles. Oraciones de ejemplo: Tatoeba, tatoeba.org (CC BY 2.0 FR); cada una enlaza a su página. Banderas: flag-icons (MIT); emoji: OpenMoji (CC BY-SA 4.0); fotos: Wikimedia Commons, cada una con su propia licencia.',
   'settings.help.tipDue':              'Repasa primero lo pendiente',
   'settings.help.tipDueDesc':          'Cuando aparecen 🔁 y un número en la esquina superior, esas son las palabras pendientes, a punto de olvidarse. Haz clic en él, o pulsa r, para repasar solo esas.',
   'settings.help.tipMissed':           'Convierte los errores en práctica',

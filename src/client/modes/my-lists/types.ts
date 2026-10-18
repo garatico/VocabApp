@@ -23,6 +23,8 @@ export interface VocabEntry {
   band:        string | null;
   glosses:     string[];
   examples:    string[];
+  /** The first example's English, when the data has it (schemaVersion 11). */
+  exampleTranslation?: string | null;
   domains:     string[];
   ipa:         string | null;
   audioUrl:    string | null;
