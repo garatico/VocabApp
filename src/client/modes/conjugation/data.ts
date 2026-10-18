@@ -158,6 +158,9 @@ export const PRONOUNS: Record<string, string[]> = {
   // actually conjugated rather than implying a seventh cell that does not exist.
   german:     ['ich', 'du', 'er / sie / es', 'wir', 'ihr',    'sie / Sie'],
   dutch:      ['ik',  'jij', 'hij / zij',    'wij', 'jullie', 'zij'],
+  romanian:   ['eu',  'tu',  'el / ea',      'noi', 'voi',    'ei / ele'],
+  // Russian's past agrees with gender, not person, so its cells hold "писа́л / писа́ла" (either is right).
+  russian:    ['я',   'ты',  'он / она / оно', 'мы', 'вы',    'они'],
 };
 
 export const TENSE_DEFS: Record<string, TenseDef[]> = {
@@ -240,5 +243,29 @@ export const TENSE_DEFS: Record<string, TenseDef[]> = {
     { key: 'present',         label: 'Tegenwoordige Tijd' },
     { key: 'preterite',       label: 'Verleden Tijd' },
     { key: 'past_participle', label: 'Voltooid Deelwoord' },
+  ],
+  // The perfect compus, future and conditional are the everyday tenses; VocabApp-Data builds them from the
+  // auxiliaries (am scris, voi scrie, aș scrie). The perfect simplu is literary and comes after them.
+  romanian: [
+    { key: 'present',                label: 'Prezent' },
+    { key: 'present_perfect',        label: 'Perfect Compus' },
+    { key: 'imperfect',              label: 'Imperfect' },
+    { key: 'future',                 label: 'Viitor' },
+    { key: 'conditional',            label: 'Condițional Prezent' },
+    { key: 'subjunctive',            label: 'Conjunctiv Prezent' },
+    { key: 'imperative_affirmative', label: 'Imperativ' },
+    { key: 'imperative_negative',    label: 'Imperativ Negativ' },
+    { key: 'pluperfect',             label: 'Mai-mult-ca-perfect' },
+    { key: 'preterite',              label: 'Perfect Simplu' },
+    { key: 'past_participle',        label: 'Participiu' },
+    { key: 'gerund',                 label: 'Gerunziu' },
+  ],
+  // An imperfective verb has a present and a compound future (бу́ду писа́ть); a perfective one only its
+  // simple future (напишу́). The past is gendered (see PRONOUNS above).
+  russian: [
+    { key: 'present',                label: 'Настоящее время' },
+    { key: 'preterite',              label: 'Прошедшее время' },
+    { key: 'future',                 label: 'Будущее время' },
+    { key: 'imperative_affirmative', label: 'Повелительное наклонение' },
   ],
 };

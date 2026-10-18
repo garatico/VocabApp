@@ -1,6 +1,9 @@
 import type { Word } from '../../types.js';
 import { showSummary, clearSummary, summaryChip, percent } from '../../ui/quiz-summary.ts';
 import { isOwnInfinitive, hasAnyForms, regularityOf } from './verb-filters.js';
+import { foldKey } from '../../utils/match.js';
+import { languageInfo } from '../../data/languages.js';
+import { hasLatin, latinAttempts, latinTargets } from '../../../shared/russian-translit.js';
 
 /**
  * conjugation/helpers.ts — what every Conjugation view shares: the options type, a
@@ -158,3 +161,26 @@ export function showConjSummary(completeVerbs: number, nVerbs: number, correctFo
  * never leaves a stale document keydown handler (or stale chip listeners
  * closing over a torn-down session) running underneath a different view.
  */
+
+
+/**
+ * Does `typed` answer a conjugation cell whose expected text is `answer`? `exact` false asks instead whether
+ * more typing could still get there — Sudden Death's question.
+ *
+ * A cell can hold several right answers, written "a / b": a Russian past is said by its gender, so я is
+ * писа́л or писа́ла by who speaks, and either is right. And in a language with `latinTyping` (Russian) an
+ * answer typed in Latin letters is matched against the cell's transliteration, as in the vocabulary quiz.
+ * Stress marks never have to be typed: `foldKey` drops them with the other accents.
+ */
+export function conjFormMatches(typed: string, answer: string, lang: string | null | undefined, exact: boolean): boolean {
+  const attempt = foldKey(typed);
+  if (!attempt) return !exact;
+  const options = answer.split(' / ').map(a => foldKey(a)).filter(Boolean);
+  const hit = (a: string, t: string) => (exact ? a === t : t.startsWith(a));
+  if (options.some(o => hit(attempt, o))) return true;
+  if (lang && languageInfo(lang).latinTyping && hasLatin(attempt)) {
+    const targets = answer.split(' / ').flatMap(a => latinTargets(a));
+    return latinAttempts(attempt).some(a => targets.some(t => hit(a, t)));
+  }
+  return false;
+}

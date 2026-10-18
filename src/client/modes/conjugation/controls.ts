@@ -104,12 +104,20 @@ export function activeTenses(): string[] {
     .filter(Boolean);
 }
 
-let _tenseListenerLang: string | null = null;
+/**
+ * The language the tense chips belong to right now. Read by the listeners at click time, not captured
+ * when they were attached: they used to be attached again on every language switch (skipped only when the
+ * language was unchanged), so after Russian -> Romanian two listeners each toggled a chip, which is no
+ * change at all, and the stale one saved its selection under the previous language's key.
+ */
+let _tenseChipLang = 'spanish';
+let _tenseChipsWired: HTMLElement | null = null;
 
 function ensureTenseChipListeners(lang: string): void {
+  _tenseChipLang = lang;
   const chips = document.getElementById('conjTenseChips');
-  if (!chips || _tenseListenerLang === lang) return;
-  _tenseListenerLang = lang;
+  if (!chips || _tenseChipsWired === chips) return;
+  _tenseChipsWired = chips;
 
   chips.addEventListener('click', e => {
     const btn = (e.target as Element).closest<HTMLElement>('.conj-tense-chip');
@@ -117,13 +125,13 @@ function ensureTenseChipListeners(lang: string): void {
     btn.classList.toggle('active');
     // Never allow an empty selection — the quiz would have nothing to drill.
     if (activeTenses().length === 0) btn.classList.add('active');
-    saveSelectedTenses(lang, activeTenses());
+    saveSelectedTenses(_tenseChipLang, activeTenses());
     _selectionChangeCallback?.();
   });
 
   document.getElementById('conjTensesAll')?.addEventListener('click', () => {
     chips.querySelectorAll('.conj-tense-chip').forEach(c => c.classList.add('active'));
-    saveSelectedTenses(lang, activeTenses());
+    saveSelectedTenses(_tenseChipLang, activeTenses());
     _selectionChangeCallback?.();
   });
   document.getElementById('conjTensesNone')?.addEventListener('click', () => {
@@ -131,7 +139,7 @@ function ensureTenseChipListeners(lang: string): void {
     chips.querySelectorAll('.conj-tense-chip').forEach((c, i) => {
       c.classList.toggle('active', i === 0);
     });
-    saveSelectedTenses(lang, activeTenses());
+    saveSelectedTenses(_tenseChipLang, activeTenses());
     _selectionChangeCallback?.();
   });
 }

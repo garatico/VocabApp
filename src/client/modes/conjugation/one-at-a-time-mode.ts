@@ -23,8 +23,8 @@ import { PRONOUNS, TENSE_DEFS } from './data.js';
 import { activeTenses, activeRegularities, unionTenseDefs, activePronounIndices } from './controls.js';
 import {
   isOwnInfinitive, hasAnyForms, regularityOf, isSingleForm, verbKey, hiddenPronounSlots,
+  conjFormMatches,
 } from './helpers.js';
-import { foldKey as normalize } from '../../utils/match.js';
 import { displayWord } from '../../utils/utils.js';
 import { shuffle } from '../../utils/shuffle.js';
 import {
@@ -279,14 +279,14 @@ export function renderConjOneAtATime({
     if (finished || results[idx] !== null) return;
     const answer = answerFor(queue[idx]);
     if (!answer) return;
-    if (normalize(inp.value) === normalize(answer)) {
+    if (conjFormMatches(inp.value, answer, queue[idx].verb.language ?? primaryLang, true)) {
       inp.value = answer;
       inp.disabled = true;
       inp.classList.add('correct');
       results[idx] = 'correct';
       updateProgress();
       advanceLater(() => idx, advance, 500);
-    } else if (Settings.getSuddenDeath() && inp.value && !normalize(answer).startsWith(normalize(inp.value))) {
+    } else if (Settings.getSuddenDeath() && inp.value && !conjFormMatches(inp.value, answer, queue[idx].verb.language ?? primaryLang, false)) {
       // Same end state finish() puts an unanswered item in (see 'missed'
       // above) — this one just got there early, from an unrecoverable typo
       // rather than running out of items to answer.

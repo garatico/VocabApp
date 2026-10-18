@@ -28,9 +28,9 @@ import { PRONOUNS, TENSE_DEFS } from './data.js';
 import { activeTenses, activeRegularities, unionTenseDefs, activePronounIndices } from './controls.js';
 import {
   isOwnInfinitive, hasAnyForms, regularityOf, isSingleForm, verbKey, hiddenPronounSlots,
+  conjFormMatches,
 } from './helpers.js';
 import { pageSlice, pageCountFor } from '../table-controls.js';
-import { foldKey as normalize } from '../../utils/match.js';
 import { displayWord } from '../../utils/utils.js';
 import { shuffle } from '../../utils/shuffle.js';
 import { saveSession, recordOutcome } from '../../utils/session-history.js';
@@ -282,7 +282,7 @@ export function renderConjRandomTable({
     inp.addEventListener('input', () => {
       if (finished || inp.disabled) return;
       const answer = answerFor(item);
-      if (!answer || normalize(inp.value) !== normalize(answer)) return;
+      if (!answer || !conjFormMatches(inp.value, answer, item.verb.language ?? primaryLang, true)) return;
       inp.value = answer;
       inp.disabled = true;
       inp.classList.add('correct');

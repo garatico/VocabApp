@@ -1,5 +1,4 @@
 import type { Word } from '../../types.js';
-import { foldKey as normalize } from '../../utils/match.ts';
 import { tenseEnLabel, TENSE_HELP, REGULARITY_HELP } from './data.js';
 import { regularityOf } from './verb-filters.js';
 import { buildGlossDisplay, displayWord } from '../../utils/utils.js';
@@ -9,7 +8,7 @@ import { openWordInfoPopover } from '../../utils/word-info-popover.ts';
 import { languageInfo } from '../../data/languages.js';
 import { createFlagImg } from '../../ui/flag-icon.js';
 import { Settings, applyAutofillAttr } from '../../settings.js';
-import { CardController, EMPTY_SLOTS, SINGLE_FORM_ROW_LABEL, hiddenPronounSlots, isSingleForm, missingDataSlots } from './helpers.ts';
+import { CardController, EMPTY_SLOTS, SINGLE_FORM_ROW_LABEL, conjFormMatches, hiddenPronounSlots, isSingleForm, missingDataSlots } from './helpers.ts';
 import '../../styles-lazy/conjugation.css';
 import { isoCode } from '../../data/languages.ts';
 
@@ -53,7 +52,8 @@ export function buildCard({
   const getTenseKey = (): string => tenseKey;
   const card = document.createElement('div');
   card.className = 'conj-card';
-  card.lang = isoCode(lang.split('+')[0]);   // the verb, its pronouns and forms: voiced, spell-checked and typed in its own language
+  card.lang = isoCode(lang.split('+')[0]);
+  const formLang = verb.language ?? lang.split('+')[0];   // whose answers these are: Latin typing is per language   // the verb, its pronouns and forms: voiced, spell-checked and typed in its own language
 
   // Header is a two-column row: the verb and its meaning on the left, the
   // tense and the reveal control on the right. The right half used to be
@@ -378,14 +378,14 @@ export function buildCard({
 
       fresh.addEventListener('input', () => {
         if (!answer) return;
-        const correct = normalize(fresh.value) === normalize(answer);
+        const correct = conjFormMatches(fresh.value, answer, formLang, true);
         const was     = fresh.classList.contains('correct');
         fresh.classList.toggle('correct', correct);
         if (correct && !was) {
           fresh.value    = answer;
           fresh.disabled = true;
           onProgress();
-        } else if (!correct && Settings.getSuddenDeath() && fresh.value && !normalize(answer).startsWith(normalize(fresh.value))) {
+        } else if (!correct && Settings.getSuddenDeath() && fresh.value && !conjFormMatches(fresh.value, answer, formLang, false)) {
           fill(fresh, singleRevealBtn, answer, 'missed');
           onProgress();
         }
@@ -406,7 +406,7 @@ export function buildCard({
         fresh.addEventListener('input', () => {
           if (!answers) return;
           const expected = Array.isArray(answers) ? (answers[i] ?? '') : '';
-          const correct  = normalize(fresh.value) === normalize(expected);
+          const correct  = conjFormMatches(fresh.value, expected, formLang, true);
           const was      = fresh.classList.contains('correct');
           fresh.classList.toggle('correct', correct);
 
@@ -417,7 +417,7 @@ export function buildCard({
             while (inputs[n].disabled && n !== i) n = (n + 1) % inputs.length;
             if (n !== i) inputs[n].focus();
             onProgress();
-          } else if (!correct && Settings.getSuddenDeath() && fresh.value && expected && !normalize(expected).startsWith(normalize(fresh.value))) {
+          } else if (!correct && Settings.getSuddenDeath() && fresh.value && expected && !conjFormMatches(fresh.value, expected, formLang, false)) {
             fill(fresh, revealBtns[i], expected, 'missed');
             let n = (i + 1) % inputs.length;
             while (inputs[n].disabled && n !== i) n = (n + 1) % inputs.length;

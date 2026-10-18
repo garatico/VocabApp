@@ -180,8 +180,8 @@ export const LANGUAGES: LanguageInfo[] = [
   { name: 'swedish', label: 'Swedish', iso: 'sv', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-swedish-bg', flagOptions: FLAG_OPTIONS['swedish'], flagCountry: FLAG_OPTIONS['swedish'][0].country },
   { name: 'norwegian', label: 'Norwegian', iso: 'nb', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-norwegian-bg', flagOptions: FLAG_OPTIONS['norwegian'], flagCountry: FLAG_OPTIONS['norwegian'][0].country },
   { name: 'danish', label: 'Danish', iso: 'da', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-danish-bg', flagOptions: FLAG_OPTIONS['danish'], flagCountry: FLAG_OPTIONS['danish'][0].country },
-  { name: 'romanian', label: 'Romanian', iso: 'ro', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-romanian-bg', flagOptions: FLAG_OPTIONS['romanian'], flagCountry: FLAG_OPTIONS['romanian'][0].country },
-  { name: 'russian', label: 'Russian', iso: 'ru', hasConjugations: false, capitalisesNouns: false, romanizedScript: false, latinTyping: true, colorVar: '--lang-russian-bg', flagOptions: FLAG_OPTIONS['russian'], flagCountry: FLAG_OPTIONS['russian'][0].country },
+  { name: 'romanian', label: 'Romanian', iso: 'ro', hasConjugations: true, capitalisesNouns: false, romanizedScript: false, colorVar: '--lang-romanian-bg', flagOptions: FLAG_OPTIONS['romanian'], flagCountry: FLAG_OPTIONS['romanian'][0].country },
+  { name: 'russian', label: 'Russian', iso: 'ru', hasConjugations: true, capitalisesNouns: false, romanizedScript: false, latinTyping: true, colorVar: '--lang-russian-bg', flagOptions: FLAG_OPTIONS['russian'], flagCountry: FLAG_OPTIONS['russian'][0].country },
 ];
 
 /** Language names in display order — the order of the dropdown. */
