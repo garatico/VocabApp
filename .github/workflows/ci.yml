@@ -55,7 +55,7 @@ jobs:
       # a small monthly allowance, so the object is cached under its own id and fetched only when it changes.
       - name: LFS object id
         run: git lfs ls-files --long | cut -d' ' -f1 | sort > .lfs-ids
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: .git/lfs/objects
           key: lfs-${{ hashFiles('.lfs-ids') }}
@@ -92,7 +92,7 @@ jobs:
       - uses: actions/checkout@v7
       - name: LFS object id
         run: git lfs ls-files --long | cut -d' ' -f1 | sort > .lfs-ids
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: .git/lfs/objects
           key: lfs-${{ hashFiles('.lfs-ids') }}
@@ -136,7 +136,7 @@ jobs:
       - name: LFS object id
         shell: bash
         run: git lfs ls-files --long | cut -d' ' -f1 | sort > .lfs-ids
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: .git/lfs/objects
           key: lfs-${{ hashFiles('.lfs-ids') }}
